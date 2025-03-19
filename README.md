@@ -1,6 +1,6 @@
 # Advanced Note Composer
 
-This is a plugin for [Obsidian](https://obsidian.md/) that Enhances core Note composer plugin.
+This is a plugin for [Obsidian](https://obsidian.md/) that enhances core [`Note composer`](https://help.obsidian.md/plugins/note-composer) plugin.
 
 ## Installation
 
@@ -21,7 +21,7 @@ For more details, refer to the [documentation](https://github.com/mnaoumov/obsid
 
 ## Support
 
-<a href="https://www.buymeacoffee.com/mnaoumov" target="_blank">Support this plugin</a>
+<a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;"></a>
 
 ## License
 
