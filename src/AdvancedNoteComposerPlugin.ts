@@ -27,10 +27,26 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     }
 
     if (!checking) {
-      new MergeFileModal(this.app).open();
+      if (this.checkCorePluginEnabled()) {
+        new MergeFileModal(this.app).open();
+      }
     }
 
     return true;
+  }
+
+  private checkCorePluginEnabled(): boolean {
+    const noteComposerPlugin = this.app.internalPlugins.getPluginById(InternalPluginName.NoteComposer);
+    if (!noteComposerPlugin) {
+      return false;
+    }
+
+    const ans = noteComposerPlugin.enabled;
+    if (!ans) {
+      new Notice('Note composer Core plugin is not enabled');
+    }
+
+    return ans;
   }
 
   private splitFile(checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo): boolean {
@@ -43,7 +59,9 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     }
 
     if (!checking) {
-      new Notice('Split file');
+      if (this.checkCorePluginEnabled()) {
+        new Notice('Split file');
+      }
     }
 
     return true;
@@ -62,7 +80,9 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     }
 
     if (!checking) {
-      new Notice('Extract heading');
+      if (this.checkCorePluginEnabled()) {
+        new Notice('Extract heading');
+      }
     }
 
     return true;
@@ -73,10 +93,6 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     if (!noteComposerPlugin) {
       return;
     }
-
-    noteComposerPlugin.instance.
-
-
 
     this.addCommand({
       icon: 'lucide-git-merge',
