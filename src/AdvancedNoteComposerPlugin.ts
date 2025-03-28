@@ -26,14 +26,15 @@ import { invokeWithPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
-import type { MergeFileSuggestModalConstructor } from './Modals/MergeFileSuggestModal.ts';
-import type { SplitFileSuggestModalConstructor } from './Modals/SplitFileSuggestModal.ts';
+import type {
+  MergeFileSuggestModalConstructor,
+  SplitFileSuggestModalConstructor
+} from './SuggestModal.ts';
 
 import { AdvancedNoteComposerPluginSettings } from './AdvancedNoteComposerPluginSettings.ts';
 import { AdvancedNoteComposerPluginSettingsTab } from './AdvancedNoteComposerPluginSettingsTab.ts';
 import { DummyEditor } from './DummyEditor.ts';
-import { extendMergeFileSuggestModal } from './Modals/MergeFileSuggestModal.ts';
-import { extendSplitFileSuggestModal } from './Modals/SplitFileSuggestModal.ts';
+import { extendSuggestModal } from './SuggestModal.ts';
 
 type GetActiveFileFn = Workspace['getActiveFile'];
 
@@ -275,7 +276,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
         }, () => {
           mergeFileCommand?.checkCallback?.(false);
           lastModal?.close();
-          this.MergeFileSuggestModalConstructor = extendMergeFileSuggestModal(lastModal?.constructor as MergeFileSuggestModalConstructor);
+          this.MergeFileSuggestModalConstructor = extendSuggestModal(lastModal?.constructor as MergeFileSuggestModalConstructor);
 
           const ctx = {
             app: this.app,
@@ -284,7 +285,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
           };
           splitFileCommand?.editorCheckCallback?.(false, new DummyEditor(), ctx);
           lastModal?.close();
-          this.SplitFileSuggestModalConstructor = extendSplitFileSuggestModal(lastModal?.constructor as SplitFileSuggestModalConstructor);
+          this.SplitFileSuggestModalConstructor = extendSuggestModal(lastModal?.constructor as SplitFileSuggestModalConstructor);
         });
       });
     });
