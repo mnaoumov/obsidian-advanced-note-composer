@@ -5,6 +5,7 @@ import type {
   SuggestModal,
   TFile
 } from 'obsidian';
+import type { Factories } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import type { NoteComposerPluginInstance } from 'obsidian-typings';
 import type { Constructor } from 'type-fest';
 
@@ -26,6 +27,7 @@ interface SuggestModalBase extends SuggestModal<unknown> {
   currentFile: TFile;
 
   getSuggestions(query: string): Promise<unknown[]> | unknown[];
+  mergeFile?(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
   renderSuggestion(value: unknown, el: HTMLElement): void;
@@ -34,8 +36,24 @@ interface SuggestModalBase extends SuggestModal<unknown> {
 
 export function extendSuggestModal<TConstructor extends Constructor<SuggestModalBase>>(OriginalSuggestModal: TConstructor): TConstructor {
   return class PatchedSuggestModal extends OriginalSuggestModal {
+    private get fileManagerPatch(): Factories<FileManager> {
+      return {
+        insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
+          return (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend') => insertIntoFile(next, this, file, text, insertIntoFilePosition);
+        }
+      };
+    }
+
+    public override async mergeFile(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void> {
+      await invokeWithPatchAsync(this.app.fileManager, this.fileManagerPatch, async () => {
+        return await super.mergeFile?.call(this, targetFile, sourceFile, position);
+      });
+    }
+
     public override async onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void> {
-      await handleChooseSuggestion(this, item, evt);
+      await invokeWithPatchAsync(this.app.fileManager, this.fileManagerPatch, async () => {
+        await super.onChooseSuggestion(item, evt);
+      });
     }
   };
 }
@@ -56,19 +74,6 @@ async function fixLinks(app: App, sourceFile: TFile, targetFile: TFile, content:
   const fixedContent = await app.vault.read(tempFile);
   await app.vault.delete(tempFile);
   return fixedContent;
-}
-
-async function handleChooseSuggestion(suggestModal: SuggestModalBase, item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void> {
-  const app = suggestModal.app;
-  await invokeWithPatchAsync(app.fileManager, {
-    insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
-      return (file: TFile, text: string, position?: 'append' | 'prepend') => insertIntoFile(next, suggestModal, file, text, position);
-    }
-  }, async () => {
-    const proto = Object.getPrototypeOf(suggestModal) as SuggestModalBase;
-    const baseProto = Object.getPrototypeOf(proto) as SuggestModalBase;
-    await baseProto.onChooseSuggestion.call(suggestModal, item, evt);
-  });
 }
 
 async function insertIntoFile(
