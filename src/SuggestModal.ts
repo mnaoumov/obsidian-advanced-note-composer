@@ -2,6 +2,7 @@ import type {
   App,
   Editor,
   FileManager,
+  Pos,
   SuggestModal,
   TFile
 } from 'obsidian';
@@ -9,8 +10,14 @@ import type { Factories } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import type { NoteComposerPluginInstance } from 'obsidian-typings';
 import type { Constructor } from 'type-fest';
 
+import { parseLinktext } from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
-import { updateLinksInFile } from 'obsidian-dev-utils/obsidian/Link';
+import {
+  editLinks,
+  updateLink,
+  updateLinksInFile
+} from 'obsidian-dev-utils/obsidian/Link';
+import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { invokeWithPatchAsync } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { join } from 'obsidian-dev-utils/Path';
 
@@ -36,9 +43,16 @@ interface Frontmatter {
 
 type InsertIntoFileFn = FileManager['insertIntoFile'];
 
+interface Selection {
+  endOffset: number;
+  startOffset: number;
+}
+
 interface SuggestModalBase extends SuggestModal<unknown> {
   currentFile: TFile;
+  editor?: Editor;
 
+  fixBacklinks(targetFile: TFile): Promise<void>;
   getSuggestions(query: string): Promise<unknown[]> | unknown[];
   mergeFile?(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -52,6 +66,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
   OriginalSuggestModal: TConstructor
 ): TConstructor {
   return class PatchedSuggestModal extends OriginalSuggestModal {
+    private backlinksToFix = new Map<string, string[]>();
     private fileManagerPatch: Factories<FileManager> = {
       createNewMarkdownFileFromLinktext: (next: CreateNewMarkdownFileFromLinktextFn): CreateNewMarkdownFileFromLinktextFn => {
         return (filename, path) => createNewMarkdownFileFromLinktext(next, plugin, filename, path);
@@ -61,16 +76,103 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       }
     };
 
+    public override async fixBacklinks(targetFile: TFile): Promise<void> {
+      for (const backlinkPath of this.backlinksToFix.keys()) {
+        const linkJsons = this.backlinksToFix.get(backlinkPath) ?? [];
+        await editLinks(this.app, backlinkPath, (link) => {
+          if (!linkJsons.includes(JSON.stringify(link))) {
+            return;
+          }
+
+          return updateLink({
+            app: this.app,
+            link,
+            newSourcePathOrFile: this.currentFile,
+            newTargetPathOrFile: targetFile
+          });
+        });
+      }
+    }
+
     public override async mergeFile(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void> {
       await invokeWithPatchAsync(this.app.fileManager, this.fileManagerPatch, async () => {
-        return await super.mergeFile?.call(this, targetFile, sourceFile, position);
+        await super.mergeFile?.call(this, targetFile, sourceFile, position);
       });
     }
 
     public override async onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void> {
       await invokeWithPatchAsync(this.app.fileManager, this.fileManagerPatch, async () => {
+        await this.prepareBacklinksToFix();
         await super.onChooseSuggestion(item, evt);
       });
+    }
+
+    private async getSelections(): Promise<Selection[]> {
+      if (this.editor) {
+        return this.editor.listSelections().map((editorSelection) => {
+          const selection: Selection = {
+            endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
+            startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
+          };
+
+          if (selection.startOffset > selection.endOffset) {
+            [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
+          }
+
+          return selection;
+        });
+      }
+
+      const content = await this.app.vault.read(this.currentFile);
+
+      return [{
+        endOffset: content.length,
+        startOffset: 0
+      }];
+    }
+
+    private async prepareBacklinksToFix(): Promise<void> {
+      const selections = await this.getSelections();
+      const cache = this.app.metadataCache.getFileCache(this.currentFile) ?? {};
+      const subpaths = new Set<string>();
+
+      for (const heading of cache.headings ?? []) {
+        if (!isSelected(heading.position, selections)) {
+          continue;
+        }
+
+        subpaths.add(`#${heading.heading}`);
+      }
+
+      for (const block of Object.values(cache.blocks ?? {})) {
+        if (!isSelected(block.position, selections)) {
+          continue;
+        }
+
+        subpaths.add(`#^${block.id}`);
+      }
+
+      const backlinks = await getBacklinksForFileSafe(this.app, this.currentFile);
+      this.backlinksToFix.clear();
+
+      for (const backlinkPath of backlinks.keys()) {
+        const links = backlinks.get(backlinkPath) ?? [];
+        for (const link of links) {
+          const { subpath } = parseLinktext(link.link);
+          if (!subpaths.has(subpath)) {
+            continue;
+          }
+
+          let referenceJsons = this.backlinksToFix.get(backlinkPath);
+
+          if (!referenceJsons) {
+            referenceJsons = [];
+            this.backlinksToFix.set(backlinkPath, referenceJsons);
+          }
+
+          referenceJsons.push(JSON.stringify(link));
+        }
+      }
     }
   };
 }
@@ -144,6 +246,13 @@ async function insertIntoFile(
   const app = suggestModal.app;
   const newText = await fixLinks(app, suggestModal.currentFile, file, text);
   await next.call(app.fileManager, file, newText, position);
+  await suggestModal.fixBacklinks(file);
+}
+
+function isSelected(position: Pos, selections: Selection[]): boolean {
+  return selections.some((selection) => {
+    return selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset;
+  });
 }
 
 function isValidFilename(app: App, filename: string): boolean {
