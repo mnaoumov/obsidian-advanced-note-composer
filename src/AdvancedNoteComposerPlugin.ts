@@ -276,7 +276,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
         }, () => {
           mergeFileCommand?.checkCallback?.(false);
           lastModal?.close();
-          this.MergeFileSuggestModalConstructor = extendSuggestModal(lastModal?.constructor as MergeFileSuggestModalConstructor);
+          this.MergeFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as MergeFileSuggestModalConstructor);
 
           const ctx = {
             app: this.app,
@@ -285,7 +285,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
           };
           splitFileCommand?.editorCheckCallback?.(false, new DummyEditor(), ctx);
           lastModal?.close();
-          this.SplitFileSuggestModalConstructor = extendSuggestModal(lastModal?.constructor as SplitFileSuggestModalConstructor);
+          this.SplitFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as SplitFileSuggestModalConstructor);
         });
       });
     });
