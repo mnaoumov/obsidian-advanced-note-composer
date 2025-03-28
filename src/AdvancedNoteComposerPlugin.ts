@@ -79,8 +79,8 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
       name: 'Extract this heading...'
     });
 
-    this.app.workspace.on('file-menu', this.handleFileMenu.bind(this));
-    this.app.workspace.on('editor-menu', this.handleEditorMenu.bind(this));
+    this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
+    this.registerEvent(this.app.workspace.on('editor-menu', this.handleEditorMenu.bind(this)));
 
     this.register(around(corePlugin.instance, {
       onEnable: (next: OnEnableFn): OnEnableFn => {
