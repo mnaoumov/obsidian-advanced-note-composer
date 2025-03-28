@@ -192,7 +192,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     if (editor.getSelection().trim()) {
       menu.addItem((item) => {
         return item
-          .setTitle('Advanced split file')
+          .setTitle('Advanced extract current selection...')
           .setIcon('lucide-git-branch-plus')
           .setSection('selection')
           .onClick(() => {
@@ -211,7 +211,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
 
     menu.addItem((item) => {
       return item
-        .setTitle('Advanced extract heading')
+        .setTitle('Advanced extract this heading...')
         .setIcon('lucide-git-branch-plus')
         .onClick(() => {
           this.extractHeading(file, editor);
@@ -241,7 +241,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     menu.addItem((item) => {
       item
         .setSection('action')
-        .setTitle('Advanced merge file')
+        .setTitle('Advanced merge entire file with...')
         .setIcon('lucide-git-merge')
         .onClick(() => {
           this.mergeFile(file);
