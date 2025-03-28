@@ -4,9 +4,9 @@ This is a plugin for [Obsidian](https://obsidian.md/) that enhances [`Note compo
 
 The plugin aims to enhance `Note composer` core plugin adding some missing functionality.
 
-## Markdown relative links
+## Relative links
 
-If you use `Merge current file with another file...`, `Extract current selection...`, `Extract this heading...` from the note with markdown links, the core plugin moves those links as is, which leads to broken links you have to fix manually.
+If you use `Merge current file with another file...`, `Extract current selection...`, `Extract this heading...` from the note with relative links, the core plugin moves those links as is, which leads to broken links you have to fix manually.
 
 The current plugin adjusts such links and makes them valid.
 
