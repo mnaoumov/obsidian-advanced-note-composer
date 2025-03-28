@@ -26,12 +26,14 @@ import { invokeWithPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
-import type { MergeFileModalConstructor } from './Modals/MergeFileModal.ts';
-import type { SplitFileModalConstructor } from './Modals/SplitFileModal.ts';
+import type { MergeFileSuggestModalConstructor } from './Modals/MergeFileSuggestModal.ts';
+import type { SplitFileSuggestModalConstructor } from './Modals/SplitFileSuggestModal.ts';
 
 import { AdvancedNoteComposerPluginSettings } from './AdvancedNoteComposerPluginSettings.ts';
 import { AdvancedNoteComposerPluginSettingsTab } from './AdvancedNoteComposerPluginSettingsTab.ts';
 import { DummyEditor } from './DummyEditor.ts';
+import { extendMergeFileSuggestModal } from './Modals/MergeFileSuggestModal.ts';
+import { extendSplitFileSuggestModal } from './Modals/SplitFileSuggestModal.ts';
 
 type GetActiveFileFn = Workspace['getActiveFile'];
 
@@ -41,8 +43,8 @@ type OpenFn = Modal['open'];
 
 export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerPluginSettings> {
   private isModalInitialized = false;
-  private MergeFileModalConstructor!: MergeFileModalConstructor;
-  private SplitFileModalConstructor!: SplitFileModalConstructor;
+  private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
+  private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
 
   protected override createPluginSettings(data: unknown): AdvancedNoteComposerPluginSettings {
     return new AdvancedNoteComposerPluginSettings(data);
@@ -273,7 +275,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
         }, () => {
           mergeFileCommand?.checkCallback?.(false);
           lastModal?.close();
-          this.MergeFileModalConstructor = lastModal?.constructor as MergeFileModalConstructor;
+          this.MergeFileSuggestModalConstructor = extendMergeFileSuggestModal(lastModal?.constructor as MergeFileSuggestModalConstructor);
 
           const ctx = {
             app: this.app,
@@ -282,7 +284,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
           };
           splitFileCommand?.editorCheckCallback?.(false, new DummyEditor(), ctx);
           lastModal?.close();
-          this.SplitFileModalConstructor = lastModal?.constructor as SplitFileModalConstructor;
+          this.SplitFileSuggestModalConstructor = extendSplitFileSuggestModal(lastModal?.constructor as SplitFileSuggestModalConstructor);
         });
       });
     });
@@ -294,7 +296,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
       return;
     }
 
-    const modal = new this.MergeFileModalConstructor(this.app, corePlugin.instance);
+    const modal = new this.MergeFileSuggestModalConstructor(this.app, corePlugin.instance);
     modal.setCurrentFile(file);
     modal.open();
   }
@@ -305,7 +307,7 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
       return;
     }
 
-    const modal = new this.SplitFileModalConstructor(this.app, editor, corePlugin.instance, heading);
+    const modal = new this.SplitFileSuggestModalConstructor(this.app, editor, corePlugin.instance, heading);
     modal.setCurrentFile(file);
     modal.open();
   }
