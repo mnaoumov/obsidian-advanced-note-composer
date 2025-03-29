@@ -15,11 +15,10 @@ import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
   updateLink,
-  updateLinksInFile
+  updateLinksInContent
 } from 'obsidian-dev-utils/obsidian/Link';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { invokeWithPatchAsync } from 'obsidian-dev-utils/obsidian/MonkeyAround';
-import { join } from 'obsidian-dev-utils/Path';
 
 import type { AdvancedNoteComposerPlugin } from './AdvancedNoteComposerPlugin.ts';
 
@@ -223,17 +222,12 @@ async function fixLinks(app: App, sourceFile: TFile, targetFile: TFile, content:
     return content;
   }
 
-  const tempPath = app.vault.getAvailablePath(join(targetFile.parent?.path ?? '', '__TEMP__'), 'md');
-  const tempFile = await app.vault.create(tempPath, content);
-
-  await updateLinksInFile({
+  return await updateLinksInContent({
     app,
-    newSourcePathOrFile: tempFile,
+    content,
+    newSourcePathOrFile: targetFile,
     oldSourcePathOrFile: sourceFile
   });
-  const fixedContent = await app.vault.read(tempFile);
-  await app.vault.delete(tempFile);
-  return fixedContent;
 }
 
 async function insertIntoFile(
