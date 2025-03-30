@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.0
+
+- Allow include frontmatter
+
 ## 1.2.0
 
 - Update links in memory
