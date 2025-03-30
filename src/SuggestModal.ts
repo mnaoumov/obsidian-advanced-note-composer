@@ -10,7 +10,10 @@ import type { Factories } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import type { NoteComposerPluginInstance } from 'obsidian-typings';
 import type { Constructor } from 'type-fest';
 
-import { parseLinktext } from 'obsidian';
+import {
+  getFrontMatterInfo,
+  parseLinktext
+} from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
@@ -66,12 +69,14 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
 ): TConstructor {
   return class PatchedSuggestModal extends OriginalSuggestModal {
     private backlinksToFix = new Map<string, string[]>();
+    private shouldIncludeFrontmatter = false;
     private fileManagerPatch: Factories<FileManager> = {
       createNewMarkdownFileFromLinktext: (next: CreateNewMarkdownFileFromLinktextFn): CreateNewMarkdownFileFromLinktextFn => {
         return (filename, path) => createNewMarkdownFileFromLinktext(next, plugin, filename, path);
       },
       insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
-        return (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend') => insertIntoFile(next, this, file, text, insertIntoFilePosition);
+        return (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend') =>
+          insertIntoFile(next, this, file, text, insertIntoFilePosition, this.shouldIncludeFrontmatter);
       }
     };
 
@@ -104,6 +109,21 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
         await this.prepareBacklinksToFix();
         await super.onChooseSuggestion(item, evt);
       });
+    }
+
+    public override onOpen(): void {
+      super.onOpen();
+
+      if (this.editor) {
+        this.instructionsEl.createEl('label', {}, (label) => {
+          label.createEl('input', { type: 'checkbox' }, (checkbox) => {
+            checkbox.addEventListener('change', () => {
+              this.shouldIncludeFrontmatter = checkbox.checked;
+            });
+          });
+          label.appendText('Include frontmatter');
+        });
+      }
     }
 
     private async getSelections(): Promise<Selection[]> {
@@ -235,12 +255,24 @@ async function insertIntoFile(
   suggestModal: SuggestModalBase,
   file: TFile,
   text: string,
-  position?: 'append' | 'prepend'
+  position: 'append' | 'prepend' | undefined,
+  shouldIncludeFrontmatter: boolean
 ): Promise<void> {
   const app = suggestModal.app;
   const newText = await fixLinks(app, suggestModal.currentFile, file, text);
   await next.call(app.fileManager, file, newText, position);
   await suggestModal.fixBacklinks(file);
+  if (!shouldIncludeFrontmatter) {
+    return;
+  }
+
+  const content = await app.vault.read(suggestModal.currentFile);
+  const frontmatterInfo = getFrontMatterInfo(content);
+  if (!frontmatterInfo.exists) {
+    return;
+  }
+  const fullFrontmatter = `---\n${frontmatterInfo.frontmatter}\n---`;
+  await insertIntoFile(next, suggestModal, file, fullFrontmatter, position, false);
 }
 
 function isSelected(position: Pos, selections: Selection[]): boolean {
