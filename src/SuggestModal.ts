@@ -3,6 +3,7 @@ import type {
   Editor,
   FileManager,
   Pos,
+  SearchResult,
   SuggestModal,
   TFile
 } from 'obsidian';
@@ -38,7 +39,27 @@ export type SplitFileSuggestModalConstructor = new (
   heading?: string
 ) => SuggestModalBase;
 
+export interface SuggestItem {
+  downranked: boolean;
+  file: TFile;
+  match: SearchResult;
+  type: 'file';
+}
+export interface SuggestModalBase extends SuggestModal<SuggestItem> {
+  currentFile: TFile;
+  editor?: Editor;
+
+  fixBacklinks(targetFile: TFile): Promise<void>;
+  getSuggestions(query: string): Promise<SuggestItem[]> | SuggestItem[];
+  mergeFile?(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  onChooseSuggestion(item: SuggestItem, evt: KeyboardEvent | MouseEvent): Promise<void>;
+  renderSuggestion(value: SuggestItem, el: HTMLElement): void;
+  setCurrentFile(file: TFile): void;
+}
+
 type CreateNewMarkdownFileFromLinktextFn = FileManager['createNewMarkdownFileFromLinktext'];
+
 interface Frontmatter {
   title?: string;
 }
@@ -48,19 +69,6 @@ type InsertIntoFileFn = FileManager['insertIntoFile'];
 interface Selection {
   endOffset: number;
   startOffset: number;
-}
-
-interface SuggestModalBase extends SuggestModal<unknown> {
-  currentFile: TFile;
-  editor?: Editor;
-
-  fixBacklinks(targetFile: TFile): Promise<void>;
-  getSuggestions(query: string): Promise<unknown[]> | unknown[];
-  mergeFile?(targetFile: TFile, sourceFile: TFile, position?: 'append' | 'prepend'): Promise<void>;
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
-  renderSuggestion(value: unknown, el: HTMLElement): void;
-  setCurrentFile(file: TFile): void;
 }
 
 export function extendSuggestModal<TConstructor extends Constructor<SuggestModalBase>>(
@@ -104,7 +112,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       });
     }
 
-    public override async onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void> {
+    public override async onChooseSuggestion(item: SuggestItem, evt: KeyboardEvent | MouseEvent): Promise<void> {
       await invokeWithPatchAsync(this.app.fileManager, this.fileManagerPatch, async () => {
         await this.prepareBacklinksToFix();
         await super.onChooseSuggestion(item, evt);

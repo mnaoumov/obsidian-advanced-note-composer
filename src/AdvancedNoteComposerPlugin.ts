@@ -17,18 +17,24 @@ import {
   PluginSettingTab,
   TFile
 } from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import {
   getFile,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { tempRegisterFileAndRun } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import {
+  getCacheSafe,
+  tempRegisterFileAndRun
+} from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { invokeWithPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type {
   MergeFileSuggestModalConstructor,
-  SplitFileSuggestModalConstructor
+  SplitFileSuggestModalConstructor,
+  SuggestItem,
+  SuggestModalBase
 } from './SuggestModal.ts';
 
 import { AdvancedNoteComposerPluginSettings } from './AdvancedNoteComposerPluginSettings.ts';
@@ -79,6 +85,17 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
       name: 'Extract this heading...'
     });
 
+    // eslint-disable-next-line no-magic-numbers
+    const HEADING_LEVELS = [1, 2, 3, 4, 5, 6];
+    for (const headingLevel of HEADING_LEVELS) {
+      this.addCommand({
+        editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean =>
+          this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel),
+        icon: 'lucide-scissors-line-dashed',
+        id: `split-note-by-headings-h${headingLevel.toString()}`,
+        name: `Split note by headings - H${headingLevel.toString()}`
+      });
+    }
     this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
     this.registerEvent(this.app.workspace.on('editor-menu', this.handleEditorMenu.bind(this)));
 
@@ -147,10 +164,33 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     return true;
   }
 
-  private extractHeading(file: TFile, editor: Editor): void {
+  private checkOrExecSplitNoteByHeadingsCommand(checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, headingLevel: number): boolean {
+    const file = ctx.file;
+    if (!file) {
+      return false;
+    }
+
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) {
+      return false;
+    }
+
+    const headings = cache.headings?.filter((heading) => heading.level === headingLevel);
+    if (!headings || headings.length === 0) {
+      return false;
+    }
+
+    if (!checking) {
+      invokeAsyncSafely(() => this.splitNoteByHeadings(file, editor, headingLevel));
+    }
+
+    return true;
+  }
+
+  private extractHeading(file: TFile, editor: Editor): null | SuggestModalBase {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
-      return;
+      return null;
     }
 
     const lineNumber = editor.getCursor().line;
@@ -158,11 +198,11 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
 
     if (!headingInfo) {
       new Notice('Failed to find heading');
-      return;
+      return null;
     }
 
     editor.setSelection(headingInfo.start, headingInfo.end);
-    this.splitFile(file, editor, headingInfo.heading);
+    return this.splitFile(file, editor, headingInfo.heading);
   }
 
   private getAndCheckCorePlugin(): NoteComposerPlugin | null {
@@ -302,15 +342,61 @@ export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerP
     modal.open();
   }
 
-  private splitFile(file: TFile, editor: Editor, heading?: string): void {
+  private splitFile(file: TFile, editor: Editor, heading?: string): null | SuggestModalBase {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
-      return;
+      return null;
     }
 
     const modal = new this.SplitFileSuggestModalConstructor(this.app, editor, corePlugin.instance, heading);
     modal.setCurrentFile(file);
     modal.open();
+    return modal;
+  }
+
+  private async splitNoteByHeadings(file: TFile, editor: Editor, headingLevel: number): Promise<void> {
+    const corePlugin = this.getAndCheckCorePlugin();
+    if (!corePlugin) {
+      return;
+    }
+
+    const dummySuggestItem: SuggestItem = {
+      downranked: false,
+      file,
+      match: {
+        matches: [],
+        score: 0
+      },
+      type: 'file'
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    while (true) {
+      const cache = await getCacheSafe(this.app, file);
+      if (!cache) {
+        break;
+      }
+
+      const heading = (cache.headings ?? []).filter((h) => h.level === headingLevel).first();
+      if (!heading) {
+        break;
+      }
+
+      editor.setCursor(heading.position.start.line);
+      const modal = this.extractHeading(file, editor);
+      if (!modal) {
+        break;
+      }
+      modal.close();
+      modal.inputEl.value = heading.heading;
+      await modal.onChooseSuggestion(
+        dummySuggestItem,
+        new KeyboardEvent('keydown', {
+          ctrlKey: true,
+          key: 'Enter'
+        })
+      );
+    }
   }
 }
 
