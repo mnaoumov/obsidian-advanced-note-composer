@@ -214,7 +214,7 @@ async function createNewMarkdownFileFromLinktext(
   const fixedFilename = fixFilename(filename, plugin);
   const file = await next.call(app.fileManager, fixedFilename, path);
 
-  if (fixedFilename !== filename) {
+  if (file.basename !== filename) {
     if (plugin.settings.shouldAddInvalidTitleToNoteAlias) {
       await addAlias(app, file, filename);
     }
