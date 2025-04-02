@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.4.0
+
+- Add alias if duplicate created
+- Add extract by headings
+
 ## 1.3.0
 
 - Allow include frontmatter
