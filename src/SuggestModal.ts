@@ -24,7 +24,7 @@ import {
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { invokeWithPatchAsync } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 
-import type { AdvancedNoteComposerPlugin } from './AdvancedNoteComposerPlugin.ts';
+import type { Plugin } from './Plugin.ts';
 
 import {
   INVALID_CHARACTERS_REG_EXP,
@@ -72,7 +72,7 @@ interface Selection {
 }
 
 export function extendSuggestModal<TConstructor extends Constructor<SuggestModalBase>>(
-  plugin: AdvancedNoteComposerPlugin,
+  plugin: Plugin,
   OriginalSuggestModal: TConstructor
 ): TConstructor {
   return class PatchedSuggestModal extends OriginalSuggestModal {
@@ -206,7 +206,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
 
 async function createNewMarkdownFileFromLinktext(
   next: CreateNewMarkdownFileFromLinktextFn,
-  plugin: AdvancedNoteComposerPlugin,
+  plugin: Plugin,
   filename: string,
   path: string
 ): Promise<TFile> {
@@ -229,7 +229,7 @@ async function createNewMarkdownFileFromLinktext(
   return file;
 }
 
-function fixFilename(filename: string, plugin: AdvancedNoteComposerPlugin): string {
+function fixFilename(filename: string, plugin: Plugin): string {
   const app = plugin.app;
   if (!plugin.settings.shouldReplaceInvalidTitleCharacters || isValidFilename(app, filename)) {
     return filename;

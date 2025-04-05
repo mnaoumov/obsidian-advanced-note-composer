@@ -37,10 +37,12 @@ import type {
   SuggestModalBase
 } from './SuggestModal.ts';
 
-import { AdvancedNoteComposerPluginSettings } from './AdvancedNoteComposerPluginSettings.ts';
-import { AdvancedNoteComposerPluginSettingsTab } from './AdvancedNoteComposerPluginSettingsTab.ts';
+import { PluginSettings } from './PluginSettings.ts';
+import { PluginSettingsTab } from './PluginSettingsTab.ts';
 import { DummyEditor } from './DummyEditor.ts';
 import { extendSuggestModal } from './SuggestModal.ts';
+import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
+import { PluginSettingsManager } from './PluginSettingsManager.ts';
 
 type GetActiveFileFn = Workspace['getActiveFile'];
 
@@ -48,17 +50,16 @@ type OnEnableFn = NoteComposerPluginInstance['onEnable'];
 
 type OpenFn = Modal['open'];
 
-export class AdvancedNoteComposerPlugin extends PluginBase<AdvancedNoteComposerPluginSettings> {
+export class Plugin extends PluginBase<PluginSettings> {
+  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
+    return new PluginSettingsManager(this);
+  }
   private isModalInitialized = false;
   private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
   private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
 
-  protected override createPluginSettings(data: unknown): AdvancedNoteComposerPluginSettings {
-    return new AdvancedNoteComposerPluginSettings(data);
-  }
-
   protected override createPluginSettingsTab(): null | PluginSettingTab {
-    return new AdvancedNoteComposerPluginSettingsTab(this);
+    return new PluginSettingsTab(this);
   }
 
   protected override onloadComplete(): void {

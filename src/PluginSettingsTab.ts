@@ -1,11 +1,9 @@
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsTabBase';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
 
-import type { AdvancedNoteComposerPlugin } from './AdvancedNoteComposerPlugin.ts';
+import type { Plugin } from './Plugin.ts';
 
-import { INVALID_CHARACTERS_REG_EXP } from './FilenameValidation.ts';
-
-export class AdvancedNoteComposerPluginSettingsTab extends PluginSettingsTabBase<AdvancedNoteComposerPlugin> {
+export class PluginSettingsTab extends PluginSettingsTabBase<Plugin> {
   public override display(): void {
     this.containerEl.empty();
 
@@ -32,14 +30,7 @@ export class AdvancedNoteComposerPluginSettingsTab extends PluginSettingsTabBase
         f.appendText('Leave empty to remove invalid characters.');
       }))
       .addText((text) => {
-        this.bind(text, 'replacement', {
-          // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-          valueValidator: (value): string | void => {
-            if (INVALID_CHARACTERS_REG_EXP.test(value) || value === '/') {
-              return 'Invalid replacement string';
-            }
-          }
-        });
+        this.bind(text, 'replacement');
         text.setDisabled(!this.plugin.settings.shouldReplaceInvalidTitleCharacters);
       });
 
