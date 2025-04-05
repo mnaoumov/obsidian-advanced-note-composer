@@ -5,12 +5,12 @@ import type {
   TAbstractFile,
   Workspace
 } from 'obsidian';
+import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
 import type {
   NoteComposerPlugin,
   NoteComposerPluginInstance
 } from 'obsidian-typings';
 
-import { around } from 'monkey-around';
 import {
   Editor,
   Modal,
@@ -26,7 +26,10 @@ import {
   getCacheSafe,
   tempRegisterFileAndRun
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { invokeWithPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import {
+  invokeWithPatch,
+  registerPatch
+} from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
@@ -37,12 +40,11 @@ import type {
   SuggestModalBase
 } from './SuggestModal.ts';
 
-import { PluginSettings } from './PluginSettings.ts';
-import { PluginSettingsTab } from './PluginSettingsTab.ts';
 import { DummyEditor } from './DummyEditor.ts';
-import { extendSuggestModal } from './SuggestModal.ts';
-import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
+import { PluginSettings } from './PluginSettings.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
+import { PluginSettingsTab } from './PluginSettingsTab.ts';
+import { extendSuggestModal } from './SuggestModal.ts';
 
 type GetActiveFileFn = Workspace['getActiveFile'];
 
@@ -51,15 +53,15 @@ type OnEnableFn = NoteComposerPluginInstance['onEnable'];
 type OpenFn = Modal['open'];
 
 export class Plugin extends PluginBase<PluginSettings> {
-  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
-    return new PluginSettingsManager(this);
-  }
   private isModalInitialized = false;
   private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
   private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
-
   protected override createPluginSettingsTab(): null | PluginSettingTab {
     return new PluginSettingsTab(this);
+  }
+
+  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
+    return new PluginSettingsManager(this);
   }
 
   protected override onloadComplete(): void {
@@ -100,13 +102,13 @@ export class Plugin extends PluginBase<PluginSettings> {
     this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
     this.registerEvent(this.app.workspace.on('editor-menu', this.handleEditorMenu.bind(this)));
 
-    this.register(around(corePlugin.instance, {
+    registerPatch(this, corePlugin.instance, {
       onEnable: (next: OnEnableFn): OnEnableFn => {
         return async () => {
           await this.handleEnableCorePlugin(next);
         };
       }
-    }));
+    });
 
     if (corePlugin.enabled) {
       this.initModals();
