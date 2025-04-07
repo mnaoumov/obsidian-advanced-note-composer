@@ -27,10 +27,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setDesc(createFragment((f) => {
         f.appendText('String to replace invalid characters with.');
         f.createEl('br');
-        f.appendText('Leave empty to remove invalid characters.');
+        f.appendText('Leave blank to remove invalid characters.');
       }))
       .addText((text) => {
-        this.bind(text, 'replacement');
+        this.bind(text, 'replacement', {
+          shouldResetSettingWhenComponentIsEmpty: false
+        });
         text.setDisabled(!this.plugin.settings.shouldReplaceInvalidTitleCharacters);
       });
 
