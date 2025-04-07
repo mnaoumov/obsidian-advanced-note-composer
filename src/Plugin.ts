@@ -5,7 +5,6 @@ import type {
   TAbstractFile,
   Workspace
 } from 'obsidian';
-import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
 import type {
   NoteComposerPlugin,
   NoteComposerPluginInstance
@@ -14,7 +13,6 @@ import type {
 import {
   Editor,
   Modal,
-  PluginSettingTab,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
@@ -33,6 +31,7 @@ import {
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
+import type { PluginTypes } from './PluginTypes.ts';
 import type {
   MergeFileSuggestModalConstructor,
   SplitFileSuggestModalConstructor,
@@ -41,7 +40,6 @@ import type {
 } from './SuggestModal.ts';
 
 import { DummyEditor } from './DummyEditor.ts';
-import { PluginSettings } from './PluginSettings.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
 import { extendSuggestModal } from './SuggestModal.ts';
@@ -52,19 +50,20 @@ type OnEnableFn = NoteComposerPluginInstance['onEnable'];
 
 type OpenFn = Modal['open'];
 
-export class Plugin extends PluginBase<PluginSettings> {
+export class Plugin extends PluginBase<PluginTypes> {
   private isModalInitialized = false;
   private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
   private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
-  protected override createPluginSettingsTab(): null | PluginSettingTab {
+  protected override createPluginSettingsTab(): null | PluginSettingsTab {
     return new PluginSettingsTab(this);
   }
 
-  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
+  protected override createSettingsManager(): PluginSettingsManager {
     return new PluginSettingsManager(this);
   }
 
-  protected override onloadComplete(): void {
+  protected override async onloadImpl(): Promise<void> {
+    await super.onloadImpl();
     const corePlugin = this.getCorePlugin();
 
     this.addCommand({
