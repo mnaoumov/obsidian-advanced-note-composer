@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.4.1
+
+- New template
+
 ## 1.4.0
 
 - Add alias if duplicate created
