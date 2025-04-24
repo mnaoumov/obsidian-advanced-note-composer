@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.4.5
+
+- Improve performance
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/26.15.2
+
 ## 1.4.4
 
 - https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.1
