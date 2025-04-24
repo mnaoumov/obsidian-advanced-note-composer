@@ -13,6 +13,7 @@ import type {
 import {
   Editor,
   Modal,
+  Notice,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
@@ -54,12 +55,13 @@ export class Plugin extends PluginBase<PluginTypes> {
   private isModalInitialized = false;
   private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
   private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
-  protected override createPluginSettingsTab(): null | PluginSettingsTab {
-    return new PluginSettingsTab(this);
-  }
 
   protected override createSettingsManager(): PluginSettingsManager {
     return new PluginSettingsManager(this);
+  }
+
+  protected override createSettingsTab(): null | PluginSettingsTab {
+    return new PluginSettingsTab(this);
   }
 
   protected override async onloadImpl(): Promise<void> {
