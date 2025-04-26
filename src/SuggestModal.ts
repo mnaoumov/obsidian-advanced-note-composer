@@ -23,6 +23,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/Link';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { invokeWithPatchAsync } from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import { trimEnd } from 'obsidian-dev-utils/String';
 
 import type { Plugin } from './Plugin.ts';
 
@@ -211,7 +212,8 @@ async function createNewMarkdownFileFromLinktext(
   path: string
 ): Promise<TFile> {
   const app = plugin.app;
-  const fixedFilename = fixFilename(filename, plugin);
+  filename = trimEnd(filename, '.md');
+  const fixedFilename = `${fixFilename(filename, plugin)}.md`;
   const file = await next.call(app.fileManager, fixedFilename, path);
 
   if (file.basename !== filename) {
