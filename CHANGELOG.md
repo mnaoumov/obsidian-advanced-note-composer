@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.5.0
+
+- Handle titles with period
+- Update libs
+
 ## 1.4.5
 
 - Improve performance
