@@ -8,7 +8,10 @@ import type {
   TFile
 } from 'obsidian';
 import type { Factories } from 'obsidian-dev-utils/obsidian/MonkeyAround';
-import type { NoteComposerPluginInstance } from 'obsidian-typings';
+import type {
+  LinkUpdatesHandler,
+  NoteComposerPluginInstance
+} from 'obsidian-typings';
 import type { Constructor } from 'type-fest';
 
 import {
@@ -66,6 +69,7 @@ interface Frontmatter {
 }
 
 type InsertIntoFileFn = FileManager['insertIntoFile'];
+type RunAsyncLinkUpdateFn = FileManager['runAsyncLinkUpdate'];
 
 interface Selection {
   endOffset: number;
@@ -86,6 +90,9 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
         return (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend') =>
           insertIntoFile(next, this, file, text, insertIntoFilePosition, this.shouldIncludeFrontmatter);
+      },
+      runAsyncLinkUpdate: (): RunAsyncLinkUpdateFn => {
+        return (linkUpdatesHandler) => runAsyncLinkUpdate(linkUpdatesHandler);
       }
     };
 
@@ -298,4 +305,8 @@ function isValidFilename(app: App, filename: string): boolean {
   } catch {
     return false;
   }
+}
+
+async function runAsyncLinkUpdate(linkUpdatesHandler: LinkUpdatesHandler): Promise<void> {
+  await linkUpdatesHandler([]);
 }
