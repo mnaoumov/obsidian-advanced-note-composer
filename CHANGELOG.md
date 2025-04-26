@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.6.0
+
+- Skip update links. As it's already done earlier
+
 ## 1.5.0
 
 - Handle titles with period
