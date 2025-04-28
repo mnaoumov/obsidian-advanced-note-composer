@@ -29,7 +29,7 @@ If those invalid characters were used intentionally, the plugin allows to add th
 
 ## Installation
 
-The plugin is not available in [the official Community Plugins repository](https://obsidian.md/plugins) yet.
+The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=advanced-note-composer).
 
 ### Beta versions
 
