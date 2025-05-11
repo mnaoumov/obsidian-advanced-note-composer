@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.7.0
+
+- Ensure wikilinks are renamed
+- Support links without subpath
+- Update libs
+
 ## 1.6.0
 
 - Skip update links. As it's already done earlier
