@@ -107,8 +107,10 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
           return updateLink({
             app: this.app,
             link,
-            newSourcePathOrFile: this.currentFile,
-            newTargetPathOrFile: targetFile
+            newSourcePathOrFile: targetFile,
+            newTargetPathOrFile: targetFile,
+            oldTargetPathOrFile: this.currentFile,
+            shouldUpdateFilenameAlias: true
           });
         });
       }
