@@ -170,6 +170,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       const selections = await this.getSelections();
       const cache = this.app.metadataCache.getFileCache(this.currentFile) ?? {};
       const subpaths = new Set<string>();
+      subpaths.add('');
 
       for (const heading of cache.headings ?? []) {
         if (!isSelected(heading.position, selections)) {
