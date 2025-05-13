@@ -320,7 +320,7 @@ export class Plugin extends PluginBase<PluginTypes> {
         }, () => {
           mergeFileCommand?.checkCallback?.(false);
           lastModal?.close();
-          this.MergeFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as MergeFileSuggestModalConstructor);
+          this.MergeFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as MergeFileSuggestModalConstructor, true);
 
           const ctx = {
             app: this.app,
@@ -329,7 +329,7 @@ export class Plugin extends PluginBase<PluginTypes> {
           };
           splitFileCommand?.editorCheckCallback?.(false, new DummyEditor(), ctx);
           lastModal?.close();
-          this.SplitFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as SplitFileSuggestModalConstructor);
+          this.SplitFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as SplitFileSuggestModalConstructor, false);
         });
       });
     });

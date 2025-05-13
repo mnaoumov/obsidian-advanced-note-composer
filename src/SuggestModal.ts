@@ -78,7 +78,8 @@ interface Selection {
 
 export function extendSuggestModal<TConstructor extends Constructor<SuggestModalBase>>(
   plugin: Plugin,
-  OriginalSuggestModal: TConstructor
+  OriginalSuggestModal: TConstructor,
+  isMerge: boolean
 ): TConstructor {
   return class PatchedSuggestModal extends OriginalSuggestModal {
     private backlinksToFix = new Map<string, string[]>();
@@ -172,7 +173,9 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       const selections = await this.getSelections();
       const cache = this.app.metadataCache.getFileCache(this.currentFile) ?? {};
       const subpaths = new Set<string>();
-      subpaths.add('');
+      if (isMerge) {
+        subpaths.add('');
+      }
 
       for (const heading of cache.headings ?? []) {
         if (!isSelected(heading.position, selections)) {
