@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.7.1
+
+- Change links only for merges
+- Update libs
+
 ## 1.7.0
 
 - Ensure wikilinks are renamed
