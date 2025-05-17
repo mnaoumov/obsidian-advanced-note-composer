@@ -90,7 +90,15 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
       },
       insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
         return async (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend'): Promise<void> => {
-          await insertIntoFile(next, this, file, text, insertIntoFilePosition, this.shouldIncludeFrontmatter, plugin.settings.shouldOpenNoteAfterMerge && isMerge);
+          await insertIntoFile(
+            next,
+            this,
+            file,
+            text,
+            insertIntoFilePosition,
+            this.shouldIncludeFrontmatter,
+            plugin.settings.shouldOpenNoteAfterMerge && isMerge
+          );
         };
       },
       runAsyncLinkUpdate: (): RunAsyncLinkUpdateFn => {
