@@ -89,8 +89,9 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
         return (filename, path) => createNewMarkdownFileFromLinktext(next, plugin, filename, path);
       },
       insertIntoFile: (next: InsertIntoFileFn): InsertIntoFileFn => {
-        return (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend') =>
-          insertIntoFile(next, this, file, text, insertIntoFilePosition, this.shouldIncludeFrontmatter);
+        return async (file: TFile, text: string, insertIntoFilePosition?: 'append' | 'prepend'): Promise<void> => {
+          await insertIntoFile(next, this, file, text, insertIntoFilePosition, this.shouldIncludeFrontmatter, plugin.settings.shouldOpenNoteAfterMerge && isMerge);
+        };
       },
       runAsyncLinkUpdate: (): RunAsyncLinkUpdateFn => {
         return (linkUpdatesHandler) => runAsyncLinkUpdate(linkUpdatesHandler);
@@ -279,23 +280,25 @@ async function insertIntoFile(
   file: TFile,
   text: string,
   position: 'append' | 'prepend' | undefined,
-  shouldIncludeFrontmatter: boolean
+  shouldIncludeFrontmatter: boolean,
+  shouldOpenNoteAfterMerge: boolean
 ): Promise<void> {
   const app = suggestModal.app;
   const newText = await fixLinks(app, suggestModal.currentFile, file, text);
   await next.call(app.fileManager, file, newText, position);
   await suggestModal.fixBacklinks(file);
-  if (!shouldIncludeFrontmatter) {
-    return;
+  if (shouldIncludeFrontmatter) {
+    const content = await app.vault.read(suggestModal.currentFile);
+    const frontmatterInfo = getFrontMatterInfo(content);
+    if (frontmatterInfo.exists) {
+      const fullFrontmatter = `---\n${frontmatterInfo.frontmatter}\n---`;
+      await insertIntoFile(next, suggestModal, file, fullFrontmatter, position, false, false);
+    }
   }
 
-  const content = await app.vault.read(suggestModal.currentFile);
-  const frontmatterInfo = getFrontMatterInfo(content);
-  if (!frontmatterInfo.exists) {
-    return;
+  if (shouldOpenNoteAfterMerge) {
+    await app.workspace.openLinkText(file.path, '');
   }
-  const fullFrontmatter = `---\n${frontmatterInfo.frontmatter}\n---`;
-  await insertIntoFile(next, suggestModal, file, fullFrontmatter, position, false);
 }
 
 function isSelected(position: Pos, selections: Selection[]): boolean {

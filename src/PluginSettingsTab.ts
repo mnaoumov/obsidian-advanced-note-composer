@@ -50,5 +50,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAddInvalidTitleToFrontmatterTitleKey');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Open note after merge')
+      .setDesc('Whether to open the note after merge.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldOpenNoteAfterMerge');
+      });
   }
 }
