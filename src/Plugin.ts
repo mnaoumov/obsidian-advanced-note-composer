@@ -1,4 +1,5 @@
 import type {
+  EditorPosition,
   MarkdownFileInfo,
   MarkdownView,
   Menu,
@@ -94,10 +95,18 @@ export class Plugin extends PluginBase<PluginTypes> {
     for (const headingLevel of HEADING_LEVELS) {
       this.addCommand({
         editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean =>
-          this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel),
+          this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel, false),
         icon: 'lucide-scissors-line-dashed',
         id: `split-note-by-headings-h${headingLevel.toString()}`,
         name: `Split note by headings - H${headingLevel.toString()}`
+      });
+
+      this.addCommand({
+        editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean =>
+          this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel, true),
+        icon: 'lucide-scissors-line-dashed',
+        id: `split-note-by-headings-content-h${headingLevel.toString()}`,
+        name: `Split note by headings content - H${headingLevel.toString()}`
       });
     }
     this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
@@ -129,7 +138,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
 
     if (!checking) {
-      this.extractHeading(ctx.file, editor);
+      this.extractHeading(ctx.file, editor, false);
     }
 
     return true;
@@ -168,7 +177,13 @@ export class Plugin extends PluginBase<PluginTypes> {
     return true;
   }
 
-  private checkOrExecSplitNoteByHeadingsCommand(checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, headingLevel: number): boolean {
+  private checkOrExecSplitNoteByHeadingsCommand(
+    checking: boolean,
+    editor: Editor,
+    ctx: MarkdownFileInfo | MarkdownView,
+    headingLevel: number,
+    shouldSplitContentOnly: boolean
+  ): boolean {
     const file = ctx.file;
     if (!file) {
       return false;
@@ -185,13 +200,13 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
 
     if (!checking) {
-      invokeAsyncSafely(() => this.splitNoteByHeadings(file, editor, headingLevel));
+      invokeAsyncSafely(() => this.splitNoteByHeadings(file, editor, headingLevel, shouldSplitContentOnly));
     }
 
     return true;
   }
 
-  private extractHeading(file: TFile, editor: Editor): null | SuggestModalBase {
+  private extractHeading(file: TFile, editor: Editor, shouldSplitContentOnly: boolean): null | SuggestModalBase {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
       return null;
@@ -205,7 +220,8 @@ export class Plugin extends PluginBase<PluginTypes> {
       return null;
     }
 
-    editor.setSelection(headingInfo.start, headingInfo.end);
+    const splitStart: EditorPosition = shouldSplitContentOnly ? { ch: 1, line: headingInfo.start.line + 1 } : headingInfo.start;
+    editor.setSelection(splitStart, headingInfo.end);
     return this.splitFile(file, editor, headingInfo.heading);
   }
 
@@ -258,7 +274,7 @@ export class Plugin extends PluginBase<PluginTypes> {
         .setTitle('Advanced extract this heading...')
         .setIcon('lucide-git-branch-plus')
         .onClick(() => {
-          this.extractHeading(file, editor);
+          this.extractHeading(file, editor, false);
         });
     });
   }
@@ -358,7 +374,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     return modal;
   }
 
-  private async splitNoteByHeadings(file: TFile, editor: Editor, headingLevel: number): Promise<void> {
+  private async splitNoteByHeadings(file: TFile, editor: Editor, headingLevel: number, shouldSplitContentOnly: boolean): Promise<void> {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
@@ -374,6 +390,8 @@ export class Plugin extends PluginBase<PluginTypes> {
       type: 'file'
     };
 
+    let headingIndex = 0;
+
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
       const cache = await getCacheSafe(this.app, file);
@@ -381,13 +399,13 @@ export class Plugin extends PluginBase<PluginTypes> {
         break;
       }
 
-      const heading = (cache.headings ?? []).filter((h) => h.level === headingLevel).first();
+      const heading = (cache.headings ?? []).filter((h) => h.level === headingLevel)[headingIndex];
       if (!heading) {
         break;
       }
 
       editor.setCursor(heading.position.start.line);
-      const modal = this.extractHeading(file, editor);
+      const modal = this.extractHeading(file, editor, shouldSplitContentOnly);
       if (!modal) {
         break;
       }
@@ -400,6 +418,10 @@ export class Plugin extends PluginBase<PluginTypes> {
           key: 'Enter'
         })
       );
+
+      if (shouldSplitContentOnly) {
+        headingIndex++;
+      }
     }
   }
 }
