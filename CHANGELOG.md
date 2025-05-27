@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.8.2
+
+- Update libs
+
 ## 1.8.1
 
 - Update libs
