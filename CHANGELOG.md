@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.9.1
+
+- Update libs
+
 ## 1.9.0
 
 - Add command to split heading content
