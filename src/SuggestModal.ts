@@ -117,7 +117,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
           return updateLink({
             app: this.app,
             link,
-            newSourcePathOrFile: targetFile,
+            newSourcePathOrFile: backlinkPath,
             newTargetPathOrFile: targetFile,
             oldTargetPathOrFile: this.currentFile,
             shouldUpdateFilenameAlias: true
