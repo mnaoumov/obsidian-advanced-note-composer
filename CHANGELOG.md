@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.9.2
+
+- Fix link source (#10)
+- Update libs
+
 ## 1.9.1
 
 - Update libs
