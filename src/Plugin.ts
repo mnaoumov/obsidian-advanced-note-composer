@@ -24,7 +24,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/FileSystem';
 import {
   getCacheSafe,
-  tempRegisterFileAndRun
+  tempRegisterFilesAndRun
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   invokeWithPatch,
@@ -320,7 +320,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     const splitFileCommand = this.app.commands.findCommand('note-composer:split-file');
 
     const dummyFile = getFile(this.app, 'DUMMY.md', true);
-    tempRegisterFileAndRun(this.app, dummyFile, () => {
+    tempRegisterFilesAndRun(this.app, [dummyFile], () => {
       invokeWithPatch(this.app.workspace, {
         getActiveFile: (): GetActiveFileFn => (): TFile => dummyFile
       }, () => {

@@ -120,7 +120,7 @@ export function extendSuggestModal<TConstructor extends Constructor<SuggestModal
             newSourcePathOrFile: backlinkPath,
             newTargetPathOrFile: targetFile,
             oldTargetPathOrFile: this.currentFile,
-            shouldUpdateFilenameAlias: true
+            shouldUpdateFileNameAlias: true
           });
         });
       }
