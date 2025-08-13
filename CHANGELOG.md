@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.9.4
+
+- Rerelease
+
 ## 1.9.3
 
 - Update libs
