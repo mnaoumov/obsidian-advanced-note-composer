@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.9.6
+
+- Update libs
+
 ## 1.9.5
 
 - Update libs
