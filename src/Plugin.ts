@@ -97,16 +97,16 @@ export class Plugin extends PluginBase<PluginTypes> {
         editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean =>
           this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel, false),
         icon: 'lucide-scissors-line-dashed',
-        id: `split-note-by-headings-h${headingLevel.toString()}`,
-        name: `Split note by headings - H${headingLevel.toString()}`
+        id: `split-note-by-headings-h${String(headingLevel)}`,
+        name: `Split note by headings - H${String(headingLevel)}`
       });
 
       this.addCommand({
         editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean =>
           this.checkOrExecSplitNoteByHeadingsCommand(checking, editor, ctx, headingLevel, true),
         icon: 'lucide-scissors-line-dashed',
-        id: `split-note-by-headings-content-h${headingLevel.toString()}`,
-        name: `Split note by headings content - H${headingLevel.toString()}`
+        id: `split-note-by-headings-content-h${String(headingLevel)}`,
+        name: `Split note by headings content - H${String(headingLevel)}`
       });
     }
     this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
