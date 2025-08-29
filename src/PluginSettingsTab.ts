@@ -9,7 +9,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
     this.containerEl.empty();
 
     new SettingEx(this.containerEl)
-      .setName('Replace invalid characters')
+      .setName('Should replace invalid characters')
       .setDesc(createFragment((f) => {
         f.appendText('Whether to replace invalid characters in the title.');
         f.createEl('br');
@@ -38,21 +38,21 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       });
 
     new SettingEx(this.containerEl)
-      .setName('Add invalid title to note aliases')
+      .setName('Should add invalid title to note aliases')
       .setDesc('Whether to add invalid title to the note alias.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAddInvalidTitleToNoteAlias');
       });
 
     new SettingEx(this.containerEl)
-      .setName('Add invalid title to frontmatter title key')
+      .setName('Should add invalid title to frontmatter title key')
       .setDesc('Whether to add invalid title to the frontmatter title key.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAddInvalidTitleToFrontmatterTitleKey');
       });
 
     new SettingEx(this.containerEl)
-      .setName('Open note after merge')
+      .setName('Should open note after merge')
       .setDesc('Whether to open the note after merge.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldOpenNoteAfterMerge');
