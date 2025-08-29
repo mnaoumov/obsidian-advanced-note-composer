@@ -20,6 +20,7 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { noop } from 'obsidian-dev-utils/Function';
 import { basename } from 'obsidian-dev-utils/Path';
 import { trimEnd } from 'obsidian-dev-utils/String';
 
@@ -492,7 +493,9 @@ function animateElement(element: HTMLElement, animation: Animation, onComplete?:
 }
 
 function forceReflow(): void {
-  const _ = document.body.offsetHeight;
+  if (document.body.offsetHeight) {
+    noop();
+  }
 }
 
 function stopAnimation(element: HTMLElement, skipComplete = false): void {
