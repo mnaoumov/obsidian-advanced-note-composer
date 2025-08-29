@@ -14,10 +14,13 @@
     "downranked",
     "frontmatter",
     "Jsons",
+    "Keymap",
     "Linktext",
     "mnaoumov",
     "Naumov",
+    "Promisable",
     "tsbuildinfo",
+    "webviewer",
     "wikilinks"
   ],
   "ignoreWords": [],

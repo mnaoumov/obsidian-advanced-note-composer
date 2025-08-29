@@ -3,60 +3,32 @@ import type {
   MarkdownFileInfo,
   MarkdownView,
   Menu,
-  TAbstractFile,
-  Workspace
+  TAbstractFile
 } from 'obsidian';
-import type {
-  NoteComposerPlugin,
-  NoteComposerPluginInstance
-} from 'obsidian-typings';
+import type { NoteComposerPlugin } from 'obsidian-typings';
 
 import {
   Editor,
-  Modal,
   Notice,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import {
-  getFile,
-  isMarkdownFile
-} from 'obsidian-dev-utils/obsidian/FileSystem';
-import {
-  getCacheSafe,
-  tempRegisterFilesAndRun
-} from 'obsidian-dev-utils/obsidian/MetadataCache';
-import {
-  invokeWithPatch,
-  registerPatch
-} from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type { PluginTypes } from './PluginTypes.ts';
-import type {
-  MergeFileSuggestModalConstructor,
-  SplitFileSuggestModalConstructor,
-  SuggestItem,
-  SuggestModalBase
-} from './SuggestModal.ts';
 
-import { DummyEditor } from './DummyEditor.ts';
+import { MergeFileSuggestModal } from './MergeFileModal.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
-import { extendSuggestModal } from './SuggestModal.ts';
-
-type GetActiveFileFn = Workspace['getActiveFile'];
-
-type OnEnableFn = NoteComposerPluginInstance['onEnable'];
-
-type OpenFn = Modal['open'];
+import {
+  extractHeadingFromLine,
+  SplitFileSuggestModal
+} from './SplitFileModal.ts';
 
 export class Plugin extends PluginBase<PluginTypes> {
-  private isModalInitialized = false;
-  private MergeFileSuggestModalConstructor!: MergeFileSuggestModalConstructor;
-  private SplitFileSuggestModalConstructor!: SplitFileSuggestModalConstructor;
-
   protected override createSettingsManager(): PluginSettingsManager {
     return new PluginSettingsManager(this);
   }
@@ -67,7 +39,6 @@ export class Plugin extends PluginBase<PluginTypes> {
 
   protected override async onloadImpl(): Promise<void> {
     await super.onloadImpl();
-    const corePlugin = this.getCorePlugin();
 
     this.addCommand({
       checkCallback: this.checkOrExecMergeFileCommand.bind(this),
@@ -111,22 +82,11 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
     this.registerEvent(this.app.workspace.on('file-menu', this.handleFileMenu.bind(this)));
     this.registerEvent(this.app.workspace.on('editor-menu', this.handleEditorMenu.bind(this)));
-
-    registerPatch(this, corePlugin.instance, {
-      onEnable: (next: OnEnableFn): OnEnableFn => {
-        return async () => {
-          await this.handleEnableCorePlugin(next);
-        };
-      }
-    });
-
-    if (corePlugin.enabled) {
-      this.initModals();
-    }
   }
 
   private checkOrExecExtractHeadingCommand(checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean {
-    if (!ctx.file) {
+    const sourceFile = ctx.file;
+    if (!sourceFile) {
       return false;
     }
 
@@ -138,31 +98,32 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
 
     if (!checking) {
-      this.extractHeading(ctx.file, editor, false);
+      invokeAsyncSafely(() => this.extractHeading(sourceFile, editor, false));
     }
 
     return true;
   }
 
   private checkOrExecMergeFileCommand(checking: boolean): boolean {
-    const file = this.app.workspace.getActiveFile();
-    if (!file) {
+    const sourceFile = this.app.workspace.getActiveFile();
+    if (!sourceFile) {
       return false;
     }
 
-    if (!isMarkdownFile(this.app, file)) {
+    if (!isMarkdownFile(this.app, sourceFile)) {
       return false;
     }
 
     if (!checking) {
-      this.mergeFile(file);
+      this.mergeFile(sourceFile);
     }
 
     return true;
   }
 
   private checkOrExecSplitFileCommand(checking: boolean, editor: Editor, ctx: MarkdownFileInfo | MarkdownView): boolean {
-    if (!ctx.file) {
+    const sourceFile = ctx.file;
+    if (!sourceFile) {
       return false;
     }
 
@@ -171,7 +132,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
 
     if (!checking && this.getAndCheckCorePlugin()) {
-      this.splitFile(ctx.file, editor);
+      invokeAsyncSafely(() => this.splitFile(sourceFile, editor));
     }
 
     return true;
@@ -206,23 +167,23 @@ export class Plugin extends PluginBase<PluginTypes> {
     return true;
   }
 
-  private extractHeading(file: TFile, editor: Editor, shouldSplitContentOnly: boolean): null | SuggestModalBase {
+  private async extractHeading(sourceFile: TFile, editor: Editor, shouldSplitContentOnly: boolean, shouldShowModal = true): Promise<void> {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
-      return null;
+      return;
     }
 
     const lineNumber = editor.getCursor().line;
-    const headingInfo = corePlugin.instance.getSelectionUnderHeading(file, editor, lineNumber);
+    const headingInfo = corePlugin.instance.getSelectionUnderHeading(sourceFile, editor, lineNumber);
 
     if (!headingInfo) {
       new Notice('Failed to find heading');
-      return null;
+      return;
     }
 
     const splitStart: EditorPosition = shouldSplitContentOnly ? { ch: 1, line: headingInfo.start.line + 1 } : headingInfo.start;
     editor.setSelection(splitStart, headingInfo.end);
-    return this.splitFile(file, editor, headingInfo.heading);
+    await this.splitFile(sourceFile, editor, headingInfo.heading, shouldShowModal);
   }
 
   private getAndCheckCorePlugin(): NoteComposerPlugin | null {
@@ -243,9 +204,9 @@ export class Plugin extends PluginBase<PluginTypes> {
   }
 
   private handleEditorMenu(menu: Menu, editor: Editor, info: MarkdownFileInfo | MarkdownView): void {
-    const file = info.file;
+    const sourceFile = info.file;
 
-    if (!file) {
+    if (!sourceFile) {
       return;
     }
 
@@ -256,7 +217,7 @@ export class Plugin extends PluginBase<PluginTypes> {
           .setIcon('lucide-git-branch-plus')
           .setSection('selection')
           .onClick(() => {
-            this.splitFile(file, editor);
+            invokeAsyncSafely(() => this.splitFile(sourceFile, editor));
           });
       });
     }
@@ -274,15 +235,9 @@ export class Plugin extends PluginBase<PluginTypes> {
         .setTitle('Advanced extract this heading...')
         .setIcon('lucide-git-branch-plus')
         .onClick(() => {
-          this.extractHeading(file, editor, false);
+          invokeAsyncSafely(() => this.extractHeading(sourceFile, editor, false));
         });
     });
-  }
-
-  private async handleEnableCorePlugin(next: OnEnableFn): Promise<void> {
-    const corePlugin = this.getCorePlugin();
-    await next(this.app, corePlugin);
-    this.initModals();
   }
 
   private handleFileMenu(menu: Menu, file: TAbstractFile, source: string): void {
@@ -309,92 +264,41 @@ export class Plugin extends PluginBase<PluginTypes> {
     });
   }
 
-  private initModals(): void {
-    if (this.isModalInitialized) {
-      return;
-    }
-
-    this.isModalInitialized = true;
-
-    const mergeFileCommand = this.app.commands.findCommand('note-composer:merge-file');
-    const splitFileCommand = this.app.commands.findCommand('note-composer:split-file');
-
-    const dummyFile = getFile(this.app, 'DUMMY.md', true);
-    tempRegisterFilesAndRun(this.app, [dummyFile], () => {
-      invokeWithPatch(this.app.workspace, {
-        getActiveFile: (): GetActiveFileFn => (): TFile => dummyFile
-      }, () => {
-        let lastModal: Modal | null = null;
-        invokeWithPatch(Modal.prototype, {
-          open: (next: OpenFn): OpenFn => {
-            return function patchedOpen(this: Modal) {
-              // eslint-disable-next-line consistent-this, @typescript-eslint/no-this-alias
-              lastModal = this;
-              next.call(this);
-            };
-          }
-        }, () => {
-          mergeFileCommand?.checkCallback?.(false);
-          lastModal?.close();
-          this.MergeFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as MergeFileSuggestModalConstructor, true);
-
-          const ctx = {
-            app: this.app,
-            file: dummyFile,
-            hoverPopover: null
-          };
-          splitFileCommand?.editorCheckCallback?.(false, new DummyEditor(), ctx);
-          lastModal?.close();
-          this.SplitFileSuggestModalConstructor = extendSuggestModal(this, lastModal?.constructor as SplitFileSuggestModalConstructor, false);
-        });
-      });
-    });
-  }
-
-  private mergeFile(file: TFile): void {
+  private mergeFile(sourceFile: TFile): void {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
     }
 
-    const modal = new this.MergeFileSuggestModalConstructor(this.app, corePlugin.instance);
-    modal.setCurrentFile(file);
+    const modal = new MergeFileSuggestModal(this.app, corePlugin.instance, sourceFile);
     modal.open();
   }
 
-  private splitFile(file: TFile, editor: Editor, heading?: string): null | SuggestModalBase {
-    const corePlugin = this.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return null;
-    }
-
-    const modal = new this.SplitFileSuggestModalConstructor(this.app, editor, corePlugin.instance, heading);
-    modal.setCurrentFile(file);
-    modal.open();
-    return modal;
-  }
-
-  private async splitNoteByHeadings(file: TFile, editor: Editor, headingLevel: number, shouldSplitContentOnly: boolean): Promise<void> {
+  private async splitFile(sourceFile: TFile, editor: Editor, heading?: string, shouldShowModal = true): Promise<void> {
     const corePlugin = this.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
     }
 
-    const dummySuggestItem: SuggestItem = {
-      downranked: false,
-      file,
-      match: {
-        matches: [],
-        score: 0
-      },
-      type: 'file'
-    };
+    const modal = new SplitFileSuggestModal(this.app, corePlugin.instance, sourceFile, editor, heading);
+    if (shouldShowModal) {
+      modal.open();
+    } else {
+      await modal.invokeWithoutUI();
+    }
+  }
+
+  private async splitNoteByHeadings(sourceFile: TFile, editor: Editor, headingLevel: number, shouldSplitContentOnly: boolean): Promise<void> {
+    const corePlugin = this.getAndCheckCorePlugin();
+    if (!corePlugin) {
+      return;
+    }
 
     let headingIndex = 0;
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
-      const cache = await getCacheSafe(this.app, file);
+      const cache = await getCacheSafe(this.app, sourceFile);
       if (!cache) {
         break;
       }
@@ -405,28 +309,11 @@ export class Plugin extends PluginBase<PluginTypes> {
       }
 
       editor.setCursor(heading.position.start.line);
-      const modal = this.extractHeading(file, editor, shouldSplitContentOnly);
-      if (!modal) {
-        break;
-      }
-      modal.close();
-      modal.inputEl.value = heading.heading;
-      await modal.onChooseSuggestion(
-        dummySuggestItem,
-        new KeyboardEvent('keydown', {
-          ctrlKey: true,
-          key: 'Enter'
-        })
-      );
+      await this.extractHeading(sourceFile, editor, shouldSplitContentOnly, false);
 
       if (shouldSplitContentOnly) {
         headingIndex++;
       }
     }
   }
-}
-
-function extractHeadingFromLine(line: string): null | string {
-  const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
-  return match?.groups?.['Heading'] ?? null;
 }

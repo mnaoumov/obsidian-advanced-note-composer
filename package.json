@@ -26,7 +26,8 @@
     "jiti": "latest",
     "obsidian": "latest",
     "obsidian-dev-utils": "latest",
-    "obsidian-typings": "obsidian-public-latest"
+    "obsidian-typings": "obsidian-public-latest",
+    "type-fest": "^4.41.0"
   },
   "overrides": {
     "@antfu/utils": "9.2.0",
