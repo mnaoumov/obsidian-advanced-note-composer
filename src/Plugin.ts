@@ -280,7 +280,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       return;
     }
 
-    const modal = new SplitFileSuggestModal(this.app, corePlugin.instance, sourceFile, editor, heading);
+    const modal = new SplitFileSuggestModal(this, corePlugin.instance, sourceFile, editor, heading);
     if (shouldShowModal) {
       modal.open();
     } else {

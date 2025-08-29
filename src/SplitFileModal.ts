@@ -1,7 +1,11 @@
 import type { NoteComposerPluginInstance } from 'obsidian-typings';
+import {
+  INVALID_CHARACTERS_REG_EXP,
+  isValidFilename,
+  TRAILING_DOTS_OR_SPACES_REG_EXP
+} from './FilenameValidation.ts';
 
 import {
-  App,
   Editor,
   Keymap,
   Platform,
@@ -11,17 +15,24 @@ import {
 import type { Item } from './SuggestModalBase.ts';
 
 import { SuggestModalBase } from './SuggestModalBase.ts';
+import type { Plugin } from './Plugin.ts';
+import { trimEnd } from 'obsidian-dev-utils/String';
+import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
+
+interface Frontmatter {
+  title?: string;
+}
 
 export class SplitFileSuggestModal extends SuggestModalBase {
   private readonly defaultValue: string;
   public constructor(
-    app: App,
+    private readonly plugin: Plugin,
     private readonly corePluginInstance: NoteComposerPluginInstance,
     private readonly sourceFile: TFile,
     private readonly editor: Editor,
     heading?: string
   ) {
-    super(app);
+    super(plugin.app);
 
     this.defaultValue = '';
     this.allowCreateNewFile = true;
@@ -76,17 +87,17 @@ export class SplitFileSuggestModal extends SuggestModalBase {
 
     if (!Keymap.isModifier(evt, 'Mod') && item) {
       if (item.type === 'unresolved') {
-        targetFile = await this.app.fileManager.createNewMarkdownFileFromLinktext(item.linktext ?? '', this.sourceFile.path);
+        targetFile = await this.createNewMarkdownFileFromLinktext(item.linktext ?? '', this.sourceFile.path);
       } else if (item.type === 'file' || item.type === 'alias') {
         if (!item.file) {
           throw new Error('File not found');
         }
         targetFile = item.file;
       } else {
-        targetFile = await this.app.fileManager.createNewMarkdownFileFromLinktext(this.inputEl.value, this.sourceFile.path);
+        targetFile = await this.createNewMarkdownFileFromLinktext(this.inputEl.value, this.sourceFile.path);
       }
     } else {
-      targetFile = await this.app.fileManager.createNewMarkdownFileFromLinktext(this.inputEl.value, this.sourceFile.path);
+      targetFile = await this.createNewMarkdownFileFromLinktext(this.inputEl.value, this.sourceFile.path);
     }
 
     const processedContent = await this.corePluginInstance.applyTemplate(this.editor.getSelection(), this.sourceFile.basename, targetFile.basename);
@@ -103,6 +114,40 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     } else {
       this.editor.replaceSelection(markdownLink);
     }
+  }
+
+  private async createNewMarkdownFileFromLinktext(fileName: string, path: string): Promise<TFile> {
+    fileName = trimEnd(fileName, '.md');
+    const fixedFilename = `${this.fixFilename(fileName)}.md`;
+    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(fixedFilename, path)
+
+    if (file.basename !== fileName) {
+      if (this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
+        await addAlias(this.app, file, fileName);
+      }
+
+      if (this.plugin.settings.shouldAddInvalidTitleToFrontmatterTitleKey) {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
+          frontmatter.title = fileName;
+        });
+      }
+    }
+    return file;
+  }
+
+  private fixFilename(fileName: string): string {
+    if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters || isValidFilename(this.app, fileName)) {
+      return fileName;
+    }
+
+    fileName = fileName.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
+    fileName = fileName.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
+    if (fileName.startsWith('.')) {
+      fileName = this.plugin.settings.replacement + fileName.slice(1);
+    }
+
+    fileName ||= 'Untitled';
+    return fileName;
   }
 }
 
