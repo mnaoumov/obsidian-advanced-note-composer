@@ -41,6 +41,7 @@ export class AdvancedNoteComposer {
   public readonly app: App;
   public mode: 'append' | 'prepend' = 'append';
   public shouldIncludeFrontmatter: boolean;
+  public shouldTreatTitleAsPath = true;
   public get targetFile(): TFile {
     if (!this._targetFile) {
       throw new Error('Target file not set');
@@ -59,18 +60,7 @@ export class AdvancedNoteComposer {
   ) {
     this.app = plugin.app;
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
-  }
-
-  public initHeading(): void {
-    if (this.heading) {
-      return;
-    }
-
-    const selectedLines = this.editor?.getSelection().split('\n') ?? [];
-    if (selectedLines.length > 0) {
-      const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
-      this.heading = extractedHeading ?? '';
-    }
+    this.initHeading();
   }
 
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
@@ -158,6 +148,10 @@ export class AdvancedNoteComposer {
   }
 
   private fixFileName(fileName: string): string {
+    if (!this.shouldTreatTitleAsPath) {
+      fileName = fileName.replaceAll('/', '\\');
+    }
+
     if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters || isValidFilename(this.app, fileName)) {
       return fileName;
     }
@@ -203,6 +197,20 @@ export class AdvancedNoteComposer {
       endOffset: content.length,
       startOffset: 0
     }];
+  }
+
+  private initHeading(): void {
+    if (!this.heading) {
+      const selectedLines = this.editor?.getSelection().split('\n') ?? [];
+      if (selectedLines.length > 0) {
+        const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
+        this.heading = extractedHeading ?? '';
+      }
+    }
+
+    if (this.heading) {
+      this.shouldTreatTitleAsPath = false;
+    }
   }
 
   private async insertIntoFile(text: string): Promise<void> {
