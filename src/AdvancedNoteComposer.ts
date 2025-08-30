@@ -120,8 +120,8 @@ export class AdvancedNoteComposer {
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd(fileName, '.md');
-    const fixedFilename = `${this.fixFilename(fileName)}.md`;
-    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(fixedFilename, this.sourceFile.path);
+    const fixedFileName = `${this.fixFileName(fileName)}.md`;
+    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(fixedFileName, this.sourceFile.path);
 
     if (file.basename !== fileName) {
       if (this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
@@ -157,7 +157,7 @@ export class AdvancedNoteComposer {
     }
   }
 
-  private fixFilename(fileName: string): string {
+  private fixFileName(fileName: string): string {
     if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters || isValidFilename(this.app, fileName)) {
       return fileName;
     }

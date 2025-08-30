@@ -9,14 +9,11 @@ import type { Item } from './SuggestModalBase.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 
 export class SplitFileSuggestModal extends SuggestModalBase {
-  private readonly defaultValue: string;
-
   public constructor(private readonly composer: AdvancedNoteComposer) {
     super(composer.app);
 
     this.composer.action = 'split';
 
-    this.defaultValue = '';
     this.allowCreateNewFile = true;
     this.shouldShowUnresolved = true;
     this.shouldShowNonImageAttachments = false;
@@ -24,7 +21,6 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     this.shouldShowNonAttachments = false;
 
     this.composer.initHeading();
-    this.defaultValue = this.composer.heading;
 
     this.setPlaceholder(window.i18next.t('plugins.note-composer.prompt-select-file-to-merge'));
     const INCLUDE_EXCLUDE_FRONTMATTER_INSTRUCTION = 'Include/exclude frontmatter';
@@ -68,7 +64,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
-    this.inputEl.value = this.defaultValue;
+    this.inputEl.value = this.composer.heading;
     this.updateSuggestions();
   }
 
