@@ -14,8 +14,14 @@ import {
   updateLink,
   updateLinksInContent
 } from 'obsidian-dev-utils/obsidian/Link';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { trimEnd } from 'obsidian-dev-utils/String';
+import {
+  getBacklinksForFileSafe,
+  getCacheSafe
+} from 'obsidian-dev-utils/obsidian/MetadataCache';
+import {
+  replaceAll,
+  trimEnd
+} from 'obsidian-dev-utils/String';
 
 import type { Plugin } from './Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
@@ -166,10 +172,47 @@ export class AdvancedNoteComposer {
     return fileName;
   }
 
-  private async fixLinks(content: string): Promise<string> {
+  private async fixFootnotes(targetContentToInsert: string): Promise<string> {
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+    const sourceContent = await this.app.vault.cachedRead(this.sourceFile);
+    const targetContent = await this.app.vault.cachedRead(this.targetFile);
+
+    const FOOTNOTE_ID_REG_EXP = /\[\^(?<FootnoteId>[^\s\]]+?)\]/g;
+    const existingTargetIds = new Set<string>(Array.from(targetContent.matchAll(FOOTNOTE_ID_REG_EXP)).map((match) => match.groups?.['FootnoteId'] ?? ''));
+
+    const selection = await this.getSelections();
+
+    const sourceFootnoteIdsToCopy = new Set<string>();
+    const targetFootnoteIdRenameMap = new Map<string, string>();
+
+    for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
+      if (this.isSelected(sourceFootnoteRef.position, selection)) {
+        this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
+        sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
+      }
+    }
+
+    for (const sourceFootnote of sourceCache?.footnotes ?? []) {
+      if (this.isSelected(sourceFootnote.position, selection)) {
+        this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
+      } else if (sourceFootnoteIdsToCopy.has(sourceFootnote.id)) {
+        const sourceFootnoteContent = sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset);
+        targetContentToInsert += '\n';
+        targetContentToInsert += sourceFootnoteContent;
+      }
+    }
+
+    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, (_, footnoteId) => {
+      return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
+    });
+
+    return targetContentToInsert;
+  }
+
+  private async fixLinks(targetContentToInsert: string): Promise<string> {
     return await updateLinksInContent({
       app: this.app,
-      content,
+      content: targetContentToInsert,
       newSourcePathOrFile: this.targetFile,
       oldSourcePathOrFile: this.sourceFile
     });
@@ -214,9 +257,10 @@ export class AdvancedNoteComposer {
   }
 
   private async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
-    const newTargetContentToInsert = await this.fixLinks(targetContentToInsert);
+    targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
+    targetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
-    await this.app.fileManager.insertIntoFile(this.targetFile, newTargetContentToInsert, this.mode);
+    await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
     await this.fixBacklinks(backlinksToFix);
     if (!this.shouldIncludeFrontmatter) {
       return;
@@ -330,6 +374,27 @@ export class AdvancedNoteComposer {
     }
 
     this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
+  }
+
+  private updateTargetFootnoteIdRenameMap(sourceFootnoteId: string, targetFootnoteIdRenameMap: Map<string, string>, existingTargetIds: Set<string>): void {
+    if (targetFootnoteIdRenameMap.has(sourceFootnoteId)) {
+      return;
+    }
+
+    if (!existingTargetIds.has(sourceFootnoteId)) {
+      existingTargetIds.add(sourceFootnoteId);
+      return;
+    }
+
+    let suffixNum = 1;
+    let newTargetFootnoteId = sourceFootnoteId;
+    while (existingTargetIds.has(newTargetFootnoteId)) {
+      newTargetFootnoteId = `${sourceFootnoteId}-${String(suffixNum)}`;
+      suffixNum++;
+    }
+
+    targetFootnoteIdRenameMap.set(sourceFootnoteId, newTargetFootnoteId);
+    existingTargetIds.add(newTargetFootnoteId);
   }
 }
 
