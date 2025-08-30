@@ -1,12 +1,16 @@
 # CHANGELOG
 
+## 1.10.0
+
+- Fix footnotes (#12)
+
 ## 1.9.6
 
-- Update libs
+- Minor changes
 
 ## 1.9.5
 
-- Update libs
+- Minor changes
 
 ## 1.9.4
 
@@ -14,16 +18,15 @@
 
 ## 1.9.3
 
-- Update libs
+- Minor changes
 
 ## 1.9.2
 
 - Fix link source (#10)
-- Update libs
 
 ## 1.9.1
 
-- Update libs
+- Minor changes
 
 ## 1.9.0
 
@@ -31,27 +34,24 @@
 
 ## 1.8.2
 
-- Update libs
+- Minor changes
 
 ## 1.8.1
 
-- Update libs
+- Minor changes
 
 ## 1.8.0
 
 - shouldOpenNoteAfterMerge
-- Update libs
 
 ## 1.7.1
 
 - Change links only for merges
-- Update libs
 
 ## 1.7.0
 
 - Ensure wikilinks are renamed
 - Support links without subpath
-- Update libs
 
 ## 1.6.0
 
@@ -60,24 +60,22 @@
 ## 1.5.0
 
 - Handle titles with period
-- Update libs
 
 ## 1.4.5
 
 - Improve performance
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/26.15.2
 
 ## 1.4.4
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.1
+- Minor changes
 
 ## 1.4.3
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.0
+- Minor changes
 
 ## 1.4.2
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.0.1
+- Minor changes
 
 ## 1.4.1
 
@@ -95,7 +93,6 @@
 ## 1.2.0
 
 - Update links in memory
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/20.2.1
 
 ## 1.1.0
 
