@@ -72,7 +72,7 @@ export class AdvancedNoteComposer {
     const sourceContent = await this.app.vault.read(this.sourceFile);
     const processedContent = await this.corePluginInstance.applyTemplate(sourceContent, this.sourceFile.basename, this.targetFile.basename);
 
-    await this.insertIntoFile(processedContent);
+    await this.insertIntoTargetFile(processedContent);
     await this.app.fileManager.trashFile(this.sourceFile);
 
     if (this.plugin.settings.shouldOpenNoteAfterMerge) {
@@ -94,7 +94,7 @@ export class AdvancedNoteComposer {
     }
 
     const processedContent = await this.corePluginInstance.applyTemplate(this.editor?.getSelection() ?? '', this.sourceFile.basename, this.targetFile.basename);
-    await this.insertIntoFile(processedContent);
+    await this.insertIntoTargetFile(processedContent);
 
     const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
     const replacementText = this.corePluginInstance.options.replacementText;
@@ -213,19 +213,19 @@ export class AdvancedNoteComposer {
     }
   }
 
-  private async insertIntoFile(text: string): Promise<void> {
-    const newText = await this.fixLinks(text);
+  private async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
+    const newTargetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
-    await this.app.fileManager.insertIntoFile(this.targetFile, newText, this.mode);
+    await this.app.fileManager.insertIntoFile(this.targetFile, newTargetContentToInsert, this.mode);
     await this.fixBacklinks(backlinksToFix);
     if (!this.shouldIncludeFrontmatter) {
       return;
     }
-    const content = await this.app.vault.read(this.sourceFile);
-    const frontmatterInfo = getFrontMatterInfo(content);
-    if (frontmatterInfo.exists) {
-      const fullFrontmatter = `---\n${frontmatterInfo.frontmatter}\n---`;
-      await this.app.fileManager.insertIntoFile(this.targetFile, fullFrontmatter);
+    const sourceContent = await this.app.vault.read(this.sourceFile);
+    const sourceFrontmatterInfo = getFrontMatterInfo(sourceContent);
+    if (sourceFrontmatterInfo.exists) {
+      const fullSourceFrontmatter = `---\n${sourceFrontmatterInfo.frontmatter}\n---`;
+      await this.app.fileManager.insertIntoFile(this.targetFile, fullSourceFrontmatter);
     }
   }
 
