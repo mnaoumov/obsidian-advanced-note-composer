@@ -20,13 +20,14 @@ import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type { PluginTypes } from './PluginTypes.ts';
 
+import {
+  AdvancedNoteComposer,
+  extractHeadingFromLine
+} from './AdvancedNoteComposer.ts';
 import { MergeFileSuggestModal } from './MergeFileModal.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
-import {
-  extractHeadingFromLine,
-  SplitFileSuggestModal
-} from './SplitFileModal.ts';
+import { SplitFileSuggestModal } from './SplitFileModal.ts';
 
 export class Plugin extends PluginBase<PluginTypes> {
   protected override createSettingsManager(): PluginSettingsManager {
@@ -270,7 +271,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       return;
     }
 
-    const modal = new MergeFileSuggestModal(this.app, corePlugin.instance, sourceFile);
+    const modal = new MergeFileSuggestModal(new AdvancedNoteComposer(this, corePlugin.instance, sourceFile));
     modal.open();
   }
 
@@ -280,11 +281,12 @@ export class Plugin extends PluginBase<PluginTypes> {
       return;
     }
 
-    const modal = new SplitFileSuggestModal(this, corePlugin.instance, sourceFile, editor, heading);
+    const composer = new AdvancedNoteComposer(this, corePlugin.instance, sourceFile, editor, heading);
     if (shouldShowModal) {
+      const modal = new SplitFileSuggestModal(composer);
       modal.open();
     } else {
-      await modal.invokeWithoutUI();
+      await composer.splitFile();
     }
   }
 

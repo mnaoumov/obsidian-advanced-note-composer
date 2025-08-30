@@ -1,20 +1,21 @@
-import type { NoteComposerPluginInstance } from 'obsidian-typings';
-
 import {
-  App,
   Keymap,
-  Platform,
-  TFile
+  Platform
 } from 'obsidian';
 
+import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 
 export class MergeFileSuggestModal extends SuggestModalBase {
-  public constructor(app: App, private readonly corePluginInstance: NoteComposerPluginInstance, private readonly sourceFile: TFile) {
-    super(app);
+  private doNotAskAgain = false;
+
+  public constructor(private readonly composer: AdvancedNoteComposer) {
+    super(composer.app);
+
+    this.composer.action = 'merge';
 
     this.emptyStateText = window.i18next.t('plugins.note-composer.label-no-files');
     this.shouldShowNonImageAttachments = false;
@@ -42,90 +43,49 @@ export class MergeFileSuggestModal extends SuggestModalBase {
   }
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
-    let targetFile: TFile;
+    await this.composer.selectItem(item, Keymap.isModifier(evt, 'Mod'), this.inputEl.value);
 
-    if (Keymap.isModifier(evt, 'Mod') || item?.type === 'unresolved') {
-      const fileName = item?.type === 'unresolved' ? item.linktext ?? '' : this.inputEl.value;
-      const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
+    if (this.composer.targetFile !== this.composer.sourceFile) {
+      this.doNotAskAgain = false;
 
-      targetFile = await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '');
-    } else if (item?.type === 'bookmark' && item.item?.type === 'file') {
-      const bookmarkFile = this.app.vault.getFileByPath(item.item.path ?? '');
-      if (bookmarkFile) {
-        targetFile = bookmarkFile;
-      } else {
-        throw new Error('Bookmark file not found');
-      }
-    } else if (item?.file) {
-      targetFile = item.file;
-    } else {
-      throw new Error('No valid file selected');
-    }
-
-    if (targetFile !== this.sourceFile) {
-      let doNotAskAgain = false;
-
-      const that = this;
-      if (this.corePluginInstance.options.askBeforeMerging) {
+      if (this.composer.corePluginInstance.options.askBeforeMerging) {
         const modal = new DynamicModal(this.app)
           .setTitle(window.i18next.t('plugins.note-composer.label-merge-file'))
           .setContent(createFragment((f) => {
             f.createEl('p', {
               text: window.i18next.t('plugins.note-composer.label-confirm-file-merge', {
-                destination: targetFile.basename,
-                file: this.sourceFile.basename
+                destination: this.composer.targetFile.basename,
+                file: this.composer.sourceFile.basename
               })
             });
           }));
 
         if (Platform.isMobile) {
           modal.addButton('mod-warning', window.i18next.t('plugins.note-composer.button-delete-do-not-ask-again'), async () => {
-            await performMerge();
+            await this.performMerge(evt);
           });
         } else {
           modal.addCheckbox(window.i18next.t('plugins.note-composer.dialogue-label-do-not-ask-again'), (evt2) => {
             if (!(evt2.target instanceof HTMLInputElement)) {
               return;
             }
-            doNotAskAgain = evt2.target.checked;
+            this.doNotAskAgain = evt2.target.checked;
           });
         }
 
         modal.addButton('mod-warning', window.i18next.t('plugins.note-composer.button-merge'), async () => {
-          await performMerge();
+          await this.performMerge(evt);
         })
           .addCancelButton()
           .open();
       } else {
-        await performMerge();
-      }
-
-      async function performMerge(): Promise<void> {
-        if (doNotAskAgain) {
-          that.corePluginInstance.options.askBeforeMerging = false;
-          await that.corePluginInstance.pluginInstance.saveData(that.corePluginInstance.options);
-        }
-        await that.mergeFile(targetFile, that.sourceFile, evt.shiftKey ? 'prepend' : 'append');
+        await this.performMerge(evt);
       }
     }
   }
 
-  private async mergeFile(targetFile: TFile, sourceFile: TFile, mode: 'append' | 'prepend' = 'append'): Promise<void> {
-    const sourceContent = await this.app.vault.read(sourceFile);
-    const processedContent = await this.corePluginInstance.applyTemplate(sourceContent, sourceFile.basename, targetFile.basename);
-
-    await this.app.fileManager.runAsyncLinkUpdate(async (links) => {
-      await this.app.fileManager.insertIntoFile(targetFile, processedContent, mode);
-      await this.app.fileManager.trashFile(sourceFile);
-
-      for (const link of links) {
-        if (link.resolvedFile === sourceFile) {
-          link.resolvedFile = targetFile;
-          link.resolvedPaths = [];
-        }
-      }
-    });
-
-    await this.app.workspace.getLeaf().openFile(targetFile);
+  private async performMerge(evt: KeyboardEvent | MouseEvent): Promise<void> {
+    this.composer.mode = evt.shiftKey ? 'prepend' : 'append';
+    await this.composer.mergeFile(this.doNotAskAgain);
   }
 }
