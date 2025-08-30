@@ -27,6 +27,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     this.defaultValue = this.composer.heading;
 
     this.setPlaceholder(window.i18next.t('plugins.note-composer.prompt-select-file-to-merge'));
+    const INCLUDE_EXCLUDE_FRONTMATTER_INSTRUCTION = 'Include/exclude frontmatter';
     this.setInstructions([
       { command: '↑↓', purpose: window.i18next.t('plugins.note-composer.instruction-navigate') },
       { command: '↵', purpose: window.i18next.t('plugins.note-composer.instruction-append') },
@@ -35,8 +36,22 @@ export class SplitFileSuggestModal extends SuggestModalBase {
         purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
       },
       { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-prepend') },
-      { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') }
+      { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
+      { command: 'alt f', purpose: INCLUDE_EXCLUDE_FRONTMATTER_INSTRUCTION }
     ]);
+
+    const includeExcludeFrontmatterInstructionEl = this.instructionsEl.findAll('span').find((span) =>
+      span.textContent === INCLUDE_EXCLUDE_FRONTMATTER_INSTRUCTION
+    );
+    let includeFrontmatterCheckboxEl: HTMLInputElement;
+    if (includeExcludeFrontmatterInstructionEl) {
+      includeFrontmatterCheckboxEl = includeExcludeFrontmatterInstructionEl.createEl('input', { type: 'checkbox' });
+      includeFrontmatterCheckboxEl.checked = this.composer.shouldIncludeFrontmatter;
+      includeFrontmatterCheckboxEl.addEventListener('change', () => {
+        this.composer.shouldIncludeFrontmatter = includeFrontmatterCheckboxEl.checked;
+      });
+    }
+
     this.scope.register(['Shift'], 'Enter', (evt) => {
       this.selectActiveSuggestion(evt);
       return false;
@@ -45,21 +60,16 @@ export class SplitFileSuggestModal extends SuggestModalBase {
       this.selectActiveSuggestion(evt);
       return false;
     });
+    this.scope.register(['Alt'], 'f', () => {
+      includeFrontmatterCheckboxEl.checked = !includeFrontmatterCheckboxEl.checked;
+      includeFrontmatterCheckboxEl.trigger('change');
+    });
   }
 
   public override onOpen(): void {
     super.onOpen();
     this.inputEl.value = this.defaultValue;
     this.updateSuggestions();
-
-    this.instructionsEl.createEl('label', {}, (label) => {
-      label.createEl('input', { type: 'checkbox' }, (checkbox) => {
-        checkbox.addEventListener('change', () => {
-          this.composer.shouldIncludeFrontmatter = checkbox.checked;
-        });
-      });
-      label.appendText('Include frontmatter');
-    });
   }
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {

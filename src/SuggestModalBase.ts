@@ -21,6 +21,7 @@ import {
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { noop } from 'obsidian-dev-utils/Function';
+import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/Plugin/PluginContext';
 import { basename } from 'obsidian-dev-utils/Path';
 import { trimEnd } from 'obsidian-dev-utils/String';
 
@@ -100,6 +101,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   public constructor(app: App) {
     super(app);
+
+    addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
     this.shouldShowUnresolved = false;
     this.shouldShowMarkdown = true;

@@ -40,15 +40,15 @@ export class AdvancedNoteComposer {
 
   public readonly app: App;
   public mode: 'append' | 'prepend' = 'append';
-  public shouldIncludeFrontmatter = false;
-  private _targetFile?: TFile;
-
+  public shouldIncludeFrontmatter: boolean;
   public get targetFile(): TFile {
     if (!this._targetFile) {
       throw new Error('Target file not set');
     }
     return this._targetFile;
   }
+
+  private _targetFile?: TFile;
 
   public constructor(
     private readonly plugin: Plugin,
@@ -58,6 +58,7 @@ export class AdvancedNoteComposer {
     public heading = ''
   ) {
     this.app = plugin.app;
+    this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
   }
 
   public initHeading(): void {

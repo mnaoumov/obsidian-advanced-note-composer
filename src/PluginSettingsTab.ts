@@ -57,5 +57,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldOpenNoteAfterMerge');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should include frontmatter when splitting by default')
+      .setDesc('Whether to include frontmatter when splitting by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldIncludeFrontmatterWhenSplittingByDefault');
+      });
   }
 }
