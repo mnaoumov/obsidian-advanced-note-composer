@@ -1,4 +1,6 @@
 import type {
+  Instruction,
+  Modifier,
   SearchMatches,
   SearchResult,
   SearchResultContainer
@@ -258,6 +260,40 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   protected abstract onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void>;
+
+  protected registerCommandWithCheckbox(
+    modifiers: Modifier[] | null,
+    key: string,
+    purpose: string,
+    initialValue: boolean,
+    onChange: (value: boolean) => void
+  ): Instruction {
+    const keys = [...(modifiers ?? []), key].map((key2) => key2.toLowerCase()).join(' ');
+
+    setTimeout(() => {
+      const instructionEl = this.instructionsEl.findAll('span').find((span) => span.textContent === purpose);
+
+      if (!instructionEl) {
+        throw new Error(`Instruction ${purpose} not found`);
+      }
+
+      const checkboxEl: HTMLInputElement = instructionEl.createEl('input', { type: 'checkbox' });
+      checkboxEl.checked = initialValue;
+      checkboxEl.addEventListener('change', () => {
+        onChange(checkboxEl.checked);
+      });
+
+      this.scope.register(modifiers, key, () => {
+        checkboxEl.checked = !checkboxEl.checked;
+        onChange(checkboxEl.checked);
+      });
+    });
+
+    return {
+      command: keys,
+      purpose
+    };
+  }
 
   private addAliasMatches(file: TFile, searchFn: SearchFn, items: Item[], isUserIgnored: boolean, scoreStep: number): void {
     const cache = this.app.metadataCache.getFileCache(file);

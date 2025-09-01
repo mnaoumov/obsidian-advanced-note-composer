@@ -4,8 +4,8 @@ import type { NoteComposerPluginInstance } from 'obsidian-typings';
 import {
   App,
   Editor,
-  getFrontMatterInfo,
   parseLinktext,
+  stringifyYaml,
   TFile
 } from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
@@ -46,8 +46,10 @@ export class AdvancedNoteComposer {
 
   public readonly app: App;
   public mode: 'append' | 'prepend' = 'append';
+  public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
-  public shouldTreatTitleAsPath = true;
+  public shouldTreatTitleAsPath: boolean;
+
   public get targetFile(): TFile {
     if (!this._targetFile) {
       throw new Error('Target file not set');
@@ -66,6 +68,8 @@ export class AdvancedNoteComposer {
   ) {
     this.app = plugin.app;
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
+    this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
     this.initHeading();
   }
 
@@ -173,6 +177,10 @@ export class AdvancedNoteComposer {
   }
 
   private async fixFootnotes(targetContentToInsert: string): Promise<string> {
+    if (!this.shouldFixFootnotes) {
+      return targetContentToInsert;
+    }
+
     const sourceCache = await getCacheSafe(this.app, this.sourceFile);
     const sourceContent = await this.app.vault.cachedRead(this.sourceFile);
     const targetContent = await this.app.vault.cachedRead(this.targetFile);
@@ -180,20 +188,20 @@ export class AdvancedNoteComposer {
     const FOOTNOTE_ID_REG_EXP = /\[\^(?<FootnoteId>[^\s\]]+?)\]/g;
     const existingTargetIds = new Set<string>(Array.from(targetContent.matchAll(FOOTNOTE_ID_REG_EXP)).map((match) => match.groups?.['FootnoteId'] ?? ''));
 
-    const selection = await this.getSelections();
+    const selections = await this.getSelections();
 
     const sourceFootnoteIdsToCopy = new Set<string>();
     const targetFootnoteIdRenameMap = new Map<string, string>();
 
     for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
-      if (this.isSelected(sourceFootnoteRef.position, selection)) {
+      if (this.isSelected(sourceFootnoteRef.position, selections)) {
         this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
         sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
       }
     }
 
     for (const sourceFootnote of sourceCache?.footnotes ?? []) {
-      if (this.isSelected(sourceFootnote.position, selection)) {
+      if (this.isSelected(sourceFootnote.position, selections)) {
         this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
       } else if (sourceFootnoteIdsToCopy.has(sourceFootnote.id)) {
         const sourceFootnoteContent = sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset);
@@ -220,7 +228,7 @@ export class AdvancedNoteComposer {
 
   private async getSelections(): Promise<Selection[]> {
     if (this.editor) {
-      return this.editor.listSelections().map((editorSelection) => {
+      const selections = this.editor.listSelections().map((editorSelection) => {
         const selection: Selection = {
           endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
           startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
@@ -232,6 +240,8 @@ export class AdvancedNoteComposer {
 
         return selection;
       });
+
+      return selections.sort((a, b) => a.startOffset - b.startOffset);
     }
 
     const content = await this.app.vault.read(this.sourceFile);
@@ -240,6 +250,30 @@ export class AdvancedNoteComposer {
       endOffset: content.length,
       startOffset: 0
     }];
+  }
+
+  private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
+    if (!this.shouldIncludeFrontmatter) {
+      return targetContentToInsert;
+    }
+
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+
+    if (!sourceCache?.frontmatterPosition) {
+      return targetContentToInsert;
+    }
+
+    const selections = await this.getSelections();
+
+    if (!selections[0]) {
+      return targetContentToInsert;
+    }
+
+    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
+      return targetContentToInsert;
+    }
+
+    return `---\n${stringifyYaml(sourceCache.frontmatter)}---\n${targetContentToInsert}`;
   }
 
   private initHeading(): void {
@@ -257,20 +291,12 @@ export class AdvancedNoteComposer {
   }
 
   private async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
+    targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
     await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
     await this.fixBacklinks(backlinksToFix);
-    if (!this.shouldIncludeFrontmatter) {
-      return;
-    }
-    const sourceContent = await this.app.vault.read(this.sourceFile);
-    const sourceFrontmatterInfo = getFrontMatterInfo(sourceContent);
-    if (sourceFrontmatterInfo.exists) {
-      const fullSourceFrontmatter = `---\n${sourceFrontmatterInfo.frontmatter}\n---`;
-      await this.app.fileManager.insertIntoFile(this.targetFile, fullSourceFrontmatter);
-    }
   }
 
   private isSelected(position: Pos, selections: Selection[]): boolean {

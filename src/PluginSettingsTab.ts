@@ -64,5 +64,19 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldIncludeFrontmatterWhenSplittingByDefault');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should treat title as path by default')
+      .setDesc('Whether to treat title as path by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldTreatTitleAsPathByDefault');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should fix footnotes by default')
+      .setDesc('Whether to fix footnotes by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldFixFootnotesByDefault');
+      });
   }
 }
