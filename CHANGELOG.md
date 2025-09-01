@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.10.1
+
+- Minor changes
+
 ## 1.10.0
 
 - Fix footnotes (#12)
