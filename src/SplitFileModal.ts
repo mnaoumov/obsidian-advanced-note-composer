@@ -30,13 +30,13 @@ export class SplitFileSuggestModal extends SuggestModalBase {
       },
       { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-prepend') },
       { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
-      this.registerCommandWithCheckbox(['Alt'], 'f', 'Include/exclude frontmatter', this.composer.shouldIncludeFrontmatter, (value) => {
+      this.registerCommandWithCheckbox(['Alt'], '1', 'Include frontmatter', this.composer.shouldIncludeFrontmatter, (value) => {
         this.composer.shouldIncludeFrontmatter = value;
       }),
-      this.registerCommandWithCheckbox(['Alt'], 't', 'Enable/disable treat title as path', this.composer.shouldTreatTitleAsPath, (value) => {
+      this.registerCommandWithCheckbox(['Alt'], '2', 'Treat title as path', this.composer.shouldTreatTitleAsPath, (value) => {
         this.composer.shouldTreatTitleAsPath = value;
       }),
-      this.registerCommandWithCheckbox(['Alt'], 'g', 'Enable/disable fix footnotes', this.composer.shouldFixFootnotes, (value) => {
+      this.registerCommandWithCheckbox(['Alt'], '3', 'Fix footnotes', this.composer.shouldFixFootnotes, (value) => {
         this.composer.shouldFixFootnotes = value;
       })
     ]);
