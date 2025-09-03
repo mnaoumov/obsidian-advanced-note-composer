@@ -47,6 +47,7 @@ export class AdvancedNoteComposer {
 
   public readonly app: App;
   public mode: 'append' | 'prepend' = 'append';
+  public shouldAllowOnlyCurrentFolder: boolean;
   public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
   public shouldTreatTitleAsPath: boolean;
@@ -71,6 +72,7 @@ export class AdvancedNoteComposer {
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
     this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
+    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.initHeading();
   }
 
@@ -142,7 +144,8 @@ export class AdvancedNoteComposer {
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd(fileName, '.md');
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
-    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(fixedFileName, this.sourceFile.path);
+    const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
+    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
     if (file.basename !== fileName) {
       if (this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {

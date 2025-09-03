@@ -78,5 +78,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldFixFootnotesByDefault');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should allow only current folder by default')
+      .setDesc('Whether to allow only current folder by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldAllowOnlyCurrentFolderByDefault');
+      });
   }
 }

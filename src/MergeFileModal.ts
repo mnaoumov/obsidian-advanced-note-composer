@@ -31,8 +31,28 @@ export class MergeFileSuggestModal extends SuggestModalBase {
       },
       { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-merge-at-top') },
       { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
-      this.registerCommandWithCheckbox(['Alt'], '1', 'Fix footnotes', this.composer.shouldFixFootnotes, (value) => {
-        this.composer.shouldFixFootnotes = value;
+      this.registerCommandWithCheckbox({
+        initCheckbox: (checkboxEl) => {
+          checkboxEl.checked = this.composer.shouldFixFootnotes;
+          checkboxEl.addEventListener('change', () => {
+            this.composer.shouldFixFootnotes = checkboxEl.checked;
+          });
+        },
+        key: '1',
+        modifiers: ['Alt'],
+        purpose: 'Fix footnotes'
+      }),
+      this.registerCommandWithCheckbox({
+        initCheckbox: (checkboxEl) => {
+          checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
+          checkboxEl.addEventListener('change', () => {
+            this.composer.shouldAllowOnlyCurrentFolder = checkboxEl.checked;
+            this.updateSuggestions();
+          });
+        },
+        key: '2',
+        modifiers: ['Alt'],
+        purpose: 'Allow only current folder'
       })
     ]);
 

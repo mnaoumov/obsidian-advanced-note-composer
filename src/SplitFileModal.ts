@@ -10,6 +10,9 @@ import type { Item } from './SuggestModalBase.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 
 export class SplitFileSuggestModal extends SuggestModalBase {
+  private treatTitleAsPathCheckboxEl!: HTMLInputElement;
+  private treatTitleAsPathCheckboxElValue!: boolean;
+
   public constructor(composer: AdvancedNoteComposer) {
     super(composer);
 
@@ -43,14 +46,63 @@ export class SplitFileSuggestModal extends SuggestModalBase {
         },
         { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-prepend') },
         { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
-        this.registerCommandWithCheckbox(['Alt'], '1', 'Include frontmatter', canIncludeFrontmatter && this.composer.shouldIncludeFrontmatter, (value) => {
-          this.composer.shouldIncludeFrontmatter = value;
-        }, canIncludeFrontmatter),
-        this.registerCommandWithCheckbox(['Alt'], '2', 'Treat title as path', this.composer.shouldTreatTitleAsPath, (value) => {
-          this.composer.shouldTreatTitleAsPath = value;
+        this.registerCommandWithCheckbox({
+          initCheckbox: (checkboxEl) => {
+            checkboxEl.checked = canIncludeFrontmatter && this.composer.shouldIncludeFrontmatter;
+            checkboxEl.disabled = !canIncludeFrontmatter;
+            checkboxEl.addEventListener('change', () => {
+              this.composer.shouldIncludeFrontmatter = checkboxEl.checked;
+            });
+          },
+          key: '1',
+          modifiers: ['Alt'],
+          purpose: 'Include frontmatter'
         }),
-        this.registerCommandWithCheckbox(['Alt'], '3', 'Fix footnotes', this.composer.shouldFixFootnotes, (value) => {
-          this.composer.shouldFixFootnotes = value;
+        this.registerCommandWithCheckbox({
+          initCheckbox: (checkboxEl) => {
+            this.treatTitleAsPathCheckboxEl = checkboxEl;
+            this.treatTitleAsPathCheckboxElValue = this.composer.shouldTreatTitleAsPath;
+            checkboxEl.checked = this.composer.shouldTreatTitleAsPath;
+            checkboxEl.addEventListener('change', () => {
+              this.composer.shouldTreatTitleAsPath = checkboxEl.checked;
+              this.treatTitleAsPathCheckboxElValue = checkboxEl.checked;
+            });
+          },
+          key: '2',
+          modifiers: ['Alt'],
+          purpose: 'Treat title as path'
+        }),
+        this.registerCommandWithCheckbox({
+          initCheckbox: (checkboxEl) => {
+            checkboxEl.checked = this.composer.shouldFixFootnotes;
+            checkboxEl.addEventListener('change', () => {
+              this.composer.shouldFixFootnotes = checkboxEl.checked;
+            });
+          },
+          key: '3',
+          modifiers: ['Alt'],
+          purpose: 'Fix footnotes'
+        }),
+        this.registerCommandWithCheckbox({
+          initCheckbox: (checkboxEl) => {
+            checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
+            checkboxEl.addEventListener('change', () => {
+              this.composer.shouldAllowOnlyCurrentFolder = checkboxEl.checked;
+              this.updateSuggestions();
+              if (this.composer.shouldAllowOnlyCurrentFolder) {
+                this.treatTitleAsPathCheckboxEl.checked = false;
+                this.treatTitleAsPathCheckboxEl.disabled = true;
+                this.composer.shouldTreatTitleAsPath = false;
+              } else {
+                this.treatTitleAsPathCheckboxEl.checked = this.treatTitleAsPathCheckboxElValue;
+                this.treatTitleAsPathCheckboxEl.disabled = false;
+                this.composer.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
+              }
+            });
+          },
+          key: '4',
+          modifiers: ['Alt'],
+          purpose: 'Allow only current folder'
         })
       ]);
     });

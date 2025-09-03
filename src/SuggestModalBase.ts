@@ -24,7 +24,10 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { noop } from 'obsidian-dev-utils/Function';
 import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/Plugin/PluginContext';
 import { basename } from 'obsidian-dev-utils/Path';
-import { trimEnd } from 'obsidian-dev-utils/String';
+import {
+  trimEnd,
+  trimStart
+} from 'obsidian-dev-utils/String';
 
 import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 
@@ -44,6 +47,13 @@ interface AnimationState {
   props: Animation;
   timer: number;
   win: Window;
+}
+
+interface RegisterCommandWithCheckboxOptions {
+  initCheckbox(this: void, checkboxEl: HTMLInputElement): void;
+  key: string;
+  modifiers?: Modifier[];
+  purpose: string;
 }
 
 type SearchFn = (text: string) => null | SearchResult;
@@ -212,11 +222,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       el.addClass('mod-downranked');
     }
     if (item.type === 'file') {
-      renderResults(suggestionContent.createDiv('suggestion-title'), trimMarkdownExtension(item.file?.path ?? ''), item.match);
+      renderResults(suggestionContent.createDiv('suggestion-title'), this.getSuggestionText(item.file?.path ?? ''), item.match);
       suggestionAux.createSpan({ cls: 'suggestion-flair' });
     } else if (item.type === 'alias') {
       renderResults(suggestionContent.createDiv('suggestion-title'), item.alias ?? '', item.match);
-      suggestionContent.createDiv({ cls: 'suggestion-note', text: trimMarkdownExtension(item.file?.path ?? '') });
+      suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getSuggestionText(item.file?.path ?? '') });
       suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
         setIcon(suggestionFlair, 'lucide-forward');
         suggestionFlair.title = window.i18next.t('interface.tooltip.alias');
@@ -230,16 +240,16 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     } else if (item.type === 'bookmark') {
       const suggestionTitle = suggestionContent.createDiv('suggestion-title');
       const suggestionNote = suggestionContent.createDiv('suggestion-note');
-      renderResults(suggestionTitle, item.bookmarkPath ?? '', item.match);
+      renderResults(suggestionTitle, this.getSuggestionText(item.bookmarkPath ?? ''), item.match);
       suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
         if (item.item?.type === 'file') {
           setIcon(suggestionFlair, 'lucide-bookmark');
           suggestionNote.setText(
-            trimMarkdownExtension(item.item.path ?? '') + (item.item.subpath ?? '')
+            this.getSuggestionText(item.item.path ?? '') + (item.item.subpath ?? '')
           );
         } else if (item.item?.type === 'folder') {
           setIcon(suggestionFlair, 'lucide-bookmark');
-          suggestionNote.setText(trimMarkdownExtension(item.item.path ?? ''));
+          suggestionNote.setText(this.getSuggestionText(item.item.path ?? ''));
         } else if (item.item?.type === 'search') {
           setIcon(suggestionFlair, 'lucide-search');
           suggestionNote.setText(item.item.query ?? '');
@@ -262,14 +272,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   protected abstract onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void>;
 
-  protected registerCommandWithCheckbox(
-    modifiers: Modifier[] | null,
-    key: string,
-    purpose: string,
-    initialValue: boolean,
-    onChange: (value: boolean) => void,
-    isEnabled = true
-  ): Instruction {
+  protected registerCommandWithCheckbox(options: RegisterCommandWithCheckboxOptions): Instruction {
+    const { initCheckbox, key, modifiers, purpose } = options;
+
     const keys = [...(modifiers ?? []), key].map((key2) => key2.toLowerCase()).join(' ');
 
     requestAnimationFrame(() => {
@@ -280,18 +285,14 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
 
       const checkboxEl: HTMLInputElement = instructionEl.createEl('input', { type: 'checkbox' });
-      checkboxEl.disabled = !isEnabled;
-      checkboxEl.checked = initialValue;
-      checkboxEl.addEventListener('change', () => {
-        onChange(checkboxEl.checked);
-      });
+      initCheckbox(checkboxEl);
 
-      this.scope.register(modifiers, key, () => {
-        if (!isEnabled) {
+      this.scope.register(modifiers ?? [], key, () => {
+        if (checkboxEl.disabled) {
           return;
         }
         checkboxEl.checked = !checkboxEl.checked;
-        onChange(checkboxEl.checked);
+        checkboxEl.trigger('change');
       });
     });
 
@@ -355,6 +356,16 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
     }
     return items;
+  }
+
+  private getSuggestionText(text: string): string {
+    let suggestionText = trimMarkdownExtension(text);
+    if (!this.composer.shouldAllowOnlyCurrentFolder) {
+      return suggestionText;
+    }
+
+    suggestionText = trimStart(suggestionText, this.composer.sourceFile.parent?.getParentPrefix() ?? '');
+    return suggestionText;
   }
 
   private handleCreateButtonClick(evt: MouseEvent): void {
@@ -466,6 +477,10 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
+    if (this.composer.shouldAllowOnlyCurrentFolder && file.parent !== this.composer.sourceFile.parent) {
+      return false;
+    }
+
     if (file.extension === 'md') {
       return this.shouldShowMarkdown;
     }
