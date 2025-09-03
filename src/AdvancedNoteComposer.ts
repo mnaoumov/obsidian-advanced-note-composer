@@ -16,7 +16,8 @@ import {
 } from 'obsidian-dev-utils/obsidian/Link';
 import {
   getBacklinksForFileSafe,
-  getCacheSafe
+  getCacheSafe,
+  getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   replaceAll,
@@ -304,7 +305,16 @@ export class AdvancedNoteComposer {
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
+
+    const targetFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
     await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
+
+    await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
+      if (targetFrontmatter.title !== undefined) {
+        frontmatter.title = targetFrontmatter.title;
+      }
+    });
+
     await this.fixBacklinks(backlinksToFix);
   }
 
