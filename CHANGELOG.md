@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.11.0
+
+- Should allow only current folder
+- Preserve title
+- Change wording and hotkeys
+
 ## 1.10.1
 
 - Minor changes
