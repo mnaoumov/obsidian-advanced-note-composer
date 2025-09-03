@@ -2,6 +2,12 @@
   &.suggest-modal-base {
     input[type=checkbox] {
       margin-left: 5px;
+      vertical-align: middle;
+
+      &[disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
     }
   }
 }

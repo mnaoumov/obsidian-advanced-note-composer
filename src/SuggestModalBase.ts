@@ -9,7 +9,6 @@ import type { MaybeReturn } from 'obsidian-dev-utils/Type';
 import type { BookmarkItem } from 'obsidian-typings';
 
 import {
-  App,
   parseFrontMatterAliases,
   Platform,
   prepareFuzzySearch,
@@ -26,6 +25,8 @@ import { noop } from 'obsidian-dev-utils/Function';
 import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/Plugin/PluginContext';
 import { basename } from 'obsidian-dev-utils/Path';
 import { trimEnd } from 'obsidian-dev-utils/String';
+
+import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;
@@ -101,8 +102,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(app: App) {
-    super(app);
+  public constructor(protected readonly composer: AdvancedNoteComposer) {
+    super(composer.app);
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
@@ -266,11 +267,12 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     key: string,
     purpose: string,
     initialValue: boolean,
-    onChange: (value: boolean) => void
+    onChange: (value: boolean) => void,
+    isEnabled = true
   ): Instruction {
     const keys = [...(modifiers ?? []), key].map((key2) => key2.toLowerCase()).join(' ');
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const instructionEl = this.instructionsEl.findAll('span').find((span) => span.textContent === purpose);
 
       if (!instructionEl) {
@@ -278,12 +280,16 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
 
       const checkboxEl: HTMLInputElement = instructionEl.createEl('input', { type: 'checkbox' });
+      checkboxEl.disabled = !isEnabled;
       checkboxEl.checked = initialValue;
       checkboxEl.addEventListener('change', () => {
         onChange(checkboxEl.checked);
       });
 
       this.scope.register(modifiers, key, () => {
+        if (!isEnabled) {
+          return;
+        }
         checkboxEl.checked = !checkboxEl.checked;
         onChange(checkboxEl.checked);
       });

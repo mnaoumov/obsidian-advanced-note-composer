@@ -12,8 +12,8 @@ import { SuggestModalBase } from './SuggestModalBase.ts';
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
 
-  public constructor(private readonly composer: AdvancedNoteComposer) {
-    super(composer.app);
+  public constructor(composer: AdvancedNoteComposer) {
+    super(composer);
 
     this.composer.action = 'merge';
 
@@ -30,8 +30,12 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
       },
       { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-merge-at-top') },
-      { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') }
+      { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
+      this.registerCommandWithCheckbox(['Alt'], '1', 'Fix footnotes', this.composer.shouldFixFootnotes, (value) => {
+        this.composer.shouldFixFootnotes = value;
+      })
     ]);
+
     this.scope.register(['Shift'], 'Enter', (evt) => {
       this.selectActiveSuggestion(evt);
       return false;

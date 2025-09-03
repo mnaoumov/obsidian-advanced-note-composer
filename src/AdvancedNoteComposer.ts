@@ -73,6 +73,26 @@ export class AdvancedNoteComposer {
     this.initHeading();
   }
 
+  public async canIncludeFrontmatter(): Promise<boolean> {
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+
+    if (!sourceCache?.frontmatterPosition) {
+      return false;
+    }
+
+    const selections = await this.getSelections();
+
+    if (!selections[0]) {
+      return false;
+    }
+
+    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
+      return false;
+    }
+
+    return true;
+  }
+
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
     if (doNotAskAgain) {
       this.corePluginInstance.options.askBeforeMerging = false;
@@ -257,23 +277,12 @@ export class AdvancedNoteComposer {
       return targetContentToInsert;
     }
 
+    if (!await this.canIncludeFrontmatter()) {
+      return targetContentToInsert;
+    }
+
     const sourceCache = await getCacheSafe(this.app, this.sourceFile);
-
-    if (!sourceCache?.frontmatterPosition) {
-      return targetContentToInsert;
-    }
-
-    const selections = await this.getSelections();
-
-    if (!selections[0]) {
-      return targetContentToInsert;
-    }
-
-    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
-      return targetContentToInsert;
-    }
-
-    return `---\n${stringifyYaml(sourceCache.frontmatter)}---\n${targetContentToInsert}`;
+    return `---\n${stringifyYaml(sourceCache?.frontmatter ?? {})}---\n${targetContentToInsert}`;
   }
 
   private initHeading(): void {
