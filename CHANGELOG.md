@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.11.1
+
+- Minor changes
+
 ## 1.11.0
 
 - Should allow only current folder
