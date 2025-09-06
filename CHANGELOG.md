@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.12.0
+
+- Should hide core plugin menu items (#17)
+
 ## 1.11.2
 
 - Fix empty filename failure (#16)
