@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.11.2
+
+- Fix empty filename failure (#16)
+
 ## 1.11.1
 
 - Minor changes
