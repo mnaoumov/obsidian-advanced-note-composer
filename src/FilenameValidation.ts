@@ -4,6 +4,10 @@ export const INVALID_CHARACTERS_REG_EXP = /[*\\<>:|?#^[\]"]+/g;
 export const TRAILING_DOTS_OR_SPACES_REG_EXP = /[ .]+$/g;
 
 export function isValidFilename(app: App, fileName: string): boolean {
+  if (!fileName) {
+    return false;
+  }
+
   try {
     app.vault.checkPath(fileName);
     return true;
