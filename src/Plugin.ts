@@ -9,6 +9,7 @@ import type { NoteComposerPlugin } from 'obsidian-typings';
 
 import {
   Editor,
+  MenuItem,
   Notice,
   TFile
 } from 'obsidian';
@@ -205,6 +206,13 @@ export class Plugin extends PluginBase<PluginTypes> {
   }
 
   private handleEditorMenu(menu: Menu, editor: Editor, info: MarkdownFileInfo | MarkdownView): void {
+    if (this.settings.shouldHideCorePluginMenuItems) {
+      filterMenuItems(menu, [
+        'plugins.note-composer.command-split-file',
+        'plugins.note-composer.command-extract-heading'
+      ]);
+    }
+
     const sourceFile = info.file;
 
     if (!sourceFile) {
@@ -242,6 +250,12 @@ export class Plugin extends PluginBase<PluginTypes> {
   }
 
   private handleFileMenu(menu: Menu, file: TAbstractFile, source: string): void {
+    if (this.settings.shouldHideCorePluginMenuItems) {
+      filterMenuItems(menu, [
+        'plugins.note-composer.action-merge-file'
+      ]);
+    }
+
     if (source === 'link-context-menu') {
       return;
     }
@@ -318,4 +332,15 @@ export class Plugin extends PluginBase<PluginTypes> {
       }
     }
   }
+}
+
+function filterMenuItems(menu: Menu, localizationKeysToSkip: string[]): void {
+  menu.items = menu.items.filter((item) => {
+    if (!(item instanceof MenuItem)) {
+      return true;
+    }
+
+    const menuItemTexts = localizationKeysToSkip.map((key) => window.i18next.t(key));
+    return !menuItemTexts.includes(item.titleEl.textContent ?? '');
+  });
 }

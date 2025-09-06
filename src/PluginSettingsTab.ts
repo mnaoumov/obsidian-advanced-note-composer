@@ -1,3 +1,4 @@
+import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsTabBase';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
 
@@ -84,6 +85,21 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setDesc('Whether to allow only current folder by default.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAllowOnlyCurrentFolderByDefault');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should hide core plugin menu items')
+      .setDesc(createFragment((f) => {
+        f.appendText('Whether to hide core ');
+        appendCodeBlock(f, 'Note Composer');
+        f.appendText(' plugin menu items.');
+        f.createEl('br');
+        f.appendText('If disabled, the core plugin menu items will be shown together with the corresponding ');
+        appendCodeBlock(f, 'Advanced Note Composer');
+        f.appendText(' plugin menu items.');
+      }))
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldHideCorePluginMenuItems');
       });
   }
 }

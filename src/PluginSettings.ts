@@ -4,6 +4,7 @@ export class PluginSettings {
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldFixFootnotesByDefault = true;
+  public shouldHideCorePluginMenuItems = false;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldReplaceInvalidTitleCharacters = true;
