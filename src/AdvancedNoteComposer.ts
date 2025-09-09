@@ -1,4 +1,7 @@
-import type { Pos } from 'obsidian';
+import type {
+  EditorSelection,
+  Pos
+} from 'obsidian';
 import type { NoteComposerPluginInstance } from 'obsidian-typings';
 
 import {
@@ -215,28 +218,57 @@ export class AdvancedNoteComposer {
     const selections = await this.getSelections();
 
     const sourceFootnoteIdsToCopy = new Set<string>();
+    const sourceFootnoteIdsToKeep = new Set<string>();
+    const sourceFootnoteIdsToRestore = new Set<string>();
+    const sourceFootnoteIdsToRemove = new Set<string>();
     const targetFootnoteIdRenameMap = new Map<string, string>();
 
     for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
       if (this.isSelected(sourceFootnoteRef.position, selections)) {
         this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
         sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
+      } else {
+        sourceFootnoteIdsToKeep.add(sourceFootnoteRef.id);
       }
     }
 
     for (const sourceFootnote of sourceCache?.footnotes ?? []) {
+      const sourceFootnoteContent = `\n${sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset)}`;
+
       if (this.isSelected(sourceFootnote.position, selections)) {
         this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
+        if (sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
+          sourceFootnoteIdsToRestore.add(sourceFootnote.id);
+        }
       } else if (sourceFootnoteIdsToCopy.has(sourceFootnote.id)) {
-        const sourceFootnoteContent = sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset);
-        targetContentToInsert += '\n';
         targetContentToInsert += sourceFootnoteContent;
+      }
+
+      if (sourceFootnoteIdsToCopy.has(sourceFootnote.id) && !sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
+        sourceFootnoteIdsToRemove.add(sourceFootnote.id);
       }
     }
 
     targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, (_, footnoteId) => {
       return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
     });
+
+    if (this.editor) {
+      let editorSelections = this.editor.listSelections();
+
+      for (const sourceFootnote of sourceCache?.footnotes ?? []) {
+        if (sourceFootnoteIdsToRemove.has(sourceFootnote.id)) {
+          editorSelections.push({
+            anchor: this.editor.offsetToPos(sourceFootnote.position.end.offset),
+            head: this.editor.offsetToPos(sourceFootnote.position.start.offset)
+          });
+        } else if (sourceFootnoteIdsToRestore.has(sourceFootnote.id)) {
+          editorSelections = this.removeSelectionRange(editorSelections, sourceFootnote.position);
+        }
+      }
+
+      this.editor.setSelections(editorSelections);
+    }
 
     return targetContentToInsert;
   }
@@ -374,6 +406,48 @@ export class AdvancedNoteComposer {
     }
 
     return backlinksToFix;
+  }
+
+  private removeSelectionRange(editorSelections: EditorSelection[], rangeToRemove: Pos): EditorSelection[] {
+    if (!this.editor) {
+      return editorSelections;
+    }
+
+    const rangeStart = rangeToRemove.start.offset;
+    const rangeEnd = rangeToRemove.end.offset;
+    const result: EditorSelection[] = [];
+
+    for (const selection of editorSelections) {
+      let selectionStart = this.editor.posToOffset(selection.anchor);
+      let selectionEnd = this.editor.posToOffset(selection.head);
+
+      if (selectionStart > selectionEnd) {
+        [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
+      }
+
+      if (selectionEnd < rangeStart || selectionStart > rangeEnd) {
+        result.push(selection);
+      } else {
+        const beforeRange = selectionStart < rangeStart;
+        const afterRange = selectionEnd > rangeEnd;
+
+        if (beforeRange) {
+          result.push({
+            anchor: this.editor.offsetToPos(selectionStart),
+            head: this.editor.offsetToPos(rangeStart)
+          });
+        }
+
+        if (afterRange) {
+          result.push({
+            anchor: this.editor.offsetToPos(rangeEnd),
+            head: this.editor.offsetToPos(selectionEnd)
+          });
+        }
+      }
+    }
+
+    return result;
   }
 
   private async selectItemForMerge(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
