@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.13.0
+
+- Remove unused / restore used extracted footnotes (#18)
+
 ## 1.12.0
 
 - Should hide core plugin menu items (#17)
