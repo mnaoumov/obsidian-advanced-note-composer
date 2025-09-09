@@ -341,6 +341,6 @@ function filterMenuItems(menu: Menu, localizationKeysToSkip: string[]): void {
     }
 
     const menuItemTexts = localizationKeysToSkip.map((key) => window.i18next.t(key));
-    return !menuItemTexts.includes(item.titleEl.textContent ?? '');
+    return !menuItemTexts.includes(item.titleEl.textContent);
   });
 }
