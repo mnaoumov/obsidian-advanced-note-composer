@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.0
+
+- Add should merge headings
+
 ## 1.13.0
 
 - Remove unused / restore used extracted footnotes (#18)
