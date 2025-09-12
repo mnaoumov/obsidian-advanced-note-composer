@@ -101,5 +101,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldHideCorePluginMenuItems');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should merge headings by default')
+      .setDesc('Whether to merge headings by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldMergeHeadingsByDefault');
+      });
   }
 }

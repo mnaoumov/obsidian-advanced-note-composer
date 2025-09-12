@@ -53,6 +53,18 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         key: '2',
         modifiers: ['Alt'],
         purpose: 'Allow only current folder'
+      }),
+      this.registerCommandWithCheckbox({
+        initCheckbox: (checkboxEl) => {
+          checkboxEl.checked = this.composer.shouldMergeHeadings;
+          checkboxEl.addEventListener('change', () => {
+            this.composer.shouldMergeHeadings = checkboxEl.checked;
+            this.updateSuggestions();
+          });
+        },
+        key: '3',
+        modifiers: ['Alt'],
+        purpose: 'Merge headings'
       })
     ]);
 

@@ -6,6 +6,7 @@ export class PluginSettings {
   public shouldFixFootnotesByDefault = true;
   public shouldHideCorePluginMenuItems = false;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
+  public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldTreatTitleAsPathByDefault = true;

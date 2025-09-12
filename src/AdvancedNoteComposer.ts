@@ -7,7 +7,9 @@ import type { NoteComposerPluginInstance } from 'obsidian-typings';
 import {
   App,
   Editor,
+  getFrontMatterInfo,
   parseLinktext,
+  parseYaml,
   stringifyYaml,
   TFile
 } from 'obsidian';
@@ -22,6 +24,7 @@ import {
   getCacheSafe,
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { process } from 'obsidian-dev-utils/obsidian/Vault';
 import {
   replaceAll,
   trimEnd
@@ -35,6 +38,9 @@ import {
   isValidFilename,
   TRAILING_DOTS_OR_SPACES_REG_EXP
 } from './FilenameValidation.ts';
+import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
+
+export type InsertMode = 'append' | 'prepend';
 
 interface Frontmatter {
   title?: string;
@@ -49,10 +55,11 @@ export class AdvancedNoteComposer {
   public action: 'merge' | 'split' = 'merge';
 
   public readonly app: App;
-  public mode: 'append' | 'prepend' = 'append';
+  public mode: InsertMode = 'append';
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
+  public shouldMergeHeadings: boolean;
   public shouldTreatTitleAsPath: boolean;
 
   public get targetFile(): TFile {
@@ -76,6 +83,7 @@ export class AdvancedNoteComposer {
     this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
     this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
     this.initHeading();
   }
 
@@ -106,9 +114,7 @@ export class AdvancedNoteComposer {
     }
 
     const sourceContent = await this.app.vault.read(this.sourceFile);
-    const processedContent = await this.corePluginInstance.applyTemplate(sourceContent, this.sourceFile.basename, this.targetFile.basename);
-
-    await this.insertIntoTargetFile(processedContent);
+    await this.insertIntoTargetFile(sourceContent);
     await this.app.fileManager.trashFile(this.sourceFile);
 
     if (this.plugin.settings.shouldOpenNoteAfterMerge) {
@@ -129,8 +135,7 @@ export class AdvancedNoteComposer {
       await this.selectItemForSplit(null, false, this.heading);
     }
 
-    const processedContent = await this.corePluginInstance.applyTemplate(this.editor?.getSelection() ?? '', this.sourceFile.basename, this.targetFile.basename);
-    await this.insertIntoTargetFile(processedContent);
+    await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
 
     const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
     const replacementText = this.corePluginInstance.options.replacementText;
@@ -342,15 +347,36 @@ export class AdvancedNoteComposer {
     const backlinksToFix = await this.prepareBacklinksToFix();
 
     const targetFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
-    await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
+    const frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
+    const newFrontmatterObj = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null;
 
-    await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
-      if (targetFrontmatter.title !== undefined) {
-        frontmatter.title = targetFrontmatter.title;
-      }
-    });
+    if (newFrontmatterObj && targetFrontmatter.title !== undefined) {
+      newFrontmatterObj.title = targetFrontmatter.title;
+    }
+    targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
+    await this.insertIntoTargetFileImpl(targetContentToInsert);
+    if (newFrontmatterObj) {
+      await this.app.fileManager.insertIntoFile(this.targetFile, `---\n${stringifyYaml(newFrontmatterObj)}---`);
+    }
 
     await this.fixBacklinks(backlinksToFix);
+  }
+
+  private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
+    if (!this.shouldMergeHeadings) {
+      // eslint-disable-next-line require-atomic-updates
+      targetContentToInsert = await this.corePluginInstance.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
+      await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
+      return;
+    }
+
+    await process(this.app, this.targetFile, async (_, targetFileContent) => {
+      const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
+      const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
+      await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
+      const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.mode);
+      return mergedDocument.toString();
+    });
   }
 
   private isSelected(position: Pos, selections: Selection[]): boolean {
@@ -517,6 +543,28 @@ export class AdvancedNoteComposer {
 
     targetFootnoteIdRenameMap.set(sourceFootnoteId, newTargetFootnoteId);
     existingTargetIds.add(newTargetFootnoteId);
+  }
+
+  private async wrapText(text: string): Promise<string> {
+    text = text.trim();
+    if (!text) {
+      return '';
+    }
+    let wrappedText = await this.corePluginInstance.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
+
+    if (!wrappedText) {
+      return '';
+    }
+
+    if (!wrappedText.endsWith('\n')) {
+      wrappedText += '\n';
+    }
+
+    if (!wrappedText.startsWith('\n')) {
+      wrappedText = `\n${wrappedText}`;
+    }
+
+    return wrappedText;
   }
 }
 
