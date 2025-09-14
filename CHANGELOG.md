@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.1
+
+- Minor changes
+
 ## 2.0.0
 
 - Add should merge headings
