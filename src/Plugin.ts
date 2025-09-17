@@ -6,6 +6,8 @@ import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import type { Level } from './MarkdownHeadingDocument.ts';
 import type { PluginTypes } from './PluginTypes.ts';
 
+import { ExtractAfterCursorEditorCommand } from './Commands/ExtractAfterCursorEditorCommand.ts';
+import { ExtractBeforeCursorEditorCommand } from './Commands/ExtractBeforeCursorEditorCommand.ts';
 import { ExtractCurrentSelectionEditorCommand } from './Commands/ExtractCurrentSelectionEditorCommand.ts';
 import { ExtractThisHeadingEditorCommand } from './Commands/ExtractThisHeadingEditorCommand.ts';
 import { MergeFileCommand } from './Commands/MergeFileCommand.ts';
@@ -33,6 +35,8 @@ export class Plugin extends PluginBase<PluginTypes> {
     new MergeFileCommand(this, this.corePluginWrapper).register();
     new ExtractCurrentSelectionEditorCommand(this, this.corePluginWrapper).register();
     new ExtractThisHeadingEditorCommand(this, this.corePluginWrapper).register();
+    new ExtractBeforeCursorEditorCommand(this, this.corePluginWrapper).register();
+    new ExtractAfterCursorEditorCommand(this, this.corePluginWrapper).register();
 
     // eslint-disable-next-line no-magic-numbers
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
