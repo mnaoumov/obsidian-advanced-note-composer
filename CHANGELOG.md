@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.1.0
+
+- Add Extract before/after cursor (#19)
+
 ## 2.0.1
 
 - Minor changes
