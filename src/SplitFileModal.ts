@@ -24,7 +24,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
 
-    this.setPlaceholder(window.i18next.t('plugins.note-composer.prompt-select-file-to-merge'));
+    this.setPlaceholder('Select file to split into...');
 
     this.scope.register(['Shift'], 'Enter', (evt) => {
       this.selectActiveSuggestion(evt);
