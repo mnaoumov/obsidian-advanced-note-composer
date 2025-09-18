@@ -108,5 +108,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldMergeHeadingsByDefault');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should allow split into unresolved path by default')
+      .setDesc('Whether to allow split into unresolved path by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldAllowSplitIntoUnresolvedPathByDefault');
+      });
   }
 }

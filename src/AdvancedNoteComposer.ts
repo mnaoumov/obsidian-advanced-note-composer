@@ -56,6 +56,7 @@ export class AdvancedNoteComposer {
   public readonly app: App;
   public mode: InsertMode = 'append';
   public shouldAllowOnlyCurrentFolder: boolean;
+  public shouldAllowSplitIntoUnresolvedPath: boolean;
   public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
   public shouldMergeHeadings: boolean;
@@ -83,6 +84,7 @@ export class AdvancedNoteComposer {
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
     this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.initHeading();
   }
 

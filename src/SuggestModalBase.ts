@@ -232,7 +232,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         suggestionFlair.title = window.i18next.t('interface.tooltip.alias');
       });
     } else if (item.type === 'unresolved') {
-      renderResults(suggestionContent.createDiv('suggestion-title'), item.linktext ?? '', item.match);
+      const suggestionTitle = suggestionContent.createDiv('suggestion-title suggestion-unresolved');
+      renderResults(suggestionTitle.createSpan(), item.linktext ?? '', item.match);
+      suggestionTitle.createSpan({ cls: 'suggestion-unresolved-description', text: '(unresolved)' });
       suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
         setIcon(suggestionFlair, 'lucide-file-plus');
         setTooltip(suggestionFlair, window.i18next.t('interface.tooltip.not-created-yet'));

@@ -9,5 +9,14 @@
         opacity: 0.5;
       }
     }
+
+    .suggestion-unresolved {
+      color: var(--text-faint);
+    }
+
+    .suggestion-unresolved-description {
+      font-style: italic;
+      margin-left: 5px;
+    }
   }
 }

@@ -3,6 +3,7 @@ export class PluginSettings {
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
+  public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   public shouldFixFootnotesByDefault = true;
   public shouldHideCorePluginMenuItems = false;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;

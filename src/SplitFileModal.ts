@@ -19,7 +19,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     this.composer.action = 'split';
 
     this.allowCreateNewFile = true;
-    this.shouldShowUnresolved = true;
+    this.shouldShowUnresolved = this.composer.shouldAllowSplitIntoUnresolvedPath;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
@@ -115,6 +115,19 @@ export class SplitFileSuggestModal extends SuggestModalBase {
           key: '5',
           modifiers: ['Alt'],
           purpose: 'Merge headings'
+        }),
+        this.registerCommandWithCheckbox({
+          initCheckbox: (checkboxEl) => {
+            checkboxEl.checked = this.composer.shouldAllowSplitIntoUnresolvedPath;
+            checkboxEl.addEventListener('change', () => {
+              this.composer.shouldAllowSplitIntoUnresolvedPath = checkboxEl.checked;
+              this.shouldShowUnresolved = checkboxEl.checked;
+              this.updateSuggestions();
+            });
+          },
+          key: '6',
+          modifiers: ['Alt'],
+          purpose: 'Allow split into unresolved path'
         })
       ]);
     });
