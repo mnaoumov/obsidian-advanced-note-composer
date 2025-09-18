@@ -461,6 +461,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     const unresolvedLinks = new Set<string>();
     for (const unresolvedLinkObj of Object.values(this.app.metadataCache.unresolvedLinks)) {
       for (const unresolvedLink of Object.keys(unresolvedLinkObj)) {
+        if (this.composer.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.composer.sourceFile.parent?.getParentPrefix() ?? '')) {
+          continue;
+        }
         unresolvedLinks.add(unresolvedLink);
       }
     }
