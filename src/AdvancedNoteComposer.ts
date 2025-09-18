@@ -35,7 +35,6 @@ import type { Item } from './SuggestModalBase.ts';
 
 import {
   INVALID_CHARACTERS_REG_EXP,
-  isValidFilename,
   TRAILING_DOTS_OR_SPACES_REG_EXP
 } from './FilenameValidation.ts';
 import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
@@ -190,22 +189,29 @@ export class AdvancedNoteComposer {
   }
 
   private fixFileName(fileName: string): string {
+    if (!fileName) {
+      return 'Untitled';
+    }
+
     if (!this.shouldTreatTitleAsPath) {
       fileName = fileName.replaceAll('/', '\\');
     }
 
-    if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters || isValidFilename(this.app, fileName)) {
+    if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters) {
       return fileName;
     }
 
-    fileName = fileName.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
-    fileName = fileName.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
-    if (fileName.startsWith('.')) {
-      fileName = this.plugin.settings.replacement + fileName.slice(1);
-    }
-
-    fileName ||= 'Untitled';
-    return fileName;
+    const parts = fileName.split('/');
+    const fixedParts = parts.filter((part) => !!part).map((part) => {
+      let fixedPart = part;
+      fixedPart = fixedPart.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
+      fixedPart = fixedPart.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
+      if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
+        fixedPart = this.plugin.settings.replacement + fixedPart.slice(1);
+      }
+      return fixedPart;
+    });
+    return fixedParts.join('/');
   }
 
   private async fixFootnotes(targetContentToInsert: string): Promise<string> {
