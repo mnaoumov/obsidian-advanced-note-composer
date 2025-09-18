@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.1.1
+
+- Fix file parts (#21)
+- Use split placeholder
+- Ensure unresolved links filter shouldAllowOnlyCurrentFolder (#20)
+
 ## 2.1.0
 
 - Add Extract before/after cursor (#19)
