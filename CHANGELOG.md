@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.0
+
+- Change/hide rendering of unresolved links (#22)
+
 ## 2.1.1
 
 - Fix file parts (#21)
