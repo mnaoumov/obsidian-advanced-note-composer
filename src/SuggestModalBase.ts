@@ -482,6 +482,10 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
+    if (file === this.composer.sourceFile) {
+      return false;
+    }
+
     if (this.composer.shouldAllowOnlyCurrentFolder && file.parent !== this.composer.sourceFile.parent) {
       return false;
     }
