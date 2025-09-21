@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.1
+
+- Exclude source file from selector (#23)
+
 ## 2.2.0
 
 - Change/hide rendering of unresolved links (#22)
