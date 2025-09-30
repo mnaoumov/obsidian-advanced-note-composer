@@ -38,7 +38,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     new ExtractBeforeCursorEditorCommand(this, this.corePluginWrapper).register();
     new ExtractAfterCursorEditorCommand(this, this.corePluginWrapper).register();
 
-    // eslint-disable-next-line no-magic-numbers
+    // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     for (const headingLevel of HEADING_LEVELS) {
       new SplitNoteByHeadingsEditorCommand(this, this.corePluginWrapper, headingLevel).register();

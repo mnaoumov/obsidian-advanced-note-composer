@@ -372,7 +372,7 @@ export class AdvancedNoteComposer {
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
     if (!this.shouldMergeHeadings) {
-      // eslint-disable-next-line require-atomic-updates
+      // eslint-disable-next-line require-atomic-updates -- Don't see a better way to do this.
       targetContentToInsert = await this.corePluginInstance.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
       await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
       return;

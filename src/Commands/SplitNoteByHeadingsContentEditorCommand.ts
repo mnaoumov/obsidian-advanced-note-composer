@@ -62,7 +62,7 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 
     let headingIndex = 0;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
     while (true) {
       const cache = await getCacheSafe(this.app, this.activeFile);
       if (!cache) {
