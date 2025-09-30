@@ -1,5 +1,9 @@
 import type { TFile } from 'obsidian';
 
+import {
+  FileCommandBase,
+  FileCommandInvocationBase
+} from 'obsidian-dev-utils/obsidian/Commands/FileCommandBase';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 
 import type { CorePluginWrapper } from '../CorePluginWrapper.ts';
@@ -7,10 +11,6 @@ import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import { MergeFileSuggestModal } from '../MergeFileModal.ts';
-import {
-  FileCommandBase,
-  FileCommandInvocationBase
-} from './FileCommandBase.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
@@ -25,7 +25,8 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
     return isMarkdownFile(this.app, this.file);
   }
 
-  public override execute(): void {
+  public override async execute(): Promise<void> {
+    await super.execute();
     const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
@@ -37,8 +38,8 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
 }
 
 export class MergeFileCommand extends FileCommandBase<Plugin> {
-  protected override readonly menuItemName: string = 'Advanced merge entire file with...';
-  protected override readonly menuSection: string = 'action';
+  protected override readonly fileMenuItemName: string = 'Advanced merge entire file with...';
+  protected override readonly fileMenuSection: string = 'action';
 
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
     super({

@@ -18,7 +18,7 @@ import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
 
 export class Plugin extends PluginBase<PluginTypes> {
-  private corePluginWrapper!: CorePluginWrapper;
+  private corePluginWrapper?: CorePluginWrapper;
 
   protected override createSettingsManager(): PluginSettingsManager {
     return new PluginSettingsManager(this);

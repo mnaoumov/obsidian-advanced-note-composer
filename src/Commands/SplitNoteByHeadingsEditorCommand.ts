@@ -6,7 +6,11 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
+import {
+  EditorCommandBase,
+  EditorCommandInvocationBase
+} from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 
 import type { Level } from '../MarkdownHeadingDocument.ts';
@@ -14,11 +18,6 @@ import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import { CorePluginWrapper } from '../CorePluginWrapper.ts';
-import { CommandInvocationBase } from './CommandBase.ts';
-import {
-  EditorCommandBase,
-  EditorCommandInvocationBase
-} from './EditorCommandBase.ts';
 
 class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(
@@ -36,7 +35,7 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
       return false;
     }
 
-    const cache = this.app.metadataCache.getFileCache(this.activeFile);
+    const cache = this.app.metadataCache.getFileCache(this.file);
     if (!cache) {
       return false;
     }
@@ -49,12 +48,9 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
     return true;
   }
 
-  public override execute(): void {
-    super.execute();
-    invokeAsyncSafely(() => this.executeAsync());
-  }
+  public override async execute(): Promise<void> {
+    await super.execute();
 
-  private async executeAsync(): Promise<void> {
     const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
@@ -62,7 +58,7 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
     while (true) {
-      const cache = await getCacheSafe(this.app, this.activeFile);
+      const cache = await getCacheSafe(this.app, this.file);
       if (!cache) {
         break;
       }
@@ -72,14 +68,14 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
         break;
       }
 
-      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.activeFile, this.editor, heading.position.start.line);
+      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.file, this.editor, heading.position.start.line);
       if (!headingInfo) {
         new Notice('Failed to find heading');
         return;
       }
 
       this.editor.setSelection(headingInfo.start, headingInfo.end);
-      const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.activeFile, this.editor, headingInfo.heading);
+      const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor, headingInfo.heading);
       await composer.splitFile();
     }
   }

@@ -4,16 +4,17 @@ import type {
   MarkdownView
 } from 'obsidian';
 
+import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
+import {
+  EditorCommandBase,
+  EditorCommandInvocationBase
+} from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
+
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
-import { CommandInvocationBase } from './CommandBase.ts';
-import {
-  EditorCommandBase,
-  EditorCommandInvocationBase
-} from './EditorCommandBase.ts';
 
 class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
@@ -28,8 +29,8 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
     return true;
   }
 
-  public override execute(): void {
-    super.execute();
+  public override async execute(): Promise<void> {
+    await super.execute();
 
     const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
     if (!corePlugin) {
@@ -37,7 +38,7 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection({ ch: this.editor.getLine(this.editor.lastLine()).length, line: this.editor.lastLine() }, this.editor.getCursor());
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.activeFile, this.editor);
+    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }

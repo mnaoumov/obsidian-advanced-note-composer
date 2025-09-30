@@ -5,6 +5,12 @@ import type {
 } from 'obsidian';
 import type { HeadingInfo } from 'obsidian-typings/implementations';
 
+import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
+import {
+  EditorCommandBase,
+  EditorCommandInvocationBase
+} from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
+
 import type { Plugin } from '../Plugin.ts';
 
 import {
@@ -13,14 +19,9 @@ import {
 } from '../AdvancedNoteComposer.ts';
 import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
-import { CommandInvocationBase } from './CommandBase.ts';
-import {
-  EditorCommandBase,
-  EditorCommandInvocationBase
-} from './EditorCommandBase.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
-  private headingInfo!: HeadingInfo;
+  private headingInfo?: HeadingInfo;
 
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
     super(plugin, editor, ctx);
@@ -40,7 +41,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
 
     const corePlugin = this.corePluginWrapper.getCorePlugin();
     if (corePlugin.enabled) {
-      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.activeFile, this.editor, lineNumber);
+      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.file, this.editor, lineNumber);
       if (!headingInfo) {
         return false;
       }
@@ -50,16 +51,20 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     return true;
   }
 
-  public override execute(): void {
-    super.execute();
+  public override async execute(): Promise<void> {
+    await super.execute();
 
     const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
     if (!corePlugin) {
       return;
     }
 
+    if (!this.headingInfo) {
+      return;
+    }
+
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.activeFile, this.editor, this.headingInfo.heading);
+    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor, this.headingInfo.heading);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }

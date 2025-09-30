@@ -10,8 +10,8 @@ import type { Item } from './SuggestModalBase.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 
 export class SplitFileSuggestModal extends SuggestModalBase {
-  private treatTitleAsPathCheckboxEl!: HTMLInputElement;
-  private treatTitleAsPathCheckboxElValue!: boolean;
+  private treatTitleAsPathCheckboxEl?: HTMLInputElement;
+  private treatTitleAsPathCheckboxElValue?: boolean;
 
   public constructor(composer: AdvancedNoteComposer) {
     super(composer);
@@ -89,14 +89,16 @@ export class SplitFileSuggestModal extends SuggestModalBase {
             checkboxEl.addEventListener('change', () => {
               this.composer.shouldAllowOnlyCurrentFolder = checkboxEl.checked;
               this.updateSuggestions();
-              if (this.composer.shouldAllowOnlyCurrentFolder) {
-                this.treatTitleAsPathCheckboxEl.checked = false;
-                this.treatTitleAsPathCheckboxEl.disabled = true;
-                this.composer.shouldTreatTitleAsPath = false;
-              } else {
-                this.treatTitleAsPathCheckboxEl.checked = this.treatTitleAsPathCheckboxElValue;
-                this.treatTitleAsPathCheckboxEl.disabled = false;
-                this.composer.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
+              if (this.treatTitleAsPathCheckboxEl !== undefined && this.treatTitleAsPathCheckboxElValue !== undefined) {
+                if (this.composer.shouldAllowOnlyCurrentFolder) {
+                  this.treatTitleAsPathCheckboxEl.checked = false;
+                  this.treatTitleAsPathCheckboxEl.disabled = true;
+                  this.composer.shouldTreatTitleAsPath = false;
+                } else {
+                  this.treatTitleAsPathCheckboxEl.checked = this.treatTitleAsPathCheckboxElValue;
+                  this.treatTitleAsPathCheckboxEl.disabled = false;
+                  this.composer.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
+                }
               }
             });
           },
