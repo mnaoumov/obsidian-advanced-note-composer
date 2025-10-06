@@ -18,6 +18,8 @@
     "format:check": "obsidian-dev-utils format:check",
     "lint": "obsidian-dev-utils lint",
     "lint:fix": "obsidian-dev-utils lint:fix",
+    "lint:md": "obsidian-dev-utils lint:md",
+    "lint:md:fix": "obsidian-dev-utils lint:md:fix",
     "prepare": "husky",
     "spellcheck": "obsidian-dev-utils spellcheck",
     "version": "obsidian-dev-utils version"
@@ -34,12 +36,12 @@
     "jiti": "latest",
     "obsidian": "latest",
     "obsidian-dev-utils": "latest",
-    "obsidian-typings": "obsidian-public-latest",
-    "type-fest": "^4.41.0"
+    "obsidian-typings": "obsidian-public-latest"
   },
   "overrides": {
     "@antfu/utils": "9.2.0",
     "boolean": "npm:dry-uninstall",
-    "dompurify": "3.0.1"
+    "dompurify": "3.0.1",
+    "type-fest": "latest"
   }
 }
