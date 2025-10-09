@@ -130,11 +130,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       }))
       .addDropdown((dropdown) => {
         dropdown.addOptions({
-          [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
+          /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
           [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
           [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
-          [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter',
-          [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter'
+          [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
+          [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
+          [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
+          /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
         this.bind(dropdown, 'defaultFrontmatterMergeStrategy');
       });
