@@ -48,7 +48,7 @@ export class DynamicModal extends Modal {
   }
 
   public addCancelButton(onCancel?: () => void): this {
-    return this.addButton('mod-cancel', window.i18next.t('plugins.note-composer.dialogue-button-cancel'), () => {
+    return this.addButton('mod-cancel', 'Cancel', () => {
       onCancel?.();
       return true;
     });

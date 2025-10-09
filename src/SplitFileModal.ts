@@ -45,12 +45,12 @@ export class SplitFileSuggestModal extends SuggestModalBase {
 
     builder.addKeyboardCommand({
       key: 'UpDown',
-      purpose: window.i18next.t('plugins.note-composer.instruction-navigate')
+      purpose: 'to navigate'
     });
 
     builder.addKeyboardCommand({
       key: 'Enter',
-      purpose: window.i18next.t('plugins.note-composer.instruction-append')
+      purpose: 'to move to bottom'
     });
 
     builder.addKeyboardCommand({
@@ -60,7 +60,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
         this.selectActiveSuggestion(evt);
         return false;
       },
-      purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
+      purpose: 'to create new'
     });
 
     builder.addKeyboardCommand({
@@ -70,12 +70,12 @@ export class SplitFileSuggestModal extends SuggestModalBase {
         this.selectActiveSuggestion(evt);
         return false;
       },
-      purpose: window.i18next.t('plugins.note-composer.instruction-prepend')
+      purpose: 'to move to top'
     });
 
     builder.addKeyboardCommand({
       key: 'Esc',
-      purpose: window.i18next.t('plugins.note-composer.instruction-dismiss')
+      purpose: 'to dismiss'
     });
 
     builder.addCheckbox({

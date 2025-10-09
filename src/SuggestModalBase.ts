@@ -192,7 +192,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     const message = value
       ? this.emptyStateText
-      : window.i18next.t('plugins.search.label-no-recent-files-found');
+      : 'No recent files found. Type to search...';
     this.chooser.setSuggestions(null);
     this.chooser.addMessage(message);
   }
@@ -205,7 +205,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       suggestionContent.createDiv({ cls: 'suggestion-title', text: this.inputEl.value });
       suggestionAux.createSpan({
         cls: 'suggestion-action',
-        text: window.i18next.t('interface.label-enter-to-create')
+        text: 'Enter to create'
       });
       return;
     }
@@ -220,7 +220,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getSuggestionText(item.file?.path ?? '') });
       suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
         setIcon(suggestionFlair, 'lucide-forward');
-        suggestionFlair.title = window.i18next.t('interface.tooltip.alias');
+        suggestionFlair.title = 'Alias';
       });
     } else if (item.type === 'unresolved') {
       const suggestionTitle = suggestionContent.createDiv('suggestion-title suggestion-unresolved');
@@ -228,7 +228,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       suggestionTitle.createSpan({ cls: 'suggestion-unresolved-description', text: '(unresolved)' });
       suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
         setIcon(suggestionFlair, 'lucide-file-plus');
-        setTooltip(suggestionFlair, window.i18next.t('interface.tooltip.not-created-yet'));
+        setTooltip(suggestionFlair, 'Not created yet, select to create');
       });
     } else if (item.type === 'bookmark') {
       const suggestionTitle = suggestionContent.createDiv('suggestion-title');

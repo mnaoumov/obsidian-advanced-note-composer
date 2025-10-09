@@ -19,22 +19,22 @@ export class MergeFileSuggestModal extends SuggestModalBase {
 
     this.composer.action = 'merge';
 
-    this.emptyStateText = window.i18next.t('plugins.note-composer.label-no-files');
+    this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
-    this.setPlaceholder(window.i18next.t('plugins.note-composer.prompt-select-file-to-merge'));
+    this.setPlaceholder('Select file to merge into...');
 
     const builder = new SuggestModalCommandBuilder();
 
     builder.addKeyboardCommand({
       key: 'UpDown',
-      purpose: window.i18next.t('plugins.note-composer.instruction-navigate')
+      purpose: 'to navigate'
     });
 
     builder.addKeyboardCommand({
       key: 'Enter',
-      purpose: window.i18next.t('plugins.note-composer.instruction-append')
+      purpose: 'to move to bottom'
     });
 
     builder.addKeyboardCommand({
@@ -44,7 +44,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         this.selectActiveSuggestion(evt);
         return false;
       },
-      purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
+      purpose: 'to create new'
     });
 
     builder.addKeyboardCommand({
@@ -54,12 +54,12 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         this.selectActiveSuggestion(evt);
         return false;
       },
-      purpose: window.i18next.t('instruction-merge-at-top')
+      purpose: 'to merge at top'
     });
 
     builder.addKeyboardCommand({
       key: 'Esc',
-      purpose: window.i18next.t('plugins.note-composer.instruction-dismiss')
+      purpose: 'to dismiss'
     });
 
     builder.addCheckbox({
@@ -125,22 +125,20 @@ export class MergeFileSuggestModal extends SuggestModalBase {
 
       if (this.plugin.settings.shouldAskBeforeMerging) {
         const modal = new DynamicModal(this.app)
-          .setTitle(window.i18next.t('plugins.note-composer.label-merge-file'))
+          .setTitle('Merge file')
           .setContent(createFragment((f) => {
             f.createEl('p', {
-              text: window.i18next.t('plugins.note-composer.label-confirm-file-merge', {
-                destination: this.composer.targetFile.basename,
-                file: this.composer.sourceFile.basename
-              })
+              text:
+                `Are you sure you want to merge "${this.composer.sourceFile.basename}" into "${this.composer.targetFile.basename}"? "${this.composer.sourceFile.basename}" will be deleted.`
             });
           }));
 
         if (Platform.isMobile) {
-          modal.addButton('mod-warning', window.i18next.t('plugins.note-composer.button-delete-do-not-ask-again'), async () => {
+          modal.addButton('mod-warning', 'Delete and don\'t ask again', async () => {
             await this.performMerge(evt);
           });
         } else {
-          modal.addCheckbox(window.i18next.t('plugins.note-composer.dialogue-label-do-not-ask-again'), (evt2) => {
+          modal.addCheckbox('Don\'t ask again', (evt2) => {
             if (!(evt2.target instanceof HTMLInputElement)) {
               return;
             }
@@ -148,7 +146,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
           });
         }
 
-        modal.addButton('mod-warning', window.i18next.t('plugins.note-composer.button-merge'), async () => {
+        modal.addButton('mod-warning', 'Merge', async () => {
           await this.performMerge(evt);
         })
           .addCancelButton()
