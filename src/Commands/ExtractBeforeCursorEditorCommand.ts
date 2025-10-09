@@ -45,7 +45,7 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
 }
 
 export class ExtractBeforeCursorEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly menuItemName: string = 'Advanced extract before cursor...';
+  protected override readonly editorMenuItemName: string = 'Advanced extract before cursor...';
 
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
     super({

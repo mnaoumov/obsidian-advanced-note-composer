@@ -48,8 +48,8 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
 }
 
 export class ExtractCurrentSelectionEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly menuItemName: string = 'Advanced extract current selection...';
-  protected override readonly menuSection: string = 'selection';
+  protected override readonly editorMenuItemName: string = 'Advanced extract current selection...';
+  protected override readonly editorMenuSection: string = 'selection';
 
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
     super({

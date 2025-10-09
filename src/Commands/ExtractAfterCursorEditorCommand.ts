@@ -45,7 +45,7 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
 }
 
 export class ExtractAfterCursorEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly menuItemName: string = 'Advanced extract after cursor...';
+  protected override readonly editorMenuItemName: string = 'Advanced extract after cursor...';
 
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
     super({

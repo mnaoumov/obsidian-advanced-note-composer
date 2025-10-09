@@ -71,7 +71,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
 }
 
 export class ExtractThisHeadingEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly menuItemName: string = 'Advanced extract this heading...';
+  protected override readonly editorMenuItemName: string = 'Advanced extract this heading...';
 
   public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
     super({
