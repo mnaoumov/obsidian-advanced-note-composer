@@ -151,11 +151,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setDesc('What to show in place of the selected text after extracting it.')
       .addDropdown((dropdown) => {
         dropdown.addOptions({
-          /* eslint-disable perfectionist/sort-objects -- Need to keep object order. */
+          /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
           [TextAfterExtractionMode.LinkToNewFile]: 'Link to new file',
           [TextAfterExtractionMode.EmbedNewFile]: 'Embed new file',
           [TextAfterExtractionMode.None]: 'None'
-          /* eslint-enable perfectionist/sort-objects -- Need to keep object order. */
+          /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
         this.bind(dropdown, 'textAfterExtractionMode');
       });
@@ -165,7 +165,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setDesc(createFragment((f) => {
         f.appendText('Template to use when merging notes.');
         f.createEl('br');
-        // Available variables: {{content}}, {{fromTitle}}, {{newTitle}}, {{date:FORMAT}}, e.g. {{date:YYYY-MM-DD}}.
         f.appendText('Available variables: ');
         f.createEl('br');
         f.appendText('- ');
