@@ -1,6 +1,4 @@
 import type {
-  Instruction,
-  Modifier,
   SearchMatches,
   SearchResult,
   SearchResultContainer
@@ -47,13 +45,6 @@ interface AnimationState {
   props: Animation;
   timer: number;
   win: Window;
-}
-
-interface RegisterCommandWithCheckboxOptions {
-  initCheckbox(this: void, checkboxEl: HTMLInputElement): void;
-  key: string;
-  modifiers?: Modifier[];
-  purpose: string;
 }
 
 type SearchFn = (text: string) => null | SearchResult;
@@ -273,36 +264,6 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   protected abstract onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void>;
-
-  protected registerCommandWithCheckbox(options: RegisterCommandWithCheckboxOptions): Instruction {
-    const { initCheckbox, key, modifiers, purpose } = options;
-
-    const keys = [...(modifiers ?? []), key].map((key2) => key2.toLowerCase()).join(' ');
-
-    requestAnimationFrame(() => {
-      const instructionEl = this.instructionsEl.findAll('span').find((span) => span.textContent === purpose);
-
-      if (!instructionEl) {
-        throw new Error(`Instruction ${purpose} not found`);
-      }
-
-      const checkboxEl: HTMLInputElement = instructionEl.createEl('input', { type: 'checkbox' });
-      initCheckbox(checkboxEl);
-
-      this.scope.register(modifiers ?? [], key, () => {
-        if (checkboxEl.disabled) {
-          return;
-        }
-        checkboxEl.checked = !checkboxEl.checked;
-        checkboxEl.trigger('change');
-      });
-    });
-
-    return {
-      command: keys,
-      purpose
-    };
-  }
 
   private addAliasMatches(file: TFile, searchFn: SearchFn, items: Item[], isUserIgnored: boolean, scoreStep: number): void {
     const cache = this.app.metadataCache.getFileCache(file);

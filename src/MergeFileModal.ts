@@ -9,6 +9,7 @@ import type { Item } from './SuggestModalBase.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
+import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
@@ -23,60 +24,97 @@ export class MergeFileSuggestModal extends SuggestModalBase {
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
     this.setPlaceholder(window.i18next.t('plugins.note-composer.prompt-select-file-to-merge'));
-    this.setInstructions([
-      { command: '↑↓', purpose: window.i18next.t('plugins.note-composer.instruction-navigate') },
-      { command: '↵', purpose: window.i18next.t('plugins.note-composer.instruction-merge') },
-      {
-        command: Platform.isMacOS ? 'cmd ↵' : 'ctrl ↵',
-        purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
-      },
-      { command: 'shift ↵', purpose: window.i18next.t('plugins.note-composer.instruction-merge-at-top') },
-      { command: 'esc', purpose: window.i18next.t('plugins.note-composer.instruction-dismiss') },
-      this.registerCommandWithCheckbox({
-        initCheckbox: (checkboxEl) => {
-          checkboxEl.checked = this.composer.shouldFixFootnotes;
-          checkboxEl.addEventListener('change', () => {
-            this.composer.shouldFixFootnotes = checkboxEl.checked;
-          });
-        },
-        key: '1',
-        modifiers: ['Alt'],
-        purpose: 'Fix footnotes'
-      }),
-      this.registerCommandWithCheckbox({
-        initCheckbox: (checkboxEl) => {
-          checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
-          checkboxEl.addEventListener('change', () => {
-            this.composer.shouldAllowOnlyCurrentFolder = checkboxEl.checked;
-            this.updateSuggestions();
-          });
-        },
-        key: '2',
-        modifiers: ['Alt'],
-        purpose: 'Allow only current folder'
-      }),
-      this.registerCommandWithCheckbox({
-        initCheckbox: (checkboxEl) => {
-          checkboxEl.checked = this.composer.shouldMergeHeadings;
-          checkboxEl.addEventListener('change', () => {
-            this.composer.shouldMergeHeadings = checkboxEl.checked;
-            this.updateSuggestions();
-          });
-        },
-        key: '3',
-        modifiers: ['Alt'],
-        purpose: 'Merge headings'
-      })
-    ]);
 
-    this.scope.register(['Shift'], 'Enter', (evt) => {
-      this.selectActiveSuggestion(evt);
-      return false;
+    const builder = new SuggestModalCommandBuilder();
+
+    builder.addKeyboardCommand({
+      key: 'UpDown',
+      purpose: window.i18next.t('plugins.note-composer.instruction-navigate')
     });
-    this.scope.register(['Mod'], 'Enter', (evt) => {
-      this.selectActiveSuggestion(evt);
-      return false;
+
+    builder.addKeyboardCommand({
+      key: 'Enter',
+      purpose: window.i18next.t('plugins.note-composer.instruction-append')
     });
+
+    builder.addKeyboardCommand({
+      key: 'Enter',
+      modifiers: ['Mod'],
+      onKey: (evt) => {
+        this.selectActiveSuggestion(evt);
+        return false;
+      },
+      purpose: window.i18next.t('plugins.note-composer.instruction-create-new')
+    });
+
+    builder.addKeyboardCommand({
+      key: 'Enter',
+      modifiers: ['Shift'],
+      onKey: (evt) => {
+        this.selectActiveSuggestion(evt);
+        return false;
+      },
+      purpose: window.i18next.t('instruction-merge-at-top')
+    });
+
+    builder.addKeyboardCommand({
+      key: 'Esc',
+      purpose: window.i18next.t('plugins.note-composer.instruction-dismiss')
+    });
+
+    builder.addCheckbox({
+      key: '1',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.composer.shouldFixFootnotes = value;
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.composer.shouldFixFootnotes;
+      },
+      purpose: 'Fix footnotes'
+    });
+
+    builder.addCheckbox({
+      key: '2',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.composer.shouldAllowOnlyCurrentFolder = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
+      },
+      purpose: 'Allow only current folder'
+    });
+
+    builder.addCheckbox({
+      key: '3',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.composer.shouldMergeHeadings = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.composer.shouldMergeHeadings;
+      },
+      purpose: 'Merge headings'
+    });
+
+    builder.addCheckbox({
+      key: '6',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.composer.shouldAllowSplitIntoUnresolvedPath = value;
+        this.shouldShowUnresolved = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.composer.shouldAllowSplitIntoUnresolvedPath;
+      },
+      purpose: 'Allow split into unresolved path'
+    });
+
+    builder.build(this);
   }
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
