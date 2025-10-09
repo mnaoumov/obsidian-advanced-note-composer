@@ -50,7 +50,6 @@ export class DynamicModal extends Modal {
   public addCancelButton(onCancel?: () => void): this {
     return this.addButton('mod-cancel', 'Cancel', () => {
       onCancel?.();
-      return true;
     });
   }
 
