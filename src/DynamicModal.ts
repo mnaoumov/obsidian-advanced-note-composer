@@ -33,7 +33,7 @@ export class DynamicModal extends Modal {
           button.addClass('mod-loading');
           const result = await onClick(evt);
 
-          if (result) {
+          if (!result) {
             this.close();
           }
         } catch (error) {
