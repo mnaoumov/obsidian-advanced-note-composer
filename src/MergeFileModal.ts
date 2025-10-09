@@ -101,7 +101,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
     });
 
     builder.addCheckbox({
-      key: '6',
+      key: '4',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
         this.composer.shouldAllowSplitIntoUnresolvedPath = value;
