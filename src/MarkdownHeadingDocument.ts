@@ -2,6 +2,7 @@ import type {
   App,
   HeadingCache
 } from 'obsidian';
+import type { Promisable } from 'type-fest';
 
 import { parseMetadata } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
@@ -41,7 +42,7 @@ class MarkdownHeadingDocument {
     return this.frontmatter + this.node.toString();
   }
 
-  public async wrapText(textFn: (text: string) => Promise<string>): Promise<void> {
+  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
     await this.node.wrapText(textFn);
   }
 }
@@ -128,7 +129,7 @@ class MarkdownHeadingNode {
     return str;
   }
 
-  public async wrapText(textFn: (text: string) => Promise<string>): Promise<void> {
+  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
     this.text = await textFn(this.text);
     for (const child of this.children) {
       await child.wrapText(textFn);

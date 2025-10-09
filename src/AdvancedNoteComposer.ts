@@ -2,6 +2,7 @@ import type {
   EditorSelection,
   Pos
 } from 'obsidian';
+import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
 import type { HeadingInfo } from 'obsidian-typings';
 
 import moment from 'moment';
@@ -39,11 +40,14 @@ import {
   TRAILING_DOTS_OR_SPACES_REG_EXP
 } from './FilenameValidation.ts';
 import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
-import { TextAfterExtractionMode } from './PluginSettings.ts';
+import {
+  FrontmatterMergeStrategy,
+  TextAfterExtractionMode
+} from './PluginSettings.ts';
 
 export type InsertMode = 'append' | 'prepend';
 
-interface Frontmatter {
+interface Frontmatter extends GenericObject {
   title?: string;
 }
 
@@ -56,6 +60,7 @@ export class AdvancedNoteComposer {
   public action: 'merge' | 'split' = 'merge';
 
   public readonly app: App;
+  public frontmatterMergeStrategy: FrontmatterMergeStrategy;
   public mode: InsertMode = 'append';
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -86,6 +91,7 @@ export class AdvancedNoteComposer {
     this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
     this.initHeading();
   }
 
@@ -146,16 +152,18 @@ export class AdvancedNoteComposer {
       case TextAfterExtractionMode.EmbedNewFile:
         this.editor?.replaceSelection(`!${markdownLink}`);
         break;
-      case TextAfterExtractionMode.None:
-        this.editor?.replaceSelection('');
-        break;
       case TextAfterExtractionMode.LinkToNewFile:
         this.editor?.replaceSelection(markdownLink);
         break;
+      case TextAfterExtractionMode.None:
+        this.editor?.replaceSelection('');
+        break;
+      default:
+        throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
     }
   }
 
-  private async applyTemplate(targetContentToInsert: string, sourceFileBasename: string, targetFileBasename: string): Promise<string> {
+  private applyTemplate(targetContentToInsert: string, sourceFileBasename: string, targetFileBasename: string): string {
     let template = this.plugin.settings.template;
     if (!template) {
       return targetContentToInsert;
@@ -387,17 +395,28 @@ export class AdvancedNoteComposer {
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
 
-    const targetFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
+    const originalFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
     const frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
-    const newFrontmatterObj = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null;
+    const newFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
 
-    if (newFrontmatterObj && targetFrontmatter.title !== undefined) {
-      newFrontmatterObj.title = targetFrontmatter.title;
-    }
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
     await this.insertIntoTargetFileImpl(targetContentToInsert);
-    if (newFrontmatterObj) {
-      await this.app.fileManager.insertIntoFile(this.targetFile, `---\n${stringifyYaml(newFrontmatterObj)}---`);
+
+    if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
+      const originalTitle = originalFrontmatter.title;
+      const mergedFrontmatter = this.mergeFrontmatter(originalFrontmatter, newFrontmatter);
+      if (originalTitle === undefined) {
+        delete mergedFrontmatter.title;
+      } else {
+        mergedFrontmatter.title = originalTitle;
+      }
+      await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
+        for (const key of Object.keys(mergedFrontmatter)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- We need to empty the object.
+          delete frontmatter[key];
+        }
+        Object.assign(frontmatter, mergedFrontmatter);
+      });
     }
 
     await this.fixBacklinks(backlinksToFix);
@@ -405,8 +424,7 @@ export class AdvancedNoteComposer {
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
     if (!this.shouldMergeHeadings) {
-      // eslint-disable-next-line require-atomic-updates -- Don't see a better way to do this.
-      targetContentToInsert = await this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
+      targetContentToInsert = this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
       await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
       return;
     }
@@ -424,6 +442,66 @@ export class AdvancedNoteComposer {
     return selections.some((selection) => {
       return selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset;
     });
+  }
+
+  private mergeFrontmatter(originalFrontmatter: Frontmatter, newFrontmatter: Frontmatter): Frontmatter {
+    switch (this.frontmatterMergeStrategy) {
+      case FrontmatterMergeStrategy.KeepOriginalFrontmatter:
+        return originalFrontmatter;
+      case FrontmatterMergeStrategy.MergeAndPreferNewValues:
+        return this.mergeRecursively(originalFrontmatter as GenericObject, newFrontmatter as GenericObject) as Frontmatter;
+      case FrontmatterMergeStrategy.MergeAndPreferOriginalValues:
+        return this.mergeRecursively(newFrontmatter as GenericObject, originalFrontmatter as GenericObject) as Frontmatter;
+      case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
+        let suffix = 0;
+        let mergeKey: string;
+        let fromKey: string;
+        let mergeDateKey: string;
+        const oldKeys = Object.keys(originalFrontmatter);
+        const newKeys = Object.keys(newFrontmatter);
+        do {
+          const suffixStr = suffix > 0 ? String(suffix) : '';
+          mergeKey = `__merged${suffixStr}`;
+          fromKey = `__from${suffixStr}`;
+          mergeDateKey = `__mergeDate${suffixStr}`;
+          suffix++;
+        } while (oldKeys.includes(mergeKey) || newKeys.includes(fromKey) || newKeys.includes(mergeDateKey));
+
+        return {
+          ...originalFrontmatter,
+          [mergeKey]: {
+            [fromKey]: this.sourceFile.path,
+            [mergeDateKey]: moment().format(),
+            ...newFrontmatter
+          }
+        };
+      }
+      case FrontmatterMergeStrategy.ReplaceWithNewFrontmatter:
+        return newFrontmatter;
+      default:
+        throw new Error(`Invalid frontmatter merge strategy: ${this.frontmatterMergeStrategy as string}`);
+    }
+  }
+
+  private mergeRecursively(oldObj: GenericObject, newObj: GenericObject): GenericObject {
+    const oldKeys = Object.keys(oldObj);
+    for (const [newKey, newValue] of Object.entries(newObj)) {
+      if (oldKeys.includes(newKey)) {
+        const oldValue = oldObj[newKey];
+        if (oldValue === undefined || oldValue === null) {
+          oldObj[newKey] = newValue;
+        } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
+          oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
+        } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
+          oldObj[newKey] = this.mergeRecursively(oldObj[newKey] as GenericObject, newValue as GenericObject);
+        } else {
+          oldObj[newKey] = newValue;
+        }
+      } else {
+        oldObj[newKey] = newValue;
+      }
+    }
+    return oldObj;
   }
 
   private async prepareBacklinksToFix(): Promise<Map<string, string[]>> {
@@ -586,12 +664,12 @@ export class AdvancedNoteComposer {
     existingTargetIds.add(newTargetFootnoteId);
   }
 
-  private async wrapText(text: string): Promise<string> {
+  private wrapText(text: string): string {
     text = text.trim();
     if (!text) {
       return '';
     }
-    let wrappedText = await this.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
+    let wrappedText = this.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
 
     if (!wrappedText) {
       return '';
@@ -639,7 +717,7 @@ export function getSelectionUnderHeading(app: App, file: TFile, editor: Editor, 
     return null;
   }
 
-  let headingEndLineNumber = null;
+  let headingEndLineNumber: number;
   if (nextHeading) {
     headingEndLineNumber = nextHeading.position.start.line - 1;
     while (!editor.getLine(headingEndLineNumber).trim() && headingEndLineNumber > lineNumber) {
