@@ -8,6 +8,7 @@ import type { Plugin } from './Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
+import { FrontmatterMergeStrategy } from './PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
@@ -112,6 +113,27 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         checkboxEl.checked = this.composer.shouldAllowSplitIntoUnresolvedPath;
       },
       purpose: 'Allow split into unresolved path'
+    });
+
+    builder.addDropDown({
+      key: '5',
+      modifiers: ['Alt'],
+      onChange: (value: string) => {
+        this.composer.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
+      },
+      onInit: (dropdownComponent) => {
+        dropdownComponent.addOptions({
+          /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+          [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
+          [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
+          [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
+          [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
+          [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
+          /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+        });
+        dropdownComponent.setValue(this.composer.frontmatterMergeStrategy);
+      },
+      purpose: 'Frontmatter merge strategy'
     });
 
     builder.build(this);

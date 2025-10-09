@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 
 import {
+  DropdownComponent,
   Platform,
   Scope
 } from 'obsidian';
@@ -20,6 +21,14 @@ interface CheckboxCommand {
   modifiers?: Modifier[];
   onChange(value: boolean): void;
   onInit(checkboxEl: HTMLInputElement): void;
+  purpose: string;
+}
+
+interface DropDownCommand {
+  key: string;
+  modifiers?: Modifier[];
+  onChange(value: string): void;
+  onInit(dropdownComponent: DropdownComponent): void;
   purpose: string;
 }
 
@@ -53,6 +62,31 @@ export class SuggestModalCommandBuilder {
           }
           checkboxEl.checked = !checkboxEl.checked;
           checkboxEl.trigger('change');
+        });
+      },
+      purpose: command.purpose
+    });
+    return this;
+  }
+
+  public addDropDown(command: DropDownCommand): this {
+    this.instructions.push({
+      command: this.buildCommand(command),
+      init: (purposeEl, scope) => {
+        purposeEl.appendText(' ');
+        const dropdownComponent = new DropdownComponent(purposeEl);
+        command.onInit(dropdownComponent);
+        dropdownComponent.onChange((value) => {
+          command.onChange(value);
+        });
+
+        scope.register(command.modifiers ?? [], command.key, () => {
+          if (dropdownComponent.disabled) {
+            return;
+          }
+          const selectEl = dropdownComponent.selectEl;
+          selectEl.selectedIndex = (selectEl.selectedIndex + 1) % selectEl.options.length;
+          selectEl.trigger('change');
         });
       },
       purpose: command.purpose
