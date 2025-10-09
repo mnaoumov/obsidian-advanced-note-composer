@@ -13,11 +13,10 @@ import {
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
 
 class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
-  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
     super(plugin, editor, ctx);
   }
 
@@ -32,13 +31,8 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
   public override async execute(): Promise<void> {
     await super.execute();
 
-    const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return;
-    }
-
     this.editor.setSelection({ ch: 0, line: 0 }, this.editor.getCursor());
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor);
+    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }
@@ -47,7 +41,7 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
 export class ExtractBeforeCursorEditorCommand extends EditorCommandBase<Plugin> {
   protected override readonly editorMenuItemName: string = 'Advanced extract before cursor...';
 
-  public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin) {
     super({
       icon: 'lucide-arrow-up-from-line',
       id: 'extract-before-cursor',
@@ -57,7 +51,7 @@ export class ExtractBeforeCursorEditorCommand extends EditorCommandBase<Plugin> 
   }
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
-    return new ExtractBeforeCursorEditorCommandInvocation(this.plugin, editor, ctx, this.corePluginWrapper);
+    return new ExtractBeforeCursorEditorCommandInvocation(this.plugin, editor, ctx);
   }
 
   protected override shouldAddToEditorMenu(): boolean {

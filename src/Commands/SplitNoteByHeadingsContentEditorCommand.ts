@@ -16,15 +16,16 @@ import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import type { Level } from '../MarkdownHeadingDocument.ts';
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { CorePluginWrapper } from '../CorePluginWrapper.ts';
+import {
+  AdvancedNoteComposer,
+  getSelectionUnderHeading
+} from '../AdvancedNoteComposer.ts';
 
 class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(
     plugin: Plugin,
     editor: Editor,
     ctx: MarkdownFileInfo | MarkdownView,
-    private readonly corePluginWrapper: CorePluginWrapper,
     private readonly headingLevel: Level
   ) {
     super(plugin, editor, ctx);
@@ -51,11 +52,6 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
   public override async execute(): Promise<void> {
     await super.execute();
 
-    const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return;
-    }
-
     let headingIndex = 0;
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
@@ -70,7 +66,7 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
         break;
       }
 
-      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.file, this.editor, heading.position.start.line);
+      const headingInfo = getSelectionUnderHeading(this.app, this.file, this.editor, heading.position.start.line);
       if (!headingInfo) {
         new Notice('Failed to find heading');
         return;
@@ -78,7 +74,7 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 
       const splitStart: EditorPosition = { ch: 1, line: headingInfo.start.line + 1 };
       this.editor.setSelection(splitStart, headingInfo.end);
-      const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor, headingInfo.heading);
+      const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor, headingInfo.heading);
       await composer.splitFile();
       headingIndex++;
     }
@@ -86,7 +82,7 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 }
 
 export class SplitNoteByHeadingsContentEditorCommand extends EditorCommandBase<Plugin> {
-  public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper, private readonly headingLevel: Level) {
+  public constructor(plugin: Plugin, private readonly headingLevel: Level) {
     super({
       icon: 'lucide-scissors-line-dashed',
       id: `split-note-by-headings-content-h${String(headingLevel)}`,
@@ -96,6 +92,6 @@ export class SplitNoteByHeadingsContentEditorCommand extends EditorCommandBase<P
   }
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
-    return new SplitNoteByHeadingsEditorContentCommandInvocation(this.plugin, editor, ctx, this.corePluginWrapper, this.headingLevel);
+    return new SplitNoteByHeadingsEditorContentCommandInvocation(this.plugin, editor, ctx, this.headingLevel);
   }
 }

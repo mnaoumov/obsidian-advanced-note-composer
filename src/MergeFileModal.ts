@@ -4,6 +4,7 @@ import {
 } from 'obsidian';
 
 import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
+import type { Plugin } from './Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
@@ -12,7 +13,7 @@ import { SuggestModalBase } from './SuggestModalBase.ts';
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
 
-  public constructor(composer: AdvancedNoteComposer) {
+  public constructor(private readonly plugin: Plugin, composer: AdvancedNoteComposer) {
     super(composer);
 
     this.composer.action = 'merge';
@@ -84,7 +85,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
     if (this.composer.targetFile !== this.composer.sourceFile) {
       this.doNotAskAgain = false;
 
-      if (this.composer.corePluginInstance.options.askBeforeMerging) {
+      if (this.plugin.settings.shouldAskBeforeMerging) {
         const modal = new DynamicModal(this.app)
           .setTitle(window.i18next.t('plugins.note-composer.label-merge-file'))
           .setContent(createFragment((f) => {

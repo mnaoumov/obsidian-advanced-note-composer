@@ -15,15 +15,15 @@ import type { Plugin } from '../Plugin.ts';
 
 import {
   AdvancedNoteComposer,
-  extractHeadingFromLine
+  extractHeadingFromLine,
+  getSelectionUnderHeading
 } from '../AdvancedNoteComposer.ts';
-import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;
 
-  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
     super(plugin, editor, ctx);
   }
 
@@ -39,32 +39,24 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
       return false;
     }
 
-    const corePlugin = this.corePluginWrapper.getCorePlugin();
-    if (corePlugin.enabled) {
-      const headingInfo = corePlugin.instance.getSelectionUnderHeading(this.file, this.editor, lineNumber);
-      if (!headingInfo) {
-        return false;
-      }
-      this.headingInfo = headingInfo;
+    const headingInfo = getSelectionUnderHeading(this.app, this.file, this.editor, lineNumber);
+    if (!headingInfo) {
+      return false;
     }
 
+    this.headingInfo = headingInfo;
     return true;
   }
 
   public override async execute(): Promise<void> {
     await super.execute();
 
-    const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return;
-    }
-
     if (!this.headingInfo) {
       return;
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor, this.headingInfo.heading);
+    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor, this.headingInfo.heading);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }
@@ -73,7 +65,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
 export class ExtractThisHeadingEditorCommand extends EditorCommandBase<Plugin> {
   protected override readonly editorMenuItemName: string = 'Advanced extract this heading...';
 
-  public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin) {
     super({
       icon: 'lucide-scissors',
       id: 'extract-this-heading',
@@ -83,7 +75,7 @@ export class ExtractThisHeadingEditorCommand extends EditorCommandBase<Plugin> {
   }
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
-    return new ExtractThisHeadingEditorCommandInvocation(this.plugin, editor, ctx, this.corePluginWrapper);
+    return new ExtractThisHeadingEditorCommandInvocation(this.plugin, editor, ctx);
   }
 
   protected override shouldAddToEditorMenu(): boolean {

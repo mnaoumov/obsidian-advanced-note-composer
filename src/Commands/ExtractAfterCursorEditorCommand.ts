@@ -13,11 +13,10 @@ import {
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
 
 class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
-  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
     super(plugin, editor, ctx);
   }
 
@@ -32,13 +31,8 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
   public override async execute(): Promise<void> {
     await super.execute();
 
-    const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return;
-    }
-
     this.editor.setSelection({ ch: this.editor.getLine(this.editor.lastLine()).length, line: this.editor.lastLine() }, this.editor.getCursor());
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor);
+    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }
@@ -47,7 +41,7 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
 export class ExtractAfterCursorEditorCommand extends EditorCommandBase<Plugin> {
   protected override readonly editorMenuItemName: string = 'Advanced extract after cursor...';
 
-  public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin) {
     super({
       icon: 'lucide-arrow-down-from-line',
       id: 'extract-after-cursor',
@@ -57,7 +51,7 @@ export class ExtractAfterCursorEditorCommand extends EditorCommandBase<Plugin> {
   }
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
-    return new ExtractAfterCursorEditorCommandInvocation(this.plugin, editor, ctx, this.corePluginWrapper);
+    return new ExtractAfterCursorEditorCommandInvocation(this.plugin, editor, ctx);
   }
 
   protected override shouldAddToEditorMenu(): boolean {

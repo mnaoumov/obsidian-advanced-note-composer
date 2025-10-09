@@ -4,7 +4,11 @@ import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
 
 import type { PluginTypes } from './PluginTypes.ts';
 
-import { FrontmatterMergeStrategy } from './PluginSettings.ts';
+import {
+  FrontmatterMergeStrategy,
+  TextAfterExtractionMode
+} from './PluginSettings.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './PrismComponent.ts';
 
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
   public override display(): void {
@@ -90,21 +94,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       });
 
     new SettingEx(this.containerEl)
-      .setName('Should hide core plugin menu items')
-      .setDesc(createFragment((f) => {
-        f.appendText('Whether to hide core ');
-        appendCodeBlock(f, 'Note Composer');
-        f.appendText(' plugin menu items.');
-        f.createEl('br');
-        f.appendText('If disabled, the core plugin menu items will be shown together with the corresponding ');
-        appendCodeBlock(f, 'Advanced Note Composer');
-        f.appendText(' plugin menu items.');
-      }))
-      .addToggle((toggle) => {
-        this.bind(toggle, 'shouldHideCorePluginMenuItems');
-      });
-
-    new SettingEx(this.containerEl)
       .setName('Should merge headings by default')
       .setDesc('Whether to merge headings by default.')
       .addToggle((toggle) => {
@@ -148,6 +137,54 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
           [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter'
         });
         this.bind(dropdown, 'defaultFrontmatterMergeStrategy');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should ask before merging')
+      .setDesc('Whether to ask before merging notes.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldAskBeforeMerging');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Text after extraction')
+      .setDesc('What to show in place of the selected text after extracting it.')
+      .addDropdown((dropdown) => {
+        dropdown.addOptions({
+          /* eslint-disable perfectionist/sort-objects -- Need to keep object order. */
+          [TextAfterExtractionMode.LinkToNewFile]: 'Link to new file',
+          [TextAfterExtractionMode.EmbedNewFile]: 'Embed new file',
+          [TextAfterExtractionMode.None]: 'None'
+          /* eslint-enable perfectionist/sort-objects -- Need to keep object order. */
+        });
+        this.bind(dropdown, 'textAfterExtractionMode');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Template')
+      .setDesc(createFragment((f) => {
+        f.appendText('Template to use when merging notes.');
+        f.createEl('br');
+        // Available variables: {{content}}, {{fromTitle}}, {{newTitle}}, {{date:FORMAT}}, e.g. {{date:YYYY-MM-DD}}.
+        f.appendText('Available variables: ');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{content}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{fromTitle}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{newTitle}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{date:FORMAT}}');
+        f.appendText(', e.g. ');
+        appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+      }))
+      .addCodeHighlighter((codeHighlighter) => {
+        codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+        this.bind(codeHighlighter, 'template');
       });
   }
 }

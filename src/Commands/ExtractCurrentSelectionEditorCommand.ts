@@ -13,11 +13,10 @@ import {
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { CorePluginWrapper } from '../CorePluginWrapper.ts';
 import { SplitFileSuggestModal } from '../SplitFileModal.ts';
 
 class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
-  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
     super(plugin, editor, ctx);
   }
 
@@ -36,12 +35,7 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
   public override async execute(): Promise<void> {
     await super.execute();
 
-    const corePlugin = this.corePluginWrapper.getAndCheckCorePlugin();
-    if (!corePlugin) {
-      return;
-    }
-
-    const composer = new AdvancedNoteComposer(this.plugin, corePlugin.instance, this.file, this.editor);
+    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor);
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }
@@ -51,7 +45,7 @@ export class ExtractCurrentSelectionEditorCommand extends EditorCommandBase<Plug
   protected override readonly editorMenuItemName: string = 'Advanced extract current selection...';
   protected override readonly editorMenuSection: string = 'selection';
 
-  public constructor(plugin: Plugin, private readonly corePluginWrapper: CorePluginWrapper) {
+  public constructor(plugin: Plugin) {
     super({
       icon: 'lucide-scissors',
       id: 'extract-current-selection',
@@ -61,7 +55,7 @@ export class ExtractCurrentSelectionEditorCommand extends EditorCommandBase<Plug
   }
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
-    return new ExtractCurrentSelectionEditorCommandInvocation(this.plugin, editor, ctx, this.corePluginWrapper);
+    return new ExtractCurrentSelectionEditorCommandInvocation(this.plugin, editor, ctx);
   }
 
   protected override shouldAddToEditorMenu(): boolean {

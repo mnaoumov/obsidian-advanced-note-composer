@@ -2,8 +2,9 @@ import type {
   EditorSelection,
   Pos
 } from 'obsidian';
-import type { NoteComposerPluginInstance } from 'obsidian-typings';
+import type { HeadingInfo } from 'obsidian-typings';
 
+import moment from 'moment';
 import {
   App,
   Editor,
@@ -38,6 +39,7 @@ import {
   TRAILING_DOTS_OR_SPACES_REG_EXP
 } from './FilenameValidation.ts';
 import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
+import { TextAfterExtractionMode } from './PluginSettings.ts';
 
 export type InsertMode = 'append' | 'prepend';
 
@@ -73,7 +75,6 @@ export class AdvancedNoteComposer {
 
   public constructor(
     private readonly plugin: Plugin,
-    public readonly corePluginInstance: NoteComposerPluginInstance,
     public readonly sourceFile: TFile,
     public readonly editor?: Editor,
     public heading = ''
@@ -110,8 +111,9 @@ export class AdvancedNoteComposer {
 
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
     if (doNotAskAgain) {
-      this.corePluginInstance.options.askBeforeMerging = false;
-      await this.corePluginInstance.pluginInstance.saveData(this.corePluginInstance.options);
+      await this.plugin.settingsManager.editAndSave((settings) => {
+        settings.shouldAskBeforeMerging = false;
+      });
     }
 
     const sourceContent = await this.app.vault.read(this.sourceFile);
@@ -139,15 +141,46 @@ export class AdvancedNoteComposer {
     await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
 
     const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-    const replacementText = this.corePluginInstance.options.replacementText;
 
-    if (replacementText === 'embed') {
-      this.editor?.replaceSelection(`!${markdownLink}`);
-    } else if (replacementText === 'none') {
-      this.editor?.replaceSelection('');
-    } else {
-      this.editor?.replaceSelection(markdownLink);
+    switch (this.plugin.settings.textAfterExtractionMode) {
+      case TextAfterExtractionMode.EmbedNewFile:
+        this.editor?.replaceSelection(`!${markdownLink}`);
+        break;
+      case TextAfterExtractionMode.None:
+        this.editor?.replaceSelection('');
+        break;
+      case TextAfterExtractionMode.LinkToNewFile:
+        this.editor?.replaceSelection(markdownLink);
+        break;
     }
+  }
+
+  private async applyTemplate(targetContentToInsert: string, sourceFileBasename: string, targetFileBasename: string): Promise<string> {
+    let template = this.plugin.settings.template;
+    if (!template) {
+      return targetContentToInsert;
+    }
+
+    if (!template.includes('{{content}}')) {
+      template += '\n\n{{content}}';
+    }
+
+    return replaceAll(template, /{{(?<Key>.+?(?::(?<Format>.+?))?)}}/g, (_, key, format) => {
+      switch (key.toLowerCase()) {
+        case 'fromTitle'.toLowerCase():
+          return sourceFileBasename;
+        case 'newTitle'.toLowerCase():
+          return targetFileBasename;
+        case 'content':
+          return targetContentToInsert;
+        case 'date':
+          return moment().format(format || 'YYYY-MM-DD');
+        case 'time':
+          return moment().format(format || 'HH:mm');
+        default:
+          throw new Error(`Invalid template key: ${key}`);
+      }
+    });
   }
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
@@ -373,7 +406,7 @@ export class AdvancedNoteComposer {
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
     if (!this.shouldMergeHeadings) {
       // eslint-disable-next-line require-atomic-updates -- Don't see a better way to do this.
-      targetContentToInsert = await this.corePluginInstance.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
+      targetContentToInsert = await this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
       await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
       return;
     }
@@ -558,7 +591,7 @@ export class AdvancedNoteComposer {
     if (!text) {
       return '';
     }
-    let wrappedText = await this.corePluginInstance.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
+    let wrappedText = await this.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
 
     if (!wrappedText) {
       return '';
@@ -579,4 +612,52 @@ export class AdvancedNoteComposer {
 export function extractHeadingFromLine(line: string): null | string {
   const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
   return match?.groups?.['Heading'] ?? null;
+}
+
+export function getSelectionUnderHeading(app: App, file: TFile, editor: Editor, lineNumber: number): HeadingInfo | null {
+  const cache = app.metadataCache.getFileCache(file);
+  if (!cache) {
+    return null;
+  }
+
+  let headingAtLineNumber = null;
+  let headingLevelAtLineNumber = 0;
+  let nextHeading = null;
+  for (const heading of cache.headings ?? []) {
+    if (headingAtLineNumber && heading.level <= headingLevelAtLineNumber) {
+      nextHeading = heading;
+      break;
+    }
+
+    if (!headingAtLineNumber && heading.position.start.line === lineNumber) {
+      headingLevelAtLineNumber = heading.level;
+      headingAtLineNumber = heading;
+    }
+  }
+
+  if (!headingAtLineNumber) {
+    return null;
+  }
+
+  let headingEndLineNumber = null;
+  if (nextHeading) {
+    headingEndLineNumber = nextHeading.position.start.line - 1;
+    while (!editor.getLine(headingEndLineNumber).trim() && headingEndLineNumber > lineNumber) {
+      headingEndLineNumber--;
+    }
+  } else {
+    headingEndLineNumber = editor.lineCount() - 1;
+  }
+
+  return {
+    end: {
+      ch: editor.getLine(headingEndLineNumber).length,
+      line: headingEndLineNumber
+    },
+    heading: headingAtLineNumber.heading.trim(),
+    start: {
+      ch: 0,
+      line: lineNumber
+    }
+  };
 }
