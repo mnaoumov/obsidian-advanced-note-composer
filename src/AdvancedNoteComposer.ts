@@ -411,7 +411,7 @@ export class AdvancedNoteComposer {
         mergedFrontmatter.title = originalTitle;
       }
       await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
-        for (const key of Object.keys(mergedFrontmatter)) {
+        for (const key of Object.keys(frontmatter)) {
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- We need to empty the object.
           delete frontmatter[key];
         }
