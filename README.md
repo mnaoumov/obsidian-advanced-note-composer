@@ -29,7 +29,7 @@ If those invalid characters were used intentionally, the plugin allows to add th
 
 `Treat title as path` option allows you to treat header as path when they contain `/`. This means that if a header with `/` is being extracted or merged, then the path it will be merged to is the name of the header. For example, if you extract or merge `## heading / abc / def`, this header will become a note in the path "`heading/abc/def.md`".
 
-Its important to make sure that you have spaced in between `/` characters in your header, so this option works correctly.
+Its important to make sure that you have spaces in between `/` characters in your header, so this option works correctly.
 
 ❌: `## heading/abc/def`
 
