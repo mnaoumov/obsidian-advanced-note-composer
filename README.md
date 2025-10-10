@@ -36,12 +36,6 @@ If Treat title as path option is
 - enabled - the split file will be a/b/c/d.md
 - disabled - the split file will be a _ b _ c _ d.md
 
-Its important to make sure that you have spaces in between `/` characters in your header, so this option works correctly.
-
-❌: `## heading/abc/def`
-
-✅: `## heading / abc / def`
-
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=advanced-note-composer).
