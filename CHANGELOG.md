@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 3.0.0
+
+- chore: add missing lint files
+- feat: add release notes
+- fix: remove keys from correct frontmatter
+- feat: add dropdown
+- fix: key
+- fix: cancel button
+- fix: close dialog on merge
+- refactor: inline translations
+- refactor: add SuggestModalCommandBuilder
+- feat: merge frontmatters
+- feat: reorder dropdown options
+- refactor: clean comments
+- feat: remove dependency from core plugin
+- fix: renamed fields
+- chore: enable markdownlint
+- chore: enable conventional commits
+- refactor: commands
+- chore: lint
+
 ## 2.2.1
 
 - Exclude source file from selector (#23)
