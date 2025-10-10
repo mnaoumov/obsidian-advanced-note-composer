@@ -25,9 +25,9 @@ If those invalid characters were used intentionally, the plugin allows to add th
 - to the note alias (to be able to access it from the `Quick switcher`).
 - to the frontmatter title key.
 
-## Treat Title As Path
+## Treat title as path
 
-If `Treat Title As Path` option is selected, it will treat a header name with `/` as a path. For example, if you extract a headers that looks like this `## heading / abc / def` the new note will be created in path: `Heading/abc/def.md`
+If `Treat title as path` option is selected, it will treat a header name with `/` as a path. For example, if you extract a headers that looks like this `## heading / abc / def` the new note will be created in path: `Heading/abc/def.md`
 
 ## Installation
 
