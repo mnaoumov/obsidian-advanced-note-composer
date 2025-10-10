@@ -396,15 +396,20 @@ export class AdvancedNoteComposer {
     const backlinksToFix = await this.prepareBacklinksToFix();
 
     const originalFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
-    const frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
+    let frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
     const newFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
 
+    targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
+    targetContentToInsert = this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
+    frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
+    const templateFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
     await this.insertIntoTargetFileImpl(targetContentToInsert);
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
-      const mergedFrontmatter = this.mergeFrontmatter(originalFrontmatter, newFrontmatter);
+      let mergedFrontmatter = this.mergeFrontmatter(originalFrontmatter, newFrontmatter);
+      mergedFrontmatter = this.mergeFrontmatter(mergedFrontmatter, templateFrontmatter);
       if (originalTitle === undefined) {
         delete mergedFrontmatter.title;
       } else {
@@ -424,7 +429,6 @@ export class AdvancedNoteComposer {
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
     if (!this.shouldMergeHeadings) {
-      targetContentToInsert = this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
       await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
       return;
     }
@@ -670,6 +674,8 @@ export class AdvancedNoteComposer {
       return '';
     }
     let wrappedText = this.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
+    const frontmatterInfo = getFrontMatterInfo(wrappedText);
+    wrappedText = wrappedText.slice(frontmatterInfo.contentStart);
 
     if (!wrappedText) {
       return '';
