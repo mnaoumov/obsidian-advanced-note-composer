@@ -21,7 +21,7 @@ export class PrismComponent extends Component {
           /* eslint-disable perfectionist/sort-objects -- Need to keep object order. */
           prefix: {
             alias: 'regex',
-            pattern: /\{/
+            pattern: /\{\{/
           },
           token: {
             alias: 'number',
@@ -37,11 +37,11 @@ export class PrismComponent extends Component {
           },
           suffix: {
             alias: 'regex',
-            pattern: /}/
+            pattern: /}\}/
           }
           /* eslint-enable perfectionist/sort-objects -- Need to keep object order. */
         },
-        pattern: /{.+?}/
+        pattern: /\{\{.+?\}\}/
       }
     };
 
