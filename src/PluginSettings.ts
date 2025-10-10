@@ -14,6 +14,7 @@ export enum TextAfterExtractionMode {
 
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+  public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
   public shouldAddInvalidTitleToNoteAlias = true;
