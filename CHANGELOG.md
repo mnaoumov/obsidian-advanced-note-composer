@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.1.0
+
+- feat: add support for template in frontmatter
+  - fix #30
+- fix: code highlighter tokens
+
 ## 3.0.0
 
 - chore: add missing lint files
