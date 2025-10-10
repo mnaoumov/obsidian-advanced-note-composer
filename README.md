@@ -27,7 +27,7 @@ If those invalid characters were used intentionally, the plugin allows to add th
 
 ## Treat title as path
 
-If `Treat title as path` option is selected, it will treat a header name with `/` in its name, as a path. For example, if you extract a header that is named `## heading / abc / def`, the new note will be created in path: `Heading/abc/def.md`
+If `Treat title as path` option is selected, it will treat a header name with `/` in its name, as a path. For example, if you extract a header that is named `## heading / abc / def`, the new note will be created in path: `heading/abc/def.md`
 
 ## Installation
 
