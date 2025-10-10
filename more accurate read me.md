@@ -1,8 +1,6 @@
 # Advanced Note Composer
 
-This is a plugin for [Obsidian](https://obsidian.md/) that enhances [`Note composer`](https://help.obsidian.md/plugins/note-composer) core plugin.
-
-The plugin aims to enhance `Note composer` core plugin adding some missing functionality.
+This [Obsidian](https://obsidian.md/) plugin extends the core [`Note composer`](https://help.obsidian.md/plugins/note-composer) plugin fixing some bugs and adding additional features.
 
 ## Relative links
 
