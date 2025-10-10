@@ -25,16 +25,16 @@ If those invalid characters were used intentionally, the plugin allows to add th
 - to the note alias (to be able to access it from the `Quick switcher`).
 - to the frontmatter title key.
 
-## Treat Title As Path
+## Treat title as path
 
-`Treat title as path` option allows you to treat header as path when they contain `/`. This means that if a header with `/` is being extracted or merged, then the path it will be merged to is the name of the header.
+`Treat title as path` option converts titles that contain `/` into paths.
 
-For example, assume we have a header `## a / b / c / d`.
+For example, when we invoke `Extract this heading...` command for `## a / b / c / d`:
 
-If Treat title as path option is
+If `Treat title as path` option is
 
-- enabled - the split file will be a/b/c/d.md
-- disabled - the split file will be a _ b _ c _ d.md
+- **enabled** - the split file will be `a/b/c/d.md`. Leading and trailing spaces are trimmed.
+- **disabled** - the split file will be `a _ b _ c _ d.md`. Spaces are preserved. `/` is replaced with `_` (or another replacement string as per settings).
 
 ## Installation
 
