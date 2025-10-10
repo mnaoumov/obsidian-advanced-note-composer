@@ -32,6 +32,7 @@ If those invalid characters were used intentionally, the plugin allows to add th
 Its important to make sure that you have spaced in between `/` characters in your header, so this option works correctly.
 
 ❌: `## heading/abc/def`
+
 ✅: `## heading / abc / def`
 
 ## Installation
