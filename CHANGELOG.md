@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.1.1
+
+- chore: update libs
+- docs: better section Treat title as path
+- docs: treat title as path documentation
+  - fix 28
+
 ## 3.1.0
 
 - feat: add support for template in frontmatter
