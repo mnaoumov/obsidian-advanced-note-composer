@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.2.0
+
+- feat: add console.debug
+  - ref #35
+
 ## 3.1.1
 
 - chore: update libs
