@@ -122,6 +122,7 @@ export class AdvancedNoteComposer {
       });
     }
 
+    this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
     const sourceContent = await this.app.vault.read(this.sourceFile);
     await this.insertIntoTargetFile(sourceContent);
     await this.app.fileManager.trashFile(this.sourceFile);
@@ -143,6 +144,8 @@ export class AdvancedNoteComposer {
     if (!this._targetFile) {
       await this.selectItemForSplit(null, false, this.heading);
     }
+
+    this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
     await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
 

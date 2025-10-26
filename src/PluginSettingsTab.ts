@@ -1,3 +1,4 @@
+import { getDebugController } from 'obsidian-dev-utils/Debug';
 import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsTabBase';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
@@ -186,6 +187,22 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addCodeHighlighter((codeHighlighter) => {
         codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
         this.bind(codeHighlighter, 'template');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should show console debug messages')
+      .setDesc('Whether to show console debug messages.')
+      .addToggle((toggle) => {
+        const debugController = getDebugController();
+        const isEnabled = debugController.get().includes(this.plugin.manifest.id);
+        toggle.setValue(isEnabled);
+        toggle.onChange((value) => {
+          if (value) {
+            debugController.enable(this.plugin.manifest.id);
+          } else {
+            debugController.disable(this.plugin.manifest.id);
+          }
+        });
       });
   }
 }
