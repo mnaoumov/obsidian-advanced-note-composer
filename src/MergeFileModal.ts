@@ -2,6 +2,7 @@ import {
   Keymap,
   Platform
 } from 'obsidian';
+import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 
 import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 import type { Plugin } from './Plugin.ts';
@@ -149,10 +150,13 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         const modal = new DynamicModal(this.app)
           .setTitle('Merge file')
           .setContent(createFragment((f) => {
-            f.createEl('p', {
-              text:
-                `Are you sure you want to merge "${this.composer.sourceFile.basename}" into "${this.composer.targetFile.basename}"? "${this.composer.sourceFile.basename}" will be deleted.`
-            });
+            f.appendText('Are you sure you want to merge ');
+            appendCodeBlock(f, this.composer.sourceFile.path);
+            f.appendText(' into ');
+            appendCodeBlock(f, this.composer.targetFile.path);
+            f.appendText('? ');
+            appendCodeBlock(f, this.composer.sourceFile.path);
+            f.appendText(' will be deleted.');
           }));
 
         if (Platform.isMobile) {
