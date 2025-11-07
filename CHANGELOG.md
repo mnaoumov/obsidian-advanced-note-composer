@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.3.0
+
+- feat: add {{fromPath}}, {{newPath}} tokens
+- feat: show full path of merged notes
+  - re #40
+
 ## 3.2.0
 
 - feat: add console.debug
