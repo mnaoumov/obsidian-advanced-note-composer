@@ -177,7 +177,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
         appendCodeBlock(f, '{{fromTitle}}');
         f.createEl('br');
         f.appendText('- ');
+        appendCodeBlock(f, '{{fromPath}}');
+        f.createEl('br');
+        f.appendText('- ');
         appendCodeBlock(f, '{{newTitle}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{newPath}}');
         f.createEl('br');
         f.appendText('- ');
         appendCodeBlock(f, '{{date:FORMAT}}');

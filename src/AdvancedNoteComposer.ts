@@ -166,7 +166,7 @@ export class AdvancedNoteComposer {
     }
   }
 
-  private applyTemplate(targetContentToInsert: string, sourceFileBasename: string, targetFileBasename: string): string {
+  private applyTemplate(targetContentToInsert: string): string {
     let template = this.plugin.settings.template;
     if (!template) {
       return targetContentToInsert;
@@ -178,10 +178,14 @@ export class AdvancedNoteComposer {
 
     return replaceAll(template, /{{(?<Key>.+?(?::(?<Format>.+?))?)}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
+        case 'fromPath'.toLowerCase():
+          return this.sourceFile.path;
         case 'fromTitle'.toLowerCase():
-          return sourceFileBasename;
+          return this.sourceFile.basename;
+        case 'newPath'.toLowerCase():
+          return this.targetFile.path;
         case 'newTitle'.toLowerCase():
-          return targetFileBasename;
+          return this.targetFile.basename;
         case 'content':
           return targetContentToInsert;
         case 'date':
@@ -403,7 +407,7 @@ export class AdvancedNoteComposer {
     const newFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
 
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
-    targetContentToInsert = this.applyTemplate(targetContentToInsert, this.sourceFile.basename, this.targetFile.basename);
+    targetContentToInsert = this.applyTemplate(targetContentToInsert);
     frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
     const templateFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
@@ -676,7 +680,7 @@ export class AdvancedNoteComposer {
     if (!text) {
       return '';
     }
-    let wrappedText = this.applyTemplate(text, this.sourceFile.basename, this.targetFile.basename);
+    let wrappedText = this.applyTemplate(text);
     const frontmatterInfo = getFrontMatterInfo(wrappedText);
     wrappedText = wrappedText.slice(frontmatterInfo.contentStart);
 
