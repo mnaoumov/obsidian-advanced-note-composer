@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.4.0
+
+- fix: compilation
+- feat: more readable merge dialog re #41
+- chore: update libs
+
 ## 3.3.0
 
 - feat: add {{fromPath}}, {{newPath}} tokens
