@@ -151,12 +151,21 @@ export class MergeFileSuggestModal extends SuggestModalBase {
           .setTitle('Merge file')
           .setContent(createFragment((f) => {
             f.appendText('Are you sure you want to merge ');
-            appendCodeBlock(f, this.composer.sourceFile.path);
+            appendCodeBlock(f, 'Source');
             f.appendText(' into ');
-            appendCodeBlock(f, this.composer.targetFile.path);
+            appendCodeBlock(f, 'Target');
             f.appendText('? ');
-            appendCodeBlock(f, this.composer.sourceFile.path);
+            appendCodeBlock(f, 'Source');
             f.appendText(' will be deleted.');
+            f.createEl('br');
+            f.createEl('br');
+            appendCodeBlock(f, 'Source');
+            f.appendText(': ');
+            appendCodeBlock(f, this.composer.sourceFile.path);
+            f.createEl('br');
+            appendCodeBlock(f, 'Target');
+            f.appendText(': ');
+            appendCodeBlock(f, this.composer.targetFile.path);
           }));
 
         if (Platform.isMobile) {
