@@ -163,6 +163,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
             f.appendText(': ');
             appendCodeBlock(f, this.composer.sourceFile.path);
             f.createEl('br');
+            f.createEl('br');
             appendCodeBlock(f, 'Target');
             f.appendText(': ');
             appendCodeBlock(f, this.composer.targetFile.path);
