@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.4.1
+
+- feat: add extra line
+
 ## 3.4.0
 
 - fix: compilation
