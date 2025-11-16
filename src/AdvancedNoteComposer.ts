@@ -10,11 +10,13 @@ import {
   App,
   Editor,
   getFrontMatterInfo,
+  Notice,
   parseLinktext,
   parseYaml,
   stringifyYaml,
   TFile
 } from 'obsidian';
+import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
@@ -27,6 +29,7 @@ import {
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { process } from 'obsidian-dev-utils/obsidian/Vault';
+import { join } from 'obsidian-dev-utils/Path';
 import {
   replaceAll,
   trimEnd
@@ -47,6 +50,8 @@ import {
 
 export type InsertMode = 'append' | 'prepend';
 
+type Action = 'merge' | 'split';
+
 interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -57,7 +62,7 @@ interface Selection {
 }
 
 export class AdvancedNoteComposer {
-  public action: 'merge' | 'split' = 'merge';
+  public action: Action = 'merge';
 
   public readonly app: App;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -115,7 +120,15 @@ export class AdvancedNoteComposer {
     return true;
   }
 
+  public isPathIgnored(path: string): boolean {
+    return this.plugin.settings.isPathIgnored(path);
+  }
+
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
+    if (!this.checkTargetFileIgnored('merge')) {
+      return;
+    }
+
     if (doNotAskAgain) {
       await this.plugin.settingsManager.editAndSave((settings) => {
         settings.shouldAskBeforeMerging = false;
@@ -143,6 +156,10 @@ export class AdvancedNoteComposer {
   public async splitFile(): Promise<void> {
     if (!this._targetFile) {
       await this.selectItemForSplit(null, false, this.heading);
+    }
+
+    if (!this.checkTargetFileIgnored('split')) {
+      return;
     }
 
     this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
@@ -196,6 +213,18 @@ export class AdvancedNoteComposer {
           throw new Error(`Invalid template key: ${key}`);
       }
     });
+  }
+
+  private checkTargetFileIgnored(action: Action): boolean {
+    if (this.isPathIgnored(this.targetFile.path)) {
+      new Notice(createFragment((f) => {
+        f.appendText(`You cannot ${action} into `);
+        appendCodeBlock(f, this.targetFile.path);
+        f.appendText(' because this path is not allowed in the plugin settings.');
+      }));
+      return false;
+    }
+    return true;
   }
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
@@ -610,6 +639,13 @@ export class AdvancedNoteComposer {
     if (isMod || item?.type === 'unresolved') {
       const fileName = item?.type === 'unresolved' ? item.linktext ?? '' : inputValue;
       const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
+
+      const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
+      if (existingFile && this.isPathIgnored(existingFile.path)) {
+        this._targetFile = existingFile;
+        return;
+      }
+
       this._targetFile = await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '');
       return;
     }
@@ -634,6 +670,12 @@ export class AdvancedNoteComposer {
 
   private async selectItemForSplit(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
     if (isMod || !item) {
+      const existingFile = this.app.metadataCache.getFirstLinkpathDest(inputValue, '');
+      if (existingFile && this.isPathIgnored(existingFile.path)) {
+        this._targetFile = existingFile;
+        return;
+      }
+
       this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
       return;
     }

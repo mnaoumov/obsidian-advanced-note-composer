@@ -210,5 +210,37 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
           }
         });
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Include paths')
+      .setDesc(createFragment((f) => {
+        f.appendText('In merge/split dialog include notes from the following paths');
+        f.createEl('br');
+        f.appendText('Insert each path on a new line');
+        f.createEl('br');
+        f.appendText('You can use path string or ');
+        appendCodeBlock(f, '/regular expression/');
+        f.createEl('br');
+        f.appendText('If the setting is empty, all notes are included');
+      }))
+      .addMultipleText((multipleText) => {
+        this.bind(multipleText, 'includePaths');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Exclude paths')
+      .setDesc(createFragment((f) => {
+        f.appendText('In merge/split dialog exclude notes from the following paths');
+        f.createEl('br');
+        f.appendText('Insert each path on a new line');
+        f.createEl('br');
+        f.appendText('You can use path string or ');
+        appendCodeBlock(f, '/regular expression/');
+        f.createEl('br');
+        f.appendText('If the setting is empty, no notes are excluded');
+      }))
+      .addMultipleText((multipleText) => {
+        this.bind(multipleText, 'excludePaths');
+      });
   }
 }
