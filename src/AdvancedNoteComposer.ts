@@ -248,12 +248,19 @@ export class AdvancedNoteComposer {
   }
 
   private async fixBacklinks(backlinksToFix: Map<string, string[]>): Promise<void> {
+    const fixedFilePaths = new Set<string>();
+    const fixedLinks = new Set<string>();
     for (const backlinkPath of backlinksToFix.keys()) {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
+      let linkIndex = 0;
       await editLinks(this.app, backlinkPath, (link) => {
+        linkIndex++;
         if (!linkJsons.includes(JSON.stringify(link))) {
           return;
         }
+
+        fixedFilePaths.add(backlinkPath);
+        fixedLinks.add(`${backlinkPath}//${String(linkIndex)}`);
 
         return updateLink({
           app: this.app,
@@ -264,6 +271,10 @@ export class AdvancedNoteComposer {
           shouldUpdateFileNameAlias: true
         });
       });
+    }
+
+    if (fixedLinks.size > 0) {
+      new Notice(`Fixed ${fixedLinks.size} links in ${fixedFilePaths.size} files.`);
     }
   }
 
