@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.5.1
+
+- fix: handling include/exclude paths not ending with /
+  - re #46
+
 ## 3.5.0
 
 - chore: spellcheck
