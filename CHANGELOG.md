@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.5.2
+
+- chore: lint
+- fix: handle formats re #45
+- feat: show links updates notice
+
 ## 3.5.1
 
 - fix: handling include/exclude paths not ending with /
