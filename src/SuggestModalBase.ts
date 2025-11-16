@@ -427,6 +427,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.composer.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.composer.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
+        if (this.composer.isPathIgnored(unresolvedLink)) {
+          continue;
+        }
         unresolvedLinks.add(unresolvedLink);
       }
     }
@@ -443,6 +446,10 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
+    if (this.composer.isPathIgnored(file.path)) {
+      return false;
+    }
+
     if (file === this.composer.sourceFile) {
       return false;
     }
