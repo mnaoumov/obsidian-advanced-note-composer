@@ -395,7 +395,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   private searchFiles(_query: string, searchFn: SearchFn): Item[] {
     const SCORE_STEP = 10;
-    const files = this.app.vault.getFiles().filter(this.shouldIncludeFile.bind(this));
+    const files = this.app.vault.getMarkdownFiles().filter(this.shouldIncludeFile.bind(this));
     const items: Item[] = [];
 
     for (const file of files) {
