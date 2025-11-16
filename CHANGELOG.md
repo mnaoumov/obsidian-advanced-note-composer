@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 3.5.0
+
+- chore: spellcheck
+- fix: include only markdown files
+  - re #43
+- chore: update libs
+- feat: add include/exclude paths
+  - re #44
+
 ## 3.4.1
 
 - feat: add extra line
