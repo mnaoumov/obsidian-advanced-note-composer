@@ -193,7 +193,7 @@ export class AdvancedNoteComposer {
       template += '\n\n{{content}}';
     }
 
-    return replaceAll(template, /{{(?<Key>.+?(?::(?<Format>.+?))?)}}/g, (_, key, format) => {
+    return replaceAll(template, /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
         case 'fromPath'.toLowerCase():
           return this.sourceFile.path;
