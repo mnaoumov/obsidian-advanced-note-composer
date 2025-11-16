@@ -274,7 +274,7 @@ export class AdvancedNoteComposer {
     }
 
     if (fixedLinks.size > 0) {
-      new Notice(`Fixed ${fixedLinks.size} links in ${fixedFilePaths.size} files.`);
+      new Notice(`Fixed ${String(fixedLinks.size)} links in ${String(fixedFilePaths.size)} files.`);
     }
   }
 
