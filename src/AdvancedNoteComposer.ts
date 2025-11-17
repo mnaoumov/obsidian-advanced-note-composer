@@ -248,8 +248,8 @@ export class AdvancedNoteComposer {
   }
 
   private async fixBacklinks(backlinksToFix: Map<string, string[]>): Promise<void> {
-    const fixedFilePaths = new Set<string>();
-    const fixedLinks = new Set<string>();
+    const updatedFilePaths = new Set<string>();
+    const updatedLinks = new Set<string>();
     for (const backlinkPath of backlinksToFix.keys()) {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
@@ -259,8 +259,8 @@ export class AdvancedNoteComposer {
           return;
         }
 
-        fixedFilePaths.add(backlinkPath);
-        fixedLinks.add(`${backlinkPath}//${String(linkIndex)}`);
+        updatedFilePaths.add(backlinkPath);
+        updatedLinks.add(`${backlinkPath}//${String(linkIndex)}`);
 
         return updateLink({
           app: this.app,
@@ -273,8 +273,8 @@ export class AdvancedNoteComposer {
       });
     }
 
-    if (fixedLinks.size > 0) {
-      new Notice(`Fixed ${String(fixedLinks.size)} links in ${String(fixedFilePaths.size)} files.`);
+    if (updatedLinks.size > 0) {
+      new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
   }
 
