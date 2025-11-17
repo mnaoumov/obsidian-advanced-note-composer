@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.5.4
+
+- fix: remove recent paths duplicates
+- fix: broke links to itself after merge
+- fix: don't treat manual split as merge
+  - re 39
+
 ## 3.5.3
 
 - fix: change links message to Updated
