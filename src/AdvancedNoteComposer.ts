@@ -125,6 +125,8 @@ export class AdvancedNoteComposer {
   }
 
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
+    this.action = 'merge';
+
     if (!this.checkTargetFileIgnored('merge')) {
       return;
     }
@@ -154,6 +156,8 @@ export class AdvancedNoteComposer {
   }
 
   public async splitFile(): Promise<void> {
+    this.action = 'split';
+
     if (!this._targetFile) {
       await this.selectItemForSplit(null, false, this.heading);
     }
