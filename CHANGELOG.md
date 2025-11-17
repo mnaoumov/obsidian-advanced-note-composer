@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.5.3
+
+- fix: change links message to Updated
+
 ## 3.5.2
 
 - chore: lint
