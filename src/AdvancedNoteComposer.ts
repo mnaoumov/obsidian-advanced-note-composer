@@ -3,6 +3,7 @@ import type {
   Pos
 } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
+import type { MaybeReturn } from 'obsidian-dev-utils/Type';
 import type { HeadingInfo } from 'obsidian-typings';
 
 import moment from 'moment';
@@ -20,6 +21,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
+  extractLinkFile,
   updateLink,
   updateLinksInContent
 } from 'obsidian-dev-utils/obsidian/Link';
@@ -270,6 +272,29 @@ export class AdvancedNoteComposer {
           app: this.app,
           link,
           newSourcePathOrFile: backlinkPath,
+          newTargetPathOrFile: this.targetFile,
+          oldTargetPathOrFile: this.sourceFile,
+          shouldUpdateFileNameAlias: true
+        });
+      });
+    }
+
+    if (this.action === 'merge') {
+      let linkIndex = 0;
+      await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
+        linkIndex++;
+        const linkFile = extractLinkFile(this.app, link, this.targetFile);
+        if (linkFile !== this.sourceFile) {
+          return;
+        }
+
+        updatedFilePaths.add(this.targetFile.path);
+        updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
+
+        return updateLink({
+          app: this.app,
+          link,
+          newSourcePathOrFile: this.targetFile,
           newTargetPathOrFile: this.targetFile,
           oldTargetPathOrFile: this.sourceFile,
           shouldUpdateFileNameAlias: true
