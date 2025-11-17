@@ -311,8 +311,13 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       showNonImageAttachments: this.shouldShowNonImageAttachments
     });
 
+    const filePaths = new Set<string>();
     const items: Item[] = [];
     for (const filePath of recentFilePaths) {
+      if (filePaths.has(filePath)) {
+        continue;
+      }
+      filePaths.add(filePath);
       const file = this.app.vault.getFileByPath(filePath);
       if (file && !this.app.metadataCache.isUserIgnored(file.path) && this.shouldIncludeFile(file)) {
         items.push({ file, match: { matches: [], score: 0 }, type: 'file' });
