@@ -6,11 +6,11 @@ import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
 import type { MaybeReturn } from 'obsidian-dev-utils/Type';
 import type { HeadingInfo } from 'obsidian-typings';
 
-import moment from 'moment';
 import {
   App,
   Editor,
   getFrontMatterInfo,
+  moment,
   Notice,
   parseLinktext,
   parseYaml,
