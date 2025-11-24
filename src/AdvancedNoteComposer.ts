@@ -10,7 +10,7 @@ import {
   App,
   Editor,
   getFrontMatterInfo,
-  moment,
+  moment as moment_,
   Notice,
   parseLinktext,
   parseYaml,
@@ -18,6 +18,7 @@ import {
   TFile
 } from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
+import { extractDefaultExportInterop } from 'obsidian-dev-utils/ObjectUtils';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
@@ -51,6 +52,8 @@ import {
 } from './PluginSettings.ts';
 
 export type InsertMode = 'append' | 'prepend';
+
+const moment = extractDefaultExportInterop(moment_);
 
 type Action = 'merge' | 'split';
 
