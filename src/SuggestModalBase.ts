@@ -545,9 +545,10 @@ function stopAnimation(element: HTMLElement, skipComplete = false): void {
   animationStates.delete(element);
 
   if (animationState) {
-    element.style.transition = '';
-    element.style.transitionProperty = '';
-
+    element.setCssProps({
+      transition: '',
+      transitionProperty: ''
+    });
     element.setCssProps(animationState.props.end);
 
     animationState.win.clearTimeout(animationState.timer);
