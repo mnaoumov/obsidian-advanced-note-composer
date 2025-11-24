@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.5.5
+
+- chore: update libs
+- chore: update libs
+
 ## 3.5.4
 
 - fix: remove recent paths duplicates
