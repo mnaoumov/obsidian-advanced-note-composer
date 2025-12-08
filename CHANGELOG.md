@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.5.6
+
+- chore: update libs
+- fix: parse frontmatter safely re #48
+
 ## 3.5.5
 
 - chore: update libs
