@@ -1,5 +1,6 @@
 import type {
   EditorSelection,
+  FrontMatterInfo,
   Pos
 } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
@@ -476,12 +477,12 @@ export class AdvancedNoteComposer {
 
     const originalFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
     let frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
-    const newFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
+    const newFrontmatter = this.safeParseFrontmatter(frontmatterInfo);
 
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
     targetContentToInsert = this.applyTemplate(targetContentToInsert);
     frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
-    const templateFrontmatter = parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
+    const templateFrontmatter = this.safeParseFrontmatter(frontmatterInfo);
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
     await this.insertIntoTargetFileImpl(targetContentToInsert);
 
@@ -507,6 +508,9 @@ export class AdvancedNoteComposer {
   }
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
+    if (targetContentToInsert.startsWith('---\n')) {
+      targetContentToInsert = `\n${targetContentToInsert}`;
+    }
     if (!this.shouldMergeHeadings) {
       await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
       return;
@@ -676,6 +680,15 @@ export class AdvancedNoteComposer {
     }
 
     return result;
+  }
+
+  private safeParseFrontmatter(frontmatterInfo: FrontMatterInfo): Frontmatter {
+    try {
+      return parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
+    } catch {
+      frontmatterInfo.contentStart = 0;
+      return {};
+    }
   }
 
   private async selectItemForMerge(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
