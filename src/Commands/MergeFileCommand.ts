@@ -12,8 +12,8 @@ import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import { MergeFileSuggestModal } from '../MergeFileModal.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
-  public constructor(plugin: Plugin) {
-    super(plugin);
+  public constructor(plugin: Plugin, file: null | TFile) {
+    super(plugin, file);
   }
 
   public override canExecute(): boolean {
@@ -45,11 +45,15 @@ export class MergeFileCommand extends FileCommandBase<Plugin> {
     });
   }
 
-  protected override createCommandInvocation(): FileCommandInvocationBase<Plugin> {
-    return new MergeFileCommandInvocation(this.plugin);
+  protected override createCommandInvocationForFile(file: null | TFile): FileCommandInvocationBase<Plugin> {
+    return new MergeFileCommandInvocation(this.plugin, file);
   }
 
   protected override shouldAddToFileMenu(_file: TFile, source: string): boolean {
     return source !== 'link-context-menu';
+  }
+
+  protected override shouldAddToFilesMenu(): boolean {
+    return false;
   }
 }
