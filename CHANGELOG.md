@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.5.7
+
+- fix: disable files menu re #47
+
 ## 3.5.6
 
 - chore: update libs
