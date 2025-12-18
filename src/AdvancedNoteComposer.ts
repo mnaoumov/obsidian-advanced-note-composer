@@ -137,15 +137,18 @@ export class AdvancedNoteComposer {
       return;
     }
 
-    const notice = new Notice(createFragment((f) => {
-      f.appendText('Advanced Note Composer: Merging note ');
-      appendCodeBlock(f, this.sourceFile.path);
-      f.appendText(' with ');
-      appendCodeBlock(f, this.targetFile.path);
-      f.createEl('br');
-      f.createEl('br');
-      f.createDiv('is-loading');
-    }), 0);
+    const notice = new Notice(
+      createFragment((f) => {
+        f.appendText('Advanced Note Composer: Merging note ');
+        appendCodeBlock(f, this.sourceFile.path);
+        f.appendText(' with ');
+        appendCodeBlock(f, this.targetFile.path);
+        f.createEl('br');
+        f.createEl('br');
+        f.createDiv('is-loading');
+      }),
+      0
+    );
 
     try {
       if (doNotAskAgain) {
@@ -186,15 +189,18 @@ export class AdvancedNoteComposer {
       return;
     }
 
-    const notice = new Notice(createFragment((f) => {
-      f.appendText('Advanced Note Composer: Splitting note ');
-      appendCodeBlock(f, this.sourceFile.path);
-      f.appendText(' into ');
-      appendCodeBlock(f, this.targetFile.path);
-      f.createEl('br');
-      f.createEl('br');
-      f.createDiv('is-loading');
-    }), 0);
+    const notice = new Notice(
+      createFragment((f) => {
+        f.appendText('Advanced Note Composer: Splitting note ');
+        appendCodeBlock(f, this.sourceFile.path);
+        f.appendText(' into ');
+        appendCodeBlock(f, this.targetFile.path);
+        f.createEl('br');
+        f.createEl('br');
+        f.createDiv('is-loading');
+      }),
+      0
+    );
     try {
       this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
