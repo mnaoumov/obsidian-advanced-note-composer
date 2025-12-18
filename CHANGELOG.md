@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.6.0
+
+- feat: add source/target clickable links re #49
+- feat: enable Templater re #37
+- chore: update libs
+
 ## 3.5.7
 
 - fix: disable files menu re #47
