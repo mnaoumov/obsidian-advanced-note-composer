@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.7.0
+
+- chore: format
+- chore: update libs
+- feat: add progress bar re #33
+
 ## 3.6.0
 
 - feat: add source/target clickable links re #49
