@@ -2,7 +2,11 @@ import {
   Keymap,
   Platform
 } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
+import {
+  appendCodeBlock,
+  createFragmentAsync
+} from 'obsidian-dev-utils/HTMLElement';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 import type { Plugin } from './Plugin.ts';
@@ -149,25 +153,27 @@ export class MergeFileSuggestModal extends SuggestModalBase {
       if (this.plugin.settings.shouldAskBeforeMerging) {
         const modal = new DynamicModal(this.app)
           .setTitle('Merge file')
-          .setContent(createFragment((f) => {
-            f.appendText('Are you sure you want to merge ');
-            appendCodeBlock(f, 'Source');
-            f.appendText(' into ');
-            appendCodeBlock(f, 'Target');
-            f.appendText('? ');
-            appendCodeBlock(f, 'Source');
-            f.appendText(' will be deleted.');
-            f.createEl('br');
-            f.createEl('br');
-            appendCodeBlock(f, 'Source');
-            f.appendText(': ');
-            appendCodeBlock(f, this.composer.sourceFile.path);
-            f.createEl('br');
-            f.createEl('br');
-            appendCodeBlock(f, 'Target');
-            f.appendText(': ');
-            appendCodeBlock(f, this.composer.targetFile.path);
-          }));
+          .setContent(
+            await createFragmentAsync(async (f) => {
+              f.appendText('Are you sure you want to merge ');
+              appendCodeBlock(f, 'Source');
+              f.appendText(' into ');
+              appendCodeBlock(f, 'Target');
+              f.appendText('? ');
+              appendCodeBlock(f, 'Source');
+              f.appendText(' will be deleted.');
+              f.createEl('br');
+              f.createEl('br');
+              appendCodeBlock(f, 'Source');
+              f.appendText(': ');
+              f.appendChild(await renderInternalLink(this.app, this.composer.sourceFile));
+              f.createEl('br');
+              f.createEl('br');
+              appendCodeBlock(f, 'Target');
+              f.appendText(': ');
+              f.appendChild(await renderInternalLink(this.app, this.composer.targetFile));
+            })
+          );
 
         if (Platform.isMobile) {
           modal.addButton('mod-warning', 'Delete and don\'t ask again', async () => {
