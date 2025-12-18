@@ -242,5 +242,16 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addMultipleText((multipleText) => {
         this.bind(multipleText, 'excludePaths');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should run templater on destination file')
+      .setDesc(createFragment((f) => {
+        f.appendText('Whether to run ');
+        f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+        f.appendText(' on the destination file after merging/splitting.');
+      }))
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldRunTemplaterOnDestinationFile');
+      });
   }
 }

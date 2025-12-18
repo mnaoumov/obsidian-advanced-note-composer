@@ -31,6 +31,7 @@ export class PluginSettings {
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldReplaceInvalidTitleCharacters = true;
+  public shouldRunTemplaterOnDestinationFile = false;
   public shouldTreatTitleAsPathByDefault = true;
   public template = '';
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
