@@ -137,19 +137,33 @@ export class AdvancedNoteComposer {
       return;
     }
 
-    if (doNotAskAgain) {
-      await this.plugin.settingsManager.editAndSave((settings) => {
-        settings.shouldAskBeforeMerging = false;
-      });
-    }
+    const notice = new Notice(createFragment((f) => {
+      f.appendText('Advanced Note Composer: Merging note ');
+      appendCodeBlock(f, this.sourceFile.path);
+      f.appendText(' with ');
+      appendCodeBlock(f, this.targetFile.path);
+      f.createEl('br');
+      f.createEl('br');
+      f.createDiv('is-loading');
+    }), 0);
 
-    this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
-    const sourceContent = await this.app.vault.read(this.sourceFile);
-    await this.insertIntoTargetFile(sourceContent);
-    await this.app.fileManager.trashFile(this.sourceFile);
+    try {
+      if (doNotAskAgain) {
+        await this.plugin.settingsManager.editAndSave((settings) => {
+          settings.shouldAskBeforeMerging = false;
+        });
+      }
 
-    if (this.plugin.settings.shouldOpenNoteAfterMerge) {
-      await this.app.workspace.getLeaf().openFile(this.targetFile);
+      this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
+      const sourceContent = await this.app.vault.read(this.sourceFile);
+      await this.insertIntoTargetFile(sourceContent);
+      await this.app.fileManager.trashFile(this.sourceFile);
+
+      if (this.plugin.settings.shouldOpenNoteAfterMerge) {
+        await this.app.workspace.getLeaf().openFile(this.targetFile);
+      }
+    } finally {
+      notice.hide();
     }
   }
 
@@ -172,24 +186,37 @@ export class AdvancedNoteComposer {
       return;
     }
 
-    this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
+    const notice = new Notice(createFragment((f) => {
+      f.appendText('Advanced Note Composer: Splitting note ');
+      appendCodeBlock(f, this.sourceFile.path);
+      f.appendText(' into ');
+      appendCodeBlock(f, this.targetFile.path);
+      f.createEl('br');
+      f.createEl('br');
+      f.createDiv('is-loading');
+    }), 0);
+    try {
+      this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-    await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
+      await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
 
-    const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+      const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
-    switch (this.plugin.settings.textAfterExtractionMode) {
-      case TextAfterExtractionMode.EmbedNewFile:
-        this.editor?.replaceSelection(`!${markdownLink}`);
-        break;
-      case TextAfterExtractionMode.LinkToNewFile:
-        this.editor?.replaceSelection(markdownLink);
-        break;
-      case TextAfterExtractionMode.None:
-        this.editor?.replaceSelection('');
-        break;
-      default:
-        throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
+      switch (this.plugin.settings.textAfterExtractionMode) {
+        case TextAfterExtractionMode.EmbedNewFile:
+          this.editor?.replaceSelection(`!${markdownLink}`);
+          break;
+        case TextAfterExtractionMode.LinkToNewFile:
+          this.editor?.replaceSelection(markdownLink);
+          break;
+        case TextAfterExtractionMode.None:
+          this.editor?.replaceSelection('');
+          break;
+        default:
+          throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
+      }
+    } finally {
+      notice.hide();
     }
   }
 
