@@ -505,6 +505,22 @@ export class AdvancedNoteComposer {
     }
 
     await this.fixBacklinks(backlinksToFix);
+
+    if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
+      return;
+    }
+
+    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    if (!templaterPlugin) {
+      new Notice(createFragment((f) => {
+        f.appendText('Advanced Note Composer: You have enabled setting ');
+        appendCodeBlock(f, 'Should run templater on destination file');
+        f.appendText(', but Templater plugin is not installed.');
+      }));
+      return;
+    }
+    const isActiveFile = this.app.workspace.getActiveFile() === this.targetFile;
+    await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
   }
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
