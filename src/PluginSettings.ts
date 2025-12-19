@@ -28,6 +28,7 @@ export class PluginSettings {
   public shouldAskBeforeMerging = true;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
+  public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldReplaceInvalidTitleCharacters = true;

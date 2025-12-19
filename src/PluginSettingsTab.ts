@@ -253,5 +253,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldRunTemplaterOnDestinationFile');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should keep headings when splitting content')
+      .setDesc('Whether to keep headings when splitting content.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldKeepHeadingsWhenSplittingContent');
+      });
   }
 }
