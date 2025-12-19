@@ -163,7 +163,11 @@ export class AdvancedNoteComposer {
       await this.app.fileManager.trashFile(this.sourceFile);
 
       if (this.plugin.settings.shouldOpenNoteAfterMerge) {
-        await this.app.workspace.getLeaf().openFile(this.targetFile);
+        const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
+        await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
+        await this.app.workspace.getLeaf().openFile(this.targetFile, {
+          active: true
+        });
       }
     } finally {
       notice.hide();
