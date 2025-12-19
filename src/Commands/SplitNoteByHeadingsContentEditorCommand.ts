@@ -76,7 +76,12 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
       this.editor.setSelection(splitStart, headingInfo.end);
       const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor, headingInfo.heading);
       await composer.splitFile();
-      headingIndex++;
+
+      if (this.plugin.settings.shouldKeepHeadingsWhenSplittingContent) {
+        headingIndex++;
+      } else {
+        this.editor.replaceRange('', { ch: 0, line: heading.position.start.line }, splitStart);
+      }
     }
   }
 }
