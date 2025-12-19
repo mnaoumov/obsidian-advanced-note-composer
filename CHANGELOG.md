@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.8.0
+
+- feat: add merge modal hotkeys
+- feat: delay before open re #32
+
 ## 3.7.0
 
 - chore: format
