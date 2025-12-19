@@ -231,15 +231,7 @@ export class AdvancedNoteComposer {
   }
 
   private applyTemplate(targetContentToInsert: string): string {
-    let template = this.plugin.settings.template;
-    if (!template) {
-      return targetContentToInsert;
-    }
-
-    if (!template.includes('{{content}}')) {
-      template += '\n\n{{content}}';
-    }
-
+    const template = this.action === 'merge' ? this.plugin.settings.mergeTemplate : this.plugin.settings.splitTemplate || this.plugin.settings.mergeTemplate;
     return replaceAll(template, /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
         case 'fromPath'.toLowerCase():

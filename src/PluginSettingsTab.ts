@@ -164,11 +164,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       });
 
     new SettingEx(this.containerEl)
-      .setName('Template')
+      .setName('Merge template')
       .setDesc(createFragment((f) => {
         f.appendText('Template to use when merging notes.');
         f.createEl('br');
-        f.appendText('Available variables: ');
+        f.appendText('Available tokens:');
         f.createEl('br');
         f.appendText('- ');
         appendCodeBlock(f, '{{content}}');
@@ -192,7 +192,46 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       }))
       .addCodeHighlighter((codeHighlighter) => {
         codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-        this.bind(codeHighlighter, 'template');
+        this.bind(codeHighlighter, 'mergeTemplate', {
+          shouldResetSettingWhenComponentIsEmpty: true,
+          shouldShowPlaceholderForDefaultValues: false
+        });
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Split template')
+      .setDesc(createFragment((f) => {
+        f.appendText('Template to use when splitting notes.');
+        f.createEl('br');
+        f.appendText('Leave empty to reuse ');
+        appendCodeBlock(f, 'Merge template');
+        f.appendText(' setting.');
+        f.createEl('br');
+        f.appendText('Available tokens:');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{content}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{fromTitle}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{fromPath}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{newTitle}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{newPath}}');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, '{{date:FORMAT}}');
+        f.appendText(', e.g. ');
+        appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+      }))
+      .addCodeHighlighter((codeHighlighter) => {
+        codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+        this.bind(codeHighlighter, 'splitTemplate');
       });
 
     new SettingEx(this.containerEl)
