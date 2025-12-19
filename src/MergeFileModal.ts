@@ -175,6 +175,15 @@ export class MergeFileSuggestModal extends SuggestModalBase {
             })
           );
 
+        modal.scope.register([], 'Enter', async (evt2) => {
+          modal.close();
+          await this.performMerge(evt2);
+        });
+
+        modal.scope.register([], 'Cancel', () => {
+          modal.close();
+        });
+
         if (Platform.isMobile) {
           modal.addButton('mod-warning', 'Delete and don\'t ask again', async () => {
             await this.performMerge(evt);
