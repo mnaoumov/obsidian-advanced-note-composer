@@ -19,6 +19,7 @@ export enum TextAfterExtractionMode {
 
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+  public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
@@ -34,7 +35,7 @@ export class PluginSettings {
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldTreatTitleAsPathByDefault = true;
-  public template = '';
+  public splitTemplate = '';
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
   public get excludePaths(): string[] {
     return this._excludePaths;
