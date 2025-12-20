@@ -4,7 +4,10 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
 import type { Item } from './SuggestModalBase.ts';
 
-import { FrontmatterMergeStrategy } from './PluginSettings.ts';
+import {
+  Action,
+  FrontmatterMergeStrategy
+} from './PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
@@ -15,7 +18,7 @@ export class SplitFileSuggestModal extends SuggestModalBase {
   public constructor(composer: AdvancedNoteComposer) {
     super(composer);
 
-    this.composer.action = 'split';
+    this.composer.action = Action.Split;
 
     this.allowCreateNewFile = true;
     this.shouldShowUnresolved = this.composer.shouldAllowSplitIntoUnresolvedPath;

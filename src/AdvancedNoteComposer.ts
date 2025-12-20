@@ -48,6 +48,7 @@ import {
 } from './FilenameValidation.ts';
 import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
 import {
+  Action,
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
 } from './PluginSettings.ts';
@@ -55,8 +56,6 @@ import {
 export type InsertMode = 'append' | 'prepend';
 
 const moment = extractDefaultExportInterop(moment_);
-
-type Action = 'merge' | 'split';
 
 interface Frontmatter extends GenericObject {
   title?: string;
@@ -68,7 +67,7 @@ interface Selection {
 }
 
 export class AdvancedNoteComposer {
-  public action: Action = 'merge';
+  public action: Action = Action.Merge;
 
   public readonly app: App;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -131,9 +130,9 @@ export class AdvancedNoteComposer {
   }
 
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
-    this.action = 'merge';
+    this.action = Action.Merge;
 
-    if (!this.checkTargetFileIgnored('merge')) {
+    if (!this.checkTargetFileIgnored(Action.Merge)) {
       return;
     }
 
@@ -175,7 +174,7 @@ export class AdvancedNoteComposer {
   }
 
   public async selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
-    if (this.action === 'merge') {
+    if (this.action === Action.Merge) {
       await this.selectItemForMerge(item, isMod, inputValue);
     } else {
       await this.selectItemForSplit(item, isMod, inputValue);
@@ -183,13 +182,13 @@ export class AdvancedNoteComposer {
   }
 
   public async splitFile(): Promise<void> {
-    this.action = 'split';
+    this.action = Action.Split;
 
     if (!this._targetFile) {
       await this.selectItemForSplit(null, false, this.heading);
     }
 
-    if (!this.checkTargetFileIgnored('split')) {
+    if (!this.checkTargetFileIgnored(Action.Split)) {
       return;
     }
 
@@ -231,7 +230,9 @@ export class AdvancedNoteComposer {
   }
 
   private applyTemplate(targetContentToInsert: string): string {
-    const template = this.action === 'merge' ? this.plugin.settings.mergeTemplate : this.plugin.settings.splitTemplate || this.plugin.settings.mergeTemplate;
+    const template = this.action === Action.Merge
+      ? this.plugin.settings.mergeTemplate
+      : this.plugin.settings.splitTemplate || this.plugin.settings.mergeTemplate;
     return replaceAll(template, /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
         case 'fromPath'.toLowerCase():
@@ -312,7 +313,7 @@ export class AdvancedNoteComposer {
       });
     }
 
-    if (this.action === 'merge') {
+    if (this.action === Action.Merge) {
       let linkIndex = 0;
       await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
         linkIndex++;
@@ -640,7 +641,7 @@ export class AdvancedNoteComposer {
     const selections = await this.getSelections();
     const cache = this.app.metadataCache.getFileCache(this.sourceFile) ?? {};
     const subpaths = new Set<string>();
-    if (this.action === 'merge') {
+    if (this.action === Action.Merge) {
       subpaths.add('');
     }
 

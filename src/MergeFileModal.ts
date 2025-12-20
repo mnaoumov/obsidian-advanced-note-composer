@@ -13,7 +13,10 @@ import type { Plugin } from './Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
-import { FrontmatterMergeStrategy } from './PluginSettings.ts';
+import {
+  Action,
+  FrontmatterMergeStrategy
+} from './PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
@@ -23,7 +26,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
   public constructor(private readonly plugin: Plugin, composer: AdvancedNoteComposer) {
     super(composer);
 
-    this.composer.action = 'merge';
+    this.composer.action = Action.Merge;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
