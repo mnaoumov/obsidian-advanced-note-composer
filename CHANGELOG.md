@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.10.1
+
+- feat: ignore `Keep original frontmatter` setting when splitting into a new file re #54 #53
+
 ## 3.10.0
 
 - chore: spellcheck
