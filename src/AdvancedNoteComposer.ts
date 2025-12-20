@@ -50,6 +50,7 @@ import { parseMarkdownHeadingDocument } from './MarkdownHeadingDocument.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
+  FrontmatterTitleMode,
   TextAfterExtractionMode
 } from './PluginSettings.ts';
 
@@ -272,17 +273,33 @@ export class AdvancedNoteComposer {
     this.isNewTargetFile = true;
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
-    if (file.basename !== fileName) {
-      if (this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
-        await addAlias(this.app, file, fileName);
-      }
+    const isInvalidTitle = file.basename !== fileName;
 
-      if (this.plugin.settings.shouldAddInvalidTitleToFrontmatterTitleKey) {
-        await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
-          frontmatter.title = fileName;
-        });
-      }
+    if (isInvalidTitle && this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
+      await addAlias(this.app, file, fileName);
     }
+
+    let shouldAddTitleToFrontmatter = false;
+
+    switch (this.plugin.settings.frontmatterTitleMode) {
+      case FrontmatterTitleMode.None:
+        break;
+      case FrontmatterTitleMode.UseAlways:
+        shouldAddTitleToFrontmatter = true;
+        break;
+      case FrontmatterTitleMode.UseForInvalidTitleOnly:
+        shouldAddTitleToFrontmatter = isInvalidTitle;
+        break;
+      default:
+        throw new Error(`Invalid frontmatter title mode: ${this.plugin.settings.frontmatterTitleMode as string}`);
+    }
+
+    if (shouldAddTitleToFrontmatter) {
+      await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
+        frontmatter.title = fileName;
+      });
+    }
+
     return file;
   }
 

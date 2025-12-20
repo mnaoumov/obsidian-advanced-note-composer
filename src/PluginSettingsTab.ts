@@ -8,6 +8,7 @@ import type { PluginTypes } from './PluginTypes.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
+  FrontmatterTitleMode,
   TextAfterExtractionMode
 } from './PluginSettings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './PrismComponent.ts';
@@ -54,10 +55,30 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       });
 
     new SettingEx(this.containerEl)
-      .setName('Should add invalid title to frontmatter title key')
-      .setDesc('Whether to add invalid title to the frontmatter title key.')
-      .addToggle((toggle) => {
-        this.bind(toggle, 'shouldAddInvalidTitleToFrontmatterTitleKey');
+      .setName('Frontmatter title mode')
+      .setDesc(createFragment((f) => {
+        f.appendText('How to handle the title property in the frontmatter.');
+        f.createEl('br');
+        appendCodeBlock(f, 'None');
+        f.appendText(' - do not add the title property to the frontmatter.');
+        f.createEl('br');
+        f.appendText('');
+        appendCodeBlock(f, 'Use for invalid title only');
+        f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
+        f.createEl('br');
+        f.appendText('- ');
+        appendCodeBlock(f, 'Use always');
+        f.appendText(' - add the title property to the frontmatter always.');
+      }))
+      .addDropdown((dropdown) => {
+        dropdown.addOptions({
+          /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+          [FrontmatterTitleMode.None]: 'None',
+          [FrontmatterTitleMode.UseForInvalidTitleOnly]: 'Use for invalid title only',
+          [FrontmatterTitleMode.UseAlways]: 'Use always'
+          /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+        });
+        this.bind(dropdown, 'frontmatterTitleMode');
       });
 
     new SettingEx(this.containerEl)
