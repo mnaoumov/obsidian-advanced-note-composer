@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.11.0
+
+- feat: add frontmatterTitleMode setting re #56 #55
+
 ## 3.10.1
 
 - feat: ignore `Keep original frontmatter` setting when splitting into a new file re #54 #53
