@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.10.0
+
+- chore: spellcheck
+- feat: add setting splitToExistingFileTemplate re #52 #51
+- refactor: enum Action
+
 ## 3.9.0
 
 - feat: add splitTemplate re #50
