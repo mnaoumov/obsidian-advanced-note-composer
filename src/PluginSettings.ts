@@ -16,6 +16,12 @@ export enum FrontmatterMergeStrategy {
   ReplaceWithNewFrontmatter = 'ReplaceWithNewFrontmatter'
 }
 
+export enum FrontmatterTitleMode {
+  None = 'None',
+  UseAlways = 'UseAlways',
+  UseForInvalidTitleOnly = 'UseForInvalidTitleOnly'
+}
+
 export enum TextAfterExtractionMode {
   EmbedNewFile = 'embed',
   LinkToNewFile = 'link',
@@ -24,10 +30,10 @@ export enum TextAfterExtractionMode {
 
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+  public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
   public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
-  public shouldAddInvalidTitleToFrontmatterTitleKey = true;
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;

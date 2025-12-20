@@ -5,7 +5,14 @@ import { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/Pl
 import type { PluginTypes } from './PluginTypes.ts';
 
 import { INVALID_CHARACTERS_REG_EXP } from './FilenameValidation.ts';
-import { PluginSettings } from './PluginSettings.ts';
+import {
+  FrontmatterTitleMode,
+  PluginSettings
+} from './PluginSettings.ts';
+
+class LegacySettings {
+  public shouldAddInvalidTitleToFrontmatterTitleKey = true;
+}
 
 export class PluginSettingsManager extends PluginSettingsManagerBase<PluginTypes> {
   protected override createDefaultSettings(): PluginSettings {
@@ -17,6 +24,14 @@ export class PluginSettingsManager extends PluginSettingsManagerBase<PluginTypes
       if (!legacySettings.mergeTemplate?.includes('{{content}}')) {
         legacySettings.mergeTemplate ??= '';
         legacySettings.mergeTemplate += '\n\n{{content}}';
+      }
+    });
+
+    this.registerLegacySettingsConverter(LegacySettings, (legacySettings) => {
+      if (legacySettings.shouldAddInvalidTitleToFrontmatterTitleKey !== undefined) {
+        legacySettings.frontmatterTitleMode = legacySettings.shouldAddInvalidTitleToFrontmatterTitleKey
+          ? FrontmatterTitleMode.UseForInvalidTitleOnly
+          : FrontmatterTitleMode.None;
       }
     });
   }
