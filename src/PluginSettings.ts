@@ -3,6 +3,11 @@ import { escapeRegExp } from 'obsidian-dev-utils/RegExp';
 const ALWAYS_MATCH_REG_EXP = /(?:)/;
 const NEVER_MATCH_REG_EXP = /$./;
 
+export enum Action {
+  Merge = 'Merge',
+  Split = 'Split'
+}
+
 export enum FrontmatterMergeStrategy {
   KeepOriginalFrontmatter = 'KeepOriginalFrontmatter',
   MergeAndPreferNewValues = 'MergeAndPreferNewValues',
