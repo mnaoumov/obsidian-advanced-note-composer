@@ -534,6 +534,9 @@ export class AdvancedNoteComposer {
     const templateFrontmatter = this.safeParseFrontmatter(frontmatterInfo);
     targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
     await this.insertIntoTargetFileImpl(targetContentToInsert);
+    if (this.isNewTargetFile) {
+      this.frontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+    }
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
