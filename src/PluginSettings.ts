@@ -41,6 +41,7 @@ export class PluginSettings {
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldTreatTitleAsPathByDefault = true;
   public splitTemplate = '';
+  public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
   public get excludePaths(): string[] {
     return this._excludePaths;

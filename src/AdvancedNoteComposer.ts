@@ -87,6 +87,7 @@ export class AdvancedNoteComposer {
   }
 
   private _targetFile?: TFile;
+  private isNewTargetFile = false;
 
   public constructor(
     private readonly plugin: Plugin,
@@ -230,10 +231,7 @@ export class AdvancedNoteComposer {
   }
 
   private applyTemplate(targetContentToInsert: string): string {
-    const template = this.action === Action.Merge
-      ? this.plugin.settings.mergeTemplate
-      : this.plugin.settings.splitTemplate || this.plugin.settings.mergeTemplate;
-    return replaceAll(template, /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
+    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
         case 'fromPath'.toLowerCase():
           return this.sourceFile.path;
@@ -271,6 +269,7 @@ export class AdvancedNoteComposer {
     fileName = trimEnd(fileName, '.md');
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
+    this.isNewTargetFile = true;
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
     if (file.basename !== fileName) {
@@ -470,6 +469,26 @@ export class AdvancedNoteComposer {
       endOffset: content.length,
       startOffset: 0
     }];
+  }
+
+  private getTemplate(): string {
+    if (!this.plugin.settings.splitTemplate) {
+      return this.plugin.settings.mergeTemplate;
+    }
+
+    if (this.action === Action.Merge) {
+      return this.plugin.settings.mergeTemplate;
+    }
+
+    if (this.isNewTargetFile) {
+      return this.plugin.settings.splitTemplate;
+    }
+
+    if (this.plugin.settings.splitToExistingFileTemplate === Action.Merge) {
+      return this.plugin.settings.mergeTemplate;
+    }
+
+    return this.plugin.settings.splitTemplate;
   }
 
   private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
@@ -748,6 +767,7 @@ export class AdvancedNoteComposer {
         return;
       }
 
+      this.isNewTargetFile = true;
       this._targetFile = await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '');
       return;
     }

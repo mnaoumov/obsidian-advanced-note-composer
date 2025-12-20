@@ -6,6 +6,7 @@ import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
 import type { PluginTypes } from './PluginTypes.ts';
 
 import {
+  Action,
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
 } from './PluginSettings.ts';
@@ -201,7 +202,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
     new SettingEx(this.containerEl)
       .setName('Split template')
       .setDesc(createFragment((f) => {
-        f.appendText('Template to use when splitting notes.');
+        f.appendText('Template to use when splitting notes into a new file.');
         f.createEl('br');
         f.appendText('Leave empty to reuse ');
         appendCodeBlock(f, 'Merge template');
@@ -232,6 +233,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addCodeHighlighter((codeHighlighter) => {
         codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
         this.bind(codeHighlighter, 'splitTemplate');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Split to existing file template')
+      .setDesc('Template to use when splitting notes to existing file.')
+      .addDropdown((dropdown) => {
+        dropdown.addOptions({
+          [Action.Merge]: 'Merge',
+          [Action.Split]: 'Split'
+        });
+        this.bind(dropdown, 'splitToExistingFileTemplate');
       });
 
     new SettingEx(this.containerEl)
