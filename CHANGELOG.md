@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.9.0
+
+- feat: add splitTemplate re #50
+- feat: setting shouldKeepHeadingsWhenSplittingContent re #38
+- fix: extracting content under Setext heading
+- fix: extracting first symbol after heading
+
 ## 3.8.0
 
 - feat: add merge modal hotkeys
