@@ -58,6 +58,11 @@ export type InsertMode = 'append' | 'prepend';
 
 const moment = extractDefaultExportInterop(moment_);
 
+interface ExtractFrontmatterResult {
+  content: string;
+  frontmatter: Frontmatter;
+}
+
 interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -303,6 +308,23 @@ export class AdvancedNoteComposer {
     return file;
   }
 
+  private extractFrontmatter(str: string): ExtractFrontmatterResult {
+    if (this.frontmatterMergeStrategy === FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
+      return {
+        content: str,
+        frontmatter: {}
+      };
+    }
+
+    const frontmatterInfo = getFrontMatterInfo(str);
+    const frontmatter = this.safeParseFrontmatter(frontmatterInfo);
+
+    return {
+      content: str.slice(frontmatterInfo.contentStart),
+      frontmatter
+    };
+  }
+
   private async fixBacklinks(backlinksToFix: Map<string, string[]>): Promise<void> {
     const updatedFilePaths = new Set<string>();
     const updatedLinks = new Set<string>();
@@ -542,18 +564,16 @@ export class AdvancedNoteComposer {
     const backlinksToFix = await this.prepareBacklinksToFix();
 
     const originalFrontmatter = await getFrontmatterSafe<Frontmatter>(this.app, this.targetFile);
-    let frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
-    const newFrontmatter = this.safeParseFrontmatter(frontmatterInfo);
 
-    targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
-    targetContentToInsert = this.applyTemplate(targetContentToInsert);
-    frontmatterInfo = getFrontMatterInfo(targetContentToInsert);
-    const templateFrontmatter = this.safeParseFrontmatter(frontmatterInfo);
-    targetContentToInsert = targetContentToInsert.slice(frontmatterInfo.contentStart);
-    await this.insertIntoTargetFileImpl(targetContentToInsert);
     if (this.isNewTargetFile) {
       this.frontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
     }
+
+    const { content: newContent, frontmatter: newFrontmatter } = this.extractFrontmatter(targetContentToInsert);
+    targetContentToInsert = this.applyTemplate(newContent);
+    const { content: templateContent, frontmatter: templateFrontmatter } = this.extractFrontmatter(targetContentToInsert);
+
+    await this.insertIntoTargetFileImpl(templateContent);
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
