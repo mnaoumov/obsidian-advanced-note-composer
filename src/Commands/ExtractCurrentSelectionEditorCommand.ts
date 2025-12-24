@@ -13,7 +13,7 @@ import {
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { SplitFileSuggestModal } from '../SplitFileModal.ts';
+import { SplitFileSuggestModal } from '../Modals/SplitFileModal.ts';
 
 class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {

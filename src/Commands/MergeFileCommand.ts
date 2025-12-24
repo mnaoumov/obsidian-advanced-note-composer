@@ -9,7 +9,7 @@ import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { MergeFileSuggestModal } from '../MergeFileModal.ts';
+import { MergeFileSuggestModal } from '../Modals/MergeFileModal.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, file: null | TFile) {
