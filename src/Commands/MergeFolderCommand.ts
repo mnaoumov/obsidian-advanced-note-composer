@@ -12,7 +12,8 @@ import {
 import {
   getAbstractFileOrNull,
   isFile,
-  isFolder
+  isFolder,
+  isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { renameSafe } from 'obsidian-dev-utils/obsidian/Vault';
 import { deleteSafe } from 'obsidian-dev-utils/obsidian/VaultEx';
@@ -84,7 +85,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     for (const child of sourceFolder.children) {
       let targetChildPath = join(targetFolder.path, child.name);
       let targetChild = getAbstractFileOrNull(this.app, targetChildPath, isCaseInsensitive);
-      if (targetChild && (isFile(targetChild) !== isFile(child))) {
+      if (targetChild && ((isFile(targetChild) && !isMarkdownFile(this.app, targetChild)) || isFile(targetChild) !== isFile(child))) {
         const extension = extname(child.name);
         const baseName = basename(child.name, extension);
         targetChildPath = this.app.vault.getAvailablePath(join(targetFolder.path, baseName), extension.slice(1));
