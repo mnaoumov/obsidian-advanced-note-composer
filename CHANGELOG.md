@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.13.1
+
+- fix: don't merge non-md
+
 ## 3.13.0
 
 - feat: implement merge folder re #25
