@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.13.0
+
+- feat: implement merge folder re #25
+- refactor: move Modals
+- feat: add MergeFolderCommand
+- chore: update libs
+
 ## 3.12.0
 
 - feat: split frontmatter as text for KeepOriginalFrontmatter re #58
