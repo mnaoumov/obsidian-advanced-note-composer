@@ -39,8 +39,8 @@ import {
   trimEnd
 } from 'obsidian-dev-utils/String';
 
+import type { Item } from './Modals/SuggestModalBase.ts';
 import type { Plugin } from './Plugin.ts';
-import type { Item } from './SuggestModalBase.ts';
 
 import {
   INVALID_CHARACTERS_REG_EXP,

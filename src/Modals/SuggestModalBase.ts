@@ -27,7 +27,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
-import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
+import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;

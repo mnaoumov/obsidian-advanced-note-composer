@@ -18,7 +18,7 @@ import {
   extractHeadingFromLine,
   getSelectionUnderHeading
 } from '../AdvancedNoteComposer.ts';
-import { SplitFileSuggestModal } from '../SplitFileModal.ts';
+import { SplitFileSuggestModal } from '../Modals/SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;

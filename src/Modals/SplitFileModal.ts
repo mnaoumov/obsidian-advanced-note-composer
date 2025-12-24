@@ -1,13 +1,13 @@
 import { Keymap } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 
-import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
+import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {
   Action,
   FrontmatterMergeStrategy
-} from './PluginSettings.ts';
+} from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 

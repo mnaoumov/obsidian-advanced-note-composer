@@ -8,15 +8,15 @@ import {
 } from 'obsidian-dev-utils/HTMLElement';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
-import type { AdvancedNoteComposer } from './AdvancedNoteComposer.ts';
-import type { Plugin } from './Plugin.ts';
+import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
+import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
-import { DynamicModal } from './DynamicModal.ts';
 import {
   Action,
   FrontmatterMergeStrategy
-} from './PluginSettings.ts';
+} from '../PluginSettings.ts';
+import { DynamicModal } from './DynamicModal.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
