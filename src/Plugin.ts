@@ -10,6 +10,7 @@ import { ExtractBeforeCursorEditorCommand } from './Commands/ExtractBeforeCursor
 import { ExtractCurrentSelectionEditorCommand } from './Commands/ExtractCurrentSelectionEditorCommand.ts';
 import { ExtractThisHeadingEditorCommand } from './Commands/ExtractThisHeadingEditorCommand.ts';
 import { MergeFileCommand } from './Commands/MergeFileCommand.ts';
+import { MergeFolderCommand } from './Commands/MergeFolderCommand.ts';
 import { SplitNoteByHeadingsContentEditorCommand } from './Commands/SplitNoteByHeadingsContentEditorCommand.ts';
 import { SplitNoteByHeadingsEditorCommand } from './Commands/SplitNoteByHeadingsEditorCommand.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
@@ -40,6 +41,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     new ExtractThisHeadingEditorCommand(this).register();
     new ExtractBeforeCursorEditorCommand(this).register();
     new ExtractAfterCursorEditorCommand(this).register();
+    new MergeFolderCommand(this).register();
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
