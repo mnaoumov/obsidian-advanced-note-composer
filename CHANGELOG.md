@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.12.0
+
+- feat: split frontmatter as text for KeepOriginalFrontmatter re #58
+
 ## 3.11.0
 
 - feat: add frontmatterTitleMode setting re #56 #55
