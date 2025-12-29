@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.14.0
+
+- feat: show recent folders first
+
 ## 3.13.1
 
 - fix: don't merge non-md
