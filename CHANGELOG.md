@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.15.0
+
+- fix: merging with subfolders re #62
+
 ## 3.14.0
 
 - feat: show recent folders first
