@@ -24,7 +24,7 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   public override getSuggestions(query: string): FuzzyMatch<TFolder>[] {
-    let suggestions = super.getSuggestions(query);
+    const suggestions = super.getSuggestions(query);
     if (query) {
       return suggestions;
     }
@@ -43,6 +43,9 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     for (const filePath of recentFilePaths) {
       const file = this.app.vault.getFileByPath(filePath);
       if (!file?.parent) {
+        continue;
+      }
+      if (file.parent === this.sourceFolder) {
         continue;
       }
       if (recentFoldersSet.has(file.parent)) {
