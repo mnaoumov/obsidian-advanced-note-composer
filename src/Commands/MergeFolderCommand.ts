@@ -82,7 +82,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
 
   private async mergeFolderImpl(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
     const isCaseInsensitive = this.app.vault.adapter.insensitive;
-    for (const child of sourceFolder.children) {
+    for (const child of Array.from(sourceFolder.children)) {
       let targetChildPath = join(targetFolder.path, child.name);
       let targetChild = getAbstractFileOrNull(this.app, targetChildPath, isCaseInsensitive);
       if (targetChild && ((isFile(targetChild) && !isMarkdownFile(this.app, targetChild)) || isFile(targetChild) !== isFile(child))) {
@@ -111,6 +111,9 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       } else if (isFile(child)) {
         await renameSafe(this.app, child, targetChildPath);
       } else if (isFolder(child)) {
+        if (targetChildPath.startsWith(child.path)) {
+          continue;
+        }
         const targetChildFolder = await this.app.vault.createFolder(targetChildPath);
         await this.mergeFolderImpl(child, targetChildFolder);
       }
