@@ -62,11 +62,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
         appendCodeBlock(f, 'None');
         f.appendText(' - do not add the title property to the frontmatter.');
         f.createEl('br');
-        f.appendText('');
         appendCodeBlock(f, 'Use for invalid title only');
         f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
         f.createEl('br');
-        f.appendText('- ');
         appendCodeBlock(f, 'Use always');
         f.appendText(' - add the title property to the frontmatter always.');
       }))
@@ -149,7 +147,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
         f.createEl('br');
         appendCodeBlock(f, 'Preserve both original and new frontmatter');
         f.appendText(' - copies new frontmatter from A into a separate frontmatter key in B.');
-        f.createEl('br');
       }))
       .addDropdown((dropdown) => {
         dropdown.addOptions({
