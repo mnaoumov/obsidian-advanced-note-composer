@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.15.2
+
+- fix: clean UI re #67
+
 ## 3.15.1
 
 - chore: spellcheck
