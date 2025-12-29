@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.15.1
+
+- chore: spellcheck
+- fix: exclude current recent folder re #66
+
 ## 3.15.0
 
 - fix: merging with subfolders re #62
