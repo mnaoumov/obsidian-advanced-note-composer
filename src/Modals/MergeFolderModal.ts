@@ -5,6 +5,7 @@ import type {
 
 import {
   FuzzySuggestModal,
+  Notice,
   Platform
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
@@ -150,6 +151,18 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     })
       .addCancelButton()
       .open();
+  }
+
+  public override onOpen(): void {
+    super.onOpen();
+    if (this.plugin.settings.isPathIgnored(this.sourceFolder.path)) {
+      this.close();
+      new Notice(createFragment((f) => {
+        f.appendText('You cannot merge folder ');
+        appendCodeBlock(f, this.sourceFolder.path);
+        f.appendText(' because it is ignored in the plugin settings.');
+      }));
+    }
   }
 
   private isAllowedDestinationFolder(folder: TFolder): boolean {
