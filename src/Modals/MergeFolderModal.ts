@@ -17,9 +17,13 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import type { Plugin } from '../Plugin.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
+import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   private doNotAskAgain = false;
+  private shouldIncludeChildFolders = false;
+  private shouldIncludeParentFolders = false;
 
   public constructor(
     private readonly plugin: Plugin,
@@ -28,6 +32,36 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to merge into...');
+    this.shouldIncludeChildFolders = plugin.settings.shouldIncludeChildFoldersWhenMergingByDefault;
+    this.shouldIncludeParentFolders = plugin.settings.shouldIncludeParentFoldersWhenMergingByDefault;
+
+    const builder = new SuggestModalCommandBuilder();
+    builder.addCheckbox({
+      key: '1',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.shouldIncludeChildFolders = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldIncludeChildFolders;
+      },
+      purpose: 'Include child folders'
+    });
+    builder.addCheckbox({
+      key: '2',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.shouldIncludeParentFolders = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldIncludeParentFolders;
+      },
+      purpose: 'Include parent folders'
+    });
+
+    builder.build(this);
   }
 
   public override getItems(): TFolder[] {
@@ -150,7 +184,19 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   private isAllowedDestinationFolder(folder: TFolder): boolean {
-    return folder !== this.sourceFolder && !this.plugin.settings.isPathIgnored(folder.path);
+    if (folder === this.sourceFolder) {
+      return false;
+    }
+    if (this.plugin.settings.isPathIgnored(folder.path)) {
+      return false;
+    }
+    if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
+      return false;
+    }
+    if (!this.shouldIncludeParentFolders && isChildOrSelf(this.app, this.sourceFolder, folder)) {
+      return false;
+    }
+    return true;
   }
 
   private async performMerge(targetFolder: TFolder): Promise<void> {
