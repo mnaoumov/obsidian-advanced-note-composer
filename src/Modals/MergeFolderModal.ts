@@ -13,12 +13,12 @@ import {
   createFragmentAsync
 } from 'obsidian-dev-utils/HTMLElement';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type { Plugin } from '../Plugin.ts';
 
 import { DynamicModal } from './DynamicModal.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
-import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   private doNotAskAgain = false;
