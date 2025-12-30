@@ -9,6 +9,7 @@ import {
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
+import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -102,12 +103,20 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
           f.createEl('br');
           appendCodeBlock(f, 'Source');
           f.appendText(': ');
-          f.appendText(this.sourceFolder.path);
+          f.createEl('a', { text: this.sourceFolder.path }, (a) => {
+            a.addEventListener('click', () => {
+              this.openFolder(this.sourceFolder);
+            });
+          });
           f.createEl('br');
           f.createEl('br');
           appendCodeBlock(f, 'Target');
           f.appendText(': ');
-          f.appendText(item.path);
+          f.createEl('a', { text: item.path }, (a) => {
+            a.addEventListener('click', () => {
+              this.openFolder(item);
+            });
+          });
         })
       );
 
@@ -140,5 +149,9 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     })
       .addCancelButton()
       .open();
+  }
+
+  private openFolder(folder: TFolder): void {
+    this.app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(folder);
   }
 }
