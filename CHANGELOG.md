@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 3.18.0
+
+- chore: lint
+- feat: allow excluding child/parent paths re #68
+- refactor: link
+- fix: improve subfolder merging re #70
+- feat: check source path for ignored
+- feat: swap command re #69
+
 ## 3.17.0
 
 - feat: check source folder for ignores
