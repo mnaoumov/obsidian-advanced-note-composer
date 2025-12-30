@@ -28,7 +28,7 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   public override getItems(): TFolder[] {
-    return this.app.vault.getAllFolders(true).filter((folder) => folder !== this.sourceFolder);
+    return this.app.vault.getAllFolders(true).filter(this.isAllowedDestinationFolder.bind(this));
   }
 
   public override getItemText(item: TFolder): string {
@@ -57,7 +57,7 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       if (!file?.parent) {
         continue;
       }
-      if (file.parent === this.sourceFolder) {
+      if (!this.isAllowedDestinationFolder(file.parent)) {
         continue;
       }
       if (recentFoldersSet.has(file.parent)) {
@@ -150,6 +150,10 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     })
       .addCancelButton()
       .open();
+  }
+
+  private isAllowedDestinationFolder(folder: TFolder): boolean {
+    return folder !== this.sourceFolder && !this.plugin.settings.isPathIgnored(folder.path);
   }
 
   private openFolder(folder: TFolder): void {
