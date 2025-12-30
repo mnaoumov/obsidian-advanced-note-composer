@@ -152,6 +152,10 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       .open();
   }
 
+  private openFolder(folder: TFolder): void {
+    this.app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(folder);
+  }
+
   private async performMerge(targetFolder: TFolder): Promise<void> {
     if (this.doNotAskAgain) {
       await this.plugin.settingsManager.editAndSave((settings) => {
@@ -159,9 +163,5 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       });
     }
     await this.callback(targetFolder);
-  }
-
-  private openFolder(folder: TFolder): void {
-    this.app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(folder);
   }
 }
