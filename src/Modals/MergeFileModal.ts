@@ -188,7 +188,8 @@ export class MergeFileSuggestModal extends SuggestModalBase {
         });
 
         if (Platform.isMobile) {
-          modal.addButton('mod-warning', 'Delete and don\'t ask again', async () => {
+          modal.addButton('mod-warning', 'Merge and don\'t ask again', async () => {
+            this.doNotAskAgain = true;
             await this.performMerge(evt);
           });
         } else {
