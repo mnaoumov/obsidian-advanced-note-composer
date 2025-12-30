@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 3.17.0
+
+- feat: check source folder for ignores
+- feat: filter excluded folders re #60
+- chore: spellcheck
+- chore: lint
+- fix: change setting only on Merge click
+- fix: mobile dialog
+- feat: add links to folders
+- feat: add warning re #61
+
 ## 3.16.0
 
 - feat: rewrite recursive merge to preserve links / fix: carefully merge into sub/superfolder / re #64 #65 #62
