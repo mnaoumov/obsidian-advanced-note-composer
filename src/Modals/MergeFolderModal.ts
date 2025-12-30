@@ -16,6 +16,8 @@ import type { Plugin } from '../Plugin.ts';
 import { DynamicModal } from './DynamicModal.ts';
 
 export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
+  private doNotAskAgain = false;
+
   public constructor(
     private readonly plugin: Plugin,
     private readonly sourceFolder: TFolder,
@@ -83,7 +85,7 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
 
     if (!this.plugin.settings.shouldAskBeforeMerging) {
       invokeAsyncSafely(async () => {
-        await this.callback(item);
+        await this.performMerge(item);
       });
       return;
     }
@@ -130,25 +132,33 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     });
 
     if (Platform.isMobile) {
-      modal.addButton('mod-warning', 'Don\'t ask again', async () => {
-        await this.callback(item);
+      modal.addButton('mod-warning', 'Merge and don\'t ask again', async () => {
+        this.doNotAskAgain = true;
+        await this.performMerge(item);
       });
     } else {
       modal.addCheckbox('Don\'t ask again', async (evt2) => {
-        await this.plugin.settingsManager.editAndSave((settings) => {
-          if (!(evt2.target instanceof HTMLInputElement)) {
-            return;
-          }
-          settings.shouldAskBeforeMerging = !evt2.target.checked;
-        });
+        if (!(evt2.target instanceof HTMLInputElement)) {
+          return;
+        }
+        this.doNotAskAgain = evt2.target.checked;
       });
     }
 
     modal.addButton('mod-warning', 'Merge', async () => {
-      await this.callback(item);
+      await this.performMerge(item);
     })
       .addCancelButton()
       .open();
+  }
+
+  private async performMerge(targetFolder: TFolder): Promise<void> {
+    if (this.doNotAskAgain) {
+      await this.plugin.settingsManager.editAndSave((settings) => {
+        settings.shouldAskBeforeMerging = false;
+      });
+    }
+    await this.callback(targetFolder);
   }
 
   private openFolder(folder: TFolder): void {
