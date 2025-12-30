@@ -63,7 +63,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
   }
 
   protected override async execute(): Promise<void> {
-    const modal = new MergeFolderModal(this.app, this.folder, this.mergeFolder.bind(this));
+    const modal = new MergeFolderModal(this.plugin, this.folder, this.mergeFolder.bind(this));
     modal.open();
   }
 
