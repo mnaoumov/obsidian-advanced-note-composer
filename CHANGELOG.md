@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.16.0
+
+- feat: rewrite recursive merge to preserve links / fix: carefully merge into sub/superfolder / re #64 #65 #62
+- chore: update libs
+
 ## 3.15.2
 
 - fix: clean UI re #67
