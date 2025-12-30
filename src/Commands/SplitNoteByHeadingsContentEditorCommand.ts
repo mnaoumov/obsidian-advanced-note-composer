@@ -6,11 +6,13 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
 import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
 import {
   EditorCommandBase,
   EditorCommandInvocationBase
 } from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 
 import type { Level } from '../MarkdownHeadingDocument.ts';
@@ -51,6 +53,17 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 
   public override async execute(): Promise<void> {
     await super.execute();
+
+    if (this.plugin.settings.isPathIgnored(this.file.path)) {
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot split file ');
+          f.appendChild(await renderInternalLink(this.app, this.file));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
 
     let headingIndex = 0;
 

@@ -4,11 +4,14 @@ import type {
   MarkdownView
 } from 'obsidian';
 
+import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
 import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
 import {
   EditorCommandBase,
   EditorCommandInvocationBase
 } from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -30,6 +33,17 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
 
   public override async execute(): Promise<void> {
     await super.execute();
+
+    if (this.plugin.settings.isPathIgnored(this.file.path)) {
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot extract from file ');
+          f.appendChild(await renderInternalLink(this.app, this.file));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
 
     this.editor.setSelection({ ch: this.editor.getLine(this.editor.lastLine()).length, line: this.editor.lastLine() }, this.editor.getCursor());
     const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor);

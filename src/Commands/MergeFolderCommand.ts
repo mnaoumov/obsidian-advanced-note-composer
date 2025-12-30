@@ -9,7 +9,10 @@ import {
   Notice,
   Vault
 } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
+import {
+  appendCodeBlock,
+  createFragmentAsync
+} from 'obsidian-dev-utils/HTMLElement';
 import {
   FolderCommandBase,
   FolderCommandInvocationBase
@@ -19,6 +22,7 @@ import {
   isFolder,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import {
   getAvailablePath,
   getOrCreateFileSafe,
@@ -63,6 +67,17 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
   }
 
   protected override async execute(): Promise<void> {
+    if (this.plugin.settings.isPathIgnored(this.folder.path)) {
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot merge folder ');
+          f.appendChild(await renderInternalLink(this.app, this.folder));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
+
     const modal = new MergeFolderModal(this.plugin, this.folder, this.mergeFolder.bind(this));
     modal.open();
   }
@@ -73,11 +88,11 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
 
   private async mergeFolder(targetFolder: TFolder): Promise<void> {
     const notice = new Notice(
-      createFragment((f) => {
+      await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
-        appendCodeBlock(f, this.folder.path);
+        f.appendChild(await renderInternalLink(this.app, this.folder.path));
         f.appendText(' with ');
-        appendCodeBlock(f, targetFolder.path);
+        f.appendChild(await renderInternalLink(this.app, targetFolder.path));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');

@@ -1,10 +1,13 @@
 import type { TFile } from 'obsidian';
 
+import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
 import {
   FileCommandBase,
   FileCommandInvocationBase
 } from 'obsidian-dev-utils/obsidian/Commands/FileCommandBase';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -26,6 +29,17 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
 
   public override async execute(): Promise<void> {
     await super.execute();
+
+    if (this.plugin.settings.isPathIgnored(this.file.path)) {
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot merge file ');
+          f.appendChild(await renderInternalLink(this.app, this.file));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
 
     const modal = new MergeFileSuggestModal(this.plugin, new AdvancedNoteComposer(this.plugin, this.file));
     modal.open();
