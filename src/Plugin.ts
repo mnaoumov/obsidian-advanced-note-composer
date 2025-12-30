@@ -13,6 +13,8 @@ import { MergeFileCommand } from './Commands/MergeFileCommand.ts';
 import { MergeFolderCommand } from './Commands/MergeFolderCommand.ts';
 import { SplitNoteByHeadingsContentEditorCommand } from './Commands/SplitNoteByHeadingsContentEditorCommand.ts';
 import { SplitNoteByHeadingsEditorCommand } from './Commands/SplitNoteByHeadingsEditorCommand.ts';
+import { SwapFileCommand } from './Commands/SwapFileCommand.ts';
+import { SwapFolderCommand } from './Commands/SwapFolderCommand.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
 import { PrismComponent } from './PrismComponent.ts';
@@ -42,6 +44,8 @@ export class Plugin extends PluginBase<PluginTypes> {
     new ExtractBeforeCursorEditorCommand(this).register();
     new ExtractAfterCursorEditorCommand(this).register();
     new MergeFolderCommand(this).register();
+    new SwapFileCommand(this).register();
+    new SwapFolderCommand(this).register();
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
