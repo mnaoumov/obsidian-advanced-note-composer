@@ -329,5 +329,19 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldKeepHeadingsWhenSplittingContent');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should include child folders when merging by default')
+      .setDesc('Whether to include child folders when merging by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldIncludeChildFoldersWhenMergingByDefault');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should include parent folders when merging by default')
+      .setDesc('Whether to include parent folders when merging by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldIncludeParentFoldersWhenMergingByDefault');
+      });
   }
 }

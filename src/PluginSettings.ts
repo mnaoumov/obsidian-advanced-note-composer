@@ -39,7 +39,9 @@ export class PluginSettings {
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   public shouldAskBeforeMerging = true;
   public shouldFixFootnotesByDefault = true;
+  public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
+  public shouldIncludeParentFoldersWhenMergingByDefault = true;
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
