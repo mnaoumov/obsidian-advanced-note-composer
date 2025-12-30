@@ -18,7 +18,10 @@ import {
   stringifyYaml,
   TFile
 } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
+import {
+  appendCodeBlock,
+  createFragmentAsync
+} from 'obsidian-dev-utils/HTMLElement';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/ObjectUtils';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
@@ -27,6 +30,7 @@ import {
   updateLink,
   updateLinksInContent
 } from 'obsidian-dev-utils/obsidian/Link';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import {
   getBacklinksForFileSafe,
   getCacheSafe,
@@ -140,17 +144,17 @@ export class AdvancedNoteComposer {
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
     this.action = Action.Merge;
 
-    if (!this.checkTargetFileIgnored(Action.Merge)) {
+    if (!await this.checkTargetFileIgnored(Action.Merge)) {
       return;
     }
 
     const notice: Notice | null = this.shouldShowNotice
       ? new Notice(
-        createFragment((f) => {
+        await createFragmentAsync(async (f) => {
           f.appendText('Advanced Note Composer: Merging note ');
-          appendCodeBlock(f, this.sourceFile.path);
+          f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
           f.appendText(' with ');
-          appendCodeBlock(f, this.targetFile.path);
+          f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
           f.createEl('br');
           f.createEl('br');
           f.createDiv('is-loading');
@@ -198,16 +202,16 @@ export class AdvancedNoteComposer {
       await this.selectItemForSplit(null, false, this.heading);
     }
 
-    if (!this.checkTargetFileIgnored(Action.Split)) {
+    if (!await this.checkTargetFileIgnored(Action.Split)) {
       return;
     }
 
     const notice = new Notice(
-      createFragment((f) => {
+      await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Splitting note ');
-        appendCodeBlock(f, this.sourceFile.path);
+        f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
         f.appendText(' into ');
-        appendCodeBlock(f, this.targetFile.path);
+        f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');
@@ -262,13 +266,15 @@ export class AdvancedNoteComposer {
     });
   }
 
-  private checkTargetFileIgnored(action: Action): boolean {
+  private async checkTargetFileIgnored(action: Action): Promise<boolean> {
     if (this.isPathIgnored(this.targetFile.path)) {
-      new Notice(createFragment((f) => {
-        f.appendText(`You cannot ${action} into `);
-        appendCodeBlock(f, this.targetFile.path);
-        f.appendText(' because this path is not allowed in the plugin settings.');
-      }));
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText(`You cannot ${action} into `);
+          f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
+          f.appendText(' because this path is not allowed in the plugin settings.');
+        })
+      );
       return false;
     }
     return true;
