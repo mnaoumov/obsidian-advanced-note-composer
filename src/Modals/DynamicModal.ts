@@ -53,14 +53,18 @@ export class DynamicModal extends Modal {
     });
   }
 
-  public addCheckbox(text: string, onClick: (evt: MouseEvent) => void): this {
+  public addCheckbox(text: string, onClick: (evt: MouseEvent) => Promisable<void>): this {
     this.buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
       label
         .createEl('input', {
           attr: { tabindex: -1 },
           type: 'checkbox'
         });
-      label.addEventListener('click', onClick);
+      label.addEventListener('click', (evt) => {
+        invokeAsyncSafely(async () => {
+          await onClick(evt);
+        });
+      });
       label.appendText(text);
     });
 
