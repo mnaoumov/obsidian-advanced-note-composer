@@ -83,6 +83,7 @@ export class AdvancedNoteComposer {
   public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
   public shouldMergeHeadings: boolean;
+  public shouldShowNotice = true;
   public shouldTreatTitleAsPath: boolean;
 
   public get targetFile(): TFile {
@@ -143,18 +144,20 @@ export class AdvancedNoteComposer {
       return;
     }
 
-    const notice = new Notice(
-      createFragment((f) => {
-        f.appendText('Advanced Note Composer: Merging note ');
-        appendCodeBlock(f, this.sourceFile.path);
-        f.appendText(' with ');
-        appendCodeBlock(f, this.targetFile.path);
-        f.createEl('br');
-        f.createEl('br');
-        f.createDiv('is-loading');
-      }),
-      0
-    );
+    const notice: Notice | null = this.shouldShowNotice
+      ? new Notice(
+        createFragment((f) => {
+          f.appendText('Advanced Note Composer: Merging note ');
+          appendCodeBlock(f, this.sourceFile.path);
+          f.appendText(' with ');
+          appendCodeBlock(f, this.targetFile.path);
+          f.createEl('br');
+          f.createEl('br');
+          f.createDiv('is-loading');
+        }),
+        0
+      )
+      : null;
 
     try {
       if (doNotAskAgain) {
@@ -176,7 +179,7 @@ export class AdvancedNoteComposer {
         });
       }
     } finally {
-      notice.hide();
+      notice?.hide();
     }
   }
 
@@ -601,11 +604,13 @@ export class AdvancedNoteComposer {
 
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
-      new Notice(createFragment((f) => {
-        f.appendText('Advanced Note Composer: You have enabled setting ');
-        appendCodeBlock(f, 'Should run templater on destination file');
-        f.appendText(', but Templater plugin is not installed.');
-      }));
+      if (this.shouldShowNotice) {
+        new Notice(createFragment((f) => {
+          f.appendText('Advanced Note Composer: You have enabled setting ');
+          appendCodeBlock(f, 'Should run templater on destination file');
+          f.appendText(', but Templater plugin is not installed.');
+        }));
+      }
       return;
     }
     const isActiveFile = this.app.workspace.getActiveFile() === this.targetFile;

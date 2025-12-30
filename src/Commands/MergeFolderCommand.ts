@@ -1,26 +1,34 @@
 import type {
+  TAbstractFile,
+  TFile,
   TFolder,
   WorkspaceLeaf
 } from 'obsidian';
 
-import { Notice } from 'obsidian';
+import {
+  Notice,
+  Vault
+} from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
 import {
   FolderCommandBase,
   FolderCommandInvocationBase
 } from 'obsidian-dev-utils/obsidian/Commands/FolderCommandBase';
 import {
-  getAbstractFileOrNull,
   isFile,
   isFolder,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { renameSafe } from 'obsidian-dev-utils/obsidian/Vault';
-import { deleteSafe } from 'obsidian-dev-utils/obsidian/VaultEx';
 import {
-  basename,
-  extname,
-  join
+  getAvailablePath,
+  getOrCreateFileSafe,
+  getOrCreateFolderSafe,
+  isChildOrSelf,
+  renameSafe
+} from 'obsidian-dev-utils/obsidian/Vault';
+import {
+  join,
+  relative
 } from 'obsidian-dev-utils/Path';
 
 import type { Plugin } from '../Plugin.ts';
@@ -59,6 +67,10 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     modal.open();
   }
 
+  private depth(file: TAbstractFile): number {
+    return file.path.split('/').length;
+  }
+
   private async mergeFolder(targetFolder: TFolder): Promise<void> {
     const notice = new Notice(
       createFragment((f) => {
@@ -81,44 +93,89 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
   }
 
   private async mergeFolderImpl(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
-    const isCaseInsensitive = this.app.vault.adapter.insensitive;
-    for (const child of Array.from(sourceFolder.children)) {
-      let targetChildPath = join(targetFolder.path, child.name);
-      let targetChild = getAbstractFileOrNull(this.app, targetChildPath, isCaseInsensitive);
-      if (targetChild && ((isFile(targetChild) && !isMarkdownFile(this.app, targetChild)) || isFile(targetChild) !== isFile(child))) {
-        const extension = extname(child.name);
-        const baseName = basename(child.name, extension);
-        targetChildPath = this.app.vault.getAvailablePath(join(targetFolder.path, baseName), extension.slice(1));
-        targetChild = null;
-      }
+    const sourceSubfolders: TFolder[] = [];
+    const sourceMdFiles: TFile[] = [];
+    const sourceOtherFiles: TFile[] = [];
 
-      if (targetChild) {
-        if (isFile(child) && isFile(targetChild)) {
-          const advancedNoteComposer = new AdvancedNoteComposer(this.plugin, child);
-          await advancedNoteComposer.selectItem(
-            {
-              file: targetChild,
-              match: { matches: [], score: 0 },
-              type: 'file'
-            },
-            false,
-            ''
-          );
-          await advancedNoteComposer.mergeFile(false);
-        } else if (isFolder(child) && isFolder(targetChild)) {
-          await this.mergeFolderImpl(child, targetChild);
+    Vault.recurseChildren(sourceFolder, (child) => {
+      if (isFolder(child)) {
+        sourceSubfolders.push(child);
+        return;
+      }
+      if (!isFile(child)) {
+        return;
+      }
+      if (isMarkdownFile(this.app, child)) {
+        sourceMdFiles.push(child);
+        return;
+      }
+      sourceOtherFiles.push(child);
+    });
+
+    sourceSubfolders.sort((a, b) => this.depth(b) - this.depth(a));
+    const subfoldersMap = new Map<string, string>();
+
+    for (const sourceSubfolder of sourceSubfolders) {
+      const relativePath = relative(sourceFolder.path, sourceSubfolder.path);
+      const targetSubfolderPath = join(targetFolder.path, relativePath);
+      const targetSubfolder = await getOrCreateFolderSafe(this.app, targetSubfolderPath);
+      subfoldersMap.set(sourceSubfolder.path, targetSubfolder.path);
+    }
+
+    if (isChildOrSelf(this.app, sourceFolder, targetFolder)) {
+      sourceMdFiles.sort((a, b) => this.depth(a) - this.depth(b));
+    }
+
+    if (isChildOrSelf(this.app, targetFolder, sourceFolder)) {
+      sourceMdFiles.sort((a, b) => this.depth(b) - this.depth(a));
+    }
+
+    for (const sourceMdFile of sourceMdFiles) {
+      const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
+      const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
+      const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
+      const advancedNoteComposer = new AdvancedNoteComposer(this.plugin, sourceMdFile);
+      advancedNoteComposer.shouldShowNotice = false;
+      await advancedNoteComposer.selectItem(
+        {
+          file: targetMdFile,
+          match: { matches: [], score: 0 },
+          type: 'file'
+        },
+        false,
+        ''
+      );
+      await advancedNoteComposer.mergeFile(false);
+    }
+
+    for (const sourceOtherFile of sourceOtherFiles) {
+      const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
+      let targetFilePath = join(targetParentFolderPath, sourceOtherFile.name);
+      targetFilePath = getAvailablePath(this.app, targetFilePath);
+      await renameSafe(this.app, sourceOtherFile, targetFilePath);
+    }
+
+    for (const sourceSubfolder of [...sourceSubfolders, sourceFolder]) {
+      if (sourceSubfolder.children.length === 0 && !isChildOrSelf(this.app, sourceSubfolder, targetFolder)) {
+        try {
+          await this.app.fileManager.trashFile(sourceSubfolder);
+        } catch {
+          // Ignore errors
         }
-      } else if (isFile(child)) {
-        await renameSafe(this.app, child, targetChildPath);
-      } else if (isFolder(child)) {
-        if (targetChildPath.startsWith(child.path)) {
-          continue;
-        }
-        const targetChildFolder = await this.app.vault.createFolder(targetChildPath);
-        await this.mergeFolderImpl(child, targetChildFolder);
       }
     }
 
-    await deleteSafe(this.app, sourceFolder, undefined, false, true);
+    if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
+      return;
+    }
+
+    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    if (!templaterPlugin) {
+      new Notice(createFragment((f) => {
+        f.appendText('Advanced Note Composer: You have enabled setting ');
+        appendCodeBlock(f, 'Should run templater on destination file');
+        f.appendText(', but Templater plugin is not installed.');
+      }));
+    }
   }
 }
