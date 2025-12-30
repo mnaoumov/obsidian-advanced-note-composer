@@ -8,8 +8,11 @@ import {
   Platform
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
-import { InternalPluginName } from 'obsidian-typings/implementations';
+import {
+  appendCodeBlock,
+  createFragmentAsync
+} from 'obsidian-dev-utils/HTMLElement';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -90,74 +93,64 @@ export class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       return;
     }
 
-    const modal = new DynamicModal(this.app)
-      .setTitle('Merge file')
-      .setContent(
-        createFragment((f) => {
-          f.appendText('Are you sure you want to merge ');
-          appendCodeBlock(f, 'Source');
-          f.appendText(' into ');
-          appendCodeBlock(f, 'Target');
-          f.appendText('? ');
-          appendCodeBlock(f, 'Source');
-          f.appendText(' will be deleted.');
-          f.createEl('br');
-          f.createEl('br');
-          appendCodeBlock(f, 'Source');
-          f.appendText(': ');
-          f.createEl('a', { text: this.sourceFolder.path }, (a) => {
-            a.addEventListener('click', () => {
-              this.openFolder(this.sourceFolder);
-            });
-          });
-          f.createEl('br');
-          f.createEl('br');
-          appendCodeBlock(f, 'Target');
-          f.appendText(': ');
-          f.createEl('a', { text: item.path }, (a) => {
-            a.addEventListener('click', () => {
-              this.openFolder(item);
-            });
-          });
-        })
-      );
+    invokeAsyncSafely(async () => {
+      const modal = new DynamicModal(this.app)
+        .setTitle('Merge file')
+        .setContent(
+          await createFragmentAsync(async (f) => {
+            f.appendText('Are you sure you want to merge ');
+            appendCodeBlock(f, 'Source');
+            f.appendText(' into ');
+            appendCodeBlock(f, 'Target');
+            f.appendText('? ');
+            appendCodeBlock(f, 'Source');
+            f.appendText(' will be deleted.');
+            f.createEl('br');
+            f.createEl('br');
+            appendCodeBlock(f, 'Source');
+            f.appendText(': ');
+            f.appendChild(await renderInternalLink(this.app, this.sourceFolder));
+            f.createEl('br');
+            f.createEl('br');
+            appendCodeBlock(f, 'Target');
+            f.appendText(': ');
+            f.appendChild(await renderInternalLink(this.app, item));
+          })
+        );
 
-    modal.scope.register([], 'Enter', async () => {
-      modal.close();
-      await this.callback(item);
-    });
+      modal.scope.register([], 'Enter', async () => {
+        modal.close();
+        await this.callback(item);
+      });
 
-    modal.scope.register([], 'Cancel', () => {
-      modal.close();
-    });
+      modal.scope.register([], 'Cancel', () => {
+        modal.close();
+      });
 
-    if (Platform.isMobile) {
-      modal.addButton('mod-warning', 'Merge and don\'t ask again', async () => {
-        this.doNotAskAgain = true;
+      if (Platform.isMobile) {
+        modal.addButton('mod-warning', 'Merge and don\'t ask again', async () => {
+          this.doNotAskAgain = true;
+          await this.performMerge(item);
+        });
+      } else {
+        modal.addCheckbox('Don\'t ask again', async (evt2) => {
+          if (!(evt2.target instanceof HTMLInputElement)) {
+            return;
+          }
+          this.doNotAskAgain = evt2.target.checked;
+        });
+      }
+
+      modal.addButton('mod-warning', 'Merge', async () => {
         await this.performMerge(item);
-      });
-    } else {
-      modal.addCheckbox('Don\'t ask again', async (evt2) => {
-        if (!(evt2.target instanceof HTMLInputElement)) {
-          return;
-        }
-        this.doNotAskAgain = evt2.target.checked;
-      });
-    }
-
-    modal.addButton('mod-warning', 'Merge', async () => {
-      await this.performMerge(item);
-    })
-      .addCancelButton()
-      .open();
+      })
+        .addCancelButton()
+        .open();
+    });
   }
 
   private isAllowedDestinationFolder(folder: TFolder): boolean {
     return folder !== this.sourceFolder && !this.plugin.settings.isPathIgnored(folder.path);
-  }
-
-  private openFolder(folder: TFolder): void {
-    this.app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(folder);
   }
 
   private async performMerge(targetFolder: TFolder): Promise<void> {
