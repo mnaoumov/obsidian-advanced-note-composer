@@ -170,14 +170,25 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       await renameSafe(this.app, sourceOtherFile, targetFilePath);
     }
 
-    for (const sourceSubfolder of [...sourceSubfolders, sourceFolder]) {
-      if (sourceSubfolder.children.length === 0 && !isChildOrSelf(this.app, sourceSubfolder, targetFolder)) {
-        try {
-          await this.app.fileManager.trashFile(sourceSubfolder);
-        } catch {
-          // Ignore errors
+    for (const sourceSubfolder of sourceSubfolders) {
+      if (sourceSubfolder.children.length > 0) {
+        continue;
+      }
+
+      let canDeleteSourceFolder = true;
+
+      for (const targetFolderPath of subfoldersMap.values()) {
+        if (isChildOrSelf(this.app, targetFolderPath, sourceSubfolder)) {
+          canDeleteSourceFolder = false;
+          break;
         }
       }
+
+      if (!canDeleteSourceFolder) {
+        continue;
+      }
+
+      await this.app.fileManager.trashFile(sourceSubfolder);
     }
 
     if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
