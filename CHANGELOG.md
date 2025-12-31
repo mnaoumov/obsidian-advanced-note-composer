@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.19.0
+
+- feat: rewrite swap re #71
+- fix: change setting title re #68
+
 ## 3.18.0
 
 - chore: lint
