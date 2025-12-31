@@ -9,14 +9,63 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type { Plugin } from '../Plugin.ts';
 
+import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+
 export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
+  private shouldIncludeChildFolders = false;
+  private shouldIncludeParentFolders = false;
+  private shouldSwapEntireFolderStructure = false;
+
   public constructor(
     private readonly plugin: Plugin,
     private readonly sourceFolder: TFolder,
-    private readonly callback: (targetFolder: TFolder) => Promise<void>
+    private readonly callback: (targetFolder: TFolder, shouldSwapEntireFolderStructure: boolean) => Promise<void>
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to swap with...');
+    this.shouldIncludeChildFolders = plugin.settings.shouldIncludeChildFoldersWhenSwappingByDefault;
+    this.shouldIncludeParentFolders = plugin.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
+    this.shouldSwapEntireFolderStructure = plugin.settings.shouldSwapEntireFolderStructureByDefault;
+
+    const builder = new SuggestModalCommandBuilder();
+    builder.addCheckbox({
+      key: '1',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.shouldIncludeChildFolders = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldIncludeChildFolders;
+      },
+      purpose: 'Include child folders'
+    });
+    builder.addCheckbox({
+      key: '2',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.shouldIncludeParentFolders = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldIncludeParentFolders;
+      },
+      purpose: 'Include parent folders'
+    });
+    builder.addCheckbox({
+      key: '3',
+      modifiers: ['Alt'],
+      onChange: (value: boolean) => {
+        this.shouldSwapEntireFolderStructure = value;
+        this.updateSuggestions();
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldSwapEntireFolderStructure;
+      },
+      purpose: 'Include parent folders'
+    });
+
+    builder.build(this);
   }
 
   public override getItems(): TFolder[] {
@@ -76,16 +125,20 @@ export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
 
   public override onChooseItem(item: TFolder): void {
     invokeAsyncSafely(async () => {
-      await this.callback(item);
+      await this.callback(item, this.shouldSwapEntireFolderStructure);
     });
   }
 
   private isAllowedTargetFolder(folder: TFolder): boolean {
-    if (isChildOrSelf(this.app, this.sourceFolder, folder)) {
+    if (folder === this.sourceFolder) {
       return false;
     }
 
-    if (isChildOrSelf(this.app, folder, this.sourceFolder)) {
+    if (!this.shouldIncludeParentFolders && isChildOrSelf(this.app, this.sourceFolder, folder)) {
+      return false;
+    }
+
+    if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
       return false;
     }
 

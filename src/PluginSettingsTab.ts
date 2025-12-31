@@ -343,5 +343,30 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldIncludeParentFoldersWhenMergingByDefault');
       });
+
+    new SettingEx(this.containerEl)
+      .setName('Should include child folders when swapping folders by default')
+      .setDesc('Whether to include child folders when swapping folders by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldIncludeChildFoldersWhenSwappingByDefault');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should include parent folders when swapping folders by default')
+      .setDesc('Whether to include parent folders when swapping folders by default.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldIncludeParentFoldersWhenSwappingByDefault');
+      });
+
+    new SettingEx(this.containerEl)
+      .setName('Should swap entire folder structure by default')
+      .setDesc(createFragment((f) => {
+        f.appendText('Whether to swap entire folder structure by default.');
+        f.createEl('br');
+        f.appendText('If disabled, only the top-level files of the folders will be swapped.');
+      }))
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldSwapEntireFolderStructureByDefault');
+      });
   }
 }

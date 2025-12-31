@@ -40,13 +40,16 @@ export class PluginSettings {
   public shouldAskBeforeMerging = true;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
+  public shouldIncludeChildFoldersWhenSwappingByDefault = true;
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
   public shouldIncludeParentFoldersWhenMergingByDefault = true;
+  public shouldIncludeParentFoldersWhenSwappingByDefault = true;
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
+  public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;

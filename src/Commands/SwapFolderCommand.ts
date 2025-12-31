@@ -27,7 +27,11 @@ class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new SwapFolderModal(this.plugin, this.folder, (targetFolder) => swap(this.app, this.folder, targetFolder));
+    const modal = new SwapFolderModal(
+      this.plugin,
+      this.folder,
+      (targetFolder, shouldSwapEntireFolderStructure) => swap(this.app, this.folder, targetFolder, shouldSwapEntireFolderStructure)
+    );
     modal.open();
   }
 }
