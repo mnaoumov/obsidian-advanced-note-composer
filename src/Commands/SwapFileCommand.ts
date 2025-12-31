@@ -27,7 +27,7 @@ class SwapFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new SwapFileModal(this.plugin, this.file, (targetFile) => swap(this.app, this.file, targetFile));
+    const modal = new SwapFileModal(this.plugin, this.file, (targetFile) => swap(this.app, this.file, targetFile, true));
     modal.open();
   }
 }
