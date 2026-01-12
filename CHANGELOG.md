@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.19.1
+
+- chore: update libs
+
 ## 3.19.0
 
 - feat: rewrite swap re #71
