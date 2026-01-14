@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.20.0
+
+- feat: restructure/reword settings re #82 #81
+- chore: update libs
+
 ## 3.19.1
 
 - chore: update libs
