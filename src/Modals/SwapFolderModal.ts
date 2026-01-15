@@ -44,7 +44,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldIncludeChildFolders;
       },
-      purpose: 'Include child folders'
+      purpose: 'Include child folders in selector'
     });
     builder.addCheckbox({
       key: '2',
@@ -56,7 +56,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldIncludeParentFolders;
       },
-      purpose: 'Include parent folders'
+      purpose: 'Include parent folders in selector'
     });
     builder.addCheckbox({
       key: '3',
@@ -68,7 +68,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldSwapEntireFolderStructure;
       },
-      purpose: 'Include parent folders'
+      purpose: 'Should swap entire folder structure'
     });
 
     builder.build(this);
