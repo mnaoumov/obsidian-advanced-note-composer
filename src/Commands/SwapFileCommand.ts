@@ -13,7 +13,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { SwapFileModal } from '../Modals/SwapFileModal.ts';
+import { selectFileForSwap } from '../Modals/SwapFileModal.ts';
 import { swap } from '../Swapper.ts';
 
 class SwapFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
@@ -29,8 +29,10 @@ class SwapFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new SwapFileModal(this.plugin, this.file, (targetFile) => swap(this.app, this.file, targetFile, true));
-    modal.open();
+    const targetFile = await selectFileForSwap(this.plugin, this.file);
+    if (targetFile) {
+      await swap(this.app, this.file, targetFile, true);
+    }
   }
 }
 

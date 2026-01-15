@@ -1,17 +1,23 @@
 import type { FuzzyMatch } from 'obsidian';
+import type { PromiseResolve } from 'obsidian-dev-utils/Async';
 
 import {
   FuzzySuggestModal,
   TFolder
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type { Plugin } from '../Plugin.ts';
 
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
-export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
+interface SwapFolderModalResult {
+  shouldSwapEntireFolderStructure: boolean;
+  targetFolder: TFolder;
+}
+
+class SwapFolderModal extends FuzzySuggestModal<TFolder> {
+  private isSelected = false;
   private shouldIncludeChildFolders = false;
   private shouldIncludeParentFolders = false;
   private shouldSwapEntireFolderStructure = false;
@@ -19,7 +25,7 @@ export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   public constructor(
     private readonly plugin: Plugin,
     private readonly sourceFolder: TFolder,
-    private readonly callback: (targetFolder: TFolder, shouldSwapEntireFolderStructure: boolean) => Promise<void>
+    private readonly promiseResolve: PromiseResolve<null | SwapFolderModalResult>
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to swap with...');
@@ -124,9 +130,23 @@ export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   public override onChooseItem(item: TFolder): void {
-    invokeAsyncSafely(async () => {
-      await this.callback(item, this.shouldSwapEntireFolderStructure);
+    this.isSelected = true;
+    this.promiseResolve({
+      shouldSwapEntireFolderStructure: this.shouldSwapEntireFolderStructure,
+      targetFolder: item
     });
+  }
+
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve(null);
+    }
+  }
+
+  public override selectSuggestion(value: FuzzyMatch<TFolder>, evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    super.selectSuggestion(value, evt);
   }
 
   private isAllowedTargetFolder(folder: TFolder): boolean {
@@ -144,4 +164,11 @@ export class SwapFolderModal extends FuzzySuggestModal<TFolder> {
 
     return !this.plugin.settings.isPathIgnored(folder.path);
   }
+}
+
+export async function selectTargetFolderForSwap(plugin: Plugin, sourceFolder: TFolder): Promise<null | SwapFolderModalResult> {
+  return new Promise<null | SwapFolderModalResult>((resolve) => {
+    const modal = new SwapFolderModal(plugin, sourceFolder, resolve);
+    modal.open();
+  });
 }
