@@ -297,8 +297,7 @@ class MergeFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      inputMode: evt.shiftKey ? 'prepend' : 'append',
-      doNotAskAgain: false
+      inputMode: evt.shiftKey ? 'prepend' : 'append'
     });
   }
 
@@ -313,7 +312,6 @@ interface PrepareForMergeFileResult {
   isMod: boolean;
   inputValue: string;
   inputMode: 'prepend' | 'append';
-  doNotAskAgain: boolean;
 }
 
 export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {

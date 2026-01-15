@@ -80,7 +80,7 @@ export class MergeComposer extends ComposerBase {
     return new Set(['']);
   }
 
-  public async mergeFile(doNotAskAgain: boolean): Promise<void> {
+  public async mergeFile(): Promise<void> {
     if (!await this.checkTargetFileIgnored(Action.Merge)) {
       return;
     }
@@ -101,12 +101,6 @@ export class MergeComposer extends ComposerBase {
       : null;
 
     try {
-      if (doNotAskAgain) {
-        await this.plugin.settingsManager.editAndSave((settings) => {
-          settings.shouldAskBeforeMerging = false;
-        });
-      }
-
       this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
       const sourceContent = await this.app.vault.read(this.sourceFile);
       await this.insertIntoTargetFile(sourceContent);

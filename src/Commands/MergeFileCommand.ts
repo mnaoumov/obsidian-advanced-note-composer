@@ -51,7 +51,7 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
     const result = await prepareForMergeFile(this.plugin, composer, this.file);
 
     if (result) {
-      await composer.mergeFile(result.doNotAskAgain);
+      await composer.mergeFile();
     }
   }
 }

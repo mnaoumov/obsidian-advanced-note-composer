@@ -167,7 +167,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
         false,
         ''
       );
-      await advancedNoteComposer.mergeFile(false);
+      await advancedNoteComposer.mergeFile();
     }
 
     for (const sourceOtherFile of sourceOtherFiles) {
