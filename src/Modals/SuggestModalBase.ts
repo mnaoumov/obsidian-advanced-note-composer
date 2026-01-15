@@ -607,11 +607,9 @@ function searchFilePath(searchFn: SearchFn, filePath: string): null | SearchResu
   return match;
 }
 
-function traverseBookmarks(bookmarkItems: BookmarkItem[], callback: (bookmarkItem: BookmarkItem, path: string) => unknown, parentPath = ''): void {
+function traverseBookmarks(bookmarkItems: BookmarkItem[], callback: (bookmarkItem: BookmarkItem, path: string) => void, parentPath = ''): void {
   for (const bookmarkItem of bookmarkItems) {
-    if (callback(bookmarkItem, parentPath)) {
-      return;
-    }
+    callback(bookmarkItem, parentPath);
 
     if (bookmarkItem.type === 'group' && bookmarkItem.items) {
       traverseBookmarks(bookmarkItem.items, callback, `${parentPath + bookmarkItem.title}/`);
