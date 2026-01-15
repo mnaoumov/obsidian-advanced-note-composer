@@ -26,8 +26,6 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
-import type { ComposerBase } from '../Composers/ComposerBase.ts';
-
 export interface Item extends SearchResultContainer {
   alias?: string;
   bookmarkPath?: string;
@@ -59,7 +57,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(private readonly plugin: Plugin, protected readonly composer: ComposerBase, protected readonly sourceFile: TFile) {
+  public constructor(private readonly plugin: Plugin, protected readonly sourceFile: TFile) {
     super(plugin.app);
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
