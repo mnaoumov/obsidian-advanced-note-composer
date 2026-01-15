@@ -1,3 +1,5 @@
+import type { IconName } from 'obsidian';
+
 import {
   Notice,
   TFolder
@@ -37,6 +39,8 @@ class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
 }
 
 export class SwapFolderCommand extends FolderCommandBase<Plugin> {
+  protected override readonly fileMenuSubmenuIcon: IconName = 'lucide-git-merge';
+
   public constructor(plugin: Plugin) {
     super({
       icon: 'switch-camera',

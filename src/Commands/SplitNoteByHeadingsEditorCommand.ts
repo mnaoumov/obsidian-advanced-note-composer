@@ -91,7 +91,7 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
 }
 
 export class SplitNoteByHeadingsEditorCommand extends EditorCommandBase<Plugin> {
-  public override icon: IconName = 'lucide-scissors-line-dashed';
+  protected override readonly editorMenuSubmenuIcon: IconName = 'lucide-git-merge';
 
   public constructor(plugin: Plugin, private readonly headingLevel: Level) {
     super({
@@ -104,5 +104,9 @@ export class SplitNoteByHeadingsEditorCommand extends EditorCommandBase<Plugin> 
 
   protected override createEditorCommandInvocation(editor: Editor, ctx: MarkdownFileInfo | MarkdownView): CommandInvocationBase {
     return new SplitNoteByHeadingsEditorCommandInvocation(this.plugin, editor, ctx, this.headingLevel);
+  }
+
+  protected override shouldAddToEditorMenu(): boolean {
+    return true;
   }
 }
