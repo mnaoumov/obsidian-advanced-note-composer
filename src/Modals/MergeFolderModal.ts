@@ -122,7 +122,6 @@ class ConfirmDialogModal extends Modal {
                 return;
               }
               this.shouldAskBeforeMerging = !evt.target.checked;
-              this.confirm();
             });
           });
         label.appendText('Don\'t ask again');
