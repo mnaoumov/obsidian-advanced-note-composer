@@ -147,50 +147,6 @@ export abstract class ComposerBase {
     return this.plugin.settings.isPathIgnored(path);
   }
 
-  public async mergeFile(doNotAskAgain: boolean): Promise<void> {
-    if (!await this.checkTargetFileIgnored(Action.Merge)) {
-      return;
-    }
-
-    const notice: Notice | null = this.shouldShowNotice
-      ? new Notice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('Advanced Note Composer: Merging note ');
-          f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
-          f.appendText(' with ');
-          f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
-          f.createEl('br');
-          f.createEl('br');
-          f.createDiv('is-loading');
-        }),
-        0
-      )
-      : null;
-
-    try {
-      if (doNotAskAgain) {
-        await this.plugin.settingsManager.editAndSave((settings) => {
-          settings.shouldAskBeforeMerging = false;
-        });
-      }
-
-      this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
-      const sourceContent = await this.app.vault.read(this.sourceFile);
-      await this.insertIntoTargetFile(sourceContent);
-      await this.app.fileManager.trashFile(this.sourceFile);
-
-      if (this.plugin.settings.shouldOpenNoteAfterMerge) {
-        const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
-        await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
-        await this.app.workspace.getLeaf().openFile(this.targetFile, {
-          active: true
-        });
-      }
-    } finally {
-      notice?.hide();
-    }
-  }
-
   public abstract selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void>;
 
   private applyTemplate(targetContentToInsert: string): string {
