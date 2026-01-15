@@ -161,7 +161,7 @@ export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
 
   public constructor(private readonly plugin: Plugin, composer: AdvancedNoteComposer) {
-    super(composer);
+    super(plugin.app, composer);
 
     this.composer.action = Action.Merge;
 

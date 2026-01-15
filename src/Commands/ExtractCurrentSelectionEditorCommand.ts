@@ -55,7 +55,7 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const modal = new SplitFileSuggestModal(composer);
+    const modal = new SplitFileSuggestModal(this.app, composer);
     modal.open();
   }
 }

@@ -1,4 +1,5 @@
 import type {
+  App,
   SearchMatches,
   SearchResult,
   SearchResultContainer
@@ -56,8 +57,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(protected readonly composer: AdvancedNoteComposer) {
-    super(composer.app);
+  public constructor(app: App, protected readonly composer: AdvancedNoteComposer) {
+    super(app);
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
