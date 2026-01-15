@@ -74,7 +74,7 @@ interface Frontmatter extends GenericObject {
   title?: string;
 }
 
-interface Selection {
+export interface Selection {
   endOffset: number;
   startOffset: number;
 }

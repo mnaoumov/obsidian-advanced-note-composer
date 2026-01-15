@@ -73,11 +73,10 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
     const composer = new SplitComposer({
       editor: this.editor,
-      heading: this.headingInfo.heading,
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const isConfirmed = await prepareForSplitFile(this.app, composer);
+    const isConfirmed = await prepareForSplitFile(this.plugin, composer, this.file, this.editor, this.headingInfo.heading);
     if (isConfirmed) {
       await composer.splitFile();
     }

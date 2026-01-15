@@ -55,7 +55,7 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const isConfirmed = await prepareForSplitFile(this.app, composer);
+    const isConfirmed = await prepareForSplitFile(this.plugin, composer, this.file, this.editor);
     if (isConfirmed) {
       await composer.splitFile();
     }
