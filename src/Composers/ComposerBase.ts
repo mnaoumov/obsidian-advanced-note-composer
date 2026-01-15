@@ -4,7 +4,6 @@ import type {
   Pos
 } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
-import type { MaybeReturn } from 'obsidian-dev-utils/Type';
 import type { HeadingInfo } from 'obsidian-typings';
 
 import {
@@ -26,7 +25,6 @@ import { extractDefaultExportInterop } from 'obsidian-dev-utils/ObjectUtils';
 import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
-  extractLinkFile,
   updateLink,
   updateLinksInContent
 } from 'obsidian-dev-utils/obsidian/Link';
@@ -37,7 +35,6 @@ import {
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { process } from 'obsidian-dev-utils/obsidian/Vault';
-import { join } from 'obsidian-dev-utils/Path';
 import {
   replaceAll,
   trimEnd
@@ -54,8 +51,7 @@ import { parseMarkdownHeadingDocument } from '../MarkdownHeadingDocument.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
-  FrontmatterTitleMode,
-  TextAfterExtractionMode
+  FrontmatterTitleMode
 } from '../PluginSettings.ts';
 
 export type InsertMode = 'append' | 'prepend';
@@ -83,8 +79,7 @@ interface Selection {
   startOffset: number;
 }
 
-export class ComposerBase {
-  public action: Action = Action.Merge;
+export abstract class ComposerBase {
   public readonly app: App;
   public readonly editor: Editor | undefined;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -107,10 +102,10 @@ export class ComposerBase {
     return this._targetFile;
   }
 
-  private _targetFile?: TFile;
+  protected _targetFile?: TFile;
 
-  private isNewTargetFile = false;
-  private readonly plugin: Plugin;
+  protected isNewTargetFile = false;
+  protected readonly plugin: Plugin;
 
   public constructor(options: ComposerBaseOptions) {
     this.plugin = options.plugin;
@@ -153,8 +148,6 @@ export class ComposerBase {
   }
 
   public async mergeFile(doNotAskAgain: boolean): Promise<void> {
-    this.action = Action.Merge;
-
     if (!await this.checkTargetFileIgnored(Action.Merge)) {
       return;
     }
@@ -198,61 +191,7 @@ export class ComposerBase {
     }
   }
 
-  public async selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
-    if (this.action === Action.Merge) {
-      await this.selectItemForMerge(item, isMod, inputValue);
-    } else {
-      await this.selectItemForSplit(item, isMod, inputValue);
-    }
-  }
-
-  public async splitFile(): Promise<void> {
-    this.action = Action.Split;
-
-    if (!this._targetFile) {
-      await this.selectItemForSplit(null, false, this.heading);
-    }
-
-    if (!await this.checkTargetFileIgnored(Action.Split)) {
-      return;
-    }
-
-    const notice = new Notice(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Advanced Note Composer: Splitting note ');
-        f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
-        f.appendText(' into ');
-        f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
-        f.createEl('br');
-        f.createEl('br');
-        f.createDiv('is-loading');
-      }),
-      0
-    );
-    try {
-      this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
-
-      await this.insertIntoTargetFile(this.editor?.getSelection() ?? '');
-
-      const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-
-      switch (this.plugin.settings.textAfterExtractionMode) {
-        case TextAfterExtractionMode.EmbedNewFile:
-          this.editor?.replaceSelection(`!${markdownLink}`);
-          break;
-        case TextAfterExtractionMode.LinkToNewFile:
-          this.editor?.replaceSelection(markdownLink);
-          break;
-        case TextAfterExtractionMode.None:
-          this.editor?.replaceSelection('');
-          break;
-        default:
-          throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
-      }
-    } finally {
-      notice.hide();
-    }
-  }
+  public abstract selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void>;
 
   private applyTemplate(targetContentToInsert: string): string {
     return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
@@ -277,7 +216,7 @@ export class ComposerBase {
     });
   }
 
-  private async checkTargetFileIgnored(action: Action): Promise<boolean> {
+  protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
     if (this.isPathIgnored(this.targetFile.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
@@ -291,7 +230,7 @@ export class ComposerBase {
     return true;
   }
 
-  private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
+  protected async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd(fileName, '.md');
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
@@ -345,9 +284,7 @@ export class ComposerBase {
     };
   }
 
-  private async fixBacklinks(backlinksToFix: Map<string, string[]>): Promise<void> {
-    const updatedFilePaths = new Set<string>();
-    const updatedLinks = new Set<string>();
+  protected async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
     for (const backlinkPath of backlinksToFix.keys()) {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
@@ -369,33 +306,6 @@ export class ComposerBase {
           shouldUpdateFileNameAlias: true
         });
       });
-    }
-
-    if (this.action === Action.Merge) {
-      let linkIndex = 0;
-      await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
-        linkIndex++;
-        const linkFile = extractLinkFile(this.app, link, this.targetFile);
-        if (linkFile !== this.sourceFile) {
-          return;
-        }
-
-        updatedFilePaths.add(this.targetFile.path);
-        updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
-
-        return updateLink({
-          app: this.app,
-          link,
-          newSourcePathOrFile: this.targetFile,
-          newTargetPathOrFile: this.targetFile,
-          oldTargetPathOrFile: this.sourceFile,
-          shouldUpdateFileNameAlias: true
-        });
-      });
-    }
-
-    if (updatedLinks.size > 0) {
-      new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
   }
 
@@ -530,25 +440,7 @@ export class ComposerBase {
     }];
   }
 
-  private getTemplate(): string {
-    if (!this.plugin.settings.splitTemplate) {
-      return this.plugin.settings.mergeTemplate;
-    }
-
-    if (this.action === Action.Merge) {
-      return this.plugin.settings.mergeTemplate;
-    }
-
-    if (this.isNewTargetFile) {
-      return this.plugin.settings.splitTemplate;
-    }
-
-    if (this.plugin.settings.splitToExistingFileTemplate === Action.Merge) {
-      return this.plugin.settings.mergeTemplate;
-    }
-
-    return this.plugin.settings.splitTemplate;
-  }
+  protected abstract getTemplate(): string;
 
   private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
     if (!this.shouldIncludeFrontmatter) {
@@ -577,7 +469,7 @@ export class ComposerBase {
     }
   }
 
-  private async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
+  protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
@@ -613,7 +505,12 @@ export class ComposerBase {
       });
     }
 
-    await this.fixBacklinks(backlinksToFix);
+    const updatedFilePaths = new Set<string>();
+    const updatedLinks = new Set<string>();
+    await this.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
+    if (updatedLinks.size > 0) {
+      new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
+    }
 
     if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
       return;
@@ -718,13 +615,12 @@ export class ComposerBase {
     return oldObj;
   }
 
+  protected abstract prepareBacklinkSubpaths(): Set<string>;
+
   private async prepareBacklinksToFix(): Promise<Map<string, string[]>> {
     const selections = await this.getSelections();
     const cache = this.app.metadataCache.getFileCache(this.sourceFile) ?? {};
-    const subpaths = new Set<string>();
-    if (this.action === Action.Merge) {
-      subpaths.add('');
-    }
+    const subpaths = this.prepareBacklinkSubpaths();
 
     for (const heading of cache.headings ?? []) {
       if (!this.isSelected(heading.position, selections)) {
@@ -816,68 +712,6 @@ export class ComposerBase {
       frontmatterInfo.contentStart = 0;
       return {};
     }
-  }
-
-  private async selectItemForMerge(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
-    if (isMod || item?.type === 'unresolved') {
-      const fileName = item?.type === 'unresolved' ? item.linktext ?? '' : inputValue;
-      const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
-
-      const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
-      if (existingFile && this.isPathIgnored(existingFile.path)) {
-        this._targetFile = existingFile;
-        return;
-      }
-
-      this.isNewTargetFile = true;
-      this._targetFile = await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '');
-      return;
-    }
-
-    if (item?.type === 'bookmark' && item.item?.type === 'file') {
-      const bookmarkFile = this.app.vault.getFileByPath(item.item.path ?? '');
-      if (bookmarkFile) {
-        this._targetFile = bookmarkFile;
-        return;
-      }
-
-      throw new Error('Bookmark file not found');
-    }
-
-    if (item?.file) {
-      this._targetFile = item.file;
-      return;
-    }
-
-    throw new Error('No valid file selected');
-  }
-
-  private async selectItemForSplit(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
-    if (isMod || !item) {
-      const existingFile = this.app.metadataCache.getFirstLinkpathDest(inputValue, '');
-      if (existingFile && this.isPathIgnored(existingFile.path)) {
-        this._targetFile = existingFile;
-        return;
-      }
-
-      this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
-      return;
-    }
-
-    if (item.type === 'unresolved') {
-      this._targetFile = await this.createNewMarkdownFileFromLinktext(item.linktext ?? '');
-      return;
-    }
-
-    if (item.type === 'file' || item.type === 'alias') {
-      if (!item.file) {
-        throw new Error('File not found');
-      }
-      this._targetFile = item.file;
-      return;
-    }
-
-    this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
   }
 
   private updateTargetFootnoteIdRenameMap(sourceFootnoteId: string, targetFootnoteIdRenameMap: Map<string, string>, existingTargetIds: Set<string>): void {

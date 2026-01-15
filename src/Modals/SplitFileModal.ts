@@ -5,7 +5,6 @@ import type { ComposerBase } from '../Composers/ComposerBase.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {
-  Action,
   FrontmatterMergeStrategy
 } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
@@ -23,8 +22,6 @@ class SplitFileSuggestModal extends SuggestModalBase {
 
   public constructor(app: App, composer: ComposerBase, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
     super(app, composer);
-
-    this.composer.action = Action.Split;
 
     this.allowCreateNewFile = true;
     this.shouldShowUnresolved = this.composer.shouldAllowSplitIntoUnresolvedPath;
