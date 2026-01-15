@@ -15,7 +15,6 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type {
-  ComposerBase,
   InsertMode
 } from '../Composers/ComposerBase.ts';
 import type { Plugin } from '../Plugin.ts';
@@ -26,6 +25,7 @@ import {
 } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import type { MergeComposer } from '../Composers/MergeComposer.ts';
 
 interface ConfirmDialogModalResult {
   insertMode: InsertMode;
@@ -159,7 +159,7 @@ class ConfirmDialogModal extends Modal {
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
 
-  public constructor(private readonly plugin: Plugin, composer: ComposerBase) {
+  public constructor(private readonly plugin: Plugin, protected override readonly composer: MergeComposer) {
     super(plugin.app, composer);
 
     this.emptyStateText = 'No files found.';
