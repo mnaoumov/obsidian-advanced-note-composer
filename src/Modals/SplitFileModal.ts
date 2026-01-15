@@ -10,7 +10,7 @@ import {
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
-class SplitFileSuggestModal extends SuggestModalBase {
+class SplitFileModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
   private isSelected = false;
@@ -224,7 +224,7 @@ interface PrepareForSplitFileResult {
 
 export async function prepareForSplitFile(app: App, composer: ComposerBase): Promise<PrepareForSplitFileResult | null> {
   const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
-    const modal = new SplitFileSuggestModal(app, composer, resolve);
+    const modal = new SplitFileModal(app, composer, resolve);
     modal.open();
   });
 
