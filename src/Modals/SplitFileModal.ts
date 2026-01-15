@@ -1,7 +1,7 @@
 import { App, Keymap } from 'obsidian';
 import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
 
-import type { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
+import type { ComposerBase } from '../Composers/ComposerBase.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {
@@ -21,7 +21,7 @@ class SplitFileSuggestModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(app: App, composer: AdvancedNoteComposer, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
+  public constructor(app: App, composer: ComposerBase, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
     super(app, composer);
 
     this.composer.action = Action.Split;
@@ -225,7 +225,7 @@ interface PrepareForSplitFileResult {
   inputMode: 'prepend' | 'append';
 }
 
-export async function prepareForSplitFile(app: App, composer: AdvancedNoteComposer): Promise<PrepareForSplitFileResult | null> {
+export async function prepareForSplitFile(app: App, composer: ComposerBase): Promise<PrepareForSplitFileResult | null> {
   const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
     const modal = new SplitFileSuggestModal(app, composer, resolve);
     modal.open();

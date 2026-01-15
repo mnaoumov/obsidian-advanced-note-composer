@@ -14,7 +14,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
+import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { MergeFileSuggestModal } from '../Modals/MergeFileModal.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
@@ -46,7 +46,7 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
 
     const modal = new MergeFileSuggestModal(
       this.plugin,
-      new AdvancedNoteComposer({
+      new ComposerBase({
         plugin: this.plugin,
         sourceFile: this.file
       })

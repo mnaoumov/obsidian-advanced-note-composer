@@ -16,7 +16,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
+import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
@@ -47,7 +47,7 @@ class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection({ ch: this.editor.getLine(this.editor.lastLine()).length, line: this.editor.lastLine() }, this.editor.getCursor());
-    const composer = new AdvancedNoteComposer({
+    const composer = new ComposerBase({
       editor: this.editor,
       plugin: this.plugin,
       sourceFile: this.file

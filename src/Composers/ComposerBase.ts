@@ -62,7 +62,7 @@ export type InsertMode = 'append' | 'prepend';
 
 const moment = extractDefaultExportInterop(moment_);
 
-interface AdvancedNoteComposerOptions {
+interface ComposerBaseOptions {
   editor?: Editor;
   heading?: string;
   plugin: Plugin;
@@ -83,7 +83,7 @@ interface Selection {
   startOffset: number;
 }
 
-export class AdvancedNoteComposer {
+export class ComposerBase {
   public action: Action = Action.Merge;
   public readonly app: App;
   public readonly editor: Editor | undefined;
@@ -112,7 +112,7 @@ export class AdvancedNoteComposer {
   private isNewTargetFile = false;
   private readonly plugin: Plugin;
 
-  public constructor(options: AdvancedNoteComposerOptions) {
+  public constructor(options: ComposerBaseOptions) {
     this.plugin = options.plugin;
     this.sourceFile = options.sourceFile;
     this.editor = options.editor;

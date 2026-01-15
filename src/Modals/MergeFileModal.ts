@@ -15,9 +15,9 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type {
-  AdvancedNoteComposer,
+  ComposerBase,
   InsertMode
-} from '../Composers/AdvancedNoteComposer.ts';
+} from '../Composers/ComposerBase.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
@@ -160,7 +160,7 @@ class ConfirmDialogModal extends Modal {
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
 
-  public constructor(private readonly plugin: Plugin, composer: AdvancedNoteComposer) {
+  public constructor(private readonly plugin: Plugin, composer: ComposerBase) {
     super(plugin.app, composer);
 
     this.composer.action = Action.Merge;
