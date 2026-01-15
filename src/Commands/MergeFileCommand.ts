@@ -14,8 +14,8 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { MergeFileSuggestModal } from '../Modals/MergeFileModal.ts';
 import { MergeComposer } from '../Composers/MergeComposer.ts';
+import { prepareForMergeFile } from '../Modals/MergeFileModal.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, file: null | TFile) {
@@ -44,14 +44,15 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new MergeFileSuggestModal(
-      this.plugin,
-      new MergeComposer({
-        plugin: this.plugin,
-        sourceFile: this.file
-      })
-    );
-    modal.open();
+    const composer = new MergeComposer({
+      plugin: this.plugin,
+      sourceFile: this.file
+    });
+    const result = await prepareForMergeFile(this.plugin, composer, this.file);
+
+    if (result) {
+      await composer.mergeFile(result.doNotAskAgain);
+    }
   }
 }
 
