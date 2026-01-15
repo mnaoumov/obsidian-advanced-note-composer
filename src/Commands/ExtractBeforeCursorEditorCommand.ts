@@ -17,7 +17,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { SplitFileSuggestModal } from '../Modals/SplitFileModal.ts';
+import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
@@ -52,8 +52,10 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const modal = new SplitFileSuggestModal(this.app, composer);
-    modal.open();
+    const isConfirmed = await prepareForSplitFile(this.app, composer);
+    if (isConfirmed) {
+      await composer.splitFile();
+    }
   }
 }
 
