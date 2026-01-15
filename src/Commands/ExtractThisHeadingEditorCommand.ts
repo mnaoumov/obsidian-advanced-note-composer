@@ -21,7 +21,7 @@ import {
   AdvancedNoteComposer,
   extractHeadingFromLine,
   getSelectionUnderHeading
-} from '../AdvancedNoteComposer.ts';
+} from '../Composers/AdvancedNoteComposer.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {

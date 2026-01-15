@@ -22,7 +22,7 @@ import type { Plugin } from '../Plugin.ts';
 import {
   AdvancedNoteComposer,
   getSelectionUnderHeading
-} from '../AdvancedNoteComposer.ts';
+} from '../Composers/AdvancedNoteComposer.ts';
 
 class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(

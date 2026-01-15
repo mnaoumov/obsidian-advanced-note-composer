@@ -38,7 +38,7 @@ import {
 
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
+import { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
 import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {

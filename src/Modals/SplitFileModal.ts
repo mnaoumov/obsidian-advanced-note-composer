@@ -1,7 +1,7 @@
 import { App, Keymap } from 'obsidian';
 import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
 
-import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
+import type { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {

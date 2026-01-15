@@ -16,7 +16,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
+import { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractAfterCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
