@@ -158,6 +158,11 @@ class ConfirmDialogModal extends Modal {
 
 class MergeFileModal extends SuggestModalBase {
   private isSelected = false;
+  private shouldFixFootnotes: boolean;
+  private shouldAllowOnlyCurrentFolder: boolean;
+  private shouldMergeHeadings: boolean;
+  private shouldAllowSplitIntoUnresolvedPath: boolean;
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
   public override onClose(): void {
     super.onClose();
@@ -166,8 +171,14 @@ class MergeFileModal extends SuggestModalBase {
     }
   }
 
-  public constructor(app: App, protected override readonly composer: MergeComposer, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
-    super(app, composer);
+  public constructor(plugin: Plugin, composer: MergeComposer, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
+    super(plugin.app, composer);
+
+    this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
+    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
@@ -220,10 +231,10 @@ class MergeFileModal extends SuggestModalBase {
       key: '1',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldFixFootnotes = value;
+        this.shouldFixFootnotes = value;
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldFixFootnotes;
+        checkboxEl.checked = this.shouldFixFootnotes;
       },
       purpose: 'Fix footnotes'
     });
@@ -232,11 +243,11 @@ class MergeFileModal extends SuggestModalBase {
       key: '2',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldAllowOnlyCurrentFolder = value;
+        this.shouldAllowOnlyCurrentFolder = value;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
+        checkboxEl.checked = this.shouldAllowOnlyCurrentFolder;
       },
       purpose: 'Allow only current folder'
     });
@@ -245,11 +256,11 @@ class MergeFileModal extends SuggestModalBase {
       key: '3',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldMergeHeadings = value;
+        this.shouldMergeHeadings = value;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldMergeHeadings;
+        checkboxEl.checked = this.shouldMergeHeadings;
       },
       purpose: 'Merge headings'
     });
@@ -258,12 +269,12 @@ class MergeFileModal extends SuggestModalBase {
       key: '4',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldAllowSplitIntoUnresolvedPath = value;
+        this.shouldAllowSplitIntoUnresolvedPath = value;
         this.shouldShowUnresolved = value;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldAllowSplitIntoUnresolvedPath;
+        checkboxEl.checked = this.shouldAllowSplitIntoUnresolvedPath;
       },
       purpose: 'Allow split into unresolved path'
     });
@@ -272,7 +283,7 @@ class MergeFileModal extends SuggestModalBase {
       key: '5',
       modifiers: ['Alt'],
       onChange: (value: string) => {
-        this.composer.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
+        this.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
       },
       onInit: (dropdownComponent) => {
         dropdownComponent.addOptions({
@@ -284,7 +295,7 @@ class MergeFileModal extends SuggestModalBase {
           [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
           /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
-        dropdownComponent.setValue(this.composer.frontmatterMergeStrategy);
+        dropdownComponent.setValue(this.frontmatterMergeStrategy);
       },
       purpose: 'Frontmatter merge strategy'
     });
@@ -297,7 +308,12 @@ class MergeFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      inputMode: evt.shiftKey ? 'prepend' : 'append'
+      inputMode: evt.shiftKey ? 'prepend' : 'append',
+      shouldFixFootnotes: this.shouldFixFootnotes,
+      shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
+      shouldMergeHeadings: this.shouldMergeHeadings,
+      shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
+      frontmatterMergeStrategy: this.frontmatterMergeStrategy
     });
   }
 
@@ -312,18 +328,31 @@ interface PrepareForMergeFileResult {
   isMod: boolean;
   inputValue: string;
   inputMode: 'prepend' | 'append';
+  shouldFixFootnotes: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldMergeHeadings: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
 export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
   const result = await new Promise<PrepareForMergeFileResult | null>((resolve) => {
-    const modal = new MergeFileModal(plugin.app, composer, resolve);
+    const modal = new MergeFileModal(plugin, composer, resolve);
     modal.open();
   });
 
-  if (result) {
-    await composer.selectItem(result.item, result.isMod, result.inputValue);
-    composer.insertMode = result.inputMode;
+  if (!result) {
+    return null;
   }
+
+  composer.insertMode = result.inputMode;
+  composer.shouldFixFootnotes = result.shouldFixFootnotes;
+  composer.shouldAllowOnlyCurrentFolder = result.shouldAllowOnlyCurrentFolder;
+  composer.shouldMergeHeadings = result.shouldMergeHeadings;
+  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
+  composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
+
+  await composer.selectItem(result.item, result.isMod, result.inputValue);
 
   if (!plugin.settings.shouldAskBeforeMerging) {
     return result;
