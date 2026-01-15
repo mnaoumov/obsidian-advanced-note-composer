@@ -62,6 +62,13 @@ export type InsertMode = 'append' | 'prepend';
 
 const moment = extractDefaultExportInterop(moment_);
 
+interface AdvancedNoteComposerOptions {
+  editor?: Editor;
+  heading?: string;
+  plugin: Plugin;
+  sourceFile: TFile;
+}
+
 interface ExtractFrontmatterResult {
   content: string;
   frontmatter: Frontmatter;
@@ -78,9 +85,12 @@ interface Selection {
 
 export class AdvancedNoteComposer {
   public action: Action = Action.Merge;
-
   public readonly app: App;
+  public readonly editor: Editor | undefined;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
+
+  public heading: string;
+
   public mode: InsertMode = 'append';
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -89,7 +99,7 @@ export class AdvancedNoteComposer {
   public shouldMergeHeadings: boolean;
   public shouldShowNotice = true;
   public shouldTreatTitleAsPath: boolean;
-
+  public readonly sourceFile: TFile;
   public get targetFile(): TFile {
     if (!this._targetFile) {
       throw new Error('Target file not set');
@@ -98,22 +108,23 @@ export class AdvancedNoteComposer {
   }
 
   private _targetFile?: TFile;
-  private isNewTargetFile = false;
 
-  public constructor(
-    private readonly plugin: Plugin,
-    public readonly sourceFile: TFile,
-    public readonly editor?: Editor,
-    public heading = ''
-  ) {
-    this.app = plugin.app;
-    this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
-    this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
-    this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
-    this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
+  private isNewTargetFile = false;
+  private readonly plugin: Plugin;
+
+  public constructor(options: AdvancedNoteComposerOptions) {
+    this.plugin = options.plugin;
+    this.sourceFile = options.sourceFile;
+    this.editor = options.editor;
+    this.heading = options.heading ?? '';
+    this.app = this.plugin.app;
+    this.shouldIncludeFrontmatter = this.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldTreatTitleAsPath = this.plugin.settings.shouldTreatTitleAsPathByDefault;
+    this.shouldFixFootnotes = this.plugin.settings.shouldFixFootnotesByDefault;
+    this.shouldAllowOnlyCurrentFolder = this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldMergeHeadings = this.plugin.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = this.plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = this.plugin.settings.defaultFrontmatterMergeStrategy;
     this.initHeading();
   }
 

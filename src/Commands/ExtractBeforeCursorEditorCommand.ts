@@ -47,7 +47,11 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
     }
 
     this.editor.setSelection({ ch: 0, line: 0 }, this.editor.getCursor());
-    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor);
+    const composer = new AdvancedNoteComposer({
+      editor: this.editor,
+      plugin: this.plugin,
+      sourceFile: this.file
+    });
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }

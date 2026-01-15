@@ -71,7 +71,12 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const composer = new AdvancedNoteComposer(this.plugin, this.file, this.editor, this.headingInfo.heading);
+    const composer = new AdvancedNoteComposer({
+      editor: this.editor,
+      heading: this.headingInfo.heading,
+      plugin: this.plugin,
+      sourceFile: this.file
+    });
     const modal = new SplitFileSuggestModal(composer);
     modal.open();
   }

@@ -153,7 +153,10 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const advancedNoteComposer = new AdvancedNoteComposer(this.plugin, sourceMdFile);
+      const advancedNoteComposer = new AdvancedNoteComposer({
+        plugin: this.plugin,
+        sourceFile: sourceMdFile
+      });
       advancedNoteComposer.shouldShowNotice = false;
       await advancedNoteComposer.selectItem(
         {
