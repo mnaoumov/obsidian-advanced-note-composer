@@ -20,9 +20,9 @@ import type { Level } from '../MarkdownHeadingDocument.ts';
 import type { Plugin } from '../Plugin.ts';
 
 import {
-  AdvancedNoteComposer,
+  ComposerBase,
   getSelectionUnderHeading
-} from '../Composers/AdvancedNoteComposer.ts';
+} from '../Composers/ComposerBase.ts';
 
 class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(
@@ -88,7 +88,7 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 
       const splitStart: EditorPosition = { ch: 0, line: heading.position.end.line + 1 };
       this.editor.setSelection(splitStart, headingInfo.end);
-      const composer = new AdvancedNoteComposer({
+      const composer = new ComposerBase({
         editor: this.editor,
         heading: headingInfo.heading,
         plugin: this.plugin,

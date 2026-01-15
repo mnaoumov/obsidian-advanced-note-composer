@@ -27,7 +27,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
-import type { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
+import type { ComposerBase } from '../Composers/ComposerBase.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;
@@ -57,7 +57,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(app: App, protected readonly composer: AdvancedNoteComposer) {
+  public constructor(app: App, protected readonly composer: ComposerBase) {
     super(app);
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');

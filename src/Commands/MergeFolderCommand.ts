@@ -38,7 +38,7 @@ import {
 
 import type { Plugin } from '../Plugin.ts';
 
-import { AdvancedNoteComposer } from '../Composers/AdvancedNoteComposer.ts';
+import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {
@@ -153,7 +153,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const advancedNoteComposer = new AdvancedNoteComposer({
+      const advancedNoteComposer = new ComposerBase({
         plugin: this.plugin,
         sourceFile: sourceMdFile
       });

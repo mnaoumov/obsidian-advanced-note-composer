@@ -18,10 +18,10 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import type { Plugin } from '../Plugin.ts';
 
 import {
-  AdvancedNoteComposer,
+  ComposerBase,
   extractHeadingFromLine,
   getSelectionUnderHeading
-} from '../Composers/AdvancedNoteComposer.ts';
+} from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
@@ -71,7 +71,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const composer = new AdvancedNoteComposer({
+    const composer = new ComposerBase({
       editor: this.editor,
       heading: this.headingInfo.heading,
       plugin: this.plugin,
