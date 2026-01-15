@@ -44,7 +44,13 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new MergeFileSuggestModal(this.plugin, new AdvancedNoteComposer(this.plugin, this.file));
+    const modal = new MergeFileSuggestModal(
+      this.plugin,
+      new AdvancedNoteComposer({
+        plugin: this.plugin,
+        sourceFile: this.file
+      })
+    );
     modal.open();
   }
 }
