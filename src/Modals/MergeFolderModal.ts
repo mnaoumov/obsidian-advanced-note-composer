@@ -73,7 +73,7 @@ class ConfirmDialogModal extends Modal {
   }
 
   private async onOpenAsync(): Promise<void> {
-    this.setTitle('Merge file');
+    this.setTitle('Merge folder');
 
     this.containerEl.addClass('mod-confirmation');
     const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
