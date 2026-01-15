@@ -21,7 +21,7 @@ class SplitFileSuggestModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(app: App, composer: AdvancedNoteComposer, private readonly promiseResolve: PromiseResolve<boolean | null>) {
+  public constructor(app: App, composer: AdvancedNoteComposer, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
     super(app, composer);
 
     this.composer.action = Action.Split;
@@ -52,9 +52,12 @@ class SplitFileSuggestModal extends SuggestModalBase {
 
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
-    await this.composer.selectItem(item, Keymap.isModifier(evt, 'Mod'), this.inputEl.value);
-    this.composer.mode = evt.shiftKey ? 'prepend' : 'append';
-    this.promiseResolve(true);
+    this.promiseResolve({
+      item,
+      isMod: Keymap.isModifier(evt, 'Mod'),
+      inputValue: this.inputEl.value,
+      inputMode: evt.shiftKey ? 'prepend' : 'append'
+    });
   }
 
   private async buildInstructions(): Promise<void> {
@@ -215,9 +218,23 @@ class SplitFileSuggestModal extends SuggestModalBase {
   }
 }
 
-export async function prepareForSplitFile(app: App, composer: AdvancedNoteComposer): Promise<boolean | null> {
-  return await new Promise<boolean | null>((resolve) => {
+interface PrepareForSplitFileResult {
+  item: Item | null;
+  isMod: boolean;
+  inputValue: string;
+  inputMode: 'prepend' | 'append';
+}
+
+export async function prepareForSplitFile(app: App, composer: AdvancedNoteComposer): Promise<PrepareForSplitFileResult | null> {
+  const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
     const modal = new SplitFileSuggestModal(app, composer, resolve);
     modal.open();
   });
+
+  if (result) {
+    await composer.selectItem(result.item, result.isMod, result.inputValue);
+    composer.mode = result.inputMode;
+  }
+
+  return result;
 }
