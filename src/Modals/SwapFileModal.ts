@@ -1,19 +1,21 @@
 import type { FuzzyMatch } from 'obsidian';
+import type { PromiseResolve } from 'obsidian-dev-utils/Async';
 
 import {
   FuzzySuggestModal,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type { Plugin } from '../Plugin.ts';
 
-export class SwapFileModal extends FuzzySuggestModal<TFile> {
+class SwapFileModal extends FuzzySuggestModal<TFile> {
+  private isSelected = false;
+
   public constructor(
     private readonly plugin: Plugin,
     private readonly sourceFile: TFile,
-    private readonly callback: (targetFile: TFile) => Promise<void>
+    private readonly promiseResolve: PromiseResolve<null | TFile>
   ) {
     super(plugin.app);
     this.setPlaceholder('Select file to swap with...');
@@ -74,9 +76,20 @@ export class SwapFileModal extends FuzzySuggestModal<TFile> {
   }
 
   public override onChooseItem(item: TFile): void {
-    invokeAsyncSafely(async () => {
-      await this.callback(item);
-    });
+    this.isSelected = true;
+    this.promiseResolve(item);
+  }
+
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve(null);
+    }
+  }
+
+  public override selectSuggestion(value: FuzzyMatch<TFile>, evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    super.selectSuggestion(value, evt);
   }
 
   private isAllowedTargetFile(file: TFile): boolean {
@@ -90,4 +103,11 @@ export class SwapFileModal extends FuzzySuggestModal<TFile> {
 
     return !this.plugin.settings.isPathIgnored(file.path);
   }
+}
+
+export async function selectFileForSwap(plugin: Plugin, sourceFile: TFile): Promise<null | TFile> {
+  return new Promise<null | TFile>((resolve) => {
+    const modal = new SwapFileModal(plugin, sourceFile, resolve);
+    modal.open();
+  });
 }

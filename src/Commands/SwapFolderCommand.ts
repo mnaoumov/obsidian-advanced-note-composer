@@ -13,7 +13,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { SwapFolderModal } from '../Modals/SwapFolderModal.ts';
+import { selectTargetFolderForSwap } from '../Modals/SwapFolderModal.ts';
 import { swap } from '../Swapper.ts';
 
 class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
@@ -29,12 +29,10 @@ class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
       return;
     }
 
-    const modal = new SwapFolderModal(
-      this.plugin,
-      this.folder,
-      (targetFolder, shouldSwapEntireFolderStructure) => swap(this.app, this.folder, targetFolder, shouldSwapEntireFolderStructure)
-    );
-    modal.open();
+    const result = await selectTargetFolderForSwap(this.plugin, this.folder);
+    if (result) {
+      await swap(this.app, this.folder, result.targetFolder, result.shouldSwapEntireFolderStructure);
+    }
   }
 }
 
