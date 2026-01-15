@@ -1,5 +1,7 @@
-import { App, Keymap } from 'obsidian';
+import { Editor, Keymap, TFile } from 'obsidian';
 import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
+
+import type { Selection } from '../Composers/ComposerBase.ts';
 
 import type { ComposerBase } from '../Composers/ComposerBase.ts';
 import type { Item } from './SuggestModalBase.ts';
@@ -9,22 +11,40 @@ import {
 } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import type { Plugin } from '../Plugin.ts';
+import type { SplitComposer } from '../Composers/SplitComposer.ts';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 
 class SplitFileModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
   private isSelected = false;
+  private shouldIncludeFrontmatter: boolean;
+  private shouldTreatTitleAsPath: boolean;
+  private shouldFixFootnotes: boolean;
+  private shouldAllowOnlyCurrentFolder: boolean;
+  private shouldMergeHeadings: boolean;
+  private shouldAllowSplitIntoUnresolvedPath: boolean;
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
   public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(app: App, composer: ComposerBase, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
-    super(app, composer);
+  public constructor(plugin: Plugin, composer: ComposerBase, private readonly heading: string, private readonly sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
+    super(plugin.app, composer);
+
+    this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
+    this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
+    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
 
     this.allowCreateNewFile = true;
-    this.shouldShowUnresolved = this.composer.shouldAllowSplitIntoUnresolvedPath;
+    this.shouldShowUnresolved = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
@@ -36,7 +56,7 @@ class SplitFileModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
-    this.inputEl.value = this.composer.heading;
+    this.inputEl.value = this.heading;
     this.updateSuggestions();
   }
 
@@ -53,12 +73,19 @@ class SplitFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      inputMode: evt.shiftKey ? 'prepend' : 'append'
+      inputMode: evt.shiftKey ? 'prepend' : 'append',
+      shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
+      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
+      shouldFixFootnotes: this.shouldFixFootnotes,
+      shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
+      shouldMergeHeadings: this.shouldMergeHeadings,
+      shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
+      frontmatterMergeStrategy: this.frontmatterMergeStrategy
     });
   }
 
   private async buildInstructions(): Promise<void> {
-    const canIncludeFrontmatter = await this.composer.canIncludeFrontmatter();
+    const canIncludeFrontmatter = await this.canIncludeFrontmatter();
     const builder = new SuggestModalCommandBuilder();
 
     builder.addKeyboardCommand({
@@ -104,10 +131,10 @@ class SplitFileModal extends SuggestModalBase {
       key: '1',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldIncludeFrontmatter = value;
+        this.shouldIncludeFrontmatter = value;
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = canIncludeFrontmatter && this.composer.shouldIncludeFrontmatter;
+        checkboxEl.checked = canIncludeFrontmatter && this.shouldIncludeFrontmatter;
       },
       purpose: 'Include frontmatter'
     });
@@ -116,13 +143,13 @@ class SplitFileModal extends SuggestModalBase {
       key: '2',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldTreatTitleAsPath = value;
+        this.shouldTreatTitleAsPath = value;
         this.treatTitleAsPathCheckboxElValue = value;
       },
       onInit: (checkboxEl) => {
         this.treatTitleAsPathCheckboxEl = checkboxEl;
-        this.treatTitleAsPathCheckboxElValue = this.composer.shouldTreatTitleAsPath;
-        checkboxEl.checked = this.composer.shouldTreatTitleAsPath;
+        this.treatTitleAsPathCheckboxElValue = this.shouldTreatTitleAsPath;
+        checkboxEl.checked = this.shouldTreatTitleAsPath;
       },
       purpose: 'Treat title as path'
     });
@@ -131,10 +158,10 @@ class SplitFileModal extends SuggestModalBase {
       key: '3',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldFixFootnotes = value;
+        this.shouldFixFootnotes = value;
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldFixFootnotes;
+        checkboxEl.checked = this.shouldFixFootnotes;
       },
       purpose: 'Fix footnotes'
     });
@@ -143,22 +170,22 @@ class SplitFileModal extends SuggestModalBase {
       key: '4',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldAllowOnlyCurrentFolder = value;
+        this.shouldAllowOnlyCurrentFolder = value;
         this.updateSuggestions();
         if (this.treatTitleAsPathCheckboxEl !== undefined && this.treatTitleAsPathCheckboxElValue !== undefined) {
-          if (this.composer.shouldAllowOnlyCurrentFolder) {
+          if (this.shouldAllowOnlyCurrentFolder) {
             this.treatTitleAsPathCheckboxEl.checked = false;
             this.treatTitleAsPathCheckboxEl.disabled = true;
-            this.composer.shouldTreatTitleAsPath = false;
+            this.shouldTreatTitleAsPath = false;
           } else {
             this.treatTitleAsPathCheckboxEl.checked = this.treatTitleAsPathCheckboxElValue;
             this.treatTitleAsPathCheckboxEl.disabled = false;
-            this.composer.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
+            this.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
           }
         }
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldAllowOnlyCurrentFolder;
+        checkboxEl.checked = this.shouldAllowOnlyCurrentFolder;
       },
       purpose: 'Allow only current folder'
     });
@@ -167,11 +194,11 @@ class SplitFileModal extends SuggestModalBase {
       key: '5',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldMergeHeadings = value;
+        this.shouldMergeHeadings = value;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldMergeHeadings;
+        checkboxEl.checked = this.shouldMergeHeadings;
       },
       purpose: 'Merge headings'
     });
@@ -180,12 +207,12 @@ class SplitFileModal extends SuggestModalBase {
       key: '6',
       modifiers: ['Alt'],
       onChange: (value: boolean) => {
-        this.composer.shouldAllowSplitIntoUnresolvedPath = value;
+        this.shouldAllowSplitIntoUnresolvedPath = value;
         this.shouldShowUnresolved = value;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
-        checkboxEl.checked = this.composer.shouldAllowSplitIntoUnresolvedPath;
+        checkboxEl.checked = this.shouldAllowSplitIntoUnresolvedPath;
       },
       purpose: 'Allow split into unresolved path'
     });
@@ -194,7 +221,7 @@ class SplitFileModal extends SuggestModalBase {
       key: '7',
       modifiers: ['Alt'],
       onChange: (value: string) => {
-        this.composer.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
+        this.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
       },
       onInit: (dropdownComponent) => {
         dropdownComponent.addOptions({
@@ -206,12 +233,59 @@ class SplitFileModal extends SuggestModalBase {
           [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
           /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
-        dropdownComponent.setValue(this.composer.frontmatterMergeStrategy);
+        dropdownComponent.setValue(this.frontmatterMergeStrategy);
       },
       purpose: 'Frontmatter merge strategy'
     });
 
     builder.build(this);
+  }
+
+  private async getSelections(): Promise<Selection[]> {
+    if (this.editor) {
+      const selections = this.editor.listSelections().map((editorSelection) => {
+        const selection: Selection = {
+          endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
+          startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
+        };
+
+        if (selection.startOffset > selection.endOffset) {
+          [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
+        }
+
+        return selection;
+      });
+
+      return selections.sort((a, b) => a.startOffset - b.startOffset);
+    }
+
+    const content = await this.app.vault.read(this.sourceFile);
+
+    return [{
+      endOffset: content.length,
+      startOffset: 0
+    }];
+  }
+
+
+  private async canIncludeFrontmatter(): Promise<boolean> {
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+
+    if (!sourceCache?.frontmatterPosition) {
+      return false;
+    }
+
+    const selections = await this.getSelections();
+
+    if (!selections[0]) {
+      return false;
+    }
+
+    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
+      return false;
+    }
+
+    return true;
   }
 }
 
@@ -220,18 +294,35 @@ interface PrepareForSplitFileResult {
   isMod: boolean;
   inputValue: string;
   inputMode: 'prepend' | 'append';
+  shouldIncludeFrontmatter: boolean;
+  shouldTreatTitleAsPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldMergeHeadings: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
-export async function prepareForSplitFile(app: App, composer: ComposerBase): Promise<PrepareForSplitFileResult | null> {
+export async function prepareForSplitFile(plugin: Plugin, composer: SplitComposer, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
   const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
-    const modal = new SplitFileModal(app, composer, resolve);
+    const modal = new SplitFileModal(plugin, composer, heading ?? '', sourceFile, editor, resolve);
     modal.open();
   });
 
-  if (result) {
-    await composer.selectItem(result.item, result.isMod, result.inputValue);
-    composer.insertMode = result.inputMode;
+  if (!result) {
+    return null;
   }
 
+  composer.insertMode = result.inputMode;
+  composer.shouldIncludeFrontmatter = result.shouldIncludeFrontmatter;
+  composer.shouldTreatTitleAsPath = result.shouldTreatTitleAsPath;
+  composer.shouldFixFootnotes = result.shouldFixFootnotes;
+  composer.shouldAllowOnlyCurrentFolder = result.shouldAllowOnlyCurrentFolder;
+  composer.shouldMergeHeadings = result.shouldMergeHeadings;
+  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
+  composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
+  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
+
+  await composer.selectItem(result.item, result.isMod, result.inputValue);
   return result;
 }
