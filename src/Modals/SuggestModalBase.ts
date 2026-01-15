@@ -95,7 +95,6 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowNonFileBookmarks: boolean;
   protected shouldShowNonImageAttachments: boolean;
   protected shouldShowUnresolved: boolean;
-  private readonly context: string;
   private readonly createButtonEl: HTMLElement;
   private readonly shouldShowAllTypes: boolean;
 
@@ -118,7 +117,6 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     this.shouldShowAlias = false;
     this.shouldShowNonFileBookmarks = false;
     this.allowCreateNewFile = false;
-    this.context = 'view';
     const DEFAULT_LIMIT = 20;
     this.limit = DEFAULT_LIMIT;
 
@@ -478,8 +476,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     }
 
     if (this.shouldShowNonImageAttachments) {
-      const registry = this.context === 'view' ? this.app.viewRegistry : this.app.embedRegistry;
-      return registry.isExtensionRegistered(file.extension);
+      return this.app.viewRegistry.isExtensionRegistered(file.extension);
     }
 
     return false;
