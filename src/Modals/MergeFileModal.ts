@@ -17,7 +17,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import type {
   AdvancedNoteComposer,
   InsertMode
-} from '../AdvancedNoteComposer.ts';
+} from '../Composers/AdvancedNoteComposer.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 

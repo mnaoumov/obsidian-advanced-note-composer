@@ -10,7 +10,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
-import type { InsertMode } from './AdvancedNoteComposer.ts';
+import type { InsertMode } from './Composers/AdvancedNoteComposer.ts';
 
 // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic number.
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;
