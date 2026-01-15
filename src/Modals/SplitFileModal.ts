@@ -3,7 +3,6 @@ import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async
 
 import type { Selection } from '../Composers/ComposerBase.ts';
 
-import type { ComposerBase } from '../Composers/ComposerBase.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {
@@ -31,8 +30,8 @@ class SplitFileModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(plugin: Plugin, composer: ComposerBase, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
-    super(plugin, composer, sourceFile);
+  public constructor(plugin: Plugin, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
+    super(plugin, sourceFile);
 
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
     this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
@@ -303,7 +302,7 @@ interface PrepareForSplitFileResult {
 
 export async function prepareForSplitFile(plugin: Plugin, composer: SplitComposer, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
   const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
-    const modal = new SplitFileModal(plugin, composer, heading ?? '', sourceFile, editor, resolve);
+    const modal = new SplitFileModal(plugin, heading ?? '', sourceFile, editor, resolve);
     modal.open();
   });
 

@@ -170,8 +170,8 @@ class MergeFileModal extends SuggestModalBase {
     }
   }
 
-  public constructor(plugin: Plugin, composer: MergeComposer, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
-    super(plugin, composer, sourceFile);
+  public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
+    super(plugin, sourceFile);
 
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
     this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
@@ -335,7 +335,7 @@ interface PrepareForMergeFileResult {
 
 export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
   const result = await new Promise<PrepareForMergeFileResult | null>((resolve) => {
-    const modal = new MergeFileModal(plugin, composer, sourceFile, resolve);
+    const modal = new MergeFileModal(plugin, sourceFile, resolve);
     modal.open();
   });
 
