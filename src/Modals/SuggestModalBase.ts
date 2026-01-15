@@ -1,5 +1,4 @@
 import type {
-  App,
   SearchMatches,
   SearchResult,
   SearchResultContainer
@@ -41,6 +40,8 @@ export interface Item extends SearchResultContainer {
 
 type SearchFn = (text: string) => null | SearchResult;
 
+import type { Plugin } from '../Plugin.ts';
+
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
   protected shouldShowAlias: boolean;
@@ -52,15 +53,18 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowUnresolved: boolean;
   private readonly createButtonEl: HTMLElement;
   private readonly shouldShowAllTypes: boolean;
+  protected shouldAllowOnlyCurrentFolder: boolean;
 
   private get supportsCreate(): boolean {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(app: App, protected readonly composer: ComposerBase) {
-    super(app);
+  public constructor(private readonly plugin: Plugin, protected readonly composer: ComposerBase, protected readonly sourceFile: TFile) {
+    super(plugin.app);
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
+
+    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
 
     this.shouldShowUnresolved = false;
     this.shouldShowMarkdown = true;
@@ -272,11 +276,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   private getSuggestionText(text: string): string {
     let suggestionText = trimMarkdownExtension(text);
-    if (!this.composer.shouldAllowOnlyCurrentFolder) {
+    if (!this.shouldAllowOnlyCurrentFolder) {
       return suggestionText;
     }
 
-    suggestionText = trimStart(suggestionText, this.composer.sourceFile.parent?.getParentPrefix() ?? '');
+    suggestionText = trimStart(suggestionText, this.sourceFile.parent?.getParentPrefix() ?? '');
     return suggestionText;
   }
 
@@ -373,10 +377,10 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     const unresolvedLinks = new Set<string>();
     for (const unresolvedLinkObj of Object.values(this.app.metadataCache.unresolvedLinks)) {
       for (const unresolvedLink of Object.keys(unresolvedLinkObj)) {
-        if (this.composer.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.composer.sourceFile.parent?.getParentPrefix() ?? '')) {
+        if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (this.composer.isPathIgnored(unresolvedLink)) {
+        if (this.plugin.settings.isPathIgnored(unresolvedLink)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -395,15 +399,15 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
-    if (this.composer.isPathIgnored(file.path)) {
+    if (this.plugin.settings.isPathIgnored(file.path)) {
       return false;
     }
 
-    if (file === this.composer.sourceFile) {
+    if (file === this.sourceFile) {
       return false;
     }
 
-    if (this.composer.shouldAllowOnlyCurrentFolder && file.parent !== this.composer.sourceFile.parent) {
+    if (this.shouldAllowOnlyCurrentFolder && file.parent !== this.sourceFile.parent) {
       return false;
     }
 
