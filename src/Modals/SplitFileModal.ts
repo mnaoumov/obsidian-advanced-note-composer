@@ -233,7 +233,7 @@ export async function prepareForSplitFile(app: App, composer: AdvancedNoteCompos
 
   if (result) {
     await composer.selectItem(result.item, result.isMod, result.inputValue);
-    composer.mode = result.inputMode;
+    composer.insertMode = result.inputMode;
   }
 
   return result;

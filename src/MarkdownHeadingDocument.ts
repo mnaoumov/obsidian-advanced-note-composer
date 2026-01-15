@@ -33,8 +33,8 @@ class MarkdownHeadingDocument {
     }
   }
 
-  public mergeWith(doc: MarkdownHeadingDocument, mode: InsertMode): MarkdownHeadingDocument {
-    const mergedNode = mode === 'append' ? this.node.append(doc.node) : doc.node.append(this.node);
+  public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
+    const mergedNode = insertMode === 'append' ? this.node.append(doc.node) : doc.node.append(this.node);
     return new MarkdownHeadingDocument(this.frontmatter, mergedNode);
   }
 

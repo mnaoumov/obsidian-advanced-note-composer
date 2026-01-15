@@ -310,12 +310,12 @@ export class MergeFileSuggestModal extends SuggestModalBase {
       settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
     });
 
-    this.composer.mode = confirmDialogResult.insertMode;
+    this.composer.insertMode = confirmDialogResult.insertMode;
     await this.composer.mergeFile(!confirmDialogResult.shouldAskBeforeMerging);
   }
 
   private async performMerge(evt: KeyboardEvent | MouseEvent): Promise<void> {
-    this.composer.mode = evt.shiftKey ? 'prepend' : 'append';
+    this.composer.insertMode = evt.shiftKey ? 'prepend' : 'append';
     await this.composer.mergeFile(this.doNotAskAgain);
   }
 }

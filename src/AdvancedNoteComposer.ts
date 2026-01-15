@@ -91,7 +91,7 @@ export class AdvancedNoteComposer {
 
   public heading: string;
 
-  public mode: InsertMode = 'append';
+  public insertMode: InsertMode = 'append';
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldAllowSplitIntoUnresolvedPath: boolean;
   public shouldFixFootnotes: boolean;
@@ -639,7 +639,7 @@ export class AdvancedNoteComposer {
       targetContentToInsert = `\n${targetContentToInsert}`;
     }
     if (!this.shouldMergeHeadings) {
-      await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.mode);
+      await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.insertMode);
       return;
     }
 
@@ -647,7 +647,7 @@ export class AdvancedNoteComposer {
       const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
       const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
       await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
-      const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.mode);
+      const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
       return mergedDocument.toString();
     });
   }
