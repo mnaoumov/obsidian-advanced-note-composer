@@ -62,7 +62,7 @@ export type InsertMode = 'append' | 'prepend';
 
 const moment = extractDefaultExportInterop(moment_);
 
-interface ComposerBaseOptions {
+export interface ComposerBaseOptions {
   editor?: Editor;
   heading?: string;
   plugin: Plugin;

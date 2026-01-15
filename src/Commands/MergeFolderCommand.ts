@@ -38,8 +38,8 @@ import {
 
 import type { Plugin } from '../Plugin.ts';
 
-import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
+import { MergeComposer } from '../Composers/MergeComposer.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {
   protected override readonly fileMenuItemName = 'Merge entire folder with...';
@@ -153,7 +153,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const advancedNoteComposer = new ComposerBase({
+      const advancedNoteComposer = new MergeComposer({
         plugin: this.plugin,
         sourceFile: sourceMdFile
       });

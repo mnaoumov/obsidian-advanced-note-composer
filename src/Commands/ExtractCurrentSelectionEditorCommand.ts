@@ -16,8 +16,8 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
+import { SplitComposer } from '../Composers/SplitComposer.ts';
 
 class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
@@ -50,7 +50,7 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
       return;
     }
 
-    const composer = new ComposerBase({
+    const composer = new SplitComposer({
       editor: this.editor,
       plugin: this.plugin,
       sourceFile: this.file

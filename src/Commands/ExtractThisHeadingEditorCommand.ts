@@ -18,11 +18,11 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import type { Plugin } from '../Plugin.ts';
 
 import {
-  ComposerBase,
   extractHeadingFromLine,
   getSelectionUnderHeading
 } from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
+import { SplitComposer } from '../Composers/SplitComposer.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;
@@ -71,7 +71,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const composer = new ComposerBase({
+    const composer = new SplitComposer({
       editor: this.editor,
       heading: this.headingInfo.heading,
       plugin: this.plugin,
