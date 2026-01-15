@@ -22,7 +22,6 @@ import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import {
-  Action,
   FrontmatterMergeStrategy
 } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
@@ -162,8 +161,6 @@ export class MergeFileSuggestModal extends SuggestModalBase {
 
   public constructor(private readonly plugin: Plugin, composer: ComposerBase) {
     super(plugin.app, composer);
-
-    this.composer.action = Action.Merge;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
