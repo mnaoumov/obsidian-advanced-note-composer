@@ -1,14 +1,23 @@
+import type { PromiseResolve } from 'obsidian-dev-utils/Async';
+
 import {
+  App,
   Keymap,
-  Platform
+  Modal,
+  Platform,
+  TFile
 } from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import {
   appendCodeBlock,
   createFragmentAsync
 } from 'obsidian-dev-utils/HTMLElement';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
-import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
+import type {
+  AdvancedNoteComposer,
+  InsertMode
+} from '../AdvancedNoteComposer.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
@@ -16,9 +25,137 @@ import {
   Action,
   FrontmatterMergeStrategy
 } from '../PluginSettings.ts';
-import { DynamicModal } from './DynamicModal.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+
+interface ConfirmDialogModalResult {
+  insertMode: InsertMode;
+  isConfirmed: boolean;
+  shouldAskBeforeMerging: boolean;
+}
+
+class ConfirmDialogModal extends Modal {
+  private isSelected = false;
+  private shouldAskBeforeMerging = true;
+
+  public constructor(
+    app: App,
+    private readonly sourceFile: TFile,
+    private readonly targetFile: TFile,
+    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
+  ) {
+    super(app);
+
+    this.scope.register([], 'Enter', async (evt) => {
+      this.confirm(evt);
+    });
+
+    this.scope.register([], 'Escape', () => {
+      this.close();
+    });
+  }
+
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve({
+        insertMode: 'append',
+        isConfirmed: false,
+        shouldAskBeforeMerging: false
+      });
+    }
+  }
+
+  public override onOpen(): void {
+    super.onOpen();
+    invokeAsyncSafely(this.onOpenAsync.bind(this));
+  }
+
+  private confirm(evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    this.promiseResolve({
+      insertMode: evt.shiftKey ? 'prepend' : 'append',
+      isConfirmed: true,
+      shouldAskBeforeMerging: this.shouldAskBeforeMerging
+    });
+    this.close();
+  }
+
+  private async onOpenAsync(): Promise<void> {
+    this.setTitle('Merge file');
+
+    this.containerEl.addClass('mod-confirmation');
+    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
+
+    this.setContent(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Are you sure you want to merge ');
+        appendCodeBlock(f, 'Source');
+        f.appendText(' into ');
+        appendCodeBlock(f, 'Target');
+        f.appendText('? ');
+        appendCodeBlock(f, 'Source');
+        f.appendText(' will be deleted.');
+        f.createEl('br');
+        f.createEl('br');
+        appendCodeBlock(f, 'Source');
+        f.appendText(': ');
+        f.appendChild(await renderInternalLink(this.app, this.sourceFile));
+        f.createEl('br');
+        f.createEl('br');
+        appendCodeBlock(f, 'Target');
+        f.appendText(': ');
+        f.appendChild(await renderInternalLink(this.app, this.targetFile));
+      })
+    );
+
+    if (Platform.isMobile) {
+      buttonContainerEl.createEl('button', {
+        cls: 'mod-warning',
+        text: 'Merge and don\'t ask again'
+      }, (button) => {
+        button.addEventListener('click', (evt) => {
+          this.shouldAskBeforeMerging = false;
+          this.confirm(evt);
+        });
+      });
+    } else {
+      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
+        label
+          .createEl('input', {
+            attr: { tabindex: -1 },
+            type: 'checkbox'
+          }, (checkbox) => {
+            checkbox.addEventListener('change', (evt) => {
+              if (!(evt.target instanceof HTMLInputElement)) {
+                return;
+              }
+              this.shouldAskBeforeMerging = !evt.target.checked;
+            });
+          });
+        label.appendText('Don\'t ask again');
+      });
+    }
+
+    buttonContainerEl.createEl('button', {
+      cls: 'mod-warning',
+      text: 'Merge'
+    }, (button) => {
+      button.addEventListener('click', (evt) => {
+        this.confirm(evt);
+      });
+    });
+
+    buttonContainerEl.createEl('button', {
+      cls: 'mod-cancel',
+      text: 'Cancel'
+    }, (button) => {
+      button.addEventListener('click', () => {
+        this.close();
+      });
+    });
+  }
+}
 
 export class MergeFileSuggestModal extends SuggestModalBase {
   private doNotAskAgain = false;
@@ -150,66 +287,31 @@ export class MergeFileSuggestModal extends SuggestModalBase {
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
     await this.composer.selectItem(item, Keymap.isModifier(evt, 'Mod'), this.inputEl.value);
 
-    if (this.composer.targetFile !== this.composer.sourceFile) {
-      this.doNotAskAgain = false;
-
-      if (this.plugin.settings.shouldAskBeforeMerging) {
-        const modal = new DynamicModal(this.app)
-          .setTitle('Merge file')
-          .setContent(
-            await createFragmentAsync(async (f) => {
-              f.appendText('Are you sure you want to merge ');
-              appendCodeBlock(f, 'Source');
-              f.appendText(' into ');
-              appendCodeBlock(f, 'Target');
-              f.appendText('? ');
-              appendCodeBlock(f, 'Source');
-              f.appendText(' will be deleted.');
-              f.createEl('br');
-              f.createEl('br');
-              appendCodeBlock(f, 'Source');
-              f.appendText(': ');
-              f.appendChild(await renderInternalLink(this.app, this.composer.sourceFile));
-              f.createEl('br');
-              f.createEl('br');
-              appendCodeBlock(f, 'Target');
-              f.appendText(': ');
-              f.appendChild(await renderInternalLink(this.app, this.composer.targetFile));
-            })
-          );
-
-        modal.scope.register([], 'Enter', async (evt2) => {
-          modal.close();
-          await this.performMerge(evt2);
-        });
-
-        modal.scope.register([], 'Cancel', () => {
-          modal.close();
-        });
-
-        if (Platform.isMobile) {
-          modal.addButton('mod-warning', 'Merge and don\'t ask again', async () => {
-            this.doNotAskAgain = true;
-            await this.performMerge(evt);
-          });
-        } else {
-          modal.addCheckbox('Don\'t ask again', (evt2) => {
-            if (!(evt2.target instanceof HTMLInputElement)) {
-              return;
-            }
-            this.doNotAskAgain = evt2.target.checked;
-          });
-        }
-
-        modal.addButton('mod-warning', 'Merge', async () => {
-          await this.performMerge(evt);
-        })
-          .addCancelButton()
-          .open();
-      } else {
-        await this.performMerge(evt);
-      }
+    if (this.composer.targetFile === this.composer.sourceFile) {
+      return;
     }
+
+    this.doNotAskAgain = false;
+
+    if (!this.plugin.settings.shouldAskBeforeMerging) {
+      await this.performMerge(evt);
+      return;
+    }
+
+    const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
+      new ConfirmDialogModal(this.app, this.composer.sourceFile, this.composer.targetFile, resolve).open();
+    });
+
+    if (!confirmDialogResult.isConfirmed) {
+      return;
+    }
+
+    await this.plugin.settingsManager.editAndSave((settings) => {
+      settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
+    });
+
+    this.composer.mode = confirmDialogResult.insertMode;
+    await this.composer.mergeFile(!confirmDialogResult.shouldAskBeforeMerging);
   }
 
   private async performMerge(evt: KeyboardEvent | MouseEvent): Promise<void> {
