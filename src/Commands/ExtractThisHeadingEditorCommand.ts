@@ -1,5 +1,6 @@
 import type {
   Editor,
+  IconName,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
@@ -77,7 +78,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
 }
 
 export class ExtractThisHeadingEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly editorMenuItemName: string = 'Advanced extract this heading...';
+  protected override readonly editorMenuSubmenuIcon: IconName = 'lucide-git-merge';
 
   public constructor(plugin: Plugin) {
     super({

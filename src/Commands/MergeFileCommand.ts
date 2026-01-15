@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  IconName,
+  TFile
+} from 'obsidian';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
@@ -47,8 +50,8 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
 }
 
 export class MergeFileCommand extends FileCommandBase<Plugin> {
-  protected override readonly fileMenuItemName: string = 'Advanced merge entire file with...';
-  protected override readonly fileMenuSection: string = 'action';
+  protected override readonly fileMenuItemName: string = 'Merge entire file with...';
+  protected override readonly fileMenuSubmenuIcon: IconName = 'lucide-git-merge';
 
   public constructor(plugin: Plugin) {
     super({

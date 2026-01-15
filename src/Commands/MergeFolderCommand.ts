@@ -1,4 +1,5 @@
 import type {
+  IconName,
   TAbstractFile,
   TFile,
   TFolder,
@@ -41,7 +42,8 @@ import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {
-  protected override readonly fileMenuItemName = 'Advanced merge entire folder with...';
+  protected override readonly fileMenuItemName = 'Merge entire folder with...';
+  protected override readonly fileMenuSubmenuIcon: IconName = 'lucide-git-merge';
 
   public constructor(plugin: Plugin) {
     super({
