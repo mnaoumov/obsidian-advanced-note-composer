@@ -19,7 +19,6 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { noop } from 'obsidian-dev-utils/Function';
 import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/Plugin/PluginContext';
 import { basename } from 'obsidian-dev-utils/Path';
 import {
@@ -39,52 +38,7 @@ export interface Item extends SearchResultContainer {
   type: string;
 }
 
-interface AnimationState {
-  complete: (() => void) | undefined;
-  fn: () => void;
-  props: Animation;
-  timer: number;
-  win: Window;
-}
-
 type SearchFn = (text: string) => null | SearchResult;
-
-class Animation {
-  public readonly duration: number;
-  public readonly end: Record<string, string> = {};
-  public readonly fn: string;
-  public readonly from: Record<string, string> = {};
-  public readonly to: Record<string, string> = {};
-
-  public constructor(config?: { duration?: number; fn?: string }) {
-    const options = config ?? {};
-    const DEFAULT_DURATION = 100;
-    const DEFAULT_FN = 'ease-in-out';
-    this.duration = options.duration ?? DEFAULT_DURATION;
-    this.fn = options.fn ?? DEFAULT_FN;
-  }
-
-  /**
-   * Adds a CSS property to animate
-   * @param property - The CSS property name
-   * @param fromValue - The starting value (optional)
-   * @param toValue - The ending value (optional)
-   * @param endValue - The final value after animation (optional)
-   * @returns This animation instance for chaining
-   */
-  public addProp(property: string, fromValue?: null | string, toValue?: null | string, endValue?: null | string): this {
-    if (typeof fromValue === 'string') {
-      this.from[property] = fromValue;
-    }
-    if (typeof toValue === 'string') {
-      this.to[property] = toValue;
-    }
-    if (typeof endValue === 'string') {
-      this.end[property] = endValue;
-    }
-    return this;
-  }
-}
 
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
@@ -165,16 +119,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
       if (!this.createButtonEl.parentElement) {
         this.ctaEl.appendChild(this.createButtonEl);
-        const ANIMATION_DURATION = 150;
-        const ANIMATION_FN = 'cubic-bezier(0, 0.55, 0.45, 1)';
 
-        animateElement(
-          this.createButtonEl,
-          new Animation({
-            duration: ANIMATION_DURATION,
-            fn: ANIMATION_FN
-          }).addProp('transform', 'scale(0.10)', '')
-        );
         const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
         this.createButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
       }
@@ -483,80 +428,6 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 }
 
-function animateElement(element: HTMLElement, animation: Animation, onComplete?: () => void): void {
-  stopAnimation(element);
-
-  element.setCssProps(animation.from);
-
-  const animationState: AnimationState = {
-    complete: onComplete,
-    fn: () => {
-      stopAnimation(element);
-    },
-    props: animation,
-    timer: 0,
-    win: element.ownerDocument.defaultView ?? window
-  };
-
-  animationStates.set(element, animationState);
-
-  if (pendingAnimations === null) {
-    pendingAnimations = [];
-    setTimeout(() => {
-      forceReflow();
-
-      const animations = pendingAnimations;
-      pendingAnimations = null;
-
-      for (const animationFn of animations ?? []) {
-        animationFn();
-      }
-    }, 0);
-  }
-
-  pendingAnimations.push(() => {
-    element.style.transition = `all ${String(animation.duration)}ms ${animation.fn}`;
-    element.style.transitionProperty = Object.keys(animation.from).join(', ');
-
-    element.setCssProps(animation.to);
-
-    element.addEventListener('transitionend', (event) => {
-      if (event.target === element) {
-        animationState.fn();
-      }
-    });
-
-    const ANIMATION_DELAY = 50;
-    animationState.timer = animationState.win.setTimeout(animationState.fn, animation.duration + ANIMATION_DELAY);
-  });
-}
-
-function forceReflow(): void {
-  if (document.body.offsetHeight) {
-    noop();
-  }
-}
-
-function stopAnimation(element: HTMLElement, skipComplete = false): void {
-  const animationState = animationStates.get(element);
-  animationStates.delete(element);
-
-  if (animationState) {
-    element.setCssProps({
-      transition: '',
-      transitionProperty: ''
-    });
-    element.setCssProps(animationState.props.end);
-
-    animationState.win.clearTimeout(animationState.timer);
-    element.removeEventListener('transitionend', animationState.fn);
-
-    if (!skipComplete && animationState.complete) {
-      animationState.complete();
-    }
-  }
-}
-
 function trimMarkdownExtension(path: string): string {
   return trimEnd(path, '.md');
 }
@@ -576,9 +447,6 @@ function truncatePathToLastMatch(path: string, matches?: SearchMatches): string 
   }
   return path;
 }
-
-const animationStates = new WeakMap<HTMLElement, AnimationState>();
-let pendingAnimations: (() => void)[] | null = null;
 
 const IMAGE_EXTENSIONS = ['bmp', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif'];
 
