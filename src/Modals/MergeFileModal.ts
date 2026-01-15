@@ -159,7 +159,6 @@ class ConfirmDialogModal extends Modal {
 class MergeFileModal extends SuggestModalBase {
   private isSelected = false;
   private shouldFixFootnotes: boolean;
-  private shouldAllowOnlyCurrentFolder: boolean;
   private shouldMergeHeadings: boolean;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -171,11 +170,10 @@ class MergeFileModal extends SuggestModalBase {
     }
   }
 
-  public constructor(plugin: Plugin, composer: MergeComposer, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
-    super(plugin.app, composer);
+  public constructor(plugin: Plugin, composer: MergeComposer, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
+    super(plugin, composer, sourceFile);
 
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
@@ -337,7 +335,7 @@ interface PrepareForMergeFileResult {
 
 export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
   const result = await new Promise<PrepareForMergeFileResult | null>((resolve) => {
-    const modal = new MergeFileModal(plugin, composer, resolve);
+    const modal = new MergeFileModal(plugin, composer, sourceFile, resolve);
     modal.open();
   });
 

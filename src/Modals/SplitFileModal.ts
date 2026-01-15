@@ -22,7 +22,6 @@ class SplitFileModal extends SuggestModalBase {
   private shouldIncludeFrontmatter: boolean;
   private shouldTreatTitleAsPath: boolean;
   private shouldFixFootnotes: boolean;
-  private shouldAllowOnlyCurrentFolder: boolean;
   private shouldMergeHeadings: boolean;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -32,13 +31,12 @@ class SplitFileModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(plugin: Plugin, composer: ComposerBase, private readonly heading: string, private readonly sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
-    super(plugin.app, composer);
+  public constructor(plugin: Plugin, composer: ComposerBase, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
+    super(plugin, composer, sourceFile);
 
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
     this.shouldTreatTitleAsPath = plugin.settings.shouldTreatTitleAsPathByDefault;
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
