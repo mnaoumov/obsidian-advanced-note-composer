@@ -16,8 +16,8 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { ComposerBase } from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
+import { SplitComposer } from '../Composers/SplitComposer.ts';
 
 class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, editor: Editor, ctx: MarkdownFileInfo | MarkdownView) {
@@ -47,7 +47,7 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
     }
 
     this.editor.setSelection({ ch: 0, line: 0 }, this.editor.getCursor());
-    const composer = new ComposerBase({
+    const composer = new SplitComposer({
       editor: this.editor,
       plugin: this.plugin,
       sourceFile: this.file
