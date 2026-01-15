@@ -1,5 +1,5 @@
 import { App, Keymap } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
 
 import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
 import type { Item } from './SuggestModalBase.ts';
@@ -11,11 +11,17 @@ import {
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
-export class SplitFileSuggestModal extends SuggestModalBase {
+class SplitFileSuggestModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
+  private isSelected = false;
 
-  public constructor(app: App, composer: AdvancedNoteComposer) {
+  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    super.selectSuggestion(value, evt);
+  }
+
+  public constructor(app: App, composer: AdvancedNoteComposer, private readonly promiseResolve: PromiseResolve<boolean | null>) {
     super(app, composer);
 
     this.composer.action = Action.Split;
@@ -37,10 +43,18 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     this.updateSuggestions();
   }
 
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve(null);
+    }
+  }
+
+
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
     await this.composer.selectItem(item, Keymap.isModifier(evt, 'Mod'), this.inputEl.value);
     this.composer.mode = evt.shiftKey ? 'prepend' : 'append';
-    await this.composer.splitFile();
+    this.promiseResolve(true);
   }
 
   private async buildInstructions(): Promise<void> {
@@ -78,8 +92,12 @@ export class SplitFileSuggestModal extends SuggestModalBase {
     });
 
     builder.addKeyboardCommand({
-      key: 'Esc',
-      purpose: 'to dismiss'
+      key: 'Escape',
+      purpose: 'to dismiss',
+      onKey: () => {
+        this.close();
+        return false;
+      }
     });
 
     builder.addCheckbox({
@@ -195,4 +213,11 @@ export class SplitFileSuggestModal extends SuggestModalBase {
 
     builder.build(this);
   }
+}
+
+export async function prepareForSplitFile(app: App, composer: AdvancedNoteComposer): Promise<boolean | null> {
+  return await new Promise<boolean | null>((resolve) => {
+    const modal = new SplitFileSuggestModal(app, composer, resolve);
+    modal.open();
+  });
 }

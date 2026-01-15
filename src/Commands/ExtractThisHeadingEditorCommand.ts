@@ -22,7 +22,7 @@ import {
   extractHeadingFromLine,
   getSelectionUnderHeading
 } from '../AdvancedNoteComposer.ts';
-import { SplitFileSuggestModal } from '../Modals/SplitFileModal.ts';
+import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;
@@ -77,8 +77,10 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const modal = new SplitFileSuggestModal(this.app, composer);
-    modal.open();
+    const isConfirmed = await prepareForSplitFile(this.app, composer);
+    if (isConfirmed) {
+      await composer.splitFile();
+    }
   }
 }
 
