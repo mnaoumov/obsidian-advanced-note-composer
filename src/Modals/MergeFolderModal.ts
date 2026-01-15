@@ -22,7 +22,7 @@ import type { Plugin } from '../Plugin.ts';
 
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 
-interface ConfirmDialogResult {
+interface ConfirmDialogModalResult {
   isConfirmed: boolean;
   shouldAskBeforeMerging: boolean;
 }
@@ -35,7 +35,7 @@ class ConfirmDialogModal extends Modal {
     app: App,
     private readonly sourceFolder: TFolder,
     private readonly targetFolder: TFolder,
-    private readonly promiseResolve: PromiseResolve<ConfirmDialogResult>
+    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
   ) {
     super(app);
 
@@ -175,7 +175,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldIncludeChildFolders;
       },
-      purpose: 'Include child folders'
+      purpose: 'Include child folders in selector'
     });
     builder.addCheckbox({
       key: '2',
@@ -187,7 +187,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldIncludeParentFolders;
       },
-      purpose: 'Include parent folders'
+      purpose: 'Include parent folders in selector'
     });
 
     builder.build(this);
@@ -292,7 +292,7 @@ export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFol
     return targetFolder;
   }
 
-  const confirmDialogResult = await new Promise<ConfirmDialogResult>((resolve) => {
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
     new ConfirmDialogModal(plugin.app, sourceFolder, targetFolder, resolve).open();
   });
 
