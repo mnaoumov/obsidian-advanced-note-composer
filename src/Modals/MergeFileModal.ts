@@ -156,11 +156,18 @@ class ConfirmDialogModal extends Modal {
   }
 }
 
-export class MergeFileSuggestModal extends SuggestModalBase {
-  private doNotAskAgain = false;
+class MergeFileModal extends SuggestModalBase {
+  private isSelected = false;
 
-  public constructor(private readonly plugin: Plugin, protected override readonly composer: MergeComposer) {
-    super(plugin.app, composer);
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve(null);
+    }
+  }
+
+  public constructor(app: App, protected override readonly composer: MergeComposer, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
+    super(app, composer);
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
@@ -201,8 +208,12 @@ export class MergeFileSuggestModal extends SuggestModalBase {
     });
 
     builder.addKeyboardCommand({
-      key: 'Esc',
-      purpose: 'to dismiss'
+      key: 'Escape',
+      purpose: 'to dismiss',
+      onKey: () => {
+        this.close();
+        return false;
+      }
     });
 
     builder.addCheckbox({
@@ -282,37 +293,56 @@ export class MergeFileSuggestModal extends SuggestModalBase {
   }
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
-    await this.composer.selectItem(item, Keymap.isModifier(evt, 'Mod'), this.inputEl.value);
-
-    if (this.composer.targetFile === this.composer.sourceFile) {
-      return;
-    }
-
-    this.doNotAskAgain = false;
-
-    if (!this.plugin.settings.shouldAskBeforeMerging) {
-      await this.performMerge(evt);
-      return;
-    }
-
-    const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
-      new ConfirmDialogModal(this.app, this.composer.sourceFile, this.composer.targetFile, resolve).open();
+    this.promiseResolve({
+      item,
+      isMod: Keymap.isModifier(evt, 'Mod'),
+      inputValue: this.inputEl.value,
+      inputMode: evt.shiftKey ? 'prepend' : 'append',
+      doNotAskAgain: false
     });
-
-    if (!confirmDialogResult.isConfirmed) {
-      return;
-    }
-
-    await this.plugin.settingsManager.editAndSave((settings) => {
-      settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
-    });
-
-    this.composer.insertMode = confirmDialogResult.insertMode;
-    await this.composer.mergeFile(!confirmDialogResult.shouldAskBeforeMerging);
   }
 
-  private async performMerge(evt: KeyboardEvent | MouseEvent): Promise<void> {
-    this.composer.insertMode = evt.shiftKey ? 'prepend' : 'append';
-    await this.composer.mergeFile(this.doNotAskAgain);
+  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    super.selectSuggestion(value, evt);
   }
+}
+
+interface PrepareForMergeFileResult {
+  item: Item | null;
+  isMod: boolean;
+  inputValue: string;
+  inputMode: 'prepend' | 'append';
+  doNotAskAgain: boolean;
+}
+
+export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
+  const result = await new Promise<PrepareForMergeFileResult | null>((resolve) => {
+    const modal = new MergeFileModal(plugin.app, composer, resolve);
+    modal.open();
+  });
+
+  if (result) {
+    await composer.selectItem(result.item, result.isMod, result.inputValue);
+    composer.insertMode = result.inputMode;
+  }
+
+  if (!plugin.settings.shouldAskBeforeMerging) {
+    return result;
+  }
+
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
+    new ConfirmDialogModal(plugin.app, sourceFile, composer.targetFile, resolve).open();
+  });
+
+  if (!confirmDialogResult.isConfirmed) {
+    return null;
+  }
+
+  await plugin.settingsManager.editAndSave((settings) => {
+    settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
+  });
+
+  composer.insertMode = confirmDialogResult.insertMode;
+  return result;
 }
