@@ -38,7 +38,7 @@ import {
 import type { Plugin } from '../Plugin.ts';
 
 import { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
-import { MergeFolderModal } from '../Modals/MergeFolderModal.ts';
+import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {
   protected override readonly fileMenuItemName = 'Advanced merge entire folder with...';
@@ -78,8 +78,10 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       return;
     }
 
-    const modal = new MergeFolderModal(this.plugin, this.folder, this.mergeFolder.bind(this));
-    modal.open();
+    const targetFolder = await selectTargetFolderForMergeFolder(this.plugin, this.folder);
+    if (targetFolder) {
+      await this.mergeFolder(targetFolder);
+    }
   }
 
   private depth(file: TAbstractFile): number {
