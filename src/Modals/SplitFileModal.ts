@@ -1,4 +1,4 @@
-import { Keymap } from 'obsidian';
+import { App, Keymap } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 
 import type { AdvancedNoteComposer } from '../AdvancedNoteComposer.ts';
@@ -15,8 +15,8 @@ export class SplitFileSuggestModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
 
-  public constructor(composer: AdvancedNoteComposer) {
-    super(composer);
+  public constructor(app: App, composer: AdvancedNoteComposer) {
+    super(app, composer);
 
     this.composer.action = Action.Split;
 
