@@ -172,7 +172,7 @@ class MergeFileModal extends SuggestModalBase {
     }
   }
 
-  public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<PrepareForMergeFileResult | null>) {
+  public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>) {
     super(plugin, sourceFile);
 
     this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
@@ -323,7 +323,7 @@ class MergeFileModal extends SuggestModalBase {
   }
 }
 
-interface PrepareForMergeFileResult {
+interface MergeFileModalResult {
   item: Item | null;
   isMod: boolean;
   inputValue: string;
@@ -335,8 +335,8 @@ interface PrepareForMergeFileResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
-export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
-  const result = await new Promise<PrepareForMergeFileResult | null>((resolve) => {
+export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<MergeFileModalResult | null> {
+  const result = await new Promise<MergeFileModalResult | null>((resolve) => {
     const modal = new MergeFileModal(plugin, sourceFile, resolve);
     modal.open();
   });

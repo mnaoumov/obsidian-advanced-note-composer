@@ -31,7 +31,7 @@ class SplitFileModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
-  public constructor(plugin: Plugin, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<PrepareForSplitFileResult | null>) {
+  public constructor(plugin: Plugin, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<SplitFileModalResult | null>) {
     super(plugin, sourceFile);
 
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
@@ -287,7 +287,7 @@ class SplitFileModal extends SuggestModalBase {
   }
 }
 
-interface PrepareForSplitFileResult {
+interface SplitFileModalResult {
   item: Item | null;
   isMod: boolean;
   inputValue: string;
@@ -301,8 +301,8 @@ interface PrepareForSplitFileResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
-export async function prepareForSplitFile(plugin: Plugin, composer: SplitComposer, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
-  const result = await new Promise<PrepareForSplitFileResult | null>((resolve) => {
+export async function prepareForSplitFile(plugin: Plugin, composer: SplitComposer, sourceFile: TFile, editor: Editor, heading?: string): Promise<SplitFileModalResult | null> {
+  const result = await new Promise<SplitFileModalResult | null>((resolve) => {
     const modal = new SplitFileModal(plugin, heading ?? '', sourceFile, editor, resolve);
     modal.open();
   });
