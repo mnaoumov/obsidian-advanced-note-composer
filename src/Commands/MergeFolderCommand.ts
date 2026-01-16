@@ -156,14 +156,14 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
       const isNewTargetFile = !exists(this.app, targetMdFilePath, FileSystemType.File);
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const advancedNoteComposer = new MergeComposer({
+      const composer = new MergeComposer({
         plugin: this.plugin,
-        sourceFile: sourceMdFile
+        sourceFile: sourceMdFile,
+        shouldShowNotice: false,
+        targetFile: targetMdFile,
+        isNewTargetFile
       });
-      advancedNoteComposer.shouldShowNotice = false;
-      advancedNoteComposer.targetFile = targetMdFile;
-      advancedNoteComposer.isNewTargetFile = isNewTargetFile;
-      await advancedNoteComposer.mergeFile();
+      await composer.mergeFile();
     }
 
     for (const sourceOtherFile of sourceOtherFiles) {

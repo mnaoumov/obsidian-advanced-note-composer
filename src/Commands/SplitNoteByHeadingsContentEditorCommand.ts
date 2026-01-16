@@ -102,10 +102,10 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
         editor: this.editor,
         heading: headingInfo.heading,
         plugin: this.plugin,
-        sourceFile: this.file
+        sourceFile: this.file,
+        targetFile: selectItemResult.targetFile,
+        isNewTargetFile: selectItemResult.isNewTargetFile
       });
-      composer.targetFile = selectItemResult.targetFile;
-      composer.isNewTargetFile = selectItemResult.isNewTargetFile;
       await composer.splitFile();
 
       if (this.plugin.settings.shouldKeepHeadingsWhenSplittingContent) {

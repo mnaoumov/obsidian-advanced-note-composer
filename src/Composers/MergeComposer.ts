@@ -17,7 +17,7 @@ export class MergeComposer extends ComposerBase {
   }
 
   public constructor(options: ComposerBaseOptions) {
-    super(options);
+    super(options, true);
   }
 
   protected override async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {

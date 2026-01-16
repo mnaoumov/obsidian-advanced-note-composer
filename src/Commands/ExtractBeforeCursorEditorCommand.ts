@@ -55,18 +55,18 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
     const composer = new SplitComposer({
       editor: this.editor,
       plugin: this.plugin,
-      sourceFile: this.file
+      sourceFile: this.file,
+      insertMode: prepareForSplitFileResult.insertMode,
+      shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
+      shouldTreatTitleAsPath: prepareForSplitFileResult.shouldTreatTitleAsPath,
+      shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
+      shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
+      shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
+      shouldAllowSplitIntoUnresolvedPath: prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath,
+      frontmatterMergeStrategy: prepareForSplitFileResult.frontmatterMergeStrategy,
+      targetFile: prepareForSplitFileResult.targetFile,
+      isNewTargetFile: prepareForSplitFileResult.isNewTargetFile
     });
-    composer.insertMode = prepareForSplitFileResult.insertMode;
-    composer.shouldIncludeFrontmatter = prepareForSplitFileResult.shouldIncludeFrontmatter;
-    composer.shouldTreatTitleAsPath = prepareForSplitFileResult.shouldTreatTitleAsPath;
-    composer.shouldFixFootnotes = prepareForSplitFileResult.shouldFixFootnotes;
-    composer.shouldAllowOnlyCurrentFolder = prepareForSplitFileResult.shouldAllowOnlyCurrentFolder;
-    composer.shouldMergeHeadings = prepareForSplitFileResult.shouldMergeHeadings;
-    composer.shouldAllowSplitIntoUnresolvedPath = prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath;
-    composer.frontmatterMergeStrategy = prepareForSplitFileResult.frontmatterMergeStrategy;
-    composer.targetFile = prepareForSplitFileResult.targetFile;
-    composer.isNewTargetFile = prepareForSplitFileResult.isNewTargetFile;
     await composer.splitFile();
   }
 }

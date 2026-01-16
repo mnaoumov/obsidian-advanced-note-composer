@@ -62,6 +62,17 @@ export interface ComposerBaseOptions {
   heading?: string;
   plugin: Plugin;
   sourceFile: TFile;
+
+  insertMode?: InsertMode;
+  shouldFixFootnotes?: boolean;
+  shouldAllowOnlyCurrentFolder?: boolean;
+  shouldMergeHeadings?: boolean;
+  shouldAllowSplitIntoUnresolvedPath?: boolean;
+  frontmatterMergeStrategy?: FrontmatterMergeStrategy;
+  targetFile: TFile;
+  isNewTargetFile: boolean;
+
+  shouldShowNotice?: boolean;
 }
 
 interface ExtractFrontmatterResult {
@@ -82,13 +93,13 @@ export abstract class ComposerBase {
   public readonly app: App;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
-  public insertMode: InsertMode = InsertMode.Append;
+  public readonly insertMode: InsertMode;
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldAllowSplitIntoUnresolvedPath: boolean;
   public shouldFixFootnotes: boolean;
   public shouldIncludeFrontmatter: boolean;
   public shouldMergeHeadings: boolean;
-  public shouldShowNotice = true;
+  public shouldShowNotice: boolean;
   public shouldTreatTitleAsPath: boolean;
   public readonly sourceFile: TFile;
   public get targetFile(): TFile {
@@ -106,17 +117,19 @@ export abstract class ComposerBase {
   public isNewTargetFile = false;
   protected readonly plugin: Plugin;
 
-  public constructor(options: ComposerBaseOptions) {
+  public constructor(options: ComposerBaseOptions, shouldIncludeFrontmatter: boolean) {
+    this.insertMode = options.insertMode ?? InsertMode.Append;
     this.plugin = options.plugin;
     this.sourceFile = options.sourceFile;
     this.app = this.plugin.app;
-    this.shouldIncludeFrontmatter = this.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
     this.shouldTreatTitleAsPath = this.plugin.settings.shouldTreatTitleAsPathByDefault;
-    this.shouldFixFootnotes = this.plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldAllowOnlyCurrentFolder = this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
-    this.shouldMergeHeadings = this.plugin.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = this.plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = this.plugin.settings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.settings.shouldFixFootnotesByDefault;
+    this.shouldAllowOnlyCurrentFolder = options.shouldAllowOnlyCurrentFolder ?? this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = options.shouldAllowSplitIntoUnresolvedPath ?? this.plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.settings.defaultFrontmatterMergeStrategy;
+    this.shouldShowNotice = options.shouldShowNotice ?? true;
   }
 
   public async canIncludeFrontmatter(): Promise<boolean> {
@@ -277,7 +290,7 @@ export abstract class ComposerBase {
     return targetContentToInsert;
   }
 
-  protected updateEditorSelections(_sourceCache: CachedMetadata | null, _sourceFootnoteIdsToRemove: Set<string>, _sourceFootnoteIdsToRestore: Set<string>): void {}
+  protected updateEditorSelections(_sourceCache: CachedMetadata | null, _sourceFootnoteIdsToRemove: Set<string>, _sourceFootnoteIdsToRestore: Set<string>): void { }
 
   private async fixLinks(targetContentToInsert: string): Promise<string> {
     return await updateLinksInContent({
