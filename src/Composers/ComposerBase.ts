@@ -49,6 +49,10 @@ export enum InsertMode {
   Prepend = 'prepend'
 }
 
+export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertMode {
+  return evt.shiftKey ? InsertMode.Prepend : InsertMode.Append;
+}
+
 const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseOptions {

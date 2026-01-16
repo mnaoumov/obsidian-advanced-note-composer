@@ -15,6 +15,7 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import {
+  getInsertModeFromEvent,
   InsertMode
 } from '../Composers/ComposerBase.ts';
 import type { Plugin } from '../Plugin.ts';
@@ -74,7 +75,7 @@ class ConfirmDialogModal extends Modal {
   private confirm(evt: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
     this.promiseResolve({
-      insertMode: evt.shiftKey ? InsertMode.Prepend : InsertMode.Append,
+      insertMode: getInsertModeFromEvent(evt),
       isConfirmed: true,
       shouldAskBeforeMerging: this.shouldAskBeforeMerging
     });
@@ -307,7 +308,7 @@ class MergeFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      insertMode: evt.shiftKey ? InsertMode.Prepend : InsertMode.Append,
+      insertMode: getInsertModeFromEvent(evt),
       shouldFixFootnotes: this.shouldFixFootnotes,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldMergeHeadings: this.shouldMergeHeadings,
