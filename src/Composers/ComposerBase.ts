@@ -1,5 +1,5 @@
 import type {
-  EditorSelection,
+  CachedMetadata,
   FrontMatterInfo,
   Pos
 } from 'obsidian';
@@ -35,14 +35,16 @@ import {
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { process } from 'obsidian-dev-utils/obsidian/Vault';
 import {
-  replaceAll} from 'obsidian-dev-utils/String';
+  replaceAll
+} from 'obsidian-dev-utils/String';
 
 import type { Plugin } from '../Plugin.ts';
 
 import { parseMarkdownHeadingDocument } from '../MarkdownHeadingDocument.ts';
 import {
   Action,
-  FrontmatterMergeStrategy} from '../PluginSettings.ts';
+  FrontmatterMergeStrategy
+} from '../PluginSettings.ts';
 
 export enum InsertMode {
   Append = 'append',
@@ -78,10 +80,7 @@ export interface Selection {
 
 export abstract class ComposerBase {
   public readonly app: App;
-  public readonly editor: Editor | undefined;
   public frontmatterMergeStrategy: FrontmatterMergeStrategy;
-
-  public heading: string;
 
   public insertMode: InsertMode = InsertMode.Append;
   public shouldAllowOnlyCurrentFolder: boolean;
@@ -110,8 +109,6 @@ export abstract class ComposerBase {
   public constructor(options: ComposerBaseOptions) {
     this.plugin = options.plugin;
     this.sourceFile = options.sourceFile;
-    this.editor = options.editor;
-    this.heading = options.heading ?? '';
     this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = this.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
     this.shouldTreatTitleAsPath = this.plugin.settings.shouldTreatTitleAsPathByDefault;
@@ -120,7 +117,6 @@ export abstract class ComposerBase {
     this.shouldMergeHeadings = this.plugin.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = this.plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.plugin.settings.defaultFrontmatterMergeStrategy;
-    this.initHeading();
   }
 
   public async canIncludeFrontmatter(): Promise<boolean> {
@@ -276,25 +272,12 @@ export abstract class ComposerBase {
       return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
     });
 
-    if (this.editor) {
-      let editorSelections = this.editor.listSelections();
-
-      for (const sourceFootnote of sourceCache?.footnotes ?? []) {
-        if (sourceFootnoteIdsToRemove.has(sourceFootnote.id)) {
-          editorSelections.push({
-            anchor: this.editor.offsetToPos(sourceFootnote.position.end.offset),
-            head: this.editor.offsetToPos(sourceFootnote.position.start.offset)
-          });
-        } else if (sourceFootnoteIdsToRestore.has(sourceFootnote.id)) {
-          editorSelections = this.removeSelectionRange(editorSelections, sourceFootnote.position);
-        }
-      }
-
-      this.editor.setSelections(editorSelections);
-    }
+    this.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
 
     return targetContentToInsert;
   }
+
+  protected updateEditorSelections(_sourceCache: CachedMetadata | null, _sourceFootnoteIdsToRemove: Set<string>, _sourceFootnoteIdsToRestore: Set<string>): void {}
 
   private async fixLinks(targetContentToInsert: string): Promise<string> {
     return await updateLinksInContent({
@@ -305,31 +288,7 @@ export abstract class ComposerBase {
     });
   }
 
-  private async getSelections(): Promise<Selection[]> {
-    if (this.editor) {
-      const selections = this.editor.listSelections().map((editorSelection) => {
-        const selection: Selection = {
-          endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
-          startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
-        };
-
-        if (selection.startOffset > selection.endOffset) {
-          [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
-        }
-
-        return selection;
-      });
-
-      return selections.sort((a, b) => a.startOffset - b.startOffset);
-    }
-
-    const content = await this.app.vault.read(this.sourceFile);
-
-    return [{
-      endOffset: content.length,
-      startOffset: 0
-    }];
-  }
+  protected abstract getSelections(): Promise<Selection[]>;
 
   protected abstract getTemplate(): string;
 
@@ -344,20 +303,6 @@ export abstract class ComposerBase {
 
     const sourceCache = await getCacheSafe(this.app, this.sourceFile);
     return `---\n${stringifyYaml(sourceCache?.frontmatter ?? {})}---\n${targetContentToInsert}`;
-  }
-
-  private initHeading(): void {
-    if (!this.heading) {
-      const selectedLines = this.editor?.getSelection().split('\n') ?? [];
-      if (selectedLines.length > 0) {
-        const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
-        this.heading = extractedHeading ?? '';
-      }
-    }
-
-    if (this.heading) {
-      this.shouldTreatTitleAsPath = false;
-    }
   }
 
   protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
@@ -554,48 +499,6 @@ export abstract class ComposerBase {
     return backlinksToFix;
   }
 
-  private removeSelectionRange(editorSelections: EditorSelection[], rangeToRemove: Pos): EditorSelection[] {
-    if (!this.editor) {
-      return editorSelections;
-    }
-
-    const rangeStart = rangeToRemove.start.offset;
-    const rangeEnd = rangeToRemove.end.offset;
-    const result: EditorSelection[] = [];
-
-    for (const selection of editorSelections) {
-      let selectionStart = this.editor.posToOffset(selection.anchor);
-      let selectionEnd = this.editor.posToOffset(selection.head);
-
-      if (selectionStart > selectionEnd) {
-        [selectionStart, selectionEnd] = [selectionEnd, selectionStart];
-      }
-
-      if (selectionEnd < rangeStart || selectionStart > rangeEnd) {
-        result.push(selection);
-      } else {
-        const beforeRange = selectionStart < rangeStart;
-        const afterRange = selectionEnd > rangeEnd;
-
-        if (beforeRange) {
-          result.push({
-            anchor: this.editor.offsetToPos(selectionStart),
-            head: this.editor.offsetToPos(rangeStart)
-          });
-        }
-
-        if (afterRange) {
-          result.push({
-            anchor: this.editor.offsetToPos(rangeEnd),
-            head: this.editor.offsetToPos(selectionEnd)
-          });
-        }
-      }
-    }
-
-    return result;
-  }
-
   private safeParseFrontmatter(frontmatterInfo: FrontMatterInfo): Frontmatter {
     try {
       return parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
@@ -649,11 +552,6 @@ export abstract class ComposerBase {
 
     return wrappedText;
   }
-}
-
-export function extractHeadingFromLine(line: string): null | string {
-  const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
-  return match?.groups?.['Heading'] ?? null;
 }
 
 export function getSelectionUnderHeading(app: App, file: TFile, editor: Editor, lineNumber: number): HeadingInfo | null {

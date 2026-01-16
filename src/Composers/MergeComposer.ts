@@ -1,5 +1,5 @@
 import { editLinks, extractLinkFile, updateLink } from "obsidian-dev-utils/obsidian/Link";
-import { ComposerBase, type ComposerBaseOptions } from "./ComposerBase.ts";
+import { ComposerBase, type ComposerBaseOptions, type Selection } from "./ComposerBase.ts";
 import type { MaybeReturn } from "obsidian-dev-utils/Type";
 import { Action } from "../PluginSettings.ts";
 import { Notice } from "obsidian";
@@ -7,6 +7,15 @@ import { createFragmentAsync } from "obsidian-dev-utils/HTMLElement";
 import { renderInternalLink } from "obsidian-dev-utils/obsidian/Markdown";
 
 export class MergeComposer extends ComposerBase {
+  protected override async getSelections(): Promise<Selection[]> {
+    const content = await this.app.vault.read(this.sourceFile);
+
+    return [{
+      endOffset: content.length,
+      startOffset: 0
+    }];
+  }
+
   public constructor(options: ComposerBaseOptions) {
     super(options);
   }
