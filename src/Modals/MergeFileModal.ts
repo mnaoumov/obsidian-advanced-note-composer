@@ -26,6 +26,7 @@ import {
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 import type { MergeComposer } from '../Composers/MergeComposer.ts';
+import { MergeItemSelector } from '../ItemSelectors/MergeItemSelector.ts';
 
 interface ConfirmDialogModalResult {
   insertMode: InsertMode;
@@ -350,7 +351,15 @@ export async function prepareForMergeFile(plugin: Plugin, composer: MergeCompose
   composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
   composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
 
-  await composer.selectItem(result.item, result.isMod, result.inputValue);
+  const selectItemResult = await new MergeItemSelector({
+    plugin,
+    sourceFile,
+    item: result.item,
+    isMod: result.isMod,
+    inputValue: result.inputValue
+  }).selectItem();
+  composer.targetFile = selectItemResult.targetFile;
+  composer.isNewTargetFile = selectItemResult.isNewTargetFile;
 
   if (!plugin.settings.shouldAskBeforeMerging) {
     return result;
