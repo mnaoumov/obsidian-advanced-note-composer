@@ -13,6 +13,7 @@ import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 import type { Plugin } from '../Plugin.ts';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
+import { extractHeading } from '../Headings.ts';
 
 class SplitFileModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
@@ -303,7 +304,6 @@ interface SplitFileModalResult {
 interface PrepareForSplitFileResult {
   insertMode: InsertMode;
   shouldIncludeFrontmatter: boolean;
-  shouldTreatTitleAsPath: boolean;
   shouldFixFootnotes: boolean;
   shouldAllowOnlyCurrentFolder: boolean;
   shouldMergeHeadings: boolean;
@@ -314,6 +314,7 @@ interface PrepareForSplitFileResult {
 }
 
 export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
+  heading ||= extractHeading(editor);
   const result = await new Promise<SplitFileModalResult | null>((resolve) => {
     const modal = new SplitFileModal(plugin, heading ?? '', sourceFile, editor, resolve);
     modal.open();
@@ -330,13 +331,12 @@ export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, edi
     isMod: result.isMod,
     inputValue: result.inputValue,
     shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldTreatTitleAsPath: result.shouldTreatTitleAsPath
+    shouldTreatTitleAsPath: !heading && result.shouldTreatTitleAsPath
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
     insertMode: result.insertMode,
     shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
-    shouldTreatTitleAsPath: result.shouldTreatTitleAsPath,
     shouldFixFootnotes: result.shouldFixFootnotes,
     shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
     shouldMergeHeadings: result.shouldMergeHeadings,

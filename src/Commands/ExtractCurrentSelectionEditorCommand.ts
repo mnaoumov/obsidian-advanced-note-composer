@@ -61,7 +61,6 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
       sourceFile: this.file,
       insertMode: prepareForSplitFileResult.insertMode,
       shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
-      shouldTreatTitleAsPath: prepareForSplitFileResult.shouldTreatTitleAsPath,
       shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
       shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
       shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,

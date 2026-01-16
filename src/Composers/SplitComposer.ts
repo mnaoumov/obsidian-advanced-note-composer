@@ -10,18 +10,14 @@ interface SplitComposerOptions extends ComposerBaseOptions {
   editor: Editor;
   heading?: string;
   shouldIncludeFrontmatter?: boolean;
-  shouldTreatTitleAsPath?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
   private readonly editor: Editor;
-  private heading: string;
 
   public constructor(options: SplitComposerOptions) {
     super(options, options.shouldIncludeFrontmatter ?? options.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
-    this.heading = options.heading ?? '';
-    this.initHeading();
   }
 
   public async splitFile(): Promise<void> {
@@ -157,19 +153,4 @@ export class SplitComposer extends ComposerBase {
 
     return selections.sort((a, b) => a.startOffset - b.startOffset);
   }
-
-  private initHeading(): void {
-    if (!this.heading) {
-      const selectedLines = this.editor?.getSelection().split('\n') ?? [];
-      if (selectedLines.length > 0) {
-        const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
-        this.heading = extractedHeading ?? '';
-      }
-    }
-  }
-}
-
-export function extractHeadingFromLine(line: string): null | string {
-  const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
-  return match?.groups?.['Heading'] ?? null;
 }
