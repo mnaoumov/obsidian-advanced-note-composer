@@ -22,7 +22,6 @@ import {
   createFragmentAsync
 } from 'obsidian-dev-utils/HTMLElement';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/ObjectUtils';
-import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
 import {
   editLinks,
   updateLink,
@@ -36,23 +35,14 @@ import {
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { process } from 'obsidian-dev-utils/obsidian/Vault';
 import {
-  replaceAll,
-  trimEnd
-} from 'obsidian-dev-utils/String';
+  replaceAll} from 'obsidian-dev-utils/String';
 
-import type { Item } from '../Modals/SuggestModalBase.ts';
 import type { Plugin } from '../Plugin.ts';
 
-import {
-  INVALID_CHARACTERS_REG_EXP,
-  TRAILING_DOTS_OR_SPACES_REG_EXP
-} from '../FilenameValidation.ts';
 import { parseMarkdownHeadingDocument } from '../MarkdownHeadingDocument.ts';
 import {
   Action,
-  FrontmatterMergeStrategy,
-  FrontmatterTitleMode
-} from '../PluginSettings.ts';
+  FrontmatterMergeStrategy} from '../PluginSettings.ts';
 
 export type InsertMode = 'append' | 'prepend';
 
@@ -70,7 +60,7 @@ interface ExtractFrontmatterResult {
   frontmatter: Frontmatter;
 }
 
-interface Frontmatter extends GenericObject {
+export interface Frontmatter extends GenericObject {
   title?: string;
 }
 
@@ -101,10 +91,13 @@ export abstract class ComposerBase {
     }
     return this._targetFile;
   }
+  public set targetFile(value: TFile) {
+    this._targetFile = value;
+  }
 
   protected _targetFile?: TFile;
 
-  protected isNewTargetFile = false;
+  public isNewTargetFile = false;
   protected readonly plugin: Plugin;
 
   public constructor(options: ComposerBaseOptions) {
@@ -147,8 +140,6 @@ export abstract class ComposerBase {
     return this.plugin.settings.isPathIgnored(path);
   }
 
-  public abstract selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void>;
-
   private applyTemplate(targetContentToInsert: string): string {
     return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
       switch (key.toLowerCase()) {
@@ -184,43 +175,6 @@ export abstract class ComposerBase {
       return false;
     }
     return true;
-  }
-
-  protected async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
-    fileName = trimEnd(fileName, '.md');
-    const fixedFileName = `${this.fixFileName(fileName)}.md`;
-    const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
-    this.isNewTargetFile = true;
-    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
-
-    const isInvalidTitle = file.basename !== fileName;
-
-    if (isInvalidTitle && this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
-      await addAlias(this.app, file, fileName);
-    }
-
-    let shouldAddTitleToFrontmatter = false;
-
-    switch (this.plugin.settings.frontmatterTitleMode) {
-      case FrontmatterTitleMode.None:
-        break;
-      case FrontmatterTitleMode.UseAlways:
-        shouldAddTitleToFrontmatter = true;
-        break;
-      case FrontmatterTitleMode.UseForInvalidTitleOnly:
-        shouldAddTitleToFrontmatter = isInvalidTitle;
-        break;
-      default:
-        throw new Error(`Invalid frontmatter title mode: ${this.plugin.settings.frontmatterTitleMode as string}`);
-    }
-
-    if (shouldAddTitleToFrontmatter) {
-      await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
-        frontmatter.title = fileName;
-      });
-    }
-
-    return file;
   }
 
   private extractFrontmatter(str: string): ExtractFrontmatterResult {
@@ -263,32 +217,6 @@ export abstract class ComposerBase {
         });
       });
     }
-  }
-
-  private fixFileName(fileName: string): string {
-    if (!fileName) {
-      return 'Untitled';
-    }
-
-    if (!this.shouldTreatTitleAsPath) {
-      fileName = fileName.replaceAll('/', '\\');
-    }
-
-    if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters) {
-      return fileName;
-    }
-
-    const parts = fileName.split('/');
-    const fixedParts = parts.filter((part) => !!part).map((part) => {
-      let fixedPart = part;
-      fixedPart = fixedPart.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
-      fixedPart = fixedPart.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
-      if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
-        fixedPart = this.plugin.settings.replacement + fixedPart.slice(1);
-      }
-      return fixedPart;
-    });
-    return fixedParts.join('/');
   }
 
   private async fixFootnotes(targetContentToInsert: string): Promise<string> {

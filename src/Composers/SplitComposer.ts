@@ -1,5 +1,4 @@
 import { Notice } from "obsidian";
-import type { Item } from "../Modals/SuggestModalBase.ts";
 import { ComposerBase, type ComposerBaseOptions } from "./ComposerBase.ts";
 import { createFragmentAsync } from "obsidian-dev-utils/HTMLElement";
 import { renderInternalLink } from "obsidian-dev-utils/obsidian/Markdown";
@@ -10,39 +9,7 @@ export class SplitComposer extends ComposerBase {
     super(options);
   }
 
-  public override async selectItem(item: Item | null, isMod: boolean, inputValue: string): Promise<void> {
-    if (isMod || !item) {
-      const existingFile = this.app.metadataCache.getFirstLinkpathDest(inputValue, '');
-      if (existingFile && this.isPathIgnored(existingFile.path)) {
-        this._targetFile = existingFile;
-        return;
-      }
-
-      this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
-      return;
-    }
-
-    if (item.type === 'unresolved') {
-      this._targetFile = await this.createNewMarkdownFileFromLinktext(item.linktext ?? '');
-      return;
-    }
-
-    if (item.type === 'file' || item.type === 'alias') {
-      if (!item.file) {
-        throw new Error('File not found');
-      }
-      this._targetFile = item.file;
-      return;
-    }
-
-    this._targetFile = await this.createNewMarkdownFileFromLinktext(inputValue);
-  }
-
   public async splitFile(): Promise<void> {
-    if (!this._targetFile) {
-      await this.selectItem(null, false, this.heading);
-    }
-
     if (!await this.checkTargetFileIgnored(Action.Split)) {
       return;
     }

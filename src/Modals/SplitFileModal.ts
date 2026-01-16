@@ -13,6 +13,7 @@ import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { SplitComposer } from '../Composers/SplitComposer.ts';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
 
 class SplitFileModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
@@ -320,6 +321,16 @@ export async function prepareForSplitFile(plugin: Plugin, composer: SplitCompose
   composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
   composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
 
-  await composer.selectItem(result.item, result.isMod, result.inputValue);
+  const selectItemResult = await new SplitItemSelector({
+    plugin,
+    sourceFile,
+    item: result.item,
+    isMod: result.isMod,
+    inputValue: result.inputValue,
+    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+    shouldTreatTitleAsPath: result.shouldTreatTitleAsPath
+  }).selectItem();
+  composer.targetFile = selectItemResult.targetFile;
+  composer.isNewTargetFile = selectItemResult.isNewTargetFile;
   return result;
 }

@@ -19,6 +19,8 @@ import {
   FolderCommandInvocationBase
 } from 'obsidian-dev-utils/obsidian/Commands/FolderCommandBase';
 import {
+  exists,
+  FileSystemType,
   isFile,
   isFolder,
   isMarkdownFile
@@ -152,21 +154,15 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     for (const sourceMdFile of sourceMdFiles) {
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
+      const isNewTargetFile = !exists(this.app, targetMdFilePath, FileSystemType.File);
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
       const advancedNoteComposer = new MergeComposer({
         plugin: this.plugin,
         sourceFile: sourceMdFile
       });
       advancedNoteComposer.shouldShowNotice = false;
-      await advancedNoteComposer.selectItem(
-        {
-          file: targetMdFile,
-          match: { matches: [], score: 0 },
-          type: 'file'
-        },
-        false,
-        ''
-      );
+      advancedNoteComposer.targetFile = targetMdFile;
+      advancedNoteComposer.isNewTargetFile = isNewTargetFile;
       await advancedNoteComposer.mergeFile();
     }
 
