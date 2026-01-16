@@ -21,7 +21,8 @@ import {
   getSelectionUnderHeading
 } from '../Composers/ComposerBase.ts';
 import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
-import { extractHeadingFromLine, SplitComposer } from '../Composers/SplitComposer.ts';
+import { SplitComposer } from '../Composers/SplitComposer.ts';
+import { extractHeadingFromLine } from '../Headings.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;
@@ -70,7 +71,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const prepareForSplitFileResult = await prepareForSplitFile(this.plugin, this.file, this.editor, this.headingInfo.heading);
+    const prepareForSplitFileResult = await prepareForSplitFile(this.plugin, this.file, this.editor);
     if (!prepareForSplitFileResult) {
       return;
     }
@@ -81,7 +82,6 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
       sourceFile: this.file,
       insertMode: prepareForSplitFileResult.insertMode,
       shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
-      shouldTreatTitleAsPath: prepareForSplitFileResult.shouldTreatTitleAsPath,
       shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
       shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
       shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
