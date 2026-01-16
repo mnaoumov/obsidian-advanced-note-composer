@@ -307,7 +307,7 @@ class MergeFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      inputMode: evt.shiftKey ? 'prepend' : 'append',
+      insertMode: evt.shiftKey ? 'prepend' : 'append',
       shouldFixFootnotes: this.shouldFixFootnotes,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldMergeHeadings: this.shouldMergeHeadings,
@@ -326,7 +326,7 @@ interface PrepareForMergeFileResult {
   item: Item | null;
   isMod: boolean;
   inputValue: string;
-  inputMode: 'prepend' | 'append';
+  insertMode: InsertMode;
   shouldFixFootnotes: boolean;
   shouldAllowOnlyCurrentFolder: boolean;
   shouldMergeHeadings: boolean;
@@ -344,7 +344,7 @@ export async function prepareForMergeFile(plugin: Plugin, composer: MergeCompose
     return null;
   }
 
-  composer.insertMode = result.inputMode;
+  composer.insertMode = result.insertMode;
   composer.shouldFixFootnotes = result.shouldFixFootnotes;
   composer.shouldAllowOnlyCurrentFolder = result.shouldAllowOnlyCurrentFolder;
   composer.shouldMergeHeadings = result.shouldMergeHeadings;
