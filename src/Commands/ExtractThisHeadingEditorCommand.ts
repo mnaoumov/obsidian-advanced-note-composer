@@ -17,12 +17,10 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import {
-  getSelectionUnderHeading
-} from '../Composers/ComposerBase.ts';
-import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
+import { getSelectionUnderHeading } from '../Composers/ComposerBase.ts';
 import { SplitComposer } from '../Composers/SplitComposer.ts';
 import { extractHeadingFromLine } from '../Headings.ts';
+import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   private headingInfo?: HeadingInfo;
@@ -78,17 +76,17 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
 
     const composer = new SplitComposer({
       editor: this.editor,
-      plugin: this.plugin,
-      sourceFile: this.file,
-      insertMode: prepareForSplitFileResult.insertMode,
-      shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
-      shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
-      shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
-      shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
-      shouldAllowSplitIntoUnresolvedPath: prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath,
       frontmatterMergeStrategy: prepareForSplitFileResult.frontmatterMergeStrategy,
-      targetFile: prepareForSplitFileResult.targetFile,
+      insertMode: prepareForSplitFileResult.insertMode,
       isNewTargetFile: prepareForSplitFileResult.isNewTargetFile,
+      plugin: this.plugin,
+      shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
+      shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
+      shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
+      sourceFile: this.file,
+      targetFile: prepareForSplitFileResult.targetFile
     });
     await composer.splitFile();
   }

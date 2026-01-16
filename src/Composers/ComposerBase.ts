@@ -17,6 +17,7 @@ import {
   stringifyYaml,
   TFile
 } from 'obsidian';
+import { noop } from 'obsidian-dev-utils/Function';
 import {
   appendCodeBlock,
   createFragmentAsync
@@ -34,22 +35,16 @@ import {
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { process } from 'obsidian-dev-utils/obsidian/Vault';
-import {
-  replaceAll
-} from 'obsidian-dev-utils/String';
+import { replaceAll } from 'obsidian-dev-utils/String';
 
 import type { Plugin } from '../Plugin.ts';
 
+import { InsertMode } from '../InsertMode.ts';
 import { parseMarkdownHeadingDocument } from '../MarkdownHeadingDocument.ts';
 import {
   Action,
   FrontmatterMergeStrategy
 } from '../PluginSettings.ts';
-
-export enum InsertMode {
-  Append = 'append',
-  Prepend = 'prepend'
-}
 
 export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertMode {
   return evt.shiftKey ? InsertMode.Prepend : InsertMode.Append;
@@ -59,25 +54,20 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseOptions {
   editor?: Editor;
+  frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   heading?: string;
+  insertMode?: InsertMode;
+
+  isNewTargetFile: boolean;
   plugin: Plugin;
+  shouldAllowOnlyCurrentFolder?: boolean;
+  shouldAllowSplitIntoUnresolvedPath?: boolean;
+  shouldFixFootnotes?: boolean;
+  shouldMergeHeadings?: boolean;
+  shouldShowNotice?: boolean;
   sourceFile: TFile;
 
-  insertMode?: InsertMode;
-  shouldFixFootnotes?: boolean;
-  shouldAllowOnlyCurrentFolder?: boolean;
-  shouldMergeHeadings?: boolean;
-  shouldAllowSplitIntoUnresolvedPath?: boolean;
-  frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   targetFile: TFile;
-  isNewTargetFile: boolean;
-
-  shouldShowNotice?: boolean;
-}
-
-interface ExtractFrontmatterResult {
-  content: string;
-  frontmatter: Frontmatter;
 }
 
 export interface Frontmatter extends GenericObject {
@@ -89,20 +79,25 @@ export interface Selection {
   startOffset: number;
 }
 
+interface ExtractFrontmatterResult {
+  content: string;
+  frontmatter: Frontmatter;
+}
+
 export abstract class ComposerBase {
   protected readonly app: App;
-  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  protected readonly isNewTargetFile: boolean;
 
-  private readonly insertMode: InsertMode;
-  private readonly shouldFixFootnotes: boolean;
-  private readonly shouldIncludeFrontmatter: boolean;
-  private readonly shouldMergeHeadings: boolean;
+  protected readonly plugin: Plugin;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  private readonly insertMode: InsertMode;
+  private readonly shouldFixFootnotes: boolean;
 
-  protected readonly isNewTargetFile: boolean;
-  protected readonly plugin: Plugin;
+  private readonly shouldIncludeFrontmatter: boolean;
+  private readonly shouldMergeHeadings: boolean;
 
   public constructor(options: ComposerBaseOptions, shouldIncludeFrontmatter: boolean) {
     this.insertMode = options.insertMode ?? InsertMode.Append;
@@ -142,29 +137,6 @@ export abstract class ComposerBase {
     return this.plugin.settings.isPathIgnored(path);
   }
 
-  private applyTemplate(targetContentToInsert: string): string {
-    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
-      switch (key.toLowerCase()) {
-        case 'fromPath'.toLowerCase():
-          return this.sourceFile.path;
-        case 'fromTitle'.toLowerCase():
-          return this.sourceFile.basename;
-        case 'newPath'.toLowerCase():
-          return this.targetFile.path;
-        case 'newTitle'.toLowerCase():
-          return this.targetFile.basename;
-        case 'content':
-          return targetContentToInsert;
-        case 'date':
-          return moment().format(format || 'YYYY-MM-DD');
-        case 'time':
-          return moment().format(format || 'HH:mm');
-        default:
-          throw new Error(`Invalid template key: ${key}`);
-      }
-    });
-  }
-
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
     if (this.isPathIgnored(this.targetFile.path)) {
       new Notice(
@@ -177,23 +149,6 @@ export abstract class ComposerBase {
       return false;
     }
     return true;
-  }
-
-  private extractFrontmatter(str: string): ExtractFrontmatterResult {
-    if (this.frontmatterMergeStrategy === FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
-      return {
-        content: str,
-        frontmatter: {}
-      };
-    }
-
-    const frontmatterInfo = getFrontMatterInfo(str);
-    const frontmatter = this.safeParseFrontmatter(frontmatterInfo);
-
-    return {
-      content: str.slice(frontmatterInfo.contentStart),
-      frontmatter
-    };
   }
 
   protected async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
@@ -221,88 +176,9 @@ export abstract class ComposerBase {
     }
   }
 
-  private async fixFootnotes(targetContentToInsert: string): Promise<string> {
-    if (!this.shouldFixFootnotes) {
-      return targetContentToInsert;
-    }
-
-    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
-    const sourceContent = await this.app.vault.cachedRead(this.sourceFile);
-    const targetContent = await this.app.vault.cachedRead(this.targetFile);
-
-    const FOOTNOTE_ID_REG_EXP = /\[\^(?<FootnoteId>[^\s\]]+?)\]/g;
-    const existingTargetIds = new Set<string>(Array.from(targetContent.matchAll(FOOTNOTE_ID_REG_EXP)).map((match) => match.groups?.['FootnoteId'] ?? ''));
-
-    const selections = await this.getSelections();
-
-    const sourceFootnoteIdsToCopy = new Set<string>();
-    const sourceFootnoteIdsToKeep = new Set<string>();
-    const sourceFootnoteIdsToRestore = new Set<string>();
-    const sourceFootnoteIdsToRemove = new Set<string>();
-    const targetFootnoteIdRenameMap = new Map<string, string>();
-
-    for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
-      if (this.isSelected(sourceFootnoteRef.position, selections)) {
-        this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
-        sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
-      } else {
-        sourceFootnoteIdsToKeep.add(sourceFootnoteRef.id);
-      }
-    }
-
-    for (const sourceFootnote of sourceCache?.footnotes ?? []) {
-      const sourceFootnoteContent = `\n${sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset)}`;
-
-      if (this.isSelected(sourceFootnote.position, selections)) {
-        this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
-        if (sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
-          sourceFootnoteIdsToRestore.add(sourceFootnote.id);
-        }
-      } else if (sourceFootnoteIdsToCopy.has(sourceFootnote.id)) {
-        targetContentToInsert += sourceFootnoteContent;
-      }
-
-      if (sourceFootnoteIdsToCopy.has(sourceFootnote.id) && !sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
-        sourceFootnoteIdsToRemove.add(sourceFootnote.id);
-      }
-    }
-
-    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, (_, footnoteId) => {
-      return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
-    });
-
-    this.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
-
-    return targetContentToInsert;
-  }
-
-  protected updateEditorSelections(_sourceCache: CachedMetadata | null, _sourceFootnoteIdsToRemove: Set<string>, _sourceFootnoteIdsToRestore: Set<string>): void { }
-
-  private async fixLinks(targetContentToInsert: string): Promise<string> {
-    return await updateLinksInContent({
-      app: this.app,
-      content: targetContentToInsert,
-      newSourcePathOrFile: this.targetFile,
-      oldSourcePathOrFile: this.sourceFile
-    });
-  }
-
   protected abstract getSelections(): Promise<Selection[]>;
 
   protected abstract getTemplate(): string;
-
-  private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
-    if (!this.shouldIncludeFrontmatter) {
-      return targetContentToInsert;
-    }
-
-    if (!await this.canIncludeFrontmatter()) {
-      return targetContentToInsert;
-    }
-
-    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
-    return `---\n${stringifyYaml(sourceCache?.frontmatter ?? {})}---\n${targetContentToInsert}`;
-  }
 
   protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
@@ -364,6 +240,133 @@ export abstract class ComposerBase {
     }
     const isActiveFile = this.app.workspace.getActiveFile() === this.targetFile;
     await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
+  }
+
+  protected abstract prepareBacklinkSubpaths(): Set<string>;
+
+  protected updateEditorSelections(
+    _sourceCache: CachedMetadata | null,
+    _sourceFootnoteIdsToRemove: Set<string>,
+    _sourceFootnoteIdsToRestore: Set<string>
+  ): void {
+    noop();
+  }
+
+  private applyTemplate(targetContentToInsert: string): string {
+    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
+      switch (key.toLowerCase()) {
+        case 'fromPath'.toLowerCase():
+          return this.sourceFile.path;
+        case 'fromTitle'.toLowerCase():
+          return this.sourceFile.basename;
+        case 'newPath'.toLowerCase():
+          return this.targetFile.path;
+        case 'newTitle'.toLowerCase():
+          return this.targetFile.basename;
+        case 'content':
+          return targetContentToInsert;
+        case 'date':
+          return moment().format(format || 'YYYY-MM-DD');
+        case 'time':
+          return moment().format(format || 'HH:mm');
+        default:
+          throw new Error(`Invalid template key: ${key}`);
+      }
+    });
+  }
+
+  private extractFrontmatter(str: string): ExtractFrontmatterResult {
+    if (this.frontmatterMergeStrategy === FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
+      return {
+        content: str,
+        frontmatter: {}
+      };
+    }
+
+    const frontmatterInfo = getFrontMatterInfo(str);
+    const frontmatter = this.safeParseFrontmatter(frontmatterInfo);
+
+    return {
+      content: str.slice(frontmatterInfo.contentStart),
+      frontmatter
+    };
+  }
+
+  private async fixFootnotes(targetContentToInsert: string): Promise<string> {
+    if (!this.shouldFixFootnotes) {
+      return targetContentToInsert;
+    }
+
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+    const sourceContent = await this.app.vault.cachedRead(this.sourceFile);
+    const targetContent = await this.app.vault.cachedRead(this.targetFile);
+
+    const FOOTNOTE_ID_REG_EXP = /\[\^(?<FootnoteId>[^\s\]]+?)\]/g;
+    const existingTargetIds = new Set<string>(Array.from(targetContent.matchAll(FOOTNOTE_ID_REG_EXP)).map((match) => match.groups?.['FootnoteId'] ?? ''));
+
+    const selections = await this.getSelections();
+
+    const sourceFootnoteIdsToCopy = new Set<string>();
+    const sourceFootnoteIdsToKeep = new Set<string>();
+    const sourceFootnoteIdsToRestore = new Set<string>();
+    const sourceFootnoteIdsToRemove = new Set<string>();
+    const targetFootnoteIdRenameMap = new Map<string, string>();
+
+    for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
+      if (this.isSelected(sourceFootnoteRef.position, selections)) {
+        this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
+        sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
+      } else {
+        sourceFootnoteIdsToKeep.add(sourceFootnoteRef.id);
+      }
+    }
+
+    for (const sourceFootnote of sourceCache?.footnotes ?? []) {
+      const sourceFootnoteContent = `\n${sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset)}`;
+
+      if (this.isSelected(sourceFootnote.position, selections)) {
+        this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
+        if (sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
+          sourceFootnoteIdsToRestore.add(sourceFootnote.id);
+        }
+      } else if (sourceFootnoteIdsToCopy.has(sourceFootnote.id)) {
+        targetContentToInsert += sourceFootnoteContent;
+      }
+
+      if (sourceFootnoteIdsToCopy.has(sourceFootnote.id) && !sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
+        sourceFootnoteIdsToRemove.add(sourceFootnote.id);
+      }
+    }
+
+    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, (_, footnoteId) => {
+      return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
+    });
+
+    this.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
+
+    return targetContentToInsert;
+  }
+
+  private async fixLinks(targetContentToInsert: string): Promise<string> {
+    return await updateLinksInContent({
+      app: this.app,
+      content: targetContentToInsert,
+      newSourcePathOrFile: this.targetFile,
+      oldSourcePathOrFile: this.sourceFile
+    });
+  }
+
+  private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
+    if (!this.shouldIncludeFrontmatter) {
+      return targetContentToInsert;
+    }
+
+    if (!await this.canIncludeFrontmatter()) {
+      return targetContentToInsert;
+    }
+
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+    return `---\n${stringifyYaml(sourceCache?.frontmatter ?? {})}---\n${targetContentToInsert}`;
   }
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
@@ -449,8 +452,6 @@ export abstract class ComposerBase {
     }
     return oldObj;
   }
-
-  protected abstract prepareBacklinkSubpaths(): Set<string>;
 
   private async prepareBacklinksToFix(): Promise<Map<string, string[]>> {
     const selections = await this.getSelections();

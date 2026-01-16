@@ -1,10 +1,20 @@
-import type { TFile } from "obsidian";
-import { INVALID_CHARACTERS_REG_EXP, TRAILING_DOTS_OR_SPACES_REG_EXP } from "../FilenameValidation.ts";
-import { ItemSelectorBase, type ItemSelectorBaseOptions, type SelectItemResult } from "./ItemSelectorBase.ts";
-import { trimEnd } from "obsidian-dev-utils/String";
-import { addAlias } from "obsidian-dev-utils/obsidian/FileManager";
-import { FrontmatterTitleMode } from "../PluginSettings.ts";
-import type { Frontmatter } from "../Composers/ComposerBase.ts";
+import type { TFile } from 'obsidian';
+
+import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
+import { trimEnd } from 'obsidian-dev-utils/String';
+
+import type { Frontmatter } from '../Composers/ComposerBase.ts';
+import type {
+  ItemSelectorBaseOptions,
+  SelectItemResult
+} from './ItemSelectorBase.ts';
+
+import {
+  INVALID_CHARACTERS_REG_EXP,
+  TRAILING_DOTS_OR_SPACES_REG_EXP
+} from '../FilenameValidation.ts';
+import { FrontmatterTitleMode } from '../PluginSettings.ts';
+import { ItemSelectorBase } from './ItemSelectorBase.ts';
 
 interface SplitItemSelectorOptions extends ItemSelectorBaseOptions {
   shouldAllowOnlyCurrentFolder: boolean;
@@ -26,21 +36,21 @@ export class SplitItemSelector extends ItemSelectorBase {
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
       if (existingFile && this.plugin.settings.isPathIgnored(existingFile.path)) {
         return {
-          targetFile: existingFile,
-          isNewTargetFile: false
+          isNewTargetFile: false,
+          targetFile: existingFile
         };
       }
 
       return {
-        targetFile: await this.createNewMarkdownFileFromLinktext(this.inputValue),
-        isNewTargetFile: true
+        isNewTargetFile: true,
+        targetFile: await this.createNewMarkdownFileFromLinktext(this.inputValue)
       };
     }
 
     if (this.item.type === 'unresolved') {
       return {
-        targetFile: await this.createNewMarkdownFileFromLinktext(this.item.linktext ?? ''),
-        isNewTargetFile: true
+        isNewTargetFile: true,
+        targetFile: await this.createNewMarkdownFileFromLinktext(this.item.linktext ?? '')
       };
     }
 
@@ -50,14 +60,14 @@ export class SplitItemSelector extends ItemSelectorBase {
       }
 
       return {
-        targetFile: this.item.file,
-        isNewTargetFile: false
+        isNewTargetFile: false,
+        targetFile: this.item.file
       };
     }
 
     return {
-      targetFile: await this.createNewMarkdownFileFromLinktext(this.inputValue),
-      isNewTargetFile: true
+      isNewTargetFile: true,
+      targetFile: await this.createNewMarkdownFileFromLinktext(this.inputValue)
     };
   }
 

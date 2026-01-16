@@ -14,8 +14,8 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { prepareForMergeFile } from '../Modals/MergeFileModal.ts';
 import { MergeComposer } from '../Composers/MergeComposer.ts';
+import { prepareForMergeFile } from '../Modals/MergeFileModal.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, file: null | TFile) {
@@ -51,16 +51,16 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
     }
 
     const composer = new MergeComposer({
-      plugin: this.plugin,
-      sourceFile: this.file,
-      insertMode: prepareForMergeFileResult.insertMode,
-      shouldFixFootnotes: prepareForMergeFileResult.shouldFixFootnotes,
-      shouldAllowOnlyCurrentFolder: prepareForMergeFileResult.shouldAllowOnlyCurrentFolder,
-      shouldMergeHeadings: prepareForMergeFileResult.shouldMergeHeadings,
-      shouldAllowSplitIntoUnresolvedPath: prepareForMergeFileResult.shouldAllowSplitIntoUnresolvedPath,
       frontmatterMergeStrategy: prepareForMergeFileResult.frontmatterMergeStrategy,
-      targetFile: prepareForMergeFileResult.targetFile,
+      insertMode: prepareForMergeFileResult.insertMode,
       isNewTargetFile: prepareForMergeFileResult.isNewTargetFile,
+      plugin: this.plugin,
+      shouldAllowOnlyCurrentFolder: prepareForMergeFileResult.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: prepareForMergeFileResult.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: prepareForMergeFileResult.shouldFixFootnotes,
+      shouldMergeHeadings: prepareForMergeFileResult.shouldMergeHeadings,
+      sourceFile: this.file,
+      targetFile: prepareForMergeFileResult.targetFile
     });
     await composer.mergeFile();
   }

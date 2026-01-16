@@ -26,6 +26,8 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
+import type { Plugin } from '../Plugin.ts';
+
 export interface Item extends SearchResultContainer {
   alias?: string;
   bookmarkPath?: string;
@@ -38,10 +40,9 @@ export interface Item extends SearchResultContainer {
 
 type SearchFn = (text: string) => null | SearchResult;
 
-import type { Plugin } from '../Plugin.ts';
-
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
+  protected shouldAllowOnlyCurrentFolder: boolean;
   protected shouldShowAlias: boolean;
   protected shouldShowImages: boolean;
   protected shouldShowMarkdown: boolean;
@@ -51,7 +52,6 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowUnresolved: boolean;
   private readonly createButtonEl: HTMLElement;
   private readonly shouldShowAllTypes: boolean;
-  protected shouldAllowOnlyCurrentFolder: boolean;
 
   private get supportsCreate(): boolean {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
