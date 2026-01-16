@@ -1,37 +1,69 @@
-import { Editor, Keymap, TFile } from 'obsidian';
-import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
-
-import { getInsertModeFromEvent, InsertMode, type Selection } from '../Composers/ComposerBase.ts';
-
-import type { Item } from './SuggestModalBase.ts';
+import type { PromiseResolve } from 'obsidian-dev-utils/Async';
 
 import {
-  FrontmatterMergeStrategy
-} from '../PluginSettings.ts';
+  Editor,
+  Keymap,
+  TFile
+} from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+
+import type { Selection } from '../Composers/ComposerBase.ts';
+import type { InsertMode } from '../InsertMode.ts';
+import type { Plugin } from '../Plugin.ts';
+import type { Item } from './SuggestModalBase.ts';
+
+import { getInsertModeFromEvent } from '../Composers/ComposerBase.ts';
+import { extractHeading } from '../Headings.ts';
+import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
+import { FrontmatterMergeStrategy } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
-import type { Plugin } from '../Plugin.ts';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
-import { extractHeading } from '../Headings.ts';
+
+interface PrepareForSplitFileResult {
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  insertMode: InsertMode;
+  isNewTargetFile: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldIncludeFrontmatter: boolean;
+  shouldMergeHeadings: boolean;
+  targetFile: TFile;
+}
+
+interface SplitFileModalResult {
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  inputValue: string;
+  insertMode: InsertMode;
+  isMod: boolean;
+  item: Item | null;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldIncludeFrontmatter: boolean;
+  shouldMergeHeadings: boolean;
+  shouldTreatTitleAsPath: boolean;
+}
 
 class SplitFileModal extends SuggestModalBase {
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  private isSelected = false;
+  private shouldAllowSplitIntoUnresolvedPath: boolean;
+  private shouldFixFootnotes: boolean;
+  private shouldIncludeFrontmatter: boolean;
+  private shouldMergeHeadings: boolean;
+  private shouldTreatTitleAsPath: boolean;
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
-  private isSelected = false;
-  private shouldIncludeFrontmatter: boolean;
-  private shouldTreatTitleAsPath: boolean;
-  private shouldFixFootnotes: boolean;
-  private shouldMergeHeadings: boolean;
-  private shouldAllowSplitIntoUnresolvedPath: boolean;
-  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
-  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
-    this.isSelected = true;
-    super.selectSuggestion(value, evt);
-  }
-
-  public constructor(plugin: Plugin, private readonly heading: string, sourceFile: TFile, private editor: Editor, private readonly promiseResolve: PromiseResolve<SplitFileModalResult | null>) {
+  public constructor(
+    plugin: Plugin,
+    private readonly heading: string,
+    sourceFile: TFile,
+    private readonly editor: Editor,
+    private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>
+  ) {
     super(plugin, sourceFile);
 
     this.shouldIncludeFrontmatter = plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
@@ -52,12 +84,6 @@ class SplitFileModal extends SuggestModalBase {
     invokeAsyncSafely(() => this.buildInstructions());
   }
 
-  public override onOpen(): void {
-    super.onOpen();
-    this.inputEl.value = this.heading;
-    this.updateSuggestions();
-  }
-
   public override onClose(): void {
     super.onClose();
     if (!this.isSelected) {
@@ -65,20 +91,30 @@ class SplitFileModal extends SuggestModalBase {
     }
   }
 
+  public override onOpen(): void {
+    super.onOpen();
+    this.inputEl.value = this.heading;
+    this.updateSuggestions();
+  }
+
+  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    super.selectSuggestion(value, evt);
+  }
 
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
     this.promiseResolve({
-      item,
-      isMod: Keymap.isModifier(evt, 'Mod'),
+      frontmatterMergeStrategy: this.frontmatterMergeStrategy,
       inputValue: this.inputEl.value,
       insertMode: getInsertModeFromEvent(evt),
-      shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
-      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
-      shouldFixFootnotes: this.shouldFixFootnotes,
+      isMod: Keymap.isModifier(evt, 'Mod'),
+      item,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
-      shouldMergeHeadings: this.shouldMergeHeadings,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
-      frontmatterMergeStrategy: this.frontmatterMergeStrategy
+      shouldFixFootnotes: this.shouldFixFootnotes,
+      shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
+      shouldMergeHeadings: this.shouldMergeHeadings,
+      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath
     });
   }
 
@@ -118,11 +154,11 @@ class SplitFileModal extends SuggestModalBase {
 
     builder.addKeyboardCommand({
       key: 'Escape',
-      purpose: 'to dismiss',
       onKey: () => {
         this.close();
         return false;
-      }
+      },
+      purpose: 'to dismiss'
     });
 
     builder.addCheckbox({
@@ -239,33 +275,6 @@ class SplitFileModal extends SuggestModalBase {
     builder.build(this);
   }
 
-  private async getSelections(): Promise<Selection[]> {
-    if (this.editor) {
-      const selections = this.editor.listSelections().map((editorSelection) => {
-        const selection: Selection = {
-          endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
-          startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
-        };
-
-        if (selection.startOffset > selection.endOffset) {
-          [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
-        }
-
-        return selection;
-      });
-
-      return selections.sort((a, b) => a.startOffset - b.startOffset);
-    }
-
-    const content = await this.app.vault.read(this.sourceFile);
-
-    return [{
-      endOffset: content.length,
-      startOffset: 0
-    }];
-  }
-
-
   private async canIncludeFrontmatter(): Promise<boolean> {
     const sourceCache = await getCacheSafe(this.app, this.sourceFile);
 
@@ -285,38 +294,32 @@ class SplitFileModal extends SuggestModalBase {
 
     return true;
   }
+
+  private async getSelections(): Promise<Selection[]> {
+    const selections = this.editor.listSelections().map((editorSelection) => {
+      const selection: Selection = {
+        endOffset: this.editor.posToOffset(editorSelection.anchor),
+        startOffset: this.editor.posToOffset(editorSelection.head)
+      };
+
+      if (selection.startOffset > selection.endOffset) {
+        [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
+      }
+
+      return selection;
+    });
+
+    return selections.sort((a, b) => a.startOffset - b.startOffset);
+  }
 }
 
-interface SplitFileModalResult {
-  item: Item | null;
-  isMod: boolean;
-  inputValue: string;
-  insertMode: InsertMode;
-  shouldIncludeFrontmatter: boolean;
-  shouldTreatTitleAsPath: boolean;
-  shouldFixFootnotes: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldMergeHeadings: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-}
-
-interface PrepareForSplitFileResult {
-  insertMode: InsertMode;
-  shouldIncludeFrontmatter: boolean;
-  shouldFixFootnotes: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldMergeHeadings: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  targetFile: TFile;
-  isNewTargetFile: boolean;
-}
-
-export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
-  heading ||= extractHeading(editor);
-  const result = await new Promise<SplitFileModalResult | null>((resolve) => {
-    const modal = new SplitFileModal(plugin, heading ?? '', sourceFile, editor, resolve);
+export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, editor: Editor, heading?: string): Promise<null | PrepareForSplitFileResult> {
+  if (heading === '') {
+    heading = undefined;
+  }
+  heading ??= extractHeading(editor);
+  const result = await new Promise<null | SplitFileModalResult>((resolve) => {
+    const modal = new SplitFileModal(plugin, heading, sourceFile, editor, resolve);
     modal.open();
   });
 
@@ -325,25 +328,25 @@ export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, edi
   }
 
   const selectItemResult = await new SplitItemSelector({
-    plugin,
-    sourceFile,
-    item: result.item,
-    isMod: result.isMod,
     inputValue: result.inputValue,
+    isMod: result.isMod,
+    item: result.item,
+    plugin,
     shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldTreatTitleAsPath: !heading && result.shouldTreatTitleAsPath
+    shouldTreatTitleAsPath: !heading && result.shouldTreatTitleAsPath,
+    sourceFile
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
-    insertMode: result.insertMode,
-    shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
-    shouldFixFootnotes: result.shouldFixFootnotes,
-    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldMergeHeadings: result.shouldMergeHeadings,
-    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
     frontmatterMergeStrategy: result.frontmatterMergeStrategy,
-    targetFile: selectItemResult.targetFile,
-    isNewTargetFile: selectItemResult.isNewTargetFile
+    insertMode: result.insertMode,
+    isNewTargetFile: selectItemResult.isNewTargetFile,
+    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
+    shouldFixFootnotes: result.shouldFixFootnotes,
+    shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
+    shouldMergeHeadings: result.shouldMergeHeadings,
+    targetFile: selectItemResult.targetFile
   };
 
   return prepareForSplitFileResult;

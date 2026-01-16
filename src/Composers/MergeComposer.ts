@@ -1,56 +1,25 @@
-import { editLinks, extractLinkFile, updateLink } from "obsidian-dev-utils/obsidian/Link";
-import { ComposerBase, type ComposerBaseOptions, type Selection } from "./ComposerBase.ts";
-import type { MaybeReturn } from "obsidian-dev-utils/Type";
-import { Action } from "../PluginSettings.ts";
-import { Notice } from "obsidian";
-import { createFragmentAsync } from "obsidian-dev-utils/HTMLElement";
-import { renderInternalLink } from "obsidian-dev-utils/obsidian/Markdown";
+import type { MaybeReturn } from 'obsidian-dev-utils/Type';
+
+import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import {
+  editLinks,
+  extractLinkFile,
+  updateLink
+} from 'obsidian-dev-utils/obsidian/Link';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+
+import type {
+  ComposerBaseOptions,
+  Selection
+} from './ComposerBase.ts';
+
+import { Action } from '../PluginSettings.ts';
+import { ComposerBase } from './ComposerBase.ts';
 
 export class MergeComposer extends ComposerBase {
-  protected override async getSelections(): Promise<Selection[]> {
-    const content = await this.app.vault.read(this.sourceFile);
-
-    return [{
-      endOffset: content.length,
-      startOffset: 0
-    }];
-  }
-
   public constructor(options: ComposerBaseOptions) {
     super(options, true);
-  }
-
-  protected override async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
-    await super.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
-
-    let linkIndex = 0;
-    await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
-      linkIndex++;
-      const linkFile = extractLinkFile(this.app, link, this.targetFile);
-      if (linkFile !== this.sourceFile) {
-        return;
-      }
-
-      updatedFilePaths.add(this.targetFile.path);
-      updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
-
-      return updateLink({
-        app: this.app,
-        link,
-        newSourcePathOrFile: this.targetFile,
-        newTargetPathOrFile: this.targetFile,
-        oldTargetPathOrFile: this.sourceFile,
-        shouldUpdateFileNameAlias: true
-      });
-    });
-  }
-
-  protected override getTemplate(): string {
-    return this.plugin.settings.mergeTemplate;
-  }
-
-  protected override prepareBacklinkSubpaths(): Set<string> {
-    return new Set(['']);
   }
 
   public async mergeFile(): Promise<void> {
@@ -89,5 +58,47 @@ export class MergeComposer extends ComposerBase {
     } finally {
       notice?.hide();
     }
+  }
+
+  protected override async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
+    await super.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
+
+    let linkIndex = 0;
+    await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
+      linkIndex++;
+      const linkFile = extractLinkFile(this.app, link, this.targetFile);
+      if (linkFile !== this.sourceFile) {
+        return;
+      }
+
+      updatedFilePaths.add(this.targetFile.path);
+      updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
+
+      return updateLink({
+        app: this.app,
+        link,
+        newSourcePathOrFile: this.targetFile,
+        newTargetPathOrFile: this.targetFile,
+        oldTargetPathOrFile: this.sourceFile,
+        shouldUpdateFileNameAlias: true
+      });
+    });
+  }
+
+  protected override async getSelections(): Promise<Selection[]> {
+    const content = await this.app.vault.read(this.sourceFile);
+
+    return [{
+      endOffset: content.length,
+      startOffset: 0
+    }];
+  }
+
+  protected override getTemplate(): string {
+    return this.plugin.settings.mergeTemplate;
+  }
+
+  protected override prepareBacklinkSubpaths(): Set<string> {
+    return new Set(['']);
   }
 }

@@ -18,9 +18,7 @@ import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import type { Level } from '../MarkdownHeadingDocument.ts';
 import type { Plugin } from '../Plugin.ts';
 
-import {
-  getSelectionUnderHeading
-} from '../Composers/ComposerBase.ts';
+import { getSelectionUnderHeading } from '../Composers/ComposerBase.ts';
 import { SplitComposer } from '../Composers/SplitComposer.ts';
 import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
 
@@ -90,18 +88,18 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
         isMod: false,
         item: null,
         plugin: this.plugin,
-        sourceFile: this.file,
         shouldAllowOnlyCurrentFolder: this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault,
-        shouldTreatTitleAsPath: this.plugin.settings.shouldTreatTitleAsPathByDefault
+        shouldTreatTitleAsPath: this.plugin.settings.shouldTreatTitleAsPathByDefault,
+        sourceFile: this.file
       }).selectItem();
 
       const composer = new SplitComposer({
         editor: this.editor,
         heading: headingInfo.heading,
+        isNewTargetFile: selectItemResult.isNewTargetFile,
         plugin: this.plugin,
         sourceFile: this.file,
-        targetFile: selectItemResult.targetFile,
-        isNewTargetFile: selectItemResult.isNewTargetFile
+        targetFile: selectItemResult.targetFile
       });
       await composer.splitFile();
     }

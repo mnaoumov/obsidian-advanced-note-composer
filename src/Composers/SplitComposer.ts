@@ -1,10 +1,24 @@
-import { Notice } from "obsidian";
-import type { CachedMetadata, Editor, EditorSelection, Pos } from "obsidian";
-import { ComposerBase, type ComposerBaseOptions } from "./ComposerBase.ts";
-import { createFragmentAsync } from "obsidian-dev-utils/HTMLElement";
-import { renderInternalLink } from "obsidian-dev-utils/obsidian/Markdown";
-import { Action, TextAfterExtractionMode } from "../PluginSettings.ts";
-import type { Selection } from "./ComposerBase.ts";
+import type {
+  CachedMetadata,
+  Editor,
+  EditorSelection,
+  Pos
+} from 'obsidian';
+
+import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+
+import type {
+  ComposerBaseOptions,
+  Selection
+} from './ComposerBase.ts';
+
+import {
+  Action,
+  TextAfterExtractionMode
+} from '../PluginSettings.ts';
+import { ComposerBase } from './ComposerBase.ts';
 
 interface SplitComposerOptions extends ComposerBaseOptions {
   editor: Editor;
@@ -40,7 +54,7 @@ export class SplitComposer extends ComposerBase {
     try {
       this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-      await this.insertIntoTargetFile(this.editor.getSelection() ?? '');
+      await this.insertIntoTargetFile(this.editor.getSelection());
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
@@ -60,6 +74,23 @@ export class SplitComposer extends ComposerBase {
     } finally {
       notice.hide();
     }
+  }
+
+  protected override async getSelections(): Promise<Selection[]> {
+    const selections = this.editor.listSelections().map((editorSelection) => {
+      const selection: Selection = {
+        endOffset: this.editor.posToOffset(editorSelection.anchor),
+        startOffset: this.editor.posToOffset(editorSelection.head)
+      };
+
+      if (selection.startOffset > selection.endOffset) {
+        [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
+      }
+
+      return selection;
+    });
+
+    return selections.sort((a, b) => a.startOffset - b.startOffset);
   }
 
   protected override getTemplate(): string {
@@ -82,7 +113,11 @@ export class SplitComposer extends ComposerBase {
     return new Set();
   }
 
-  protected override updateEditorSelections(sourceCache: CachedMetadata | null, sourceFootnoteIdsToRemove: Set<string>, sourceFootnoteIdsToRestore: Set<string>): void {
+  protected override updateEditorSelections(
+    sourceCache: CachedMetadata | null,
+    sourceFootnoteIdsToRemove: Set<string>,
+    sourceFootnoteIdsToRestore: Set<string>
+  ): void {
     let editorSelections = this.editor.listSelections();
 
     for (const sourceFootnote of sourceCache?.footnotes ?? []) {
@@ -135,22 +170,5 @@ export class SplitComposer extends ComposerBase {
     }
 
     return result;
-  }
-
-  protected override async getSelections(): Promise<Selection[]> {
-    const selections = this.editor.listSelections().map((editorSelection) => {
-      const selection: Selection = {
-        endOffset: this.editor?.posToOffset(editorSelection.anchor) ?? 0,
-        startOffset: this.editor?.posToOffset(editorSelection.head) ?? 0
-      };
-
-      if (selection.startOffset > selection.endOffset) {
-        [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
-      }
-
-      return selection;
-    });
-
-    return selections.sort((a, b) => a.startOffset - b.startOffset);
   }
 }

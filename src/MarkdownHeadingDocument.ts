@@ -10,7 +10,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/String';
 
-import type { InsertMode } from './Composers/ComposerBase.ts';
+import { InsertMode } from './InsertMode.ts';
 
 // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic number.
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -34,7 +34,7 @@ class MarkdownHeadingDocument {
   }
 
   public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
-    const mergedNode = insertMode === 'append' ? this.node.append(doc.node) : doc.node.append(this.node);
+    const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
     return new MarkdownHeadingDocument(this.frontmatter, mergedNode);
   }
 

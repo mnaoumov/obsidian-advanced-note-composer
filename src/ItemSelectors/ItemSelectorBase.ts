@@ -1,28 +1,31 @@
-import type { App, TFile } from "obsidian";
+import type {
+  App,
+  TFile
+} from 'obsidian';
 
-export interface SelectItemResult {
-  targetFile: TFile;
-  isNewTargetFile: boolean;
-}
-
-import type { Plugin } from "../Plugin.ts";
-import type { Item } from "../Modals/SuggestModalBase.ts";
+import type { Item } from '../Modals/SuggestModalBase.ts';
+import type { Plugin } from '../Plugin.ts';
 
 export interface ItemSelectorBaseOptions {
+  inputValue: string;
+  isMod: boolean;
+  item: Item | null;
   plugin: Plugin;
   sourceFile: TFile;
-  item: Item | null;
-  isMod: boolean;
-  inputValue: string;
+}
+
+export interface SelectItemResult {
+  isNewTargetFile: boolean;
+  targetFile: TFile;
 }
 
 export abstract class ItemSelectorBase {
   protected readonly app: App;
+  protected readonly inputValue: string;
+  protected readonly isMod: boolean;
+  protected readonly item: Item | null;
   protected readonly plugin: Plugin;
   protected readonly sourceFile: TFile;
-  protected readonly item: Item | null;
-  protected readonly isMod: boolean;
-  protected readonly inputValue: string;
 
   public constructor(options: ItemSelectorBaseOptions) {
     this.app = options.plugin.app;

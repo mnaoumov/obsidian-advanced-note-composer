@@ -14,24 +14,43 @@ import {
 } from 'obsidian-dev-utils/HTMLElement';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
-import {
-  getInsertModeFromEvent,
-  InsertMode
-} from '../Composers/ComposerBase.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
-import {
-  FrontmatterMergeStrategy
-} from '../PluginSettings.ts';
+import { getInsertModeFromEvent } from '../Composers/ComposerBase.ts';
+import { InsertMode } from '../InsertMode.ts';
+import { MergeItemSelector } from '../ItemSelectors/MergeItemSelector.ts';
+import { FrontmatterMergeStrategy } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
-import { MergeItemSelector } from '../ItemSelectors/MergeItemSelector.ts';
 
 interface ConfirmDialogModalResult {
   insertMode: InsertMode;
   isConfirmed: boolean;
   shouldAskBeforeMerging: boolean;
+}
+
+interface MergeFileModalResult {
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  inputValue: string;
+  insertMode: InsertMode;
+  isMod: boolean;
+  item: Item | null;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldMergeHeadings: boolean;
+}
+
+interface PrepareForMergeFileResult {
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  insertMode: InsertMode;
+  isNewTargetFile: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldMergeHeadings: boolean;
+  targetFile: TFile;
 }
 
 class ConfirmDialogModal extends Modal {
@@ -158,18 +177,11 @@ class ConfirmDialogModal extends Modal {
 }
 
 class MergeFileModal extends SuggestModalBase {
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private isSelected = false;
+  private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
   private shouldMergeHeadings: boolean;
-  private shouldAllowSplitIntoUnresolvedPath: boolean;
-  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
-
-  public override onClose(): void {
-    super.onClose();
-    if (!this.isSelected) {
-      this.promiseResolve(null);
-    }
-  }
 
   public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>) {
     super(plugin, sourceFile);
@@ -219,11 +231,11 @@ class MergeFileModal extends SuggestModalBase {
 
     builder.addKeyboardCommand({
       key: 'Escape',
-      purpose: 'to dismiss',
       onKey: () => {
         this.close();
         return false;
-      }
+      },
+      purpose: 'to dismiss'
     });
 
     builder.addCheckbox({
@@ -302,50 +314,34 @@ class MergeFileModal extends SuggestModalBase {
     builder.build(this);
   }
 
-  protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
-    this.promiseResolve({
-      item,
-      isMod: Keymap.isModifier(evt, 'Mod'),
-      inputValue: this.inputEl.value,
-      insertMode: getInsertModeFromEvent(evt),
-      shouldFixFootnotes: this.shouldFixFootnotes,
-      shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
-      shouldMergeHeadings: this.shouldMergeHeadings,
-      shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
-      frontmatterMergeStrategy: this.frontmatterMergeStrategy
-    });
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve(null);
+    }
   }
 
   public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
     super.selectSuggestion(value, evt);
   }
+
+  protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
+    this.promiseResolve({
+      frontmatterMergeStrategy: this.frontmatterMergeStrategy,
+      inputValue: this.inputEl.value,
+      insertMode: getInsertModeFromEvent(evt),
+      isMod: Keymap.isModifier(evt, 'Mod'),
+      item,
+      shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: this.shouldFixFootnotes,
+      shouldMergeHeadings: this.shouldMergeHeadings
+    });
+  }
 }
 
-interface MergeFileModalResult {
-  item: Item | null;
-  isMod: boolean;
-  inputValue: string;
-  insertMode: InsertMode;
-  shouldFixFootnotes: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldMergeHeadings: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-}
-
-interface PrepareForMergeFileResult {
-  insertMode: InsertMode;
-  shouldFixFootnotes: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldMergeHeadings: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  targetFile: TFile;
-  isNewTargetFile: boolean;
-}
-
-export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
+export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Promise<null | PrepareForMergeFileResult> {
   const result = await new Promise<MergeFileModalResult | null>((resolve) => {
     const modal = new MergeFileModal(plugin, sourceFile, resolve);
     modal.open();
@@ -356,22 +352,22 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
   }
 
   const selectItemResult = await new MergeItemSelector({
-    plugin,
-    sourceFile,
-    item: result.item,
+    inputValue: result.inputValue,
     isMod: result.isMod,
-    inputValue: result.inputValue
+    item: result.item,
+    plugin,
+    sourceFile
   }).selectItem();
 
   const prepareForMergeFileResult: PrepareForMergeFileResult = {
-    insertMode: result.insertMode,
-    shouldFixFootnotes: result.shouldFixFootnotes,
-    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldMergeHeadings: result.shouldMergeHeadings,
-    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
     frontmatterMergeStrategy: result.frontmatterMergeStrategy,
-    targetFile: selectItemResult.targetFile,
-    isNewTargetFile: selectItemResult.isNewTargetFile
+    insertMode: result.insertMode,
+    isNewTargetFile: selectItemResult.isNewTargetFile,
+    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
+    shouldFixFootnotes: result.shouldFixFootnotes,
+    shouldMergeHeadings: result.shouldMergeHeadings,
+    targetFile: selectItemResult.targetFile
   };
 
   if (!plugin.settings.shouldAskBeforeMerging) {

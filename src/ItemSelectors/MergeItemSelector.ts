@@ -1,11 +1,16 @@
-import { join } from "obsidian-dev-utils/Path";
-import { ItemSelectorBase, type ItemSelectorBaseOptions, type SelectItemResult } from "./ItemSelectorBase.ts";
+import { join } from 'obsidian-dev-utils/Path';
+
+import type {
+  ItemSelectorBaseOptions,
+  SelectItemResult
+} from './ItemSelectorBase.ts';
+
+import { ItemSelectorBase } from './ItemSelectorBase.ts';
 
 export class MergeItemSelector extends ItemSelectorBase {
   public constructor(options: ItemSelectorBaseOptions) {
     super(options);
   }
-
 
   public override async selectItem(): Promise<SelectItemResult> {
     if (this.isMod || this.item?.type === 'unresolved') {
@@ -15,14 +20,14 @@ export class MergeItemSelector extends ItemSelectorBase {
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
       if (existingFile && this.plugin.settings.isPathIgnored(existingFile.path)) {
         return {
-          targetFile: existingFile,
-          isNewTargetFile: false
+          isNewTargetFile: false,
+          targetFile: existingFile
         };
       }
 
       return {
-        targetFile: await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, ''),
-        isNewTargetFile: true
+        isNewTargetFile: true,
+        targetFile: await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '')
       };
     }
 
@@ -30,8 +35,8 @@ export class MergeItemSelector extends ItemSelectorBase {
       const bookmarkFile = this.app.vault.getFileByPath(this.item.item.path ?? '');
       if (bookmarkFile) {
         return {
-          targetFile: bookmarkFile,
-          isNewTargetFile: false
+          isNewTargetFile: false,
+          targetFile: bookmarkFile
         };
       }
 
@@ -40,8 +45,8 @@ export class MergeItemSelector extends ItemSelectorBase {
 
     if (this.item?.file) {
       return {
-        targetFile: this.item.file,
-        isNewTargetFile: false
+        isNewTargetFile: false,
+        targetFile: this.item.file
       };
     }
 
