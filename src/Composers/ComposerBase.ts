@@ -90,31 +90,18 @@ export interface Selection {
 }
 
 export abstract class ComposerBase {
-  public readonly app: App;
-  public frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  protected readonly app: App;
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
-  public readonly insertMode: InsertMode;
-  public shouldAllowOnlyCurrentFolder: boolean;
-  public shouldAllowSplitIntoUnresolvedPath: boolean;
-  public shouldFixFootnotes: boolean;
-  public shouldIncludeFrontmatter: boolean;
-  public shouldMergeHeadings: boolean;
-  public shouldShowNotice: boolean;
-  public shouldTreatTitleAsPath: boolean;
-  public readonly sourceFile: TFile;
-  public get targetFile(): TFile {
-    if (!this._targetFile) {
-      throw new Error('Target file not set');
-    }
-    return this._targetFile;
-  }
-  public set targetFile(value: TFile) {
-    this._targetFile = value;
-  }
+  private readonly insertMode: InsertMode;
+  private readonly shouldFixFootnotes: boolean;
+  private readonly shouldIncludeFrontmatter: boolean;
+  private readonly shouldMergeHeadings: boolean;
+  protected readonly shouldShowNotice: boolean;
+  protected readonly sourceFile: TFile;
+  protected readonly targetFile: TFile;
 
-  protected _targetFile?: TFile;
-
-  public isNewTargetFile = false;
+  protected readonly isNewTargetFile: boolean;
   protected readonly plugin: Plugin;
 
   public constructor(options: ComposerBaseOptions, shouldIncludeFrontmatter: boolean) {
@@ -123,13 +110,12 @@ export abstract class ComposerBase {
     this.sourceFile = options.sourceFile;
     this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldTreatTitleAsPath = this.plugin.settings.shouldTreatTitleAsPathByDefault;
     this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldAllowOnlyCurrentFolder = options.shouldAllowOnlyCurrentFolder ?? this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
     this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = options.shouldAllowSplitIntoUnresolvedPath ?? this.plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.settings.defaultFrontmatterMergeStrategy;
     this.shouldShowNotice = options.shouldShowNotice ?? true;
+    this.targetFile = options.targetFile;
+    this.isNewTargetFile = options.isNewTargetFile;
   }
 
   public async canIncludeFrontmatter(): Promise<boolean> {

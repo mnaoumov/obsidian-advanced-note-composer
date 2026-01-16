@@ -21,7 +21,6 @@ export class SplitComposer extends ComposerBase {
     super(options, options.shouldIncludeFrontmatter ?? options.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
     this.heading = options.heading ?? '';
-    this.shouldTreatTitleAsPath = options.shouldTreatTitleAsPath ?? this.plugin.settings.shouldTreatTitleAsPathByDefault;
     this.initHeading();
   }
 
@@ -166,10 +165,6 @@ export class SplitComposer extends ComposerBase {
         const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
         this.heading = extractedHeading ?? '';
       }
-    }
-
-    if (this.heading) {
-      this.shouldTreatTitleAsPath = false;
     }
   }
 }
