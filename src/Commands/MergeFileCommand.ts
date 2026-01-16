@@ -52,16 +52,16 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
 
     const composer = new MergeComposer({
       plugin: this.plugin,
-      sourceFile: this.file
+      sourceFile: this.file,
+      insertMode: prepareForMergeFileResult.insertMode,
+      shouldFixFootnotes: prepareForMergeFileResult.shouldFixFootnotes,
+      shouldAllowOnlyCurrentFolder: prepareForMergeFileResult.shouldAllowOnlyCurrentFolder,
+      shouldMergeHeadings: prepareForMergeFileResult.shouldMergeHeadings,
+      shouldAllowSplitIntoUnresolvedPath: prepareForMergeFileResult.shouldAllowSplitIntoUnresolvedPath,
+      frontmatterMergeStrategy: prepareForMergeFileResult.frontmatterMergeStrategy,
+      targetFile: prepareForMergeFileResult.targetFile,
+      isNewTargetFile: prepareForMergeFileResult.isNewTargetFile,
     });
-    composer.insertMode = prepareForMergeFileResult.insertMode;
-    composer.shouldFixFootnotes = prepareForMergeFileResult.shouldFixFootnotes;
-    composer.shouldAllowOnlyCurrentFolder = prepareForMergeFileResult.shouldAllowOnlyCurrentFolder;
-    composer.shouldMergeHeadings = prepareForMergeFileResult.shouldMergeHeadings;
-    composer.shouldAllowSplitIntoUnresolvedPath = prepareForMergeFileResult.shouldAllowSplitIntoUnresolvedPath;
-    composer.frontmatterMergeStrategy = prepareForMergeFileResult.frontmatterMergeStrategy;
-    composer.targetFile = prepareForMergeFileResult.targetFile;
-    composer.isNewTargetFile = prepareForMergeFileResult.isNewTargetFile;
     await composer.mergeFile();
   }
 }

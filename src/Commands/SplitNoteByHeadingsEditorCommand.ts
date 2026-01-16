@@ -22,6 +22,7 @@ import {
   getSelectionUnderHeading
 } from '../Composers/ComposerBase.ts';
 import { SplitComposer } from '../Composers/SplitComposer.ts';
+import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
 
 class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(
@@ -84,11 +85,23 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
       }
 
       this.editor.setSelection(headingInfo.start, headingInfo.end);
+      const selectItemResult = await new SplitItemSelector({
+        inputValue: headingInfo.heading,
+        isMod: false,
+        item: null,
+        plugin: this.plugin,
+        sourceFile: this.file,
+        shouldAllowOnlyCurrentFolder: this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault,
+        shouldTreatTitleAsPath: this.plugin.settings.shouldTreatTitleAsPathByDefault
+      }).selectItem();
+
       const composer = new SplitComposer({
         editor: this.editor,
         heading: headingInfo.heading,
         plugin: this.plugin,
-        sourceFile: this.file
+        sourceFile: this.file,
+        targetFile: selectItemResult.targetFile,
+        isNewTargetFile: selectItemResult.isNewTargetFile
       });
       await composer.splitFile();
     }

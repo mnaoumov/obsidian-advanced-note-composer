@@ -9,6 +9,8 @@ import type { Selection } from "./ComposerBase.ts";
 interface SplitComposerOptions extends ComposerBaseOptions {
   editor: Editor;
   heading?: string;
+  shouldIncludeFrontmatter?: boolean;
+  shouldTreatTitleAsPath?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
@@ -16,9 +18,10 @@ export class SplitComposer extends ComposerBase {
   private heading: string;
 
   public constructor(options: SplitComposerOptions) {
-    super(options);
+    super(options, options.shouldIncludeFrontmatter ?? options.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
     this.heading = options.heading ?? '';
+    this.shouldTreatTitleAsPath = options.shouldTreatTitleAsPath ?? this.plugin.settings.shouldTreatTitleAsPathByDefault;
     this.initHeading();
   }
 
