@@ -1,7 +1,7 @@
 import { Editor, Keymap, TFile } from 'obsidian';
 import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
 
-import { InsertMode, type Selection } from '../Composers/ComposerBase.ts';
+import { getInsertModeFromEvent, InsertMode, type Selection } from '../Composers/ComposerBase.ts';
 
 import type { Item } from './SuggestModalBase.ts';
 
@@ -71,7 +71,7 @@ class SplitFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      insertMode: evt.shiftKey ? InsertMode.Prepend : InsertMode.Append,
+      insertMode: getInsertModeFromEvent(evt),
       shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
       shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
       shouldFixFootnotes: this.shouldFixFootnotes,
