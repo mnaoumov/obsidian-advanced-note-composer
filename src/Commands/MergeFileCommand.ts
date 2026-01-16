@@ -14,8 +14,8 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
-import { MergeComposer } from '../Composers/MergeComposer.ts';
 import { prepareForMergeFile } from '../Modals/MergeFileModal.ts';
+import { MergeComposer } from '../Composers/MergeComposer.ts';
 
 class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
   public constructor(plugin: Plugin, file: null | TFile) {
@@ -44,15 +44,25 @@ class MergeFileCommandInvocation extends FileCommandInvocationBase<Plugin> {
       return;
     }
 
+    const prepareForMergeFileResult = await prepareForMergeFile(this.plugin, this.file);
+
+    if (!prepareForMergeFileResult) {
+      return;
+    }
+
     const composer = new MergeComposer({
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const result = await prepareForMergeFile(this.plugin, composer, this.file);
-
-    if (result) {
-      await composer.mergeFile();
-    }
+    composer.insertMode = prepareForMergeFileResult.insertMode;
+    composer.shouldFixFootnotes = prepareForMergeFileResult.shouldFixFootnotes;
+    composer.shouldAllowOnlyCurrentFolder = prepareForMergeFileResult.shouldAllowOnlyCurrentFolder;
+    composer.shouldMergeHeadings = prepareForMergeFileResult.shouldMergeHeadings;
+    composer.shouldAllowSplitIntoUnresolvedPath = prepareForMergeFileResult.shouldAllowSplitIntoUnresolvedPath;
+    composer.frontmatterMergeStrategy = prepareForMergeFileResult.frontmatterMergeStrategy;
+    composer.targetFile = prepareForMergeFileResult.targetFile;
+    composer.isNewTargetFile = prepareForMergeFileResult.isNewTargetFile;
+    await composer.mergeFile();
   }
 }
 

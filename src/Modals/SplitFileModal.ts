@@ -11,7 +11,6 @@ import {
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
 import type { Plugin } from '../Plugin.ts';
-import type { SplitComposer } from '../Composers/SplitComposer.ts';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
 
@@ -301,7 +300,20 @@ interface SplitFileModalResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
-export async function prepareForSplitFile(plugin: Plugin, composer: SplitComposer, sourceFile: TFile, editor: Editor, heading?: string): Promise<SplitFileModalResult | null> {
+interface PrepareForSplitFileResult {
+  insertMode: InsertMode;
+  shouldIncludeFrontmatter: boolean;
+  shouldTreatTitleAsPath: boolean;
+  shouldFixFootnotes: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldMergeHeadings: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  targetFile: TFile;
+  isNewTargetFile: boolean;
+}
+
+export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, editor: Editor, heading?: string): Promise<PrepareForSplitFileResult | null> {
   const result = await new Promise<SplitFileModalResult | null>((resolve) => {
     const modal = new SplitFileModal(plugin, heading ?? '', sourceFile, editor, resolve);
     modal.open();
@@ -310,16 +322,6 @@ export async function prepareForSplitFile(plugin: Plugin, composer: SplitCompose
   if (!result) {
     return null;
   }
-
-  composer.insertMode = result.insertMode;
-  composer.shouldIncludeFrontmatter = result.shouldIncludeFrontmatter;
-  composer.shouldTreatTitleAsPath = result.shouldTreatTitleAsPath;
-  composer.shouldFixFootnotes = result.shouldFixFootnotes;
-  composer.shouldAllowOnlyCurrentFolder = result.shouldAllowOnlyCurrentFolder;
-  composer.shouldMergeHeadings = result.shouldMergeHeadings;
-  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
-  composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
-  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
 
   const selectItemResult = await new SplitItemSelector({
     plugin,
@@ -330,7 +332,19 @@ export async function prepareForSplitFile(plugin: Plugin, composer: SplitCompose
     shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
     shouldTreatTitleAsPath: result.shouldTreatTitleAsPath
   }).selectItem();
-  composer.targetFile = selectItemResult.targetFile;
-  composer.isNewTargetFile = selectItemResult.isNewTargetFile;
-  return result;
+
+  const prepareForSplitFileResult: PrepareForSplitFileResult = {
+    insertMode: result.insertMode,
+    shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
+    shouldTreatTitleAsPath: result.shouldTreatTitleAsPath,
+    shouldFixFootnotes: result.shouldFixFootnotes,
+    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+    shouldMergeHeadings: result.shouldMergeHeadings,
+    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
+    frontmatterMergeStrategy: result.frontmatterMergeStrategy,
+    targetFile: selectItemResult.targetFile,
+    isNewTargetFile: selectItemResult.isNewTargetFile
+  };
+
+  return prepareForSplitFileResult;
 }

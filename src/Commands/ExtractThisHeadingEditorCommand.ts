@@ -71,15 +71,27 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
     }
 
     this.editor.setSelection(this.headingInfo.start, this.headingInfo.end);
+    const prepareForSplitFileResult = await prepareForSplitFile(this.plugin, this.file, this.editor, this.headingInfo.heading);
+    if (!prepareForSplitFileResult) {
+      return;
+    }
+
     const composer = new SplitComposer({
       editor: this.editor,
       plugin: this.plugin,
       sourceFile: this.file
     });
-    const isConfirmed = await prepareForSplitFile(this.plugin, composer, this.file, this.editor, this.headingInfo.heading);
-    if (isConfirmed) {
-      await composer.splitFile();
-    }
+    composer.insertMode = prepareForSplitFileResult.insertMode;
+    composer.shouldIncludeFrontmatter = prepareForSplitFileResult.shouldIncludeFrontmatter;
+    composer.shouldTreatTitleAsPath = prepareForSplitFileResult.shouldTreatTitleAsPath;
+    composer.shouldFixFootnotes = prepareForSplitFileResult.shouldFixFootnotes;
+    composer.shouldAllowOnlyCurrentFolder = prepareForSplitFileResult.shouldAllowOnlyCurrentFolder;
+    composer.shouldMergeHeadings = prepareForSplitFileResult.shouldMergeHeadings;
+    composer.shouldAllowSplitIntoUnresolvedPath = prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath;
+    composer.frontmatterMergeStrategy = prepareForSplitFileResult.frontmatterMergeStrategy;
+    composer.targetFile = prepareForSplitFileResult.targetFile;
+    composer.isNewTargetFile = prepareForSplitFileResult.isNewTargetFile;
+    await composer.splitFile();
   }
 }
 
