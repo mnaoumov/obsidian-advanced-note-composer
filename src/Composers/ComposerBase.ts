@@ -44,7 +44,10 @@ import {
   Action,
   FrontmatterMergeStrategy} from '../PluginSettings.ts';
 
-export type InsertMode = 'append' | 'prepend';
+export enum InsertMode {
+  Append = 'append',
+  Prepend = 'prepend'
+}
 
 const moment = extractDefaultExportInterop(moment_);
 
@@ -76,7 +79,7 @@ export abstract class ComposerBase {
 
   public heading: string;
 
-  public insertMode: InsertMode = 'append';
+  public insertMode: InsertMode = InsertMode.Append;
   public shouldAllowOnlyCurrentFolder: boolean;
   public shouldAllowSplitIntoUnresolvedPath: boolean;
   public shouldFixFootnotes: boolean;

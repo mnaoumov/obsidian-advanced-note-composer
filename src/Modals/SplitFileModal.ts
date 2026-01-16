@@ -1,7 +1,7 @@
 import { Editor, Keymap, TFile } from 'obsidian';
 import { invokeAsyncSafely, type PromiseResolve } from 'obsidian-dev-utils/Async';
 
-import type { Selection } from '../Composers/ComposerBase.ts';
+import { InsertMode, type Selection } from '../Composers/ComposerBase.ts';
 
 import type { Item } from './SuggestModalBase.ts';
 
@@ -71,7 +71,7 @@ class SplitFileModal extends SuggestModalBase {
       item,
       isMod: Keymap.isModifier(evt, 'Mod'),
       inputValue: this.inputEl.value,
-      inputMode: evt.shiftKey ? 'prepend' : 'append',
+      insertMode: evt.shiftKey ? InsertMode.Prepend : InsertMode.Append,
       shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
       shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
       shouldFixFootnotes: this.shouldFixFootnotes,
@@ -291,7 +291,7 @@ interface PrepareForSplitFileResult {
   item: Item | null;
   isMod: boolean;
   inputValue: string;
-  inputMode: 'prepend' | 'append';
+  insertMode: InsertMode;
   shouldIncludeFrontmatter: boolean;
   shouldTreatTitleAsPath: boolean;
   shouldFixFootnotes: boolean;
@@ -311,7 +311,7 @@ export async function prepareForSplitFile(plugin: Plugin, composer: SplitCompose
     return null;
   }
 
-  composer.insertMode = result.inputMode;
+  composer.insertMode = result.insertMode;
   composer.shouldIncludeFrontmatter = result.shouldIncludeFrontmatter;
   composer.shouldTreatTitleAsPath = result.shouldTreatTitleAsPath;
   composer.shouldFixFootnotes = result.shouldFixFootnotes;
