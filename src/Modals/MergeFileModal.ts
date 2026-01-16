@@ -26,7 +26,6 @@ import {
 } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
-import type { MergeComposer } from '../Composers/MergeComposer.ts';
 import { MergeItemSelector } from '../ItemSelectors/MergeItemSelector.ts';
 
 interface ConfirmDialogModalResult {
@@ -335,7 +334,18 @@ interface MergeFileModalResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
 }
 
-export async function prepareForMergeFile(plugin: Plugin, composer: MergeComposer, sourceFile: TFile): Promise<MergeFileModalResult | null> {
+interface PrepareForMergeFileResult {
+  insertMode: InsertMode;
+  shouldFixFootnotes: boolean;
+  shouldAllowOnlyCurrentFolder: boolean;
+  shouldMergeHeadings: boolean;
+  shouldAllowSplitIntoUnresolvedPath: boolean;
+  frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  targetFile: TFile;
+  isNewTargetFile: boolean;
+}
+
+export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Promise<PrepareForMergeFileResult | null> {
   const result = await new Promise<MergeFileModalResult | null>((resolve) => {
     const modal = new MergeFileModal(plugin, sourceFile, resolve);
     modal.open();
@@ -345,13 +355,6 @@ export async function prepareForMergeFile(plugin: Plugin, composer: MergeCompose
     return null;
   }
 
-  composer.insertMode = result.insertMode;
-  composer.shouldFixFootnotes = result.shouldFixFootnotes;
-  composer.shouldAllowOnlyCurrentFolder = result.shouldAllowOnlyCurrentFolder;
-  composer.shouldMergeHeadings = result.shouldMergeHeadings;
-  composer.shouldAllowSplitIntoUnresolvedPath = result.shouldAllowSplitIntoUnresolvedPath;
-  composer.frontmatterMergeStrategy = result.frontmatterMergeStrategy;
-
   const selectItemResult = await new MergeItemSelector({
     plugin,
     sourceFile,
@@ -359,15 +362,24 @@ export async function prepareForMergeFile(plugin: Plugin, composer: MergeCompose
     isMod: result.isMod,
     inputValue: result.inputValue
   }).selectItem();
-  composer.targetFile = selectItemResult.targetFile;
-  composer.isNewTargetFile = selectItemResult.isNewTargetFile;
+
+  const prepareForMergeFileResult: PrepareForMergeFileResult = {
+    insertMode: result.insertMode,
+    shouldFixFootnotes: result.shouldFixFootnotes,
+    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+    shouldMergeHeadings: result.shouldMergeHeadings,
+    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
+    frontmatterMergeStrategy: result.frontmatterMergeStrategy,
+    targetFile: selectItemResult.targetFile,
+    isNewTargetFile: selectItemResult.isNewTargetFile
+  };
 
   if (!plugin.settings.shouldAskBeforeMerging) {
-    return result;
+    return prepareForMergeFileResult;
   }
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
-    new ConfirmDialogModal(plugin.app, sourceFile, composer.targetFile, resolve).open();
+    new ConfirmDialogModal(plugin.app, sourceFile, prepareForMergeFileResult.targetFile, resolve).open();
   });
 
   if (!confirmDialogResult.isConfirmed) {
@@ -378,6 +390,6 @@ export async function prepareForMergeFile(plugin: Plugin, composer: MergeCompose
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
 
-  composer.insertMode = confirmDialogResult.insertMode;
-  return result;
+  prepareForMergeFileResult.insertMode = confirmDialogResult.insertMode;
+  return prepareForMergeFileResult;
 }
