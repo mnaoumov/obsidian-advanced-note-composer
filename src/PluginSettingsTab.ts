@@ -285,7 +285,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .addSettingEx((setting: SettingEx) => {
         setting
           .setName('Should allow split into unresolved path')
-          .setDesc('Default setting for whether to allow split into unresolved path. Can be changed in the split modal dialog.')
+          .setDesc(createFragment((f) => {
+            f.appendText('Default setting for whether to allow split into unresolved path. Can be changed in the split modal dialog.');
+            f.createEl('br');
+            f.appendText('Unresolved path comes from links like ');
+            appendCodeBlock(f, '[[non-existing note]]');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Some plugins also call them as ');
+            appendCodeBlock(f, 'broken links');
+            f.appendText('.');
+          }))
           .addToggle((toggle) => {
             this.bind(toggle, 'shouldAllowSplitIntoUnresolvedPathByDefault');
           });
