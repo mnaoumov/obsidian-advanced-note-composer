@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.23.0
+
+- feat: additional explanation for `Should treat title as path` re #84
+
 ## 3.22.0
 
 - feat: shouldOpenTargetNoteAfterSplit re #78
