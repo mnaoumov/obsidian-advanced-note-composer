@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.24.0
+
+- feat: additional explanation for `Should allow split into unresolved path` re #85
+
 ## 3.23.0
 
 - feat: additional explanation for `Should treat title as path` re #84
