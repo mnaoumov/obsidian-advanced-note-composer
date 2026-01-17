@@ -44,6 +44,7 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
+  public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldSwapEntireFolderStructureByDefault = true;
