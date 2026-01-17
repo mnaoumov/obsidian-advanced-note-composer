@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.22.0
+
+- feat: shouldOpenTargetNoteAfterSplit re #78
+
 ## 3.21.0
 
 - refactor: path settings
