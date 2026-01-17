@@ -1,6 +1,5 @@
 import type {
   Editor,
-  IconName,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
@@ -75,10 +74,13 @@ class ExtractCurrentSelectionEditorCommandInvocation extends EditorCommandInvoca
 }
 
 export class ExtractCurrentSelectionEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly editorMenuSubmenuIcon: IconName = 'lucide-git-merge';
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.settings.shouldAddCommandsToSubmenu;
+  }
 
   public constructor(plugin: Plugin) {
     super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'extract-current-selection',
       name: 'Extract current selection...',

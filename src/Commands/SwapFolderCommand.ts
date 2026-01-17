@@ -1,5 +1,3 @@
-import type { IconName } from 'obsidian';
-
 import {
   Notice,
   TFolder
@@ -37,10 +35,13 @@ class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
 }
 
 export class SwapFolderCommand extends FolderCommandBase<Plugin> {
-  protected override readonly fileMenuSubmenuIcon: IconName = 'lucide-git-merge';
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.settings.shouldAddCommandsToSubmenu;
+  }
 
   public constructor(plugin: Plugin) {
     super({
+      fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'switch-camera',
       id: 'swap-folder',
       name: 'Swap folder with...',

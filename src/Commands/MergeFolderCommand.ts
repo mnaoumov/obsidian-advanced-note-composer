@@ -1,5 +1,4 @@
 import type {
-  IconName,
   TAbstractFile,
   TFile,
   TFolder,
@@ -44,11 +43,14 @@ import { MergeComposer } from '../Composers/MergeComposer.ts';
 import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
 
 export class MergeFolderCommand extends FolderCommandBase<Plugin> {
-  protected override readonly fileMenuItemName = 'Merge entire folder with...';
-  protected override readonly fileMenuSubmenuIcon: IconName = 'lucide-git-merge';
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.settings.shouldAddCommandsToSubmenu;
+  }
 
   public constructor(plugin: Plugin) {
     super({
+      fileMenuItemName: 'Merge entire folder with...',
+      fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'merge',
       id: 'merge-folder',
       name: 'Merge current folder with another folder...',
