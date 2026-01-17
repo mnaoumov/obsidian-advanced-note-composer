@@ -198,6 +198,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
             f.appendText(' will be treated as ');
             appendCodeBlock(f, 'foo_bar_baz.md');
             f.appendText(' path.');
+            f.createEl('br');
+            f.appendText('When using ');
+            appendCodeBlock(f, 'Split note by headings/content');
+            f.appendText(' commands, the setting will be treated as disabled.');
           }))
           .addToggle((toggle) => {
             this.bind(toggle, 'shouldTreatTitleAsPathByDefault');
