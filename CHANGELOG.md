@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.25.0
+
+- feat: shouldAddCommandsToSubmenu re #86
+
 ## 3.24.0
 
 - feat: additional explanation for `Should allow split into unresolved path` re #85
