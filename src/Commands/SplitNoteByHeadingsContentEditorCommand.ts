@@ -1,7 +1,6 @@
 import type {
   Editor,
   EditorPosition,
-  IconName,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
@@ -117,10 +116,13 @@ class SplitNoteByHeadingsEditorContentCommandInvocation extends EditorCommandInv
 }
 
 export class SplitNoteByHeadingsContentEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly editorMenuSubmenuIcon: IconName = 'lucide-git-merge';
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.settings.shouldAddCommandsToSubmenu;
+  }
 
   public constructor(plugin: Plugin, private readonly headingLevel: Level) {
     super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors-line-dashed',
       id: `split-note-by-headings-content-h${String(headingLevel)}`,
       name: `Split note by headings content - H${String(headingLevel)}`,

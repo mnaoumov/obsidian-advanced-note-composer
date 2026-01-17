@@ -31,6 +31,7 @@ export class PluginSettings {
   public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
+  public shouldAddCommandsToSubmenu = true;
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;

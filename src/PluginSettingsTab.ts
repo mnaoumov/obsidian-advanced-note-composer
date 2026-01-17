@@ -426,6 +426,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
             this.bind(toggle, 'shouldSwapEntireFolderStructureByDefault');
           });
       });
+
+    new SettingGroupEx(this.containerEl)
+      .setHeading('UI')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should add commands to submenu')
+          .setDesc('Whether to add commands to the submenu.')
+          .addToggle((toggle) => {
+            this.bind(toggle, 'shouldAddCommandsToSubmenu');
+          });
+      });
   }
 }
 

@@ -1,6 +1,5 @@
 import type {
   Editor,
-  IconName,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
@@ -72,10 +71,13 @@ class ExtractBeforeCursorEditorCommandInvocation extends EditorCommandInvocation
 }
 
 export class ExtractBeforeCursorEditorCommand extends EditorCommandBase<Plugin> {
-  protected override readonly editorMenuSubmenuIcon: IconName = 'lucide-git-merge';
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.settings.shouldAddCommandsToSubmenu;
+  }
 
   public constructor(plugin: Plugin) {
     super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-arrow-up-from-line',
       id: 'extract-before-cursor',
       name: 'Extract before cursor...',
