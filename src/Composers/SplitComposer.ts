@@ -23,15 +23,18 @@ import { ComposerBase } from './ComposerBase.ts';
 interface SplitComposerOptions extends ComposerBaseOptions {
   editor: Editor;
   heading?: string;
+  isMultipleSplit: boolean;
   shouldIncludeFrontmatter?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
   private readonly editor: Editor;
+  private readonly isMultipleSplit: boolean;
 
   public constructor(options: SplitComposerOptions) {
     super(options, options.shouldIncludeFrontmatter ?? options.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
+    this.isMultipleSplit = options.isMultipleSplit;
   }
 
   public async splitFile(): Promise<void> {
@@ -70,6 +73,14 @@ export class SplitComposer extends ComposerBase {
           break;
         default:
           throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
+      }
+
+      if (!this.isMultipleSplit && this.plugin.settings.shouldOpenTargetNoteAfterSplit) {
+        const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
+        await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
+        await this.app.workspace.getLeaf().openFile(this.targetFile, {
+          active: true
+        });
       }
     } finally {
       notice.hide();

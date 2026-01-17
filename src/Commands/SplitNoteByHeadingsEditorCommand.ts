@@ -96,6 +96,7 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
       const composer = new SplitComposer({
         editor: this.editor,
         heading: headingInfo.heading,
+        isMultipleSplit: true,
         isNewTargetFile: selectItemResult.isNewTargetFile,
         plugin: this.plugin,
         sourceFile: this.file,

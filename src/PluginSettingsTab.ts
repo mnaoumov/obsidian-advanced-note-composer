@@ -243,6 +243,20 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setHeading('Split/extract')
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should open target note after split')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to open the target note after splitting.');
+            f.createEl('br');
+            f.appendText('If enabled, the target note will be opened after splitting.');
+            f.createEl('br');
+            f.appendText('If disabled, the source note will stay opened after splitting.');
+          }))
+          .addToggle((toggle) => {
+            this.bind(toggle, 'shouldOpenTargetNoteAfterSplit');
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Text after extraction')
           .setDesc('What to show in place of the selected text after extracting it.')
           .addDropdown((dropdown) => {

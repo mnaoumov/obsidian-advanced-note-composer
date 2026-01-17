@@ -78,6 +78,7 @@ class ExtractThisHeadingEditorCommandInvocation extends EditorCommandInvocationB
       editor: this.editor,
       frontmatterMergeStrategy: prepareForSplitFileResult.frontmatterMergeStrategy,
       insertMode: prepareForSplitFileResult.insertMode,
+      isMultipleSplit: false,
       isNewTargetFile: prepareForSplitFileResult.isNewTargetFile,
       plugin: this.plugin,
       shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
