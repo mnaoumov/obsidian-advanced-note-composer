@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## 3.21.0
+
+- refactor: path settings
+- chore: lint
+- refactor: extractHeading
+- refactor: switch visibility
+- refactor: init ctors
+- refactor: extract editor
+- refactor: move initialization
+- refactor: modal result classes
+- refactor: getInsertModeFromEvent
+- refactor: switch to InsertMode enum
+- refactor: rename insertMode
+- refactor: extract item selectors
+- refactor: remove composer arg from modals
+- refactor: extract composer props
+- refactor: move init composer to split
+- refactor: move init composer to merge
+- refactor: remove doNotAskAgain
+- refactor: prepareForMergeFile
+- refactor: rename SplitFileModal
+- refactor: extract mergeFile
+- refactor: remove action
+- refactor: extract separate composers
+- refactor: rename ComposerBase
+- refactor: extract Composers
+- refactor: rename insertMode
+- refactor: move selectItem
+- refactor: extract prepareForSplitFile
+- refactor: add app arg
+- refactor: extract AdvancedNoteComposerOptions
+- refactor: remove animation
+- refactor: remove context
+- refactor: remove DynamicModal
+- fix: don't confirm after clicking checkbox
+- fix: wrong title
+- feat: improve captions
+- refactor: modals to promises
+- refactor: rename ConfirmDialogModalResult
+- refactor: traverseBookmarks
+- feat: extract submenu
+- refactor: promise of MergeFolderModal
+
 ## 3.20.0
 
 - feat: restructure/reword settings re #82 #81
