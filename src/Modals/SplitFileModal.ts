@@ -1,24 +1,39 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/Async';
 
 import {
+  App,
   Editor,
   Keymap,
+  Modal,
+  Platform,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import {
+  appendCodeBlock,
+  createFragmentAsync
+} from 'obsidian-dev-utils/HTMLElement';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 
 import type { Selection } from '../Composers/ComposerBase.ts';
-import type { InsertMode } from '../InsertMode.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
 import { getInsertModeFromEvent } from '../Composers/ComposerBase.ts';
+import { getSelections } from '../Composers/SplitComposer.ts';
 import { extractHeading } from '../Headings.ts';
+import { InsertMode } from '../InsertMode.ts';
 import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
 import { FrontmatterMergeStrategy } from '../PluginSettings.ts';
 import { SuggestModalBase } from './SuggestModalBase.ts';
 import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+
+interface ConfirmDialogModalResult {
+  insertMode: InsertMode;
+  isConfirmed: boolean;
+  shouldAskBeforeSplitting: boolean;
+}
 
 interface PrepareForSplitFileResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -44,6 +59,138 @@ interface SplitFileModalResult {
   shouldIncludeFrontmatter: boolean;
   shouldMergeHeadings: boolean;
   shouldTreatTitleAsPath: boolean;
+}
+
+class ConfirmDialogModal extends Modal {
+  private isSelected = false;
+  private shouldAskBeforeSplitting = true;
+
+  public constructor(
+    app: App,
+    private readonly sourceFile: TFile,
+    private readonly targetFile: TFile,
+    private readonly editor: Editor,
+    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
+  ) {
+    super(app);
+
+    this.scope.register([], 'Enter', async (evt) => {
+      this.confirm(evt);
+    });
+
+    this.scope.register([], 'Escape', () => {
+      this.close();
+    });
+  }
+
+  public override onClose(): void {
+    super.onClose();
+    if (!this.isSelected) {
+      this.promiseResolve({
+        insertMode: InsertMode.Append,
+        isConfirmed: false,
+        shouldAskBeforeSplitting: false
+      });
+    }
+  }
+
+  public override onOpen(): void {
+    super.onOpen();
+    invokeAsyncSafely(this.onOpenAsync.bind(this));
+  }
+
+  private confirm(evt: KeyboardEvent | MouseEvent): void {
+    this.isSelected = true;
+    this.promiseResolve({
+      insertMode: getInsertModeFromEvent(evt),
+      isConfirmed: true,
+      shouldAskBeforeSplitting: this.shouldAskBeforeSplitting
+    });
+    this.close();
+  }
+
+  private async onOpenAsync(): Promise<void> {
+    this.setTitle('Split file');
+
+    this.containerEl.addClass('mod-confirmation');
+    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
+
+    this.setContent(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Are you sure you want to split ');
+        appendCodeBlock(f, 'Source');
+        f.appendText(' into ');
+        appendCodeBlock(f, 'Target');
+        f.appendText('?');
+        f.createEl('br');
+        f.createEl('br');
+        appendCodeBlock(f, 'Source');
+        f.appendText(': ');
+        f.appendChild(await renderInternalLink(this.app, this.sourceFile));
+        f.createEl('br');
+        f.createEl('br');
+        appendCodeBlock(f, 'Target');
+        f.appendText(': ');
+        f.appendChild(await renderInternalLink(this.app, this.targetFile));
+        f.createEl('br');
+        f.createEl('br');
+        f.createEl('h2', { text: 'Source content to split' });
+        const selectedText = getSelections(this.editor).map((selection) => this.editor.cm.state.sliceDoc(selection.startOffset, selection.endOffset))
+          .join('\n');
+        const lines = selectedText.split('\n');
+        for (const line of lines) {
+          appendCodeBlock(f, line);
+          f.createEl('br');
+        }
+      })
+    );
+
+    if (Platform.isMobile) {
+      buttonContainerEl.createEl('button', {
+        cls: 'mod-warning',
+        text: 'Split and don\'t ask again'
+      }, (button) => {
+        button.addEventListener('click', (evt) => {
+          this.shouldAskBeforeSplitting = false;
+          this.confirm(evt);
+        });
+      });
+    } else {
+      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
+        label
+          .createEl('input', {
+            attr: { tabindex: -1 },
+            type: 'checkbox'
+          }, (checkbox) => {
+            checkbox.addEventListener('change', (evt) => {
+              if (!(evt.target instanceof HTMLInputElement)) {
+                return;
+              }
+              this.shouldAskBeforeSplitting = !evt.target.checked;
+            });
+          });
+        label.appendText('Don\'t ask again');
+      });
+    }
+
+    buttonContainerEl.createEl('button', {
+      cls: 'mod-warning',
+      text: 'Merge'
+    }, (button) => {
+      button.addEventListener('click', (evt) => {
+        this.confirm(evt);
+      });
+    });
+
+    buttonContainerEl.createEl('button', {
+      cls: 'mod-cancel',
+      text: 'Cancel'
+    }, (button) => {
+      button.addEventListener('click', () => {
+        this.close();
+      });
+    });
+  }
 }
 
 class SplitFileModal extends SuggestModalBase {
@@ -348,6 +495,22 @@ export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, edi
     shouldMergeHeadings: result.shouldMergeHeadings,
     targetFile: selectItemResult.targetFile
   };
+
+  if (!plugin.settings.shouldAskBeforeSplitting) {
+    return prepareForSplitFileResult;
+  }
+
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
+    new ConfirmDialogModal(plugin.app, sourceFile, prepareForSplitFileResult.targetFile, editor, resolve).open();
+  });
+
+  if (!confirmDialogResult.isConfirmed) {
+    return null;
+  }
+
+  await plugin.settingsManager.editAndSave((settings) => {
+    settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskBeforeSplitting;
+  });
 
   return prepareForSplitFileResult;
 }
