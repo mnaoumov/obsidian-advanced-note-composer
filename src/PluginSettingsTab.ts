@@ -247,6 +247,14 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
       .setHeading('Split/extract')
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should ask before splitting')
+          .setDesc('Whether to ask before splitting notes.')
+          .addToggle((toggle) => {
+            this.bind(toggle, 'shouldAskBeforeSplitting');
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Should open target note after split')
           .setDesc(createFragment((f) => {
             f.appendText('Whether to open the target note after splitting.');

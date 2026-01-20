@@ -88,20 +88,7 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override async getSelections(): Promise<Selection[]> {
-    const selections = this.editor.listSelections().map((editorSelection) => {
-      const selection: Selection = {
-        endOffset: this.editor.posToOffset(editorSelection.anchor),
-        startOffset: this.editor.posToOffset(editorSelection.head)
-      };
-
-      if (selection.startOffset > selection.endOffset) {
-        [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
-      }
-
-      return selection;
-    });
-
-    return selections.sort((a, b) => a.startOffset - b.startOffset);
+    return getSelections(this.editor);
   }
 
   protected override getTemplate(): string {
@@ -182,4 +169,21 @@ export class SplitComposer extends ComposerBase {
 
     return result;
   }
+}
+
+export function getSelections(editor: Editor): Selection[] {
+  const selections = editor.listSelections().map((editorSelection) => {
+    const selection: Selection = {
+      endOffset: editor.posToOffset(editorSelection.anchor),
+      startOffset: editor.posToOffset(editorSelection.head)
+    };
+
+    if (selection.startOffset > selection.endOffset) {
+      [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
+    }
+
+    return selection;
+  });
+
+  return selections.sort((a, b) => a.startOffset - b.startOffset);
 }

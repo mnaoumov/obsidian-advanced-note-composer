@@ -36,6 +36,7 @@ export class PluginSettings {
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   public shouldAskBeforeMerging = true;
+  public shouldAskBeforeSplitting = true;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
