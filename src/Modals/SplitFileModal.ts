@@ -175,7 +175,7 @@ class ConfirmDialogModal extends Modal {
 
     buttonContainerEl.createEl('button', {
       cls: 'mod-warning',
-      text: 'Merge'
+      text: 'Split'
     }, (button) => {
       button.addEventListener('click', (evt) => {
         this.confirm(evt);
