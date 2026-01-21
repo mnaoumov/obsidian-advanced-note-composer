@@ -506,7 +506,7 @@ export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, edi
 
   if (!confirmDialogResult.isConfirmed) {
     if (prepareForSplitFileResult.isNewTargetFile) {
-      await plugin.app.vault.delete(prepareForSplitFileResult.targetFile);
+      await plugin.app.fileManager.trashFile(prepareForSplitFileResult.targetFile);
     }
     return null;
   }
