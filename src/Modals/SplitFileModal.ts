@@ -460,39 +460,60 @@ class SplitFileModal extends SuggestModalBase {
   }
 }
 
-export async function prepareForSplitFile(plugin: Plugin, sourceFile: TFile, editor: Editor, heading?: string): Promise<null | PrepareForSplitFileResult> {
+export async function prepareForSplitFile(
+  plugin: Plugin,
+  sourceFile: TFile,
+  editor: Editor,
+  heading?: string,
+  shouldSkipModal?: boolean
+): Promise<null | PrepareForSplitFileResult> {
   if (heading === '') {
     heading = undefined;
   }
   heading ??= extractHeading(editor);
-  const result = await new Promise<null | SplitFileModalResult>((resolve) => {
-    const modal = new SplitFileModal(plugin, heading, sourceFile, editor, resolve);
-    modal.open();
-  });
 
-  if (!result) {
+  const splitFileModalResult: null | SplitFileModalResult = shouldSkipModal
+    ? {
+      frontmatterMergeStrategy: plugin.settings.defaultFrontmatterMergeStrategy,
+      inputValue: heading,
+      insertMode: InsertMode.Append,
+      isMod: false,
+      item: null,
+      shouldAllowOnlyCurrentFolder: plugin.settings.shouldAllowOnlyCurrentFolderByDefault,
+      shouldAllowSplitIntoUnresolvedPath: plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
+      shouldFixFootnotes: plugin.settings.shouldFixFootnotesByDefault,
+      shouldIncludeFrontmatter: plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+      shouldMergeHeadings: plugin.settings.shouldMergeHeadingsByDefault,
+      shouldTreatTitleAsPath: plugin.settings.shouldTreatTitleAsPathByDefault
+    }
+    : await new Promise<null | SplitFileModalResult>((resolve) => {
+      const modal = new SplitFileModal(plugin, heading, sourceFile, editor, resolve);
+      modal.open();
+    });
+
+  if (!splitFileModalResult) {
     return null;
   }
 
   const selectItemResult = await new SplitItemSelector({
-    inputValue: result.inputValue,
-    isMod: result.isMod,
-    item: result.item,
+    inputValue: splitFileModalResult.inputValue,
+    isMod: splitFileModalResult.isMod,
+    item: splitFileModalResult.item,
     plugin,
-    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldTreatTitleAsPath: !heading && result.shouldTreatTitleAsPath,
+    shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+    shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
     sourceFile
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
-    frontmatterMergeStrategy: result.frontmatterMergeStrategy,
-    insertMode: result.insertMode,
+    frontmatterMergeStrategy: splitFileModalResult.frontmatterMergeStrategy,
+    insertMode: splitFileModalResult.insertMode,
     isNewTargetFile: selectItemResult.isNewTargetFile,
-    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
-    shouldFixFootnotes: result.shouldFixFootnotes,
-    shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
-    shouldMergeHeadings: result.shouldMergeHeadings,
+    shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+    shouldAllowSplitIntoUnresolvedPath: splitFileModalResult.shouldAllowSplitIntoUnresolvedPath,
+    shouldFixFootnotes: splitFileModalResult.shouldFixFootnotes,
+    shouldIncludeFrontmatter: splitFileModalResult.shouldIncludeFrontmatter,
+    shouldMergeHeadings: splitFileModalResult.shouldMergeHeadings,
     targetFile: selectItemResult.targetFile
   };
 

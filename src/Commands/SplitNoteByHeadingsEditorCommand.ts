@@ -19,7 +19,7 @@ import type { Plugin } from '../Plugin.ts';
 
 import { getSelectionUnderHeading } from '../Composers/ComposerBase.ts';
 import { SplitComposer } from '../Composers/SplitComposer.ts';
-import { SplitItemSelector } from '../ItemSelectors/SplitItemSelector.ts';
+import { prepareForSplitFile } from '../Modals/SplitFileModal.ts';
 
 class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocationBase<Plugin> {
   public constructor(
@@ -82,24 +82,21 @@ class SplitNoteByHeadingsEditorCommandInvocation extends EditorCommandInvocation
       }
 
       this.editor.setSelection(headingInfo.start, headingInfo.end);
-      const selectItemResult = await new SplitItemSelector({
-        inputValue: headingInfo.heading,
-        isMod: false,
-        item: null,
-        plugin: this.plugin,
-        shouldAllowOnlyCurrentFolder: this.plugin.settings.shouldAllowOnlyCurrentFolderByDefault,
-        shouldTreatTitleAsPath: this.plugin.settings.shouldTreatTitleAsPathByDefault,
-        sourceFile: this.file
-      }).selectItem();
+
+      const prepareForSplitFileResult = await prepareForSplitFile(this.plugin, this.file, this.editor, headingInfo.heading, true);
+
+      if (!prepareForSplitFileResult) {
+        return;
+      }
 
       const composer = new SplitComposer({
         editor: this.editor,
         heading: headingInfo.heading,
         isMultipleSplit: true,
-        isNewTargetFile: selectItemResult.isNewTargetFile,
+        isNewTargetFile: prepareForSplitFileResult.isNewTargetFile,
         plugin: this.plugin,
         sourceFile: this.file,
-        targetFile: selectItemResult.targetFile
+        targetFile: prepareForSplitFileResult.targetFile
       });
       await composer.splitFile();
     }
