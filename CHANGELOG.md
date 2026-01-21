@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 3.26.0
+
+- feat: show confirms for split by heading commands
+- chore: lint
+- fix: correct button caption
+- feat: remove new split file is cancelled
+- feat: shouldAskBeforeSplitting re #77
+
 ## 3.25.0
 
 - feat: shouldAddCommandsToSubmenu re #86
