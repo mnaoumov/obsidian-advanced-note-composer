@@ -429,7 +429,7 @@ class SplitFileModal extends SuggestModalBase {
       return false;
     }
 
-    const selections = await this.getSelections();
+    const selections = getSelections(this.editor);
 
     if (!selections[0]) {
       return false;
@@ -440,23 +440,6 @@ class SplitFileModal extends SuggestModalBase {
     }
 
     return true;
-  }
-
-  private async getSelections(): Promise<Selection[]> {
-    const selections = this.editor.listSelections().map((editorSelection) => {
-      const selection: Selection = {
-        endOffset: this.editor.posToOffset(editorSelection.anchor),
-        startOffset: this.editor.posToOffset(editorSelection.head)
-      };
-
-      if (selection.startOffset > selection.endOffset) {
-        [selection.startOffset, selection.endOffset] = [selection.endOffset, selection.startOffset];
-      }
-
-      return selection;
-    });
-
-    return selections.sort((a, b) => a.startOffset - b.startOffset);
   }
 }
 
