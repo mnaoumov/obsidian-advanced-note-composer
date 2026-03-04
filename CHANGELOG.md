@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.26.1
+
+- fix: safe trash re #107
+- chore: update libs
+- refactor: getSelections
+
 ## 3.26.0
 
 - feat: show confirms for split by heading commands
