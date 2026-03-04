@@ -15,8 +15,8 @@ import {
 } from 'obsidian-dev-utils/HTMLElement';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { trashSafe } from 'obsidian-dev-utils/obsidian/Vault';
 
-import type { Selection } from '../Composers/ComposerBase.ts';
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
 
@@ -510,7 +510,7 @@ export async function prepareForSplitFile(
 
   if (!confirmDialogResult.isConfirmed) {
     if (prepareForSplitFileResult.isNewTargetFile) {
-      await plugin.app.fileManager.trashFile(prepareForSplitFileResult.targetFile);
+      await trashSafe(plugin.app, prepareForSplitFileResult.targetFile);
     }
     return null;
   }

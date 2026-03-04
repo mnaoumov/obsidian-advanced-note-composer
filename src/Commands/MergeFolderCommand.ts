@@ -30,7 +30,8 @@ import {
   getOrCreateFileSafe,
   getOrCreateFolderSafe,
   isChildOrSelf,
-  renameSafe
+  renameSafe,
+  trashSafe
 } from 'obsidian-dev-utils/obsidian/Vault';
 import {
   join,
@@ -193,7 +194,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
         continue;
       }
 
-      await this.app.fileManager.trashFile(sourceSubfolder);
+      await trashSafe(this.app, sourceSubfolder);
     }
 
     if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {

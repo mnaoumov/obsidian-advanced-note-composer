@@ -3,7 +3,7 @@ import type {
   FrontMatterInfo,
   Pos
 } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/ObjectUtils';
+import type { GenericObject } from 'obsidian-dev-utils/TypeGuards';
 import type { HeadingInfo } from 'obsidian-typings';
 
 import {
