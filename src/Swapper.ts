@@ -15,7 +15,7 @@ import {
   isChild,
   renameSafe
 } from 'obsidian-dev-utils/obsidian/Vault';
-import { deleteSafe } from 'obsidian-dev-utils/obsidian/VaultEx';
+import { deleteIfNotUsed } from 'obsidian-dev-utils/obsidian/VaultDelete';
 import { join } from 'obsidian-dev-utils/Path';
 
 export async function swap(app: App, sourceFile: TAbstractFile, targetFile: TAbstractFile, shouldSwapEntireFolderStructure: boolean): Promise<void> {
@@ -97,5 +97,5 @@ async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder
     await renameSafe(app, sourceChild, join(targetFolder.path, sourceChild.name));
   }
 
-  await deleteSafe(app, tempFolder);
+  await deleteIfNotUsed(app, tempFolder);
 }

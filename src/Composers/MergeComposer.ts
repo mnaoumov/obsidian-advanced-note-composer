@@ -8,6 +8,7 @@ import {
   updateLink
 } from 'obsidian-dev-utils/obsidian/Link';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+import { trashSafe } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type {
   ComposerBaseOptions,
@@ -46,7 +47,7 @@ export class MergeComposer extends ComposerBase {
       this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
       const sourceContent = await this.app.vault.read(this.sourceFile);
       await this.insertIntoTargetFile(sourceContent);
-      await this.app.fileManager.trashFile(this.sourceFile);
+      await trashSafe(this.app, this.sourceFile);
 
       if (this.plugin.settings.shouldOpenNoteAfterMerge) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
