@@ -73,6 +73,10 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     super(plugin, folder);
   }
 
+  protected override canExecute(): boolean {
+    return super.canExecute() && !this.folder.isRoot();
+  }
+
   protected override async execute(): Promise<void> {
     if (this.plugin.settings.isPathIgnored(this.folder.path)) {
       new Notice(
