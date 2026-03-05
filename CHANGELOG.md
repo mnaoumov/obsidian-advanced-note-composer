@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.2
+
+- fix: exclude root folder from merge/swap re #104
+
 ## 3.26.1
 
 - fix: safe trash re #107
