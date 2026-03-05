@@ -15,6 +15,10 @@ import { selectTargetFolderForSwap } from '../Modals/SwapFolderModal.ts';
 import { swap } from '../Swapper.ts';
 
 class SwapFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
+  protected override canExecute(): boolean {
+    return super.canExecute() && !this.folder.isRoot();
+  }
+
   protected override async execute(): Promise<void> {
     if (this.plugin.settings.isPathIgnored(this.folder.path)) {
       new Notice(
