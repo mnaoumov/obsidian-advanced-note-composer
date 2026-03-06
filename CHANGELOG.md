@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.3
+
+- chore: update template
+
 ## 3.26.2
 
 - fix: exclude root folder from merge/swap re #104
