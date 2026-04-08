@@ -12,19 +12,19 @@ import {
 import {
   appendCodeBlock,
   createFragmentAsync
-} from 'obsidian-dev-utils/HTMLElement';
+} from 'obsidian-dev-utils/html-element';
 import {
   FolderCommandBase,
   FolderCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/FolderCommandBase';
+} from 'obsidian-dev-utils/obsidian/commands/folder-command-base';
 import {
   exists,
   FileSystemType,
   isFile,
   isFolder,
   isMarkdownFile
-} from 'obsidian-dev-utils/obsidian/FileSystem';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/file-system';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   getAvailablePath,
   getOrCreateFileSafe,
@@ -32,11 +32,11 @@ import {
   isChildOrSelf,
   renameSafe,
   trashSafe
-} from 'obsidian-dev-utils/obsidian/Vault';
+} from 'obsidian-dev-utils/obsidian/vault';
 import {
   join,
   relative
-} from 'obsidian-dev-utils/Path';
+} from 'obsidian-dev-utils/path';
 
 import type { Plugin } from '../Plugin.ts';
 

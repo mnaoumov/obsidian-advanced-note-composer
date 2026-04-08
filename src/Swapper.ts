@@ -9,14 +9,14 @@ import {
   getFolderOrNull,
   isFile,
   isFolder
-} from 'obsidian-dev-utils/obsidian/FileSystem';
+} from 'obsidian-dev-utils/obsidian/file-system';
 import {
   getAvailablePath,
   isChild,
   renameSafe
-} from 'obsidian-dev-utils/obsidian/Vault';
-import { deleteIfNotUsed } from 'obsidian-dev-utils/obsidian/VaultDelete';
-import { join } from 'obsidian-dev-utils/Path';
+} from 'obsidian-dev-utils/obsidian/vault';
+import { deleteIfNotUsed } from 'obsidian-dev-utils/obsidian/vault-delete';
+import { join } from 'obsidian-dev-utils/path';
 
 export async function swap(app: App, sourceFile: TAbstractFile, targetFile: TAbstractFile, shouldSwapEntireFolderStructure: boolean): Promise<void> {
   if (isFile(sourceFile) && isFile(targetFile)) {

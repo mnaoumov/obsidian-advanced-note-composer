@@ -3,20 +3,20 @@ import type {
   FuzzyMatch,
   TFolder
 } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/Async';
+import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
   FuzzySuggestModal,
   Modal,
   Platform
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import {
   appendCodeBlock,
   createFragmentAsync
-} from 'obsidian-dev-utils/HTMLElement';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
-import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
+} from 'obsidian-dev-utils/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -39,7 +39,7 @@ class ConfirmDialogModal extends Modal {
   ) {
     super(app);
 
-    this.scope.register([], 'Enter', async () => {
+    this.scope.register([], 'Enter', () => {
       this.confirm();
     });
 

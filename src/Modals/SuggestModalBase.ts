@@ -3,7 +3,7 @@ import type {
   SearchResult,
   SearchResultContainer
 } from 'obsidian';
-import type { MaybeReturn } from 'obsidian-dev-utils/Type';
+import type { MaybeReturn } from 'obsidian-dev-utils/type';
 import type { BookmarkItem } from 'obsidian-typings';
 
 import {
@@ -18,13 +18,13 @@ import {
   SuggestModal,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/Plugin/PluginContext';
-import { basename } from 'obsidian-dev-utils/Path';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/plugin/plugin-context';
+import { basename } from 'obsidian-dev-utils/path';
 import {
   trimEnd,
   trimStart
-} from 'obsidian-dev-utils/String';
+} from 'obsidian-dev-utils/string';
 
 import type { Plugin } from '../Plugin.ts';
 

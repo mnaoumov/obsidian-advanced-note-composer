@@ -1,11 +1,11 @@
 import type { FuzzyMatch } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/Async';
+import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
   FuzzySuggestModal,
   TFolder
 } from 'obsidian';
-import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/Vault';
+import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { Plugin } from '../Plugin.ts';
 

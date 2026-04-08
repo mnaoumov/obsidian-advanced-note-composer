@@ -1,13 +1,13 @@
 import type { TFile } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   FileCommandBase,
   FileCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/FileCommandBase';
-import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/commands/file-command-base';
+import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { Plugin } from '../Plugin.ts';
 

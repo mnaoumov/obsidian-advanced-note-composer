@@ -3,7 +3,7 @@ import type {
   FrontMatterInfo,
   Pos
 } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/TypeGuards';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { HeadingInfo } from 'obsidian-typings';
 
 import {
@@ -17,25 +17,25 @@ import {
   stringifyYaml,
   TFile
 } from 'obsidian';
-import { noop } from 'obsidian-dev-utils/Function';
+import { noop } from 'obsidian-dev-utils/function';
 import {
   appendCodeBlock,
   createFragmentAsync
-} from 'obsidian-dev-utils/HTMLElement';
-import { extractDefaultExportInterop } from 'obsidian-dev-utils/ObjectUtils';
+} from 'obsidian-dev-utils/html-element';
+import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
 import {
   editLinks,
   updateLink,
   updateLinksInContent
-} from 'obsidian-dev-utils/obsidian/Link';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/link';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   getBacklinksForFileSafe,
   getCacheSafe,
   getFrontmatterSafe
-} from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { process } from 'obsidian-dev-utils/obsidian/Vault';
-import { replaceAll } from 'obsidian-dev-utils/String';
+} from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { process } from 'obsidian-dev-utils/obsidian/vault';
+import { replaceAll } from 'obsidian-dev-utils/string';
 
 import type { Plugin } from '../Plugin.ts';
 
@@ -442,7 +442,7 @@ export abstract class ComposerBase {
         } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
           oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
         } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
-          oldObj[newKey] = this.mergeRecursively(oldObj[newKey] as GenericObject, newValue as GenericObject);
+          oldObj[newKey] = this.mergeRecursively(oldObj[newKey], newValue as GenericObject);
         } else {
           oldObj[newKey] = newValue;
         }

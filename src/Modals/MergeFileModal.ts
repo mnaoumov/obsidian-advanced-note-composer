@@ -1,4 +1,4 @@
-import type { PromiseResolve } from 'obsidian-dev-utils/Async';
+import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
   App,
@@ -7,12 +7,12 @@ import {
   Platform,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import {
   appendCodeBlock,
   createFragmentAsync
-} from 'obsidian-dev-utils/HTMLElement';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { Plugin } from '../Plugin.ts';
 import type { Item } from './SuggestModalBase.ts';
@@ -65,7 +65,7 @@ class ConfirmDialogModal extends Modal {
   ) {
     super(app);
 
-    this.scope.register([], 'Enter', async (evt) => {
+    this.scope.register([], 'Enter', (evt) => {
       this.confirm(evt);
     });
 

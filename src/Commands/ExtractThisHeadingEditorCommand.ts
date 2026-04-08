@@ -6,13 +6,13 @@ import type {
 import type { HeadingInfo } from 'obsidian-typings/implementations';
 
 import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
-import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/commands/command-base';
 import {
   EditorCommandBase,
   EditorCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/commands/editor-command-base';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { Plugin } from '../Plugin.ts';
 
