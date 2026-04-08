@@ -4,11 +4,11 @@ import type {
 } from 'obsidian';
 import type { Promisable } from 'type-fest';
 
-import { parseMetadata } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import {
   trimEnd,
   trimStart
-} from 'obsidian-dev-utils/String';
+} from 'obsidian-dev-utils/string';
 
 import { InsertMode } from './InsertMode.ts';
 

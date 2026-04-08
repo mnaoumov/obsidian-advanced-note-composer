@@ -6,8 +6,8 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type {
   ComposerBaseOptions,

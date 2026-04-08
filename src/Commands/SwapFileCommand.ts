@@ -2,12 +2,12 @@ import {
   Notice,
   TFile
 } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   FileCommandBase,
   FileCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/FileCommandBase';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/commands/file-command-base';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { Plugin } from '../Plugin.ts';
 

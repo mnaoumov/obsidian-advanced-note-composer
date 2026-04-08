@@ -5,14 +5,14 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
-import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/Commands/CommandBase';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { CommandInvocationBase } from 'obsidian-dev-utils/obsidian/commands/command-base';
 import {
   EditorCommandBase,
   EditorCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/EditorCommandBase';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+} from 'obsidian-dev-utils/obsidian/commands/editor-command-base';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { Level } from '../MarkdownHeadingDocument.ts';
 import type { Plugin } from '../Plugin.ts';

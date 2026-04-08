@@ -2,12 +2,12 @@ import {
   Notice,
   TFolder
 } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   FolderCommandBase,
   FolderCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/Commands/FolderCommandBase';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
+} from 'obsidian-dev-utils/obsidian/commands/folder-command-base';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { Plugin } from '../Plugin.ts';
 

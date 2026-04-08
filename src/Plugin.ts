@@ -1,6 +1,6 @@
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
-import { alert } from 'obsidian-dev-utils/obsidian/Modals/Alert';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
+import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
 
 import type { Level } from './MarkdownHeadingDocument.ts';
 import type { PluginTypes } from './PluginTypes.ts';

@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
-import { addAlias } from 'obsidian-dev-utils/obsidian/FileManager';
-import { trimEnd } from 'obsidian-dev-utils/String';
+import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
+import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { Frontmatter } from '../Composers/ComposerBase.ts';
 import type {

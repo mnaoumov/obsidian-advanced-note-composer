@@ -1,14 +1,14 @@
-import type { MaybeReturn } from 'obsidian-dev-utils/Type';
+import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/HTMLElement';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   editLinks,
   extractLinkFile,
   updateLink
-} from 'obsidian-dev-utils/obsidian/Link';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/Markdown';
-import { trashSafe } from 'obsidian-dev-utils/obsidian/Vault';
+} from 'obsidian-dev-utils/obsidian/link';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type {
   ComposerBaseOptions,

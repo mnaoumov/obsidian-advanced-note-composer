@@ -1,8 +1,8 @@
-import { getDebugController } from 'obsidian-dev-utils/Debug';
-import { appendCodeBlock } from 'obsidian-dev-utils/HTMLElement';
-import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsTabBase';
-import { SettingEx } from 'obsidian-dev-utils/obsidian/SettingEx';
-import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/SettingGroupEx';
+import { getDebugController } from 'obsidian-dev-utils/debug';
+import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab-base';
+import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
+import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
 
 import type { PluginTypes } from './PluginTypes.ts';
 
