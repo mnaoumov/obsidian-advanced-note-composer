@@ -3,9 +3,9 @@ import { join } from 'obsidian-dev-utils/path';
 import type {
   ItemSelectorBaseOptions,
   SelectItemResult
-} from './ItemSelectorBase.ts';
+} from './item-selector-base.ts';
 
-import { ItemSelectorBase } from './ItemSelectorBase.ts';
+import { ItemSelectorBase } from './item-selector-base.ts';
 
 export class MergeItemSelector extends ItemSelectorBase {
   public constructor(options: ItemSelectorBaseOptions) {
@@ -18,7 +18,7 @@ export class MergeItemSelector extends ItemSelectorBase {
       const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
 
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
-      if (existingFile && this.plugin.settings.isPathIgnored(existingFile.path)) {
+      if (existingFile && this.plugin.pluginSettings.isPathIgnored(existingFile.path)) {
         return {
           isNewTargetFile: false,
           targetFile: existingFile

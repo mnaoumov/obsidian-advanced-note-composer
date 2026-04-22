@@ -3,8 +3,8 @@ import type {
   TFile
 } from 'obsidian';
 
-import type { Item } from '../Modals/SuggestModalBase.ts';
-import type { Plugin } from '../Plugin.ts';
+import type { Item } from '../modals/suggest-modal-base.ts';
+import type { Plugin } from '../plugin.ts';
 
 export interface ItemSelectorBaseOptions {
   inputValue: string;

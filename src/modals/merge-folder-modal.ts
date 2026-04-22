@@ -18,9 +18,9 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
-import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface ConfirmDialogModalResult {
   isConfirmed: boolean;
@@ -38,11 +38,9 @@ class ConfirmDialogModal extends Modal {
     private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
   ) {
     super(app);
-
     this.scope.register([], 'Enter', () => {
       this.confirm();
     });
-
     this.scope.register([], 'Escape', () => {
       this.close();
     });
@@ -51,10 +49,7 @@ class ConfirmDialogModal extends Modal {
   public override onClose(): void {
     super.onClose();
     if (!this.isSelected) {
-      this.promiseResolve({
-        isConfirmed: false,
-        shouldAskBeforeMerging: false
-      });
+      this.promiseResolve({ isConfirmed: false, shouldAskBeforeMerging: false });
     }
   }
 
@@ -65,16 +60,12 @@ class ConfirmDialogModal extends Modal {
 
   private confirm(): void {
     this.isSelected = true;
-    this.promiseResolve({
-      isConfirmed: true,
-      shouldAskBeforeMerging: this.shouldAskBeforeMerging
-    });
+    this.promiseResolve({ isConfirmed: true, shouldAskBeforeMerging: this.shouldAskBeforeMerging });
     this.close();
   }
 
   private async onOpenAsync(): Promise<void> {
     this.setTitle('Merge folder');
-
     this.containerEl.addClass('mod-confirmation');
     const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
 
@@ -101,10 +92,7 @@ class ConfirmDialogModal extends Modal {
     );
 
     if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', {
-        cls: 'mod-warning',
-        text: 'Merge and don\'t ask again'
-      }, (button) => {
+      buttonContainerEl.createEl('button', { cls: 'mod-warning', text: 'Merge and don\'t ask again' }, (button) => {
         button.addEventListener('click', () => {
           this.shouldAskBeforeMerging = false;
           this.confirm();
@@ -112,35 +100,24 @@ class ConfirmDialogModal extends Modal {
       });
     } else {
       buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label
-          .createEl('input', {
-            attr: { tabindex: -1 },
-            type: 'checkbox'
-          }, (checkbox) => {
-            checkbox.addEventListener('change', (evt) => {
-              if (!(evt.target instanceof HTMLInputElement)) {
-                return;
-              }
-              this.shouldAskBeforeMerging = !evt.target.checked;
-            });
+        label.createEl('input', { attr: { tabindex: -1 }, type: 'checkbox' }, (checkbox) => {
+          checkbox.addEventListener('change', (evt) => {
+            if (!(evt.target instanceof HTMLInputElement)) {
+              return;
+            }
+            this.shouldAskBeforeMerging = !evt.target.checked;
           });
+        });
         label.appendText('Don\'t ask again');
       });
     }
 
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-warning',
-      text: 'Merge'
-    }, (button) => {
+    buttonContainerEl.createEl('button', { cls: 'mod-warning', text: 'Merge' }, (button) => {
       button.addEventListener('click', () => {
         this.confirm();
       });
     });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-cancel',
-      text: 'Cancel'
-    }, (button) => {
+    buttonContainerEl.createEl('button', { cls: 'mod-cancel', text: 'Cancel' }, (button) => {
       button.addEventListener('click', () => {
         this.close();
       });
@@ -160,8 +137,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to merge into...');
-    this.shouldIncludeChildFolders = plugin.settings.shouldIncludeChildFoldersWhenMergingByDefault;
-    this.shouldIncludeParentFolders = plugin.settings.shouldIncludeParentFoldersWhenMergingByDefault;
+    this.shouldIncludeChildFolders = plugin.pluginSettings.shouldIncludeChildFoldersWhenMergingByDefault;
+    this.shouldIncludeParentFolders = plugin.pluginSettings.shouldIncludeParentFoldersWhenMergingByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -188,7 +165,6 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       },
       purpose: 'Include parent folders in selector'
     });
-
     builder.build(this);
   }
 
@@ -205,7 +181,6 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     if (query) {
       return suggestions;
     }
-
     const recentFilePaths = this.app.workspace.getRecentFiles({
       showCanvas: true,
       showImages: true,
@@ -213,10 +188,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       showNonAttachments: true,
       showNonImageAttachments: true
     });
-
     const recentFolders: TFolder[] = [];
     const recentFoldersSet = new Set<TFolder>();
-
     for (const filePath of recentFilePaths) {
       const file = this.app.vault.getFileByPath(filePath);
       if (!file?.parent) {
@@ -231,17 +204,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       recentFoldersSet.add(file.parent);
       recentFolders.push(file.parent);
     }
-
-    const recentSuggestions = recentFolders.map((folder) => ({
-      item: folder,
-      match: {
-        matches: [],
-        score: 0
-      }
-    }));
-
+    const recentSuggestions = recentFolders.map((folder) => ({ item: folder, match: { matches: [], score: 0 } }));
     const otherSuggestions = suggestions.filter((suggestion) => !recentFoldersSet.has(suggestion.item));
-
     return [...recentSuggestions, ...otherSuggestions];
   }
 
@@ -265,7 +229,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     if (folder === this.sourceFolder) {
       return false;
     }
-    if (this.plugin.settings.isPathIgnored(folder.path)) {
+    if (this.plugin.pluginSettings.isPathIgnored(folder.path)) {
       return false;
     }
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
@@ -282,26 +246,20 @@ export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFol
   const targetFolder = await new Promise<null | TFolder>((resolve) => {
     new MergeFolderModal(plugin, sourceFolder, resolve).open();
   });
-
   if (!targetFolder) {
     return null;
   }
-
-  if (!plugin.settings.shouldAskBeforeMerging) {
+  if (!plugin.pluginSettings.shouldAskBeforeMerging) {
     return targetFolder;
   }
-
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
     new ConfirmDialogModal(plugin.app, sourceFolder, targetFolder, resolve).open();
   });
-
   if (!confirmDialogResult.isConfirmed) {
     return null;
   }
-
-  await plugin.settingsManager.editAndSave((settings) => {
+  await plugin.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
-
   return targetFolder;
 }

@@ -7,7 +7,7 @@ import {
 } from 'obsidian';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
 class SwapFileModal extends FuzzySuggestModal<TFile> {
   private isSelected = false;
@@ -34,7 +34,6 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     if (query) {
       return suggestions;
     }
-
     const recentFilePaths = this.app.workspace.getRecentFiles({
       showCanvas: true,
       showImages: true,
@@ -42,10 +41,8 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
       showNonAttachments: true,
       showNonImageAttachments: true
     });
-
     const recentFiles: TFile[] = [];
     const recentFilesSet = new Set<TFile>();
-
     for (const filePath of recentFilePaths) {
       const recentFile = this.app.vault.getFileByPath(filePath);
       if (!recentFile) {
@@ -57,21 +54,11 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
       if (recentFilesSet.has(recentFile)) {
         continue;
       }
-
       recentFilesSet.add(recentFile);
       recentFiles.push(recentFile);
     }
-
-    const recentSuggestions = recentFiles.map((recenTFile) => ({
-      item: recenTFile,
-      match: {
-        matches: [],
-        score: 0
-      }
-    }));
-
+    const recentSuggestions = recentFiles.map((recenTFile) => ({ item: recenTFile, match: { matches: [], score: 0 } }));
     const otherSuggestions = suggestions.filter((suggestion) => !recentFilesSet.has(suggestion.item));
-
     return [...recentSuggestions, ...otherSuggestions];
   }
 
@@ -96,12 +83,10 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     if (isChildOrSelf(this.app, this.sourceFile, file)) {
       return false;
     }
-
     if (isChildOrSelf(this.app, file, this.sourceFile)) {
       return false;
     }
-
-    return !this.plugin.settings.isPathIgnored(file.path);
+    return !this.plugin.pluginSettings.isPathIgnored(file.path);
   }
 }
 

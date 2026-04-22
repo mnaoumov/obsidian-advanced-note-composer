@@ -10,7 +10,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/string';
 
-import { InsertMode } from './InsertMode.ts';
+import { InsertMode } from './insert-mode.ts';
 
 // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic number.
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;

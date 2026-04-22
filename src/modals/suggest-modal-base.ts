@@ -26,7 +26,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/string';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;
@@ -62,7 +62,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
-    this.shouldAllowOnlyCurrentFolder = plugin.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldAllowOnlyCurrentFolder = plugin.pluginSettings.shouldAllowOnlyCurrentFolderByDefault;
 
     this.shouldShowUnresolved = false;
     this.shouldShowMarkdown = true;
@@ -295,7 +295,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     if (!selectedItem) {
       return false;
     }
-    let displayText = truncatePathToLastMatch(this.getDisplayText(selectedItem), selectedItem.match.matches as [number, number][] | undefined);
+    let displayText = truncatePathToLastMatch(this.getDisplayText(selectedItem), selectedItem.match.matches);
     if (displayText === this.inputEl.value) {
       displayText += '/';
     }
@@ -378,7 +378,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (this.plugin.settings.isPathIgnored(unresolvedLink)) {
+        if (this.plugin.pluginSettings.isPathIgnored(unresolvedLink)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -397,7 +397,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
-    if (this.plugin.settings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
       return false;
     }
 

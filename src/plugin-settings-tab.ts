@@ -1,20 +1,29 @@
+import type { PluginSettingsTabBaseParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+
 import { getDebugController } from 'obsidian-dev-utils/debug';
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
-import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab-base';
+import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
 
-import type { PluginTypes } from './PluginTypes.ts';
+import type { PluginSettings } from './plugin-settings.ts';
 
 import {
   Action,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   TextAfterExtractionMode
-} from './PluginSettings.ts';
-import { TOKENIZED_STRING_LANGUAGE } from './PrismComponent.ts';
+} from './plugin-settings.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
 
-export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
+export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
+  private readonly pluginId: string;
+
+  public constructor(params: PluginSettingsTabBaseParams<PluginSettings>) {
+    super(params);
+    this.pluginId = params.plugin.manifest.id;
+  }
+
   public override display(): void {
     super.display();
     this.containerEl.empty();
@@ -35,13 +44,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
           .setDesc('Whether to show console debug messages.')
           .addToggle((toggle) => {
             const debugController = getDebugController();
-            const isEnabled = debugController.get().includes(this.plugin.manifest.id);
+            const isEnabled = debugController.get().includes(this.pluginId);
             toggle.setValue(isEnabled);
             toggle.onChange((value) => {
               if (value) {
-                debugController.enable(this.plugin.manifest.id);
+                debugController.enable(this.pluginId);
               } else {
-                debugController.disable(this.plugin.manifest.id);
+                debugController.disable(this.pluginId);
               }
             });
           });
@@ -144,7 +153,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
             this.bind(text, 'replacement', {
               shouldResetSettingWhenComponentIsEmpty: false
             });
-            text.setDisabled(!this.plugin.settings.shouldReplaceInvalidTitleCharacters);
+            text.setDisabled(!this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters);
           });
       })
       .addSettingEx((setting: SettingEx) => {

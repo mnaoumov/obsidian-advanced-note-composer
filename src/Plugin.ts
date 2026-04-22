@@ -1,31 +1,62 @@
+import type {
+  App,
+  PluginManifest
+} from 'obsidian';
+import type { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import type { ReadonlyDeep } from 'type-fest';
+
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-tab-component';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
-import type { Level } from './MarkdownHeadingDocument.ts';
-import type { PluginTypes } from './PluginTypes.ts';
+import type { Level } from './markdown-heading-document.ts';
+import type { PluginSettings } from './plugin-settings.ts';
 
-import { ExtractAfterCursorEditorCommand } from './Commands/ExtractAfterCursorEditorCommand.ts';
-import { ExtractBeforeCursorEditorCommand } from './Commands/ExtractBeforeCursorEditorCommand.ts';
-import { ExtractCurrentSelectionEditorCommand } from './Commands/ExtractCurrentSelectionEditorCommand.ts';
-import { ExtractThisHeadingEditorCommand } from './Commands/ExtractThisHeadingEditorCommand.ts';
-import { MergeFileCommand } from './Commands/MergeFileCommand.ts';
-import { MergeFolderCommand } from './Commands/MergeFolderCommand.ts';
-import { SplitNoteByHeadingsContentEditorCommand } from './Commands/SplitNoteByHeadingsContentEditorCommand.ts';
-import { SplitNoteByHeadingsEditorCommand } from './Commands/SplitNoteByHeadingsEditorCommand.ts';
-import { SwapFileCommand } from './Commands/SwapFileCommand.ts';
-import { SwapFolderCommand } from './Commands/SwapFolderCommand.ts';
-import { PluginSettingsManager } from './PluginSettingsManager.ts';
-import { PluginSettingsTab } from './PluginSettingsTab.ts';
-import { PrismComponent } from './PrismComponent.ts';
+import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
+import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
+import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/extract-current-selection-editor-command-handler.ts';
+import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
+import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
+import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
+import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
+import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
+import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
+import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
+import { PluginSettingsTab } from './plugin-settings-tab.ts';
+import { PrismComponent } from './prism-component.ts';
 
-export class Plugin extends PluginBase<PluginTypes> {
-  protected override createSettingsManager(): PluginSettingsManager {
-    return new PluginSettingsManager(this);
+export class Plugin extends PluginBase {
+  public readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public get pluginSettings(): ReadonlyDeep<PluginSettings> {
+    return this.pluginSettingsComponent.settings;
   }
 
-  protected override createSettingsTab(): null | PluginSettingsTab {
-    return new PluginSettingsTab(this);
+  public constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    this.pluginSettingsComponent = this.registerComponent({
+      component: new PluginSettingsComponent({
+        loadData: this.loadData.bind(this),
+        saveData: this.saveData.bind(this)
+      }),
+      shouldPreload: true
+    });
+    this.registerComponent({
+      component: new PluginSettingsTabComponent(
+        this,
+        new PluginSettingsTab({
+          plugin: this,
+          pluginSettingsComponent: this.pluginSettingsComponent
+        }) as PluginSettingsTabBase<object>
+      )
+    });
+  }
+
+  public consoleDebug(message: string, ...args: unknown[]): void {
+    this.consoleDebugComponent.debug(message, ...args);
   }
 
   protected override async onLayoutReady(): Promise<void> {
@@ -38,20 +69,20 @@ export class Plugin extends PluginBase<PluginTypes> {
 
     this.addChild(new PrismComponent());
 
-    new MergeFileCommand(this).register();
-    new ExtractCurrentSelectionEditorCommand(this).register();
-    new ExtractThisHeadingEditorCommand(this).register();
-    new ExtractBeforeCursorEditorCommand(this).register();
-    new ExtractAfterCursorEditorCommand(this).register();
-    new MergeFolderCommand(this).register();
-    new SwapFileCommand(this).register();
-    new SwapFolderCommand(this).register();
+    this.addChild(new CommandHandlerComponent(this, new MergeFileCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new ExtractCurrentSelectionEditorCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new ExtractThisHeadingEditorCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new ExtractBeforeCursorEditorCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new ExtractAfterCursorEditorCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new MergeFolderCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new SwapFileCommandHandler(this)));
+    this.addChild(new CommandHandlerComponent(this, new SwapFolderCommandHandler(this)));
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     for (const headingLevel of HEADING_LEVELS) {
-      new SplitNoteByHeadingsEditorCommand(this, headingLevel).register();
-      new SplitNoteByHeadingsContentEditorCommand(this, headingLevel).register();
+      this.addChild(new CommandHandlerComponent(this, new SplitNoteByHeadingsEditorCommandHandler(this, headingLevel)));
+      this.addChild(new CommandHandlerComponent(this, new SplitNoteByHeadingsContentEditorCommandHandler(this, headingLevel)));
     }
   }
 
@@ -68,7 +99,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     const notShownReleaseNoteVersions: string[] = [];
 
     for (const [version, versionReleaseNote] of Object.entries(RELEASE_NOTES)) {
-      if (this.settings.releaseNotesShown.includes(version)) {
+      if (this.pluginSettings.releaseNotesShown.includes(version)) {
         continue;
       }
 
@@ -81,7 +112,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       return;
     }
 
-    await this.settingsManager.editAndSave((settings) => {
+    await this.pluginSettingsComponent.editAndSave((settings) => {
       settings.releaseNotesShown = [...settings.releaseNotesShown, ...notShownReleaseNoteVersions];
     });
 

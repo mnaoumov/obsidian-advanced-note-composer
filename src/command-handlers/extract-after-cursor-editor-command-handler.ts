@@ -1,0 +1,75 @@
+import type {
+  Editor,
+  MarkdownFileInfo
+} from 'obsidian';
+
+import { Notice } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+
+import type { Plugin } from '../plugin.ts';
+
+import { SplitComposer } from '../composers/split-composer.ts';
+import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+
+export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler {
+  protected override get shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+  }
+
+  public constructor(private readonly plugin: Plugin) {
+    super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
+      icon: 'lucide-arrow-down-from-line',
+      id: 'extract-after-cursor',
+      name: 'Extract after cursor...',
+      pluginName: plugin.manifest.name
+    });
+  }
+
+  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
+    const file = ctx.file;
+    if (!file) {
+      return;
+    }
+
+    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+      new Notice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot extract from file ');
+          f.appendChild(await renderInternalLink(this.plugin.app, file));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
+
+    editor.setSelection({ ch: editor.getLine(editor.lastLine()).length, line: editor.lastLine() }, editor.getCursor());
+    const prepareForSplitFileResult = await prepareForSplitFile(this.plugin, file, editor);
+    if (!prepareForSplitFileResult) {
+      return;
+    }
+
+    const composer = new SplitComposer({
+      editor,
+      frontmatterMergeStrategy: prepareForSplitFileResult.frontmatterMergeStrategy,
+      insertMode: prepareForSplitFileResult.insertMode,
+      isMultipleSplit: false,
+      isNewTargetFile: prepareForSplitFileResult.isNewTargetFile,
+      plugin: this.plugin,
+      shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
+      shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
+      shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
+      sourceFile: file,
+      targetFile: prepareForSplitFileResult.targetFile
+    });
+    await composer.splitFile();
+  }
+
+  protected override shouldAddToEditorMenu(): boolean {
+    return true;
+  }
+}

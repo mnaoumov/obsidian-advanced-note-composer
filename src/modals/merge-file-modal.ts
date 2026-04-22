@@ -14,15 +14,15 @@ import {
 } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { Plugin } from '../Plugin.ts';
-import type { Item } from './SuggestModalBase.ts';
+import type { Plugin } from '../plugin.ts';
+import type { Item } from './suggest-modal-base.ts';
 
-import { getInsertModeFromEvent } from '../Composers/ComposerBase.ts';
-import { InsertMode } from '../InsertMode.ts';
-import { MergeItemSelector } from '../ItemSelectors/MergeItemSelector.ts';
-import { FrontmatterMergeStrategy } from '../PluginSettings.ts';
-import { SuggestModalBase } from './SuggestModalBase.ts';
-import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import { getInsertModeFromEvent } from '../composers/composer-base.ts';
+import { InsertMode } from '../insert-mode.ts';
+import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { SuggestModalBase } from './suggest-modal-base.ts';
+import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface ConfirmDialogModalResult {
   insertMode: InsertMode;
@@ -186,10 +186,10 @@ class MergeFileModal extends SuggestModalBase {
   public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>) {
     super(plugin, sourceFile);
 
-    this.shouldFixFootnotes = plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = plugin.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.settings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = plugin.pluginSettings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = plugin.pluginSettings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.pluginSettings.defaultFrontmatterMergeStrategy;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
@@ -326,6 +326,7 @@ class MergeFileModal extends SuggestModalBase {
     super.selectSuggestion(value, evt);
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
     this.promiseResolve({
       frontmatterMergeStrategy: this.frontmatterMergeStrategy,
@@ -370,7 +371,7 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
     targetFile: selectItemResult.targetFile
   };
 
-  if (!plugin.settings.shouldAskBeforeMerging) {
+  if (!plugin.pluginSettings.shouldAskBeforeMerging) {
     return prepareForMergeFileResult;
   }
 
@@ -382,7 +383,7 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
     return null;
   }
 
-  await plugin.settingsManager.editAndSave((settings) => {
+  await plugin.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
 
