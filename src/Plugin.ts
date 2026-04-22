@@ -2,7 +2,6 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
-import type { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import type { ReadonlyDeep } from 'type-fest';
 
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
@@ -50,7 +49,7 @@ export class Plugin extends PluginBase {
         new PluginSettingsTab({
           plugin: this,
           pluginSettingsComponent: this.pluginSettingsComponent
-        }) as PluginSettingsTabBase<object>
+        })
       )
     });
   }
