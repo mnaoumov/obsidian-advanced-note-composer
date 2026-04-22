@@ -41,7 +41,7 @@ import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.t
 
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   public constructor(private readonly plugin: Plugin) {
@@ -60,7 +60,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.plugin.pluginSettings.isPathIgnored(folder.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
@@ -176,7 +176,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       await trashSafe(this.plugin.app, sourceSubfolder);
     }
 
-    if (!this.plugin.pluginSettings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.plugin.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
     const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];

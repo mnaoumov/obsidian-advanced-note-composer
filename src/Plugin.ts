@@ -2,7 +2,6 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
-import type { ReadonlyDeep } from 'type-fest';
 
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
@@ -11,7 +10,6 @@ import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/c
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
 import type { Level } from './markdown-heading-document.ts';
-import type { PluginSettings } from './plugin-settings.ts';
 
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
@@ -29,10 +27,6 @@ import { PrismComponent } from './prism-component.ts';
 
 export class Plugin extends PluginBase {
   public readonly pluginSettingsComponent: PluginSettingsComponent;
-
-  public get pluginSettings(): ReadonlyDeep<PluginSettings> {
-    return this.pluginSettingsComponent.settings;
-  }
 
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
@@ -98,7 +92,7 @@ export class Plugin extends PluginBase {
     const notShownReleaseNoteVersions: string[] = [];
 
     for (const [version, versionReleaseNote] of Object.entries(RELEASE_NOTES)) {
-      if (this.pluginSettings.releaseNotesShown.includes(version)) {
+      if (this.pluginSettingsComponent.settings.releaseNotesShown.includes(version)) {
         continue;
       }
 

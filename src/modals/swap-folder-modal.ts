@@ -29,9 +29,9 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to swap with...');
-    this.shouldIncludeChildFolders = plugin.pluginSettings.shouldIncludeChildFoldersWhenSwappingByDefault;
-    this.shouldIncludeParentFolders = plugin.pluginSettings.shouldIncludeParentFoldersWhenSwappingByDefault;
-    this.shouldSwapEntireFolderStructure = plugin.pluginSettings.shouldSwapEntireFolderStructureByDefault;
+    this.shouldIncludeChildFolders = plugin.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenSwappingByDefault;
+    this.shouldIncludeParentFolders = plugin.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
+    this.shouldSwapEntireFolderStructure = plugin.pluginSettingsComponent.settings.shouldSwapEntireFolderStructureByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -142,7 +142,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
       return false;
     }
-    return !this.plugin.pluginSettings.isPathIgnored(folder.path);
+    return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path);
   }
 }
 
