@@ -62,7 +62,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
-    this.shouldAllowOnlyCurrentFolder = plugin.pluginSettings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldAllowOnlyCurrentFolder = plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
 
     this.shouldShowUnresolved = false;
     this.shouldShowMarkdown = true;
@@ -378,7 +378,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (this.plugin.pluginSettings.isPathIgnored(unresolvedLink)) {
+        if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -397,7 +397,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   private shouldIncludeFile(file: TFile): boolean {
-    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       return false;
     }
 

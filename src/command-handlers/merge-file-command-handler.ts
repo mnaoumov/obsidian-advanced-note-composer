@@ -13,7 +13,7 @@ import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 
 export class MergeFileCommandHandler extends FileCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   public constructor(private readonly plugin: Plugin) {
@@ -32,7 +32,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge file ');

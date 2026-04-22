@@ -18,7 +18,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   public constructor(private readonly plugin: Plugin, private readonly headingLevel: Level) {
@@ -52,7 +52,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');

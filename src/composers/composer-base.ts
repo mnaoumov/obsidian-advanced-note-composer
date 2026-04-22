@@ -105,9 +105,9 @@ export abstract class ComposerBase {
     this.sourceFile = options.sourceFile;
     this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.pluginSettings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.pluginSettings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.pluginSettings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     this.shouldShowNotice = options.shouldShowNotice ?? true;
     this.targetFile = options.targetFile;
     this.isNewTargetFile = options.isNewTargetFile;
@@ -134,7 +134,7 @@ export abstract class ComposerBase {
   }
 
   public isPathIgnored(path: string): boolean {
-    return this.plugin.pluginSettings.isPathIgnored(path);
+    return this.plugin.pluginSettingsComponent.settings.isPathIgnored(path);
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
@@ -223,7 +223,7 @@ export abstract class ComposerBase {
       new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
 
-    if (!this.plugin.pluginSettings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.plugin.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
 

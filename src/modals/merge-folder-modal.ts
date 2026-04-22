@@ -137,8 +137,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to merge into...');
-    this.shouldIncludeChildFolders = plugin.pluginSettings.shouldIncludeChildFoldersWhenMergingByDefault;
-    this.shouldIncludeParentFolders = plugin.pluginSettings.shouldIncludeParentFoldersWhenMergingByDefault;
+    this.shouldIncludeChildFolders = plugin.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenMergingByDefault;
+    this.shouldIncludeParentFolders = plugin.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenMergingByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -229,7 +229,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     if (folder === this.sourceFolder) {
       return false;
     }
-    if (this.plugin.pluginSettings.isPathIgnored(folder.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       return false;
     }
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
@@ -249,7 +249,7 @@ export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFol
   if (!targetFolder) {
     return null;
   }
-  if (!plugin.pluginSettings.shouldAskBeforeMerging) {
+  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return targetFolder;
   }
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {

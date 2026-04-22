@@ -213,15 +213,15 @@ class SplitFileModal extends SuggestModalBase {
   ) {
     super(plugin, sourceFile);
 
-    this.shouldIncludeFrontmatter = plugin.pluginSettings.shouldIncludeFrontmatterWhenSplittingByDefault;
-    this.shouldTreatTitleAsPath = plugin.pluginSettings.shouldTreatTitleAsPathByDefault;
-    this.shouldFixFootnotes = plugin.pluginSettings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = plugin.pluginSettings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.pluginSettings.defaultFrontmatterMergeStrategy;
+    this.shouldIncludeFrontmatter = plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldTreatTitleAsPath = plugin.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault;
+    this.shouldFixFootnotes = plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
     this.allowCreateNewFile = true;
-    this.shouldShowUnresolved = plugin.pluginSettings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.shouldShowUnresolved = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
@@ -443,17 +443,17 @@ export async function prepareForSplitFile(
 
   const splitFileModalResult: null | SplitFileModalResult = shouldSkipModal
     ? {
-      frontmatterMergeStrategy: plugin.pluginSettings.defaultFrontmatterMergeStrategy,
+      frontmatterMergeStrategy: plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
       inputValue: heading,
       insertMode: InsertMode.Append,
       isMod: false,
       item: null,
-      shouldAllowOnlyCurrentFolder: plugin.pluginSettings.shouldAllowOnlyCurrentFolderByDefault,
-      shouldAllowSplitIntoUnresolvedPath: plugin.pluginSettings.shouldAllowSplitIntoUnresolvedPathByDefault,
-      shouldFixFootnotes: plugin.pluginSettings.shouldFixFootnotesByDefault,
-      shouldIncludeFrontmatter: plugin.pluginSettings.shouldIncludeFrontmatterWhenSplittingByDefault,
-      shouldMergeHeadings: plugin.pluginSettings.shouldMergeHeadingsByDefault,
-      shouldTreatTitleAsPath: plugin.pluginSettings.shouldTreatTitleAsPathByDefault
+      shouldAllowOnlyCurrentFolder: plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
+      shouldAllowSplitIntoUnresolvedPath: plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
+      shouldFixFootnotes: plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
+      shouldIncludeFrontmatter: plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+      shouldMergeHeadings: plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
+      shouldTreatTitleAsPath: plugin.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
     }
     : await new Promise<null | SplitFileModalResult>((resolve) => {
       const modal = new SplitFileModal(plugin, heading, sourceFile, editor, resolve);
@@ -486,7 +486,7 @@ export async function prepareForSplitFile(
     targetFile: selectItemResult.targetFile
   };
 
-  if (!plugin.pluginSettings.shouldAskBeforeSplitting) {
+  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
     return prepareForSplitFileResult;
   }
 

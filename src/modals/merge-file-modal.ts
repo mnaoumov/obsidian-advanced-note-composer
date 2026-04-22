@@ -186,10 +186,10 @@ class MergeFileModal extends SuggestModalBase {
   public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>) {
     super(plugin, sourceFile);
 
-    this.shouldFixFootnotes = plugin.pluginSettings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = plugin.pluginSettings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.pluginSettings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
@@ -371,7 +371,7 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
     targetFile: selectItemResult.targetFile
   };
 
-  if (!plugin.pluginSettings.shouldAskBeforeMerging) {
+  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return prepareForMergeFileResult;
   }
 

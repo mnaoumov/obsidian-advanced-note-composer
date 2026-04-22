@@ -86,7 +86,7 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     if (isChildOrSelf(this.app, file, this.sourceFile)) {
       return false;
     }
-    return !this.plugin.pluginSettings.isPathIgnored(file.path);
+    return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path);
   }
 }
 

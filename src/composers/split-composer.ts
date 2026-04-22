@@ -32,7 +32,7 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
 
   public constructor(options: SplitComposerOptions) {
-    super(options, options.shouldIncludeFrontmatter ?? options.plugin.pluginSettings.shouldIncludeFrontmatterWhenSplittingByDefault);
+    super(options, options.shouldIncludeFrontmatter ?? options.plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
     this.isMultipleSplit = options.isMultipleSplit;
   }
@@ -61,7 +61,7 @@ export class SplitComposer extends ComposerBase {
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
-      switch (this.plugin.pluginSettings.textAfterExtractionMode) {
+      switch (this.plugin.pluginSettingsComponent.settings.textAfterExtractionMode) {
         case TextAfterExtractionMode.EmbedNewFile:
           this.editor.replaceSelection(`!${markdownLink}`);
           break;
@@ -72,10 +72,10 @@ export class SplitComposer extends ComposerBase {
           this.editor.replaceSelection('');
           break;
         default:
-          throw new Error(`Invalid text after extraction mode: ${this.plugin.pluginSettings.textAfterExtractionMode as string}`);
+          throw new Error(`Invalid text after extraction mode: ${this.plugin.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
       }
 
-      if (!this.isMultipleSplit && this.plugin.pluginSettings.shouldOpenTargetNoteAfterSplit) {
+      if (!this.isMultipleSplit && this.plugin.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -93,19 +93,19 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
-    if (!this.plugin.pluginSettings.splitTemplate) {
-      return this.plugin.pluginSettings.mergeTemplate;
+    if (!this.plugin.pluginSettingsComponent.settings.splitTemplate) {
+      return this.plugin.pluginSettingsComponent.settings.mergeTemplate;
     }
 
     if (this.isNewTargetFile) {
-      return this.plugin.pluginSettings.splitTemplate;
+      return this.plugin.pluginSettingsComponent.settings.splitTemplate;
     }
 
-    if (this.plugin.pluginSettings.splitToExistingFileTemplate === Action.Merge) {
-      return this.plugin.pluginSettings.mergeTemplate;
+    if (this.plugin.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
+      return this.plugin.pluginSettingsComponent.settings.mergeTemplate;
     }
 
-    return this.plugin.pluginSettings.splitTemplate;
+    return this.plugin.pluginSettingsComponent.settings.splitTemplate;
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

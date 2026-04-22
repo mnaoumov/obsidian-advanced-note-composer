@@ -15,7 +15,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   public constructor(private readonly plugin: Plugin) {
@@ -37,7 +37,7 @@ export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHa
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');

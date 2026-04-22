@@ -18,7 +18,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   private headingInfo?: HeadingInfo;
@@ -60,7 +60,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettings.isPathIgnored(file.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');

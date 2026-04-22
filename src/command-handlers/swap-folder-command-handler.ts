@@ -12,7 +12,7 @@ import { swap } from '../swapper.ts';
 
 export class SwapFolderCommandHandler extends FolderCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   public constructor(private readonly plugin: Plugin) {
@@ -30,7 +30,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.plugin.pluginSettings.isPathIgnored(folder.path)) {
+    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap folder ');
