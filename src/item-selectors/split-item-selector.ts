@@ -3,18 +3,18 @@ import type { TFile } from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
 import { trimEnd } from 'obsidian-dev-utils/string';
 
-import type { Frontmatter } from '../Composers/ComposerBase.ts';
+import type { Frontmatter } from '../composers/composer-base.ts';
 import type {
   ItemSelectorBaseOptions,
   SelectItemResult
-} from './ItemSelectorBase.ts';
+} from './item-selector-base.ts';
 
 import {
   INVALID_CHARACTERS_REG_EXP,
   TRAILING_DOTS_OR_SPACES_REG_EXP
-} from '../FilenameValidation.ts';
-import { FrontmatterTitleMode } from '../PluginSettings.ts';
-import { ItemSelectorBase } from './ItemSelectorBase.ts';
+} from '../filename-validation.ts';
+import { FrontmatterTitleMode } from '../plugin-settings.ts';
+import { ItemSelectorBase } from './item-selector-base.ts';
 
 interface SplitItemSelectorOptions extends ItemSelectorBaseOptions {
   shouldAllowOnlyCurrentFolder: boolean;
@@ -34,7 +34,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   public override async selectItem(): Promise<SelectItemResult> {
     if (this.isMod || !this.item) {
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
-      if (existingFile && this.plugin.settings.isPathIgnored(existingFile.path)) {
+      if (existingFile && this.plugin.pluginSettings.isPathIgnored(existingFile.path)) {
         return {
           isNewTargetFile: false,
           targetFile: existingFile
@@ -79,13 +79,13 @@ export class SplitItemSelector extends ItemSelectorBase {
 
     const isInvalidTitle = file.basename !== fileName;
 
-    if (isInvalidTitle && this.plugin.settings.shouldAddInvalidTitleToNoteAlias) {
+    if (isInvalidTitle && this.plugin.pluginSettings.shouldAddInvalidTitleToNoteAlias) {
       await addAlias(this.app, file, fileName);
     }
 
     let shouldAddTitleToFrontmatter = false;
 
-    switch (this.plugin.settings.frontmatterTitleMode) {
+    switch (this.plugin.pluginSettings.frontmatterTitleMode) {
       case FrontmatterTitleMode.None:
         break;
       case FrontmatterTitleMode.UseAlways:
@@ -95,7 +95,7 @@ export class SplitItemSelector extends ItemSelectorBase {
         shouldAddTitleToFrontmatter = isInvalidTitle;
         break;
       default:
-        throw new Error(`Invalid frontmatter title mode: ${this.plugin.settings.frontmatterTitleMode as string}`);
+        throw new Error(`Invalid frontmatter title mode: ${this.plugin.pluginSettings.frontmatterTitleMode as string}`);
     }
 
     if (shouldAddTitleToFrontmatter) {
@@ -116,17 +116,17 @@ export class SplitItemSelector extends ItemSelectorBase {
       fileName = fileName.replaceAll('/', '\\');
     }
 
-    if (!this.plugin.settings.shouldReplaceInvalidTitleCharacters) {
+    if (!this.plugin.pluginSettings.shouldReplaceInvalidTitleCharacters) {
       return fileName;
     }
 
     const parts = fileName.split('/');
     const fixedParts = parts.filter((part) => !!part).map((part) => {
       let fixedPart = part;
-      fixedPart = fixedPart.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
-      fixedPart = fixedPart.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.settings.replacement.repeat(substring.length));
+      fixedPart = fixedPart.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.pluginSettings.replacement.repeat(substring.length));
+      fixedPart = fixedPart.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.pluginSettings.replacement.repeat(substring.length));
       if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
-        fixedPart = this.plugin.settings.replacement + fixedPart.slice(1);
+        fixedPart = this.plugin.pluginSettings.replacement + fixedPart.slice(1);
       }
       return fixedPart;
     });

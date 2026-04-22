@@ -1,20 +1,23 @@
+import type { PluginSettingsComponentParams } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-component';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-manager-base';
+import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-component';
 
-import type { PluginTypes } from './PluginTypes.ts';
-
-import { INVALID_CHARACTERS_REG_EXP } from './FilenameValidation.ts';
+import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import {
   FrontmatterTitleMode,
   PluginSettings
-} from './PluginSettings.ts';
+} from './plugin-settings.ts';
 
 class LegacySettings {
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
 }
 
-export class PluginSettingsManager extends PluginSettingsManagerBase<PluginTypes> {
+export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginSettings> {
+  public constructor(params: PluginSettingsComponentParams) {
+    super(params);
+  }
+
   protected override createDefaultSettings(): PluginSettings {
     return new PluginSettings();
   }

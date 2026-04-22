@@ -7,9 +7,9 @@ import {
 } from 'obsidian';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
-import { SuggestModalCommandBuilder } from './SuggestModalCommandBuilder.ts';
+import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface SwapFolderModalResult {
   shouldSwapEntireFolderStructure: boolean;
@@ -29,9 +29,9 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   ) {
     super(plugin.app);
     this.setPlaceholder('Select folder to swap with...');
-    this.shouldIncludeChildFolders = plugin.settings.shouldIncludeChildFoldersWhenSwappingByDefault;
-    this.shouldIncludeParentFolders = plugin.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
-    this.shouldSwapEntireFolderStructure = plugin.settings.shouldSwapEntireFolderStructureByDefault;
+    this.shouldIncludeChildFolders = plugin.pluginSettings.shouldIncludeChildFoldersWhenSwappingByDefault;
+    this.shouldIncludeParentFolders = plugin.pluginSettings.shouldIncludeParentFoldersWhenSwappingByDefault;
+    this.shouldSwapEntireFolderStructure = plugin.pluginSettings.shouldSwapEntireFolderStructureByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -70,7 +70,6 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       },
       purpose: 'Should swap entire folder structure'
     });
-
     builder.build(this);
   }
 
@@ -87,7 +86,6 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (query) {
       return suggestions;
     }
-
     const recentFolderPaths = this.app.workspace.getRecentFiles({
       showCanvas: true,
       showImages: true,
@@ -95,10 +93,8 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       showNonAttachments: true,
       showNonImageAttachments: true
     });
-
     const recentFolders: TFolder[] = [];
     const recentFoldersSet = new Set<TFolder>();
-
     for (const folderPath of recentFolderPaths) {
       const recentFile = this.app.vault.getFileByPath(folderPath);
       const recentFolder = recentFile?.parent;
@@ -111,30 +107,17 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       if (recentFoldersSet.has(recentFolder)) {
         continue;
       }
-
       recentFoldersSet.add(recentFolder);
       recentFolders.push(recentFolder);
     }
-
-    const recentSuggestions = recentFolders.map((recenTFolder) => ({
-      item: recenTFolder,
-      match: {
-        matches: [],
-        score: 0
-      }
-    }));
-
+    const recentSuggestions = recentFolders.map((recenTFolder) => ({ item: recenTFolder, match: { matches: [], score: 0 } }));
     const otherSuggestions = suggestions.filter((suggestion) => !recentFoldersSet.has(suggestion.item));
-
     return [...recentSuggestions, ...otherSuggestions];
   }
 
   public override onChooseItem(item: TFolder): void {
     this.isSelected = true;
-    this.promiseResolve({
-      shouldSwapEntireFolderStructure: this.shouldSwapEntireFolderStructure,
-      targetFolder: item
-    });
+    this.promiseResolve({ shouldSwapEntireFolderStructure: this.shouldSwapEntireFolderStructure, targetFolder: item });
   }
 
   public override onClose(): void {
@@ -153,16 +136,13 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (folder === this.sourceFolder) {
       return false;
     }
-
     if (!this.shouldIncludeParentFolders && isChildOrSelf(this.app, this.sourceFolder, folder)) {
       return false;
     }
-
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
       return false;
     }
-
-    return !this.plugin.settings.isPathIgnored(folder.path);
+    return !this.plugin.pluginSettings.isPathIgnored(folder.path);
   }
 }
 

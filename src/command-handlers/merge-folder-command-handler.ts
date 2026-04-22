@@ -1,8 +1,7 @@
 import type {
   TAbstractFile,
   TFile,
-  TFolder,
-  WorkspaceLeaf
+  TFolder
 } from 'obsidian';
 
 import {
@@ -13,10 +12,7 @@ import {
   appendCodeBlock,
   createFragmentAsync
 } from 'obsidian-dev-utils/html-element';
-import {
-  FolderCommandBase,
-  FolderCommandInvocationBase
-} from 'obsidian-dev-utils/obsidian/commands/folder-command-base';
+import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
   exists,
   FileSystemType,
@@ -38,74 +34,63 @@ import {
   relative
 } from 'obsidian-dev-utils/path';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
-import { MergeComposer } from '../Composers/MergeComposer.ts';
-import { selectTargetFolderForMergeFolder } from '../Modals/MergeFolderModal.ts';
+import { MergeComposer } from '../composers/merge-composer.ts';
+import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 
-export class MergeFolderCommand extends FolderCommandBase<Plugin> {
+export class MergeFolderCommandHandler extends FolderCommandHandler {
   protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.settings.shouldAddCommandsToSubmenu;
+    return this.plugin.pluginSettings.shouldAddCommandsToSubmenu;
   }
 
-  public constructor(plugin: Plugin) {
+  public constructor(private readonly plugin: Plugin) {
     super({
       fileMenuItemName: 'Merge entire folder with...',
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'merge',
       id: 'merge-folder',
       name: 'Merge current folder with another folder...',
-      plugin
+      pluginName: plugin.manifest.name
     });
   }
 
-  protected override createCommandInvocationForFolder(folder: null | TFolder): FolderCommandInvocationBase<Plugin> {
-    return new MergeFolderCommandInvocation(this.plugin, folder);
+  protected override canExecuteFolder(folder: TFolder): boolean {
+    return !folder.isRoot();
   }
 
-  protected override shouldAddToFolderMenu(_folder: TFolder, _source: string, _leaf?: WorkspaceLeaf): boolean {
-    return true;
-  }
-}
-
-export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Plugin> {
-  public constructor(plugin: Plugin, folder: null | TFolder) {
-    super(plugin, folder);
-  }
-
-  protected override canExecute(): boolean {
-    return super.canExecute() && !this.folder.isRoot();
-  }
-
-  protected override async execute(): Promise<void> {
-    if (this.plugin.settings.isPathIgnored(this.folder.path)) {
+  protected override async executeFolder(folder: TFolder): Promise<void> {
+    if (this.plugin.pluginSettings.isPathIgnored(folder.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
-          f.appendChild(await renderInternalLink(this.app, this.folder));
+          f.appendChild(await renderInternalLink(this.plugin.app, folder));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
       return;
     }
-
-    const targetFolder = await selectTargetFolderForMergeFolder(this.plugin, this.folder);
+    const targetFolder = await selectTargetFolderForMergeFolder(this.plugin, folder);
     if (targetFolder) {
-      await this.mergeFolder(targetFolder);
+      await this.mergeFolder(folder, targetFolder);
     }
+  }
+
+  protected override shouldAddToFolderMenu(): boolean {
+    return true;
   }
 
   private depth(file: TAbstractFile): number {
     return file.path.split('/').length;
   }
 
-  private async mergeFolder(targetFolder: TFolder): Promise<void> {
+  private async mergeFolder(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
     const notice = new Notice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
-        f.appendChild(await renderInternalLink(this.app, this.folder.path));
+        f.appendChild(await renderInternalLink(this.plugin.app, sourceFolder.path));
         f.appendText(' with ');
-        f.appendChild(await renderInternalLink(this.app, targetFolder.path));
+        f.appendChild(await renderInternalLink(this.plugin.app, targetFolder.path));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');
@@ -114,7 +99,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     );
 
     try {
-      await this.mergeFolderImpl(this.folder, targetFolder);
+      await this.mergeFolderImpl(sourceFolder, targetFolder);
     } finally {
       notice.hide();
     }
@@ -133,7 +118,7 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
       if (!isFile(child)) {
         return;
       }
-      if (isMarkdownFile(this.app, child)) {
+      if (isMarkdownFile(this.plugin.app, child)) {
         sourceMdFiles.push(child);
         return;
       }
@@ -146,66 +131,55 @@ export class MergeFolderCommandInvocation extends FolderCommandInvocationBase<Pl
     for (const sourceSubfolder of sourceSubfolders) {
       const relativePath = relative(sourceFolder.path, sourceSubfolder.path);
       const targetSubfolderPath = join(targetFolder.path, relativePath);
-      const targetSubfolder = await getOrCreateFolderSafe(this.app, targetSubfolderPath);
+      const targetSubfolder = await getOrCreateFolderSafe(this.plugin.app, targetSubfolderPath);
       subfoldersMap.set(sourceSubfolder.path, targetSubfolder.path);
     }
 
-    if (isChildOrSelf(this.app, sourceFolder, targetFolder)) {
+    if (isChildOrSelf(this.plugin.app, sourceFolder, targetFolder)) {
       sourceMdFiles.sort((a, b) => this.depth(a) - this.depth(b));
     }
 
-    if (isChildOrSelf(this.app, targetFolder, sourceFolder)) {
+    if (isChildOrSelf(this.plugin.app, targetFolder, sourceFolder)) {
       sourceMdFiles.sort((a, b) => this.depth(b) - this.depth(a));
     }
 
     for (const sourceMdFile of sourceMdFiles) {
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
-      const isNewTargetFile = !exists(this.app, targetMdFilePath, FileSystemType.File);
-      const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const composer = new MergeComposer({
-        isNewTargetFile,
-        plugin: this.plugin,
-        shouldShowNotice: false,
-        sourceFile: sourceMdFile,
-        targetFile: targetMdFile
-      });
+      const isNewTargetFile = !exists(this.plugin.app, targetMdFilePath, FileSystemType.File);
+      const targetMdFile = await getOrCreateFileSafe(this.plugin.app, targetMdFilePath);
+      const composer = new MergeComposer({ isNewTargetFile, plugin: this.plugin, shouldShowNotice: false, sourceFile: sourceMdFile, targetFile: targetMdFile });
       await composer.mergeFile();
     }
 
     for (const sourceOtherFile of sourceOtherFiles) {
       const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
       let targetFilePath = join(targetParentFolderPath, sourceOtherFile.name);
-      targetFilePath = getAvailablePath(this.app, targetFilePath);
-      await renameSafe(this.app, sourceOtherFile, targetFilePath);
+      targetFilePath = getAvailablePath(this.plugin.app, targetFilePath);
+      await renameSafe(this.plugin.app, sourceOtherFile, targetFilePath);
     }
 
     for (const sourceSubfolder of sourceSubfolders) {
       if (sourceSubfolder.children.length > 0) {
         continue;
       }
-
       let canDeleteSourceFolder = true;
-
       for (const targetFolderPath of subfoldersMap.values()) {
-        if (isChildOrSelf(this.app, targetFolderPath, sourceSubfolder)) {
+        if (isChildOrSelf(this.plugin.app, targetFolderPath, sourceSubfolder)) {
           canDeleteSourceFolder = false;
           break;
         }
       }
-
       if (!canDeleteSourceFolder) {
         continue;
       }
-
-      await trashSafe(this.app, sourceSubfolder);
+      await trashSafe(this.plugin.app, sourceSubfolder);
     }
 
-    if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.plugin.pluginSettings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
-
-    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       new Notice(createFragment((f) => {
         f.appendText('Advanced Note Composer: You have enabled setting ');

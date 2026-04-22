@@ -12,13 +12,13 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type {
   ComposerBaseOptions,
   Selection
-} from './ComposerBase.ts';
+} from './composer-base.ts';
 
 import {
   Action,
   TextAfterExtractionMode
-} from '../PluginSettings.ts';
-import { ComposerBase } from './ComposerBase.ts';
+} from '../plugin-settings.ts';
+import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerOptions extends ComposerBaseOptions {
   editor: Editor;
@@ -32,7 +32,7 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
 
   public constructor(options: SplitComposerOptions) {
-    super(options, options.shouldIncludeFrontmatter ?? options.plugin.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
+    super(options, options.shouldIncludeFrontmatter ?? options.plugin.pluginSettings.shouldIncludeFrontmatterWhenSplittingByDefault);
     this.editor = options.editor;
     this.isMultipleSplit = options.isMultipleSplit;
   }
@@ -61,7 +61,7 @@ export class SplitComposer extends ComposerBase {
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
-      switch (this.plugin.settings.textAfterExtractionMode) {
+      switch (this.plugin.pluginSettings.textAfterExtractionMode) {
         case TextAfterExtractionMode.EmbedNewFile:
           this.editor.replaceSelection(`!${markdownLink}`);
           break;
@@ -72,10 +72,10 @@ export class SplitComposer extends ComposerBase {
           this.editor.replaceSelection('');
           break;
         default:
-          throw new Error(`Invalid text after extraction mode: ${this.plugin.settings.textAfterExtractionMode as string}`);
+          throw new Error(`Invalid text after extraction mode: ${this.plugin.pluginSettings.textAfterExtractionMode as string}`);
       }
 
-      if (!this.isMultipleSplit && this.plugin.settings.shouldOpenTargetNoteAfterSplit) {
+      if (!this.isMultipleSplit && this.plugin.pluginSettings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -87,24 +87,25 @@ export class SplitComposer extends ComposerBase {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise return type.
   protected override async getSelections(): Promise<Selection[]> {
     return getSelections(this.editor);
   }
 
   protected override getTemplate(): string {
-    if (!this.plugin.settings.splitTemplate) {
-      return this.plugin.settings.mergeTemplate;
+    if (!this.plugin.pluginSettings.splitTemplate) {
+      return this.plugin.pluginSettings.mergeTemplate;
     }
 
     if (this.isNewTargetFile) {
-      return this.plugin.settings.splitTemplate;
+      return this.plugin.pluginSettings.splitTemplate;
     }
 
-    if (this.plugin.settings.splitToExistingFileTemplate === Action.Merge) {
-      return this.plugin.settings.mergeTemplate;
+    if (this.plugin.pluginSettings.splitToExistingFileTemplate === Action.Merge) {
+      return this.plugin.pluginSettings.mergeTemplate;
     }
 
-    return this.plugin.settings.splitTemplate;
+    return this.plugin.pluginSettings.splitTemplate;
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

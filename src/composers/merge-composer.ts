@@ -13,10 +13,10 @@ import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import type {
   ComposerBaseOptions,
   Selection
-} from './ComposerBase.ts';
+} from './composer-base.ts';
 
-import { Action } from '../PluginSettings.ts';
-import { ComposerBase } from './ComposerBase.ts';
+import { Action } from '../plugin-settings.ts';
+import { ComposerBase } from './composer-base.ts';
 
 export class MergeComposer extends ComposerBase {
   public constructor(options: ComposerBaseOptions) {
@@ -49,7 +49,7 @@ export class MergeComposer extends ComposerBase {
       await this.insertIntoTargetFile(sourceContent);
       await trashSafe(this.app, this.sourceFile);
 
-      if (this.plugin.settings.shouldOpenNoteAfterMerge) {
+      if (this.plugin.pluginSettings.shouldOpenNoteAfterMerge) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -96,7 +96,7 @@ export class MergeComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
-    return this.plugin.settings.mergeTemplate;
+    return this.plugin.pluginSettings.mergeTemplate;
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

@@ -37,14 +37,14 @@ import {
 import { process } from 'obsidian-dev-utils/obsidian/vault';
 import { replaceAll } from 'obsidian-dev-utils/string';
 
-import type { Plugin } from '../Plugin.ts';
+import type { Plugin } from '../plugin.ts';
 
-import { InsertMode } from '../InsertMode.ts';
-import { parseMarkdownHeadingDocument } from '../MarkdownHeadingDocument.ts';
+import { InsertMode } from '../insert-mode.ts';
+import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import {
   Action,
   FrontmatterMergeStrategy
-} from '../PluginSettings.ts';
+} from '../plugin-settings.ts';
 
 export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertMode {
   return evt.shiftKey ? InsertMode.Prepend : InsertMode.Append;
@@ -105,9 +105,9 @@ export abstract class ComposerBase {
     this.sourceFile = options.sourceFile;
     this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.settings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.settings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.pluginSettings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.pluginSettings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.pluginSettings.defaultFrontmatterMergeStrategy;
     this.shouldShowNotice = options.shouldShowNotice ?? true;
     this.targetFile = options.targetFile;
     this.isNewTargetFile = options.isNewTargetFile;
@@ -134,7 +134,7 @@ export abstract class ComposerBase {
   }
 
   public isPathIgnored(path: string): boolean {
-    return this.plugin.settings.isPathIgnored(path);
+    return this.plugin.pluginSettings.isPathIgnored(path);
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
@@ -223,7 +223,7 @@ export abstract class ComposerBase {
       new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
 
-    if (!this.plugin.settings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.plugin.pluginSettings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
 
@@ -253,7 +253,9 @@ export abstract class ComposerBase {
   }
 
   private applyTemplate(targetContentToInsert: string): string {
-    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, (_, key, format) => {
+    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, ({ groups }) => {
+      const key = groups?.['Key'] ?? '';
+      const format = groups?.['Format'];
       switch (key.toLowerCase()) {
         case 'fromPath'.toLowerCase():
           return this.sourceFile.path;
@@ -266,9 +268,9 @@ export abstract class ComposerBase {
         case 'content':
           return targetContentToInsert;
         case 'date':
-          return moment().format(format || 'YYYY-MM-DD');
+          return moment().format(format ?? 'YYYY-MM-DD');
         case 'time':
-          return moment().format(format || 'HH:mm');
+          return moment().format(format ?? 'HH:mm');
         default:
           throw new Error(`Invalid template key: ${key}`);
       }
@@ -338,7 +340,8 @@ export abstract class ComposerBase {
       }
     }
 
-    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, (_, footnoteId) => {
+    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, ({ groups }) => {
+      const footnoteId = groups?.['FootnoteId'] ?? '';
       return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
     });
 
@@ -378,7 +381,7 @@ export abstract class ComposerBase {
       return;
     }
 
-    await process(this.app, this.targetFile, async (_, targetFileContent) => {
+    await process(this.app, this.targetFile, async ({ content: targetFileContent }) => {
       const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
       const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
       await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
@@ -398,9 +401,9 @@ export abstract class ComposerBase {
       case FrontmatterMergeStrategy.KeepOriginalFrontmatter:
         return originalFrontmatter;
       case FrontmatterMergeStrategy.MergeAndPreferNewValues:
-        return this.mergeRecursively(originalFrontmatter as GenericObject, newFrontmatter as GenericObject) as Frontmatter;
+        return this.mergeRecursively(originalFrontmatter, newFrontmatter);
       case FrontmatterMergeStrategy.MergeAndPreferOriginalValues:
-        return this.mergeRecursively(newFrontmatter as GenericObject, originalFrontmatter as GenericObject) as Frontmatter;
+        return this.mergeRecursively(newFrontmatter, originalFrontmatter);
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
         let suffix = 0;
         let mergeKey: string;
@@ -442,7 +445,7 @@ export abstract class ComposerBase {
         } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
           oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
         } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
-          oldObj[newKey] = this.mergeRecursively(oldObj[newKey], newValue as GenericObject);
+          oldObj[newKey] = this.mergeRecursively(oldObj[newKey] as GenericObject, newValue as GenericObject);
         } else {
           oldObj[newKey] = newValue;
         }
@@ -501,7 +504,7 @@ export abstract class ComposerBase {
 
   private safeParseFrontmatter(frontmatterInfo: FrontMatterInfo): Frontmatter {
     try {
-      return parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null ?? {};
+      return (parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null) ?? {};
     } catch {
       frontmatterInfo.contentStart = 0;
       return {};
