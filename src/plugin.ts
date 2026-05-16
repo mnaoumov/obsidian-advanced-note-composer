@@ -24,28 +24,21 @@ import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
+import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 
 export class Plugin extends PluginBase {
   public readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.pluginSettingsComponent = this.registerComponent({
-      component: new PluginSettingsComponent({
-        loadData: this.loadData.bind(this),
-        saveData: this.saveData.bind(this)
-      }),
-      shouldPreload: true
-    });
-    this.registerComponent({
-      component: new PluginSettingsTabComponent(
+    this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
+    this.addChild(new PluginSettingsTabComponent(
         this,
         new PluginSettingsTab({
           plugin: this,
           pluginSettingsComponent: this.pluginSettingsComponent
         })
-      )
-    });
+      ));
   }
 
   public consoleDebug(message: string, ...args: unknown[]): void {
