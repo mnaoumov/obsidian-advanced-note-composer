@@ -4,7 +4,7 @@ import type {
   Pos
 } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
-import type { HeadingInfo } from 'obsidian-typings';
+import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest';
 
 import {
   App,

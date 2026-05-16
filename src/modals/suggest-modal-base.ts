@@ -4,7 +4,7 @@ import type {
   SearchResultContainer
 } from 'obsidian';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
-import type { BookmarkItem } from 'obsidian-typings';
+import type { BookmarkItem } from '@obsidian-typings/obsidian-public-latest';
 
 import {
   parseFrontMatterAliases,

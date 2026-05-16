@@ -2,7 +2,7 @@ import type {
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
-import type { HeadingInfo } from 'obsidian-typings/implementations';
+import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';

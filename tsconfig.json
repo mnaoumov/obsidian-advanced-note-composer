@@ -22,7 +22,7 @@
     "types": [
       "@total-typescript/ts-reset",
       "node",
-      "obsidian-typings",
+      "@obsidian-typings/obsidian-public-latest",
       "svelte"
     ],
     "verbatimModuleSyntax": true
