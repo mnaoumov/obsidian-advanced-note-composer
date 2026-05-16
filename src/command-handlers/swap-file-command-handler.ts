@@ -20,8 +20,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'switch-camera',
       id: 'swap-file',
-      name: 'Swap file with...',
-      pluginName: plugin.manifest.name
+      name: 'Swap file with...'
     });
   }
 

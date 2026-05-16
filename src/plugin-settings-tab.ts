@@ -1,4 +1,4 @@
-import type { PluginSettingsTabBaseParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import { getDebugController } from 'obsidian-dev-utils/debug';
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
@@ -19,7 +19,7 @@ import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   private readonly pluginId: string;
 
-  public constructor(params: PluginSettingsTabBaseParams<PluginSettings>) {
+  public constructor(params: PluginSettingsTabBaseConstructorParams<PluginSettings>) {
     super(params);
     this.pluginId = params.plugin.manifest.id;
   }

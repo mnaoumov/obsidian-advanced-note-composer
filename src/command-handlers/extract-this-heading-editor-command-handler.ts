@@ -28,8 +28,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'extract-this-heading',
-      name: 'Extract this heading...',
-      pluginName: plugin.manifest.name
+      name: 'Extract this heading...'
     });
   }
 

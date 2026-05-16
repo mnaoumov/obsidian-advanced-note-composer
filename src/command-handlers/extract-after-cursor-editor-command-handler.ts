@@ -23,8 +23,7 @@ export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-arrow-down-from-line',
       id: 'extract-after-cursor',
-      name: 'Extract after cursor...',
-      pluginName: plugin.manifest.name
+      name: 'Extract after cursor...'
     });
   }
 

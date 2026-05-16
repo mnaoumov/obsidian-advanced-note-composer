@@ -25,6 +25,9 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
+import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
+import { AppMenuEventRegistrar } from 'obsidian-dev-utils/obsidian/menu-event-registrar';
 
 export class Plugin extends PluginBase {
   public readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -32,44 +35,47 @@ export class Plugin extends PluginBase {
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
     this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
-    this.addChild(new PluginSettingsTabComponent(
-        this,
-        new PluginSettingsTab({
-          plugin: this,
-          pluginSettingsComponent: this.pluginSettingsComponent
-        })
-      ));
+
+    this.addChild(new PluginSettingsTabComponent({
+      plugin: this,
+      pluginSettingsTab: new PluginSettingsTab({
+        plugin: this,
+        pluginSettingsComponent: this.pluginSettingsComponent
+      })
+    }));
+
+    // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
+    const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
+    this.addChild(new CommandHandlerComponent({
+      activeFileProvider: new AppActiveFileProvider(app),
+      commandHandlers: [
+        new MergeFileCommandHandler(this),
+        new ExtractCurrentSelectionEditorCommandHandler(this),
+        new ExtractThisHeadingEditorCommandHandler(this),
+        new ExtractBeforeCursorEditorCommandHandler(this),
+        new ExtractAfterCursorEditorCommandHandler(this),
+        new MergeFolderCommandHandler(this),
+        new SwapFileCommandHandler(this),
+        new SwapFolderCommandHandler(this),
+        ...HEADING_LEVELS.flatMap((headingLevel) => [
+          new SplitNoteByHeadingsEditorCommandHandler(this, headingLevel),
+          new SplitNoteByHeadingsContentEditorCommandHandler(this, headingLevel)
+        ])
+      ],
+      commandRegistrar: new PluginCommandRegistrar(this),
+      menuEventRegistrar: new AppMenuEventRegistrar(app, this),
+      pluginName: manifest.name
+    }));
+
+    this.addChild(new PrismComponent());
   }
 
   public consoleDebug(message: string, ...args: unknown[]): void {
     this.consoleDebugComponent.debug(message, ...args);
   }
 
-  protected override async onLayoutReady(): Promise<void> {
-    await super.onLayoutReady();
+  protected async onLayoutReady(): Promise<void> {
     await this.showReleaseNotes();
-  }
-
-  protected override async onloadImpl(): Promise<void> {
-    await super.onloadImpl();
-
-    this.addChild(new PrismComponent());
-
-    this.addChild(new CommandHandlerComponent(this, new MergeFileCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new ExtractCurrentSelectionEditorCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new ExtractThisHeadingEditorCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new ExtractBeforeCursorEditorCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new ExtractAfterCursorEditorCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new MergeFolderCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new SwapFileCommandHandler(this)));
-    this.addChild(new CommandHandlerComponent(this, new SwapFolderCommandHandler(this)));
-
-    // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
-    const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
-    for (const headingLevel of HEADING_LEVELS) {
-      this.addChild(new CommandHandlerComponent(this, new SplitNoteByHeadingsEditorCommandHandler(this, headingLevel)));
-      this.addChild(new CommandHandlerComponent(this, new SplitNoteByHeadingsContentEditorCommandHandler(this, headingLevel)));
-    }
   }
 
   private async showReleaseNotes(): Promise<void> {
