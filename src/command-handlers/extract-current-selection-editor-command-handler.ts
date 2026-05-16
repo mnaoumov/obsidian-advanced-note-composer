@@ -23,8 +23,7 @@ export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHa
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'extract-current-selection',
-      name: 'Extract current selection...',
-      pluginName: plugin.manifest.name
+      name: 'Extract current selection...'
     });
   }
 

@@ -27,8 +27,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors-line-dashed',
       id: `split-note-by-headings-content-h${String(headingLevel)}`,
-      name: `Split note by headings content - H${String(headingLevel)}`,
-      pluginName: plugin.manifest.name
+      name: `Split note by headings content - H${String(headingLevel)}`
     });
   }
 

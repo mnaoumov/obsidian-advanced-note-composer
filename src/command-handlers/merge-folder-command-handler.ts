@@ -50,8 +50,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'merge',
       id: 'merge-folder',
-      name: 'Merge current folder with another folder...',
-      pluginName: plugin.manifest.name
+      name: 'Merge current folder with another folder...'
     });
   }
 

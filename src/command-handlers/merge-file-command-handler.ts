@@ -22,8 +22,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-git-merge',
       id: 'merge-file',
-      name: 'Merge current file with another file...',
-      pluginName: plugin.manifest.name
+      name: 'Merge current file with another file...'
     });
   }
 

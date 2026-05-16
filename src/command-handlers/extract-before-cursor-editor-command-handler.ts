@@ -23,8 +23,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-arrow-up-from-line',
       id: 'extract-before-cursor',
-      name: 'Extract before cursor...',
-      pluginName: plugin.manifest.name
+      name: 'Extract before cursor...'
     });
   }
 

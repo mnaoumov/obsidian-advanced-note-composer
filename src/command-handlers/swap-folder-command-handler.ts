@@ -20,8 +20,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'switch-camera',
       id: 'swap-folder',
-      name: 'Swap folder with...',
-      pluginName: plugin.manifest.name
+      name: 'Swap folder with...'
     });
   }
 
