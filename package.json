@@ -9,6 +9,7 @@
   "license": "MIT",
   "author": "mnaoumov",
   "type": "module",
+  "main": "src/main.ts",
   "scripts": {
     "build": "jiti scripts/build.ts",
     "build:clean": "jiti scripts/build-clean.ts",
