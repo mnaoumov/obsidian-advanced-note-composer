@@ -28,9 +28,6 @@
     "version": "jiti scripts/version.ts"
   },
   "overrides": {
-    "@antfu/utils": "9.2.0",
-    "boolean": "npm:dry-uninstall",
-    "dompurify": "3.0.1",
     "eslint": "$eslint",
     "type-fest": "$type-fest",
     "typescript": "$typescript"
@@ -39,7 +36,7 @@
     "@commitlint/cli": "^21.0.1",
     "@commitlint/config-conventional": "^21.0.1",
     "@commitlint/types": "^21.0.1",
-    "@obsidian-typings/obsidian-public-latest": "^6.1.0",
+    "@obsidian-typings/obsidian-public-latest": "^6.3.0",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/strictest": "^2.0.8",
     "@types/node": "^25.8.0",
@@ -50,7 +47,7 @@
     "jiti": "^2.7.0",
     "nano-staged": "^1.0.2",
     "obsidian": "^1.12.3",
-    "obsidian-dev-utils": "^64.0.0",
+    "obsidian-dev-utils": "^65.0.1",
     "type-fest": "^5.6.0",
     "typescript": "^6.0.3"
   }

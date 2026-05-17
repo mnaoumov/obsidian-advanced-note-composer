@@ -17,10 +17,6 @@ import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin, private readonly headingLevel: Level) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
@@ -30,7 +26,8 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     });
   }
 
-  protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
+  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    super.canExecuteEditor(editor, ctx);
     const file = ctx.file;
     if (!file) {
       return false;
@@ -95,7 +92,12 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     }
   }
 
-  protected override shouldAddToEditorMenu(): boolean {
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, ctx);
     return true;
   }
 }

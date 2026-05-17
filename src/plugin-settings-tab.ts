@@ -16,12 +16,16 @@ import {
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
 
+interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
+  readonly pluginId: string;
+}
+
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   private readonly pluginId: string;
 
-  public constructor(params: PluginSettingsTabBaseConstructorParams<PluginSettings>) {
+  public constructor(params: PluginSettingsTabConstructorParams) {
     super(params);
-    this.pluginId = params.plugin.manifest.id;
+    this.pluginId = params.pluginId;
   }
 
   public override display(): void {

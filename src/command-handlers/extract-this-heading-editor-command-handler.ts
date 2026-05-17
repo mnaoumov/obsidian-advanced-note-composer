@@ -1,8 +1,8 @@
+import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest/implementations';
 import type {
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
-import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -17,10 +17,6 @@ import { extractHeadingFromLine } from '../headings.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   private headingInfo?: HeadingInfo;
 
   public constructor(private readonly plugin: Plugin) {
@@ -95,7 +91,11 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     await composer.splitFile();
   }
 
-  protected override shouldAddToEditorMenu(): boolean {
-    return true;
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    return super.shouldAddToEditorMenu(editor, ctx) || true;
   }
 }

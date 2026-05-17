@@ -1,15 +1,19 @@
 import { join } from 'obsidian-dev-utils/path';
 
 import type {
-  ItemSelectorBaseOptions,
+  ItemSelectorBaseConstructorParams,
   SelectItemResult
 } from './item-selector-base.ts';
 
 import { ItemSelectorBase } from './item-selector-base.ts';
 
+interface MergeItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
+  readonly __brand?: 'MergeItemSelectorConstructorParams';
+}
+
 export class MergeItemSelector extends ItemSelectorBase {
-  public constructor(options: ItemSelectorBaseOptions) {
-    super(options);
+  public constructor(params: MergeItemSelectorConstructorParams) {
+    super(params);
   }
 
   public override async selectItem(): Promise<SelectItemResult> {

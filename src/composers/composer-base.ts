@@ -1,10 +1,10 @@
+import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest';
 import type {
   CachedMetadata,
   FrontMatterInfo,
   Pos
 } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
-import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest';
 
 import {
   App,
@@ -52,22 +52,22 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
 
 const moment = extractDefaultExportInterop(moment_);
 
-export interface ComposerBaseOptions {
-  editor?: Editor;
-  frontmatterMergeStrategy?: FrontmatterMergeStrategy;
-  heading?: string;
-  insertMode?: InsertMode;
+export interface ComposerBaseConstructorParams {
+  readonly editor?: Editor;
+  readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
+  readonly heading?: string;
+  readonly insertMode?: InsertMode;
 
-  isNewTargetFile: boolean;
-  plugin: Plugin;
-  shouldAllowOnlyCurrentFolder?: boolean;
-  shouldAllowSplitIntoUnresolvedPath?: boolean;
-  shouldFixFootnotes?: boolean;
-  shouldMergeHeadings?: boolean;
-  shouldShowNotice?: boolean;
-  sourceFile: TFile;
+  readonly isNewTargetFile: boolean;
+  readonly plugin: Plugin;
+  readonly shouldAllowOnlyCurrentFolder?: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath?: boolean;
+  readonly shouldFixFootnotes?: boolean;
+  readonly shouldMergeHeadings?: boolean;
+  readonly shouldShowNotice?: boolean;
+  readonly sourceFile: TFile;
 
-  targetFile: TFile;
+  readonly targetFile: TFile;
 }
 
 export interface Frontmatter extends GenericObject {
@@ -99,7 +99,7 @@ export abstract class ComposerBase {
   private readonly shouldIncludeFrontmatter: boolean;
   private readonly shouldMergeHeadings: boolean;
 
-  public constructor(options: ComposerBaseOptions, shouldIncludeFrontmatter: boolean) {
+  public constructor(options: ComposerBaseConstructorParams, shouldIncludeFrontmatter: boolean) {
     this.insertMode = options.insertMode ?? InsertMode.Append;
     this.plugin = options.plugin;
     this.sourceFile = options.sourceFile;

@@ -18,6 +18,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
   }
 
   protected override registerLegacySettingsConverters(): void {
+    super.registerLegacySettingsConverters();
     this.registerLegacySettingsConverter(PluginSettings, (legacySettings) => {
       if (!legacySettings.mergeTemplate?.includes('{{content}}')) {
         legacySettings.mergeTemplate ??= '';
@@ -35,6 +36,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
   }
 
   protected override registerValidators(): void {
+    super.registerValidators();
     this.registerValidator('replacement', (value): MaybeReturn<string> => {
       if (INVALID_CHARACTERS_REG_EXP.test(value) || value === '/') {
         return 'Invalid replacement string';

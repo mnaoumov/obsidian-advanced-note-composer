@@ -1,6 +1,6 @@
+import { loadPrism } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { Component } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { loadPrism } from '@obsidian-typings/obsidian-public-latest/implementations';
 
 export const TOKENIZED_STRING_LANGUAGE = 'advanced-note-composer-template';
 

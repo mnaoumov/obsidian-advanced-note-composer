@@ -5,7 +5,7 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { Frontmatter } from '../composers/composer-base.ts';
 import type {
-  ItemSelectorBaseOptions,
+  ItemSelectorBaseConstructorParams,
   SelectItemResult
 } from './item-selector-base.ts';
 
@@ -16,16 +16,16 @@ import {
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
-interface SplitItemSelectorOptions extends ItemSelectorBaseOptions {
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldTreatTitleAsPath: boolean;
+interface SplitItemSelectorConstructorOptions extends ItemSelectorBaseConstructorParams {
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldTreatTitleAsPath: boolean;
 }
 
 export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
 
-  public constructor(options: SplitItemSelectorOptions) {
+  public constructor(options: SplitItemSelectorConstructorOptions) {
     super(options);
     this.shouldAllowOnlyCurrentFolder = options.shouldAllowOnlyCurrentFolder;
     this.shouldTreatTitleAsPath = options.shouldTreatTitleAsPath;
@@ -123,8 +123,14 @@ export class SplitItemSelector extends ItemSelectorBase {
     const parts = fileName.split('/');
     const fixedParts = parts.filter((part) => !!part).map((part) => {
       let fixedPart = part;
-      fixedPart = fixedPart.replaceAll(INVALID_CHARACTERS_REG_EXP, (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length));
-      fixedPart = fixedPart.replaceAll(TRAILING_DOTS_OR_SPACES_REG_EXP, (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length));
+      fixedPart = fixedPart.replaceAll(
+        INVALID_CHARACTERS_REG_EXP,
+        (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length)
+      );
+      fixedPart = fixedPart.replaceAll(
+        TRAILING_DOTS_OR_SPACES_REG_EXP,
+        (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length)
+      );
       if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
         fixedPart = this.plugin.pluginSettingsComponent.settings.replacement + fixedPart.slice(1);
       }

@@ -3,7 +3,7 @@ import type {
   TFile
 } from 'obsidian';
 
-declare module 'obsidian-typings' {
+declare module '@obsidian-typings/obsidian-public-latest' {
   interface PluginsPluginsRecord {
     ['templater-obsidian']?: TemplaterPlugin;
   }

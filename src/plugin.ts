@@ -4,7 +4,11 @@ import type {
 } from 'obsidian';
 
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
+import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
+import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import { AppMenuEventRegistrar } from 'obsidian-dev-utils/obsidian/menu-event-registrar';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-tab-component';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
@@ -24,10 +28,6 @@ import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
-import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
-import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
-import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import { AppMenuEventRegistrar } from 'obsidian-dev-utils/obsidian/menu-event-registrar';
 
 export class Plugin extends PluginBase {
   public readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -36,36 +36,40 @@ export class Plugin extends PluginBase {
     super(app, manifest);
     this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
 
-    this.addChild(new PluginSettingsTabComponent({
-      plugin: this,
-      pluginSettingsTab: new PluginSettingsTab({
+    this.addChild(
+      new PluginSettingsTabComponent({
         plugin: this,
-        pluginSettingsComponent: this.pluginSettingsComponent
+        pluginSettingsTab: new PluginSettingsTab({
+          plugin: this,
+          pluginSettingsComponent: this.pluginSettingsComponent
+        })
       })
-    }));
+    );
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
-    this.addChild(new CommandHandlerComponent({
-      activeFileProvider: new AppActiveFileProvider(app),
-      commandHandlers: [
-        new MergeFileCommandHandler(this),
-        new ExtractCurrentSelectionEditorCommandHandler(this),
-        new ExtractThisHeadingEditorCommandHandler(this),
-        new ExtractBeforeCursorEditorCommandHandler(this),
-        new ExtractAfterCursorEditorCommandHandler(this),
-        new MergeFolderCommandHandler(this),
-        new SwapFileCommandHandler(this),
-        new SwapFolderCommandHandler(this),
-        ...HEADING_LEVELS.flatMap((headingLevel) => [
-          new SplitNoteByHeadingsEditorCommandHandler(this, headingLevel),
-          new SplitNoteByHeadingsContentEditorCommandHandler(this, headingLevel)
-        ])
-      ],
-      commandRegistrar: new PluginCommandRegistrar(this),
-      menuEventRegistrar: new AppMenuEventRegistrar(app, this),
-      pluginName: manifest.name
-    }));
+    this.addChild(
+      new CommandHandlerComponent({
+        activeFileProvider: new AppActiveFileProvider(app),
+        commandHandlers: [
+          new MergeFileCommandHandler(this),
+          new ExtractCurrentSelectionEditorCommandHandler(this),
+          new ExtractThisHeadingEditorCommandHandler(this),
+          new ExtractBeforeCursorEditorCommandHandler(this),
+          new ExtractAfterCursorEditorCommandHandler(this),
+          new MergeFolderCommandHandler(this),
+          new SwapFileCommandHandler(this),
+          new SwapFolderCommandHandler(this),
+          ...HEADING_LEVELS.flatMap((headingLevel) => [
+            new SplitNoteByHeadingsEditorCommandHandler(this, headingLevel),
+            new SplitNoteByHeadingsContentEditorCommandHandler(this, headingLevel)
+          ])
+        ],
+        commandRegistrar: new PluginCommandRegistrar(this),
+        menuEventRegistrar: new AppMenuEventRegistrar(app, this),
+        pluginName: manifest.name
+      })
+    );
 
     this.addChild(new PrismComponent());
   }
