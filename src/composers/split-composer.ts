@@ -10,7 +10,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type {
-  ComposerBaseOptions,
+  ComposerBaseConstructorParams,
   Selection
 } from './composer-base.ts';
 
@@ -20,21 +20,21 @@ import {
 } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
-interface SplitComposerOptions extends ComposerBaseOptions {
-  editor: Editor;
-  heading?: string;
-  isMultipleSplit: boolean;
-  shouldIncludeFrontmatter?: boolean;
+interface SplitComposerConstructorParams extends ComposerBaseConstructorParams {
+  readonly editor: Editor;
+  readonly heading?: string;
+  readonly isMultipleSplit: boolean;
+  readonly shouldIncludeFrontmatter?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
   private readonly editor: Editor;
   private readonly isMultipleSplit: boolean;
 
-  public constructor(options: SplitComposerOptions) {
-    super(options, options.shouldIncludeFrontmatter ?? options.plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
-    this.editor = options.editor;
-    this.isMultipleSplit = options.isMultipleSplit;
+  public constructor(params: SplitComposerConstructorParams) {
+    super(params, params.shouldIncludeFrontmatter ?? params.plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
+    this.editor = params.editor;
+    this.isMultipleSplit = params.isMultipleSplit;
   }
 
   public async splitFile(): Promise<void> {
@@ -117,6 +117,8 @@ export class SplitComposer extends ComposerBase {
     sourceFootnoteIdsToRemove: Set<string>,
     sourceFootnoteIdsToRestore: Set<string>
   ): void {
+    super.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
+
     let editorSelections = this.editor.listSelections();
 
     for (const sourceFootnote of sourceCache?.footnotes ?? []) {

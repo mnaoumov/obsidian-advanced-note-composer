@@ -1,10 +1,10 @@
+import type { BookmarkItem } from '@obsidian-typings/obsidian-public-latest';
 import type {
   SearchMatches,
   SearchResult,
   SearchResultContainer
 } from 'obsidian';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
-import type { BookmarkItem } from '@obsidian-typings/obsidian-public-latest';
 
 import {
   parseFrontMatterAliases,
@@ -130,6 +130,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   public override onNoSuggestion(): void {
+    super.onNoSuggestion();
     const value = this.inputEl.value.trim();
     if (value && this.supportsCreate) {
       this.chooser.setSuggestions([null]);

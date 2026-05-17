@@ -11,16 +11,20 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type {
-  ComposerBaseOptions,
+  ComposerBaseConstructorParams,
   Selection
 } from './composer-base.ts';
 
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
+interface MergeComposerConstructorParams extends ComposerBaseConstructorParams {
+  readonly __brand?: 'MergeComposerConstructorParams';
+}
+
 export class MergeComposer extends ComposerBase {
-  public constructor(options: ComposerBaseOptions) {
-    super(options, true);
+  public constructor(params: MergeComposerConstructorParams) {
+    super(params, true);
   }
 
   public async mergeFile(): Promise<void> {

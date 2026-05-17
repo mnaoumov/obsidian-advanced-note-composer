@@ -6,12 +6,12 @@ import type {
 import type { Item } from '../modals/suggest-modal-base.ts';
 import type { Plugin } from '../plugin.ts';
 
-export interface ItemSelectorBaseOptions {
-  inputValue: string;
-  isMod: boolean;
-  item: Item | null;
-  plugin: Plugin;
-  sourceFile: TFile;
+export interface ItemSelectorBaseConstructorParams {
+  readonly inputValue: string;
+  readonly isMod: boolean;
+  readonly item: Item | null;
+  readonly plugin: Plugin;
+  readonly sourceFile: TFile;
 }
 
 export interface SelectItemResult {
@@ -27,13 +27,13 @@ export abstract class ItemSelectorBase {
   protected readonly plugin: Plugin;
   protected readonly sourceFile: TFile;
 
-  public constructor(options: ItemSelectorBaseOptions) {
-    this.app = options.plugin.app;
-    this.plugin = options.plugin;
-    this.sourceFile = options.sourceFile;
-    this.item = options.item;
-    this.isMod = options.isMod;
-    this.inputValue = options.inputValue;
+  public constructor(params: ItemSelectorBaseConstructorParams) {
+    this.app = params.plugin.app;
+    this.plugin = params.plugin;
+    this.sourceFile = params.sourceFile;
+    this.item = params.item;
+    this.isMod = params.isMod;
+    this.inputValue = params.inputValue;
   }
   public abstract selectItem(): Promise<SelectItemResult>;
 }

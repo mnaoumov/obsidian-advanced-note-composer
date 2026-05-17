@@ -14,10 +14,6 @@ import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
@@ -63,6 +59,10 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       targetFile: result.targetFile
     });
     await composer.splitFile();
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(): boolean {

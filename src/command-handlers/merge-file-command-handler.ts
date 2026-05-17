@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  TFile,
+  WorkspaceLeaf
+} from 'obsidian';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -12,10 +15,6 @@ import { MergeComposer } from '../composers/merge-composer.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 
 export class MergeFileCommandHandler extends FileCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin) {
     super({
       fileMenuItemName: 'Merge entire file with...',
@@ -27,7 +26,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override canExecuteFile(file: TFile): boolean {
-    return isMarkdownFile(this.plugin.app, file);
+    return super.canExecuteFile(file) || isMarkdownFile(this.plugin.app, file);
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
@@ -60,11 +59,17 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     await composer.mergeFile();
   }
 
-  protected override shouldAddToFileMenu(_file: TFile, source: string): boolean {
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToFileMenu(file: TFile, source: string): boolean {
+    super.shouldAddToFileMenu(file, source);
     return source !== 'link-context-menu';
   }
 
-  protected override shouldAddToFilesMenu(): boolean {
+  protected override shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean {
+    super.shouldAddToFilesMenu(files, source, leaf);
     return false;
   }
 }

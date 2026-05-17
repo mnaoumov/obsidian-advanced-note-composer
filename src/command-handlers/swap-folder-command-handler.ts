@@ -1,4 +1,7 @@
-import type { TFolder } from 'obsidian';
+import type {
+  TFolder,
+  WorkspaceLeaf
+} from 'obsidian';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -11,10 +14,6 @@ import { selectTargetFolderForSwap } from '../modals/swap-folder-modal.ts';
 import { swap } from '../swapper.ts';
 
 export class SwapFolderCommandHandler extends FolderCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin) {
     super({
       fileMenuSubmenuIcon: 'lucide-git-merge',
@@ -25,6 +24,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override canExecuteFolder(folder: TFolder): boolean {
+    super.canExecuteFolder(folder);
     return !folder.isRoot();
   }
 
@@ -45,7 +45,12 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
     }
   }
 
-  protected override shouldAddToFolderMenu(): boolean {
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean {
+    super.shouldAddToFolderMenu(folder, source, leaf);
     return true;
   }
 }

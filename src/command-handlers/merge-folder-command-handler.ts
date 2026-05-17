@@ -1,7 +1,8 @@
 import type {
   TAbstractFile,
   TFile,
-  TFolder
+  TFolder,
+  WorkspaceLeaf
 } from 'obsidian';
 
 import {
@@ -40,10 +41,6 @@ import { MergeComposer } from '../composers/merge-composer.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 
 export class MergeFolderCommandHandler extends FolderCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin) {
     super({
       fileMenuItemName: 'Merge entire folder with...',
@@ -55,6 +52,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override canExecuteFolder(folder: TFolder): boolean {
+    super.canExecuteFolder(folder);
     return !folder.isRoot();
   }
 
@@ -75,7 +73,12 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
   }
 
-  protected override shouldAddToFolderMenu(): boolean {
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean {
+    super.shouldAddToFolderMenu(folder, source, leaf);
     return true;
   }
 

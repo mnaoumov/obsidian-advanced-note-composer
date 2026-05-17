@@ -16,14 +16,14 @@ import { InsertMode } from './insert-mode.ts';
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 interface ParseHeadingNodeOptions {
-  content: string;
-  contentStartOffset: number;
-  heading: string;
-  headingEndIndex: number;
-  headingsCaches: HeadingCache[];
-  headingStartIndex: number;
-  isFake: boolean;
-  level: Level;
+  readonly content: string;
+  readonly contentStartOffset: number;
+  readonly heading: string;
+  readonly headingEndIndex: number;
+  readonly headingsCaches: HeadingCache[];
+  readonly headingStartIndex: number;
+  readonly isFake: boolean;
+  readonly level: Level;
 }
 
 class MarkdownHeadingDocument {

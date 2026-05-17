@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  TFile,
+  WorkspaceLeaf
+} from 'obsidian';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -11,10 +14,6 @@ import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { swap } from '../swapper.ts';
 
 export class SwapFileCommandHandler extends FileCommandHandler {
-  protected override get shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
   public constructor(private readonly plugin: Plugin) {
     super({
       fileMenuSubmenuIcon: 'lucide-git-merge',
@@ -41,7 +40,12 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     }
   }
 
-  protected override shouldAddToFileMenu(): boolean {
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean {
+    super.shouldAddToFileMenu(file, source, leaf);
     return true;
   }
 }
