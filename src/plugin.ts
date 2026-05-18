@@ -8,9 +8,9 @@ import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-p
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
-import { AppMenuEventRegistrar } from 'obsidian-dev-utils/obsidian/menu-event-registrar';
+import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
-import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-tab-component';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
 import type { Level } from './markdown-heading-document.ts';
@@ -48,6 +48,7 @@ export class Plugin extends PluginBase {
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
+    const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(app));
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(app),

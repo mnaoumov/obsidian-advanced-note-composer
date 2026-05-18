@@ -1,6 +1,6 @@
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-component';
+import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import {
