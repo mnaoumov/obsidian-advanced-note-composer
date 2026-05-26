@@ -1,4 +1,4 @@
-import { PathSettings } from 'obsidian-dev-utils/obsidian/plugin/path-settings';
+import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
 
 export enum Action {
   Merge = 'Merge',
