@@ -7,11 +7,12 @@ import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
 import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
-import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
+import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
+import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
 import type { Level } from './markdown-heading-document.ts';
 
@@ -34,13 +35,19 @@ export class Plugin extends PluginBase {
 
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
+    this.pluginSettingsComponent = this.addChild(
+      new PluginSettingsComponent({
+        dataHandler: new PluginDataHandler(this),
+        pluginEventSource: new PluginEventSourceImpl(this)
+      })
+    );
 
     this.addChild(
       new PluginSettingsTabComponent({
         plugin: this,
         pluginSettingsTab: new PluginSettingsTab({
           plugin: this,
+          pluginId: this.manifest.id,
           pluginSettingsComponent: this.pluginSettingsComponent
         })
       })
@@ -67,7 +74,7 @@ export class Plugin extends PluginBase {
           ])
         ],
         commandRegistrar: new PluginCommandRegistrar(this),
-        menuEventRegistrar: new AppMenuEventRegistrar(app, this),
+        menuEventRegistrar,
         pluginName: manifest.name
       })
     );

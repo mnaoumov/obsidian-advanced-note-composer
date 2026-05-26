@@ -1,10 +1,10 @@
 import { loadPrism } from '@obsidian-typings/obsidian-public-latest/implementations';
-import { Component } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 
 export const TOKENIZED_STRING_LANGUAGE = 'advanced-note-composer-template';
 
-export class PrismComponent extends Component {
+export class PrismComponent extends ComponentEx {
   public override onload(): void {
     super.onload();
     invokeAsyncSafely(this.initPrism.bind(this));

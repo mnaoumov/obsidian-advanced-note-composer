@@ -33,7 +33,7 @@ interface DropDownCommand {
 }
 
 interface InstructionEx extends Instruction {
-  init?: (purposeEl: HTMLSpanElement, scope: Scope) => void;
+  init?(purposeEl: HTMLSpanElement, scope: Scope): void;
 }
 
 interface KeyboardCommand {
