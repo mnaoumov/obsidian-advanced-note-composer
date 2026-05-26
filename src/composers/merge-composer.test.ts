@@ -7,6 +7,10 @@ import {
 
 import { MergeComposer } from './merge-composer.ts';
 
+interface UpdateLinksParams {
+  readonly content: string;
+}
+
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
@@ -20,7 +24,7 @@ vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   editLinks: vi.fn(),
   extractLinkFile: vi.fn(),
   updateLink: vi.fn(),
-  updateLinksInContent: vi.fn().mockImplementation(({ content }: { content: string }) => content)
+  updateLinksInContent: vi.fn().mockImplementation(({ content }: UpdateLinksParams) => content)
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
@@ -43,7 +47,7 @@ vi.mock('obsidian-dev-utils/function', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
-  extractDefaultExportInterop: (m: unknown) => m
+  extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
 vi.mock('../markdown-heading-document.ts', () => ({

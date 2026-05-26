@@ -7,24 +7,37 @@ import {
 
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 
+interface LegacySettingsConverterEntry {
+  converter(settings: Record<string, unknown>): void;
+  settingsClass: new () => unknown;
+}
+
+interface PluginSettingsClassParam<T> {
+  pluginSettingsClass: new () => T;
+}
+
+interface PluginSettingsComponentPrototype {
+  registerLegacySettingsConverters(this: PluginSettingsComponent): void;
+  registerValidators(this: PluginSettingsComponent): void;
+}
+
+interface TestablePluginSettingsComponent extends PluginSettingsComponent {
+  getLegacyConverters(): LegacySettingsConverterEntry[];
+  getValidator(key: string): ((value: unknown) => string | undefined) | undefined;
+}
+
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-component', () => {
   class PluginSettingsComponentBase<T> {
     public settings: T;
-    protected registeredLegacySettingsConverters: {
-      converter(settings: Record<string, unknown>): void;
-      settingsClass: new () => unknown;
-    }[] = [];
+    protected registeredLegacySettingsConverters: LegacySettingsConverterEntry[] = [];
 
     protected registeredValidators = new Map<string, (value: unknown) => string | undefined>();
 
-    public constructor(params: { pluginSettingsClass: new () => T }) {
+    public constructor(params: PluginSettingsClassParam<T>) {
       this.settings = new params.pluginSettingsClass();
     }
 
-    public getLegacyConverters(): {
-      converter(settings: Record<string, unknown>): void;
-      settingsClass: new () => unknown;
-    }[] {
+    public getLegacyConverters(): LegacySettingsConverterEntry[] {
       return this.registeredLegacySettingsConverters;
     }
 
@@ -52,14 +65,6 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-component', () =
   return { PluginSettingsComponentBase };
 });
 
-interface TestablePluginSettingsComponent {
-  getLegacyConverters(): {
-    converter(settings: Record<string, unknown>): void;
-    settingsClass: new () => unknown;
-  }[];
-  getValidator(key: string): ((value: unknown) => string | undefined) | undefined;
-}
-
 function createComponent(): TestablePluginSettingsComponent {
   const component = new PluginSettingsComponent({
     dataHandler: {} as never,
@@ -67,14 +72,11 @@ function createComponent(): TestablePluginSettingsComponent {
   });
 
   // Trigger the protected methods that register validators and converters
-  const proto = Object.getPrototypeOf(component) as {
-    registerLegacySettingsConverters(this: PluginSettingsComponent): void;
-    registerValidators(this: PluginSettingsComponent): void;
-  };
+  const proto = Object.getPrototypeOf(component) as PluginSettingsComponentPrototype;
   proto.registerValidators.call(component);
   proto.registerLegacySettingsConverters.call(component);
 
-  return component as unknown as TestablePluginSettingsComponent;
+  return component as TestablePluginSettingsComponent;
 }
 
 describe('PluginSettingsComponent', () => {

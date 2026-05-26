@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 
 import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -18,7 +19,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
 const mockParseMetadata = vi.mocked(parseMetadata);
 
 function createMockApp(): App {
-  return {} as unknown as App;
+  return strictProxy<App>({});
 }
 
 describe('parseMarkdownHeadingDocument', () => {

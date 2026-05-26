@@ -11,6 +11,18 @@ import {
   TOKENIZED_STRING_LANGUAGE
 } from './prism-component.ts';
 
+interface PrismExpression {
+  pattern: RegExp;
+}
+
+interface PrismLanguage {
+  expression: PrismExpression;
+}
+
+interface WithTriggerUnload {
+  triggerUnload(): void;
+}
+
 vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
   loadPrism: vi.fn()
 }));
@@ -71,7 +83,7 @@ describe('PrismComponent', () => {
     component.onload();
 
     await vi.waitFor(() => {
-      const lang = languages[TOKENIZED_STRING_LANGUAGE] as { expression: { pattern: RegExp } };
+      const lang = languages[TOKENIZED_STRING_LANGUAGE] as PrismLanguage;
       expect(lang.expression.pattern).toBeInstanceOf(RegExp);
       expect(lang.expression.pattern.test('{{content}}')).toBe(true);
     });
@@ -88,7 +100,7 @@ describe('PrismComponent', () => {
       expect(languages[TOKENIZED_STRING_LANGUAGE]).toBeDefined();
     });
 
-    (component as unknown as { triggerUnload(): void }).triggerUnload();
+    (component as PrismComponent & WithTriggerUnload).triggerUnload();
     expect(languages[TOKENIZED_STRING_LANGUAGE]).toBeUndefined();
   });
 });

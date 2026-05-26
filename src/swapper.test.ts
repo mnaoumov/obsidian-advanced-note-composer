@@ -2,7 +2,8 @@ import type {
   App,
   TAbstractFile,
   TFile,
-  TFolder
+  TFolder,
+  Vault
 } from 'obsidian';
 
 import {
@@ -16,6 +17,7 @@ import {
   renameSafe
 } from 'obsidian-dev-utils/obsidian/vault';
 import { deleteIfNotUsed } from 'obsidian-dev-utils/obsidian/vault-delete';
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -24,6 +26,10 @@ import {
 } from 'vitest';
 
 import { swap } from './swapper.ts';
+
+interface NamedFile {
+  name: string;
+}
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   getFolderOrNull: vi.fn(),
@@ -42,7 +48,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault-delete', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/path', () => ({
-  join: (...args: string[]) => args.filter(Boolean).join('/')
+  join: (...args: string[]): string => args.filter(Boolean).join('/')
 }));
 
 const mockIsFile = vi.mocked(isFile);
@@ -54,25 +60,25 @@ const mockIsChild = vi.mocked(isChild);
 const mockGetFolderOrNull = vi.mocked(getFolderOrNull);
 
 function createMockApp(): App {
-  return {
-    vault: {
-      createFolder: vi.fn().mockResolvedValue({ children: [], name: '__temp', path: '__temp' })
-    }
-  } as unknown as App;
+  return strictProxy<App>({
+    vault: strictProxy<Vault>({
+      createFolder: vi.fn().mockResolvedValue(strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' }))
+    })
+  });
 }
 
 function createMockFile(path: string): TFile {
-  return { name: path.split('/').pop(), path } as unknown as TFile;
+  return strictProxy<TFile>({ name: path.split('/').pop(), path });
 }
 
 function createMockFolder(path: string, name: string, children: TAbstractFile[] = []): TFolder {
   const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-  return {
+  return strictProxy<TFolder>({
     children,
     name,
-    parent: { path: parentPath },
+    parent: strictProxy<TFolder>({ path: parentPath }),
     path
-  } as unknown as TFolder;
+  });
 }
 
 describe('swap', () => {
@@ -107,13 +113,13 @@ describe('swap', () => {
     const targetChild = createMockFile('target/file2.md');
     const source = createMockFolder('src', 'same', [sourceChild]);
     const target = createMockFolder('target', 'same', [targetChild]);
-    const tempFolder = { children: [], name: '__temp', path: '__temp' } as unknown as TFolder;
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
 
-    const app = {
-      vault: {
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
         createFolder: vi.fn().mockResolvedValue(tempFolder)
-      }
-    } as unknown as App;
+      })
+    });
 
     mockIsFile.mockReturnValue(false);
     mockIsFolder.mockImplementation((f) => f === source || f === target);
@@ -137,20 +143,20 @@ describe('swap', () => {
     const targetChild = createMockFile('folderB/file2.md');
     const source = createMockFolder('folderA', 'folderA', [sourceChild]);
     const target = createMockFolder('folderB', 'folderB', [targetChild]);
-    const tempFolder = { children: [], name: '__temp', path: '__temp' } as unknown as TFolder;
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
 
-    const app = {
-      vault: {
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
         createFolder: vi.fn().mockResolvedValue(tempFolder)
-      }
-    } as unknown as App;
+      })
+    });
 
     mockIsFile.mockReturnValue(false);
     mockIsFolder.mockImplementation((f) => f === source || f === target);
     mockGetAvailablePath.mockReturnValue('__temp');
     mockRenameSafe.mockImplementation((_app, file, newPath) => {
       if (typeof file === 'object' && 'name' in file) {
-        (file as { name: string }).name = newPath.split('/').pop() ?? '';
+        (file as NamedFile).name = newPath.split('/').pop() ?? '';
       }
       return Promise.resolve(newPath);
     });
@@ -175,20 +181,20 @@ describe('swap', () => {
     const targetFile = createMockFile('folderB/file2.md');
     const source = createMockFolder('src', 'src', [sourceFile, sourceSubfolder]);
     const target = createMockFolder('target', 'target', [targetFile]);
-    const tempFolder = { children: [], name: '__temp', path: '__temp' } as unknown as TFolder;
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
 
-    const app = {
-      vault: {
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
         createFolder: vi.fn().mockResolvedValue(tempFolder)
-      }
-    } as unknown as App;
+      })
+    });
 
     mockIsFile.mockImplementation((f) => f === sourceFile || f === targetFile);
     mockIsFolder.mockImplementation((f) => f === source || f === target);
     mockGetAvailablePath.mockReturnValue('__temp');
     mockRenameSafe.mockImplementation((_app, file, newPath) => {
       if (typeof file === 'object' && 'name' in file) {
-        (file as { name: string }).name = newPath.split('/').pop() ?? '';
+        (file as NamedFile).name = newPath.split('/').pop() ?? '';
       }
       return Promise.resolve(newPath);
     });
