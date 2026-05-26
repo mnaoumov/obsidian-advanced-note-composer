@@ -1,5 +1,6 @@
 import type { Editor } from 'obsidian';
 
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -8,6 +9,15 @@ import {
 } from 'vitest';
 
 import { getSelections } from './split-composer.ts';
+
+interface MockPosition {
+  ch: number;
+}
+
+interface MockSelection {
+  anchor: number;
+  head: number;
+}
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
@@ -42,7 +52,7 @@ vi.mock('obsidian-dev-utils/function', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
-  extractDefaultExportInterop: (m: unknown) => m
+  extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
 vi.mock('../markdown-heading-document.ts', () => ({
@@ -50,16 +60,16 @@ vi.mock('../markdown-heading-document.ts', () => ({
 }));
 
 describe('getSelections', () => {
-  function createMockEditor(selections: { anchor: number; head: number }[]): Editor {
-    return {
+  function createMockEditor(selections: MockSelection[]): Editor {
+    return strictProxy<Editor>({
       listSelections: vi.fn().mockReturnValue(
         selections.map((s) => ({
           anchor: { ch: s.anchor, line: 0 },
           head: { ch: s.head, line: 0 }
         }))
       ),
-      posToOffset: vi.fn((pos: { ch: number }) => pos.ch)
-    } as unknown as Editor;
+      posToOffset: vi.fn((pos: MockPosition) => pos.ch)
+    });
   }
 
   it('should return selections in sorted order', () => {

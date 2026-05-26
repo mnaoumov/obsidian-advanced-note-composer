@@ -1,5 +1,6 @@
 import type { Editor } from 'obsidian';
 
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -60,9 +61,9 @@ describe('extractHeadingFromLine', () => {
 
 describe('extractHeading', () => {
   function createMockEditor(selection: string): Editor {
-    return {
+    return strictProxy<Editor>({
       getSelection: vi.fn().mockReturnValue(selection)
-    } as unknown as Editor;
+    });
   }
 
   it('should extract heading from first line of selection', () => {

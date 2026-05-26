@@ -2,9 +2,11 @@ import type {
   App,
   CachedMetadata,
   Editor,
+  MetadataCache,
   TFile
 } from 'obsidian';
 
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -17,6 +19,10 @@ import {
   getInsertModeFromEvent,
   getSelectionUnderHeading
 } from './composer-base.ts';
+
+interface RegexMatch {
+  groups: Record<string, string | undefined> | undefined;
+}
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   editLinks: vi.fn(),
@@ -39,7 +45,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/string', () => ({
-  replaceAll: vi.fn((str: string, regex: RegExp, replacer: (match: { groups: Record<string, string | undefined> | undefined }) => string) => {
+  replaceAll: vi.fn((str: string, regex: RegExp, replacer: (match: RegexMatch) => string) => {
     return str.replace(regex, (...args: unknown[]) => {
       const groups = args[args.length - 1] as Record<string, string | undefined> | undefined;
       return replacer({ groups });
@@ -57,7 +63,7 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
-  extractDefaultExportInterop: (m: unknown) => m
+  extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
 vi.mock('../markdown-heading-document.ts', () => ({
@@ -88,23 +94,23 @@ describe('getInsertModeFromEvent', () => {
 
 describe('getSelectionUnderHeading', () => {
   function createMockEditor(lines: string[]): Editor {
-    return {
+    return strictProxy<Editor>({
       getLine: vi.fn((n: number) => lines[n] ?? ''),
       lineCount: vi.fn(() => lines.length)
-    } as unknown as Editor;
+    });
   }
 
   function createMockApp(cache: CachedMetadata | null): App {
-    return {
-      metadataCache: {
+    return strictProxy<App>({
+      metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn().mockReturnValue(cache)
-      }
-    } as unknown as App;
+      })
+    });
   }
 
   it('should return null when no cache exists', () => {
     const app = createMockApp(null);
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const editor = createMockEditor(['# Heading', 'text']);
 
     expect(getSelectionUnderHeading(app, file, editor, 0)).toBeNull();
@@ -120,7 +126,7 @@ describe('getSelectionUnderHeading', () => {
         }
       ]
     });
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const editor = createMockEditor(['# Heading', 'text', 'more text']);
 
     expect(getSelectionUnderHeading(app, file, editor, 1)).toBeNull();
@@ -136,7 +142,7 @@ describe('getSelectionUnderHeading', () => {
         }
       ]
     });
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const lines = ['# Heading', 'text under heading', 'more text'];
     const editor = createMockEditor(lines);
 
@@ -162,7 +168,7 @@ describe('getSelectionUnderHeading', () => {
         }
       ]
     });
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const lines = ['## First', 'content 1', '', '## Second', 'content 2'];
     const editor = createMockEditor(lines);
 
@@ -187,7 +193,7 @@ describe('getSelectionUnderHeading', () => {
         }
       ]
     });
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const lines = ['# First', 'content', '', '', '# Second'];
     const editor = createMockEditor(lines);
 
@@ -211,7 +217,7 @@ describe('getSelectionUnderHeading', () => {
         }
       ]
     });
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const lines = ['# Parent', 'text', '## Child', 'child text'];
     const editor = createMockEditor(lines);
 
@@ -222,7 +228,7 @@ describe('getSelectionUnderHeading', () => {
 
   it('should handle cache without headings', () => {
     const app = createMockApp({});
-    const file = {} as TFile;
+    const file = strictProxy<TFile>({});
     const editor = createMockEditor(['text']);
 
     expect(getSelectionUnderHeading(app, file, editor, 0)).toBeNull();
