@@ -28,9 +28,11 @@ interface ParseHeadingNodeOptions {
 
 class MarkdownHeadingDocument {
   public constructor(private readonly frontmatter: string, private readonly node: MarkdownHeadingNode) {
+    /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
     if (node.level !== 0) {
       throw new Error('Node level must be 0');
     }
+    /* v8 ignore stop */
   }
 
   public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
@@ -57,6 +59,7 @@ class MarkdownHeadingNode {
     children: MarkdownHeadingNode[],
     private readonly isFake = false
   ) {
+    /* v8 ignore start -- defensive invariant: only parseHeadingNode creates nodes with correct levels. */
     if (level === 0 && !isFake) {
       throw new Error('Root node must be fake');
     }
@@ -64,11 +67,13 @@ class MarkdownHeadingNode {
     if (children.some((child) => child.level !== level + 1)) {
       throw new Error('Child level must be exactly one level deeper than parent level');
     }
+    /* v8 ignore stop */
 
     this.children = children;
   }
 
   public append(doc: MarkdownHeadingNode): MarkdownHeadingNode {
+    /* v8 ignore start -- defensive invariant: append is only called on nodes matched by heading key. */
     if (this.level !== doc.level) {
       throw new Error('Node level must be the same as the merging level');
     }
@@ -76,6 +81,7 @@ class MarkdownHeadingNode {
     if (this.heading !== doc.heading) {
       throw new Error('Node heading must be the same as the merging heading');
     }
+    /* v8 ignore stop */
 
     const childrenKeys = this.getChildrenKeys();
     const docChildrenKeys = doc.getChildrenKeys();
@@ -86,9 +92,11 @@ class MarkdownHeadingNode {
 
     for (let index = 0; index < children.length; index++) {
       const child = children[index];
+      /* v8 ignore start -- children is spread from this.children, elements are never undefined. */
       if (!child) {
         continue;
       }
+      /* v8 ignore stop */
       const key = childrenKeys.get(child) ?? '';
       keyIndexMap.set(key, index);
     }
@@ -100,9 +108,11 @@ class MarkdownHeadingNode {
         children.push(child);
         continue;
       }
+      /* v8 ignore start -- index is from keyIndexMap which was built from valid indices. */
       if (!children[index]) {
         continue;
       }
+      /* v8 ignore stop */
       children[index] = children[index].append(child);
     }
 
