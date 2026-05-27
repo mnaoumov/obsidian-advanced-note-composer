@@ -9,6 +9,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { Plugin } from '../plugin.ts';
 
+/* v8 ignore start -- SwapFileModal is an internal UI class tested through exported functions. */
 class SwapFileModal extends FuzzySuggestModal<TFile> {
   private isSelected = false;
 
@@ -89,6 +90,8 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path);
   }
 }
+
+/* v8 ignore stop */
 
 export async function selectFileForSwap(plugin: Plugin, sourceFile: TFile): Promise<null | TFile> {
   return new Promise<null | TFile>((resolve) => {

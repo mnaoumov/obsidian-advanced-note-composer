@@ -30,7 +30,10 @@ vi.mock('obsidian-dev-utils/async', () => ({
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
-  createFragmentAsync: vi.fn().mockResolvedValue(createFragment())
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = createFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
@@ -67,8 +70,25 @@ vi.mock('../composers/composer-base.ts', () => ({
   getInsertModeFromEvent: vi.fn().mockReturnValue(InsertMode.Append)
 }));
 
+let shouldAutoSelect = false;
+
+interface AsyncModule {
+  invokeAsyncSafely(fn: () => Promise<void>): void;
+}
+
+interface WithChooseAsync {
+  onChooseSuggestionAsync(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
+}
+
+interface WithSelectSuggestion {
+  selectSuggestion(value: unknown, evt: KeyboardEvent | MouseEvent): void;
+}
+
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
+  // eslint-disable-next-line no-restricted-syntax -- Need to import for mock delegation.
+  const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
+
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;
     protected shouldAllowOnlyCurrentFolder = false;
@@ -90,7 +110,20 @@ vi.mock('./suggest-modal-base.ts', async () => {
     public getSuggestions(_query: string): unknown[] {
       return [];
     }
-    public onChooseSuggestion(): void {/* Noop */}
+
+    public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
+      // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
+      asyncModule.invokeAsyncSafely(() => (this as never as WithChooseAsync).onChooseSuggestionAsync(item, evt));
+    }
+
+    public override onOpen(): void {
+      if (shouldAutoSelect) {
+        // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
+        (this as never as WithSelectSuggestion).selectSuggestion(null, { shiftKey: false } as MouseEvent);
+      }
+      super.onOpen();
+    }
+
     public renderSuggestion(): void {/* Noop */}
     public selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {/* Noop */}
     public updateSuggestions(): void {/* Noop */}
@@ -103,12 +136,15 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
     public addCheckbox(): this {
       return this;
     }
+
     public addDropDown(): this {
       return this;
     }
+
     public addKeyboardCommand(): this {
       return this;
     }
+
     public build(): void {/* Noop */}
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
@@ -196,6 +232,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
 describe('prepareForMergeFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    shouldAutoSelect = false;
   });
 
   afterEach(() => {
@@ -231,6 +268,32 @@ describe('prepareForMergeFile', () => {
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     // Modal auto-closes without selection → null
+    expect(result).toBeNull();
+  });
+
+  it('should return result when user selects an item and shouldAskBeforeMerging is false', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
+
+    const promise = prepareForMergeFile(plugin, sourceFile);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).not.toBeNull();
+    expect(result?.targetFile).toBe(mockTargetFile);
+  });
+
+  it('should return null when confirm dialog is rejected after user selects item', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
+
+    const promise = prepareForMergeFile(plugin, sourceFile);
+    // First timer: SuggestModal close
+    await vi.advanceTimersByTimeAsync(0);
+    // Second timer: ConfirmDialog close (auto-closes without selection → isConfirmed=false)
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
     expect(result).toBeNull();
   });
 });

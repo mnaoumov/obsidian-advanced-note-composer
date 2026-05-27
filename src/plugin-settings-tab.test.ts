@@ -55,6 +55,9 @@ interface SettingsTabConstructorParams extends PluginSettingsTabBaseConstructorP
   readonly pluginId: string;
 }
 
+const capturedToggleOnChangeHandlers: ((value: boolean) => void)[] = [];
+const capturedBindOnChangedCallbacks: (() => void)[] = [];
+
 function createMockSettingEx(): MockSettingEx {
   const setting: MockSettingEx = {
     addCodeHighlighter: vi.fn().mockImplementation((cb: (codeHighlighter: MockCodeHighlighter) => void) => {
@@ -74,7 +77,14 @@ function createMockSettingEx(): MockSettingEx {
       return setting;
     }),
     addToggle: vi.fn().mockImplementation((cb: (toggle: MockToggle) => void) => {
-      cb({ onChange: vi.fn(), setDisabled: vi.fn(), setValue: vi.fn() });
+      const toggle: MockToggle = {
+        onChange: vi.fn().mockImplementation((handler: (value: boolean) => void) => {
+          capturedToggleOnChangeHandlers.push(handler);
+        }),
+        setDisabled: vi.fn(),
+        setValue: vi.fn()
+      };
+      cb(toggle);
       return setting;
     }),
     setDesc: vi.fn().mockReturnThis(),
@@ -106,6 +116,10 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
+interface BindOptions {
+  onChanged?(): void;
+}
+
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-settings-tab', () => {
   class MockPluginSettingsTabBase {
     protected readonly pluginSettingsComponent: unknown;
@@ -114,8 +128,10 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-settings-tab', () => {
       this.pluginSettingsComponent = params.pluginSettingsComponent;
     }
 
-    public bind(): void {
-      // No-op for test
+    public bind(_component: unknown, _key: string, options?: BindOptions): void {
+      if (options?.onChanged) {
+        capturedBindOnChangedCallbacks.push(options.onChanged);
+      }
     }
 
     public display(): void {
@@ -159,6 +175,8 @@ vi.mock('./prism-component.ts', () => ({
 
 afterEach(() => {
   vi.restoreAllMocks();
+  capturedToggleOnChangeHandlers.length = 0;
+  capturedBindOnChangedCallbacks.length = 0;
 });
 
 function createSettingsTab(): PluginSettingsTab {
@@ -234,5 +252,66 @@ describe('debug controller toggle', () => {
     expect(() => {
       tab.display();
     }).not.toThrow();
+  });
+
+  it('should enable debug controller when toggle onChange is called with true', () => {
+    const enableMock = vi.fn();
+    const disableMock = vi.fn();
+    vi.mocked(getDebugController).mockReturnValue({
+      disable: disableMock,
+      enable: enableMock,
+      get: vi.fn().mockReturnValue([])
+    } as never);
+
+    const tab = createSettingsTab();
+    getContainerEl(tab);
+    tab.display();
+
+    // The debug toggle's onChange handler is the only one captured via toggle.onChange
+    // (all other toggles use bind). It's the first captured onChange handler.
+    expect(capturedToggleOnChangeHandlers.length).toBeGreaterThan(0);
+
+    // Call with true to exercise the enable branch
+    const debugToggleHandler = capturedToggleOnChangeHandlers[0];
+    expect(debugToggleHandler).toBeDefined();
+    debugToggleHandler?.(true);
+    expect(enableMock).toHaveBeenCalledWith('test-plugin-id');
+  });
+
+  it('should disable debug controller when toggle onChange is called with false', () => {
+    const enableMock = vi.fn();
+    const disableMock = vi.fn();
+    vi.mocked(getDebugController).mockReturnValue({
+      disable: disableMock,
+      enable: enableMock,
+      get: vi.fn().mockReturnValue([])
+    } as never);
+
+    const tab = createSettingsTab();
+    getContainerEl(tab);
+    tab.display();
+
+    const debugToggleHandler = capturedToggleOnChangeHandlers[0];
+    expect(debugToggleHandler).toBeDefined();
+    debugToggleHandler?.(false);
+    expect(disableMock).toHaveBeenCalledWith('test-plugin-id');
+  });
+});
+
+describe('shouldReplaceInvalidTitleCharacters onChanged', () => {
+  it('should call display when shouldReplaceInvalidTitleCharacters changes', () => {
+    const tab = createSettingsTab();
+    getContainerEl(tab);
+    tab.display();
+
+    // The bind call with onChanged option captures the callback
+    expect(capturedBindOnChangedCallbacks.length).toBeGreaterThan(0);
+
+    // Calling the onChanged callback should re-invoke display
+    const displaySpy = vi.spyOn(tab, 'display');
+    const onChangedCallback = capturedBindOnChangedCallbacks[0];
+    expect(onChangedCallback).toBeDefined();
+    onChangedCallback?.();
+    expect(displaySpy).toHaveBeenCalled();
   });
 });

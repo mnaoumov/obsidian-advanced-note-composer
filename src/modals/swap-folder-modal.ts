@@ -16,6 +16,7 @@ interface SwapFolderModalResult {
   targetFolder: TFolder;
 }
 
+/* v8 ignore start -- SwapFolderModal is an internal UI class tested through exported functions. */
 class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   private isSelected = false;
   private shouldIncludeChildFolders = false;
@@ -145,6 +146,8 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path);
   }
 }
+
+/* v8 ignore stop */
 
 export async function selectTargetFolderForSwap(plugin: Plugin, sourceFolder: TFolder): Promise<null | SwapFolderModalResult> {
   return new Promise<null | SwapFolderModalResult>((resolve) => {

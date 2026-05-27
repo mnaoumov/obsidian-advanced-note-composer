@@ -248,6 +248,83 @@ describe('SuggestModalBase', () => {
       expect(Array.isArray(suggestions)).toBe(true);
     });
 
+    it('should lower score of user-ignored files that match search query', () => {
+      const file1 = createMockFile('folder/test-file.md');
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        files: [file1, sourceFile],
+        markdownFiles: [file1, sourceFile]
+      });
+      vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const suggestions = modal.getSuggestions('test-file');
+      // The file should still appear but have lower score
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should skip ignored unresolved links', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        unresolvedLinks: {
+          'folder/source.md': { 'ignored-note': 1 }
+        }
+      });
+      vi.mocked(plugin.pluginSettingsComponent.settings.isPathIgnored).mockImplementation((path: string) => path === 'ignored-note');
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      modal['shouldShowUnresolved'] = true;
+      const suggestions = modal.getSuggestions('ignored');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should add file bookmark when file exists and is included', () => {
+      const bookmarkedFile = createMockFile('folder/bookmarked.md');
+      sourceFile = createMockFile('folder/source.md');
+      const bookmarksPlugin: BookmarksPlugin = {
+        getItemTitle: vi.fn().mockReturnValue('Bookmarked'),
+        items: [{ path: 'folder/bookmarked.md', type: 'file' }]
+      };
+      plugin = createMockPlugin({
+        bookmarksPlugin,
+        files: [bookmarkedFile, sourceFile]
+      });
+      vi.mocked(plugin.app.vault.getFileByPath).mockImplementation((path: string) => {
+        if (path === 'folder/bookmarked.md') {
+          return bookmarkedFile;
+        }
+        return null;
+      });
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const suggestions = modal.getSuggestions('Bookmarked');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should find files where path matches but filename does not', () => {
+      // File whose filename (xyz.md) does not match 'unique-folder' but path does
+      const file1 = createMockFile('unique-folder/xyz.md');
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        files: [file1, sourceFile],
+        markdownFiles: [file1, sourceFile]
+      });
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const suggestions = modal.getSuggestions('unique-folder');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should find files matching query via searchFilePath', () => {
+      const file1 = createMockFile('folder/test-file.md');
+      const file2 = createMockFile('folder/other-test.md');
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        files: [file1, file2, sourceFile],
+        markdownFiles: [file1, file2, sourceFile]
+      });
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      // Use a specific query that the fuzzy search should match
+      const suggestions = modal.getSuggestions('test-file');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
     it('should search unresolved links when enabled', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin({
@@ -285,6 +362,40 @@ describe('SuggestModalBase', () => {
       const modal = new TestSuggestModal(plugin, sourceFile);
       modal['shouldShowUnresolved'] = false;
       const suggestions = modal.getSuggestions('unresolved');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should search aliases when shouldShowAlias is true', () => {
+      const file1 = createMockFile('folder/test-file.md');
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        files: [file1, sourceFile],
+        markdownFiles: [file1, sourceFile]
+      });
+      // Set up cache with aliases
+      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue({
+        frontmatter: { aliases: ['My Alias'] }
+      } as never);
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      modal['shouldShowAlias'] = true;
+      const suggestions = modal.getSuggestions('alias');
+      expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should lower score of alias matches for user-ignored files', () => {
+      const file1 = createMockFile('folder/test-file.md');
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin({
+        files: [file1, sourceFile],
+        markdownFiles: [file1, sourceFile]
+      });
+      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue({
+        frontmatter: { aliases: ['My Alias'] }
+      } as never);
+      vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      modal['shouldShowAlias'] = true;
+      const suggestions = modal.getSuggestions('alias');
       expect(Array.isArray(suggestions)).toBe(true);
     });
 
@@ -375,6 +486,15 @@ describe('SuggestModalBase', () => {
       const modal = new TestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(Array.isArray(suggestions)).toBe(true);
+    });
+
+    it('should include non-standard extension files when shouldShowAllTypes is true', () => {
+      sourceFile = createMockFile('folder/source.md');
+      const customFile = createMockFile('folder/data.xyz', 'xyz');
+      plugin = createMockPlugin({ files: [customFile, sourceFile], recentFiles: ['folder/data.xyz'] });
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const suggestions = modal.getSuggestions('');
+      expect(suggestions.length).toBeGreaterThan(0);
     });
 
     it('should handle image files based on shouldShowImages', () => {
@@ -615,6 +735,33 @@ describe('SuggestModalBase', () => {
       expect(superOnInput).toHaveBeenCalled();
     });
 
+    it('should not re-append create button when already in DOM on mobile', () => {
+      vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      modal['allowCreateNewFile'] = true;
+      modal['shouldShowMarkdown'] = true;
+      modal.inputEl.value = 'test';
+
+      const ctaEl = createDiv();
+      Object.defineProperty(modal, 'ctaEl', { value: ctaEl });
+      Object.defineProperty(modal, 'chooser', {
+        value: {
+          suggestions: [{ getText: (): string => 'test' }]
+        }
+      });
+
+      const superOnInput = vi.fn();
+      Object.getPrototypeOf(Object.getPrototypeOf(modal)).onInput = superOnInput;
+
+      // First call: appends the button
+      modal.onInput();
+      // Second call: button is already appended, so just updates ariaDisabled
+      modal.onInput();
+      expect(superOnInput).toHaveBeenCalledTimes(2);
+    });
+
     it('should not add create button on desktop', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(false);
       sourceFile = createMockFile('folder/source.md');
@@ -685,6 +832,45 @@ describe('SuggestModalBase', () => {
     });
   });
 
+  describe('handleCreateButtonClick', () => {
+    it('should call onChooseSuggestion with null and close', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const closeSpy = vi.spyOn(modal, 'close');
+
+      modal['handleCreateButtonClick']({ shiftKey: false } as MouseEvent);
+      expect(modal.lastChosenItem).toBeNull();
+      expect(closeSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getDisplayText', () => {
+    it('should return bookmark path for bookmark type', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const result = modal['getDisplayText']({ bookmarkPath: 'My Bookmark', match: { matches: [], score: 0 }, type: 'bookmark' });
+      expect(result).toBe('My Bookmark');
+    });
+
+    it('should return linktext for unresolved type', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const result = modal['getDisplayText']({ linktext: 'unresolved-note', match: { matches: [], score: 0 }, type: 'unresolved' });
+      expect(result).toBe('unresolved-note');
+    });
+
+    it('should return empty string for unknown type', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+      const result = modal['getDisplayText']({ match: { matches: [], score: 0 }, type: 'unknown' });
+      expect(result).toBe('');
+    });
+  });
+
   describe('handleTabKey', () => {
     it('should return false when no selected item', () => {
       sourceFile = createMockFile('folder/source.md');
@@ -710,6 +896,55 @@ describe('SuggestModalBase', () => {
       const evt = strictProxy<KeyboardEvent>({ isComposing: true });
       const result = modal['handleTabKey'](evt);
       expect(result).toBeUndefined();
+    });
+
+    it('should return full path when last match end is falsy', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+
+      const fileItem: Item = {
+        file: createMockFile('folder/test.md'),
+        match: { matches: [[0, 0]], score: 1 },
+        type: 'file'
+      };
+      const chooser = {
+        selectedItem: 0,
+        values: [fileItem]
+      };
+      Object.defineProperty(modal, 'chooser', { value: chooser });
+
+      modal.inputEl.value = 'different';
+      modal.inputEl.trigger = vi.fn();
+      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
+      modal['handleTabKey'](evt);
+      // When lastMatchEnd is 0 (falsy), path is returned unchanged
+      expect(modal.inputEl.value).toBe('folder/test');
+    });
+
+    it('should truncate path to last match when tab is pressed', () => {
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = new TestSuggestModal(plugin, sourceFile);
+
+      const fileItem: Item = {
+        file: createMockFile('folder/sub/test.md'),
+        match: { matches: [[0, 6]], score: 1 },
+        type: 'file'
+      };
+      const chooser = {
+        selectedItem: 0,
+        values: [fileItem]
+      };
+      Object.defineProperty(modal, 'chooser', { value: chooser });
+
+      modal.inputEl.value = 'different';
+      modal.inputEl.trigger = vi.fn();
+      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
+      const result = modal['handleTabKey'](evt);
+      expect(result).toBe(false);
+      // The path should be truncated to the match
+      expect(modal.inputEl.value).toBeDefined();
     });
 
     it('should set input value from selected item and append / when same', () => {

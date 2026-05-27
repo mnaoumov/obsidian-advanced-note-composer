@@ -31,7 +31,10 @@ vi.mock('obsidian-dev-utils/async', () => ({
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
-  createFragmentAsync: vi.fn().mockResolvedValue(createFragment())
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = createFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
@@ -50,24 +53,40 @@ vi.mock('../composers/composer-base.ts', () => ({
   getInsertModeFromEvent: vi.fn().mockReturnValue(InsertMode.Append)
 }));
 
+let shouldAutoSelect = false;
+
 vi.mock('./suggest-modal-command-builder.ts', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;
     }
+
     public addDropDown(): this {
       return this;
     }
+
     public addKeyboardCommand(): this {
       return this;
     }
+
     public build(): void {/* Noop */}
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
 });
 
+interface AsyncModule {
+  invokeAsyncSafely(fn: () => Promise<void>): void;
+}
+
+interface WithChooseAsync {
+  onChooseSuggestionAsync(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
+}
+
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
+  // eslint-disable-next-line no-restricted-syntax -- Need to import for mock delegation.
+  const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
+
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;
     protected shouldAllowOnlyCurrentFolder = false;
@@ -89,7 +108,19 @@ vi.mock('./suggest-modal-base.ts', async () => {
     public getSuggestions(_query: string): unknown[] {
       return [];
     }
-    public onChooseSuggestion(): void {/* Noop */}
+
+    public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
+      // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
+      asyncModule.invokeAsyncSafely(() => (this as never as WithChooseAsync).onChooseSuggestionAsync(item, evt));
+    }
+
+    public override onOpen(): void {
+      if (shouldAutoSelect) {
+        this.onChooseSuggestion(null, { shiftKey: false } as MouseEvent);
+      }
+      super.onOpen();
+    }
+
     public renderSuggestion(): void {/* Noop */}
     public selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {/* Noop */}
     public updateSuggestions(): void {/* Noop */}
@@ -200,6 +231,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
 describe('prepareForSplitFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    shouldAutoSelect = false;
   });
 
   afterEach(() => {
@@ -310,5 +342,31 @@ describe('prepareForSplitFile', () => {
     const result = await promise;
     expect(result).toBeNull();
     expect(trashSafe).toHaveBeenCalledWith(plugin.app, mockTargetFile);
+  });
+
+  it('should return result when user selects item via modal and shouldAskBeforeSplitting is false', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).not.toBeNull();
+    expect(result?.targetFile).toBe(mockTargetFile);
+  });
+
+  it('should return null when confirm dialog rejects after modal selection', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
   });
 });

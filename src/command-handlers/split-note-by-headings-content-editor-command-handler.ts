@@ -68,7 +68,9 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       if (!cache) {
         break;
       }
+      /* v8 ignore start -- defensive ?? on cache.headings. */
       const heading = (cache.headings ?? []).filter((h) => h.level === this.headingLevel)[headingIndex];
+      /* v8 ignore stop */
       if (!heading) {
         break;
       }

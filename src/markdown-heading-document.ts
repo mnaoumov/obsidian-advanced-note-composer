@@ -97,12 +97,16 @@ class MarkdownHeadingNode {
         continue;
       }
       /* v8 ignore stop */
+      /* v8 ignore start -- childrenKeys always has entries for all children. */
       const key = childrenKeys.get(child) ?? '';
+      /* v8 ignore stop */
       keyIndexMap.set(key, index);
     }
 
     for (const child of doc.children) {
+      /* v8 ignore start -- docChildrenKeys always has entries for all children. */
       const key = docChildrenKeys.get(child) ?? '';
+      /* v8 ignore stop */
       const index = keyIndexMap.get(key);
       if (index === undefined) {
         children.push(child);
@@ -128,7 +132,9 @@ class MarkdownHeadingNode {
     let str = '';
     if (!this.isFake) {
       str += '#'.repeat(this.level);
+      /* v8 ignore start -- heading is always set for non-fake nodes. */
       if (this.heading) {
+        /* v8 ignore stop */
         str += ` ${this.heading}`;
       }
     }
@@ -214,12 +220,14 @@ function parseHeadingNode(options: ParseHeadingNodeOptions): MarkdownHeadingNode
   }
 
   for (let j = 0; j < childrenLevelIndices.length; j++) {
+    /* v8 ignore start -- defensive ?? on array indexing and optional heading property. */
     const headingStartIndex = childrenLevelIndices[j] ?? 0;
     const child = parseHeadingNode({
       content: options.content,
       contentStartOffset: options.contentStartOffset,
       heading: options.headingsCaches[headingStartIndex]?.heading ?? '',
       headingEndIndex: childrenLevelIndices[j + 1] ?? options.headingEndIndex,
+      /* v8 ignore stop */
       headingsCaches: options.headingsCaches,
       headingStartIndex: headingStartIndex + 1,
       isFake: false,

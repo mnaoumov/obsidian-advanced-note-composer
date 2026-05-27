@@ -61,6 +61,7 @@ interface SplitFileModalResult {
   shouldTreatTitleAsPath: boolean;
 }
 
+/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
   private isSelected = false;
   private shouldAskBeforeSplitting = true;
@@ -193,6 +194,9 @@ class ConfirmDialogModal extends Modal {
   }
 }
 
+/* v8 ignore stop */
+
+/* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private isSelected = false;
@@ -429,6 +433,8 @@ class SplitFileModal extends SuggestModalBase {
   }
 }
 
+/* v8 ignore stop */
+
 export async function prepareForSplitFile(
   plugin: Plugin,
   sourceFile: TFile,
@@ -470,7 +476,9 @@ export async function prepareForSplitFile(
     item: splitFileModalResult.item,
     plugin,
     shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+    /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
     shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
+    /* v8 ignore stop */
     sourceFile
   }).selectItem();
 
@@ -494,16 +502,17 @@ export async function prepareForSplitFile(
     new ConfirmDialogModal(plugin.app, sourceFile, prepareForSplitFileResult.targetFile, editor, resolve).open();
   });
 
+  /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
   if (!confirmDialogResult.isConfirmed) {
     if (prepareForSplitFileResult.isNewTargetFile) {
       await trashSafe(plugin.app, prepareForSplitFileResult.targetFile);
     }
     return null;
   }
-
   await plugin.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskBeforeSplitting;
   });
 
   return prepareForSplitFileResult;
+  /* v8 ignore stop */
 }

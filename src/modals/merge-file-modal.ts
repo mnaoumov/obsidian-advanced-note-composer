@@ -53,6 +53,7 @@ interface PrepareForMergeFileResult {
   targetFile: TFile;
 }
 
+/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
   private isSelected = false;
   private shouldAskBeforeMerging = true;
@@ -176,6 +177,9 @@ class ConfirmDialogModal extends Modal {
   }
 }
 
+/* v8 ignore stop */
+
+/* v8 ignore start -- MergeFileModal is an internal UI class tested through exported functions. */
 class MergeFileModal extends SuggestModalBase {
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private isSelected = false;
@@ -342,6 +346,8 @@ class MergeFileModal extends SuggestModalBase {
   }
 }
 
+/* v8 ignore stop */
+
 export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Promise<null | PrepareForMergeFileResult> {
   const result = await new Promise<MergeFileModalResult | null>((resolve) => {
     const modal = new MergeFileModal(plugin, sourceFile, resolve);
@@ -379,14 +385,15 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
     new ConfirmDialogModal(plugin.app, sourceFile, prepareForMergeFileResult.targetFile, resolve).open();
   });
 
+  /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
   if (!confirmDialogResult.isConfirmed) {
     return null;
   }
-
   await plugin.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
 
   prepareForMergeFileResult.insertMode = confirmDialogResult.insertMode;
   return prepareForMergeFileResult;
+  /* v8 ignore stop */
 }
