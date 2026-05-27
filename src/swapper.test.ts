@@ -18,6 +18,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/vault';
 import { deleteIfNotUsed } from 'obsidian-dev-utils/obsidian/vault-delete';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
   describe,
   expect,
@@ -68,7 +69,7 @@ function createMockApp(): App {
 }
 
 function createMockFile(path: string): TFile {
-  return strictProxy<TFile>({ name: path.split('/').pop(), path });
+  return strictProxy<TFile>({ name: ensureNonNullable(path.split('/').pop()), path });
 }
 
 function createMockFolder(path: string, name: string, children: TAbstractFile[] = []): TFolder {
