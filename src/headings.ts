@@ -5,7 +5,9 @@ export function extractHeading(editor: Editor): string {
   /* v8 ignore start -- split('\n') always returns at least one element. */
   if (selectedLines.length > 0) {
     /* v8 ignore stop */
+    /* v8 ignore start -- selectedLines[0] is always defined when length > 0. */
     const extractedHeading = extractHeadingFromLine(selectedLines[0] ?? '');
+    /* v8 ignore stop */
     return extractedHeading ?? '';
   }
 

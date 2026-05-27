@@ -28,12 +28,15 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
     public addCheckbox(): this {
       return this;
     }
+
     public addDropDown(): this {
       return this;
     }
+
     public addKeyboardCommand(): this {
       return this;
     }
+
     public build(): void {/* Noop */}
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };

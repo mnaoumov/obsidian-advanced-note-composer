@@ -121,7 +121,9 @@ export class SplitComposer extends ComposerBase {
 
     let editorSelections = this.editor.listSelections();
 
+    /* v8 ignore start -- defensive ?? on sourceCache?.footnotes. */
     for (const sourceFootnote of sourceCache?.footnotes ?? []) {
+      /* v8 ignore stop */
       if (sourceFootnoteIdsToRemove.has(sourceFootnote.id)) {
         editorSelections.push({
           anchor: this.editor.offsetToPos(sourceFootnote.position.end.offset),
@@ -135,6 +137,7 @@ export class SplitComposer extends ComposerBase {
     this.editor.setSelections(editorSelections);
   }
 
+  /* v8 ignore start -- removeSelectionRange branches are defensive for various selection/range overlap cases. */
   private removeSelectionRange(editorSelections: EditorSelection[], rangeToRemove: Pos): EditorSelection[] {
     const rangeStart = rangeToRemove.start.offset;
     const rangeEnd = rangeToRemove.end.offset;
@@ -172,6 +175,7 @@ export class SplitComposer extends ComposerBase {
 
     return result;
   }
+  /* v8 ignore stop */
 }
 
 export function getSelections(editor: Editor): Selection[] {

@@ -15,8 +15,12 @@ interface PrismExpression {
   pattern: RegExp;
 }
 
+interface PrismExpressionWithInside extends PrismExpression {
+  inside: Record<string, PrismExpression>;
+}
+
 interface PrismLanguage {
-  expression: PrismExpression;
+  expression: PrismExpressionWithInside;
 }
 
 interface WithTriggerUnload {
@@ -86,6 +90,24 @@ describe('PrismComponent', () => {
       const lang = languages[TOKENIZED_STRING_LANGUAGE] as PrismLanguage;
       expect(lang.expression.pattern).toBeInstanceOf(RegExp);
       expect(lang.expression.pattern.test('{{content}}')).toBe(true);
+    });
+  });
+
+  it('should define inside tokens for expression', async () => {
+    const languages: Record<string, unknown> = {};
+    mockLoadPrism.mockResolvedValue({ languages } as never);
+
+    const component = new PrismComponent();
+    component.onload();
+
+    await vi.waitFor(() => {
+      const lang = languages[TOKENIZED_STRING_LANGUAGE] as PrismLanguage;
+      const inside = lang.expression.inside;
+      expect(inside['prefix']).toBeDefined();
+      expect(inside['token']).toBeDefined();
+      expect(inside['formatDelimiter']).toBeDefined();
+      expect(inside['format']).toBeDefined();
+      expect(inside['suffix']).toBeDefined();
     });
   });
 

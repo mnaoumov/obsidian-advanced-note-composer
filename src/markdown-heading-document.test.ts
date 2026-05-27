@@ -224,6 +224,56 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
     expect(result).toContain('Sub A');
     expect(result).toContain('Sub B');
   });
+
+  it('should add non-matching sub-headings from merged document', async () => {
+    const contentA = '# Title\nText A';
+    mockParseMetadata.mockResolvedValueOnce({
+      headings: [
+        {
+          heading: 'Title',
+          level: 1,
+          position: {
+            end: { col: 7, line: 0, offset: 7 },
+            start: { col: 0, line: 0, offset: 0 }
+          }
+        }
+      ]
+    });
+
+    const contentB = '# Title\nText B\n## NewSub\nNew Sub Content';
+    mockParseMetadata.mockResolvedValueOnce({
+      headings: [
+        {
+          heading: 'Title',
+          level: 1,
+          position: {
+            end: { col: 7, line: 0, offset: 7 },
+            start: { col: 0, line: 0, offset: 0 }
+          }
+        },
+        {
+          heading: 'NewSub',
+          level: 2,
+          position: {
+            end: { col: 8, line: 2, offset: 23 },
+            start: { col: 0, line: 2, offset: 15 }
+          }
+        }
+      ]
+    });
+
+    const app = createMockApp();
+    const doc1 = await parseMarkdownHeadingDocument(app, contentA);
+    const doc2 = await parseMarkdownHeadingDocument(app, contentB);
+
+    const merged = doc1.mergeWith(doc2, InsertMode.Append);
+    const result = merged.toString();
+    expect(result).toContain('# Title');
+    expect(result).toContain('Text A');
+    expect(result).toContain('Text B');
+    expect(result).toContain('## NewSub');
+    expect(result).toContain('New Sub Content');
+  });
 });
 
 describe('MarkdownHeadingDocument.wrapText', () => {

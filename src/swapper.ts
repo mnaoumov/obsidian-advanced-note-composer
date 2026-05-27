@@ -46,10 +46,14 @@ async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder
   const targetFolderName = targetFolder.name;
 
   if (sourceFolderName !== targetFolderName) {
+    /* v8 ignore start -- parent?.path ?? '' is defensive; folders always have a parent in practice. */
     const sourceFolderWithTargetName = join(sourceFolder.parent?.path ?? '', targetFolderName);
+    /* v8 ignore stop */
     await renameSafe(app, sourceFolder, sourceFolderWithTargetName);
 
+    /* v8 ignore start -- parent?.path ?? '' is defensive; folders always have a parent in practice. */
     const targetFolderWithSourceName = join(targetFolder.parent?.path ?? '', sourceFolderName);
+    /* v8 ignore stop */
     await renameSafe(app, targetFolder, targetFolderWithSourceName);
 
     if (sourceFolder.name !== targetFolderName && getFolderOrNull(app, sourceFolderWithTargetName) === null) {

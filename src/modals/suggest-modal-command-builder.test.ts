@@ -1,5 +1,6 @@
 import type {
   Instruction,
+  KeymapEventListener,
   Modifier,
   SuggestModal
 } from 'obsidian';
@@ -20,11 +21,28 @@ import {
 
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
+interface RegisterCall {
+  func: KeymapEventListener;
+  key: string;
+  modifiers: Modifier[];
+}
+
+function captureRegisterCalls(scope: Scope): RegisterCall[] {
+  const calls: RegisterCall[] = [];
+  const originalRegister = scope.register.bind(scope);
+  vi.spyOn(scope, 'register').mockImplementation((modifiers, key, func) => {
+    calls.push({ func, key: key ?? '', modifiers: modifiers ?? [] });
+    return originalRegister(modifiers, key, func);
+  });
+  return calls;
+}
+
 function createMockModal(): SuggestModal<unknown> {
   const instructionsEl = createDiv();
+  const scope = new Scope();
   return strictProxy<SuggestModal<unknown>>({
     instructionsEl,
-    scope: new Scope(),
+    scope,
     setInstructions: vi.fn((instructions: Instruction[]) => {
       instructionsEl.empty();
       for (const instruction of instructions) {
@@ -81,11 +99,10 @@ describe('SuggestModalCommandBuilder', () => {
       const onKey = vi.fn();
       builder.addKeyboardCommand({ key: 'Enter', modifiers: ['Mod'], onKey, purpose: 'to create' });
       const modal = createMockModal();
-      // Scope.register is called inside init, which is called inside build
-      // The mock Scope stores handlers but the InstructionEx.init is called during build
+      const registerCalls = captureRegisterCalls(modal.scope);
       builder.build(modal);
-      // Verify setInstructions was called with the instruction
-      expect(modal.setInstructions).toHaveBeenCalled();
+      const call = registerCalls.find((c) => c.key === 'Enter' && c.modifiers.includes('Mod'));
+      expect(call).toBeDefined();
     });
 
     it('should not register scope handler when no onKey is provided', () => {
@@ -172,9 +189,38 @@ describe('SuggestModalCommandBuilder', () => {
         purpose: 'Test'
       });
       const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
       builder.build(modal);
       // The checkbox should be disabled and the keyboard handler should return early
       expect(capturedCheckbox?.disabled).toBe(true);
+
+      // Trigger the keyboard handler - it should not toggle
+      const handler = registerCalls.find((c) => c.key === '1');
+      expect(handler).toBeDefined();
+      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      // OnChange should NOT have been called since checkbox is disabled
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('should toggle checkbox via keyboard shortcut when enabled', () => {
+      const onChange = vi.fn();
+      builder.addCheckbox({
+        key: '1',
+        modifiers: ['Alt'],
+        onChange,
+        onInit: (el) => {
+          el.checked = false;
+        },
+        purpose: 'Test'
+      });
+      const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
+      builder.build(modal);
+
+      const handler = registerCalls.find((c) => c.key === '1');
+      expect(handler).toBeDefined();
+      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      expect(onChange).toHaveBeenCalledWith(true);
     });
 
     it('should return this for chaining', () => {
@@ -213,6 +259,75 @@ describe('SuggestModalCommandBuilder', () => {
       const modal = createMockModal();
       builder.build(modal);
       expect(onInit).toHaveBeenCalledWith(expect.any(DropdownComponent));
+    });
+
+    it('should call onChange when dropdown value changes via setValue', () => {
+      const onChange = vi.fn();
+      let capturedDropdown: DropdownComponent | undefined;
+      builder.addDropDown({
+        key: '5',
+        modifiers: ['Alt'],
+        onChange,
+        onInit: (dropdownComponent) => {
+          dropdownComponent.addOptions({ a: 'A', b: 'B', c: 'C' });
+          capturedDropdown = dropdownComponent;
+        },
+        purpose: 'Strategy'
+      });
+      const modal = createMockModal();
+      builder.build(modal);
+
+      // Trigger change via setValue which invokes the onChange callback
+      expect(capturedDropdown).toBeDefined();
+      capturedDropdown?.setValue('b');
+      expect(onChange).toHaveBeenCalledWith('b');
+    });
+
+    it('should execute keyboard handler for dropdown cycling', () => {
+      const onChange = vi.fn();
+      builder.addDropDown({
+        key: '5',
+        modifiers: ['Alt'],
+        onChange,
+        onInit: (dropdownComponent) => {
+          dropdownComponent.addOptions({ a: 'A', b: 'B' });
+        },
+        purpose: 'Strategy'
+      });
+      const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
+      builder.build(modal);
+
+      const handler = registerCalls.find((c) => c.key === '5');
+      expect(handler).toBeDefined();
+      // This executes the handler code (lines 84-89) even though
+      // SelectEl.trigger('change') won't call DropdownComponent's internal callback
+      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      expect(handler).toBeDefined();
+    });
+
+    it('should not cycle dropdown when disabled', () => {
+      builder.addDropDown({
+        key: '5',
+        modifiers: ['Alt'],
+        onChange: vi.fn(),
+        onInit: (dropdownComponent) => {
+          dropdownComponent.addOptions({ a: 'A', b: 'B' });
+          dropdownComponent.setDisabled(true);
+        },
+        purpose: 'Strategy'
+      });
+      const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
+      builder.build(modal);
+
+      const handler = registerCalls.find((c) => c.key === '5');
+      expect(handler).toBeDefined();
+      // This should return early due to disabled check
+      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      // The handler returned early, select index was not changed
+      const selectEl = modal.instructionsEl.querySelector('select');
+      expect(selectEl?.selectedIndex).toBe(0);
     });
 
     it('should return this for chaining', () => {

@@ -32,7 +32,10 @@ interface UpdateLinksParams {
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
-  createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = activeDocument.createDocumentFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({

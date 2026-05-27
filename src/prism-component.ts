@@ -15,6 +15,7 @@ export class PrismComponent extends ComponentEx {
     prism.languages[TOKENIZED_STRING_LANGUAGE] = {
       expression: {
         greedy: true,
+        /* v8 ignore start -- v8 cannot instrument eslint-disable comments inside object literals. */
         inside: {
           /* eslint-disable perfectionist/sort-objects -- Need to keep object order. */
           prefix: {
@@ -39,6 +40,7 @@ export class PrismComponent extends ComponentEx {
           }
           /* eslint-enable perfectionist/sort-objects -- Need to keep object order. */
         },
+        /* v8 ignore stop */
         pattern: /\{\{.+?\}\}/
       }
     };

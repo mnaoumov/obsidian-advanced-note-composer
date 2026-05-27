@@ -42,7 +42,10 @@ interface MockSelection {
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
-  createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = activeDocument.createDocumentFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
@@ -616,6 +619,65 @@ describe('SplitComposer updateEditorSelections', () => {
       ],
       footnotes: [
         { id: 'fn1', position: { end: { col: 20, line: 1, offset: 34 }, start: { col: 0, line: 1, offset: 14 } } }
+      ]
+    });
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(setSelectionsMock).toHaveBeenCalled();
+  });
+});
+
+describe('SplitComposer updateEditorSelections with restore', () => {
+  it('should call removeSelectionRange for footnotes that need restoring', async () => {
+    const setSelectionsMock = vi.fn();
+    // Selection covers only part of the text, not the footnote ref outside selection
+    const editor = strictProxy<Editor>({
+      getSelection: vi.fn().mockReturnValue('definition text'),
+      listSelections: vi.fn().mockReturnValue([
+        { anchor: { ch: 20, line: 0 }, head: { ch: 50, line: 0 } }
+      ]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      setSelections: setSelectionsMock
+    });
+
+    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['vault'] = {
+      cachedRead: vi.fn()
+        .mockResolvedValueOnce('before [^fn1] selected [^fn1]: definition after')
+        .mockResolvedValueOnce('target content')
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue({
+      footnoteRefs: [
+        // First ref is outside selection (offset 7-13)
+        { id: 'fn1', position: { end: { col: 13, line: 0, offset: 13 }, start: { col: 7, line: 0, offset: 7 } } },
+        // Second ref is inside selection (offset 23-29)
+        { id: 'fn1', position: { end: { col: 29, line: 0, offset: 29 }, start: { col: 23, line: 0, offset: 23 } } }
+      ],
+      footnotes: [
+        // Footnote definition is inside selection (offset 23-45)
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 45, line: 0, offset: 45 },
+            start: { col: 23, line: 0, offset: 23 }
+          }
+        }
       ]
     });
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});

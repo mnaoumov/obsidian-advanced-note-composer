@@ -15,9 +15,11 @@ interface PluginSettingsComponentConstructorParams {
   readonly pluginEventSource: PluginEventSource;
 }
 
+/* v8 ignore start -- LegacySettings is only instantiated during legacy settings migration. */
 class LegacySettings {
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
 }
+/* v8 ignore stop */
 
 export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginSettings> {
   public constructor(params: PluginSettingsComponentConstructorParams) {

@@ -80,7 +80,9 @@ export class SuggestModalCommandBuilder {
           command.onChange(value);
         });
 
+        /* v8 ignore start -- defensive ?? on optional modifiers. */
         scope.register(command.modifiers ?? [], command.key, () => {
+          /* v8 ignore stop */
           if (dropdownComponent.disabled) {
             return;
           }
@@ -99,7 +101,9 @@ export class SuggestModalCommandBuilder {
       command: this.buildCommand(command),
       init: (_purposeEl, scope) => {
         if (command.onKey) {
+          /* v8 ignore start -- defensive ?? on optional modifiers. */
           scope.register(command.modifiers ?? [], command.key, command.onKey.bind(command));
+          /* v8 ignore stop */
         }
       },
       purpose: command.purpose
@@ -112,9 +116,11 @@ export class SuggestModalCommandBuilder {
     const purposeEls = Array.from(modal.instructionsEl.findAll('.prompt-instruction > span:nth-child(2)')) as HTMLSpanElement[];
     for (let i = 0; i < purposeEls.length; i++) {
       const purposeEl = purposeEls[i];
+      /* v8 ignore start -- purposeEls[i] is always defined within loop bounds. */
       if (!purposeEl) {
         continue;
       }
+      /* v8 ignore stop */
 
       this.instructions[i]?.init?.(purposeEl, modal.scope);
     }

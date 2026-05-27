@@ -1,5 +1,6 @@
 import type {
   App,
+  TFile,
   TFolder,
   Vault,
   Workspace
@@ -25,7 +26,10 @@ vi.mock('obsidian-dev-utils/async', () => ({
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
-  createFragmentAsync: vi.fn().mockResolvedValue(createFragment())
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = createFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
@@ -36,17 +40,23 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
 
+let shouldAutoSelect = false;
+let autoSelectFolder: null | TFolder = null;
+
 vi.mock('./suggest-modal-command-builder.ts', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;
     }
+
     public addDropDown(): this {
       return this;
     }
+
     public addKeyboardCommand(): this {
       return this;
     }
+
     public build(): void {/* Noop */}
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
@@ -67,15 +77,21 @@ function createMockFolder(path: string): TFolder {
 
 function createMockPlugin(options?: MockPluginOptions): Plugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
+  const folders = autoSelectFolder ? [autoSelectFolder] : [];
 
   return strictProxy<Plugin>({
     app: strictProxy<App>({
       vault: strictProxy<Vault>({
-        getAllFolders: vi.fn().mockReturnValue([]),
-        getFileByPath: vi.fn().mockReturnValue(null)
+        getAllFolders: vi.fn().mockReturnValue(folders),
+        getFileByPath: vi.fn().mockImplementation((filePath: string) => {
+          if (autoSelectFolder) {
+            return strictProxy<TFile>({ parent: autoSelectFolder, path: filePath });
+          }
+          return null;
+        })
       }),
       workspace: strictProxy<Workspace>({
-        getRecentFiles: vi.fn().mockReturnValue([])
+        getRecentFiles: vi.fn().mockReturnValue(shouldAutoSelect && autoSelectFolder ? ['dummy.md'] : [])
       })
     }),
     pluginSettingsComponent: strictProxy({
@@ -93,6 +109,8 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
 describe('selectTargetFolderForMergeFolder', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    shouldAutoSelect = false;
+    autoSelectFolder = null;
   });
 
   afterEach(() => {

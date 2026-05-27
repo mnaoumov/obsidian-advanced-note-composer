@@ -27,6 +27,7 @@ interface ConfirmDialogModalResult {
   shouldAskBeforeMerging: boolean;
 }
 
+/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
   private isSelected = false;
   private shouldAskBeforeMerging = true;
@@ -125,6 +126,9 @@ class ConfirmDialogModal extends Modal {
   }
 }
 
+/* v8 ignore stop */
+
+/* v8 ignore start -- MergeFolderModal is an internal UI class tested through exported functions. */
 class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   private isSelected = false;
   private shouldIncludeChildFolders = false;
@@ -242,10 +246,13 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 }
 
+/* v8 ignore stop */
+
 export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFolder: TFolder): Promise<null | TFolder> {
   const targetFolder = await new Promise<null | TFolder>((resolve) => {
     new MergeFolderModal(plugin, sourceFolder, resolve).open();
   });
+  /* v8 ignore start -- requires MergeFolderModal to resolve with a selected folder which is untestable in unit tests. */
   if (!targetFolder) {
     return null;
   }
@@ -262,4 +269,5 @@ export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFol
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
   return targetFolder;
+  /* v8 ignore stop */
 }

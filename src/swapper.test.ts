@@ -176,6 +176,139 @@ describe('swap', () => {
     expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
   });
 
+  it('should retry rename when folder name did not change after first rename', async () => {
+    const sourceChild = createMockFile('folderA/file1.md');
+    const targetChild = createMockFile('folderB/file2.md');
+    const source = createMockFolder('folderA', 'folderA', [sourceChild]);
+    const target = createMockFolder('folderB', 'folderB', [targetChild]);
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
+
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
+        createFolder: vi.fn().mockResolvedValue(tempFolder)
+      })
+    });
+
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockImplementation((f) => f === source || f === target);
+    mockGetAvailablePath.mockReturnValue('__temp');
+    // After first rename, names don't change (simulates rename failure)
+    mockRenameSafe.mockResolvedValue('');
+    // GetFolderOrNull returns null, meaning the target path doesn't exist yet, so retry rename
+    mockGetFolderOrNull.mockReturnValue(null);
+    mockIsChild.mockReturnValue(false);
+    mockDeleteIfNotUsed.mockResolvedValue(false);
+
+    await swap(app, source, target, true);
+
+    // RenameSafe should be called extra times for the retry
+    expect(mockRenameSafe).toHaveBeenCalled();
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+  });
+
+  it('should skip target child when isChild returns true for source and target child', async () => {
+    const sourceChild = createMockFile('folderA/file1.md');
+    const targetChild = createMockFile('folderB/file2.md');
+    const source = createMockFolder('src', 'same', [sourceChild]);
+    const target = createMockFolder('target', 'same', [targetChild]);
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
+
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
+        createFolder: vi.fn().mockResolvedValue(tempFolder)
+      })
+    });
+
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockImplementation((f) => f === source || f === target);
+    mockGetAvailablePath.mockReturnValue('__temp');
+    mockRenameSafe.mockResolvedValue('');
+    // IsChild(app, sourceFolder, targetChild) returns true
+    mockIsChild.mockImplementation((_app, a, b) => {
+      if (a === source && b === targetChild) {
+        return true;
+      }
+      if (b === tempFolder) {
+        return a === sourceChild;
+      }
+      return false;
+    });
+    mockDeleteIfNotUsed.mockResolvedValue(false);
+
+    await swap(app, source, target, true);
+
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+  });
+
+  it('should rename target folder back when its path changed', async () => {
+    const sourceChild = createMockFile('folderA/file1.md');
+    const targetChild = createMockFile('folderB/file2.md');
+    const source = createMockFolder('src', 'same', [sourceChild]);
+    const target = createMockFolder('target', 'same', [targetChild]);
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
+
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
+        createFolder: vi.fn().mockResolvedValue(tempFolder)
+      })
+    });
+
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockImplementation((f) => f === source || f === target);
+    mockGetAvailablePath.mockReturnValue('__temp');
+
+    const originalTargetPath = target.path;
+    mockRenameSafe.mockImplementation((_app, file, _newPath) => {
+      // Simulate target folder path changing during swap
+      if (file === targetChild) {
+        Object.defineProperty(target, 'path', { configurable: true, value: 'changed-path' });
+      }
+      return Promise.resolve('');
+    });
+    mockIsChild.mockImplementation((_app, child, parent) => {
+      if (parent === tempFolder) {
+        return child === sourceChild;
+      }
+      return false;
+    });
+    mockDeleteIfNotUsed.mockResolvedValue(false);
+
+    await swap(app, source, target, true);
+
+    // Verify renameSafe was called to fix the target folder path
+    expect(mockRenameSafe).toHaveBeenCalled();
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+
+    // Restore original path
+    Object.defineProperty(target, 'path', { configurable: true, value: originalTargetPath });
+  });
+
+  it('should skip source child not in temp folder when moving back', async () => {
+    const sourceChild = createMockFile('folderA/file1.md');
+    const targetChild = createMockFile('folderB/file2.md');
+    const source = createMockFolder('src', 'same', [sourceChild]);
+    const target = createMockFolder('target', 'same', [targetChild]);
+    const tempFolder = strictProxy<TFolder>({ children: [], name: '__temp', path: '__temp' });
+
+    const app = strictProxy<App>({
+      vault: strictProxy<Vault>({
+        createFolder: vi.fn().mockResolvedValue(tempFolder)
+      })
+    });
+
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockImplementation((f) => f === source || f === target);
+    mockGetAvailablePath.mockReturnValue('__temp');
+    mockRenameSafe.mockResolvedValue('');
+    // SourceChild is NOT in tempFolder (e.g., it was moved elsewhere)
+    mockIsChild.mockReturnValue(false);
+    mockDeleteIfNotUsed.mockResolvedValue(false);
+
+    await swap(app, source, target, true);
+
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+  });
+
   it('should only swap files when shouldSwapEntireFolderStructure is false', async () => {
     const sourceFile = createMockFile('folderA/file1.md');
     const sourceSubfolder = createMockFolder('folderA/sub', 'sub');
