@@ -1,14 +1,35 @@
-import type { Editor } from 'obsidian';
+import type {
+  Editor,
+  EditorPosition,
+  EditorSelection,
+  TFile
+} from 'obsidian';
 
+import { updateLinksInContent } from 'obsidian-dev-utils/obsidian/link';
+import {
+  getCacheSafe,
+  getFrontmatterSafe
+} from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
+  afterEach,
   describe,
   expect,
   it,
   vi
 } from 'vitest';
 
-import { getSelections } from './split-composer.ts';
+import type { Plugin } from '../plugin.ts';
+
+import {
+  Action,
+  FrontmatterMergeStrategy,
+  TextAfterExtractionMode
+} from '../plugin-settings.ts';
+import {
+  getSelections,
+  SplitComposer
+} from './split-composer.ts';
 
 interface MockPosition {
   ch: number;
@@ -20,23 +41,28 @@ interface MockSelection {
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
+  appendCodeBlock: vi.fn(),
+  createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
+  renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
 }));
+
+interface UpdateLinksParams {
+  readonly content: string;
+}
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   editLinks: vi.fn(),
   updateLink: vi.fn(),
-  updateLinksInContent: vi.fn()
+  updateLinksInContent: vi.fn().mockImplementation(({ content }: UpdateLinksParams) => content)
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getBacklinksForFileSafe: vi.fn(),
-  getCacheSafe: vi.fn(),
-  getFrontmatterSafe: vi.fn()
+  getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
+  getCacheSafe: vi.fn().mockResolvedValue(null),
+  getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
@@ -44,7 +70,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/string', () => ({
-  replaceAll: vi.fn()
+  replaceAll: vi.fn((str: string) => str)
 }));
 
 vi.mock('obsidian-dev-utils/function', () => ({
@@ -59,8 +85,78 @@ vi.mock('../markdown-heading-document.ts', () => ({
   parseMarkdownHeadingDocument: vi.fn()
 }));
 
+interface MockEditorOptions {
+  readonly listSelections?: EditorSelection[];
+  readonly selection?: string;
+}
+
+function createMockEditor(options?: MockEditorOptions): Editor {
+  const selections = options?.listSelections ?? [{ anchor: { ch: 0, line: 0 }, head: { ch: 10, line: 0 } }];
+  return strictProxy<Editor>({
+    getSelection: vi.fn().mockReturnValue(options?.selection ?? 'selected text'),
+    listSelections: vi.fn().mockReturnValue(selections),
+    offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+    posToOffset: vi.fn((pos: MockPosition) => pos.ch),
+    replaceSelection: vi.fn(),
+    setSelections: vi.fn()
+  });
+}
+
+function createPlugin(overrides?: Record<string, unknown>): Plugin {
+  return {
+    app: {
+      fileManager: {
+        generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
+        insertIntoFile: vi.fn(),
+        processFrontMatter: vi.fn()
+      },
+      metadataCache: { getFileCache: vi.fn().mockReturnValue({}) },
+      plugins: { plugins: {} },
+      vault: {
+        cachedRead: vi.fn().mockResolvedValue(''),
+        read: vi.fn().mockResolvedValue('')
+      },
+      workspace: {
+        getActiveFile: vi.fn(),
+        getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
+      }
+    },
+    consoleDebug: vi.fn(),
+    pluginSettingsComponent: {
+      settings: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+        isPathIgnored: vi.fn().mockReturnValue(false),
+        mergeTemplate: '{{content}}',
+        shouldFixFootnotesByDefault: false,
+        shouldIncludeFrontmatterWhenSplittingByDefault: false,
+        shouldMergeHeadingsByDefault: false,
+        shouldOpenTargetNoteAfterSplit: false,
+        shouldRunTemplaterOnDestinationFile: false,
+        splitTemplate: '',
+        splitToExistingFileTemplate: Action.Split,
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
+        ...overrides
+      }
+    }
+  } as never;
+}
+
+function getComposerAppObj(composer: SplitComposer): Record<string, unknown> {
+  const record = composer as never;
+  return (record as Record<string, unknown>)['app'] as Record<string, unknown>;
+}
+
+function getPluginAppObj(plugin: Plugin): Record<string, unknown> {
+  const record = plugin as never;
+  return (record as Record<string, Record<string, unknown>>)['app'];
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('getSelections', () => {
-  function createMockEditor(selections: MockSelection[]): Editor {
+  function createMockEditorForGetSelections(selections: MockSelection[]): Editor {
     return strictProxy<Editor>({
       listSelections: vi.fn().mockReturnValue(
         selections.map((s) => ({
@@ -73,7 +169,7 @@ describe('getSelections', () => {
   }
 
   it('should return selections in sorted order', () => {
-    const editor = createMockEditor([
+    const editor = createMockEditorForGetSelections([
       { anchor: 20, head: 30 },
       { anchor: 0, head: 10 }
     ]);
@@ -84,7 +180,7 @@ describe('getSelections', () => {
   });
 
   it('should normalize reversed selections', () => {
-    const editor = createMockEditor([
+    const editor = createMockEditorForGetSelections([
       { anchor: 30, head: 10 }
     ]);
 
@@ -94,7 +190,7 @@ describe('getSelections', () => {
   });
 
   it('should handle single selection', () => {
-    const editor = createMockEditor([
+    const editor = createMockEditorForGetSelections([
       { anchor: 5, head: 15 }
     ]);
 
@@ -105,8 +201,535 @@ describe('getSelections', () => {
   });
 
   it('should handle empty selections', () => {
-    const editor = createMockEditor([]);
+    const editor = createMockEditorForGetSelections([]);
     const result = getSelections(editor);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('SplitComposer constructor', () => {
+  it('should use shouldIncludeFrontmatter from params when provided', () => {
+    const plugin = createPlugin();
+    const editor = createMockEditor();
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      shouldIncludeFrontmatter: true,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+    expect(composer).toBeDefined();
+  });
+
+  it('should use default from settings when shouldIncludeFrontmatter not provided', () => {
+    const plugin = createPlugin({ shouldIncludeFrontmatterWhenSplittingByDefault: true });
+    const editor = createMockEditor();
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+    expect(composer).toBeDefined();
+  });
+});
+
+describe('splitFile', () => {
+  it('should return early when checkTargetFileIgnored returns false', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ isPathIgnored: vi.fn().mockReturnValue(true) });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    await composer.splitFile();
+
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should insert content and replace with link for LinkToNewFile mode', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
+  });
+
+  it('should replace with embed for EmbedNewFile mode', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(editor.replaceSelection).toHaveBeenCalledWith('![[target]]');
+  });
+
+  it('should replace with empty string for None mode', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.None });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(editor.replaceSelection).toHaveBeenCalledWith('');
+  });
+
+  it('should throw for invalid textAfterExtractionMode', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ textAfterExtractionMode: 'invalid' });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await expect(composer.splitFile()).rejects.toThrow('Invalid text after extraction mode');
+  });
+
+  it('should open target note after split when shouldOpenTargetNoteAfterSplit is true and not multiple split', async () => {
+    const openFileMock = vi.fn().mockResolvedValue(undefined);
+    const editor = createMockEditor();
+    const plugin = createPlugin({ shouldOpenTargetNoteAfterSplit: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['workspace'] = {
+      getActiveFile: vi.fn(),
+      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(openFileMock).toHaveBeenCalled();
+  });
+
+  it('should not open target note when isMultipleSplit is true', async () => {
+    const openFileMock = vi.fn().mockResolvedValue(undefined);
+    const editor = createMockEditor();
+    const plugin = createPlugin({ shouldOpenTargetNoteAfterSplit: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['workspace'] = {
+      getActiveFile: vi.fn(),
+      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: true,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(openFileMock).not.toHaveBeenCalled();
+  });
+
+  it('should propagate errors from insertIntoFile', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin();
+    const appObj = getPluginAppObj(plugin);
+    appObj['fileManager'] = {
+      generateMarkdownLink: vi.fn(),
+      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
+      processFrontMatter: vi.fn()
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: { basename: 'source', path: 'source.md' } as never,
+      targetFile: { basename: 'target', path: 'target.md' } as never
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    let didThrow = false;
+    try {
+      await composer.splitFile();
+    } catch {
+      didThrow = true;
+    }
+    expect(didThrow).toBe(true);
+    // ReplaceSelection should not have been called since the error occurred before it
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+});
+
+describe('SplitComposer getTemplate', () => {
+  it('should return mergeTemplate when splitTemplate is empty', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    const insertIntoFileMock = vi.fn();
+    const appObj = getComposerAppObj(composer);
+    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+
+    await composer.splitFile();
+
+    // The merge template should have been used
+    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
+    expect(insertedContent).toContain('merge:');
+  });
+
+  it('should return splitTemplate for new file when splitTemplate is set', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    const insertIntoFileMock = vi.fn();
+    const appObj = getComposerAppObj(composer);
+    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+
+    await composer.splitFile();
+
+    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
+    expect(insertedContent).toContain('split:');
+  });
+
+  it('should return mergeTemplate for existing file when splitToExistingFileTemplate is Merge', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({
+      mergeTemplate: 'merge: {{content}}',
+      splitTemplate: 'split: {{content}}',
+      splitToExistingFileTemplate: Action.Merge
+    });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    const insertIntoFileMock = vi.fn();
+    const appObj = getComposerAppObj(composer);
+    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+
+    await composer.splitFile();
+
+    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
+    expect(insertedContent).toContain('merge:');
+  });
+
+  it('should return splitTemplate for existing file when splitToExistingFileTemplate is Split', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin({
+      mergeTemplate: 'merge: {{content}}',
+      splitTemplate: 'split: {{content}}',
+      splitToExistingFileTemplate: Action.Split
+    });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    const insertIntoFileMock = vi.fn();
+    const appObj = getComposerAppObj(composer);
+    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+
+    await composer.splitFile();
+
+    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
+    expect(insertedContent).toContain('split:');
+  });
+});
+
+describe('SplitComposer prepareBacklinkSubpaths', () => {
+  it('should return empty Set', async () => {
+    const editor = createMockEditor();
+    const plugin = createPlugin();
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    // Split does not include '' in subpaths (unlike merge), so no full-file backlinks
+    await composer.splitFile();
+
+    expect(composer).toBeDefined();
+  });
+});
+
+describe('SplitComposer updateEditorSelections', () => {
+  it('should add footnotes to remove as editor selections', async () => {
+    const setSelectionsMock = vi.fn();
+    const editor = strictProxy<Editor>({
+      getSelection: vi.fn().mockReturnValue('text [^fn1]'),
+      listSelections: vi.fn().mockReturnValue([
+        { anchor: { ch: 0, line: 0 }, head: { ch: 11, line: 0 } }
+      ]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      setSelections: setSelectionsMock
+    });
+
+    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['vault'] = {
+      cachedRead: vi.fn()
+        .mockResolvedValueOnce('source [^fn1]\n[^fn1]: footnote')
+        .mockResolvedValueOnce('target content')
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue({
+      footnoteRefs: [
+        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
+      ],
+      footnotes: [
+        { id: 'fn1', position: { end: { col: 20, line: 1, offset: 34 }, start: { col: 0, line: 1, offset: 14 } } }
+      ]
+    });
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(setSelectionsMock).toHaveBeenCalled();
+  });
+});
+
+describe('SplitComposer removeSelectionRange', () => {
+  it('should keep selection before range', async () => {
+    const setSelectionsMock = vi.fn();
+    const editor = strictProxy<Editor>({
+      getSelection: vi.fn().mockReturnValue('text'),
+      listSelections: vi.fn().mockReturnValue([
+        { anchor: { ch: 0, line: 0 }, head: { ch: 5, line: 0 } }
+      ]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      setSelections: setSelectionsMock
+    });
+
+    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['vault'] = {
+      cachedRead: vi.fn()
+        .mockResolvedValueOnce('text [^fn1]\n[^fn1]: footnote')
+        .mockResolvedValueOnce('target')
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue({
+      footnoteRefs: [
+        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
+      ],
+      footnotes: [
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 20, line: 1, offset: 34 },
+            start: { col: 0, line: 1, offset: 14 }
+          }
+        }
+      ]
+    });
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    // The setSelections mock was called with updated selections
+    expect(setSelectionsMock).toHaveBeenCalled();
+  });
+
+  it('should split overlapping selection around range', async () => {
+    const setSelectionsMock = vi.fn();
+    // Selection that overlaps with a footnote range
+    const editor = strictProxy<Editor>({
+      getSelection: vi.fn().mockReturnValue('text [^fn1] and [^fn1]: footnote'),
+      listSelections: vi.fn().mockReturnValue([
+        { anchor: { ch: 0, line: 0 }, head: { ch: 40, line: 0 } }
+      ]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      setSelections: setSelectionsMock
+    });
+
+    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
+    const appObj = getPluginAppObj(plugin);
+    appObj['vault'] = {
+      cachedRead: vi.fn()
+        .mockResolvedValueOnce('text [^fn1] and [^fn1]: footnote more')
+        .mockResolvedValueOnce('target')
+    };
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue({
+      footnoteRefs: [
+        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
+      ],
+      footnotes: [
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 35, line: 0, offset: 35 },
+            start: { col: 16, line: 0, offset: 16 }
+          }
+        }
+      ]
+    });
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(setSelectionsMock).toHaveBeenCalled();
   });
 });

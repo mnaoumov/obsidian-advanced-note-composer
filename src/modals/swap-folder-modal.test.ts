@@ -1,0 +1,102 @@
+import type {
+  App,
+  TFolder,
+  Vault,
+  Workspace
+} from 'obsidian';
+
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import type { Plugin } from '../plugin.ts';
+
+import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
+
+vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
+  isChildOrSelf: vi.fn().mockReturnValue(false)
+}));
+
+vi.mock('./suggest-modal-command-builder.ts', () => {
+  class MockSuggestModalCommandBuilder {
+    public addCheckbox(): this {
+      return this;
+    }
+    public addDropDown(): this {
+      return this;
+    }
+    public addKeyboardCommand(): this {
+      return this;
+    }
+    public build(): void {/* Noop */}
+  }
+  return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
+});
+
+function createMockFolder(path: string): TFolder {
+  const name = path.split('/').pop() ?? path;
+  return strictProxy<TFolder>({
+    children: [],
+    name,
+    path
+  });
+}
+
+function createMockPlugin(): Plugin {
+  return strictProxy<Plugin>({
+    app: strictProxy<App>({
+      vault: strictProxy<Vault>({
+        getAllFolders: vi.fn().mockReturnValue([]),
+        getFileByPath: vi.fn().mockReturnValue(null)
+      }),
+      workspace: strictProxy<Workspace>({
+        getRecentFiles: vi.fn().mockReturnValue([])
+      })
+    }),
+    pluginSettingsComponent: strictProxy({
+      settings: strictProxy({
+        isPathIgnored: vi.fn().mockReturnValue(false),
+        shouldIncludeChildFoldersWhenSwappingByDefault: true,
+        shouldIncludeParentFoldersWhenSwappingByDefault: true,
+        shouldSwapEntireFolderStructureByDefault: true
+      })
+    })
+  });
+}
+
+describe('selectTargetFolderForSwap', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should return null when modal is cancelled', async () => {
+    const sourceFolder = createMockFolder('source');
+    const plugin = createMockPlugin();
+
+    const promise = selectTargetFolderForSwap(plugin, sourceFolder);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should create modal and open it', async () => {
+    const sourceFolder = createMockFolder('source');
+    const plugin = createMockPlugin();
+
+    const promise = selectTargetFolderForSwap(plugin, sourceFolder);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    // Modal auto-closes without selection → onClose → null
+    expect(result).toBeNull();
+  });
+});

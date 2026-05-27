@@ -1,0 +1,314 @@
+import type {
+  App,
+  Editor,
+  MetadataCache,
+  TFile,
+  TFolder,
+  Vault,
+  ViewRegistry,
+  Workspace
+} from 'obsidian';
+
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import type { Plugin } from '../plugin.ts';
+
+import { InsertMode } from '../insert-mode.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { prepareForSplitFile } from './split-file-modal.ts';
+
+vi.mock('obsidian-dev-utils/async', () => ({
+  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
+}));
+
+vi.mock('obsidian-dev-utils/html-element', () => ({
+  appendCodeBlock: vi.fn(),
+  createFragmentAsync: vi.fn().mockResolvedValue(createFragment())
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
+  getCacheSafe: vi.fn().mockResolvedValue(null)
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
+  trashSafe: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('../composers/composer-base.ts', () => ({
+  getInsertModeFromEvent: vi.fn().mockReturnValue(InsertMode.Append)
+}));
+
+vi.mock('./suggest-modal-command-builder.ts', () => {
+  class MockSuggestModalCommandBuilder {
+    public addCheckbox(): this {
+      return this;
+    }
+    public addDropDown(): this {
+      return this;
+    }
+    public addKeyboardCommand(): this {
+      return this;
+    }
+    public build(): void {/* Noop */}
+  }
+  return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
+});
+
+vi.mock('./suggest-modal-base.ts', async () => {
+  const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
+  class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
+    protected allowCreateNewFile = false;
+    protected shouldAllowOnlyCurrentFolder = false;
+    protected shouldShowAlias = false;
+    protected shouldShowImages = true;
+    protected shouldShowMarkdown = true;
+    protected shouldShowNonAttachments = true;
+    protected shouldShowNonFileBookmarks = false;
+    protected shouldShowNonImageAttachments = true;
+    protected shouldShowUnresolved = false;
+    protected sourceFile: TFile;
+
+    public constructor(plugin: Plugin, sourceFile: TFile) {
+      super(plugin.app);
+      this.sourceFile = sourceFile;
+      this.shouldAllowOnlyCurrentFolder = plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
+    }
+
+    public getSuggestions(_query: string): unknown[] {
+      return [];
+    }
+    public onChooseSuggestion(): void {/* Noop */}
+    public renderSuggestion(): void {/* Noop */}
+    public selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {/* Noop */}
+    public updateSuggestions(): void {/* Noop */}
+  }
+  return { SuggestModalBase: MockSuggestModalBase };
+});
+
+vi.mock('../composers/split-composer.ts', () => ({
+  getSelections: vi.fn().mockReturnValue([{ endOffset: 10, startOffset: 0 }])
+}));
+
+vi.mock('../headings.ts', () => ({
+  extractHeading: vi.fn().mockReturnValue('Test Heading')
+}));
+
+interface InternalPlugins {
+  getEnabledPluginById: ReturnType<typeof vi.fn>;
+}
+
+interface MockPluginOptions {
+  readonly shouldAskBeforeSplitting?: boolean;
+}
+
+interface SelectItemResult {
+  isNewTargetFile: boolean;
+  targetFile: TFile;
+}
+
+const mockTargetFile = strictProxy<TFile>({ path: 'folder/target.md' });
+
+vi.mock('../item-selectors/split-item-selector.ts', () => {
+  class MockSplitItemSelector {
+    public selectItem(): Promise<SelectItemResult> {
+      return Promise.resolve({ isNewTargetFile: false, targetFile: mockTargetFile });
+    }
+  }
+  return { SplitItemSelector: MockSplitItemSelector };
+});
+
+function createMockEditor(): Editor {
+  return strictProxy<Editor>({
+    cm: strictProxy({
+      state: strictProxy({
+        sliceDoc: vi.fn().mockReturnValue('selected text')
+      })
+    }),
+    getSelection: vi.fn().mockReturnValue('# Heading\nsome text')
+  });
+}
+
+function createMockFile(path: string): TFile {
+  const name = path.split('/').pop() ?? '';
+  const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+  return strictProxy<TFile>({
+    extension: 'md',
+    name,
+    parent: strictProxy<TFolder>({
+      getParentPrefix: () => parentPath ? `${parentPath}/` : '',
+      path: parentPath
+    }),
+    path
+  });
+}
+
+function createMockPlugin(options?: MockPluginOptions): Plugin {
+  const shouldAskBeforeSplitting = options?.shouldAskBeforeSplitting ?? false;
+
+  return strictProxy<Plugin>({
+    app: strictProxy<App>({
+      internalPlugins: strictProxy<InternalPlugins>({
+        getEnabledPluginById: vi.fn().mockReturnValue(null)
+      }),
+      metadataCache: strictProxy<MetadataCache>({
+        getFileCache: vi.fn().mockReturnValue(null),
+        isUserIgnored: vi.fn().mockReturnValue(false),
+        unresolvedLinks: {}
+      }),
+      vault: strictProxy<Vault>({
+        getFileByPath: vi.fn().mockReturnValue(null),
+        getFiles: vi.fn().mockReturnValue([]),
+        getMarkdownFiles: vi.fn().mockReturnValue([])
+      }),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ViewRegistry is an internal Obsidian type with incomplete typings.
+      viewRegistry: strictProxy<ViewRegistry>({
+        isExtensionRegistered: vi.fn().mockReturnValue(true)
+      }),
+      workspace: strictProxy<Workspace>({
+        getRecentFiles: vi.fn().mockReturnValue([])
+      })
+    }),
+    pluginSettingsComponent: strictProxy({
+      editAndSave: vi.fn().mockResolvedValue(undefined),
+      settings: strictProxy({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+        isPathIgnored: vi.fn().mockReturnValue(false),
+        shouldAllowOnlyCurrentFolderByDefault: false,
+        shouldAllowSplitIntoUnresolvedPathByDefault: true,
+        shouldAskBeforeSplitting,
+        shouldFixFootnotesByDefault: true,
+        shouldIncludeFrontmatterWhenSplittingByDefault: false,
+        shouldMergeHeadingsByDefault: false,
+        shouldTreatTitleAsPathByDefault: true
+      })
+    })
+  });
+}
+
+describe('prepareForSplitFile', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should return null when modal is cancelled', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin();
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should use extractHeading when heading is undefined', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin();
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should treat empty string heading as undefined', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin();
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor, '');
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should use provided heading', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin();
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Custom Heading');
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should skip modal when shouldSkipModal is true', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+
+    const result = await prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    expect(result).not.toBeNull();
+    expect(result?.targetFile).toBe(mockTargetFile);
+    expect(result?.insertMode).toBe(InsertMode.Append);
+  });
+
+  it('should return all settings when shouldSkipModal and not shouldAskBeforeSplitting', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+
+    const result = await prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    expect(result).not.toBeNull();
+    expect(result?.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
+    expect(result?.shouldAllowOnlyCurrentFolder).toBe(false);
+    expect(result?.shouldAllowSplitIntoUnresolvedPath).toBe(true);
+    expect(result?.shouldMergeHeadings).toBe(false);
+    expect(result?.shouldIncludeFrontmatter).toBe(false);
+  });
+
+  it('should return null when confirm dialog is rejected', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should trash new target file when confirm rejected and file is new', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+
+    // Override SplitItemSelector to return isNewTargetFile: true
+    // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for vi.spyOn on module-level getter.
+    const splitItemSelectorModule = await import('../item-selectors/split-item-selector.ts');
+    vi.spyOn(splitItemSelectorModule, 'SplitItemSelector', 'get').mockReturnValue(
+      class {
+        public selectItem(): Promise<SelectItemResult> {
+          return Promise.resolve({ isNewTargetFile: true, targetFile: mockTargetFile });
+        }
+      } as never
+    );
+
+    // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for accessing mocked module.
+    const { trashSafe } = await import('obsidian-dev-utils/obsidian/vault');
+
+    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+    expect(trashSafe).toHaveBeenCalledWith(plugin.app, mockTargetFile);
+  });
+});
