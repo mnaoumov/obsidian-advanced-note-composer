@@ -1,6 +1,9 @@
+import type { DebugController } from 'obsidian-dev-utils/debug-controller';
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import type { Mock } from 'vitest';
 
 import { getDebugController } from 'obsidian-dev-utils/debug';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -37,8 +40,8 @@ interface MockSettingEx {
 }
 
 interface MockSettingGroupEx {
-  addSettingEx: ReturnType<typeof vi.fn>;
-  setHeading: ReturnType<typeof vi.fn>;
+  addSettingEx: Mock<(cb: (setting: MockSettingEx) => void) => MockSettingGroupEx>;
+  setHeading: Mock<(heading: string) => MockSettingGroupEx>;
 }
 
 interface MockText {
@@ -207,6 +210,7 @@ describe('PluginSettingsTab', () => {
     getContainerEl(tab);
 
     expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
       tab.display();
     }).not.toThrow();
   });
@@ -216,6 +220,7 @@ describe('PluginSettingsTab', () => {
     getContainerEl(tab);
 
     // Display() creates all 9 setting groups without throwing
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     tab.display();
 
     // The display method ran to completion, meaning all 9 SettingGroupEx were created
@@ -230,6 +235,7 @@ describe('addAvailableTokens', () => {
 
     // If display doesn't throw, the addAvailableTokens function ran successfully
     expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
       tab.display();
     }).not.toThrow();
   });
@@ -239,17 +245,18 @@ describe('debug controller toggle', () => {
   it('should handle debug toggle callbacks', () => {
     const enableMock = vi.fn();
     const disableMock = vi.fn();
-    vi.mocked(getDebugController).mockReturnValue({
+    vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
       disable: disableMock,
       enable: enableMock,
       get: vi.fn().mockReturnValue(['test-plugin-id'])
-    } as never);
+    }));
 
     const tab = createSettingsTab();
     getContainerEl(tab);
 
     // Display will trigger the toggle callback creation
     expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
       tab.display();
     }).not.toThrow();
   });
@@ -257,14 +264,15 @@ describe('debug controller toggle', () => {
   it('should enable debug controller when toggle onChange is called with true', () => {
     const enableMock = vi.fn();
     const disableMock = vi.fn();
-    vi.mocked(getDebugController).mockReturnValue({
+    vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
       disable: disableMock,
       enable: enableMock,
       get: vi.fn().mockReturnValue([])
-    } as never);
+    }));
 
     const tab = createSettingsTab();
     getContainerEl(tab);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     tab.display();
 
     // The debug toggle's onChange handler is the only one captured via toggle.onChange
@@ -281,14 +289,15 @@ describe('debug controller toggle', () => {
   it('should disable debug controller when toggle onChange is called with false', () => {
     const enableMock = vi.fn();
     const disableMock = vi.fn();
-    vi.mocked(getDebugController).mockReturnValue({
+    vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
       disable: disableMock,
       enable: enableMock,
       get: vi.fn().mockReturnValue([])
-    } as never);
+    }));
 
     const tab = createSettingsTab();
     getContainerEl(tab);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     tab.display();
 
     const debugToggleHandler = capturedToggleOnChangeHandlers[0];
@@ -302,6 +311,7 @@ describe('shouldReplaceInvalidTitleCharacters onChanged', () => {
   it('should call display when shouldReplaceInvalidTitleCharacters changes', () => {
     const tab = createSettingsTab();
     getContainerEl(tab);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     tab.display();
 
     // The bind call with onChanged option captures the callback

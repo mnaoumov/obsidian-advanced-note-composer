@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -14,12 +15,14 @@ import {
 
 import type { Frontmatter } from '../composers/composer-base.ts';
 import type { Item } from '../modals/suggest-modal-base.ts';
+import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 
+import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { SplitItemSelector } from './split-item-selector.ts';
 
 function mockItem(partial: Record<string, unknown>): Item {
-  return partial as never;
+  return castTo<Item>(partial);
 }
 
 const mockAddAlias = vi.fn();
@@ -85,15 +88,15 @@ function createMockPlugin(settingsOverrides: SettingsOverrides = {}): Plugin {
       })
     }),
     pluginSettingsComponent: {
-      settings: {
-        frontmatterTitleMode: 'UseForInvalidTitleOnly',
+      settings: castTo<PluginSettings>({
+        frontmatterTitleMode: FrontmatterTitleMode.UseForInvalidTitleOnly,
         isPathIgnored: vi.fn().mockReturnValue(false),
         replacement: '_',
         shouldAddInvalidTitleToNoteAlias: true,
         shouldReplaceInvalidTitleCharacters: true,
         ...settingsOverrides
-      }
-    } as never
+      })
+    }
   });
 }
 

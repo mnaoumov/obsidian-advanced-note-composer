@@ -7,6 +7,7 @@ import type {
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -22,7 +23,9 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
+import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './extract-before-cursor-editor-command-handler.ts';
 
 interface TestableHandler {
@@ -99,7 +102,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
 }
 
 function toTestable(handler: ExtractBeforeCursorEditorCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('ExtractBeforeCursorEditorCommandHandler', () => {
@@ -176,8 +179,8 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
     const targetFile = createMockFile();
 
     const splitResult = {
-      frontmatterMergeStrategy: 'MergeAndPreferNewValues',
-      insertMode: 'append',
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      insertMode: InsertMode.Append,
       isNewTargetFile: true,
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
@@ -186,7 +189,7 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
       shouldMergeHeadings: false,
       targetFile
     };
-    mockPrepareForSplitFile.mockResolvedValue(splitResult as never);
+    mockPrepareForSplitFile.mockResolvedValue(splitResult);
 
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;

@@ -15,7 +15,7 @@ import { InsertMode } from './insert-mode.ts';
 // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic number.
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-interface ParseHeadingNodeOptions {
+interface ParseHeadingNodeParams {
   readonly content: string;
   readonly contentStartOffset: number;
   readonly heading: string;
@@ -24,29 +24,6 @@ interface ParseHeadingNodeOptions {
   readonly headingStartIndex: number;
   readonly isFake: boolean;
   readonly level: Level;
-}
-
-class MarkdownHeadingDocument {
-  public constructor(private readonly frontmatter: string, private readonly node: MarkdownHeadingNode) {
-    /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
-    if (node.level !== 0) {
-      throw new Error('Node level must be 0');
-    }
-    /* v8 ignore stop */
-  }
-
-  public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
-    const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
-    return new MarkdownHeadingDocument(this.frontmatter, mergedNode);
-  }
-
-  public toString(): string {
-    return this.frontmatter + this.node.toString();
-  }
-
-  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
-    await this.node.wrapText(textFn);
-  }
 }
 
 class MarkdownHeadingNode {
@@ -166,6 +143,29 @@ class MarkdownHeadingNode {
   }
 }
 
+export class MarkdownHeadingDocument {
+  public constructor(private readonly frontmatter: string, private readonly node: MarkdownHeadingNode) {
+    /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
+    if (node.level !== 0) {
+      throw new Error('Node level must be 0');
+    }
+    /* v8 ignore stop */
+  }
+
+  public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
+    const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
+    return new MarkdownHeadingDocument(this.frontmatter, mergedNode);
+  }
+
+  public toString(): string {
+    return this.frontmatter + this.node.toString();
+  }
+
+  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
+    await this.node.wrapText(textFn);
+  }
+}
+
 export async function parseMarkdownHeadingDocument(app: App, content: string): Promise<MarkdownHeadingDocument> {
   const metadata = await parseMetadata(app, content);
   const contentStartOffset = metadata.frontmatterPosition?.end.offset ?? 0;
@@ -187,34 +187,34 @@ export async function parseMarkdownHeadingDocument(app: App, content: string): P
   return new MarkdownHeadingDocument(frontmatter, headingNode);
 }
 
-function parseHeadingNode(options: ParseHeadingNodeOptions): MarkdownHeadingNode {
-  const text = options.isFake && options.level > 0
+function parseHeadingNode(params: ParseHeadingNodeParams): MarkdownHeadingNode {
+  const text = params.isFake && params.level > 0
     ? ''
-    : options.content.slice(
-      options.headingsCaches[options.headingStartIndex - 1]?.position.end.offset ?? options.contentStartOffset,
-      options.headingsCaches[options.headingStartIndex]?.position.start.offset ?? options.content.length
+    : params.content.slice(
+      params.headingsCaches[params.headingStartIndex - 1]?.position.end.offset ?? params.contentStartOffset,
+      params.headingsCaches[params.headingStartIndex]?.position.start.offset ?? params.content.length
     );
 
   const childrenLevelIndices = [];
 
-  for (let i = options.headingStartIndex; i < options.headingEndIndex; i++) {
-    if (options.headingsCaches[i]?.level === options.level + 1) {
+  for (let i = params.headingStartIndex; i < params.headingEndIndex; i++) {
+    if (params.headingsCaches[i]?.level === params.level + 1) {
       childrenLevelIndices.push(i);
     }
   }
 
   const children = [];
 
-  if (options.headingStartIndex < options.headingEndIndex && childrenLevelIndices[0] !== options.headingStartIndex) {
+  if (params.headingStartIndex < params.headingEndIndex && childrenLevelIndices[0] !== params.headingStartIndex) {
     const child = parseHeadingNode({
-      content: options.content,
-      contentStartOffset: options.contentStartOffset,
+      content: params.content,
+      contentStartOffset: params.contentStartOffset,
       heading: '',
-      headingEndIndex: childrenLevelIndices[0] ?? options.headingEndIndex,
-      headingsCaches: options.headingsCaches,
-      headingStartIndex: options.headingStartIndex,
+      headingEndIndex: childrenLevelIndices[0] ?? params.headingEndIndex,
+      headingsCaches: params.headingsCaches,
+      headingStartIndex: params.headingStartIndex,
       isFake: true,
-      level: options.level + 1 as Level
+      level: params.level + 1 as Level
     });
     children.push(child);
   }
@@ -223,18 +223,18 @@ function parseHeadingNode(options: ParseHeadingNodeOptions): MarkdownHeadingNode
     /* v8 ignore start -- defensive ?? on array indexing and optional heading property. */
     const headingStartIndex = childrenLevelIndices[j] ?? 0;
     const child = parseHeadingNode({
-      content: options.content,
-      contentStartOffset: options.contentStartOffset,
-      heading: options.headingsCaches[headingStartIndex]?.heading ?? '',
-      headingEndIndex: childrenLevelIndices[j + 1] ?? options.headingEndIndex,
+      content: params.content,
+      contentStartOffset: params.contentStartOffset,
+      heading: params.headingsCaches[headingStartIndex]?.heading ?? '',
+      headingEndIndex: childrenLevelIndices[j + 1] ?? params.headingEndIndex,
       /* v8 ignore stop */
-      headingsCaches: options.headingsCaches,
+      headingsCaches: params.headingsCaches,
       headingStartIndex: headingStartIndex + 1,
       isFake: false,
-      level: options.level + 1 as Level
+      level: params.level + 1 as Level
     });
     children.push(child);
   }
 
-  return new MarkdownHeadingNode(options.level, options.heading, text, children, options.isFake);
+  return new MarkdownHeadingNode(params.level, params.heading, text, children, params.isFake);
 }

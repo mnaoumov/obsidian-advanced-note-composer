@@ -29,13 +29,7 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
-interface ConfirmDialogModalResult {
-  insertMode: InsertMode;
-  isConfirmed: boolean;
-  shouldAskBeforeSplitting: boolean;
-}
-
-interface PrepareForSplitFileResult {
+export interface PrepareForSplitFileResult {
   frontmatterMergeStrategy: FrontmatterMergeStrategy;
   insertMode: InsertMode;
   isNewTargetFile: boolean;
@@ -45,6 +39,12 @@ interface PrepareForSplitFileResult {
   shouldIncludeFrontmatter: boolean;
   shouldMergeHeadings: boolean;
   targetFile: TFile;
+}
+
+interface ConfirmDialogModalResult {
+  insertMode: InsertMode;
+  isConfirmed: boolean;
+  shouldAskBeforeSplitting: boolean;
 }
 
 interface SplitFileModalResult {

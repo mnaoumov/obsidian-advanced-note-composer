@@ -1,5 +1,11 @@
-import type { TFile } from 'obsidian';
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
+import type {
+  Reference,
+  TFile
+} from 'obsidian';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   editLinks,
   extractLinkFile,
@@ -21,6 +27,7 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
@@ -69,6 +76,7 @@ vi.mock('obsidian-dev-utils/function', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
+  castTo: (value: unknown): unknown => value,
   extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
@@ -76,7 +84,7 @@ vi.mock('../markdown-heading-document.ts', () => ({
   parseMarkdownHeadingDocument: vi.fn()
 }));
 
-function createComposer(pluginOverrides?: Record<string, unknown>): MergeComposer {
+function createComposer(pluginOverrides?: Partial<PluginSettings>): MergeComposer {
   const plugin = createPlugin(pluginOverrides);
   return new MergeComposer({
     isNewTargetFile: false,
@@ -86,8 +94,8 @@ function createComposer(pluginOverrides?: Record<string, unknown>): MergeCompose
   });
 }
 
-function createPlugin(overrides?: Record<string, unknown>): Plugin {
-  return {
+function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
+  return castTo<Plugin>({
     app: {
       fileManager: {
         insertIntoFile: vi.fn(),
@@ -117,12 +125,11 @@ function createPlugin(overrides?: Record<string, unknown>): Plugin {
         ...overrides
       }
     }
-  } as never;
+  });
 }
 
-function getPluginAppObj(plugin: Plugin): Record<string, unknown> {
-  const record = plugin as never;
-  return (record as Record<string, Record<string, unknown>>)['app'];
+function getPluginAppObj(plugin: Plugin): GenericObject {
+  return castTo<GenericObject>(plugin.app);
 }
 
 afterEach(() => {
@@ -131,7 +138,7 @@ afterEach(() => {
 
 describe('MergeComposer', () => {
   it('should be constructable', () => {
-    const plugin = {
+    const plugin = castTo<Plugin>({
       app: {
         fileManager: {},
         metadataCache: { getFileCache: vi.fn() },
@@ -142,7 +149,7 @@ describe('MergeComposer', () => {
       consoleDebug: vi.fn(),
       pluginSettingsComponent: {
         settings: {
-          defaultFrontmatterMergeStrategy: 'MergeAndPreferNewValues',
+          defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
           mergeTemplate: '\n\n{{content}}',
           shouldFixFootnotesByDefault: true,
           shouldMergeHeadingsByDefault: false,
@@ -150,13 +157,13 @@ describe('MergeComposer', () => {
           shouldRunTemplaterOnDestinationFile: false
         }
       }
-    };
+    });
 
     const composer = new MergeComposer({
       isNewTargetFile: false,
-      plugin: plugin as never,
-      sourceFile: { basename: 'source', path: 'source.md' } as never,
-      targetFile: { basename: 'target', path: 'target.md' } as never
+      plugin,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
 
     expect(composer).toBeDefined();
@@ -310,7 +317,7 @@ describe('MergeComposer getSelections', () => {
     const plugin = createPlugin();
     const appObj = getPluginAppObj(plugin);
     appObj['vault'] = {
-      ...appObj['vault'] as Record<string, unknown>,
+      ...appObj['vault'] as GenericObject,
       read: vi.fn().mockResolvedValue('hello world')
     };
 
@@ -329,7 +336,7 @@ describe('MergeComposer getSelections', () => {
     await composer.mergeFile();
 
     // The read method should have been called (getSelections reads the whole file)
-    const readMock = (appObj['vault'] as Record<string, ReturnType<typeof vi.fn>>)['read'];
+    const readMock = (appObj['vault'] as GenericObject)['read'];
     expect(readMock).toHaveBeenCalled();
   });
 });
@@ -361,10 +368,10 @@ describe('MergeComposer prepareBacklinkSubpaths', () => {
     // Backlinks pointing to the source file (no subpath) should be picked up
     const backlinkMap = new Map<string, unknown[]>();
     backlinkMap.set('other.md', [{ link: 'source' }]);
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(backlinkMap as never);
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(backlinkMap));
 
     vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
-      await callback({ link: 'source' } as never);
+      await callback(castTo<Reference>({ link: 'source' }));
     });
     vi.mocked(updateLink).mockReturnValue('updated');
 

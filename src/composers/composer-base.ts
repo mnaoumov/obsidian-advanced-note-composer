@@ -99,18 +99,18 @@ export abstract class ComposerBase {
   private readonly shouldIncludeFrontmatter: boolean;
   private readonly shouldMergeHeadings: boolean;
 
-  public constructor(options: ComposerBaseConstructorParams, shouldIncludeFrontmatter: boolean) {
-    this.insertMode = options.insertMode ?? InsertMode.Append;
-    this.plugin = options.plugin;
-    this.sourceFile = options.sourceFile;
+  public constructor(params: ComposerBaseConstructorParams, shouldIncludeFrontmatter: boolean) {
+    this.insertMode = params.insertMode ?? InsertMode.Append;
+    this.plugin = params.plugin;
+    this.sourceFile = params.sourceFile;
     this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = options.shouldFixFootnotes ?? this.plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = options.shouldMergeHeadings ?? this.plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? this.plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
-    this.shouldShowNotice = options.shouldShowNotice ?? true;
-    this.targetFile = options.targetFile;
-    this.isNewTargetFile = options.isNewTargetFile;
+    this.shouldFixFootnotes = params.shouldFixFootnotes ?? this.plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = params.shouldMergeHeadings ?? this.plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? this.plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.shouldShowNotice = params.shouldShowNotice ?? true;
+    this.targetFile = params.targetFile;
+    this.isNewTargetFile = params.isNewTargetFile;
   }
 
   public async canIncludeFrontmatter(): Promise<boolean> {

@@ -6,6 +6,7 @@ import type {
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -92,7 +93,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
 }
 
 function toTestable(handler: SwapFileCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('SwapFileCommandHandler', () => {

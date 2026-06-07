@@ -1,11 +1,15 @@
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
   CachedMetadata,
   Editor,
   MetadataCache,
+  Reference,
   TFile
 } from 'obsidian';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   editLinks,
   updateLink,
@@ -18,6 +22,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { process as processVault } from 'obsidian-dev-utils/obsidian/vault';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { resolveValue } from 'obsidian-dev-utils/value-provider';
 import {
   afterEach,
   describe,
@@ -26,6 +31,8 @@ import {
   vi
 } from 'vitest';
 
+import type { MarkdownHeadingDocument } from '../markdown-heading-document.ts';
+import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 import type {
   ComposerBaseConstructorParams,
@@ -34,18 +41,15 @@ import type {
 
 import { InsertMode } from '../insert-mode.ts';
 import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  Action,
+  FrontmatterMergeStrategy
+} from '../plugin-settings.ts';
 import {
   ComposerBase,
   getInsertModeFromEvent,
   getSelectionUnderHeading
 } from './composer-base.ts';
-
-type ProcessCallback = (opts: ProcessCallbackOpts) => Promise<string>;
-
-interface ProcessCallbackOpts {
-  content: string;
-}
 
 interface RegexMatch {
   groups: Record<string, string | undefined> | undefined;
@@ -90,6 +94,7 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
+  castTo: (value: unknown): unknown => value,
   extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
@@ -102,6 +107,10 @@ class TestComposer extends ComposerBase {
   public selectionsToReturn: Selection[] = [];
   public templateToReturn = '{{content}}';
 
+  public get appForTest(): App {
+    return this.app;
+  }
+
   public constructor(params: ComposerBaseConstructorParams, shouldIncludeFrontmatter = false) {
     super(params, shouldIncludeFrontmatter);
   }
@@ -111,7 +120,7 @@ class TestComposer extends ComposerBase {
   }
 
   public async callCheckTargetFileIgnored(): Promise<boolean> {
-    return this.checkTargetFileIgnored('Merge' as never);
+    return this.checkTargetFileIgnored(Action.Merge);
   }
 
   public async callFixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
@@ -140,7 +149,7 @@ class TestComposer extends ComposerBase {
   }
 }
 
-function createComposer(pluginOverrides?: Record<string, unknown>, shouldIncludeFrontmatter = false): TestComposer {
+function createComposer(pluginOverrides?: Partial<PluginSettings>, shouldIncludeFrontmatter = false): TestComposer {
   const plugin = createPlugin(pluginOverrides);
   return new TestComposer({
     isNewTargetFile: false,
@@ -150,8 +159,8 @@ function createComposer(pluginOverrides?: Record<string, unknown>, shouldInclude
   }, shouldIncludeFrontmatter);
 }
 
-function createPlugin(overrides?: Record<string, unknown>): Plugin {
-  return {
+function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
+  return castTo<Plugin>({
     app: {
       fileManager: {
         generateMarkdownLink: vi.fn(),
@@ -182,17 +191,15 @@ function createPlugin(overrides?: Record<string, unknown>): Plugin {
         ...overrides
       }
     }
-  } as never;
+  });
 }
 
-function getComposerAppObj(composer: TestComposer): Record<string, unknown> {
-  const record = composer as never;
-  return (record as Record<string, unknown>)['app'] as Record<string, unknown>;
+function getComposerAppObj(composer: TestComposer): GenericObject {
+  return castTo<GenericObject>(composer.appForTest);
 }
 
-function getPluginAppObj(plugin: Plugin): Record<string, unknown> {
-  const record = plugin as never;
-  return (record as Record<string, Record<string, unknown>>)['app'];
+function getPluginAppObj(plugin: Plugin): GenericObject {
+  return castTo<GenericObject>(plugin.app);
 }
 
 afterEach(() => {
@@ -470,14 +477,12 @@ describe('insertIntoTargetFile', () => {
     const mockContentDoc = { wrapText: vi.fn().mockResolvedValue(undefined) };
 
     vi.mocked(parseMarkdownHeadingDocument)
-      .mockResolvedValueOnce(mockTargetDoc as never)
-      .mockResolvedValueOnce(mockContentDoc as never);
+      .mockResolvedValueOnce(castTo<MarkdownHeadingDocument>(mockTargetDoc))
+      .mockResolvedValueOnce(castTo<MarkdownHeadingDocument>(mockContentDoc));
 
     // Make processVault actually call the callback
     vi.mocked(processVault).mockImplementation(async (_app, _file, callback) => {
-      // eslint-disable-next-line no-restricted-syntax -- Using as never for mock callback typing.
-      const result = await (callback as never as ProcessCallback)({ content: 'existing content' });
-      return result;
+      await resolveValue(callback, { content: 'existing content' });
     });
 
     const composer = new TestComposer({
@@ -658,10 +663,10 @@ describe('insertIntoTargetFile', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(backlinkMap as never);
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(backlinkMap));
     const linkJson = JSON.stringify({ link: 'source' });
     vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
-      await callback(JSON.parse(linkJson) as never);
+      await callback(castTo<Reference>(JSON.parse(linkJson)));
     });
     vi.mocked(updateLink).mockReturnValue('updated-link');
     await composer.callInsertIntoTargetFile('test content');
@@ -711,7 +716,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{fromPath}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -725,7 +730,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{fromTitle}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -739,7 +744,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{newPath}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -753,7 +758,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{newTitle}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -767,7 +772,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = 'before {{content}} after';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -781,7 +786,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{date}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -795,7 +800,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{time}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -825,7 +830,7 @@ describe('applyTemplate', () => {
     composer.templateToReturn = '{{date:DD/MM/YYYY}}';
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -840,8 +845,8 @@ describe('fixFootnotes', () => {
     const composer = createComposer({ shouldFixFootnotesByDefault: true });
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
-    (appObj['vault'] as Record<string, unknown>)['cachedRead'] = vi.fn()
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['vault'] as GenericObject)['cachedRead'] = vi.fn()
       .mockResolvedValueOnce('source [^fn1] and [^fn1] again')
       .mockResolvedValueOnce('target [^fn1]');
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -862,7 +867,7 @@ describe('fixFootnotes', () => {
     const composer = createComposer({ shouldFixFootnotesByDefault: false });
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
@@ -875,8 +880,8 @@ describe('fixFootnotes', () => {
     const composer = createComposer({ shouldFixFootnotesByDefault: true });
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
-    (appObj['vault'] as Record<string, unknown>)['cachedRead'] = vi.fn().mockResolvedValueOnce('source [^note1]').mockResolvedValueOnce('target [^note1]');
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['vault'] as GenericObject)['cachedRead'] = vi.fn().mockResolvedValueOnce('source [^note1]').mockResolvedValueOnce('target [^note1]');
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue({
       footnoteRefs: [{ id: 'note1', position: { end: { col: 15, line: 0, offset: 15 }, start: { col: 7, line: 0, offset: 7 } } }],
@@ -897,7 +902,7 @@ describe('fixLinks', () => {
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     await composer.callInsertIntoTargetFile('test');
     expect(updateLinksInContent).toHaveBeenCalled();
   });
@@ -909,7 +914,7 @@ describe('includeFrontmatter', () => {
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 50 }];
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue({
       frontmatterPosition: { end: { col: 0, line: 3, offset: 30 }, start: { col: 0, line: 0, offset: 0 } }
@@ -932,10 +937,10 @@ describe('includeFrontmatter', () => {
     }, true);
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 50 }];
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue({
+    vi.mocked(getCacheSafe).mockResolvedValue(castTo<CachedMetadata>({
       frontmatter: { key: 'value' },
       frontmatterPosition: { end: { col: 0, line: 3, offset: 30 }, start: { col: 0, line: 0, offset: 0 } }
-    } as never);
+    }));
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
     await composer.callInsertIntoTargetFile('body content');
     const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
@@ -945,7 +950,7 @@ describe('includeFrontmatter', () => {
 
 describe('mergeFrontmatter strategies', () => {
   it('should replace with new frontmatter when ReplaceWithNewFrontmatter', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
@@ -966,7 +971,7 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should preserve both frontmatters when PreserveBothOriginalAndNewFrontmatter', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter });
@@ -987,8 +992,8 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should preserve original title when originalTitle is defined', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
-      const fm: Record<string, unknown> = { existingKey: 'val' };
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
+      const fm: GenericObject = { existingKey: 'val' };
       callback(fm);
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
@@ -1009,7 +1014,7 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should merge arrays with unique values', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
@@ -1030,7 +1035,7 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should merge nested objects recursively', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
@@ -1051,7 +1056,7 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should handle null values in original frontmatter during merge', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
@@ -1072,7 +1077,7 @@ describe('mergeFrontmatter strategies', () => {
   });
 
   it('should merge and prefer original values when MergeAndPreferOriginalValues', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferOriginalValues });
@@ -1113,7 +1118,7 @@ describe('prepareBacklinksToFix', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(new Map() as never);
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(new Map()));
     await composer.callInsertIntoTargetFile('test');
     expect(getBacklinksForFileSafe).toHaveBeenCalled();
   });
@@ -1141,7 +1146,7 @@ describe('prepareBacklinksToFix', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(new Map() as never);
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(new Map()));
     await composer.callInsertIntoTargetFile('test');
     expect(getBacklinksForFileSafe).toHaveBeenCalled();
   });
@@ -1165,7 +1170,7 @@ describe('prepareBacklinksToFix', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(new Map() as never);
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(new Map()));
     await composer.callInsertIntoTargetFile('test');
     expect(getBacklinksForFileSafe).toHaveBeenCalled();
   });
@@ -1173,7 +1178,7 @@ describe('prepareBacklinksToFix', () => {
 
 describe('safeParseFrontmatter', () => {
   it('should handle invalid YAML frontmatter gracefully', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
@@ -1195,7 +1200,7 @@ describe('safeParseFrontmatter', () => {
   });
 
   it('should handle content with valid frontmatter', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
@@ -1216,7 +1221,7 @@ describe('safeParseFrontmatter', () => {
   });
 
   it('should handle content without frontmatter', async () => {
-    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: Record<string, unknown>) => void) => {
+    const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
     const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });

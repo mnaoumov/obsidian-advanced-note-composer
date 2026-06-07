@@ -1,4 +1,14 @@
+import type {
+  Grammar,
+  Languages,
+  PrismModule
+} from '@obsidian-typings/obsidian-public-latest';
+
 import { loadPrism } from '@obsidian-typings/obsidian-public-latest/implementations';
+import {
+  bypassStrictProxy,
+  strictProxy
+} from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -19,7 +29,9 @@ interface PrismExpressionWithInside extends PrismExpression {
   inside: Record<string, PrismExpression>;
 }
 
-interface PrismLanguage {
+type PrismLanguage = Grammar & PrismLanguageRaw;
+
+interface PrismLanguageRaw {
   expression: PrismExpressionWithInside;
 }
 
@@ -68,8 +80,8 @@ describe('PrismComponent', () => {
   });
 
   it('should register language on load', async () => {
-    const languages: Record<string, unknown> = {};
-    mockLoadPrism.mockResolvedValue({ languages } as never);
+    const languages = strictProxy<Languages>({});
+    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
     component.onload();
@@ -80,8 +92,8 @@ describe('PrismComponent', () => {
   });
 
   it('should define expression pattern in language', async () => {
-    const languages: Record<string, unknown> = {};
-    mockLoadPrism.mockResolvedValue({ languages } as never);
+    const languages = strictProxy<Languages>({});
+    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
     component.onload();
@@ -94,8 +106,8 @@ describe('PrismComponent', () => {
   });
 
   it('should define inside tokens for expression', async () => {
-    const languages: Record<string, unknown> = {};
-    mockLoadPrism.mockResolvedValue({ languages } as never);
+    const languages = strictProxy<Languages>({});
+    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
     component.onload();
@@ -112,8 +124,8 @@ describe('PrismComponent', () => {
   });
 
   it('should unregister language on unload', async () => {
-    const languages: Record<string, unknown> = {};
-    mockLoadPrism.mockResolvedValue({ languages } as never);
+    const languages = strictProxy<Languages>({});
+    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
     component.onload();
@@ -123,6 +135,6 @@ describe('PrismComponent', () => {
     });
 
     (component as PrismComponent & WithTriggerUnload).triggerUnload();
-    expect(languages[TOKENIZED_STRING_LANGUAGE]).toBeUndefined();
+    expect(bypassStrictProxy(languages)[TOKENIZED_STRING_LANGUAGE]).toBeUndefined();
   });
 });

@@ -16,7 +16,7 @@ import {
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
-interface SplitItemSelectorConstructorOptions extends ItemSelectorBaseConstructorParams {
+export interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldTreatTitleAsPath: boolean;
 }
@@ -25,10 +25,10 @@ export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
 
-  public constructor(options: SplitItemSelectorConstructorOptions) {
-    super(options);
-    this.shouldAllowOnlyCurrentFolder = options.shouldAllowOnlyCurrentFolder;
-    this.shouldTreatTitleAsPath = options.shouldTreatTitleAsPath;
+  public constructor(params: SplitItemSelectorConstructorParams) {
+    super(params);
+    this.shouldAllowOnlyCurrentFolder = params.shouldAllowOnlyCurrentFolder;
+    this.shouldTreatTitleAsPath = params.shouldTreatTitleAsPath;
   }
 
   public override async selectItem(): Promise<SelectItemResult> {

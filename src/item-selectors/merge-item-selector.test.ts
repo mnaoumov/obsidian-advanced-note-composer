@@ -4,6 +4,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -18,7 +19,7 @@ import type { Plugin } from '../plugin.ts';
 import { MergeItemSelector } from './merge-item-selector.ts';
 
 function mockItem(partial: Record<string, unknown>): Item {
-  return partial as never;
+  return castTo<Item>(partial);
 }
 
 vi.mock('obsidian-dev-utils/path', () => ({

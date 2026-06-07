@@ -7,6 +7,7 @@ import type {
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -24,7 +25,9 @@ import type { Plugin } from '../plugin.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { extractHeadingFromLine } from '../headings.ts';
+import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './extract-this-heading-editor-command-handler.ts';
 
 interface TestableHandler {
@@ -117,7 +120,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
 }
 
 function toTestable(handler: ExtractThisHeadingEditorCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('ExtractThisHeadingEditorCommandHandler', () => {
@@ -275,8 +278,8 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     handler.canExecuteEditor(editor, ctx);
 
     const splitResult = {
-      frontmatterMergeStrategy: 'MergeAndPreferNewValues',
-      insertMode: 'append',
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      insertMode: InsertMode.Append,
       isNewTargetFile: true,
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
@@ -285,7 +288,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
       shouldMergeHeadings: false,
       targetFile
     };
-    mockPrepareForSplitFile.mockResolvedValue(splitResult as never);
+    mockPrepareForSplitFile.mockResolvedValue(splitResult);
 
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;
