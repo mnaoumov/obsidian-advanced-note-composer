@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.4
+
+- chore: update template
+
 ## 3.26.3
 
 - chore: update template
