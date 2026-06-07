@@ -1,14 +1,19 @@
 import type {
+  InternalPlugins,
+  ViewRegistry
+} from '@obsidian-typings/obsidian-public-latest';
+import type {
   App,
   Editor,
   MetadataCache,
   TFile,
   TFolder,
   Vault,
-  ViewRegistry,
   Workspace
 } from 'obsidian';
 
+import { noop } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -69,7 +74,9 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
       return this;
     }
 
-    public build(): void {/* Noop */}
+    public build(): void {
+      noop();
+    }
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
 });
@@ -110,8 +117,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
     }
 
     public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
-      // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
-      asyncModule.invokeAsyncSafely(() => (this as never as WithChooseAsync).onChooseSuggestionAsync(item, evt));
+      asyncModule.invokeAsyncSafely(() => (castTo<WithChooseAsync>(this)).onChooseSuggestionAsync(item, evt));
     }
 
     public override onOpen(): void {
@@ -121,9 +127,17 @@ vi.mock('./suggest-modal-base.ts', async () => {
       super.onOpen();
     }
 
-    public renderSuggestion(): void {/* Noop */}
-    public selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {/* Noop */}
-    public updateSuggestions(): void {/* Noop */}
+    public renderSuggestion(): void {
+      noop();
+    }
+
+    public override selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {
+      noop();
+    }
+
+    public override updateSuggestions(): void {
+      noop();
+    }
   }
   return { SuggestModalBase: MockSuggestModalBase };
 });
@@ -136,10 +150,6 @@ vi.mock('../headings.ts', () => ({
   extractHeading: vi.fn().mockReturnValue('Test Heading')
 }));
 
-interface InternalPlugins {
-  getEnabledPluginById: ReturnType<typeof vi.fn>;
-}
-
 interface MockPluginOptions {
   readonly shouldAskBeforeSplitting?: boolean;
 }
@@ -151,10 +161,14 @@ interface SelectItemResult {
 
 const mockTargetFile = strictProxy<TFile>({ path: 'folder/target.md' });
 
+const mockSelectItem = vi.fn(
+  (): Promise<SelectItemResult> => Promise.resolve({ isNewTargetFile: false, targetFile: mockTargetFile })
+);
+
 vi.mock('../item-selectors/split-item-selector.ts', () => {
   class MockSplitItemSelector {
     public selectItem(): Promise<SelectItemResult> {
-      return Promise.resolve({ isNewTargetFile: false, targetFile: mockTargetFile });
+      return mockSelectItem();
     }
   }
   return { SplitItemSelector: MockSplitItemSelector };
@@ -191,7 +205,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
   return strictProxy<Plugin>({
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
-        getEnabledPluginById: vi.fn().mockReturnValue(null)
+        getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn().mockReturnValue(null))
       }),
       metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn().mockReturnValue(null),
@@ -203,7 +217,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         getFiles: vi.fn().mockReturnValue([]),
         getMarkdownFiles: vi.fn().mockReturnValue([])
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ViewRegistry is an internal Obsidian type with incomplete typings.
+
       viewRegistry: strictProxy<ViewRegistry>({
         isExtensionRegistered: vi.fn().mockReturnValue(true)
       }),
@@ -323,19 +337,10 @@ describe('prepareForSplitFile', () => {
     const editor = createMockEditor();
     const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
 
-    // Override SplitItemSelector to return isNewTargetFile: true
-    // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for vi.spyOn on module-level getter.
-    const splitItemSelectorModule = await import('../item-selectors/split-item-selector.ts');
-    vi.spyOn(splitItemSelectorModule, 'SplitItemSelector', 'get').mockReturnValue(
-      class {
-        public selectItem(): Promise<SelectItemResult> {
-          return Promise.resolve({ isNewTargetFile: true, targetFile: mockTargetFile });
-        }
-      } as never
-    );
-
     // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for accessing mocked module.
     const { trashSafe } = await import('obsidian-dev-utils/obsidian/vault');
+
+    mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });
 
     const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
     await vi.advanceTimersByTimeAsync(0);

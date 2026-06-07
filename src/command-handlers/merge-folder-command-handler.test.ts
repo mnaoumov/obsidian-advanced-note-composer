@@ -13,6 +13,7 @@ import {
   Vault as VaultClass
 } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   exists,
   isFile,
@@ -141,7 +142,7 @@ const mockRenameSafe = vi.mocked(renameSafe);
 const mockTrashSafe = vi.mocked(trashSafe);
 const mockIsChildOrSelf = vi.mocked(isChildOrSelf);
 
-interface MockPluginOptions {
+interface CreateMockPluginParams {
   readonly isPathIgnored?: boolean;
   readonly shouldAddCommandsToSubmenu?: boolean;
   readonly shouldRunTemplaterOnDestinationFile?: boolean;
@@ -161,13 +162,13 @@ function createMockFolder(path: string, isRoot = false, children: TAbstractFile[
   });
 }
 
-function createMockPlugin(options: MockPluginOptions = {}): Plugin {
+function createMockPlugin(params: CreateMockPluginParams = {}): Plugin {
   const {
     isPathIgnored = false,
     shouldAddCommandsToSubmenu = true,
     shouldRunTemplaterOnDestinationFile = false,
     templaterInstalled = false
-  } = options;
+  } = params;
   const pluginsRecord = Object.assign(Object.create(null), templaterInstalled ? { 'templater-obsidian': {} } : {});
   return strictProxy<Plugin>({
     app: strictProxy<App>({
@@ -188,7 +189,7 @@ function createMockPlugin(options: MockPluginOptions = {}): Plugin {
 }
 
 function toTestable(handler: MergeFolderCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('MergeFolderCommandHandler', () => {

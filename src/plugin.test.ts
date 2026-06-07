@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -13,23 +14,17 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+import type { PluginSettings } from './plugin-settings.ts';
+
 import { Plugin } from './plugin.ts';
 
 interface ConsoleDebugComponent {
   debug: ReturnType<typeof vi.fn>;
 }
 
-interface PluginInternals extends Plugin {
+interface PluginInternals {
   onLayoutReady(): Promise<void>;
-}
-
-interface PluginSettingsComponentLike {
-  editAndSave: ReturnType<typeof vi.fn>;
-  settings: PluginSettingsLike;
-}
-
-interface PluginSettingsLike {
-  releaseNotesShown: string[];
 }
 
 const mockAddChild = vi.fn(<T>(component: T): T => component);
@@ -79,7 +74,7 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
     }
 
     public addChild<T>(component: T): T {
-      return mockAddChild(component);
+      return mockAddChild(component) as T;
     }
   }
 
@@ -132,10 +127,14 @@ vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
 
 vi.mock('./plugin-settings-component.ts', () => {
   class MockPluginSettingsComponent {
-    public editAndSave = vi.fn().mockResolvedValue(undefined);
-    public settings: PluginSettingsLike = {
+    public settings: PluginSettings = strictProxy<PluginSettings>({
       releaseNotesShown: []
-    };
+    });
+
+    public editAndSave = vi.fn().mockImplementation((callback: (settings: PluginSettings) => void): Promise<void> => {
+      callback(this.settings);
+      return noopAsync();
+    });
   }
 
   return { PluginSettingsComponent: MockPluginSettingsComponent };
@@ -166,8 +165,8 @@ function createPlugin(): Plugin {
   return new Plugin(createMockApp(), createMockManifest());
 }
 
-function getPluginSettingsComponent(plugin: Plugin): PluginSettingsComponentLike {
-  return plugin.pluginSettingsComponent as never;
+function getPluginSettingsComponent(plugin: Plugin): PluginSettingsComponent {
+  return plugin.pluginSettingsComponent;
 }
 
 describe('Plugin', () => {
@@ -221,10 +220,12 @@ describe('Plugin', () => {
     it('should show release notes when there are versions not yet shown', async () => {
       const plugin = createPlugin();
       const pluginSettingsComponent = getPluginSettingsComponent(plugin);
-      pluginSettingsComponent.settings.releaseNotesShown = [];
+      await pluginSettingsComponent.editAndSave((settings) => {
+        settings.releaseNotesShown = [];
+      });
       pluginSettingsComponent.editAndSave = vi.fn().mockResolvedValue(undefined);
 
-      await (plugin as PluginInternals).onLayoutReady();
+      await castTo<PluginInternals>(plugin).onLayoutReady();
 
       expect(pluginSettingsComponent.editAndSave).toHaveBeenCalledOnce();
       expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({
@@ -237,10 +238,12 @@ describe('Plugin', () => {
 
       const plugin = createPlugin();
       const pluginSettingsComponent = getPluginSettingsComponent(plugin);
-      pluginSettingsComponent.settings.releaseNotesShown = ['3.0.0'];
+      await pluginSettingsComponent.editAndSave((settings) => {
+        settings.releaseNotesShown = ['3.0.0'];
+      });
       pluginSettingsComponent.editAndSave = vi.fn().mockResolvedValue(undefined);
 
-      await (plugin as PluginInternals).onLayoutReady();
+      await castTo<PluginInternals>(plugin).onLayoutReady();
 
       expect(pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
       expect(mockAlert).not.toHaveBeenCalled();
@@ -249,13 +252,16 @@ describe('Plugin', () => {
     it('should save shown versions to settings', async () => {
       const plugin = createPlugin();
       const pluginSettingsComponent = getPluginSettingsComponent(plugin);
-      pluginSettingsComponent.settings.releaseNotesShown = [];
-      pluginSettingsComponent.editAndSave = vi.fn().mockImplementation((callback: (settings: PluginSettingsLike) => void) => {
-        callback(pluginSettingsComponent.settings);
+      await pluginSettingsComponent.editAndSave((settings) => {
+        settings.releaseNotesShown = [];
+      });
+      // eslint-disable-next-line require-atomic-updates -- Can't fix.
+      pluginSettingsComponent.editAndSave = vi.fn().mockImplementation((callback: (settings: PluginSettings) => void) => {
+        callback(castTo<PluginSettings>(pluginSettingsComponent.settings));
         return noopAsync();
       });
 
-      await (plugin as PluginInternals).onLayoutReady();
+      await castTo<PluginInternals>(plugin).onLayoutReady();
 
       expect(pluginSettingsComponent.settings.releaseNotesShown).toContain('3.0.0');
     });

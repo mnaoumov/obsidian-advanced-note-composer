@@ -1,3 +1,7 @@
+import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
+
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -67,8 +71,8 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-component', () =
 
 function createComponent(): TestablePluginSettingsComponent {
   const component = new PluginSettingsComponent({
-    dataHandler: {} as never,
-    pluginEventSource: {} as never
+    dataHandler: strictProxy<DataHandler>({}),
+    pluginEventSource: strictProxy<PluginEventSource>({})
   });
 
   // Trigger the protected methods that register validators and converters

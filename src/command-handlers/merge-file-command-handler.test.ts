@@ -6,6 +6,7 @@ import type {
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -22,7 +23,9 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
+import { InsertMode } from '../insert-mode.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeFileCommandHandler } from './merge-file-command-handler.ts';
 
 interface TestableHandler {
@@ -111,7 +114,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
 }
 
 function toTestable(handler: MergeFileCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('MergeFileCommandHandler', () => {
@@ -191,8 +194,8 @@ describe('MergeFileCommandHandler', () => {
     const targetFile = createMockFile();
 
     const mergeResult = {
-      frontmatterMergeStrategy: 'MergeAndPreferNewValues',
-      insertMode: 'append',
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      insertMode: InsertMode.Append,
       isNewTargetFile: true,
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
@@ -200,7 +203,7 @@ describe('MergeFileCommandHandler', () => {
       shouldMergeHeadings: false,
       targetFile
     };
-    mockPrepareForMergeFile.mockResolvedValue(mergeResult as never);
+    mockPrepareForMergeFile.mockResolvedValue(mergeResult);
 
     const mockMergeFile = vi.fn().mockResolvedValue(undefined);
     MockMergeComposer.prototype.mergeFile = mockMergeFile;

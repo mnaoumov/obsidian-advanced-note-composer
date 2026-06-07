@@ -29,6 +29,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   }
 
   public override display(): void {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     super.display();
     this.containerEl.empty();
 
@@ -140,6 +141,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addToggle((toggle) => {
             this.bind(toggle, 'shouldReplaceInvalidTitleCharacters', {
               onChanged: () => {
+                // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
                 this.display();
               }
             });

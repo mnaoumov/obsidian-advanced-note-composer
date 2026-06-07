@@ -4,13 +4,16 @@ import type {
   EditorSelection,
   TFile
 } from 'obsidian';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { updateLinksInContent } from 'obsidian-dev-utils/obsidian/link';
 import {
   getCacheSafe,
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureGenericObject } from 'obsidian-dev-utils/type-guards';
 import {
   afterEach,
   describe,
@@ -19,6 +22,7 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
 
 import {
@@ -81,6 +85,7 @@ vi.mock('obsidian-dev-utils/function', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/object-utils', () => ({
+  castTo: (value: unknown): unknown => value,
   extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
@@ -105,8 +110,8 @@ function createMockEditor(options?: MockEditorOptions): Editor {
   });
 }
 
-function createPlugin(overrides?: Record<string, unknown>): Plugin {
-  return {
+function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
+  return castTo<Plugin>({
     app: {
       fileManager: {
         generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
@@ -141,17 +146,15 @@ function createPlugin(overrides?: Record<string, unknown>): Plugin {
         ...overrides
       }
     }
-  } as never;
+  });
 }
 
-function getComposerAppObj(composer: SplitComposer): Record<string, unknown> {
-  const record = composer as never;
-  return (record as Record<string, unknown>)['app'] as Record<string, unknown>;
+function getComposerAppObj(composer: SplitComposer): GenericObject {
+  return ensureGenericObject(ensureGenericObject(composer)['app']);
 }
 
-function getPluginAppObj(plugin: Plugin): Record<string, unknown> {
-  const record = plugin as never;
-  return (record as Record<string, Record<string, unknown>>)['app'];
+function getPluginAppObj(plugin: Plugin): GenericObject {
+  return castTo<GenericObject>(plugin.app);
 }
 
 afterEach(() => {
@@ -328,7 +331,7 @@ describe('splitFile', () => {
 
   it('should throw for invalid textAfterExtractionMode', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ textAfterExtractionMode: 'invalid' });
+    const plugin = createPlugin({ textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid') });
 
     const composer = new SplitComposer({
       editor,
@@ -417,8 +420,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       plugin,
-      sourceFile: { basename: 'source', path: 'source.md' } as never,
-      targetFile: { basename: 'target', path: 'target.md' } as never
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -457,7 +460,7 @@ describe('SplitComposer getTemplate', () => {
 
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
@@ -485,7 +488,7 @@ describe('SplitComposer getTemplate', () => {
 
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
@@ -516,7 +519,7 @@ describe('SplitComposer getTemplate', () => {
 
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
@@ -547,7 +550,7 @@ describe('SplitComposer getTemplate', () => {
 
     const insertIntoFileMock = vi.fn();
     const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as Record<string, unknown>)['insertIntoFile'] = insertIntoFileMock;
+    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 

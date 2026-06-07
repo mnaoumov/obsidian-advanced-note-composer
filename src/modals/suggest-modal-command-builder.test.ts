@@ -1,5 +1,6 @@
 import type {
   Instruction,
+  KeymapContext,
   KeymapEventListener,
   Modifier,
   SuggestModal
@@ -10,6 +11,7 @@ import {
   Platform,
   Scope
 } from 'obsidian';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -197,7 +199,7 @@ describe('SuggestModalCommandBuilder', () => {
       // Trigger the keyboard handler - it should not toggle
       const handler = registerCalls.find((c) => c.key === '1');
       expect(handler).toBeDefined();
-      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      handler?.func(new KeyboardEvent('keydown'), castTo<KeymapContext>({}));
       // OnChange should NOT have been called since checkbox is disabled
       expect(onChange).not.toHaveBeenCalled();
     });
@@ -219,7 +221,7 @@ describe('SuggestModalCommandBuilder', () => {
 
       const handler = registerCalls.find((c) => c.key === '1');
       expect(handler).toBeDefined();
-      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      handler?.func(new KeyboardEvent('keydown'), castTo<KeymapContext>({}));
       expect(onChange).toHaveBeenCalledWith(true);
     });
 
@@ -302,7 +304,7 @@ describe('SuggestModalCommandBuilder', () => {
       expect(handler).toBeDefined();
       // This executes the handler code (lines 84-89) even though
       // SelectEl.trigger('change') won't call DropdownComponent's internal callback
-      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      handler?.func(new KeyboardEvent('keydown'), castTo<KeymapContext>({}));
       expect(handler).toBeDefined();
     });
 
@@ -324,7 +326,7 @@ describe('SuggestModalCommandBuilder', () => {
       const handler = registerCalls.find((c) => c.key === '5');
       expect(handler).toBeDefined();
       // This should return early due to disabled check
-      handler?.func(new KeyboardEvent('keydown'), {} as never);
+      handler?.func(new KeyboardEvent('keydown'), castTo<KeymapContext>({}));
       // The handler returned early, select index was not changed
       const selectEl = modal.instructionsEl.querySelector('select');
       expect(selectEl?.selectedIndex).toBe(0);

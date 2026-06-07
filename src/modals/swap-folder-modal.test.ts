@@ -5,6 +5,7 @@ import type {
   Workspace
 } from 'obsidian';
 
+import { noop } from 'obsidian-dev-utils/function';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -37,7 +38,9 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
       return this;
     }
 
-    public build(): void {/* Noop */}
+    public build(): void {
+      noop();
+    }
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
 });

@@ -1,13 +1,18 @@
 import type {
+  InternalPlugins,
+  ViewRegistry
+} from '@obsidian-typings/obsidian-public-latest';
+import type {
   App,
   MetadataCache,
   TFile,
   TFolder,
   Vault,
-  ViewRegistry,
   Workspace
 } from 'obsidian';
 
+import { noop } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -112,21 +117,27 @@ vi.mock('./suggest-modal-base.ts', async () => {
     }
 
     public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
-      // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
-      asyncModule.invokeAsyncSafely(() => (this as never as WithChooseAsync).onChooseSuggestionAsync(item, evt));
+      asyncModule.invokeAsyncSafely(() => castTo<WithChooseAsync>(this).onChooseSuggestionAsync(item, evt));
     }
 
     public override onOpen(): void {
       if (shouldAutoSelect) {
-        // eslint-disable-next-line no-restricted-syntax -- Using as never for mock delegation.
-        (this as never as WithSelectSuggestion).selectSuggestion(null, { shiftKey: false } as MouseEvent);
+        (this as WithSelectSuggestion).selectSuggestion(null, { shiftKey: false } as MouseEvent);
       }
       super.onOpen();
     }
 
-    public renderSuggestion(): void {/* Noop */}
-    public selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {/* Noop */}
-    public updateSuggestions(): void {/* Noop */}
+    public renderSuggestion(): void {
+      noop();
+    }
+
+    public override selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {
+      noop();
+    }
+
+    public override updateSuggestions(): void {
+      noop();
+    }
   }
   return { SuggestModalBase: MockSuggestModalBase };
 });
@@ -145,7 +156,9 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
       return this;
     }
 
-    public build(): void {/* Noop */}
+    public build(): void {
+      noop();
+    }
   }
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
 });
@@ -165,10 +178,6 @@ vi.mock('../item-selectors/merge-item-selector.ts', () => {
   }
   return { MergeItemSelector: MockMergeItemSelector };
 });
-
-interface InternalPlugins {
-  getEnabledPluginById: ReturnType<typeof vi.fn>;
-}
 
 interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
@@ -194,7 +203,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
   return strictProxy<Plugin>({
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
-        getEnabledPluginById: vi.fn().mockReturnValue(null)
+        getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn().mockReturnValue(null))
       }),
       metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn().mockReturnValue(null),
@@ -206,7 +215,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         getFiles: vi.fn().mockReturnValue([]),
         getMarkdownFiles: vi.fn().mockReturnValue([])
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ViewRegistry is an internal Obsidian type with incomplete typings.
+
       viewRegistry: strictProxy<ViewRegistry>({
         isExtensionRegistered: vi.fn().mockReturnValue(true)
       }),

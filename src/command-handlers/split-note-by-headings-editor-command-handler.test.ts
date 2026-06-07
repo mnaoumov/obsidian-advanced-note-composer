@@ -10,6 +10,7 @@ import type {
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -21,6 +22,7 @@ import {
   vi
 } from 'vitest';
 
+import type { PrepareForSplitFileResult } from '../modals/split-file-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type { Plugin } from '../plugin.ts';
@@ -141,7 +143,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
 }
 
 function toTestable(handler: SplitNoteByHeadingsEditorCommandHandler): TestableHandler {
-  return handler as never;
+  return castTo<TestableHandler>(handler);
 }
 
 describe('SplitNoteByHeadingsEditorCommandHandler', () => {
@@ -361,11 +363,11 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       start: { ch: 0, line: 0 }
     });
 
-    const splitResult = {
+    const splitResult = strictProxy<PrepareForSplitFileResult>({
       isNewTargetFile: true,
       targetFile
-    };
-    mockPrepareForSplitFile.mockResolvedValue(splitResult as never);
+    });
+    mockPrepareForSplitFile.mockResolvedValue(splitResult);
 
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;

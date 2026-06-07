@@ -1,14 +1,20 @@
 import type {
+  BookmarkItem,
+  InternalPlugins,
+  ViewRegistry
+} from '@obsidian-typings/obsidian-public-latest';
+import type {
   App,
+  CachedMetadata,
   MetadataCache,
   TFile,
   TFolder,
   Vault,
-  ViewRegistry,
   Workspace
 } from 'obsidian';
 
 import { Platform } from 'obsidian';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -23,6 +29,10 @@ import type { Plugin } from '../plugin.ts';
 import type { Item } from './suggest-modal-base.ts';
 
 import { SuggestModalBase } from './suggest-modal-base.ts';
+
+interface OnInputable {
+  onInput(): void;
+}
 
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
@@ -54,23 +64,9 @@ vi.mock('obsidian-dev-utils/string', () => ({
   })
 }));
 
-interface BookmarkItemMock {
-  items?: BookmarkItemMock[];
-  path?: string;
-  query?: string;
-  subpath?: string;
-  title?: string;
-  type: string;
-  url?: string;
-}
-
 interface BookmarksPlugin {
   getItemTitle: ReturnType<typeof vi.fn>;
-  items: BookmarkItemMock[];
-}
-
-interface InternalPlugins {
-  getEnabledPluginById: ReturnType<typeof vi.fn>;
+  items: BookmarkItem[];
 }
 
 interface MockPluginOptions {
@@ -117,12 +113,12 @@ function createMockPlugin(overrides?: MockPluginOptions): Plugin {
   return strictProxy<Plugin>({
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
-        getEnabledPluginById: vi.fn((id: string) => {
+        getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn((id: string) => {
           if (id === 'bookmarks') {
             return bookmarksPlugin;
           }
           return null;
-        })
+        }))
       }),
       metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn().mockReturnValue(null),
@@ -134,7 +130,7 @@ function createMockPlugin(overrides?: MockPluginOptions): Plugin {
         getFiles: vi.fn(() => files),
         getMarkdownFiles: vi.fn(() => markdownFiles)
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ViewRegistry is an internal Obsidian type with incomplete typings.
+
       viewRegistry: strictProxy<ViewRegistry>({
         isExtensionRegistered: vi.fn().mockReturnValue(true)
       }),
@@ -281,7 +277,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const bookmarksPlugin: BookmarksPlugin = {
         getItemTitle: vi.fn().mockReturnValue('Bookmarked'),
-        items: [{ path: 'folder/bookmarked.md', type: 'file' }]
+        items: [{ ctime: 0, path: 'folder/bookmarked.md', title: 'bookmarked', type: 'file' }]
       };
       plugin = createMockPlugin({
         bookmarksPlugin,
@@ -373,9 +369,9 @@ describe('SuggestModalBase', () => {
         markdownFiles: [file1, sourceFile]
       });
       // Set up cache with aliases
-      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue({
+      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(castTo<CachedMetadata>({
         frontmatter: { aliases: ['My Alias'] }
-      } as never);
+      }));
       const modal = new TestSuggestModal(plugin, sourceFile);
       modal['shouldShowAlias'] = true;
       const suggestions = modal.getSuggestions('alias');
@@ -389,9 +385,9 @@ describe('SuggestModalBase', () => {
         files: [file1, sourceFile],
         markdownFiles: [file1, sourceFile]
       });
-      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue({
+      vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(castTo<CachedMetadata>({
         frontmatter: { aliases: ['My Alias'] }
-      } as never);
+      }));
       vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
       const modal = new TestSuggestModal(plugin, sourceFile);
       modal['shouldShowAlias'] = true;
@@ -403,7 +399,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const bookmarksPlugin: BookmarksPlugin = {
         getItemTitle: vi.fn().mockReturnValue('My Bookmark'),
-        items: [{ path: 'folder/bookmarked.md', type: 'file' }]
+        items: [{ ctime: 0, path: 'folder/bookmarked.md', title: 'bookmarked', type: 'file' }]
       };
       plugin = createMockPlugin({ bookmarksPlugin });
       const modal = new TestSuggestModal(plugin, sourceFile);
@@ -424,7 +420,8 @@ describe('SuggestModalBase', () => {
       const bookmarksPlugin: BookmarksPlugin = {
         getItemTitle: vi.fn().mockReturnValue('Group'),
         items: [{
-          items: [{ path: 'folder/nested.md', title: 'Nested', type: 'file' }],
+          ctime: 0,
+          items: [{ ctime: 0, path: 'folder/nested.md', title: 'Nested', type: 'file' }],
           title: 'Group',
           type: 'group'
         }]
@@ -439,7 +436,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const bookmarksPlugin: BookmarksPlugin = {
         getItemTitle: vi.fn().mockReturnValue('Bookmark'),
-        items: [{ path: 'folder/bookmarked.md', subpath: '#heading', type: 'file' }]
+        items: [{ ctime: 0, path: 'folder/bookmarked.md', subpath: '#heading', title: 'bookmarked', type: 'file' }]
       };
       plugin = createMockPlugin({ bookmarksPlugin });
       const modal = new TestSuggestModal(plugin, sourceFile);
@@ -571,7 +568,7 @@ describe('SuggestModalBase', () => {
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'My Bookmark',
-        item: { path: 'folder/bookmarked.md', subpath: '#heading', type: 'file' },
+        item: { ctime: 0, path: 'folder/bookmarked.md', subpath: '#heading', title: 'bookmarked', type: 'file' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -586,7 +583,7 @@ describe('SuggestModalBase', () => {
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Folder Bookmark',
-        item: { path: 'folder', type: 'folder' },
+        item: { ctime: 0, path: 'folder', title: 'folder', type: 'folder' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -601,7 +598,7 @@ describe('SuggestModalBase', () => {
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Search Bookmark',
-        item: { query: 'search query', type: 'search' },
+        item: { ctime: 0, query: 'search query', title: 'search', type: 'search' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -616,7 +613,7 @@ describe('SuggestModalBase', () => {
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Graph Bookmark',
-        item: { type: 'graph' },
+        item: { ctime: 0, title: 'graph', type: 'graph' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -631,7 +628,7 @@ describe('SuggestModalBase', () => {
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'URL Bookmark',
-        item: { type: 'url', url: 'https://example.com' },
+        item: { ctime: 0, title: 'URL', type: 'url', url: 'https://example.com' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -642,17 +639,17 @@ describe('SuggestModalBase', () => {
     it('should render bookmark url item with webviewer plugin', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      vi.mocked(plugin.app.internalPlugins.getEnabledPluginById).mockImplementation((id: string) => {
+      vi.mocked(plugin.app.internalPlugins.getEnabledPluginById).mockImplementation(castTo<InternalPlugins['getEnabledPluginById']>((id: string) => {
         if (id === 'webviewer') {
           return { db: { setIcon: vi.fn() } };
         }
         return null;
-      });
+      }));
       const modal = new TestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'URL Bookmark',
-        item: { type: 'url', url: 'https://example.com' },
+        item: { ctime: 0, title: 'URL', type: 'url', url: 'https://example.com' },
         match: { matches: [], score: 0 },
         type: 'bookmark'
       };
@@ -714,7 +711,7 @@ describe('SuggestModalBase', () => {
 
       // Super.onInput() may not exist on the mock, so we stub it
       const superOnInput = vi.fn();
-      Object.getPrototypeOf(Object.getPrototypeOf(modal)).onInput = superOnInput;
+      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
 
       modal.onInput();
       expect(superOnInput).toHaveBeenCalled();
@@ -729,7 +726,7 @@ describe('SuggestModalBase', () => {
       modal.inputEl.value = '   ';
 
       const superOnInput = vi.fn();
-      Object.getPrototypeOf(Object.getPrototypeOf(modal)).onInput = superOnInput;
+      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
 
       modal.onInput();
       expect(superOnInput).toHaveBeenCalled();
@@ -753,7 +750,7 @@ describe('SuggestModalBase', () => {
       });
 
       const superOnInput = vi.fn();
-      Object.getPrototypeOf(Object.getPrototypeOf(modal)).onInput = superOnInput;
+      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
 
       // First call: appends the button
       modal.onInput();
@@ -770,7 +767,8 @@ describe('SuggestModalBase', () => {
       modal.inputEl.value = 'test';
 
       const superOnInput = vi.fn();
-      Object.getPrototypeOf(Object.getPrototypeOf(modal)).onInput = superOnInput;
+
+      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
 
       modal.onInput();
       expect(superOnInput).toHaveBeenCalled();
