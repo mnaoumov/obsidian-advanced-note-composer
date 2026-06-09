@@ -20,7 +20,7 @@ import type { PluginSettings } from './plugin-settings.ts';
 import { Plugin } from './plugin.ts';
 
 interface ConsoleDebugComponent {
-  debug: ReturnType<typeof vi.fn>;
+  consoleDebug: ReturnType<typeof vi.fn>;
 }
 
 interface PluginInternals {
@@ -28,7 +28,7 @@ interface PluginInternals {
 }
 
 const mockAddChild = vi.fn(<T>(component: T): T => component);
-const mockConsoleDebugComponent: ConsoleDebugComponent = { debug: vi.fn() };
+const mockConsoleDebugComponent: ConsoleDebugComponent = { consoleDebug: vi.fn() };
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn()
@@ -198,21 +198,21 @@ describe('Plugin', () => {
   });
 
   describe('consoleDebug', () => {
-    it('should delegate to consoleDebugComponent.debug', () => {
+    it('should delegate to consoleDebugComponent.consoleDebug', () => {
       const plugin = createPlugin();
 
       plugin.consoleDebug('test message', 'arg1', 'arg2');
 
-      expect(mockConsoleDebugComponent.debug).toHaveBeenCalledWith('test message', 'arg1', 'arg2');
+      expect(mockConsoleDebugComponent.consoleDebug).toHaveBeenCalledWith('test message', 'arg1', 'arg2');
     });
 
     it('should pass message without extra args', () => {
-      mockConsoleDebugComponent.debug.mockClear();
+      mockConsoleDebugComponent.consoleDebug.mockClear();
       const plugin = createPlugin();
 
       plugin.consoleDebug('simple message');
 
-      expect(mockConsoleDebugComponent.debug).toHaveBeenCalledWith('simple message');
+      expect(mockConsoleDebugComponent.consoleDebug).toHaveBeenCalledWith('simple message');
     });
   });
 
