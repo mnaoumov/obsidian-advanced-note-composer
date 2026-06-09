@@ -83,7 +83,7 @@ export class Plugin extends PluginBase {
   }
 
   public consoleDebug(message: string, ...args: unknown[]): void {
-    this.consoleDebugComponent.debug(message, ...args);
+    this.consoleDebugComponent.consoleDebug(message, ...args);
   }
 
   protected async onLayoutReady(): Promise<void> {
