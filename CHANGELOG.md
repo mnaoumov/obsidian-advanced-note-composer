@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.6
+
+- chore: update libs
+
 ## 3.26.5
 
 - chore: update libs
