@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.26.7
+
+- chore: add attestation
+- chore: update version script
+
 ## 3.26.6
 
 - chore: update libs
