@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.8
+
+- chore: update template
+
 ## 3.26.7
 
 - chore: add attestation
