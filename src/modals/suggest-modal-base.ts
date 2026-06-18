@@ -1,5 +1,6 @@
 import type { BookmarkItem } from '@obsidian-typings/obsidian-public-latest';
 import type {
+  App,
   SearchMatches,
   SearchResult,
   SearchResultContainer
@@ -26,7 +27,7 @@ import {
   trimStart
 } from 'obsidian-dev-utils/string';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;
@@ -38,10 +39,17 @@ export interface Item extends SearchResultContainer {
   type: string;
 }
 
+export interface SuggestModalBaseConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFile: TFile;
+}
+
 type SearchFn = (text: string) => null | SearchResult;
 
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
+  protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected shouldAllowOnlyCurrentFolder: boolean;
   protected shouldShowAlias: boolean;
   protected shouldShowImages: boolean;
@@ -50,6 +58,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowNonFileBookmarks: boolean;
   protected shouldShowNonImageAttachments: boolean;
   protected shouldShowUnresolved: boolean;
+  protected readonly sourceFile: TFile;
+
   private readonly createButtonEl: HTMLElement;
   private readonly shouldShowAllTypes: boolean;
 
@@ -57,12 +67,15 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return this.allowCreateNewFile && this.shouldShowMarkdown;
   }
 
-  public constructor(private readonly plugin: Plugin, protected readonly sourceFile: TFile) {
-    super(plugin.app);
+  public constructor(params: SuggestModalBaseConstructorParams) {
+    super(params.app);
+
+    this.sourceFile = params.sourceFile;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
-    this.shouldAllowOnlyCurrentFolder = plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
+    this.shouldAllowOnlyCurrentFolder = params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
 
     this.shouldShowUnresolved = false;
     this.shouldShowMarkdown = true;
@@ -398,7 +411,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
+        if (this.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -420,7 +433,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   /* v8 ignore start -- shouldIncludeFile has many branches tested individually but v8 can't attribute coverage across test runs. */
   private shouldIncludeFile(file: TFile): boolean {
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       return false;
     }
 

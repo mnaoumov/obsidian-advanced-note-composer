@@ -4,19 +4,20 @@ import type {
 } from 'obsidian';
 
 import type { Item } from '../modals/suggest-modal-base.ts';
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 export interface ItemSelectorBaseConstructorParams {
+  readonly app: App;
   readonly inputValue: string;
   readonly isMod: boolean;
   readonly item: Item | null;
-  readonly plugin: Plugin;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
 }
 
 export interface SelectItemResult {
-  isNewTargetFile: boolean;
-  targetFile: TFile;
+  readonly isNewTargetFile: boolean;
+  readonly targetFile: TFile;
 }
 
 export abstract class ItemSelectorBase {
@@ -24,12 +25,12 @@ export abstract class ItemSelectorBase {
   protected readonly inputValue: string;
   protected readonly isMod: boolean;
   protected readonly item: Item | null;
-  protected readonly plugin: Plugin;
+  protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly sourceFile: TFile;
 
   public constructor(params: ItemSelectorBaseConstructorParams) {
-    this.app = params.plugin.app;
-    this.plugin = params.plugin;
+    this.app = params.app;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.sourceFile = params.sourceFile;
     this.item = params.item;
     this.isMod = params.isMod;

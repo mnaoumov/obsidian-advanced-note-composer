@@ -37,7 +37,7 @@ import {
 import { process } from 'obsidian-dev-utils/obsidian/vault';
 import { replaceAll } from 'obsidian-dev-utils/string';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
@@ -53,13 +53,15 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
 const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParams {
+  readonly app: App;
   readonly editor?: Editor;
+
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly heading?: string;
   readonly insertMode?: InsertMode;
-
   readonly isNewTargetFile: boolean;
-  readonly plugin: Plugin;
+
+  readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldAllowOnlyCurrentFolder?: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath?: boolean;
   readonly shouldFixFootnotes?: boolean;
@@ -80,34 +82,36 @@ export interface Selection {
 }
 
 interface ExtractFrontmatterResult {
-  content: string;
-  frontmatter: Frontmatter;
+  readonly content: string;
+  readonly frontmatter: Frontmatter;
 }
 
 export abstract class ComposerBase {
   protected readonly app: App;
   protected readonly isNewTargetFile: boolean;
 
-  protected readonly plugin: Plugin;
+  protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly insertMode: InsertMode;
-  private readonly shouldFixFootnotes: boolean;
 
+  private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
+
   private readonly shouldMergeHeadings: boolean;
 
   public constructor(params: ComposerBaseConstructorParams, shouldIncludeFrontmatter: boolean) {
+    this.app = params.app;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+
     this.insertMode = params.insertMode ?? InsertMode.Append;
-    this.plugin = params.plugin;
     this.sourceFile = params.sourceFile;
-    this.app = this.plugin.app;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = params.shouldFixFootnotes ?? this.plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = params.shouldMergeHeadings ?? this.plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? this.plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.shouldFixFootnotes = params.shouldFixFootnotes ?? params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = params.shouldMergeHeadings ?? params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     this.shouldShowNotice = params.shouldShowNotice ?? true;
     this.targetFile = params.targetFile;
     this.isNewTargetFile = params.isNewTargetFile;
@@ -134,7 +138,7 @@ export abstract class ComposerBase {
   }
 
   public isPathIgnored(path: string): boolean {
-    return this.plugin.pluginSettingsComponent.settings.isPathIgnored(path);
+    return this.pluginSettingsComponent.settings.isPathIgnored(path);
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
@@ -226,7 +230,7 @@ export abstract class ComposerBase {
       new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
 
-    if (!this.plugin.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
 

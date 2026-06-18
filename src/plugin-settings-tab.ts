@@ -28,10 +28,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
     this.pluginId = params.pluginId;
   }
 
-  public override display(): void {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-    super.display();
-    this.containerEl.empty();
+  public override displayLegacy(): void {
+    super.displayLegacy();
 
     new SettingGroupEx(this.containerEl)
       .setHeading('Common')
@@ -141,8 +139,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addToggle((toggle) => {
             this.bind(toggle, 'shouldReplaceInvalidTitleCharacters', {
               onChanged: () => {
-                // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-                this.display();
+                this.displayLegacy();
               }
             });
           });

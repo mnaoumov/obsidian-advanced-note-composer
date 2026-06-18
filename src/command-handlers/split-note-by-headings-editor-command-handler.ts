@@ -1,7 +1,9 @@
 import type {
+  App,
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -10,20 +12,37 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { Level } from '../markdown-heading-document.ts';
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
+interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly headingLevel: Level;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandler {
-  public constructor(private readonly plugin: Plugin, private readonly headingLevel: Level) {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly headingLevel: Level;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: SplitNoteByHeadingsEditorCommandHandlerConstructorParams) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors-line-dashed',
-      id: `split-note-by-headings-h${String(headingLevel)}`,
-      name: `Split note by headings - H${String(headingLevel)}`
+      id: `split-note-by-headings-h${String(params.headingLevel)}`,
+      name: `Split note by headings - H${String(params.headingLevel)}`
     });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.headingLevel = params.headingLevel;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
@@ -32,7 +51,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     if (!file) {
       return false;
     }
-    const cache = this.plugin.app.metadataCache.getFileCache(file);
+    const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) {
       return false;
     }
@@ -48,11 +67,11 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');
-          f.appendChild(await renderInternalLink(this.plugin.app, file));
+          f.appendChild(await renderInternalLink(this.app, file));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -61,7 +80,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
     while (true) {
-      const cache = await getCacheSafe(this.plugin.app, file);
+      const cache = await getCacheSafe(this.app, file);
       if (!cache) {
         break;
       }
@@ -69,22 +88,31 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       if (!heading) {
         break;
       }
-      const headingInfo = getSelectionUnderHeading(this.plugin.app, file, editor, heading.position.start.line);
+      const headingInfo = getSelectionUnderHeading(this.app, file, editor, heading.position.start.line);
       if (!headingInfo) {
         new Notice('Failed to find heading');
         return;
       }
       editor.setSelection(headingInfo.start, headingInfo.end);
-      const result = await prepareForSplitFile(this.plugin, file, editor, headingInfo.heading, true);
+      const result = await prepareForSplitFile({
+        app: this.app,
+        editor,
+        heading: headingInfo.heading,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        shouldSkipModal: true,
+        sourceFile: file
+      });
       if (!result) {
         return;
       }
       const composer = new SplitComposer({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
         editor,
         heading: headingInfo.heading,
         isMultipleSplit: true,
         isNewTargetFile: result.isNewTargetFile,
-        plugin: this.plugin,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         sourceFile: file,
         targetFile: result.targetFile
       });
@@ -93,7 +121,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {

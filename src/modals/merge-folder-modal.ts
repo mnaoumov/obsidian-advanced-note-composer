@@ -18,27 +18,52 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
+interface ConfirmDialogModalConstructorParams {
+  readonly app: App;
+  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
+}
+
 interface ConfirmDialogModalResult {
-  isConfirmed: boolean;
-  shouldAskBeforeMerging: boolean;
+  readonly isConfirmed: boolean;
+  readonly shouldAskBeforeMerging: boolean;
+}
+
+interface MergeFolderModalConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly promiseResolve: PromiseResolve<null | TFolder>;
+  readonly sourceFolder: TFolder;
+}
+
+/* v8 ignore stop */
+
+interface SelectTargetFolderForMergeFolderParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFolder: TFolder;
 }
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
   private isSelected = false;
+  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
   private shouldAskBeforeMerging = true;
+  private readonly sourceFolder: TFolder;
+  private readonly targetFolder: TFolder;
 
-  public constructor(
-    app: App,
-    private readonly sourceFolder: TFolder,
-    private readonly targetFolder: TFolder,
-    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
-  ) {
-    super(app);
+  public constructor(params: ConfirmDialogModalConstructorParams) {
+    super(params.app);
+
+    this.sourceFolder = params.sourceFolder;
+    this.targetFolder = params.targetFolder;
+    this.promiseResolve = params.promiseResolve;
+
     this.scope.register([], 'Enter', () => {
       this.confirm();
     });
@@ -131,18 +156,23 @@ class ConfirmDialogModal extends Modal {
 /* v8 ignore start -- MergeFolderModal is an internal UI class tested through exported functions. */
 class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   private isSelected = false;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly promiseResolve: PromiseResolve<null | TFolder>;
+
   private shouldIncludeChildFolders = false;
   private shouldIncludeParentFolders = false;
+  private readonly sourceFolder: TFolder;
 
-  public constructor(
-    private readonly plugin: Plugin,
-    private readonly sourceFolder: TFolder,
-    private readonly promiseResolve: PromiseResolve<null | TFolder>
-  ) {
-    super(plugin.app);
+  public constructor(params: MergeFolderModalConstructorParams) {
+    super(params.app);
+
+    this.sourceFolder = params.sourceFolder;
+    this.promiseResolve = params.promiseResolve;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+
     this.setPlaceholder('Select folder to merge into...');
-    this.shouldIncludeChildFolders = plugin.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenMergingByDefault;
-    this.shouldIncludeParentFolders = plugin.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenMergingByDefault;
+    this.shouldIncludeChildFolders = params.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenMergingByDefault;
+    this.shouldIncludeParentFolders = params.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenMergingByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -233,7 +263,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     if (folder === this.sourceFolder) {
       return false;
     }
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       return false;
     }
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
@@ -246,26 +276,31 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 }
 
-/* v8 ignore stop */
-
-export async function selectTargetFolderForMergeFolder(plugin: Plugin, sourceFolder: TFolder): Promise<null | TFolder> {
-  const targetFolder = await new Promise<null | TFolder>((resolve) => {
-    new MergeFolderModal(plugin, sourceFolder, resolve).open();
+export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
+  const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
+    new MergeFolderModal({
+      ...params,
+      promiseResolve
+    }).open();
   });
   /* v8 ignore start -- requires MergeFolderModal to resolve with a selected folder which is untestable in unit tests. */
   if (!targetFolder) {
     return null;
   }
-  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
+  if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return targetFolder;
   }
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
-    new ConfirmDialogModal(plugin.app, sourceFolder, targetFolder, resolve).open();
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+    new ConfirmDialogModal({
+      ...params,
+      promiseResolve,
+      targetFolder
+    }).open();
   });
   if (!confirmDialogResult.isConfirmed) {
     return null;
   }
-  await plugin.pluginSettingsComponent.editAndSave((settings) => {
+  await params.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
   return targetFolder;

@@ -15,6 +15,19 @@ import { InsertMode } from './insert-mode.ts';
 // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic number.
 export type Level = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+interface MarkdownHeadingDocumentConstructorParams {
+  readonly frontmatter: string;
+  readonly node: MarkdownHeadingNode;
+}
+
+interface MarkdownHeadingNodeConstructorParams {
+  readonly children: MarkdownHeadingNode[];
+  readonly heading: string;
+  readonly isFake: boolean;
+  readonly level: Level;
+  readonly text: string;
+}
+
 interface ParseHeadingNodeParams {
   readonly content: string;
   readonly contentStartOffset: number;
@@ -28,25 +41,27 @@ interface ParseHeadingNodeParams {
 
 class MarkdownHeadingNode {
   public readonly children: MarkdownHeadingNode[];
+  public readonly heading: string;
+  public readonly level: Level;
+  public text: string;
+  private readonly isFake: boolean = false;
 
-  public constructor(
-    public readonly level: Level,
-    public readonly heading: string,
-    public text: string,
-    children: MarkdownHeadingNode[],
-    private readonly isFake = false
-  ) {
+  public constructor(params: MarkdownHeadingNodeConstructorParams) {
+    this.level = params.level;
+    this.heading = params.heading;
+    this.text = params.text;
+    this.children = params.children;
+    this.isFake = params.isFake;
+
     /* v8 ignore start -- defensive invariant: only parseHeadingNode creates nodes with correct levels. */
-    if (level === 0 && !isFake) {
+    if (this.level === 0 && !this.isFake) {
       throw new Error('Root node must be fake');
     }
 
-    if (children.some((child) => child.level !== level + 1)) {
+    if (this.children.some((child) => child.level !== this.level + 1)) {
       throw new Error('Child level must be exactly one level deeper than parent level');
     }
     /* v8 ignore stop */
-
-    this.children = children;
   }
 
   public append(doc: MarkdownHeadingNode): MarkdownHeadingNode {
@@ -102,7 +117,13 @@ class MarkdownHeadingNode {
 
     const mergedText = trimText && trimDocText ? `${trimText}\n${trimDocText}` : trimText || trimDocText || '';
 
-    return new MarkdownHeadingNode(this.level, this.heading, mergedText, children, this.isFake);
+    return new MarkdownHeadingNode({
+      children,
+      heading: this.heading,
+      isFake: this.isFake,
+      level: this.level,
+      text: mergedText
+    });
   }
 
   public toString(): string {
@@ -144,9 +165,15 @@ class MarkdownHeadingNode {
 }
 
 export class MarkdownHeadingDocument {
-  public constructor(private readonly frontmatter: string, private readonly node: MarkdownHeadingNode) {
+  private readonly frontmatter: string;
+  private readonly node: MarkdownHeadingNode;
+
+  public constructor(params: MarkdownHeadingDocumentConstructorParams) {
+    this.frontmatter = params.frontmatter;
+    this.node = params.node;
+
     /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
-    if (node.level !== 0) {
+    if (this.node.level !== 0) {
       throw new Error('Node level must be 0');
     }
     /* v8 ignore stop */
@@ -154,7 +181,10 @@ export class MarkdownHeadingDocument {
 
   public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
     const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
-    return new MarkdownHeadingDocument(this.frontmatter, mergedNode);
+    return new MarkdownHeadingDocument({
+      frontmatter: this.frontmatter,
+      node: mergedNode
+    });
   }
 
   public toString(): string {
@@ -184,7 +214,10 @@ export async function parseMarkdownHeadingDocument(app: App, content: string): P
     isFake: true,
     level: 0
   });
-  return new MarkdownHeadingDocument(frontmatter, headingNode);
+  return new MarkdownHeadingDocument({
+    frontmatter,
+    node: headingNode
+  });
 }
 
 function parseHeadingNode(params: ParseHeadingNodeParams): MarkdownHeadingNode {
@@ -236,5 +269,9 @@ function parseHeadingNode(params: ParseHeadingNodeParams): MarkdownHeadingNode {
     children.push(child);
   }
 
-  return new MarkdownHeadingNode(params.level, params.heading, text, children, params.isFake);
+  return new MarkdownHeadingNode({
+    ...params,
+    children,
+    text
+  });
 }

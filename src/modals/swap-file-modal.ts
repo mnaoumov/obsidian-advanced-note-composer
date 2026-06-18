@@ -1,4 +1,7 @@
-import type { FuzzyMatch } from 'obsidian';
+import type {
+  App,
+  FuzzyMatch
+} from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
@@ -7,18 +10,38 @@ import {
 } from 'obsidian';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+
+interface SelectFileForSwapParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFile: TFile;
+}
+
+interface SwapFileModalConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly promiseResolve: PromiseResolve<null | TFile>;
+  readonly sourceFile: TFile;
+}
+
+/* v8 ignore stop */
 
 /* v8 ignore start -- SwapFileModal is an internal UI class tested through exported functions. */
 class SwapFileModal extends FuzzySuggestModal<TFile> {
   private isSelected = false;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly promiseResolve: PromiseResolve<null | TFile>;
 
-  public constructor(
-    private readonly plugin: Plugin,
-    private readonly sourceFile: TFile,
-    private readonly promiseResolve: PromiseResolve<null | TFile>
-  ) {
-    super(plugin.app);
+  private readonly sourceFile: TFile;
+
+  public constructor(params: SwapFileModalConstructorParams) {
+    super(params.app);
+
+    this.sourceFile = params.sourceFile;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.promiseResolve = params.promiseResolve;
+
     this.setPlaceholder('Select file to swap with...');
   }
 
@@ -87,15 +110,16 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     if (isChildOrSelf(this.app, file, this.sourceFile)) {
       return false;
     }
-    return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path);
+    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path);
   }
 }
 
-/* v8 ignore stop */
-
-export async function selectFileForSwap(plugin: Plugin, sourceFile: TFile): Promise<null | TFile> {
-  return new Promise<null | TFile>((resolve) => {
-    const modal = new SwapFileModal(plugin, sourceFile, resolve);
+export async function selectFileForSwap(params: SelectFileForSwapParams): Promise<null | TFile> {
+  return new Promise<null | TFile>((promiseResolve) => {
+    const modal = new SwapFileModal({
+      ...params,
+      promiseResolve
+    });
     modal.open();
   });
 }

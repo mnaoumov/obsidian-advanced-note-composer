@@ -1,26 +1,42 @@
 import type {
+  App,
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
+interface ExtractBeforeCursorEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandler {
-  public constructor(private readonly plugin: Plugin) {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: ExtractBeforeCursorEditorCommandHandlerConstructorParams) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-arrow-up-from-line',
       id: 'extract-before-cursor',
       name: 'Extract before cursor...'
     });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
@@ -28,28 +44,35 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');
-          f.appendChild(await renderInternalLink(this.plugin.app, file));
+          f.appendChild(await renderInternalLink(this.app, file));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
       return;
     }
     editor.setSelection({ ch: 0, line: 0 }, editor.getCursor());
-    const result = await prepareForSplitFile(this.plugin, file, editor);
+    const result = await prepareForSplitFile({
+      app: this.app,
+      editor,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFile: file
+    });
     if (!result) {
       return;
     }
     const composer = new SplitComposer({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
       editor,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
-      plugin: this.plugin,
+      pluginSettingsComponent: this.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: result.shouldFixFootnotes,
@@ -62,7 +85,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(): boolean {

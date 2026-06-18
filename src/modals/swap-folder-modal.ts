@@ -1,4 +1,7 @@
-import type { FuzzyMatch } from 'obsidian';
+import type {
+  App,
+  FuzzyMatch
+} from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
@@ -7,32 +10,51 @@ import {
 } from 'obsidian';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
-interface SwapFolderModalResult {
-  shouldSwapEntireFolderStructure: boolean;
-  targetFolder: TFolder;
+interface SelectTargetFolderForSwapParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFolder: TFolder;
 }
+
+interface SwapFolderModalConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly promiseResolve: PromiseResolve<null | SwapFolderModalResult>;
+  readonly sourceFolder: TFolder;
+}
+
+interface SwapFolderModalResult {
+  readonly shouldSwapEntireFolderStructure: boolean;
+  readonly targetFolder: TFolder;
+}
+
+/* v8 ignore stop */
 
 /* v8 ignore start -- SwapFolderModal is an internal UI class tested through exported functions. */
 class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   private isSelected = false;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly promiseResolve: PromiseResolve<null | SwapFolderModalResult>;
   private shouldIncludeChildFolders = false;
   private shouldIncludeParentFolders = false;
   private shouldSwapEntireFolderStructure = false;
+  private readonly sourceFolder: TFolder;
 
-  public constructor(
-    private readonly plugin: Plugin,
-    private readonly sourceFolder: TFolder,
-    private readonly promiseResolve: PromiseResolve<null | SwapFolderModalResult>
-  ) {
-    super(plugin.app);
+  public constructor(params: SwapFolderModalConstructorParams) {
+    super(params.app);
+
+    this.promiseResolve = params.promiseResolve;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.sourceFolder = params.sourceFolder;
+
     this.setPlaceholder('Select folder to swap with...');
-    this.shouldIncludeChildFolders = plugin.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenSwappingByDefault;
-    this.shouldIncludeParentFolders = plugin.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
-    this.shouldSwapEntireFolderStructure = plugin.pluginSettingsComponent.settings.shouldSwapEntireFolderStructureByDefault;
+    this.shouldIncludeChildFolders = this.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenSwappingByDefault;
+    this.shouldIncludeParentFolders = this.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
+    this.shouldSwapEntireFolderStructure = this.pluginSettingsComponent.settings.shouldSwapEntireFolderStructureByDefault;
 
     const builder = new SuggestModalCommandBuilder();
     builder.addCheckbox({
@@ -143,15 +165,16 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
       return false;
     }
-    return !this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path);
+    return !this.pluginSettingsComponent.settings.isPathIgnored(folder.path);
   }
 }
 
-/* v8 ignore stop */
-
-export async function selectTargetFolderForSwap(plugin: Plugin, sourceFolder: TFolder): Promise<null | SwapFolderModalResult> {
-  return new Promise<null | SwapFolderModalResult>((resolve) => {
-    const modal = new SwapFolderModal(plugin, sourceFolder, resolve);
+export async function selectTargetFolderForSwap(params: SelectTargetFolderForSwapParams): Promise<null | SwapFolderModalResult> {
+  return new Promise<null | SwapFolderModalResult>((promiseResolve) => {
+    const modal = new SwapFolderModal({
+      ...params,
+      promiseResolve
+    });
     modal.open();
   });
 }

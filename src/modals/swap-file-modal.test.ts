@@ -16,13 +16,25 @@ import {
   vi
 } from 'vitest';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { selectFileForSwap } from './swap-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
+
+function createMockApp(): App {
+  return strictProxy<App>({
+    vault: strictProxy<Vault>({
+      getFileByPath: vi.fn().mockReturnValue(null),
+      getMarkdownFiles: vi.fn().mockReturnValue([])
+    }),
+    workspace: strictProxy<Workspace>({
+      getRecentFiles: vi.fn().mockReturnValue([])
+    })
+  });
+}
 
 function createMockFile(path: string): TFile {
   const name = path.split('/').pop() ?? '';
@@ -35,21 +47,10 @@ function createMockFile(path: string): TFile {
   });
 }
 
-function createMockPlugin(): Plugin {
-  return strictProxy<Plugin>({
-    app: strictProxy<App>({
-      vault: strictProxy<Vault>({
-        getFileByPath: vi.fn().mockReturnValue(null),
-        getMarkdownFiles: vi.fn().mockReturnValue([])
-      }),
-      workspace: strictProxy<Workspace>({
-        getRecentFiles: vi.fn().mockReturnValue([])
-      })
-    }),
-    pluginSettingsComponent: strictProxy({
-      settings: strictProxy({
-        isPathIgnored: vi.fn().mockReturnValue(false)
-      })
+function createMockPluginSettingsComponent(): PluginSettingsComponent {
+  return strictProxy<PluginSettingsComponent>({
+    settings: strictProxy({
+      isPathIgnored: vi.fn().mockReturnValue(false)
     })
   });
 }
@@ -65,9 +66,10 @@ describe('selectFileForSwap', () => {
 
   it('should return null when modal is cancelled', async () => {
     const sourceFile = createMockFile('folder/source.md');
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = selectFileForSwap(plugin, sourceFile);
+    const promise = selectFileForSwap({ app, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -75,9 +77,10 @@ describe('selectFileForSwap', () => {
 
   it('should create modal and open it', async () => {
     const sourceFile = createMockFile('folder/source.md');
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = selectFileForSwap(plugin, sourceFile);
+    const promise = selectFileForSwap({ app, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     // Modal auto-closes without selection → null (tests the onClose path)

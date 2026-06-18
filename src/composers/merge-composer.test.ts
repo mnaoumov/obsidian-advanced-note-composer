@@ -1,8 +1,10 @@
 import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 import type {
+  App,
   Reference,
   TFile
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -27,11 +29,17 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeComposer } from './merge-composer.ts';
+
+interface ComposerDeps {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
 
 interface UpdateLinksParams {
   readonly content: string;
@@ -84,18 +92,18 @@ vi.mock('../markdown-heading-document.ts', () => ({
   parseMarkdownHeadingDocument: vi.fn()
 }));
 
-function createComposer(pluginOverrides?: Partial<PluginSettings>): MergeComposer {
-  const plugin = createPlugin(pluginOverrides);
+function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
+  const deps = createDeps(settingsOverrides);
   return new MergeComposer({
+    ...deps,
     isNewTargetFile: false,
-    plugin,
     sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
     targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
   });
 }
 
-function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
-  return castTo<Plugin>({
+function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
+  return castTo<ComposerDeps>({
     app: {
       fileManager: {
         insertIntoFile: vi.fn(),
@@ -112,7 +120,9 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
         getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
       }
     },
-    consoleDebug: vi.fn(),
+    consoleDebugComponent: {
+      consoleDebug: vi.fn()
+    },
     pluginSettingsComponent: {
       settings: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
@@ -128,8 +138,8 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
   });
 }
 
-function getPluginAppObj(plugin: Plugin): GenericObject {
-  return castTo<GenericObject>(plugin.app);
+function getAppObj(app: App): GenericObject {
+  return castTo<GenericObject>(app);
 }
 
 afterEach(() => {
@@ -138,7 +148,7 @@ afterEach(() => {
 
 describe('MergeComposer', () => {
   it('should be constructable', () => {
-    const plugin = castTo<Plugin>({
+    const deps = castTo<ComposerDeps>({
       app: {
         fileManager: {},
         metadataCache: { getFileCache: vi.fn() },
@@ -146,7 +156,9 @@ describe('MergeComposer', () => {
         vault: { cachedRead: vi.fn(), read: vi.fn() },
         workspace: {}
       },
-      consoleDebug: vi.fn(),
+      consoleDebugComponent: {
+        consoleDebug: vi.fn()
+      },
       pluginSettingsComponent: {
         settings: {
           defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
@@ -160,8 +172,8 @@ describe('MergeComposer', () => {
     });
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -205,11 +217,11 @@ describe('mergeFile', () => {
   });
 
   it('should not show notice when shouldShowNotice is false', async () => {
-    const plugin = createPlugin();
+    const deps = createDeps();
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       shouldShowNotice: false,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
@@ -227,16 +239,16 @@ describe('mergeFile', () => {
 
   it('should open note after merge when shouldOpenNoteAfterMerge is true', async () => {
     const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const plugin = createPlugin({ shouldOpenNoteAfterMerge: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldOpenNoteAfterMerge: true });
+    const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -252,16 +264,16 @@ describe('mergeFile', () => {
 
   it('should not open note when shouldOpenNoteAfterMerge is false', async () => {
     const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const plugin = createPlugin({ shouldOpenNoteAfterMerge: false });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldOpenNoteAfterMerge: false });
+    const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -281,11 +293,11 @@ describe('MergeComposer fixBacklinks', () => {
     const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
 
-    const plugin = createPlugin();
+    const deps = createDeps();
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile,
       targetFile
     });
@@ -314,16 +326,16 @@ describe('MergeComposer fixBacklinks', () => {
 
 describe('MergeComposer getSelections', () => {
   it('should return full file content as single selection', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['vault'] = {
       ...appObj['vault'] as GenericObject,
       read: vi.fn().mockResolvedValue('hello world')
     };
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -343,11 +355,11 @@ describe('MergeComposer getSelections', () => {
 
 describe('MergeComposer getTemplate', () => {
   it('should return mergeTemplate from settings', () => {
-    const plugin = createPlugin({ mergeTemplate: 'custom: {{content}}' });
+    const deps = createDeps({ mergeTemplate: 'custom: {{content}}' });
 
     const composer = new MergeComposer({
+      ...deps,
       isNewTargetFile: false,
-      plugin,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });

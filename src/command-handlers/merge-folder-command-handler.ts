@@ -1,9 +1,11 @@
 import type {
+  App,
   TAbstractFile,
   TFile,
   TFolder,
   WorkspaceLeaf
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import {
   Notice,
@@ -35,13 +37,23 @@ import {
   relative
 } from 'obsidian-dev-utils/path';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 
+interface MergeFolderCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 export class MergeFolderCommandHandler extends FolderCommandHandler {
-  public constructor(private readonly plugin: Plugin) {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: MergeFolderCommandHandlerConstructorParams) {
     super({
       fileMenuItemName: 'Merge entire folder with...',
       fileMenuSubmenuIcon: 'lucide-git-merge',
@@ -49,6 +61,10 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       id: 'merge-folder',
       name: 'Merge current folder with another folder...'
     });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   protected override canExecuteFolder(folder: TFolder): boolean {
@@ -57,24 +73,28 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
-          f.appendChild(await renderInternalLink(this.plugin.app, folder));
+          f.appendChild(await renderInternalLink(this.app, folder));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
       return;
     }
-    const targetFolder = await selectTargetFolderForMergeFolder(this.plugin, folder);
+    const targetFolder = await selectTargetFolderForMergeFolder({
+      app: this.app,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFolder: folder
+    });
     if (targetFolder) {
       await this.mergeFolder(folder, targetFolder);
     }
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean {
@@ -90,9 +110,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const notice = new Notice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
-        f.appendChild(await renderInternalLink(this.plugin.app, sourceFolder.path));
+        f.appendChild(await renderInternalLink(this.app, sourceFolder.path));
         f.appendText(' with ');
-        f.appendChild(await renderInternalLink(this.plugin.app, targetFolder.path));
+        f.appendChild(await renderInternalLink(this.app, targetFolder.path));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');
@@ -120,7 +140,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!isFile(child)) {
         return;
       }
-      if (isMarkdownFile(this.plugin.app, child)) {
+      if (isMarkdownFile(this.app, child)) {
         sourceMdFiles.push(child);
         return;
       }
@@ -135,15 +155,15 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     for (const sourceSubfolder of sourceSubfolders) {
       const relativePath = relative(sourceFolder.path, sourceSubfolder.path);
       const targetSubfolderPath = join(targetFolder.path, relativePath);
-      const targetSubfolder = await getOrCreateFolderSafe(this.plugin.app, targetSubfolderPath);
+      const targetSubfolder = await getOrCreateFolderSafe(this.app, targetSubfolderPath);
       subfoldersMap.set(sourceSubfolder.path, targetSubfolder.path);
     }
 
-    if (isChildOrSelf(this.plugin.app, sourceFolder, targetFolder)) {
+    if (isChildOrSelf(this.app, sourceFolder, targetFolder)) {
       sourceMdFiles.sort((a, b) => this.depth(a) - this.depth(b));
     }
 
-    if (isChildOrSelf(this.plugin.app, targetFolder, sourceFolder)) {
+    if (isChildOrSelf(this.app, targetFolder, sourceFolder)) {
       sourceMdFiles.sort((a, b) => this.depth(b) - this.depth(a));
     }
 
@@ -152,9 +172,17 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
-      const isNewTargetFile = !exists(this.plugin.app, targetMdFilePath, FileSystemType.File);
-      const targetMdFile = await getOrCreateFileSafe(this.plugin.app, targetMdFilePath);
-      const composer = new MergeComposer({ isNewTargetFile, plugin: this.plugin, shouldShowNotice: false, sourceFile: sourceMdFile, targetFile: targetMdFile });
+      const isNewTargetFile = !exists(this.app, targetMdFilePath, FileSystemType.File);
+      const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
+      const composer = new MergeComposer({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        isNewTargetFile,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        shouldShowNotice: false,
+        sourceFile: sourceMdFile,
+        targetFile: targetMdFile
+      });
       await composer.mergeFile();
     }
 
@@ -163,8 +191,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
       let targetFilePath = join(targetParentFolderPath, sourceOtherFile.name);
-      targetFilePath = getAvailablePath(this.plugin.app, targetFilePath);
-      await renameSafe(this.plugin.app, sourceOtherFile, targetFilePath);
+      targetFilePath = getAvailablePath(this.app, targetFilePath);
+      await renameSafe(this.app, sourceOtherFile, targetFilePath);
     }
 
     for (const sourceSubfolder of sourceSubfolders) {
@@ -173,7 +201,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       }
       let canDeleteSourceFolder = true;
       for (const targetFolderPath of subfoldersMap.values()) {
-        if (isChildOrSelf(this.plugin.app, targetFolderPath, sourceSubfolder)) {
+        if (isChildOrSelf(this.app, targetFolderPath, sourceSubfolder)) {
           canDeleteSourceFolder = false;
           break;
         }
@@ -181,13 +209,13 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!canDeleteSourceFolder) {
         continue;
       }
-      await trashSafe(this.plugin.app, sourceSubfolder);
+      await trashSafe(this.app, sourceSubfolder);
     }
 
-    if (!this.plugin.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
+    if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
-    const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];
+    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       new Notice(createFragment((f) => {
         f.appendText('Advanced Note Composer: You have enabled setting ');

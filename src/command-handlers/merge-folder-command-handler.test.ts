@@ -7,6 +7,7 @@ import type {
   Vault,
   WorkspaceLeaf
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import {
   Notice,
@@ -40,7 +41,6 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
@@ -149,6 +149,12 @@ interface CreateMockPluginParams {
   readonly templaterInstalled?: boolean;
 }
 
+interface MergeFolderCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 function createMockFile(path: string): TFile {
   const name = path.split('/').pop() ?? '';
   return strictProxy<TFile>({ name, parent: strictProxy<TFolder>({ path: path.slice(0, path.lastIndexOf('/')) }), path });
@@ -162,7 +168,7 @@ function createMockFolder(path: string, isRoot = false, children: TAbstractFile[
   });
 }
 
-function createMockPlugin(params: CreateMockPluginParams = {}): Plugin {
+function createMockParams(params: CreateMockPluginParams = {}): MergeFolderCommandHandlerConstructorParams {
   const {
     isPathIgnored = false,
     shouldAddCommandsToSubmenu = true,
@@ -170,7 +176,7 @@ function createMockPlugin(params: CreateMockPluginParams = {}): Plugin {
     templaterInstalled = false
   } = params;
   const pluginsRecord = Object.assign(Object.create(null), templaterInstalled ? { 'templater-obsidian': {} } : {});
-  return strictProxy<Plugin>({
+  return {
     app: strictProxy<App>({
       metadataCache: strictProxy<MetadataCache>({}),
       plugins: strictProxy<App['plugins']>({
@@ -178,6 +184,7 @@ function createMockPlugin(params: CreateMockPluginParams = {}): Plugin {
       }),
       vault: strictProxy<Vault>({})
     }),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -185,7 +192,7 @@ function createMockPlugin(params: CreateMockPluginParams = {}): Plugin {
         shouldRunTemplaterOnDestinationFile
       })
     })
-  });
+  };
 }
 
 function toTestable(handler: MergeFolderCommandHandler): TestableHandler {
@@ -198,8 +205,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should construct with correct params', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     expect(handler.params).toStrictEqual({
       fileMenuItemName: 'Merge entire folder with...',
       fileMenuSubmenuIcon: 'lucide-git-merge',
@@ -210,22 +217,22 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should return false from canExecuteFolder when folder is root', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('/', true);
     expect(handler.canExecuteFolder(folder)).toBe(false);
   });
 
   it('should return true from canExecuteFolder when folder is not root', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('some/folder', false);
     expect(handler.canExecuteFolder(folder)).toBe(true);
   });
 
   it('should show notice and return when path is ignored', async () => {
-    const plugin = createMockPlugin({ isPathIgnored: true });
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams({ isPathIgnored: true });
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('test/folder');
 
     const mockFragment = strictProxy<DocumentFragment>({
@@ -245,8 +252,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should return when selectTargetFolderForMergeFolder returns null', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('test/folder');
 
     mockSelectTargetFolder.mockResolvedValue(null);
@@ -257,8 +264,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should merge folders on happy path', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -293,8 +300,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should merge markdown files and move non-markdown files', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -354,8 +361,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should delete empty source subfolders that are not target ancestors', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -397,8 +404,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should not delete source subfolder when target is a child of it', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -444,8 +451,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should not delete subfolder when it has children', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -486,8 +493,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should show notice when templater setting is enabled but plugin is not installed', async () => {
-    const plugin = createMockPlugin({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: false });
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: false });
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -522,8 +529,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should not show templater notice when templater is installed', async () => {
-    const plugin = createMockPlugin({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: true });
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: true });
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -558,8 +565,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should sort md files by depth ascending when source is child of target', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -617,27 +624,27 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {
-    const plugin = createMockPlugin({ shouldAddCommandsToSubmenu: true });
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams({ shouldAddCommandsToSubmenu: true });
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const plugin = createMockPlugin({ shouldAddCommandsToSubmenu: false });
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams({ shouldAddCommandsToSubmenu: false });
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
   it('should return true from shouldAddToFolderMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('test/folder');
     expect(handler.shouldAddToFolderMenu(folder, 'source')).toBe(true);
   });
 
   it('should hide notice even when mergeFolderImpl throws', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -670,8 +677,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should skip children that are neither folder nor file', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 
@@ -712,8 +719,8 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should sort md files by depth descending when target is child of source', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFolderCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     const sourceFolder = createMockFolder('src');
     const targetFolder = createMockFolder('target');
 

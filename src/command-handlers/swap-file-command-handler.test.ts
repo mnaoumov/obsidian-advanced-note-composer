@@ -19,7 +19,6 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { swap } from '../swapper.ts';
@@ -76,12 +75,17 @@ const MockNotice = vi.mocked(Notice);
 const mockSelectFileForSwap = vi.mocked(selectFileForSwap);
 const mockSwap = vi.mocked(swap);
 
+interface SwapFileCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = true): Plugin {
-  return strictProxy<Plugin>({
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): SwapFileCommandHandlerConstructorParams {
+  return {
     app: strictProxy<App>({}),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
@@ -89,7 +93,7 @@ function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
         shouldAddCommandsToSubmenu
       })
     })
-  });
+  };
 }
 
 function toTestable(handler: SwapFileCommandHandler): TestableHandler {
@@ -102,8 +106,8 @@ describe('SwapFileCommandHandler', () => {
   });
 
   it('should construct with correct params', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new SwapFileCommandHandler(params));
     expect(handler.params).toStrictEqual({
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'switch-camera',
@@ -113,8 +117,8 @@ describe('SwapFileCommandHandler', () => {
   });
 
   it('should show notice and return when path is ignored', async () => {
-    const plugin = createMockPlugin(true);
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams(true);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     const file = createMockFile();
 
     const mockFragment = strictProxy<DocumentFragment>({
@@ -134,8 +138,8 @@ describe('SwapFileCommandHandler', () => {
   });
 
   it('should return when selectFileForSwap returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     const file = createMockFile();
 
     mockSelectFileForSwap.mockResolvedValue(null);
@@ -146,8 +150,8 @@ describe('SwapFileCommandHandler', () => {
   });
 
   it('should call swap on happy path', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     const file = createMockFile();
     const targetFile = createMockFile();
 
@@ -156,24 +160,24 @@ describe('SwapFileCommandHandler', () => {
 
     await handler.executeFile(file);
 
-    expect(mockSwap).toHaveBeenCalledWith(plugin.app, file, targetFile, true);
+    expect(mockSwap).toHaveBeenCalledWith(params.app, file, targetFile, true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {
-    const plugin = createMockPlugin(false, true);
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams(false, true);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const plugin = createMockPlugin(false, false);
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams(false, false);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
   it('should return true from shouldAddToFileMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SwapFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new SwapFileCommandHandler(params));
     const file = createMockFile();
     expect(handler.shouldAddToFileMenu(file, 'source')).toBe(true);
   });

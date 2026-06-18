@@ -1,9 +1,11 @@
 import type {
+  App,
   Editor,
   EditorPosition,
   EditorSelection,
   TFile
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -22,8 +24,8 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import {
   Action,
@@ -34,6 +36,12 @@ import {
   getSelections,
   SplitComposer
 } from './split-composer.ts';
+
+interface ComposerDeps {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
 
 interface MockPosition {
   ch: number;
@@ -98,20 +106,8 @@ interface MockEditorOptions {
   readonly selection?: string;
 }
 
-function createMockEditor(options?: MockEditorOptions): Editor {
-  const selections = options?.listSelections ?? [{ anchor: { ch: 0, line: 0 }, head: { ch: 10, line: 0 } }];
-  return strictProxy<Editor>({
-    getSelection: vi.fn().mockReturnValue(options?.selection ?? 'selected text'),
-    listSelections: vi.fn().mockReturnValue(selections),
-    offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
-    posToOffset: vi.fn((pos: MockPosition) => pos.ch),
-    replaceSelection: vi.fn(),
-    setSelections: vi.fn()
-  });
-}
-
-function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
-  return castTo<Plugin>({
+function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
+  return castTo<ComposerDeps>({
     app: {
       fileManager: {
         generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
@@ -129,7 +125,9 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
         getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
       }
     },
-    consoleDebug: vi.fn(),
+    consoleDebugComponent: {
+      consoleDebug: vi.fn()
+    },
     pluginSettingsComponent: {
       settings: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
@@ -149,12 +147,24 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
   });
 }
 
-function getComposerAppObj(composer: SplitComposer): GenericObject {
-  return ensureGenericObject(ensureGenericObject(composer)['app']);
+function createMockEditor(options?: MockEditorOptions): Editor {
+  const selections = options?.listSelections ?? [{ anchor: { ch: 0, line: 0 }, head: { ch: 10, line: 0 } }];
+  return strictProxy<Editor>({
+    getSelection: vi.fn().mockReturnValue(options?.selection ?? 'selected text'),
+    listSelections: vi.fn().mockReturnValue(selections),
+    offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+    posToOffset: vi.fn((pos: MockPosition) => pos.ch),
+    replaceSelection: vi.fn(),
+    setSelections: vi.fn()
+  });
 }
 
-function getPluginAppObj(plugin: Plugin): GenericObject {
-  return castTo<GenericObject>(plugin.app);
+function getAppObj(app: App): GenericObject {
+  return castTo<GenericObject>(app);
+}
+
+function getComposerAppObj(composer: SplitComposer): GenericObject {
+  return ensureGenericObject(ensureGenericObject(composer)['app']);
 }
 
 afterEach(() => {
@@ -215,13 +225,13 @@ describe('getSelections', () => {
 
 describe('SplitComposer constructor', () => {
   it('should use shouldIncludeFrontmatter from params when provided', () => {
-    const plugin = createPlugin();
+    const deps = createDeps();
     const editor = createMockEditor();
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       shouldIncludeFrontmatter: true,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
@@ -230,13 +240,13 @@ describe('SplitComposer constructor', () => {
   });
 
   it('should use default from settings when shouldIncludeFrontmatter not provided', () => {
-    const plugin = createPlugin({ shouldIncludeFrontmatterWhenSplittingByDefault: true });
+    const deps = createDeps({ shouldIncludeFrontmatterWhenSplittingByDefault: true });
     const editor = createMockEditor();
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -247,13 +257,13 @@ describe('SplitComposer constructor', () => {
 describe('splitFile', () => {
   it('should return early when checkTargetFileIgnored returns false', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ isPathIgnored: vi.fn().mockReturnValue(true) });
+    const deps = createDeps({ isPathIgnored: vi.fn().mockReturnValue(true) });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -265,13 +275,13 @@ describe('splitFile', () => {
 
   it('should insert content and replace with link for LinkToNewFile mode', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -287,13 +297,13 @@ describe('splitFile', () => {
 
   it('should replace with embed for EmbedNewFile mode', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -309,13 +319,13 @@ describe('splitFile', () => {
 
   it('should replace with empty string for None mode', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ textAfterExtractionMode: TextAfterExtractionMode.None });
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -331,13 +341,13 @@ describe('splitFile', () => {
 
   it('should throw for invalid textAfterExtractionMode', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid') });
+    const deps = createDeps({ textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid') });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -352,8 +362,8 @@ describe('splitFile', () => {
   it('should open target note after split when shouldOpenTargetNoteAfterSplit is true and not multiple split', async () => {
     const openFileMock = vi.fn().mockResolvedValue(undefined);
     const editor = createMockEditor();
-    const plugin = createPlugin({ shouldOpenTargetNoteAfterSplit: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldOpenTargetNoteAfterSplit: true });
+    const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
@@ -363,7 +373,7 @@ describe('splitFile', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -380,8 +390,8 @@ describe('splitFile', () => {
   it('should not open target note when isMultipleSplit is true', async () => {
     const openFileMock = vi.fn().mockResolvedValue(undefined);
     const editor = createMockEditor();
-    const plugin = createPlugin({ shouldOpenTargetNoteAfterSplit: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldOpenTargetNoteAfterSplit: true });
+    const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
@@ -391,7 +401,7 @@ describe('splitFile', () => {
       editor,
       isMultipleSplit: true,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -407,8 +417,8 @@ describe('splitFile', () => {
 
   it('should propagate errors from insertIntoFile', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = {
       generateMarkdownLink: vi.fn(),
       insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
@@ -419,7 +429,7 @@ describe('splitFile', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -443,13 +453,13 @@ describe('splitFile', () => {
 describe('SplitComposer getTemplate', () => {
   it('should return mergeTemplate when splitTemplate is empty', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' });
+    const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -471,13 +481,13 @@ describe('SplitComposer getTemplate', () => {
 
   it('should return splitTemplate for new file when splitTemplate is set', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' });
+    const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' });
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -498,7 +508,7 @@ describe('SplitComposer getTemplate', () => {
 
   it('should return mergeTemplate for existing file when splitToExistingFileTemplate is Merge', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({
+    const deps = createDeps({
       mergeTemplate: 'merge: {{content}}',
       splitTemplate: 'split: {{content}}',
       splitToExistingFileTemplate: Action.Merge
@@ -508,7 +518,7 @@ describe('SplitComposer getTemplate', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -529,7 +539,7 @@ describe('SplitComposer getTemplate', () => {
 
   it('should return splitTemplate for existing file when splitToExistingFileTemplate is Split', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin({
+    const deps = createDeps({
       mergeTemplate: 'merge: {{content}}',
       splitTemplate: 'split: {{content}}',
       splitToExistingFileTemplate: Action.Split
@@ -539,7 +549,7 @@ describe('SplitComposer getTemplate', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -562,13 +572,13 @@ describe('SplitComposer getTemplate', () => {
 describe('SplitComposer prepareBacklinkSubpaths', () => {
   it('should return empty Set', async () => {
     const editor = createMockEditor();
-    const plugin = createPlugin();
+    const deps = createDeps();
 
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -598,8 +608,8 @@ describe('SplitComposer updateEditorSelections', () => {
       setSelections: setSelectionsMock
     });
 
-    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldFixFootnotesByDefault: true });
+    const appObj = getAppObj(deps.app);
     appObj['vault'] = {
       cachedRead: vi.fn()
         .mockResolvedValueOnce('source [^fn1]\n[^fn1]: footnote')
@@ -610,7 +620,7 @@ describe('SplitComposer updateEditorSelections', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -647,8 +657,8 @@ describe('SplitComposer updateEditorSelections with restore', () => {
       setSelections: setSelectionsMock
     });
 
-    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldFixFootnotesByDefault: true });
+    const appObj = getAppObj(deps.app);
     appObj['vault'] = {
       cachedRead: vi.fn()
         .mockResolvedValueOnce('before [^fn1] selected [^fn1]: definition after')
@@ -659,7 +669,7 @@ describe('SplitComposer updateEditorSelections with restore', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -705,8 +715,8 @@ describe('SplitComposer removeSelectionRange', () => {
       setSelections: setSelectionsMock
     });
 
-    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldFixFootnotesByDefault: true });
+    const appObj = getAppObj(deps.app);
     appObj['vault'] = {
       cachedRead: vi.fn()
         .mockResolvedValueOnce('text [^fn1]\n[^fn1]: footnote')
@@ -717,7 +727,7 @@ describe('SplitComposer removeSelectionRange', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -759,8 +769,8 @@ describe('SplitComposer removeSelectionRange', () => {
       setSelections: setSelectionsMock
     });
 
-    const plugin = createPlugin({ shouldFixFootnotesByDefault: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldFixFootnotesByDefault: true });
+    const appObj = getAppObj(deps.app);
     appObj['vault'] = {
       cachedRead: vi.fn()
         .mockResolvedValueOnce('text [^fn1] and [^fn1]: footnote more')
@@ -771,7 +781,7 @@ describe('SplitComposer removeSelectionRange', () => {
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
