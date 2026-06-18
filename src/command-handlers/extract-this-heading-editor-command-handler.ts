@@ -1,31 +1,46 @@
 import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest/implementations';
 import type {
+  App,
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { extractHeadingFromLine } from '../headings.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
-export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
-  private headingInfo?: HeadingInfo;
+interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
 
-  public constructor(private readonly plugin: Plugin) {
+export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private headingInfo?: HeadingInfo;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: ExtractThisHeadingEditorCommandHandlerConstructorParams) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'extract-this-heading',
       name: 'Extract this heading...'
     });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
@@ -41,7 +56,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return false;
     }
 
-    const headingInfo = getSelectionUnderHeading(this.plugin.app, file, editor, lineNumber);
+    const headingInfo = getSelectionUnderHeading(this.app, file, editor, lineNumber);
     if (!headingInfo) {
       return false;
     }
@@ -55,11 +70,11 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     if (!file) {
       return;
     }
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');
-          f.appendChild(await renderInternalLink(this.plugin.app, file));
+          f.appendChild(await renderInternalLink(this.app, file));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -69,17 +84,24 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return;
     }
     editor.setSelection(this.headingInfo.start, this.headingInfo.end);
-    const result = await prepareForSplitFile(this.plugin, file, editor);
+    const result = await prepareForSplitFile({
+      app: this.app,
+      editor,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFile: file
+    });
     if (!result) {
       return;
     }
     const composer = new SplitComposer({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
       editor,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
-      plugin: this.plugin,
+      pluginSettingsComponent: this.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: result.shouldFixFootnotes,
@@ -92,7 +114,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {

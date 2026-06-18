@@ -17,8 +17,11 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
-import type { Plugin } from '../plugin.ts';
-import type { Item } from './suggest-modal-base.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type {
+  Item,
+  SuggestModalBaseConstructorParams
+} from './suggest-modal-base.ts';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { getSelections } from '../composers/split-composer.ts';
@@ -30,35 +33,52 @@ import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 export interface PrepareForSplitFileResult {
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  insertMode: InsertMode;
-  isNewTargetFile: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  shouldFixFootnotes: boolean;
-  shouldIncludeFrontmatter: boolean;
-  shouldMergeHeadings: boolean;
-  targetFile: TFile;
+  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  readonly insertMode: InsertMode;
+  readonly isNewTargetFile: boolean;
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldMergeHeadings: boolean;
+  readonly targetFile: TFile;
 }
 
 interface ConfirmDialogModalResult {
-  insertMode: InsertMode;
-  isConfirmed: boolean;
-  shouldAskBeforeSplitting: boolean;
+  readonly insertMode: InsertMode;
+  readonly isConfirmed: boolean;
+  readonly shouldAskBeforeSplitting: boolean;
 }
 
+interface PrepareForSplitFileParams {
+  readonly app: App;
+  readonly editor: Editor;
+  readonly heading?: string;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly shouldSkipModal?: boolean;
+  readonly sourceFile: TFile;
+}
+
+interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {
+  readonly editor: Editor;
+  readonly heading: string;
+  readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
+}
+
+/* v8 ignore stop */
+
 interface SplitFileModalResult {
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  inputValue: string;
-  insertMode: InsertMode;
-  isMod: boolean;
-  item: Item | null;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  shouldFixFootnotes: boolean;
-  shouldIncludeFrontmatter: boolean;
-  shouldMergeHeadings: boolean;
-  shouldTreatTitleAsPath: boolean;
+  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  readonly inputValue: string;
+  readonly insertMode: InsertMode;
+  readonly isMod: boolean;
+  readonly item: Item | null;
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldMergeHeadings: boolean;
+  readonly shouldTreatTitleAsPath: boolean;
 }
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
@@ -198,8 +218,11 @@ class ConfirmDialogModal extends Modal {
 
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
+  private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  private readonly heading: string;
   private isSelected = false;
+  private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
   private shouldIncludeFrontmatter: boolean;
@@ -208,24 +231,22 @@ class SplitFileModal extends SuggestModalBase {
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
 
-  public constructor(
-    plugin: Plugin,
-    private readonly heading: string,
-    sourceFile: TFile,
-    private readonly editor: Editor,
-    private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>
-  ) {
-    super(plugin, sourceFile);
+  public constructor(params: SplitFileModalConstructorParams) {
+    super(params);
 
-    this.shouldIncludeFrontmatter = plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
-    this.shouldTreatTitleAsPath = plugin.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault;
-    this.shouldFixFootnotes = plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.editor = params.editor;
+    this.heading = params.heading;
+    this.promiseResolve = params.promiseResolve;
+
+    this.shouldIncludeFrontmatter = this.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
+    this.shouldTreatTitleAsPath = this.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault;
+    this.shouldFixFootnotes = this.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
     this.allowCreateNewFile = true;
-    this.shouldShowUnresolved = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.shouldShowUnresolved = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
@@ -433,36 +454,33 @@ class SplitFileModal extends SuggestModalBase {
   }
 }
 
-/* v8 ignore stop */
-
-export async function prepareForSplitFile(
-  plugin: Plugin,
-  sourceFile: TFile,
-  editor: Editor,
-  heading?: string,
-  shouldSkipModal?: boolean
-): Promise<null | PrepareForSplitFileResult> {
+export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
+  let heading = params.heading;
   if (heading === '') {
     heading = undefined;
   }
-  heading ??= extractHeading(editor);
+  heading ??= extractHeading(params.editor);
 
-  const splitFileModalResult: null | SplitFileModalResult = shouldSkipModal
+  const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
     ? {
-      frontmatterMergeStrategy: plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
+      frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
       inputValue: heading,
       insertMode: InsertMode.Append,
       isMod: false,
       item: null,
-      shouldAllowOnlyCurrentFolder: plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
-      shouldAllowSplitIntoUnresolvedPath: plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
-      shouldFixFootnotes: plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
-      shouldIncludeFrontmatter: plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
-      shouldMergeHeadings: plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
-      shouldTreatTitleAsPath: plugin.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
+      shouldAllowOnlyCurrentFolder: params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
+      shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
+      shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
+      shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+      shouldMergeHeadings: params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
+      shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
     }
-    : await new Promise<null | SplitFileModalResult>((resolve) => {
-      const modal = new SplitFileModal(plugin, heading, sourceFile, editor, resolve);
+    : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
+      const modal = new SplitFileModal({
+        ...params,
+        heading,
+        promiseResolve
+      });
       modal.open();
     });
 
@@ -471,15 +489,16 @@ export async function prepareForSplitFile(
   }
 
   const selectItemResult = await new SplitItemSelector({
+    app: params.app,
     inputValue: splitFileModalResult.inputValue,
     isMod: splitFileModalResult.isMod,
     item: splitFileModalResult.item,
-    plugin,
+    pluginSettingsComponent: params.pluginSettingsComponent,
     shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
     /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
     shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
     /* v8 ignore stop */
-    sourceFile
+    sourceFile: params.sourceFile
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
@@ -494,22 +513,22 @@ export async function prepareForSplitFile(
     targetFile: selectItemResult.targetFile
   };
 
-  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
+  if (!params.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
     return prepareForSplitFileResult;
   }
 
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
-    new ConfirmDialogModal(plugin.app, sourceFile, prepareForSplitFileResult.targetFile, editor, resolve).open();
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+    new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve).open();
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
   if (!confirmDialogResult.isConfirmed) {
     if (prepareForSplitFileResult.isNewTargetFile) {
-      await trashSafe(plugin.app, prepareForSplitFileResult.targetFile);
+      await trashSafe(params.app, prepareForSplitFileResult.targetFile);
     }
     return null;
   }
-  await plugin.pluginSettingsComponent.editAndSave((settings) => {
+  await params.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskBeforeSplitting;
   });
 

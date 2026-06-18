@@ -1,3 +1,4 @@
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { Notice } from 'obsidian';
@@ -10,6 +11,7 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   ComposerBaseConstructorParams,
   Selection
@@ -19,12 +21,17 @@ import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParams {
-  readonly __brand?: 'MergeComposerConstructorParams';
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 export class MergeComposer extends ComposerBase {
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+
   public constructor(params: MergeComposerConstructorParams) {
     super(params, true);
+
+    this.consoleDebugComponent = params.consoleDebugComponent;
   }
 
   public async mergeFile(): Promise<void> {
@@ -48,12 +55,12 @@ export class MergeComposer extends ComposerBase {
       : null;
 
     try {
-      this.plugin.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
+      this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
       const sourceContent = await this.app.vault.read(this.sourceFile);
       await this.insertIntoTargetFile(sourceContent);
       await trashSafe(this.app, this.sourceFile);
 
-      if (this.plugin.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge) {
+      if (this.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -100,7 +107,7 @@ export class MergeComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
-    return this.plugin.pluginSettingsComponent.settings.mergeTemplate;
+    return this.pluginSettingsComponent.settings.mergeTemplate;
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

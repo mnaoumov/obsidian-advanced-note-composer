@@ -25,7 +25,7 @@ import {
   vi
 } from 'vitest';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { Item } from './suggest-modal-base.ts';
 
 import { SuggestModalBase } from './suggest-modal-base.ts';
@@ -69,6 +69,11 @@ interface BookmarksPlugin {
   items: BookmarkItem[];
 }
 
+interface MockPlugin {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 interface MockPluginOptions {
   readonly bookmarksPlugin?: BookmarksPlugin | null;
   readonly files?: TFile[];
@@ -103,14 +108,14 @@ function createMockFile(path: string, extension = 'md'): TFile {
   });
 }
 
-function createMockPlugin(overrides?: MockPluginOptions): Plugin {
+function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
   const files = overrides?.files ?? [];
   const markdownFiles = overrides?.markdownFiles ?? files.filter((f) => f.extension === 'md');
   const recentFiles = overrides?.recentFiles ?? [];
   const unresolvedLinks = overrides?.unresolvedLinks ?? {};
   const bookmarksPlugin = overrides?.bookmarksPlugin ?? null;
 
-  return strictProxy<Plugin>({
+  return {
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
         getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn((id: string) => {
@@ -138,17 +143,25 @@ function createMockPlugin(overrides?: MockPluginOptions): Plugin {
         getRecentFiles: vi.fn().mockReturnValue(recentFiles)
       })
     }),
-    pluginSettingsComponent: strictProxy({
+    pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy({
         isPathIgnored: vi.fn().mockReturnValue(false),
         shouldAllowOnlyCurrentFolderByDefault: false
       })
     })
+  };
+}
+
+function createTestSuggestModal(plugin: MockPlugin, sourceFile: TFile): TestSuggestModal {
+  return new TestSuggestModal({
+    app: plugin.app,
+    pluginSettingsComponent: plugin.pluginSettingsComponent,
+    sourceFile
   });
 }
 
 describe('SuggestModalBase', () => {
-  let plugin: Plugin;
+  let plugin: MockPlugin;
   let sourceFile: TFile;
 
   beforeEach(() => {
@@ -163,7 +176,7 @@ describe('SuggestModalBase', () => {
     it('should set default properties', () => {
       plugin = createMockPlugin();
       sourceFile = createMockFile('folder/source.md');
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       expect(modal.inputEl).toBeTruthy();
       expect(modal.limit).toBe(20);
     });
@@ -178,7 +191,7 @@ describe('SuggestModalBase', () => {
         files: [file1, file2, sourceFile],
         recentFiles: ['folder/recent1.md', 'folder/recent2.md']
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(2);
       expect(suggestions[0]?.file).toBe(file1);
@@ -191,7 +204,7 @@ describe('SuggestModalBase', () => {
         files: [file1, sourceFile],
         recentFiles: ['folder/recent1.md', 'folder/recent1.md']
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(1);
     });
@@ -202,7 +215,7 @@ describe('SuggestModalBase', () => {
         files: [sourceFile],
         recentFiles: ['folder/source.md']
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(0);
     });
@@ -215,7 +228,7 @@ describe('SuggestModalBase', () => {
         recentFiles: ['folder/ignored.md']
       });
       vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(0);
     });
@@ -226,7 +239,7 @@ describe('SuggestModalBase', () => {
         files: [sourceFile],
         recentFiles: ['folder/nonexistent.md']
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(0);
     });
@@ -238,7 +251,7 @@ describe('SuggestModalBase', () => {
         files: [file1, sourceFile],
         markdownFiles: [file1, sourceFile]
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('test');
       // Results depend on prepareFuzzySearch mock which returns null by default
       expect(Array.isArray(suggestions)).toBe(true);
@@ -252,7 +265,7 @@ describe('SuggestModalBase', () => {
         markdownFiles: [file1, sourceFile]
       });
       vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('test-file');
       // The file should still appear but have lower score
       expect(Array.isArray(suggestions)).toBe(true);
@@ -266,7 +279,7 @@ describe('SuggestModalBase', () => {
         }
       });
       vi.mocked(plugin.pluginSettingsComponent.settings.isPathIgnored).mockImplementation((path: string) => path === 'ignored-note');
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowUnresolved'] = true;
       const suggestions = modal.getSuggestions('ignored');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -289,7 +302,7 @@ describe('SuggestModalBase', () => {
         }
         return null;
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('Bookmarked');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -302,7 +315,7 @@ describe('SuggestModalBase', () => {
         files: [file1, sourceFile],
         markdownFiles: [file1, sourceFile]
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('unique-folder');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -315,7 +328,7 @@ describe('SuggestModalBase', () => {
         files: [file1, file2, sourceFile],
         markdownFiles: [file1, file2, sourceFile]
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       // Use a specific query that the fuzzy search should match
       const suggestions = modal.getSuggestions('test-file');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -328,7 +341,7 @@ describe('SuggestModalBase', () => {
           'folder/source.md': { 'unresolved-note': 1 }
         }
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowUnresolved'] = true;
       const suggestions = modal.getSuggestions('unresolved');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -341,7 +354,7 @@ describe('SuggestModalBase', () => {
           'folder/source.md': { 'other/unresolved-note': 1 }
         }
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowUnresolved'] = true;
       modal['shouldAllowOnlyCurrentFolder'] = true;
       const suggestions = modal.getSuggestions('unresolved');
@@ -355,7 +368,7 @@ describe('SuggestModalBase', () => {
           'folder/source.md': { 'unresolved-note': 1 }
         }
       });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowUnresolved'] = false;
       const suggestions = modal.getSuggestions('unresolved');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -372,7 +385,7 @@ describe('SuggestModalBase', () => {
       vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(castTo<CachedMetadata>({
         frontmatter: { aliases: ['My Alias'] }
       }));
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowAlias'] = true;
       const suggestions = modal.getSuggestions('alias');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -389,7 +402,7 @@ describe('SuggestModalBase', () => {
         frontmatter: { aliases: ['My Alias'] }
       }));
       vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowAlias'] = true;
       const suggestions = modal.getSuggestions('alias');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -402,7 +415,7 @@ describe('SuggestModalBase', () => {
         items: [{ ctime: 0, path: 'folder/bookmarked.md', title: 'bookmarked', type: 'file' }]
       };
       plugin = createMockPlugin({ bookmarksPlugin });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('bookmark');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -410,7 +423,7 @@ describe('SuggestModalBase', () => {
     it('should not search bookmarks when bookmarks plugin is disabled', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin({ bookmarksPlugin: null });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('bookmark');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -427,7 +440,7 @@ describe('SuggestModalBase', () => {
         }]
       };
       plugin = createMockPlugin({ bookmarksPlugin });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('nested');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -439,7 +452,7 @@ describe('SuggestModalBase', () => {
         items: [{ ctime: 0, path: 'folder/bookmarked.md', subpath: '#heading', title: 'bookmarked', type: 'file' }]
       };
       plugin = createMockPlugin({ bookmarksPlugin });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldShowNonFileBookmarks'] = true;
       const suggestions = modal.getSuggestions('bookmark');
       expect(Array.isArray(suggestions)).toBe(true);
@@ -452,7 +465,7 @@ describe('SuggestModalBase', () => {
       const file = createMockFile('ignored/file.md');
       plugin = createMockPlugin({ files: [file, sourceFile] });
       vi.mocked(plugin.pluginSettingsComponent.settings.isPathIgnored).mockReturnValue(true);
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(0);
     });
@@ -461,7 +474,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const otherFile = createMockFile('other/file.md');
       plugin = createMockPlugin({ files: [otherFile, sourceFile], recentFiles: ['other/file.md'] });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldAllowOnlyCurrentFolder'] = true;
       const suggestions = modal.getSuggestions('');
       expect(suggestions).toHaveLength(0);
@@ -471,7 +484,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const canvasFile = createMockFile('folder/canvas.canvas', 'canvas');
       plugin = createMockPlugin({ files: [canvasFile, sourceFile], recentFiles: ['folder/canvas.canvas'] });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -480,7 +493,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const baseFile = createMockFile('folder/data.base', 'base');
       plugin = createMockPlugin({ files: [baseFile, sourceFile], recentFiles: ['folder/data.base'] });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -489,7 +502,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const customFile = createMockFile('folder/data.xyz', 'xyz');
       plugin = createMockPlugin({ files: [customFile, sourceFile], recentFiles: ['folder/data.xyz'] });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(suggestions.length).toBeGreaterThan(0);
     });
@@ -498,7 +511,7 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const imageFile = createMockFile('folder/image.png', 'png');
       plugin = createMockPlugin({ files: [imageFile, sourceFile], recentFiles: ['folder/image.png'] });
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -508,7 +521,7 @@ describe('SuggestModalBase', () => {
     it('should render null item as create suggestion', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal.inputEl.value = 'New Note';
       const el = createDiv();
       modal.renderSuggestion(null, el);
@@ -519,7 +532,7 @@ describe('SuggestModalBase', () => {
     it('should render file item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         file: createMockFile('folder/test.md'),
@@ -534,7 +547,7 @@ describe('SuggestModalBase', () => {
     it('should render alias item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         alias: 'My Alias',
@@ -549,7 +562,7 @@ describe('SuggestModalBase', () => {
     it('should render unresolved item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         linktext: 'unresolved-note',
@@ -564,7 +577,7 @@ describe('SuggestModalBase', () => {
     it('should render bookmark file item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'My Bookmark',
@@ -579,7 +592,7 @@ describe('SuggestModalBase', () => {
     it('should render bookmark folder item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Folder Bookmark',
@@ -594,7 +607,7 @@ describe('SuggestModalBase', () => {
     it('should render bookmark search item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Search Bookmark',
@@ -609,7 +622,7 @@ describe('SuggestModalBase', () => {
     it('should render bookmark graph item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'Graph Bookmark',
@@ -624,7 +637,7 @@ describe('SuggestModalBase', () => {
     it('should render bookmark url item without webviewer plugin', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'URL Bookmark',
@@ -645,7 +658,7 @@ describe('SuggestModalBase', () => {
         }
         return null;
       }));
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         bookmarkPath: 'URL Bookmark',
@@ -660,7 +673,7 @@ describe('SuggestModalBase', () => {
     it('should add downranked class for downranked items', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {
         downranked: true,
@@ -677,7 +690,7 @@ describe('SuggestModalBase', () => {
     it('should call onChooseSuggestionAsync', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const item: Item = {
         file: createMockFile('folder/test.md'),
         match: { matches: [], score: 0 },
@@ -695,7 +708,7 @@ describe('SuggestModalBase', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
       modal['shouldShowMarkdown'] = true;
       modal.inputEl.value = 'test';
@@ -721,7 +734,7 @@ describe('SuggestModalBase', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
       modal.inputEl.value = '   ';
 
@@ -736,7 +749,7 @@ describe('SuggestModalBase', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
       modal['shouldShowMarkdown'] = true;
       modal.inputEl.value = 'test';
@@ -763,7 +776,7 @@ describe('SuggestModalBase', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(false);
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal.inputEl.value = 'test';
 
       const superOnInput = vi.fn();
@@ -779,7 +792,7 @@ describe('SuggestModalBase', () => {
     it('should set create suggestion when supportsCreate is true and value is non-empty', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
       modal['shouldShowMarkdown'] = true;
       modal.inputEl.value = 'New Note';
@@ -797,7 +810,7 @@ describe('SuggestModalBase', () => {
     it('should show empty state text when value is non-empty and supportsCreate is false', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = false;
       modal.inputEl.value = 'query';
 
@@ -815,7 +828,7 @@ describe('SuggestModalBase', () => {
     it('should show type-to-search message when value is empty', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal.inputEl.value = '';
 
       const chooser = {
@@ -834,7 +847,7 @@ describe('SuggestModalBase', () => {
     it('should call onChooseSuggestion with null and close', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const closeSpy = vi.spyOn(modal, 'close');
 
       modal['handleCreateButtonClick']({ shiftKey: false } as MouseEvent);
@@ -847,7 +860,7 @@ describe('SuggestModalBase', () => {
     it('should return bookmark path for bookmark type', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const result = modal['getDisplayText']({ bookmarkPath: 'My Bookmark', match: { matches: [], score: 0 }, type: 'bookmark' });
       expect(result).toBe('My Bookmark');
     });
@@ -855,7 +868,7 @@ describe('SuggestModalBase', () => {
     it('should return linktext for unresolved type', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const result = modal['getDisplayText']({ linktext: 'unresolved-note', match: { matches: [], score: 0 }, type: 'unresolved' });
       expect(result).toBe('unresolved-note');
     });
@@ -863,7 +876,7 @@ describe('SuggestModalBase', () => {
     it('should return empty string for unknown type', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       const result = modal['getDisplayText']({ match: { matches: [], score: 0 }, type: 'unknown' });
       expect(result).toBe('');
     });
@@ -873,7 +886,7 @@ describe('SuggestModalBase', () => {
     it('should return false when no selected item', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
 
       const chooser = {
         selectedItem: 0,
@@ -889,7 +902,7 @@ describe('SuggestModalBase', () => {
     it('should return undefined when composing', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
 
       const evt = strictProxy<KeyboardEvent>({ isComposing: true });
       const result = modal['handleTabKey'](evt);
@@ -899,7 +912,7 @@ describe('SuggestModalBase', () => {
     it('should return full path when last match end is falsy', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
 
       const fileItem: Item = {
         file: createMockFile('folder/test.md'),
@@ -923,7 +936,7 @@ describe('SuggestModalBase', () => {
     it('should truncate path to last match when tab is pressed', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
 
       const fileItem: Item = {
         file: createMockFile('folder/sub/test.md'),
@@ -948,7 +961,7 @@ describe('SuggestModalBase', () => {
     it('should set input value from selected item and append / when same', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
 
       const fileItem: Item = {
         file: createMockFile('folder/test.md'),
@@ -973,7 +986,7 @@ describe('SuggestModalBase', () => {
     it('should trim source file parent prefix when shouldAllowOnlyCurrentFolder is true', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldAllowOnlyCurrentFolder'] = true;
       const text = modal['getSuggestionText']('folder/test.md');
       expect(text).toBe('test');
@@ -982,7 +995,7 @@ describe('SuggestModalBase', () => {
     it('should not trim prefix when shouldAllowOnlyCurrentFolder is false', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      const modal = new TestSuggestModal(plugin, sourceFile);
+      const modal = createTestSuggestModal(plugin, sourceFile);
       modal['shouldAllowOnlyCurrentFolder'] = false;
       const text = modal['getSuggestionText']('folder/test.md');
       expect(text).toBe('folder/test');

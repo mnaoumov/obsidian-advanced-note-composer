@@ -7,6 +7,7 @@ import type {
   MetadataCache,
   TFile
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -22,10 +23,10 @@ import {
   vi
 } from 'vitest';
 
+import type { Level } from '../markdown-heading-document.ts';
 import type { PrepareForSplitFileResult } from '../modals/split-file-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
@@ -101,6 +102,13 @@ const MockNotice = vi.mocked(Notice);
 const mockGetCacheSafe = vi.mocked(getCacheSafe);
 const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 
+interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly headingLevel: Level;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 function createHeading(level: number, line: number): HeadingCache {
   return strictProxy<HeadingCache>({
     heading: `Heading ${String(line)}`,
@@ -126,20 +134,22 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = true): Plugin {
-  return strictProxy<Plugin>({
+function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddCommandsToSubmenu = true): SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
+  return {
     app: strictProxy<App>({
       metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn()
       })
     }),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
+    headingLevel,
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
     })
-  });
+  };
 }
 
 function toTestable(handler: SplitNoteByHeadingsEditorCommandHandler): TestableHandler {
@@ -152,8 +162,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should construct with correct params for H2', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     expect(handler.params).toStrictEqual({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors-line-dashed',
@@ -163,8 +173,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return false from canExecuteEditor when file is null', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const ctx = createMockCtx(null);
 
@@ -172,25 +182,25 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return false from canExecuteEditor when cache is null', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
 
-    vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(null);
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(null);
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when no headings match the level', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
 
-    vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadata>({ headings: [createHeading(1, 0)] })
     );
 
@@ -198,13 +208,13 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return false from canExecuteEditor when headings is undefined', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
 
-    vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       {}
     );
 
@@ -212,13 +222,13 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return true from canExecuteEditor when matching headings exist', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
 
-    vi.mocked(plugin.app.metadataCache.getFileCache).mockReturnValue(
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadata>({ headings: [createHeading(2, 0)] })
     );
 
@@ -226,8 +236,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return early when ctx.file is null in executeEditor', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const ctx = createMockCtx(null);
 
@@ -237,8 +247,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should show notice and return when path is ignored', async () => {
-    const plugin = createMockPlugin(true);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, true);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -260,8 +270,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should break loop when getCacheSafe returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -274,8 +284,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should break loop when no matching heading found in cache', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -288,8 +298,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should break loop when cache has no headings', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -302,8 +312,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should show notice when getSelectionUnderHeading returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -319,8 +329,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should return when prepareForSplitFile returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -341,8 +351,8 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
   });
 
   it('should create SplitComposer and loop until no more headings', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -377,31 +387,33 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     expect(mockSplitFile).toHaveBeenCalledTimes(1);
     expect(MockSplitComposer).toHaveBeenCalledWith({
+      app: params.app,
+      consoleDebugComponent: params.consoleDebugComponent,
       editor,
       heading: 'My Heading',
       isMultipleSplit: true,
       isNewTargetFile: true,
-      plugin,
+      pluginSettingsComponent: params.pluginSettingsComponent,
       sourceFile: file,
       targetFile
     });
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {
-    const plugin = createMockPlugin(false, true);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false, true);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const plugin = createMockPlugin(false, false);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2, false, false);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
   it('should return true from shouldAddToEditorMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(plugin, 2));
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     const editor = createMockEditor();
     const ctx = createMockCtx(createMockFile());
     expect(handler.shouldAddToEditorMenu(editor, ctx)).toBe(true);

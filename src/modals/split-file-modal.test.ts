@@ -24,7 +24,8 @@ import {
   vi
 } from 'vitest';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
@@ -96,6 +97,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;
+    protected readonly pluginSettingsComponent: PluginSettingsComponent;
     protected shouldAllowOnlyCurrentFolder = false;
     protected shouldShowAlias = false;
     protected shouldShowImages = true;
@@ -106,10 +108,11 @@ vi.mock('./suggest-modal-base.ts', async () => {
     protected shouldShowUnresolved = false;
     protected sourceFile: TFile;
 
-    public constructor(plugin: Plugin, sourceFile: TFile) {
-      super(plugin.app);
-      this.sourceFile = sourceFile;
-      this.shouldAllowOnlyCurrentFolder = plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
+    public constructor(params: SuggestModalBaseConstructorParams) {
+      super(params.app);
+      this.sourceFile = params.sourceFile;
+      this.pluginSettingsComponent = params.pluginSettingsComponent;
+      this.shouldAllowOnlyCurrentFolder = params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
     }
 
     public getSuggestions(_query: string): unknown[] {
@@ -155,8 +158,8 @@ interface MockPluginOptions {
 }
 
 interface SelectItemResult {
-  isNewTargetFile: boolean;
-  targetFile: TFile;
+  readonly isNewTargetFile: boolean;
+  readonly targetFile: TFile;
 }
 
 const mockTargetFile = strictProxy<TFile>({ path: 'folder/target.md' });
@@ -173,6 +176,31 @@ vi.mock('../item-selectors/split-item-selector.ts', () => {
   }
   return { SplitItemSelector: MockSplitItemSelector };
 });
+
+function createMockApp(): App {
+  return strictProxy<App>({
+    internalPlugins: strictProxy<InternalPlugins>({
+      getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn().mockReturnValue(null))
+    }),
+    metadataCache: strictProxy<MetadataCache>({
+      getFileCache: vi.fn().mockReturnValue(null),
+      isUserIgnored: vi.fn().mockReturnValue(false),
+      unresolvedLinks: {}
+    }),
+    vault: strictProxy<Vault>({
+      getFileByPath: vi.fn().mockReturnValue(null),
+      getFiles: vi.fn().mockReturnValue([]),
+      getMarkdownFiles: vi.fn().mockReturnValue([])
+    }),
+
+    viewRegistry: strictProxy<ViewRegistry>({
+      isExtensionRegistered: vi.fn().mockReturnValue(true)
+    }),
+    workspace: strictProxy<Workspace>({
+      getRecentFiles: vi.fn().mockReturnValue([])
+    })
+  });
+}
 
 function createMockEditor(): Editor {
   return strictProxy<Editor>({
@@ -199,45 +227,21 @@ function createMockFile(path: string): TFile {
   });
 }
 
-function createMockPlugin(options?: MockPluginOptions): Plugin {
+function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginSettingsComponent {
   const shouldAskBeforeSplitting = options?.shouldAskBeforeSplitting ?? false;
 
-  return strictProxy<Plugin>({
-    app: strictProxy<App>({
-      internalPlugins: strictProxy<InternalPlugins>({
-        getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn().mockReturnValue(null))
-      }),
-      metadataCache: strictProxy<MetadataCache>({
-        getFileCache: vi.fn().mockReturnValue(null),
-        isUserIgnored: vi.fn().mockReturnValue(false),
-        unresolvedLinks: {}
-      }),
-      vault: strictProxy<Vault>({
-        getFileByPath: vi.fn().mockReturnValue(null),
-        getFiles: vi.fn().mockReturnValue([]),
-        getMarkdownFiles: vi.fn().mockReturnValue([])
-      }),
-
-      viewRegistry: strictProxy<ViewRegistry>({
-        isExtensionRegistered: vi.fn().mockReturnValue(true)
-      }),
-      workspace: strictProxy<Workspace>({
-        getRecentFiles: vi.fn().mockReturnValue([])
-      })
-    }),
-    pluginSettingsComponent: strictProxy({
-      editAndSave: vi.fn().mockResolvedValue(undefined),
-      settings: strictProxy({
-        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
-        isPathIgnored: vi.fn().mockReturnValue(false),
-        shouldAllowOnlyCurrentFolderByDefault: false,
-        shouldAllowSplitIntoUnresolvedPathByDefault: true,
-        shouldAskBeforeSplitting,
-        shouldFixFootnotesByDefault: true,
-        shouldIncludeFrontmatterWhenSplittingByDefault: false,
-        shouldMergeHeadingsByDefault: false,
-        shouldTreatTitleAsPathByDefault: true
-      })
+  return strictProxy<PluginSettingsComponent>({
+    editAndSave: vi.fn().mockResolvedValue(undefined),
+    settings: strictProxy({
+      defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isPathIgnored: vi.fn().mockReturnValue(false),
+      shouldAllowOnlyCurrentFolderByDefault: false,
+      shouldAllowSplitIntoUnresolvedPathByDefault: true,
+      shouldAskBeforeSplitting,
+      shouldFixFootnotesByDefault: true,
+      shouldIncludeFrontmatterWhenSplittingByDefault: false,
+      shouldMergeHeadingsByDefault: false,
+      shouldTreatTitleAsPathByDefault: true
     })
   });
 }
@@ -255,9 +259,10 @@ describe('prepareForSplitFile', () => {
   it('should return null when modal is cancelled', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -266,9 +271,10 @@ describe('prepareForSplitFile', () => {
   it('should use extractHeading when heading is undefined', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -277,9 +283,10 @@ describe('prepareForSplitFile', () => {
   it('should treat empty string heading as undefined', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor, '');
+    const promise = prepareForSplitFile({ app, editor, heading: '', pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -288,9 +295,10 @@ describe('prepareForSplitFile', () => {
   it('should use provided heading', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Custom Heading');
+    const promise = prepareForSplitFile({ app, editor, heading: 'Custom Heading', pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -299,9 +307,10 @@ describe('prepareForSplitFile', () => {
   it('should skip modal when shouldSkipModal is true', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.targetFile).toBe(mockTargetFile);
     expect(result?.insertMode).toBe(InsertMode.Append);
@@ -310,9 +319,10 @@ describe('prepareForSplitFile', () => {
   it('should return all settings when shouldSkipModal and not shouldAskBeforeSplitting', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
     expect(result?.shouldAllowOnlyCurrentFolder).toBe(false);
@@ -324,9 +334,10 @@ describe('prepareForSplitFile', () => {
   it('should return null when confirm dialog is rejected', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -335,27 +346,29 @@ describe('prepareForSplitFile', () => {
   it('should trash new target file when confirm rejected and file is new', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
     // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for accessing mocked module.
     const { trashSafe } = await import('obsidian-dev-utils/obsidian/vault');
 
     mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor, 'Heading', true);
+    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
-    expect(trashSafe).toHaveBeenCalledWith(plugin.app, mockTargetFile);
+    expect(trashSafe).toHaveBeenCalledWith(app, mockTargetFile);
   });
 
   it('should return result when user selects item via modal and shouldAskBeforeSplitting is false', async () => {
     shouldAutoSelect = true;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: false });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).not.toBeNull();
@@ -366,9 +379,10 @@ describe('prepareForSplitFile', () => {
     shouldAutoSelect = true;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
-    const plugin = createMockPlugin({ shouldAskBeforeSplitting: true });
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile(plugin, sourceFile, editor);
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;

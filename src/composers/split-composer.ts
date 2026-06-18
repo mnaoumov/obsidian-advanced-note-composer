@@ -4,6 +4,7 @@ import type {
   EditorSelection,
   Pos
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -21,6 +22,7 @@ import {
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParams {
+  readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
@@ -28,11 +30,14 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParams {
 }
 
 export class SplitComposer extends ComposerBase {
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly editor: Editor;
   private readonly isMultipleSplit: boolean;
 
   public constructor(params: SplitComposerConstructorParams) {
-    super(params, params.shouldIncludeFrontmatter ?? params.plugin.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
+    super(params, params.shouldIncludeFrontmatter ?? params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
+
+    this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
   }
@@ -55,13 +60,13 @@ export class SplitComposer extends ComposerBase {
       0
     );
     try {
-      this.plugin.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
+      this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
       await this.insertIntoTargetFile(this.editor.getSelection());
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
-      switch (this.plugin.pluginSettingsComponent.settings.textAfterExtractionMode) {
+      switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
         case TextAfterExtractionMode.EmbedNewFile:
           this.editor.replaceSelection(`!${markdownLink}`);
           break;
@@ -72,10 +77,10 @@ export class SplitComposer extends ComposerBase {
           this.editor.replaceSelection('');
           break;
         default:
-          throw new Error(`Invalid text after extraction mode: ${this.plugin.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+          throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
       }
 
-      if (!this.isMultipleSplit && this.plugin.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
+      if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -93,19 +98,19 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
-    if (!this.plugin.pluginSettingsComponent.settings.splitTemplate) {
-      return this.plugin.pluginSettingsComponent.settings.mergeTemplate;
+    if (!this.pluginSettingsComponent.settings.splitTemplate) {
+      return this.pluginSettingsComponent.settings.mergeTemplate;
     }
 
     if (this.isNewTargetFile) {
-      return this.plugin.pluginSettingsComponent.settings.splitTemplate;
+      return this.pluginSettingsComponent.settings.splitTemplate;
     }
 
-    if (this.plugin.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
-      return this.plugin.pluginSettingsComponent.settings.mergeTemplate;
+    if (this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
+      return this.pluginSettingsComponent.settings.mergeTemplate;
     }
 
-    return this.plugin.pluginSettingsComponent.settings.splitTemplate;
+    return this.pluginSettingsComponent.settings.splitTemplate;
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

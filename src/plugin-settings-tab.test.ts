@@ -137,7 +137,7 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-settings-tab', () => {
       }
     }
 
-    public display(): void {
+    public displayLegacy(): void {
       // No-op for test
     }
   }
@@ -210,8 +210,7 @@ describe('PluginSettingsTab', () => {
     getContainerEl(tab);
 
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-      tab.display();
+      tab.displayLegacy();
     }).not.toThrow();
   });
 
@@ -220,8 +219,7 @@ describe('PluginSettingsTab', () => {
     getContainerEl(tab);
 
     // Display() creates all 9 setting groups without throwing
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-    tab.display();
+    tab.displayLegacy();
 
     // The display method ran to completion, meaning all 9 SettingGroupEx were created
     expect(tab).toBeDefined();
@@ -235,8 +233,7 @@ describe('addAvailableTokens', () => {
 
     // If display doesn't throw, the addAvailableTokens function ran successfully
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-      tab.display();
+      tab.displayLegacy();
     }).not.toThrow();
   });
 });
@@ -256,8 +253,7 @@ describe('debug controller toggle', () => {
 
     // Display will trigger the toggle callback creation
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-      tab.display();
+      tab.displayLegacy();
     }).not.toThrow();
   });
 
@@ -272,8 +268,7 @@ describe('debug controller toggle', () => {
 
     const tab = createSettingsTab();
     getContainerEl(tab);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-    tab.display();
+    tab.displayLegacy();
 
     // The debug toggle's onChange handler is the only one captured via toggle.onChange
     // (all other toggles use bind). It's the first captured onChange handler.
@@ -297,8 +292,7 @@ describe('debug controller toggle', () => {
 
     const tab = createSettingsTab();
     getContainerEl(tab);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-    tab.display();
+    tab.displayLegacy();
 
     const debugToggleHandler = capturedToggleOnChangeHandlers[0];
     expect(debugToggleHandler).toBeDefined();
@@ -311,14 +305,13 @@ describe('shouldReplaceInvalidTitleCharacters onChanged', () => {
   it('should call display when shouldReplaceInvalidTitleCharacters changes', () => {
     const tab = createSettingsTab();
     getContainerEl(tab);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
-    tab.display();
+    tab.displayLegacy();
 
     // The bind call with onChanged option captures the callback
     expect(capturedBindOnChangedCallbacks.length).toBeGreaterThan(0);
 
     // Calling the onChanged callback should re-invoke display
-    const displaySpy = vi.spyOn(tab, 'display');
+    const displaySpy = vi.spyOn(tab, 'displayLegacy');
     const onChangedCallback = capturedBindOnChangedCallbacks[0];
     expect(onChangedCallback).toBeDefined();
     onChangedCallback?.();

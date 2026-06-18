@@ -11,7 +11,7 @@ import {
 } from 'vitest';
 
 import type { Item } from '../modals/suggest-modal-base.ts';
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   ItemSelectorBaseConstructorParams,
   SelectItemResult
@@ -36,8 +36,8 @@ class ConcreteItemSelector extends ItemSelectorBase {
     return this.item;
   }
 
-  public getPlugin(): Plugin {
-    return this.plugin;
+  public getPluginSettingsComponent(): PluginSettingsComponent {
+    return this.pluginSettingsComponent;
   }
 
   public getSourceFile(): TFile {
@@ -56,9 +56,7 @@ class ConcreteItemSelector extends ItemSelectorBase {
 describe('ItemSelectorBase', () => {
   it('should assign all fields from params', () => {
     const mockApp = strictProxy<App>({});
-    const mockPlugin = strictProxy<Plugin>({
-      app: mockApp
-    });
+    const mockPluginSettingsComponent = strictProxy<PluginSettingsComponent>({});
     const mockSourceFile = strictProxy<TFile>({
       path: 'test.md'
     });
@@ -67,17 +65,18 @@ describe('ItemSelectorBase', () => {
     });
 
     const params: ItemSelectorBaseConstructorParams = {
+      app: mockApp,
       inputValue: 'test input',
       isMod: true,
       item: mockItem,
-      plugin: mockPlugin,
+      pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile
     };
 
     const selector = new ConcreteItemSelector(params);
 
     expect(selector.getApp()).toBe(mockApp);
-    expect(selector.getPlugin()).toBe(mockPlugin);
+    expect(selector.getPluginSettingsComponent()).toBe(mockPluginSettingsComponent);
     expect(selector.getSourceFile()).toBe(mockSourceFile);
     expect(selector.getItem()).toBe(mockItem);
     expect(selector.getIsMod()).toBe(true);
@@ -86,18 +85,17 @@ describe('ItemSelectorBase', () => {
 
   it('should handle null item', () => {
     const mockApp = strictProxy<App>({});
-    const mockPlugin = strictProxy<Plugin>({
-      app: mockApp
-    });
+    const mockPluginSettingsComponent = strictProxy<PluginSettingsComponent>({});
     const mockSourceFile = strictProxy<TFile>({
       path: 'test.md'
     });
 
     const params: ItemSelectorBaseConstructorParams = {
+      app: mockApp,
       inputValue: '',
       isMod: false,
       item: null,
-      plugin: mockPlugin,
+      pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile
     };
 
@@ -108,18 +106,17 @@ describe('ItemSelectorBase', () => {
 
   it('should delegate selectItem to subclass', async () => {
     const mockApp = strictProxy<App>({});
-    const mockPlugin = strictProxy<Plugin>({
-      app: mockApp
-    });
+    const mockPluginSettingsComponent = strictProxy<PluginSettingsComponent>({});
     const mockSourceFile = strictProxy<TFile>({
       path: 'test.md'
     });
 
     const params: ItemSelectorBaseConstructorParams = {
+      app: mockApp,
       inputValue: '',
       isMod: false,
       item: null,
-      plugin: mockPlugin,
+      pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile
     };
 

@@ -4,6 +4,7 @@ import type {
   MarkdownFileInfo,
   TFile
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -20,7 +21,6 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -74,6 +74,12 @@ const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const MockSplitComposer = vi.mocked(SplitComposer);
 const MockNotice = vi.mocked(Notice);
 
+interface HandlerParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
@@ -91,16 +97,19 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = true): Plugin {
-  return strictProxy<Plugin>({
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
+  return {
     app: strictProxy<App>({}),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
+      consoleDebug: vi.fn()
+    }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
     })
-  });
+  };
 }
 
 function toTestable(handler: ExtractAfterCursorEditorCommandHandler): TestableHandler {
@@ -113,8 +122,8 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should construct with correct params', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.params).toStrictEqual({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-arrow-down-from-line',
@@ -124,8 +133,8 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should return early when ctx.file is null', async () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const ctx = createMockCtx(null);
 
@@ -135,8 +144,8 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should show notice and return when path is ignored', async () => {
-    const plugin = createMockPlugin(true);
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams(true);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -158,8 +167,8 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should return when prepareForSplitFile returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -173,8 +182,8 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should create SplitComposer and call splitFile on happy path', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const ctx = createMockCtx(file);
@@ -203,12 +212,14 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
       { ch: 5, line: 3 }
     );
     expect(MockSplitComposer).toHaveBeenCalledWith({
+      app: params.app,
+      consoleDebugComponent: params.consoleDebugComponent,
       editor,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isMultipleSplit: false,
       isNewTargetFile: true,
-      plugin,
+      pluginSettingsComponent: params.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
@@ -221,20 +232,20 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   });
 
   it('should return true from shouldAddToEditorMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.shouldAddToEditorMenu()).toBe(true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {
-    const plugin = createMockPlugin(false, true);
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams(false, true);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const plugin = createMockPlugin(false, false);
-    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(plugin));
+    const params = createMockParams(false, false);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 });

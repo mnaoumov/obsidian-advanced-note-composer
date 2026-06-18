@@ -17,7 +17,7 @@ import {
   vi
 } from 'vitest';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
@@ -65,6 +65,11 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
   return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
 });
 
+interface MockPlugin {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
 }
@@ -78,11 +83,11 @@ function createMockFolder(path: string): TFolder {
   });
 }
 
-function createMockPlugin(options?: MockPluginOptions): Plugin {
+function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
   const folders = autoSelectFolder ? [autoSelectFolder] : [];
 
-  return strictProxy<Plugin>({
+  return {
     app: strictProxy<App>({
       vault: strictProxy<Vault>({
         getAllFolders: vi.fn().mockReturnValue(folders),
@@ -97,7 +102,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         getRecentFiles: vi.fn().mockReturnValue(shouldAutoSelect && autoSelectFolder ? ['dummy.md'] : [])
       })
     }),
-    pluginSettingsComponent: strictProxy({
+    pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy({
         isPathIgnored: vi.fn().mockReturnValue(false),
@@ -106,7 +111,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         shouldIncludeParentFoldersWhenMergingByDefault: true
       })
     })
-  });
+  };
 }
 
 describe('selectTargetFolderForMergeFolder', () => {
@@ -124,7 +129,7 @@ describe('selectTargetFolderForMergeFolder', () => {
     const sourceFolder = createMockFolder('source');
     const plugin = createMockPlugin();
 
-    const promise = selectTargetFolderForMergeFolder(plugin, sourceFolder);
+    const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -134,7 +139,7 @@ describe('selectTargetFolderForMergeFolder', () => {
     const sourceFolder = createMockFolder('source');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
-    const promise = selectTargetFolderForMergeFolder(plugin, sourceFolder);
+    const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -144,7 +149,7 @@ describe('selectTargetFolderForMergeFolder', () => {
     const sourceFolder = createMockFolder('source');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
-    const promise = selectTargetFolderForMergeFolder(plugin, sourceFolder);
+    const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();

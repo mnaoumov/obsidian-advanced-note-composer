@@ -1,4 +1,5 @@
 import type {
+  App,
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
@@ -8,40 +9,55 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { swap } from '../swapper.ts';
 
+interface SwapFileCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 export class SwapFileCommandHandler extends FileCommandHandler {
-  public constructor(private readonly plugin: Plugin) {
+  private readonly app: App;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: SwapFileCommandHandlerConstructorParams) {
     super({
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'switch-camera',
       id: 'swap-file',
       name: 'Swap file with...'
     });
+
+    this.app = params.app;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.plugin.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       new Notice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap file ');
-          f.appendChild(await renderInternalLink(this.plugin.app, file));
+          f.appendChild(await renderInternalLink(this.app, file));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
       return;
     }
-    const targetFile = await selectFileForSwap(this.plugin, file);
+    const targetFile = await selectFileForSwap({
+      app: this.app,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFile: file
+    });
     if (targetFile) {
-      await swap(this.plugin.app, file, targetFile, true);
+      await swap(this.app, file, targetFile, true);
     }
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.plugin.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean {

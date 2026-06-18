@@ -7,6 +7,7 @@ import type {
   Reference,
   TFile
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -32,8 +33,8 @@ import {
 } from 'vitest';
 
 import type { MarkdownHeadingDocument } from '../markdown-heading-document.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 import type {
   ComposerBaseConstructorParams,
   Selection
@@ -50,6 +51,12 @@ import {
   getInsertModeFromEvent,
   getSelectionUnderHeading
 } from './composer-base.ts';
+
+interface ComposerDeps {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
 
 interface RegexMatch {
   groups: Record<string, string | undefined> | undefined;
@@ -149,18 +156,18 @@ class TestComposer extends ComposerBase {
   }
 }
 
-function createComposer(pluginOverrides?: Partial<PluginSettings>, shouldIncludeFrontmatter = false): TestComposer {
-  const plugin = createPlugin(pluginOverrides);
+function createComposer(settingsOverrides?: Partial<PluginSettings>, shouldIncludeFrontmatter = false): TestComposer {
+  const deps = createDeps(settingsOverrides);
   return new TestComposer({
+    ...deps,
     isNewTargetFile: false,
-    plugin,
     sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
     targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
   }, shouldIncludeFrontmatter);
 }
 
-function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
-  return castTo<Plugin>({
+function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
+  return castTo<ComposerDeps>({
     app: {
       fileManager: {
         generateMarkdownLink: vi.fn(),
@@ -178,7 +185,9 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
         getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn() })
       }
     },
-    consoleDebug: vi.fn(),
+    consoleDebugComponent: {
+      consoleDebug: vi.fn()
+    },
     pluginSettingsComponent: {
       settings: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
@@ -194,12 +203,12 @@ function createPlugin(overrides?: Partial<PluginSettings>): Plugin {
   });
 }
 
-function getComposerAppObj(composer: TestComposer): GenericObject {
-  return castTo<GenericObject>(composer.appForTest);
+function getAppObj(app: App): GenericObject {
+  return castTo<GenericObject>(app);
 }
 
-function getPluginAppObj(plugin: Plugin): GenericObject {
-  return castTo<GenericObject>(plugin.app);
+function getComposerAppObj(composer: TestComposer): GenericObject {
+  return castTo<GenericObject>(composer.appForTest);
 }
 
 afterEach(() => {
@@ -339,10 +348,10 @@ describe('ComposerBase constructor', () => {
   });
 
   it('should use defaults from settings when options are not provided', () => {
-    const plugin = createPlugin();
+    const deps = createDeps();
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -350,12 +359,12 @@ describe('ComposerBase constructor', () => {
   });
 
   it('should use explicit option values when provided', () => {
-    const plugin = createPlugin();
+    const deps = createDeps();
     const composer = new TestComposer({
       frontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter,
       insertMode: InsertMode.Prepend,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       shouldFixFootnotes: true,
       shouldMergeHeadings: true,
       shouldShowNotice: false,
@@ -431,12 +440,12 @@ describe('checkTargetFileIgnored', () => {
 describe('insertIntoTargetFile', () => {
   it('should call insertIntoFile when shouldMergeHeadings is false', async () => {
     const insertIntoFileMock = vi.fn();
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: insertIntoFileMock, processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -449,12 +458,12 @@ describe('insertIntoTargetFile', () => {
   });
 
   it('should use process when shouldMergeHeadings is true', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       shouldMergeHeadings: true,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
@@ -468,8 +477,8 @@ describe('insertIntoTargetFile', () => {
   });
 
   it('should invoke wrapText via process callback when shouldMergeHeadings is true', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
 
     const mockMergedDoc = { toString: vi.fn().mockReturnValue('merged content') };
@@ -487,7 +496,7 @@ describe('insertIntoTargetFile', () => {
 
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       shouldMergeHeadings: true,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
@@ -527,13 +536,13 @@ describe('insertIntoTargetFile', () => {
 
   it('should update frontmatter merge strategy for new target files', async () => {
     const processFrontMatterMock = vi.fn();
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       frontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
       isNewTargetFile: true,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -547,12 +556,12 @@ describe('insertIntoTargetFile', () => {
 
   it('should skip frontmatter merge when strategy is KeepOriginalFrontmatter', async () => {
     const processFrontMatterMock = vi.fn();
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -566,15 +575,15 @@ describe('insertIntoTargetFile', () => {
 
   it('should run templater when enabled and plugin is available', async () => {
     const overwriteMock = vi.fn();
-    const plugin = createPlugin({ shouldRunTemplaterOnDestinationFile: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldRunTemplaterOnDestinationFile: true });
+    const appObj = getAppObj(deps.app);
     // eslint-disable-next-line camelcase -- Templater plugin API uses snake_case.
     appObj['plugins'] = { plugins: { 'templater-obsidian': { templater: { overwrite_file_commands: overwriteMock } } } };
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     appObj['workspace'] = { getActiveFile: vi.fn().mockReturnValue(null) };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -587,13 +596,13 @@ describe('insertIntoTargetFile', () => {
   });
 
   it('should complete when templater is enabled but not installed', async () => {
-    const plugin = createPlugin({ shouldRunTemplaterOnDestinationFile: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldRunTemplaterOnDestinationFile: true });
+    const appObj = getAppObj(deps.app);
     appObj['plugins'] = { plugins: {} };
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -606,13 +615,13 @@ describe('insertIntoTargetFile', () => {
   });
 
   it('should not show templater notice when shouldShowNotice is false', async () => {
-    const plugin = createPlugin({ shouldRunTemplaterOnDestinationFile: true });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ shouldRunTemplaterOnDestinationFile: true });
+    const appObj = getAppObj(deps.app);
     appObj['plugins'] = { plugins: {} };
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       shouldShowNotice: false,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
@@ -627,12 +636,12 @@ describe('insertIntoTargetFile', () => {
 
   it('should prepend newline when template content starts with frontmatter delimiter', async () => {
     const insertIntoFileMock = vi.fn();
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: insertIntoFileMock, processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -647,12 +656,12 @@ describe('insertIntoTargetFile', () => {
   });
 
   it('should show notice when backlinks are updated', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -925,13 +934,13 @@ describe('includeFrontmatter', () => {
   });
 
   it('should prepend frontmatter when enabled and canIncludeFrontmatter returns true', async () => {
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter });
+    const appObj = getAppObj(deps.app);
     const insertIntoFileMock = vi.fn();
     appObj['fileManager'] = { insertIntoFile: insertIntoFileMock, processFrontMatter: vi.fn() };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     }, true);
@@ -953,12 +962,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -974,12 +983,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -996,12 +1005,12 @@ describe('mergeFrontmatter strategies', () => {
       const fm: GenericObject = { existingKey: 'val' };
       callback(fm);
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1017,12 +1026,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1038,12 +1047,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1059,12 +1068,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1080,12 +1089,12 @@ describe('mergeFrontmatter strategies', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferOriginalValues });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferOriginalValues });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1100,8 +1109,8 @@ describe('mergeFrontmatter strategies', () => {
 
 describe('prepareBacklinksToFix', () => {
   it('should handle headings in selections', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     appObj['metadataCache'] = {
       getFileCache: vi.fn().mockReturnValue({
@@ -1110,7 +1119,7 @@ describe('prepareBacklinksToFix', () => {
     };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1124,8 +1133,8 @@ describe('prepareBacklinksToFix', () => {
   });
 
   it('should skip headings not in selections', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     appObj['metadataCache'] = {
       getFileCache: vi.fn().mockReturnValue({
@@ -1137,7 +1146,7 @@ describe('prepareBacklinksToFix', () => {
     };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1152,8 +1161,8 @@ describe('prepareBacklinksToFix', () => {
   });
 
   it('should handle blocks in selections', async () => {
-    const plugin = createPlugin();
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: vi.fn() };
     appObj['metadataCache'] = {
       getFileCache: vi.fn().mockReturnValue({
@@ -1162,7 +1171,7 @@ describe('prepareBacklinksToFix', () => {
     };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1181,12 +1190,12 @@ describe('safeParseFrontmatter', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1203,12 +1212,12 @@ describe('safeParseFrontmatter', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });
@@ -1224,12 +1233,12 @@ describe('safeParseFrontmatter', () => {
     const processFrontMatterMock = vi.fn().mockImplementation((_file: TFile, callback: (fm: GenericObject) => void) => {
       callback({});
     });
-    const plugin = createPlugin({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
-    const appObj = getPluginAppObj(plugin);
+    const deps = createDeps({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    const appObj = getAppObj(deps.app);
     appObj['fileManager'] = { insertIntoFile: vi.fn(), processFrontMatter: processFrontMatterMock };
     const composer = new TestComposer({
       isNewTargetFile: false,
-      plugin,
+      ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
     });

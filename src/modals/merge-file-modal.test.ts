@@ -23,7 +23,8 @@ import {
   vi
 } from 'vitest';
 
-import type { Plugin } from '../plugin.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
@@ -96,6 +97,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;
+    protected readonly pluginSettingsComponent: PluginSettingsComponent;
     protected shouldAllowOnlyCurrentFolder = false;
     protected shouldShowAlias = false;
     protected shouldShowImages = true;
@@ -104,12 +106,14 @@ vi.mock('./suggest-modal-base.ts', async () => {
     protected shouldShowNonFileBookmarks = false;
     protected shouldShowNonImageAttachments = true;
     protected shouldShowUnresolved = false;
+
     protected sourceFile: TFile;
 
-    public constructor(plugin: Plugin, sourceFile: TFile) {
-      super(plugin.app);
-      this.sourceFile = sourceFile;
-      this.shouldAllowOnlyCurrentFolder = plugin.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
+    public constructor(params: SuggestModalBaseConstructorParams) {
+      super(params.app);
+      this.sourceFile = params.sourceFile;
+      this.pluginSettingsComponent = params.pluginSettingsComponent;
+      this.shouldAllowOnlyCurrentFolder = params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
     }
 
     public getSuggestions(_query: string): unknown[] {
@@ -166,8 +170,8 @@ vi.mock('./suggest-modal-command-builder.ts', () => {
 const mockTargetFile = strictProxy<TFile>({ path: 'folder/target.md' });
 
 interface SelectItemResult {
-  isNewTargetFile: boolean;
-  targetFile: TFile;
+  readonly isNewTargetFile: boolean;
+  readonly targetFile: TFile;
 }
 
 vi.mock('../item-selectors/merge-item-selector.ts', () => {
@@ -178,6 +182,11 @@ vi.mock('../item-selectors/merge-item-selector.ts', () => {
   }
   return { MergeItemSelector: MockMergeItemSelector };
 });
+
+interface MockPlugin {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
 
 interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
@@ -197,10 +206,10 @@ function createMockFile(path: string): TFile {
   });
 }
 
-function createMockPlugin(options?: MockPluginOptions): Plugin {
+function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
 
-  return strictProxy<Plugin>({
+  return {
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
         getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn().mockReturnValue(null))
@@ -223,7 +232,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         getRecentFiles: vi.fn().mockReturnValue([])
       })
     }),
-    pluginSettingsComponent: strictProxy({
+    pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
@@ -235,7 +244,7 @@ function createMockPlugin(options?: MockPluginOptions): Plugin {
         shouldMergeHeadingsByDefault: false
       })
     })
-  });
+  };
 }
 
 describe('prepareForMergeFile', () => {
@@ -252,7 +261,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin();
 
-    const promise = prepareForMergeFile(plugin, sourceFile);
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -263,7 +272,7 @@ describe('prepareForMergeFile', () => {
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
     // MergeFileModal auto-closes → onClose → resolves null → prepareForMergeFile returns null
-    const promise = prepareForMergeFile(plugin, sourceFile);
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -273,7 +282,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
-    const promise = prepareForMergeFile(plugin, sourceFile);
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     // Modal auto-closes without selection → null
@@ -285,7 +294,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
-    const promise = prepareForMergeFile(plugin, sourceFile);
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).not.toBeNull();
@@ -297,7 +306,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
-    const promise = prepareForMergeFile(plugin, sourceFile);
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     // First timer: SuggestModal close
     await vi.advanceTimersByTimeAsync(0);
     // Second timer: ConfirmDialog close (auto-closes without selection → isConfirmed=false)

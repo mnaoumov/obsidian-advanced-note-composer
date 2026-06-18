@@ -34,7 +34,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   public override async selectItem(): Promise<SelectItemResult> {
     if (this.isMod || !this.item) {
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
-      if (existingFile && this.plugin.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
+      if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
         return {
           isNewTargetFile: false,
           targetFile: existingFile
@@ -79,13 +79,13 @@ export class SplitItemSelector extends ItemSelectorBase {
 
     const isInvalidTitle = file.basename !== fileName;
 
-    if (isInvalidTitle && this.plugin.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
+    if (isInvalidTitle && this.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
       await addAlias(this.app, file, fileName);
     }
 
     let shouldAddTitleToFrontmatter = false;
 
-    switch (this.plugin.pluginSettingsComponent.settings.frontmatterTitleMode) {
+    switch (this.pluginSettingsComponent.settings.frontmatterTitleMode) {
       case FrontmatterTitleMode.None:
         break;
       case FrontmatterTitleMode.UseAlways:
@@ -95,7 +95,7 @@ export class SplitItemSelector extends ItemSelectorBase {
         shouldAddTitleToFrontmatter = isInvalidTitle;
         break;
       default:
-        throw new Error(`Invalid frontmatter title mode: ${this.plugin.pluginSettingsComponent.settings.frontmatterTitleMode as string}`);
+        throw new Error(`Invalid frontmatter title mode: ${this.pluginSettingsComponent.settings.frontmatterTitleMode as string}`);
     }
 
     if (shouldAddTitleToFrontmatter) {
@@ -116,7 +116,7 @@ export class SplitItemSelector extends ItemSelectorBase {
       fileName = fileName.replaceAll('/', '\\');
     }
 
-    if (!this.plugin.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters) {
+    if (!this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters) {
       return fileName;
     }
 
@@ -125,14 +125,14 @@ export class SplitItemSelector extends ItemSelectorBase {
       let fixedPart = part;
       fixedPart = fixedPart.replaceAll(
         INVALID_CHARACTERS_REG_EXP,
-        (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length)
+        (substring) => this.pluginSettingsComponent.settings.replacement.repeat(substring.length)
       );
       fixedPart = fixedPart.replaceAll(
         TRAILING_DOTS_OR_SPACES_REG_EXP,
-        (substring) => this.plugin.pluginSettingsComponent.settings.replacement.repeat(substring.length)
+        (substring) => this.pluginSettingsComponent.settings.replacement.repeat(substring.length)
       );
       if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
-        fixedPart = this.plugin.pluginSettingsComponent.settings.replacement + fixedPart.slice(1);
+        fixedPart = this.pluginSettingsComponent.settings.replacement + fixedPart.slice(1);
       }
       return fixedPart;
     });

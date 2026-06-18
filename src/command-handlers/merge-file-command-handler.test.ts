@@ -3,6 +3,7 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -20,7 +21,6 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
-import type { Plugin } from '../plugin.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -97,20 +97,27 @@ const MockMergeComposer = vi.mocked(MergeComposer);
 const MockNotice = vi.mocked(Notice);
 const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
 
+interface MergeFileCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockPlugin(isPathIgnored = false, shouldAddCommandsToSubmenu = true): Plugin {
-  return strictProxy<Plugin>({
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): MergeFileCommandHandlerConstructorParams {
+  return {
     app: strictProxy<App>({}),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
     })
-  });
+  };
 }
 
 function toTestable(handler: MergeFileCommandHandler): TestableHandler {
@@ -123,8 +130,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should construct with correct params', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     expect(handler.params).toStrictEqual({
       fileMenuItemName: 'Merge entire file with...',
       fileMenuSubmenuIcon: 'lucide-git-merge',
@@ -135,8 +142,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should return true from canExecuteFile when isMarkdownFile returns true', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     mockIsMarkdownFile.mockReturnValue(true);
@@ -145,8 +152,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should return false from canExecuteFile when isMarkdownFile returns false', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     mockIsMarkdownFile.mockReturnValue(false);
@@ -155,8 +162,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should show notice and return when path is ignored', async () => {
-    const plugin = createMockPlugin(true);
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams(true);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     const mockFragment = strictProxy<DocumentFragment>({
@@ -176,8 +183,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should return when prepareForMergeFile returns null', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     mockPrepareForMergeFile.mockResolvedValue(null);
@@ -188,8 +195,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should create MergeComposer and call mergeFile on happy path', async () => {
-    const plugin = createMockPlugin(false);
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams(false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
     const targetFile = createMockFile();
 
@@ -211,10 +218,12 @@ describe('MergeFileCommandHandler', () => {
     await handler.executeFile(file);
 
     expect(MockMergeComposer).toHaveBeenCalledWith({
+      app: params.app,
+      consoleDebugComponent: params.consoleDebugComponent,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isNewTargetFile: true,
-      plugin,
+      pluginSettingsComponent: params.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
@@ -226,36 +235,36 @@ describe('MergeFileCommandHandler', () => {
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {
-    const plugin = createMockPlugin(false, true);
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams(false, true);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const plugin = createMockPlugin(false, false);
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams(false, false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
   it('should return false for link-context-menu source in shouldAddToFileMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     expect(handler.shouldAddToFileMenu(file, 'link-context-menu')).toBe(false);
   });
 
   it('should return true for non-link-context-menu source in shouldAddToFileMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
     expect(handler.shouldAddToFileMenu(file, 'file-explorer-context-menu')).toBe(true);
   });
 
   it('should return false from shouldAddToFilesMenu', () => {
-    const plugin = createMockPlugin();
-    const handler = toTestable(new MergeFileCommandHandler(plugin));
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
     const files = [createMockFile()];
 
     expect(handler.shouldAddToFilesMenu(files, 'source')).toBe(false);

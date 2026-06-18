@@ -14,8 +14,11 @@ import {
 } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { Plugin } from '../plugin.ts';
-import type { Item } from './suggest-modal-base.ts';
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type {
+  Item,
+  SuggestModalBaseConstructorParams
+} from './suggest-modal-base.ts';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -24,47 +27,69 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
+interface ConfirmDialogModalConstructorParams {
+  readonly app: App;
+  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
+  readonly sourceFile: TFile;
+  readonly targetFile: TFile;
+}
+
 interface ConfirmDialogModalResult {
-  insertMode: InsertMode;
-  isConfirmed: boolean;
-  shouldAskBeforeMerging: boolean;
+  readonly insertMode: InsertMode;
+  readonly isConfirmed: boolean;
+  readonly shouldAskBeforeMerging: boolean;
+}
+
+interface MergeFileModalConstructorParams extends SuggestModalBaseConstructorParams {
+  readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>;
 }
 
 interface MergeFileModalResult {
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  inputValue: string;
-  insertMode: InsertMode;
-  isMod: boolean;
-  item: Item | null;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  shouldFixFootnotes: boolean;
-  shouldMergeHeadings: boolean;
+  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  readonly inputValue: string;
+  readonly insertMode: InsertMode;
+  readonly isMod: boolean;
+  readonly item: Item | null;
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldMergeHeadings: boolean;
 }
 
+interface PrepareForMergeFileParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFile: TFile;
+}
+
+/* v8 ignore stop */
+
 interface PrepareForMergeFileResult {
-  frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  insertMode: InsertMode;
-  isNewTargetFile: boolean;
-  shouldAllowOnlyCurrentFolder: boolean;
-  shouldAllowSplitIntoUnresolvedPath: boolean;
-  shouldFixFootnotes: boolean;
-  shouldMergeHeadings: boolean;
-  targetFile: TFile;
+  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  readonly insertMode: InsertMode;
+  readonly isNewTargetFile: boolean;
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldMergeHeadings: boolean;
+  readonly targetFile: TFile;
 }
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
   private isSelected = false;
+  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
   private shouldAskBeforeMerging = true;
 
-  public constructor(
-    app: App,
-    private readonly sourceFile: TFile,
-    private readonly targetFile: TFile,
-    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
-  ) {
-    super(app);
+  private readonly sourceFile: TFile;
+  private readonly targetFile: TFile;
+
+  public constructor(params: ConfirmDialogModalConstructorParams) {
+    super(params.app);
+
+    this.sourceFile = params.sourceFile;
+    this.targetFile = params.targetFile;
+    this.promiseResolve = params.promiseResolve;
 
     this.scope.register([], 'Enter', (evt) => {
       this.confirm(evt);
@@ -177,23 +202,25 @@ class ConfirmDialogModal extends Modal {
   }
 }
 
-/* v8 ignore stop */
-
 /* v8 ignore start -- MergeFileModal is an internal UI class tested through exported functions. */
 class MergeFileModal extends SuggestModalBase {
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+
   private isSelected = false;
+  private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
   private shouldMergeHeadings: boolean;
 
-  public constructor(plugin: Plugin, sourceFile: TFile, private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>) {
-    super(plugin, sourceFile);
+  public constructor(params: MergeFileModalConstructorParams) {
+    super(params);
 
-    this.shouldFixFootnotes = plugin.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = plugin.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.shouldAllowSplitIntoUnresolvedPath = plugin.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
-    this.frontmatterMergeStrategy = plugin.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.promiseResolve = params.promiseResolve;
+
+    this.shouldFixFootnotes = this.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
+    this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;
@@ -348,9 +375,12 @@ class MergeFileModal extends SuggestModalBase {
 
 /* v8 ignore stop */
 
-export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Promise<null | PrepareForMergeFileResult> {
-  const result = await new Promise<MergeFileModalResult | null>((resolve) => {
-    const modal = new MergeFileModal(plugin, sourceFile, resolve);
+export async function prepareForMergeFile(params: PrepareForMergeFileParams): Promise<null | PrepareForMergeFileResult> {
+  const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
+    const modal = new MergeFileModal({
+      ...params,
+      promiseResolve
+    });
     modal.open();
   });
 
@@ -359,14 +389,15 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
   }
 
   const selectItemResult = await new MergeItemSelector({
+    app: params.app,
     inputValue: result.inputValue,
     isMod: result.isMod,
     item: result.item,
-    plugin,
-    sourceFile
+    pluginSettingsComponent: params.pluginSettingsComponent,
+    sourceFile: params.sourceFile
   }).selectItem();
 
-  const prepareForMergeFileResult: PrepareForMergeFileResult = {
+  let prepareForMergeFileResult: PrepareForMergeFileResult = {
     frontmatterMergeStrategy: result.frontmatterMergeStrategy,
     insertMode: result.insertMode,
     isNewTargetFile: selectItemResult.isNewTargetFile,
@@ -377,23 +408,31 @@ export async function prepareForMergeFile(plugin: Plugin, sourceFile: TFile): Pr
     targetFile: selectItemResult.targetFile
   };
 
-  if (!plugin.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
+  if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return prepareForMergeFileResult;
   }
 
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((resolve) => {
-    new ConfirmDialogModal(plugin.app, sourceFile, prepareForMergeFileResult.targetFile, resolve).open();
+  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+    new ConfirmDialogModal({
+      ...params,
+      promiseResolve,
+      targetFile: prepareForMergeFileResult.targetFile
+    }).open();
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
   if (!confirmDialogResult.isConfirmed) {
     return null;
   }
-  await plugin.pluginSettingsComponent.editAndSave((settings) => {
+  await params.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
   });
 
-  prepareForMergeFileResult.insertMode = confirmDialogResult.insertMode;
+  prepareForMergeFileResult = {
+    ...prepareForMergeFileResult,
+    insertMode: confirmDialogResult.insertMode
+  };
+
   return prepareForMergeFileResult;
   /* v8 ignore stop */
 }
