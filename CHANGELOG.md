@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 3.26.9
+
+- chore: unify tsconfig
+- test: use real obsidian-dev-utils implementations in unit tests
+- test: drive real obsidian-dev-utils base classes via test-mocks bridge
+- fix: restrict merge-file command to markdown files
+- chore: add integration tests
+
 ## 3.26.8
 
 - chore: update template
