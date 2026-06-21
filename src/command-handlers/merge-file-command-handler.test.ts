@@ -194,8 +194,6 @@ describe('MergeFileCommandHandler', () => {
       insertMode: 'append',
       isNewTargetFile: true,
       pluginSettingsComponent: params.pluginSettingsComponent,
-      shouldAllowOnlyCurrentFolder: false,
-      shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
       shouldMergeHeadings: false,
       sourceFile: file,

@@ -54,16 +54,12 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParams {
   readonly app: App;
-  readonly editor?: Editor;
 
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
-  readonly heading?: string;
   readonly insertMode?: InsertMode;
   readonly isNewTargetFile: boolean;
 
   readonly pluginSettingsComponent: PluginSettingsComponent;
-  readonly shouldAllowOnlyCurrentFolder?: boolean;
-  readonly shouldAllowSplitIntoUnresolvedPath?: boolean;
   readonly shouldFixFootnotes?: boolean;
   readonly shouldMergeHeadings?: boolean;
   readonly shouldShowNotice?: boolean;
