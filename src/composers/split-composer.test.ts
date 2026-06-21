@@ -84,19 +84,6 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   process: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/string', () => ({
-  replaceAll: vi.fn((str: string) => str)
-}));
-
-vi.mock('obsidian-dev-utils/function', () => ({
-  noop: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/object-utils', () => ({
-  castTo: (value: unknown): unknown => value,
-  extractDefaultExportInterop: (m: unknown): unknown => m
-}));
-
 vi.mock('../markdown-heading-document.ts', () => ({
   parseMarkdownHeadingDocument: vi.fn()
 }));

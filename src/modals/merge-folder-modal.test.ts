@@ -21,10 +21,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {

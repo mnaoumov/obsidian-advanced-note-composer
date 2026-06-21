@@ -1,7 +1,5 @@
 import type { App } from 'obsidian';
-import type { Promisable } from 'type-fest';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
@@ -30,12 +28,6 @@ interface MockPluginSettingsComponentResult {
   readonly settings: PluginSettings;
 }
 
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((asyncFn: () => Promisable<unknown>): void => {
-    invokeAsyncSafelyResult = Promise.resolve(asyncFn());
-  })
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
@@ -46,8 +38,6 @@ vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
 
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);
 const mockAlert = vi.mocked(alert);
-
-let invokeAsyncSafelyResult: Promise<unknown> | undefined;
 
 function createMockApp(): MockAppResult {
   let layoutReadyCallback: (() => void) | undefined;
@@ -91,22 +81,18 @@ function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPlu
 }
 
 async function triggerLayoutReadyAndWait(triggerLayoutReady: () => void): Promise<void> {
-  vi.useFakeTimers();
-  try {
-    triggerLayoutReady();
-    vi.runAllTimers();
-  } finally {
-    vi.useRealTimers();
-  }
-
-  expect(invokeAsyncSafely).toHaveBeenCalledOnce();
-  await invokeAsyncSafelyResult;
+  // The real `invokeAsyncSafely` (inside `LayoutReadyComponent`) starts `onLayoutReady`
+  // Synchronously and fire-and-forgets it. Trigger the layout-ready callback, then flush
+  // The pending microtasks so the awaited (mocked) `editAndSave`/`alert` work completes.
+  triggerLayoutReady();
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 0);
+  });
 }
 
 describe('ReleaseNotesComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    invokeAsyncSafelyResult = undefined;
   });
 
   describe('onLayoutReady', () => {

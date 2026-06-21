@@ -31,15 +31,6 @@ vi.mock('obsidian-dev-utils/obsidian/file-manager', () => ({
   addAlias: (...args: unknown[]): unknown => mockAddAlias(...args)
 }));
 
-vi.mock('obsidian-dev-utils/string', () => ({
-  trimEnd: vi.fn((str: string, suffix: string) => {
-    if (str.endsWith(suffix)) {
-      return str.slice(0, -suffix.length);
-    }
-    return str;
-  })
-}));
-
 vi.mock('../filename-validation.ts', () => ({
   INVALID_CHARACTERS_REG_EXP: /[*\\<>:|?#^[\]"]+/g,
   TRAILING_DOTS_OR_SPACES_REG_EXP: /[ .]+$/g
