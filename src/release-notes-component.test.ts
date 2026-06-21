@@ -1,8 +1,9 @@
 import type { App } from 'obsidian';
+import type { Promisable } from 'type-fest';
 
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
-import { castTo } from 'obsidian-dev-utils/object-utils';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -18,31 +19,26 @@ import type { PluginSettings } from './plugin-settings.ts';
 
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 
+interface MockAppResult {
+  readonly app: App;
+  triggerLayoutReady(): void;
+}
+
 interface MockPluginSettingsComponentResult {
   readonly editAndSave: ReturnType<typeof vi.fn>;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly settings: PluginSettings;
 }
 
-interface TestableReleaseNotesComponent {
-  onLayoutReady(): Promise<void>;
-}
+vi.mock('obsidian-dev-utils/async', () => ({
+  invokeAsyncSafely: vi.fn((asyncFn: () => Promisable<unknown>): void => {
+    invokeAsyncSafelyResult = Promise.resolve(asyncFn());
+  })
+}));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/components/layout-ready-component', () => {
-  class LayoutReadyComponent {
-    protected readonly app: App;
-
-    public constructor(app: App) {
-      this.app = app;
-    }
-  }
-
-  return { LayoutReadyComponent };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
   alert: vi.fn().mockResolvedValue(undefined)
@@ -51,8 +47,25 @@ vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);
 const mockAlert = vi.mocked(alert);
 
-function createMockApp(): App {
-  return strictProxy<App>({});
+let invokeAsyncSafelyResult: Promise<unknown> | undefined;
+
+function createMockApp(): MockAppResult {
+  let layoutReadyCallback: (() => void) | undefined;
+
+  const app = strictProxy<App>({
+    workspace: {
+      onLayoutReady: vi.fn((callback: () => void) => {
+        layoutReadyCallback = callback;
+      })
+    }
+  });
+
+  return {
+    app,
+    triggerLayoutReady: (): void => {
+      layoutReadyCallback?.();
+    }
+  };
 }
 
 function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPluginSettingsComponentResult {
@@ -77,24 +90,36 @@ function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPlu
   };
 }
 
-function toTestable(component: ReleaseNotesComponent): TestableReleaseNotesComponent {
-  return castTo<TestableReleaseNotesComponent>(component);
+async function triggerLayoutReadyAndWait(triggerLayoutReady: () => void): Promise<void> {
+  vi.useFakeTimers();
+  try {
+    triggerLayoutReady();
+    vi.runAllTimers();
+  } finally {
+    vi.useRealTimers();
+  }
+
+  expect(invokeAsyncSafely).toHaveBeenCalledOnce();
+  await invokeAsyncSafelyResult;
 }
 
 describe('ReleaseNotesComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    invokeAsyncSafelyResult = undefined;
   });
 
   describe('onLayoutReady', () => {
     it('should show release notes, persist shown versions, and render the code block when the version was not shown yet', async () => {
+      const { app, triggerLayoutReady } = createMockApp();
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
       const component = new ReleaseNotesComponent({
-        app: createMockApp(),
+        app,
         pluginSettingsComponent
       });
 
-      await toTestable(component).onLayoutReady();
+      component.load();
+      await triggerLayoutReadyAndWait(triggerLayoutReady);
 
       expect(mockAppendCodeBlock).toHaveBeenCalledWith(expect.anything(), 'Note composer');
       expect(editAndSave).toHaveBeenCalledTimes(1);
@@ -104,13 +129,15 @@ describe('ReleaseNotesComponent', () => {
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
+      const { app, triggerLayoutReady } = createMockApp();
       const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0']);
       const component = new ReleaseNotesComponent({
-        app: createMockApp(),
+        app,
         pluginSettingsComponent
       });
 
-      await toTestable(component).onLayoutReady();
+      component.load();
+      await triggerLayoutReadyAndWait(triggerLayoutReady);
 
       expect(editAndSave).not.toHaveBeenCalled();
       expect(mockAlert).not.toHaveBeenCalled();

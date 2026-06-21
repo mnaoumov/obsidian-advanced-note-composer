@@ -1,215 +1,135 @@
 import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
+import { PluginSettings } from './plugin-settings.ts';
 
-interface LegacySettingsConverterEntry {
-  converter(settings: Record<string, unknown>): void;
-  settingsClass: new () => unknown;
-}
-
-interface PluginSettingsClassParam<T> {
-  pluginSettingsClass: new () => T;
-}
-
-interface PluginSettingsComponentPrototype {
-  registerLegacySettingsConverters(this: PluginSettingsComponent): void;
-  registerValidators(this: PluginSettingsComponent): void;
-}
-
-interface TestablePluginSettingsComponent extends PluginSettingsComponent {
-  getLegacyConverters(): LegacySettingsConverterEntry[];
-  getValidator(key: string): ((value: unknown) => string | undefined) | undefined;
-}
-
-vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-component', () => {
-  class PluginSettingsComponentBase<T> {
-    public settings: T;
-    protected registeredLegacySettingsConverters: LegacySettingsConverterEntry[] = [];
-
-    protected registeredValidators = new Map<string, (value: unknown) => string | undefined>();
-
-    public constructor(params: PluginSettingsClassParam<T>) {
-      this.settings = new params.pluginSettingsClass();
-    }
-
-    public getLegacyConverters(): LegacySettingsConverterEntry[] {
-      return this.registeredLegacySettingsConverters;
-    }
-
-    public getValidator(key: string): ((value: unknown) => string | undefined) | undefined {
-      return this.registeredValidators.get(key);
-    }
-
-    protected registerLegacySettingsConverter(settingsClass: new () => unknown, converter: (settings: Record<string, unknown>) => void): void {
-      this.registeredLegacySettingsConverters.push({ converter, settingsClass });
-    }
-
-    protected registerLegacySettingsConverters(): void {
-      // Base no-op
-    }
-
-    protected registerValidator(key: string, validator: (value: unknown) => string | undefined): void {
-      this.registeredValidators.set(key, validator);
-    }
-
-    protected registerValidators(): void {
-      // Base no-op
-    }
+class TestablePluginSettingsComponent extends PluginSettingsComponent {
+  public async runLegacyConverters(record: GenericObject): Promise<void> {
+    await this.onLoadRecord(record);
   }
-
-  return { PluginSettingsComponentBase };
-});
+}
 
 function createComponent(): TestablePluginSettingsComponent {
-  const component = new PluginSettingsComponent({
+  return new TestablePluginSettingsComponent({
     dataHandler: strictProxy<DataHandler>({}),
     pluginEventSource: strictProxy<PluginEventSource>({})
   });
+}
 
-  // Trigger the protected methods that register validators and converters
-  const proto = Object.getPrototypeOf(component) as PluginSettingsComponentPrototype;
-  proto.registerValidators.call(component);
-  proto.registerLegacySettingsConverters.call(component);
-
-  return component as TestablePluginSettingsComponent;
+async function validateProperty<PropertyName extends keyof PluginSettings>(
+  component: TestablePluginSettingsComponent,
+  propertyName: PropertyName,
+  value: PluginSettings[PropertyName]
+): Promise<string | undefined> {
+  const settings = new PluginSettings();
+  settings[propertyName] = value;
+  const result = await component.validate(settings);
+  return result[propertyName];
 }
 
 describe('PluginSettingsComponent', () => {
   describe('validators', () => {
     describe('replacement validator', () => {
-      it('should reject replacement containing invalid characters', () => {
+      it('should reject replacement containing invalid characters', async () => {
         const component = createComponent();
-        const validator = component.getValidator('replacement');
-        expect(validator?.('*')).toBe('Invalid replacement string');
+        expect(await validateProperty(component, 'replacement', '*')).toBe('Invalid replacement string');
       });
 
-      it('should reject forward slash as replacement', () => {
+      it('should reject forward slash as replacement', async () => {
         const component = createComponent();
-        const validator = component.getValidator('replacement');
-        expect(validator?.('/')).toBe('Invalid replacement string');
+        expect(await validateProperty(component, 'replacement', '/')).toBe('Invalid replacement string');
       });
 
-      it('should accept valid replacement string', () => {
+      it('should accept valid replacement string', async () => {
         const component = createComponent();
-        const validator = component.getValidator('replacement');
-        expect(validator?.('_')).toBeUndefined();
+        expect(await validateProperty(component, 'replacement', '_')).toBeUndefined();
       });
 
-      it('should accept empty replacement string', () => {
+      it('should accept empty replacement string', async () => {
         const component = createComponent();
-        const validator = component.getValidator('replacement');
-        expect(validator?.('')).toBeUndefined();
+        expect(await validateProperty(component, 'replacement', '')).toBeUndefined();
       });
     });
 
     describe('mergeTemplate validator', () => {
-      it('should reject template without content token', () => {
+      it('should reject template without content token', async () => {
         const component = createComponent();
-        const validator = component.getValidator('mergeTemplate');
-        expect(validator?.('no token here')).toBe('Merge template should contain {{content}} token');
+        expect(await validateProperty(component, 'mergeTemplate', 'no token here')).toBe('Merge template should contain {{content}} token');
       });
 
-      it('should accept template with content token', () => {
+      it('should accept template with content token', async () => {
         const component = createComponent();
-        const validator = component.getValidator('mergeTemplate');
-        expect(validator?.('\n\n{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'mergeTemplate', '\n\n{{content}}')).toBeUndefined();
       });
     });
 
     describe('splitTemplate validator', () => {
-      it('should reject non-empty template without content token', () => {
+      it('should reject non-empty template without content token', async () => {
         const component = createComponent();
-        const validator = component.getValidator('splitTemplate');
-        expect(validator?.('no token here')).toBe('Split template should contain {{content}} token');
+        expect(await validateProperty(component, 'splitTemplate', 'no token here')).toBe('Split template should contain {{content}} token');
       });
 
-      it('should accept template with content token', () => {
+      it('should accept template with content token', async () => {
         const component = createComponent();
-        const validator = component.getValidator('splitTemplate');
-        expect(validator?.('{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'splitTemplate', '{{content}}')).toBeUndefined();
       });
 
-      it('should accept empty template', () => {
+      it('should accept empty template', async () => {
         const component = createComponent();
-        const validator = component.getValidator('splitTemplate');
-        expect(validator?.('')).toBeUndefined();
+        expect(await validateProperty(component, 'splitTemplate', '')).toBeUndefined();
       });
     });
   });
 
   describe('legacy settings converters', () => {
-    it('should add content token to merge template if missing', () => {
+    it('should add content token to merge template if missing', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const firstConverter = converters[0];
-      expect(firstConverter).toBeDefined();
-
-      const legacySettings = { mergeTemplate: 'old template' };
-      firstConverter?.converter(legacySettings);
-      expect(legacySettings.mergeTemplate).toBe('old template\n\n{{content}}');
+      const legacySettings: GenericObject = { mergeTemplate: 'old template' };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['mergeTemplate']).toBe('old template\n\n{{content}}');
     });
 
-    it('should not modify merge template if content token exists', () => {
+    it('should not modify merge template if content token exists', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const firstConverter = converters[0];
-      expect(firstConverter).toBeDefined();
-
-      const legacySettings = { mergeTemplate: '{{content}} existing' };
-      firstConverter?.converter(legacySettings);
-      expect(legacySettings.mergeTemplate).toBe('{{content}} existing');
+      const legacySettings: GenericObject = { mergeTemplate: '{{content}} existing' };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['mergeTemplate']).toBe('{{content}} existing');
     });
 
-    it('should add content token to null merge template', () => {
+    it('should add content token to null merge template', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const firstConverter = converters[0];
-      expect(firstConverter).toBeDefined();
-
-      const legacySettings: Record<string, unknown> = {};
-      firstConverter?.converter(legacySettings);
+      const legacySettings: GenericObject = {};
+      await component.runLegacyConverters(legacySettings);
       expect(legacySettings['mergeTemplate']).toBe('\n\n{{content}}');
     });
 
-    it('should convert shouldAddInvalidTitleToFrontmatterTitleKey true to UseForInvalidTitleOnly', () => {
+    it('should convert shouldAddInvalidTitleToFrontmatterTitleKey true to UseForInvalidTitleOnly', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const secondConverter = converters[1];
-      expect(secondConverter).toBeDefined();
-
-      const legacySettings: Record<string, unknown> = { shouldAddInvalidTitleToFrontmatterTitleKey: true };
-      secondConverter?.converter(legacySettings);
+      const legacySettings: GenericObject = { shouldAddInvalidTitleToFrontmatterTitleKey: true };
+      await component.runLegacyConverters(legacySettings);
       expect(legacySettings['frontmatterTitleMode']).toBe('UseForInvalidTitleOnly');
     });
 
-    it('should convert shouldAddInvalidTitleToFrontmatterTitleKey false to None', () => {
+    it('should convert shouldAddInvalidTitleToFrontmatterTitleKey false to None', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const secondConverter = converters[1];
-      expect(secondConverter).toBeDefined();
-
-      const legacySettings: Record<string, unknown> = { shouldAddInvalidTitleToFrontmatterTitleKey: false };
-      secondConverter?.converter(legacySettings);
+      const legacySettings: GenericObject = { shouldAddInvalidTitleToFrontmatterTitleKey: false };
+      await component.runLegacyConverters(legacySettings);
       expect(legacySettings['frontmatterTitleMode']).toBe('None');
     });
 
-    it('should not modify settings when shouldAddInvalidTitleToFrontmatterTitleKey is undefined', () => {
+    it('should not modify settings when shouldAddInvalidTitleToFrontmatterTitleKey is undefined', async () => {
       const component = createComponent();
-      const converters = component.getLegacyConverters();
-      const secondConverter = converters[1];
-      expect(secondConverter).toBeDefined();
-
-      const legacySettings: Record<string, unknown> = {};
-      secondConverter?.converter(legacySettings);
+      const legacySettings: GenericObject = {};
+      await component.runLegacyConverters(legacySettings);
       expect(legacySettings['frontmatterTitleMode']).toBeUndefined();
     });
   });

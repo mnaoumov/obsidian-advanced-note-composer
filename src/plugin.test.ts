@@ -2,8 +2,13 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
+import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
+import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -14,14 +19,10 @@ import {
 
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
-
-interface ConsoleDebugComponent {
-  consoleDebug: ReturnType<typeof vi.fn>;
-}
-
-const mockAddChild = vi.fn(<T>(component: T): T => component);
-const mockConsoleDebugComponent: ConsoleDebugComponent = { consoleDebug: vi.fn() };
+import { PrismComponent } from './prism-component.ts';
+import { ReleaseNotesComponent } from './release-notes-component.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
   AppActiveFileProvider: vi.fn()
@@ -46,34 +47,6 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', 
 vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
   PluginDataHandler: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
-  class MockPluginBase {
-    public app: App;
-    public manifest: PluginManifest;
-    protected consoleDebugComponent = mockConsoleDebugComponent;
-
-    public constructor(app: App, manifest: PluginManifest) {
-      this.app = app;
-      this.manifest = manifest;
-    }
-
-    public addChild<T>(component: T): T {
-      return mockAddChild(component) as T;
-    }
-
-    public onload(): Promise<void> {
-      return this.onloadImpl();
-    }
-
-    protected onloadImpl(): Promise<void> {
-      // Overridden by the Plugin subclass under test.
-      return noopAsync();
-    }
-  }
-
-  return { PluginBase: MockPluginBase };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
   PluginEventSourceImpl: vi.fn()
@@ -146,6 +119,11 @@ vi.mock('./release-notes-component.ts', () => ({
   ReleaseNotesComponent: vi.fn()
 }));
 
+interface PluginInternals {
+  _consoleDebugComponent: ConsoleDebugComponent;
+  onloadImpl(): void;
+}
+
 function createMockApp(): App {
   return strictProxy<App>({});
 }
@@ -157,30 +135,23 @@ function createMockManifest(): PluginManifest {
   });
 }
 
-function createPlugin(): Plugin {
-  return new Plugin(createMockApp(), createMockManifest());
-}
-
 describe('Plugin', () => {
-  describe('constructor', () => {
-    it('should add all expected children', async () => {
-      mockAddChild.mockClear();
-      await createPlugin().onload();
+  it('should wire up all components in onloadImpl', () => {
+    const plugin = new Plugin(createMockApp(), createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    const addChildSpy = vi.spyOn(plugin, 'addChild');
 
-      const PLUGIN_SETTINGS_COMPONENT_CALL = 1;
-      const PLUGIN_SETTINGS_TAB_COMPONENT_CALL = 1;
-      const MENU_EVENT_REGISTRAR_CALL = 1;
-      const COMMAND_HANDLER_COMPONENT_CALL = 1;
-      const PRISM_COMPONENT_CALL = 1;
-      const RELEASE_NOTES_COMPONENT_CALL = 1;
-      const EXPECTED_ADD_CHILD_CALLS = PLUGIN_SETTINGS_COMPONENT_CALL
-        + PLUGIN_SETTINGS_TAB_COMPONENT_CALL
-        + MENU_EVENT_REGISTRAR_CALL
-        + COMMAND_HANDLER_COMPONENT_CALL
-        + PRISM_COMPONENT_CALL
-        + RELEASE_NOTES_COMPONENT_CALL;
+    internals.onloadImpl();
 
-      expect(mockAddChild).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
-    });
+    expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
+    expect(PluginSettingsTab).toHaveBeenCalledOnce();
+    expect(MenuEventRegistrarComponent).toHaveBeenCalledOnce();
+    expect(CommandHandlerComponent).toHaveBeenCalledOnce();
+    expect(PrismComponent).toHaveBeenCalledOnce();
+    expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
+
+    const EXPECTED_ADD_CHILD_CALLS = 6;
+    expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 });

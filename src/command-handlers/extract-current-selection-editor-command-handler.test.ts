@@ -31,7 +31,6 @@ import { ExtractCurrentSelectionEditorCommandHandler } from './extract-current-s
 interface TestableHandler {
   canExecuteEditor(editor: Editor): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
 }
@@ -43,16 +42,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/editor-command-handler', () => {
-  class EditorCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-  }
-  return { EditorCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -121,13 +110,10 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new ExtractCurrentSelectionEditorCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      editorMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-scissors',
-      id: 'extract-current-selection',
-      name: 'Extract current selection...'
-    });
+    const handler = new ExtractCurrentSelectionEditorCommandHandler(params);
+    expect(handler.id).toBe('extract-current-selection');
+    expect(handler.name).toBe('Extract current selection...');
+    expect(handler.icon).toBe('lucide-scissors');
   });
 
   it('should return true from canExecuteEditor when something is selected', () => {
