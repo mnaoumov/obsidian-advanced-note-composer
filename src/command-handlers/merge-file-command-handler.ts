@@ -42,7 +42,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override canExecuteFile(file: TFile): boolean {
-    return super.canExecuteFile(file) || isMarkdownFile(this.app, file);
+    return isMarkdownFile(this.app, file);
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
