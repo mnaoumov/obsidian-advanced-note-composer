@@ -1,5 +1,6 @@
 import type { App } from 'obsidian';
 
+import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
@@ -81,13 +82,18 @@ function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPlu
 }
 
 async function triggerLayoutReadyAndWait(triggerLayoutReady: () => void): Promise<void> {
-  // The real `invokeAsyncSafely` (inside `LayoutReadyComponent`) starts `onLayoutReady`
-  // Synchronously and fire-and-forgets it. Trigger the layout-ready callback, then flush
-  // The pending microtasks so the awaited (mocked) `editAndSave`/`alert` work completes.
-  triggerLayoutReady();
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, 0);
-  });
+  // `LayoutReadyComponent.onload` schedules a `window.setTimeout(0)` that fire-and-forgets
+  // `onLayoutReady` via the real `invokeAsyncSafely`. Flush that one-shot timer with fake
+  // Timers so the tracked async operation is registered, then settle it deterministically
+  // Via the async-operation-tracking setup file instead of racing a real `setTimeout(0)`.
+  vi.useFakeTimers();
+  try {
+    triggerLayoutReady();
+    vi.runAllTimers();
+  } finally {
+    vi.useRealTimers();
+  }
+  await waitForAllAsyncOperations();
 }
 
 describe('ReleaseNotesComponent', () => {
