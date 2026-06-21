@@ -71,8 +71,6 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       insertMode: result.insertMode,
       isNewTargetFile: result.isNewTargetFile,
       pluginSettingsComponent: this.pluginSettingsComponent,
-      shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-      shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeHeadings: result.shouldMergeHeadings,
       sourceFile: file,

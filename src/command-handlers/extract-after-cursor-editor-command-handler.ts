@@ -76,8 +76,6 @@ export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler
       isMultipleSplit: false,
       isNewTargetFile: prepareForSplitFileResult.isNewTargetFile,
       pluginSettingsComponent: this.pluginSettingsComponent,
-      shouldAllowOnlyCurrentFolder: prepareForSplitFileResult.shouldAllowOnlyCurrentFolder,
-      shouldAllowSplitIntoUnresolvedPath: prepareForSplitFileResult.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: prepareForSplitFileResult.shouldFixFootnotes,
       shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
       shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,

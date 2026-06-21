@@ -214,8 +214,6 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       pluginSettingsComponent: params.pluginSettingsComponent,
-      shouldAllowOnlyCurrentFolder: false,
-      shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
       shouldIncludeFrontmatter: false,
       shouldMergeHeadings: false,
