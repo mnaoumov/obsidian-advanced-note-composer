@@ -36,7 +36,6 @@ import { SplitNoteByHeadingsEditorCommandHandler } from './split-note-by-heading
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
@@ -48,28 +47,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/editor-command-handler', () => {
-  class EditorCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected canExecuteEditor(_editor: unknown, _ctx: unknown): boolean {
-      return true;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToEditorMenu(_editor: unknown, _ctx: unknown): boolean {
-      return false;
-    }
-  }
-  return { EditorCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -163,13 +140,10 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
 
   it('should construct with correct params for H2', () => {
     const params = createMockParams(2);
-    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      editorMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-scissors-line-dashed',
-      id: 'split-note-by-headings-h2',
-      name: 'Split note by headings - H2'
-    });
+    const handler = new SplitNoteByHeadingsEditorCommandHandler(params);
+    expect(handler.id).toBe('split-note-by-headings-h2');
+    expect(handler.name).toBe('Split note by headings - H2');
+    expect(handler.icon).toBe('lucide-scissors-line-dashed');
   });
 
   it('should return false from canExecuteEditor when file is null', () => {

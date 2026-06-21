@@ -35,42 +35,9 @@ interface PrismLanguageRaw {
   expression: PrismExpressionWithInside;
 }
 
-interface WithTriggerUnload {
-  triggerUnload(): void;
-}
-
 vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
   loadPrism: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => {
-    fn().catch(() => {
-      // Noop
-    });
-  })
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/component-ex', () => {
-  class ComponentEx {
-    private readonly unloadCallbacks: (() => void)[] = [];
-
-    public onload(): void {
-      // Base onload
-    }
-
-    public triggerUnload(): void {
-      for (const cb of this.unloadCallbacks) {
-        cb();
-      }
-    }
-
-    protected register(cb: () => void): void {
-      this.unloadCallbacks.push(cb);
-    }
-  }
-  return { ComponentEx };
-});
 
 const mockLoadPrism = vi.mocked(loadPrism);
 
@@ -84,7 +51,7 @@ describe('PrismComponent', () => {
     mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
       expect(languages[TOKENIZED_STRING_LANGUAGE]).toBeDefined();
@@ -96,7 +63,7 @@ describe('PrismComponent', () => {
     mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
       const lang = languages[TOKENIZED_STRING_LANGUAGE] as PrismLanguage;
@@ -110,7 +77,7 @@ describe('PrismComponent', () => {
     mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
       const lang = languages[TOKENIZED_STRING_LANGUAGE] as PrismLanguage;
@@ -128,13 +95,13 @@ describe('PrismComponent', () => {
     mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
 
     const component = new PrismComponent();
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
       expect(languages[TOKENIZED_STRING_LANGUAGE]).toBeDefined();
     });
 
-    (component as PrismComponent & WithTriggerUnload).triggerUnload();
+    component.unload();
     expect(bypassStrictProxy(languages)[TOKENIZED_STRING_LANGUAGE]).toBeUndefined();
   });
 });

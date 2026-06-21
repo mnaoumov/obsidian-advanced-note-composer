@@ -36,7 +36,6 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './split-note-by-
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
@@ -48,28 +47,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/editor-command-handler', () => {
-  class EditorCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected canExecuteEditor(_editor: unknown, _ctx: unknown): boolean {
-      return true;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToEditorMenu(_editor: unknown, _ctx: unknown): boolean {
-      return false;
-    }
-  }
-  return { EditorCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -170,13 +147,10 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
 
   it('should construct with correct params for H3', () => {
     const params = createMockParams(3);
-    const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      editorMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-scissors-line-dashed',
-      id: 'split-note-by-headings-content-h3',
-      name: 'Split note by headings content - H3'
-    });
+    const handler = new SplitNoteByHeadingsContentEditorCommandHandler(params);
+    expect(handler.id).toBe('split-note-by-headings-content-h3');
+    expect(handler.name).toBe('Split note by headings content - H3');
+    expect(handler.icon).toBe('lucide-scissors-line-dashed');
   });
 
   it('should return false from canExecuteEditor when file is null', () => {

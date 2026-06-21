@@ -26,7 +26,6 @@ import { SwapFileCommandHandler } from './swap-file-command-handler.ts';
 
 interface TestableHandler {
   executeFile(file: TFile): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -38,24 +37,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/file-command-handler', () => {
-  class FileCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToFileMenu(_file: unknown, _source: unknown, _leaf?: unknown): boolean {
-      return false;
-    }
-  }
-  return { FileCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -107,13 +88,10 @@ describe('SwapFileCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new SwapFileCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      fileMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'switch-camera',
-      id: 'swap-file',
-      name: 'Swap file with...'
-    });
+    const handler = new SwapFileCommandHandler(params);
+    expect(handler.id).toBe('swap-file');
+    expect(handler.name).toBe('Swap file with...');
+    expect(handler.icon).toBe('switch-camera');
   });
 
   it('should show notice and return when path is ignored', async () => {

@@ -33,7 +33,6 @@ import { ExtractThisHeadingEditorCommandHandler } from './extract-this-heading-e
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
@@ -45,20 +44,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/editor-command-handler', () => {
-  class EditorCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected shouldAddToEditorMenu(_editor: unknown, _ctx: unknown): boolean {
-      return false;
-    }
-  }
-  return { EditorCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -139,13 +124,10 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      editorMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-scissors',
-      id: 'extract-this-heading',
-      name: 'Extract this heading...'
-    });
+    const handler = new ExtractThisHeadingEditorCommandHandler(params);
+    expect(handler.id).toBe('extract-this-heading');
+    expect(handler.name).toBe('Extract this heading...');
+    expect(handler.icon).toBe('lucide-scissors');
   });
 
   it('should return false from canExecuteEditor when ctx.file is null', () => {

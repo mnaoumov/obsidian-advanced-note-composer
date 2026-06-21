@@ -49,7 +49,6 @@ import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 interface TestableHandler {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -65,28 +64,6 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/folder-command-handler', () => {
-  class FolderCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected canExecuteFolder(_folder: unknown): boolean {
-      return true;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToFolderMenu(_folder: unknown, _source: unknown, _leaf?: unknown): boolean {
-      return false;
-    }
-  }
-  return { FolderCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   exists: vi.fn(),
@@ -206,14 +183,10 @@ describe('MergeFolderCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      fileMenuItemName: 'Merge entire folder with...',
-      fileMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'merge',
-      id: 'merge-folder',
-      name: 'Merge current folder with another folder...'
-    });
+    const handler = new MergeFolderCommandHandler(params);
+    expect(handler.id).toBe('merge-folder');
+    expect(handler.name).toBe('Merge current folder with another folder...');
+    expect(handler.icon).toBe('merge');
   });
 
   it('should return false from canExecuteFolder when folder is root', () => {

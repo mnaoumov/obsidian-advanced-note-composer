@@ -30,7 +30,6 @@ import { ExtractBeforeCursorEditorCommandHandler } from './extract-before-cursor
 
 interface TestableHandler {
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
 }
@@ -42,16 +41,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/editor-command-handler', () => {
-  class EditorCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-  }
-  return { EditorCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -121,13 +110,10 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new ExtractBeforeCursorEditorCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      editorMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-arrow-up-from-line',
-      id: 'extract-before-cursor',
-      name: 'Extract before cursor...'
-    });
+    const handler = new ExtractBeforeCursorEditorCommandHandler(params);
+    expect(handler.id).toBe('extract-before-cursor');
+    expect(handler.name).toBe('Extract before cursor...');
+    expect(handler.icon).toBe('lucide-arrow-up-from-line');
   });
 
   it('should return early when ctx.file is null', async () => {

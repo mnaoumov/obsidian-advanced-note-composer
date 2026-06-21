@@ -1,12 +1,26 @@
+import type {
+  BaseComponent,
+  DropdownComponent,
+  Plugin,
+  TextComponent,
+  ToggleComponent
+} from 'obsidian';
 import type { DebugController } from 'obsidian-dev-utils/debug-controller';
-import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
-import type { Mock } from 'vitest';
+import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
+import {
+  App,
+  Setting
+} from 'obsidian';
 import { getDebugController } from 'obsidian-dev-utils/debug';
+import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
+  beforeEach,
   describe,
   expect,
   it,
@@ -15,97 +29,28 @@ import {
 
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
-interface MockCodeHighlighter {
-  setLanguage: ReturnType<typeof vi.fn>;
+const PLUGIN_ID = 'test-plugin-id';
+
+interface AppStatics {
+  createConfigured__(): App;
 }
 
-interface MockDropdown {
-  addOptions: ReturnType<typeof vi.fn>;
+interface NamedComponent<T extends BaseComponent> {
+  component: T;
+  name: string;
 }
 
-interface MockMultipleText {
-  placeholder?: string;
+interface TextBasedProbe {
+  setPlaceholderValue?: unknown;
 }
 
-interface MockSettingEx {
-  addCodeHighlighter: ReturnType<typeof vi.fn>;
-  addDropdown: ReturnType<typeof vi.fn>;
-  addMultipleText: ReturnType<typeof vi.fn>;
-  addText: ReturnType<typeof vi.fn>;
-  addToggle: ReturnType<typeof vi.fn>;
-  setDesc: ReturnType<typeof vi.fn>;
-  setName: ReturnType<typeof vi.fn>;
-}
-
-interface MockSettingGroupEx {
-  addSettingEx: Mock<(cb: (setting: MockSettingEx) => void) => MockSettingGroupEx>;
-  setHeading: Mock<(heading: string) => MockSettingGroupEx>;
-}
-
-interface MockText {
-  setDisabled: ReturnType<typeof vi.fn>;
-}
-
-interface MockToggle {
-  onChange: ReturnType<typeof vi.fn>;
-  setDisabled: ReturnType<typeof vi.fn>;
-  setValue: ReturnType<typeof vi.fn>;
-}
-
-interface SettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
-  readonly pluginId: string;
-}
-
-const capturedToggleOnChangeHandlers: ((value: boolean) => void)[] = [];
-const capturedBindOnChangedCallbacks: (() => void)[] = [];
-
-function createMockSettingEx(): MockSettingEx {
-  const setting: MockSettingEx = {
-    addCodeHighlighter: vi.fn().mockImplementation((cb: (codeHighlighter: MockCodeHighlighter) => void) => {
-      cb({ setLanguage: vi.fn() });
-      return setting;
-    }),
-    addDropdown: vi.fn().mockImplementation((cb: (dropdown: MockDropdown) => void) => {
-      cb({ addOptions: vi.fn() });
-      return setting;
-    }),
-    addMultipleText: vi.fn().mockImplementation((cb: (multipleText: MockMultipleText) => void) => {
-      cb({});
-      return setting;
-    }),
-    addText: vi.fn().mockImplementation((cb: (text: MockText) => void) => {
-      cb({ setDisabled: vi.fn() });
-      return setting;
-    }),
-    addToggle: vi.fn().mockImplementation((cb: (toggle: MockToggle) => void) => {
-      const toggle: MockToggle = {
-        onChange: vi.fn().mockImplementation((handler: (value: boolean) => void) => {
-          capturedToggleOnChangeHandlers.push(handler);
-        }),
-        setDisabled: vi.fn(),
-        setValue: vi.fn()
-      };
-      cb(toggle);
-      return setting;
-    }),
-    setDesc: vi.fn().mockReturnThis(),
-    setName: vi.fn().mockReturnThis()
-  };
-  return setting;
-}
-
-function createMockSettingGroupEx(): MockSettingGroupEx {
-  const group: MockSettingGroupEx = {
-    addSettingEx: vi.fn().mockImplementation((cb: (setting: MockSettingEx) => void) => {
-      cb(createMockSettingEx());
-      return group;
-    }),
-    setHeading: vi.fn().mockReturnThis()
-  };
-  return group;
-}
+const headings: string[] = [];
+const toggles: NamedComponent<ToggleComponent>[] = [];
+const texts: NamedComponent<TextComponent>[] = [];
+const dropdowns: NamedComponent<DropdownComponent>[] = [];
 
 vi.mock('obsidian-dev-utils/debug', () => ({
   getDebugController: vi.fn().mockReturnValue({
@@ -115,149 +60,135 @@ vi.mock('obsidian-dev-utils/debug', () => ({
   })
 }));
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  appendCodeBlock: vi.fn()
+vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
+  loadPrism: vi.fn(() =>
+    Promise.resolve({
+      highlightElement: vi.fn(),
+      languages: {}
+    })
+  )
 }));
-
-interface BindOptions {
-  onChanged?(): void;
-}
-
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-settings-tab', () => {
-  class MockPluginSettingsTabBase {
-    protected readonly pluginSettingsComponent: unknown;
-
-    public constructor(params: PluginSettingsTabBaseConstructorParams<PluginSettings>) {
-      this.pluginSettingsComponent = params.pluginSettingsComponent;
-    }
-
-    public bind(_component: unknown, _key: string, options?: BindOptions): void {
-      if (options?.onChanged) {
-        capturedBindOnChangedCallbacks.push(options.onChanged);
-      }
-    }
-
-    public displayLegacy(): void {
-      // No-op for test
-    }
-  }
-  return {
-    PluginSettingsTabBase: MockPluginSettingsTabBase
-  };
-});
-
-vi.mock('obsidian-dev-utils/obsidian/setting-ex', () => ({
-  SettingEx: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/setting-group-ex', () => {
-  class MockSettingGroupExClass {
-    private readonly group: MockSettingGroupEx;
-    public constructor() {
-      this.group = createMockSettingGroupEx();
-    }
-
-    public addSettingEx(cb: (setting: MockSettingEx) => void): this {
-      this.group.addSettingEx(cb);
-      return this;
-    }
-
-    public setHeading(heading: string): this {
-      this.group.setHeading(heading);
-      return this;
-    }
-  }
-  return {
-    SettingGroupEx: MockSettingGroupExClass
-  };
-});
 
 vi.mock('./prism-component.ts', () => ({
   TOKENIZED_STRING_LANGUAGE: 'mock-language'
 }));
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  capturedToggleOnChangeHandlers.length = 0;
-  capturedBindOnChangedCallbacks.length = 0;
+beforeEach(() => {
+  installSettingSpies();
 });
 
-function createSettingsTab(): PluginSettingsTab {
-  const params = strictProxy<SettingsTabConstructorParams>({
-    plugin: strictProxy<Record<string, unknown>>({ app: {} }),
-    pluginId: 'test-plugin-id',
-    pluginSettingsComponent: {
-      settings: {
-        shouldReplaceInvalidTitleCharacters: true
-      }
-    }
+afterEach(() => {
+  vi.restoreAllMocks();
+  headings.length = 0;
+  toggles.length = 0;
+  texts.length = 0;
+  dropdowns.length = 0;
+});
+
+async function createSettingsComponent(): Promise<PluginSettingsComponent> {
+  const component = new PluginSettingsComponent({
+    dataHandler: strictProxy<DataHandler>({
+      loadData: vi.fn(() => Promise.resolve(null)),
+      saveData: vi.fn(() => noopAsync())
+    }),
+    pluginEventSource: strictProxy<PluginEventSource>({
+      on: vi.fn(() => castTo<ReturnType<PluginEventSource['on']>>({}))
+    })
   });
-  return new PluginSettingsTab(params);
+  await component.loadWithPromises();
+  return component;
 }
 
-function getContainerEl(tab: PluginSettingsTab): void {
-  Object.assign(tab, { containerEl: { empty: vi.fn() } });
+async function createSettingsTab(pluginSettingsComponent?: PluginSettingsComponent): Promise<PluginSettingsTab> {
+  const settingsComponent = pluginSettingsComponent ?? await createSettingsComponent();
+  const app = castTo<AppStatics>(App).createConfigured__();
+  const plugin = strictProxy<Plugin>({ app });
+  return new PluginSettingsTab({
+    plugin,
+    pluginId: PLUGIN_ID,
+    pluginSettingsComponent: settingsComponent
+  });
+}
+
+function findText(name: string): TextComponent {
+  const entry = texts.find((text) => text.name === name);
+  if (!entry) {
+    throw new Error(`Text "${name}" was not rendered.`);
+  }
+
+  return entry.component;
+}
+
+function findToggle(name: string): ToggleComponent {
+  const entry = toggles.find((toggle) => toggle.name === name);
+  if (!entry) {
+    throw new Error(`Toggle "${name}" was not rendered.`);
+  }
+
+  return entry.component;
 }
 
 describe('PluginSettingsTab', () => {
-  it('should be constructable with pluginId', () => {
-    const tab = createSettingsTab();
-    expect(tab).toBeDefined();
+  it('should be constructable with pluginId', async () => {
+    const tab = await createSettingsTab();
+    expect(tab).toBeInstanceOf(PluginSettingsTab);
   });
 
-  it('should call display without throwing', () => {
-    const tab = createSettingsTab();
-    getContainerEl(tab);
-
-    expect(() => {
-      tab.displayLegacy();
-    }).not.toThrow();
-  });
-
-  it('should create setting groups for all sections', () => {
-    const tab = createSettingsTab();
-    getContainerEl(tab);
-
-    // Display() creates all 9 setting groups without throwing
+  it('should render all setting group headings in order', async () => {
+    const tab = await createSettingsTab();
     tab.displayLegacy();
 
-    // The display method ran to completion, meaning all 9 SettingGroupEx were created
-    expect(tab).toBeDefined();
+    expect(headings).toEqual([
+      'Common',
+      'Merge/split/extract strategies',
+      'Title',
+      'Merge',
+      'Split/extract',
+      'Include/exclude paths',
+      'Merge folders',
+      'Swap folders',
+      'UI'
+    ]);
   });
-});
 
-describe('addAvailableTokens', () => {
-  it('should be called as part of merge template and split template settings', () => {
-    const tab = createSettingsTab();
-    getContainerEl(tab);
+  it('should render the expected named settings', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
 
-    // If display doesn't throw, the addAvailableTokens function ran successfully
-    expect(() => {
-      tab.displayLegacy();
-    }).not.toThrow();
+    const allNames = [...toggles, ...texts, ...dropdowns].map((entry) => entry.name);
+    expect(allNames).toContain('Should allow only current folder');
+    expect(allNames).toContain('Should show console debug messages');
+    expect(allNames).toContain('Should replace invalid characters');
+    expect(allNames).toContain('Replacement string');
+    expect(allNames).toContain('Frontmatter merge strategy');
+    expect(allNames).toContain('Should add commands to submenu');
+  });
+
+  it('should re-render settings when display is called twice', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+    const firstRenderHeadings = headings.length;
+    tab.displayLegacy();
+
+    expect(headings.length).toBe(firstRenderHeadings * 2);
   });
 });
 
 describe('debug controller toggle', () => {
-  it('should handle debug toggle callbacks', () => {
-    const enableMock = vi.fn();
-    const disableMock = vi.fn();
+  it('should reflect the current debug-enabled state on the toggle', async () => {
     vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
-      disable: disableMock,
-      enable: enableMock,
-      get: vi.fn().mockReturnValue(['test-plugin-id'])
+      disable: vi.fn(),
+      enable: vi.fn(),
+      get: vi.fn().mockReturnValue([PLUGIN_ID])
     }));
 
-    const tab = createSettingsTab();
-    getContainerEl(tab);
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
 
-    // Display will trigger the toggle callback creation
-    expect(() => {
-      tab.displayLegacy();
-    }).not.toThrow();
+    expect(findToggle('Should show console debug messages').getValue()).toBe(true);
   });
 
-  it('should enable debug controller when toggle onChange is called with true', () => {
+  it('should enable debug controller when the debug toggle is switched on', async () => {
     const enableMock = vi.fn();
     const disableMock = vi.fn();
     vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
@@ -266,22 +197,14 @@ describe('debug controller toggle', () => {
       get: vi.fn().mockReturnValue([])
     }));
 
-    const tab = createSettingsTab();
-    getContainerEl(tab);
+    const tab = await createSettingsTab();
     tab.displayLegacy();
 
-    // The debug toggle's onChange handler is the only one captured via toggle.onChange
-    // (all other toggles use bind). It's the first captured onChange handler.
-    expect(capturedToggleOnChangeHandlers.length).toBeGreaterThan(0);
-
-    // Call with true to exercise the enable branch
-    const debugToggleHandler = capturedToggleOnChangeHandlers[0];
-    expect(debugToggleHandler).toBeDefined();
-    debugToggleHandler?.(true);
-    expect(enableMock).toHaveBeenCalledWith('test-plugin-id');
+    findToggle('Should show console debug messages').setValue(true);
+    expect(enableMock).toHaveBeenCalledWith(PLUGIN_ID);
   });
 
-  it('should disable debug controller when toggle onChange is called with false', () => {
+  it('should disable debug controller when the debug toggle is switched off', async () => {
     const enableMock = vi.fn();
     const disableMock = vi.fn();
     vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
@@ -290,31 +213,76 @@ describe('debug controller toggle', () => {
       get: vi.fn().mockReturnValue([])
     }));
 
-    const tab = createSettingsTab();
-    getContainerEl(tab);
+    const tab = await createSettingsTab();
     tab.displayLegacy();
 
-    const debugToggleHandler = capturedToggleOnChangeHandlers[0];
-    expect(debugToggleHandler).toBeDefined();
-    debugToggleHandler?.(false);
-    expect(disableMock).toHaveBeenCalledWith('test-plugin-id');
+    findToggle('Should show console debug messages').setValue(false);
+    expect(disableMock).toHaveBeenCalledWith(PLUGIN_ID);
   });
 });
 
-describe('shouldReplaceInvalidTitleCharacters onChanged', () => {
-  it('should call display when shouldReplaceInvalidTitleCharacters changes', () => {
-    const tab = createSettingsTab();
-    getContainerEl(tab);
+describe('shouldReplaceInvalidTitleCharacters', () => {
+  it('should enable the replacement text input when replacing invalid characters is on', async () => {
+    const tab = await createSettingsTab();
     tab.displayLegacy();
 
-    // The bind call with onChanged option captures the callback
-    expect(capturedBindOnChangedCallbacks.length).toBeGreaterThan(0);
+    expect(findText('Replacement string').disabled).toBe(false);
+  });
 
-    // Calling the onChanged callback should re-invoke display
+  it('should disable the replacement text input when replacing invalid characters is off', async () => {
+    const settingsComponent = await createSettingsComponent();
+    castTo<PluginSettings>(settingsComponent.settings).shouldReplaceInvalidTitleCharacters = false;
+
+    const tab = await createSettingsTab(settingsComponent);
+    tab.displayLegacy();
+
+    expect(findText('Replacement string').disabled).toBe(true);
+  });
+
+  it('should re-render the tab when the replace-invalid-characters toggle changes', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
     const displaySpy = vi.spyOn(tab, 'displayLegacy');
-    const onChangedCallback = capturedBindOnChangedCallbacks[0];
-    expect(onChangedCallback).toBeDefined();
-    onChangedCallback?.();
-    expect(displaySpy).toHaveBeenCalled();
+    // The toggle is bound with an `onChanged` handler that re-invokes `displayLegacy`.
+    // `bind` wires an async onChange, so the re-render happens after the microtask flush.
+    findToggle('Should replace invalid characters').setValue(false);
+
+    await vi.waitFor(() => {
+      expect(displaySpy).toHaveBeenCalled();
+    });
   });
 });
+
+type AddComponentFn = (cb: (component: BaseComponent) => void) => Setting;
+type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
+
+function installSettingSpies(): void {
+  const originalSetHeading = SettingGroupEx.prototype.setHeading;
+  vi.spyOn(SettingGroupEx.prototype, 'setHeading').mockImplementation(function setHeadingSpy(this: SettingGroupEx, heading: DocumentFragment | string): SettingGroupEx {
+    headings.push(castTo<string>(heading));
+    return originalSetHeading.call(this, heading);
+  });
+
+  spyOnAdd('addToggle', toggles);
+  spyOnAdd('addText', texts);
+  spyOnAdd('addDropdown', dropdowns);
+}
+
+function spyOnAdd<T extends BaseComponent>(
+  method: AddComponentMethod,
+  registry: NamedComponent<T>[]
+): void {
+  const prototype = castTo<Record<AddComponentMethod, AddComponentFn>>(Setting.prototype);
+  const original = prototype[method];
+  vi.spyOn(prototype, method).mockImplementation(function addComponentSpy(this: Setting, cb: (component: BaseComponent) => void): Setting {
+    const name = this.nameEl.textContent;
+    return original.call(this, (component: BaseComponent) => {
+      // Mock value components lack the dev-utils text-based-component probe (`setPlaceholderValue`).
+      // Assigning it stops the strict proxy from throwing and makes `bind` correctly treat them as non-text-based.
+      castTo<TextBasedProbe>(component).setPlaceholderValue = undefined;
+      registry.push({ component: castTo<T>(component), name });
+      cb(component);
+    });
+  });
+}

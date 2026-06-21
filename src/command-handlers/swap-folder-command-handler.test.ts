@@ -27,7 +27,6 @@ import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 interface TestableHandler {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -39,28 +38,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/folder-command-handler', () => {
-  class FolderCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected canExecuteFolder(_folder: unknown): boolean {
-      return true;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToFolderMenu(_folder: unknown, _source: unknown, _leaf?: unknown): boolean {
-      return false;
-    }
-  }
-  return { FolderCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
@@ -115,13 +92,10 @@ describe('SwapFolderCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new SwapFolderCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      fileMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'switch-camera',
-      id: 'swap-folder',
-      name: 'Swap folder with...'
-    });
+    const handler = new SwapFolderCommandHandler(params);
+    expect(handler.id).toBe('swap-folder');
+    expect(handler.name).toBe('Swap folder with...');
+    expect(handler.icon).toBe('switch-camera');
   });
 
   it('should return false from canExecuteFolder when folder is root', () => {
