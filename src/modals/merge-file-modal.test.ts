@@ -30,10 +30,6 @@ import { InsertMode } from '../insert-mode.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { prepareForMergeFile } from './merge-file-modal.ts';
 
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
@@ -48,28 +44,6 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
   addPluginCssClasses: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/path', () => ({
-  basename: vi.fn((filePath: string) => {
-    const parts = filePath.split('/');
-    return parts[parts.length - 1] ?? '';
-  })
-}));
-
-vi.mock('obsidian-dev-utils/string', () => ({
-  trimEnd: vi.fn((str: string, suffix: string) => {
-    if (str.endsWith(suffix)) {
-      return str.slice(0, -suffix.length);
-    }
-    return str;
-  }),
-  trimStart: vi.fn((str: string, prefix: string) => {
-    if (str.startsWith(prefix)) {
-      return str.slice(prefix.length);
-    }
-    return str;
-  })
 }));
 
 vi.mock('../composers/composer-base.ts', () => ({

@@ -37,7 +37,8 @@ interface TestableHandler {
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
 
-vi.mock('obsidian', () => ({
+vi.mock('obsidian', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian')>(),
   Notice: vi.fn()
 }));
 

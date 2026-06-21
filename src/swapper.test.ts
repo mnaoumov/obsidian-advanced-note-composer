@@ -48,10 +48,6 @@ vi.mock('obsidian-dev-utils/obsidian/vault-delete', () => ({
   deleteIfNotUsed: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/path', () => ({
-  join: (...args: string[]): string => args.filter(Boolean).join('/')
-}));
-
 const mockIsFile = vi.mocked(isFile);
 const mockIsFolder = vi.mocked(isFolder);
 const mockGetAvailablePath = vi.mocked(getAvailablePath);

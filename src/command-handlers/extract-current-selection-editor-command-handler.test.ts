@@ -35,7 +35,8 @@ interface TestableHandler {
   shouldAddToEditorMenu(): boolean;
 }
 
-vi.mock('obsidian', () => ({
+vi.mock('obsidian', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian')>(),
   Notice: vi.fn()
 }));
 

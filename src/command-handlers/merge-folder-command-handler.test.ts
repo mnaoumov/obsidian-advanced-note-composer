@@ -8,6 +8,7 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { MockInstance } from 'vitest';
 
 import {
   Notice,
@@ -53,11 +54,9 @@ interface TestableHandler {
   shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
 }
 
-vi.mock('obsidian', () => ({
-  Notice: vi.fn(),
-  Vault: {
-    recurseChildren: vi.fn()
-  }
+vi.mock('obsidian', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian')>(),
+  Notice: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -65,9 +64,9 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
+vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/file-system')>(),
   exists: vi.fn(),
-  FileSystemType: { File: 'File' },
   isFile: vi.fn(),
   isFolder: vi.fn(),
   isMarkdownFile: vi.fn()
@@ -86,11 +85,6 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   trashSafe: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/path', () => ({
-  join: (...args: string[]): string => args.filter(Boolean).join('/'),
-  relative: (from: string, to: string): string => to.slice(from.length + 1)
-}));
-
 vi.mock('../composers/merge-composer.ts', () => {
   const MockMergeComposer = vi.fn();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- vi.fn() prototype is untyped in mock factories.
@@ -107,7 +101,7 @@ const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMergeFolder);
 const MockNotice = vi.mocked(Notice);
 const MockMergeComposer = vi.mocked(MergeComposer);
-const mockRecurseChildren = vi.mocked(VaultClass.recurseChildren);
+let mockRecurseChildren: MockInstance<typeof VaultClass.recurseChildren>;
 const mockIsFile = vi.mocked(isFile);
 const mockIsFolder = vi.mocked(isFolder);
 const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
@@ -179,6 +173,7 @@ function toTestable(handler: MergeFolderCommandHandler): TestableHandler {
 describe('MergeFolderCommandHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRecurseChildren = vi.spyOn(VaultClass, 'recurseChildren');
   });
 
   it('should construct with correct params', () => {

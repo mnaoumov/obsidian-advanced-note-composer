@@ -58,10 +58,6 @@ interface ComposerDeps {
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
-interface RegexMatch {
-  groups: Record<string, string | undefined> | undefined;
-}
-
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   editLinks: vi.fn(),
   updateLink: vi.fn(),
@@ -82,27 +78,9 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   process: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/string', () => ({
-  replaceAll: vi.fn((str: string, regex: RegExp, replacer: (match: RegexMatch) => string) => {
-    return str.replace(regex, (...args: unknown[]) => {
-      const groups = args[args.length - 1] as Record<string, string | undefined> | undefined;
-      return replacer({ groups });
-    });
-  })
-}));
-
-vi.mock('obsidian-dev-utils/function', () => ({
-  noop: vi.fn()
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
-}));
-
-vi.mock('obsidian-dev-utils/object-utils', () => ({
-  castTo: (value: unknown): unknown => value,
-  extractDefaultExportInterop: (m: unknown): unknown => m
 }));
 
 vi.mock('../markdown-heading-document.ts', () => ({

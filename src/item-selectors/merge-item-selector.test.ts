@@ -18,14 +18,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { MergeItemSelector } from './merge-item-selector.ts';
 
-function mockItem(partial: Record<string, unknown>): Item {
-  return castTo<Item>(partial);
-}
-
-vi.mock('obsidian-dev-utils/path', () => ({
-  join: vi.fn((...args: string[]) => args.join('/'))
-}));
-
 function createMockApp(): App {
   const mockFile = createMockFile('folder/new-file.md');
   return strictProxy<App>({
@@ -55,6 +47,10 @@ function createMockPluginSettingsComponent(overrides: Record<string, unknown> = 
       ...overrides
     })
   });
+}
+
+function mockItem(partial: Record<string, unknown>): Item {
+  return castTo<Item>(partial);
 }
 
 describe('MergeItemSelector', () => {

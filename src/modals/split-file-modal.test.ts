@@ -31,10 +31,6 @@ import { InsertMode } from '../insert-mode.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { prepareForSplitFile } from './split-file-modal.ts';
 
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
