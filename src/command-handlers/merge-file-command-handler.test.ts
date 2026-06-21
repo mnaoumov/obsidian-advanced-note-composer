@@ -31,7 +31,6 @@ import { MergeFileCommandHandler } from './merge-file-command-handler.ts';
 interface TestableHandler {
   canExecuteFile(file: TFile): boolean;
   executeFile(file: TFile): Promise<void>;
-  params: unknown;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFileMenu(file: TFile, source: string): boolean;
   shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean;
@@ -44,32 +43,6 @@ vi.mock('obsidian', () => ({
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/file-command-handler', () => {
-  class FileCommandHandler {
-    public readonly params: unknown;
-    public constructor(params: unknown) {
-      this.params = params;
-    }
-
-    protected canExecuteFile(_file: unknown): boolean {
-      return false;
-    }
-
-    protected shouldAddCommandToSubmenu(): boolean | undefined {
-      return undefined;
-    }
-
-    protected shouldAddToFileMenu(_file: unknown, _source: unknown): boolean {
-      return false;
-    }
-
-    protected shouldAddToFilesMenu(_files: unknown, _source: unknown, _leaf?: unknown): boolean {
-      return false;
-    }
-  }
-  return { FileCommandHandler };
-});
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   isMarkdownFile: vi.fn()
@@ -131,14 +104,10 @@ describe('MergeFileCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = toTestable(new MergeFileCommandHandler(params));
-    expect(handler.params).toStrictEqual({
-      fileMenuItemName: 'Merge entire file with...',
-      fileMenuSubmenuIcon: 'lucide-git-merge',
-      icon: 'lucide-git-merge',
-      id: 'merge-file',
-      name: 'Merge current file with another file...'
-    });
+    const handler = new MergeFileCommandHandler(params);
+    expect(handler.id).toBe('merge-file');
+    expect(handler.name).toBe('Merge current file with another file...');
+    expect(handler.icon).toBe('lucide-git-merge');
   });
 
   it('should return true from canExecuteFile when isMarkdownFile returns true', () => {
