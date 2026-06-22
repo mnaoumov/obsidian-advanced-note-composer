@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.10
+
+- chore: update libs
+
 ## 3.26.9
 
 - chore: unify tsconfig
