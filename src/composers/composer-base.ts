@@ -52,7 +52,7 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
 
 const moment = extractDefaultExportInterop(moment_);
 
-export interface ComposerBaseConstructorParams {
+export interface ComposerBaseConstructorOptions {
   readonly app: App;
 
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
@@ -98,19 +98,19 @@ export abstract class ComposerBase {
 
   private readonly shouldMergeHeadings: boolean;
 
-  public constructor(params: ComposerBaseConstructorParams, shouldIncludeFrontmatter: boolean) {
-    this.app = params.app;
-    this.pluginSettingsComponent = params.pluginSettingsComponent;
+  public constructor(options: ComposerBaseConstructorOptions, shouldIncludeFrontmatter: boolean) {
+    this.app = options.app;
+    this.pluginSettingsComponent = options.pluginSettingsComponent;
 
-    this.insertMode = params.insertMode ?? InsertMode.Append;
-    this.sourceFile = params.sourceFile;
+    this.insertMode = options.insertMode ?? InsertMode.Append;
+    this.sourceFile = options.sourceFile;
     this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = params.shouldFixFootnotes ?? params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = params.shouldMergeHeadings ?? params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
-    this.shouldShowNotice = params.shouldShowNotice ?? true;
-    this.targetFile = params.targetFile;
-    this.isNewTargetFile = params.isNewTargetFile;
+    this.shouldFixFootnotes = options.shouldFixFootnotes ?? options.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = options.shouldMergeHeadings ?? options.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? options.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.shouldShowNotice = options.shouldShowNotice ?? true;
+    this.targetFile = options.targetFile;
+    this.isNewTargetFile = options.isNewTargetFile;
   }
 
   public async canIncludeFrontmatter(): Promise<boolean> {
