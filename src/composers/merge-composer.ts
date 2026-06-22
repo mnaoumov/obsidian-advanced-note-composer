@@ -13,14 +13,14 @@ import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
-  ComposerBaseConstructorParams,
+  ComposerBaseConstructorOptions,
   Selection
 } from './composer-base.ts';
 
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
-interface MergeComposerConstructorParams extends ComposerBaseConstructorParams {
+interface MergeComposerConstructorParams extends ComposerBaseConstructorOptions {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }

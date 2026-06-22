@@ -11,7 +11,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type {
-  ComposerBaseConstructorParams,
+  ComposerBaseConstructorOptions,
   Selection
 } from './composer-base.ts';
 
@@ -21,7 +21,7 @@ import {
 } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
-interface SplitComposerConstructorParams extends ComposerBaseConstructorParams {
+interface SplitComposerConstructorParams extends ComposerBaseConstructorOptions {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;

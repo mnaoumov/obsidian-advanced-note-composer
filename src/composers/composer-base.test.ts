@@ -36,7 +36,7 @@ import type { MarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type {
-  ComposerBaseConstructorParams,
+  ComposerBaseConstructorOptions,
   Selection
 } from './composer-base.ts';
 
@@ -96,8 +96,8 @@ class TestComposer extends ComposerBase {
     return this.app;
   }
 
-  public constructor(params: ComposerBaseConstructorParams, shouldIncludeFrontmatter = false) {
-    super(params, shouldIncludeFrontmatter);
+  public constructor(options: ComposerBaseConstructorOptions, shouldIncludeFrontmatter = false) {
+    super(options, shouldIncludeFrontmatter);
   }
 
   public async callCanIncludeFrontmatter(): Promise<boolean> {
