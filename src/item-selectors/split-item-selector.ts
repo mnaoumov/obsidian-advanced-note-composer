@@ -16,7 +16,7 @@ import {
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
-export interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
+interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldTreatTitleAsPath: boolean;
 }
@@ -71,7 +71,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     };
   }
 
-  protected async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
+  private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd(fileName, '.md');
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';

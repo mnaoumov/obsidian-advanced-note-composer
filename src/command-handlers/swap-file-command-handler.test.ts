@@ -26,6 +26,9 @@ import { SwapFileCommandHandler } from './swap-file-command-handler.ts';
 
 interface TestableHandler {
   executeFile(file: TFile): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -89,7 +92,7 @@ describe('SwapFileCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new SwapFileCommandHandler(params);
+    const handler = toTestable(new SwapFileCommandHandler(params));
     expect(handler.id).toBe('swap-file');
     expect(handler.name).toBe('Swap file with...');
     expect(handler.icon).toBe('switch-camera');

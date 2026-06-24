@@ -40,11 +40,11 @@ interface ParseHeadingNodeParams {
 }
 
 class MarkdownHeadingNode {
-  public readonly children: MarkdownHeadingNode[];
-  public readonly heading: string;
   public readonly level: Level;
-  public text: string;
+  private readonly children: MarkdownHeadingNode[];
+  private readonly heading: string;
   private readonly isFake: boolean = false;
+  private text: string;
 
   public constructor(params: MarkdownHeadingNodeConstructorParams) {
     this.level = params.level;

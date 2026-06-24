@@ -30,6 +30,9 @@ import { ExtractAfterCursorEditorCommandHandler } from './extract-after-cursor-e
 
 interface TestableHandler {
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
 }
@@ -113,7 +116,7 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new ExtractAfterCursorEditorCommandHandler(params);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.id).toBe('extract-after-cursor');
     expect(handler.name).toBe('Extract after cursor...');
     expect(handler.icon).toBe('lucide-arrow-down-from-line');

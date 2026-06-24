@@ -27,6 +27,9 @@ import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 interface TestableHandler {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -93,7 +96,7 @@ describe('SwapFolderCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new SwapFolderCommandHandler(params);
+    const handler = toTestable(new SwapFolderCommandHandler(params));
     expect(handler.id).toBe('swap-folder');
     expect(handler.name).toBe('Swap folder with...');
     expect(handler.icon).toBe('switch-camera');

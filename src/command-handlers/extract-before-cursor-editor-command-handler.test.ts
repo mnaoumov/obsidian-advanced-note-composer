@@ -30,6 +30,9 @@ import { ExtractBeforeCursorEditorCommandHandler } from './extract-before-cursor
 
 interface TestableHandler {
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
 }
@@ -111,7 +114,7 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new ExtractBeforeCursorEditorCommandHandler(params);
+    const handler = toTestable(new ExtractBeforeCursorEditorCommandHandler(params));
     expect(handler.id).toBe('extract-before-cursor');
     expect(handler.name).toBe('Extract before cursor...');
     expect(handler.icon).toBe('lucide-arrow-up-from-line');

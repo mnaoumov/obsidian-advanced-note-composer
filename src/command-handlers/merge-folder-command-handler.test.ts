@@ -50,6 +50,9 @@ import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 interface TestableHandler {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
 }
@@ -178,7 +181,7 @@ describe('MergeFolderCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new MergeFolderCommandHandler(params);
+    const handler = toTestable(new MergeFolderCommandHandler(params));
     expect(handler.id).toBe('merge-folder');
     expect(handler.name).toBe('Merge current folder with another folder...');
     expect(handler.icon).toBe('merge');
@@ -305,7 +308,7 @@ describe('MergeFolderCommandHandler', () => {
 
     mockIsFolder.mockImplementation((f) => f === subfolder);
     mockIsFile.mockImplementation((f) => f === mdFile || f === otherFile);
-    mockIsMarkdownFile.mockImplementation((_app, f) => f === mdFile);
+    mockIsMarkdownFile.mockImplementation((f) => f === mdFile);
     mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/sub' }));
     mockIsChildOrSelf.mockReturnValue(false);
 

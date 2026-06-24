@@ -36,6 +36,9 @@ import { SplitNoteByHeadingsEditorCommandHandler } from './split-note-by-heading
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
@@ -141,7 +144,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
 
   it('should construct with correct params for H2', () => {
     const params = createMockParams(2);
-    const handler = new SplitNoteByHeadingsEditorCommandHandler(params);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     expect(handler.id).toBe('split-note-by-headings-h2');
     expect(handler.name).toBe('Split note by headings - H2');
     expect(handler.icon).toBe('lucide-scissors-line-dashed');
