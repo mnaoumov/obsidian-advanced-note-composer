@@ -31,6 +31,9 @@ import { ExtractCurrentSelectionEditorCommandHandler } from './extract-current-s
 interface TestableHandler {
   canExecuteEditor(editor: Editor): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
 }
@@ -111,7 +114,7 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new ExtractCurrentSelectionEditorCommandHandler(params);
+    const handler = toTestable(new ExtractCurrentSelectionEditorCommandHandler(params));
     expect(handler.id).toBe('extract-current-selection');
     expect(handler.name).toBe('Extract current selection...');
     expect(handler.icon).toBe('lucide-scissors');

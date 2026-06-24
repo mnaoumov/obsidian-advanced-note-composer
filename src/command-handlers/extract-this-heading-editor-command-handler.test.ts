@@ -33,6 +33,9 @@ import { ExtractThisHeadingEditorCommandHandler } from './extract-this-heading-e
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
@@ -125,7 +128,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new ExtractThisHeadingEditorCommandHandler(params);
+    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     expect(handler.id).toBe('extract-this-heading');
     expect(handler.name).toBe('Extract this heading...');
     expect(handler.icon).toBe('lucide-scissors');

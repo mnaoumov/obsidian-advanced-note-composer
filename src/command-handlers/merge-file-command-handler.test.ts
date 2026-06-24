@@ -31,6 +31,9 @@ import { MergeFileCommandHandler } from './merge-file-command-handler.ts';
 interface TestableHandler {
   canExecuteFile(file: TFile): boolean;
   executeFile(file: TFile): Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFileMenu(file: TFile, source: string): boolean;
   shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean;
@@ -105,7 +108,7 @@ describe('MergeFileCommandHandler', () => {
 
   it('should construct with correct params', () => {
     const params = createMockParams();
-    const handler = new MergeFileCommandHandler(params);
+    const handler = toTestable(new MergeFileCommandHandler(params));
     expect(handler.id).toBe('merge-file');
     expect(handler.name).toBe('Merge current file with another file...');
     expect(handler.icon).toBe('lucide-git-merge');

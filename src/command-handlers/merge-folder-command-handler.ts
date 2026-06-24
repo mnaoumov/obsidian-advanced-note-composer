@@ -140,7 +140,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!isFile(child)) {
         return;
       }
-      if (isMarkdownFile(this.app, child)) {
+      if (isMarkdownFile(child)) {
         sourceMdFiles.push(child);
         return;
       }
