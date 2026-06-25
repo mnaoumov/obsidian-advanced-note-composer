@@ -51,17 +51,17 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected shouldAllowOnlyCurrentFolder: boolean;
-  protected shouldShowAlias: boolean;
   protected shouldShowImages: boolean;
-  protected shouldShowMarkdown: boolean;
   protected shouldShowNonAttachments: boolean;
-  protected shouldShowNonFileBookmarks: boolean;
   protected shouldShowNonImageAttachments: boolean;
   protected shouldShowUnresolved: boolean;
   protected readonly sourceFile: TFile;
-
   private readonly createButtonEl: HTMLElement;
+  private readonly shouldShowAlias: boolean;
   private readonly shouldShowAllTypes: boolean;
+
+  private readonly shouldShowMarkdown: boolean;
+  private readonly shouldShowNonFileBookmarks: boolean;
 
   private get supportsCreate(): boolean {
     return this.allowCreateNewFile && this.shouldShowMarkdown;

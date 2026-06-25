@@ -32,18 +32,6 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
-export interface PrepareForSplitFileResult {
-  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  readonly insertMode: InsertMode;
-  readonly isNewTargetFile: boolean;
-  readonly shouldAllowOnlyCurrentFolder: boolean;
-  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
-  readonly shouldFixFootnotes: boolean;
-  readonly shouldIncludeFrontmatter: boolean;
-  readonly shouldMergeHeadings: boolean;
-  readonly targetFile: TFile;
-}
-
 interface ConfirmDialogModalResult {
   readonly insertMode: InsertMode;
   readonly isConfirmed: boolean;
@@ -57,6 +45,18 @@ interface PrepareForSplitFileParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldSkipModal?: boolean;
   readonly sourceFile: TFile;
+}
+
+interface PrepareForSplitFileResult {
+  readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
+  readonly insertMode: InsertMode;
+  readonly isNewTargetFile: boolean;
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldAllowSplitIntoUnresolvedPath: boolean;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldMergeHeadings: boolean;
+  readonly targetFile: TFile;
 }
 
 interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {

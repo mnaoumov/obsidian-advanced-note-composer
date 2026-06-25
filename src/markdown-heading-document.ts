@@ -164,7 +164,7 @@ class MarkdownHeadingNode {
   }
 }
 
-export class MarkdownHeadingDocument {
+class MarkdownHeadingDocument {
   private readonly frontmatter: string;
   private readonly node: MarkdownHeadingNode;
 
