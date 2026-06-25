@@ -52,7 +52,11 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
 
 const moment = extractDefaultExportInterop(moment_);
 
-export interface ComposerBaseConstructorOptions {
+export interface ComposerBaseConstructorParams extends ComposerBaseConstructorParamsBase {
+  readonly shouldIncludeFrontmatter: boolean;
+}
+
+export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
@@ -99,20 +103,20 @@ export abstract class ComposerBase {
 
   private readonly shouldMergeHeadings: boolean;
 
-  public constructor(options: ComposerBaseConstructorOptions, shouldIncludeFrontmatter: boolean) {
-    this.app = options.app;
-    this.pluginNoticeComponent = options.pluginNoticeComponent;
-    this.pluginSettingsComponent = options.pluginSettingsComponent;
+  public constructor(params: ComposerBaseConstructorParams) {
+    this.app = params.app;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
 
-    this.insertMode = options.insertMode ?? InsertMode.Append;
-    this.sourceFile = options.sourceFile;
-    this.shouldIncludeFrontmatter = shouldIncludeFrontmatter;
-    this.shouldFixFootnotes = options.shouldFixFootnotes ?? options.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
-    this.shouldMergeHeadings = options.shouldMergeHeadings ?? options.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
-    this.frontmatterMergeStrategy = options.frontmatterMergeStrategy ?? options.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
-    this.shouldShowNotice = options.shouldShowNotice ?? true;
-    this.targetFile = options.targetFile;
-    this.isNewTargetFile = options.isNewTargetFile;
+    this.insertMode = params.insertMode ?? InsertMode.Append;
+    this.sourceFile = params.sourceFile;
+    this.shouldIncludeFrontmatter = params.shouldIncludeFrontmatter;
+    this.shouldFixFootnotes = params.shouldFixFootnotes ?? params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
+    this.shouldMergeHeadings = params.shouldMergeHeadings ?? params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.shouldShowNotice = params.shouldShowNotice ?? true;
+    this.targetFile = params.targetFile;
+    this.isNewTargetFile = params.isNewTargetFile;
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {

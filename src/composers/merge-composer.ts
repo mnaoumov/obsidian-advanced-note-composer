@@ -13,14 +13,14 @@ import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
-  ComposerBaseConstructorOptions,
+  ComposerBaseConstructorParamsBase,
   Selection
 } from './composer-base.ts';
 
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
-interface MergeComposerConstructorParams extends ComposerBaseConstructorOptions {
+interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -29,7 +29,10 @@ export class MergeComposer extends ComposerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
 
   public constructor(params: MergeComposerConstructorParams) {
-    super(params, true);
+    super({
+      ...params,
+      shouldIncludeFrontmatter: true
+    });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
   }

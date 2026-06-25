@@ -10,7 +10,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type {
-  ComposerBaseConstructorOptions,
+  ComposerBaseConstructorParamsBase,
   Selection
 } from './composer-base.ts';
 
@@ -20,7 +20,7 @@ import {
 } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
-interface SplitComposerConstructorParams extends ComposerBaseConstructorOptions {
+interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;
@@ -34,7 +34,10 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
 
   public constructor(params: SplitComposerConstructorParams) {
-    super(params, params.shouldIncludeFrontmatter ?? params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault);
+    super({
+      ...params,
+      shouldIncludeFrontmatter: params.shouldIncludeFrontmatter ?? params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault
+    });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
