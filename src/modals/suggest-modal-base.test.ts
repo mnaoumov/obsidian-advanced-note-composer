@@ -34,6 +34,12 @@ interface OnInputable {
   onInput(): void;
 }
 
+interface TestableSuggestModalBase {
+  shouldShowAlias: boolean;
+  shouldShowMarkdown: boolean;
+  shouldShowNonFileBookmarks: boolean;
+}
+
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
   addPluginCssClasses: vi.fn()
 }));
@@ -360,7 +366,7 @@ describe('SuggestModalBase', () => {
         frontmatter: { aliases: ['My Alias'] }
       }));
       const modal = createTestSuggestModal(plugin, sourceFile);
-      modal['shouldShowAlias'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowAlias = true;
       const suggestions = modal.getSuggestions('alias');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -377,7 +383,7 @@ describe('SuggestModalBase', () => {
       }));
       vi.mocked(plugin.app.metadataCache.isUserIgnored).mockReturnValue(true);
       const modal = createTestSuggestModal(plugin, sourceFile);
-      modal['shouldShowAlias'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowAlias = true;
       const suggestions = modal.getSuggestions('alias');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -427,7 +433,7 @@ describe('SuggestModalBase', () => {
       };
       plugin = createMockPlugin({ bookmarksPlugin });
       const modal = createTestSuggestModal(plugin, sourceFile);
-      modal['shouldShowNonFileBookmarks'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowNonFileBookmarks = true;
       const suggestions = modal.getSuggestions('bookmark');
       expect(Array.isArray(suggestions)).toBe(true);
     });
@@ -684,7 +690,7 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
-      modal['shouldShowMarkdown'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowMarkdown = true;
       modal.inputEl.value = 'test';
 
       // Mock ctaEl and chooser
@@ -725,7 +731,7 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
-      modal['shouldShowMarkdown'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowMarkdown = true;
       modal.inputEl.value = 'test';
 
       const ctaEl = createDiv();
@@ -768,7 +774,7 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
-      modal['shouldShowMarkdown'] = true;
+      castTo<TestableSuggestModalBase>(modal).shouldShowMarkdown = true;
       modal.inputEl.value = 'New Note';
 
       const chooser = {

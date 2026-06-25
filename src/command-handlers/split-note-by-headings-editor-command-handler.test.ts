@@ -24,7 +24,6 @@ import {
 } from 'vitest';
 
 import type { Level } from '../markdown-heading-document.ts';
-import type { PrepareForSplitFileResult } from '../modals/split-file-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
@@ -32,6 +31,8 @@ import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './split-note-by-headings-editor-command-handler.ts';
+
+type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
 
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;

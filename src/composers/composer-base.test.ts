@@ -32,7 +32,6 @@ import {
   vi
 } from 'vitest';
 
-import type { MarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type {
@@ -56,6 +55,13 @@ interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
+type MarkdownHeadingDocument = Awaited<ReturnType<typeof parseMarkdownHeadingDocument>>;
+
+interface TestableComposerBase {
+  canIncludeFrontmatter(): Promise<boolean>;
+  isPathIgnored(path: string): boolean;
 }
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
@@ -101,7 +107,7 @@ class TestComposer extends ComposerBase {
   }
 
   public async callCanIncludeFrontmatter(): Promise<boolean> {
-    return this.canIncludeFrontmatter();
+    return castTo<TestableComposerBase>(this).canIncludeFrontmatter();
   }
 
   public async callCheckTargetFileIgnored(): Promise<boolean> {
@@ -117,7 +123,7 @@ class TestComposer extends ComposerBase {
   }
 
   public callIsPathIgnored(path: string): boolean {
-    return this.isPathIgnored(path);
+    return castTo<TestableComposerBase>(this).isPathIgnored(path);
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Base class requires async.
