@@ -113,30 +113,6 @@ export abstract class ComposerBase {
     this.isNewTargetFile = options.isNewTargetFile;
   }
 
-  public async canIncludeFrontmatter(): Promise<boolean> {
-    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
-
-    if (!sourceCache?.frontmatterPosition) {
-      return false;
-    }
-
-    const selections = await this.getSelections();
-
-    if (!selections[0]) {
-      return false;
-    }
-
-    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
-      return false;
-    }
-
-    return true;
-  }
-
-  public isPathIgnored(path: string): boolean {
-    return this.pluginSettingsComponent.settings.isPathIgnored(path);
-  }
-
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
     if (this.isPathIgnored(this.targetFile.path)) {
       new Notice(
@@ -177,11 +153,11 @@ export abstract class ComposerBase {
     }
   }
 
-  /* v8 ignore stop */
-
   protected abstract getSelections(): Promise<Selection[]>;
 
   protected abstract getTemplate(): string;
+
+  /* v8 ignore stop */
 
   protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
@@ -281,7 +257,25 @@ export abstract class ComposerBase {
     });
   }
 
-  /* v8 ignore stop */
+  private async canIncludeFrontmatter(): Promise<boolean> {
+    const sourceCache = await getCacheSafe(this.app, this.sourceFile);
+
+    if (!sourceCache?.frontmatterPosition) {
+      return false;
+    }
+
+    const selections = await this.getSelections();
+
+    if (!selections[0]) {
+      return false;
+    }
+
+    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
+      return false;
+    }
+
+    return true;
+  }
 
   private extractFrontmatter(str: string): ExtractFrontmatterResult {
     if (this.frontmatterMergeStrategy === FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
@@ -299,6 +293,8 @@ export abstract class ComposerBase {
       frontmatter
     };
   }
+
+  /* v8 ignore stop */
 
   /* v8 ignore start -- fixFootnotes contains many defensive ?? and ?. on regex groups and cache properties. */
   private async fixFootnotes(targetContentToInsert: string): Promise<string> {
@@ -357,8 +353,6 @@ export abstract class ComposerBase {
     return targetContentToInsert;
   }
 
-  /* v8 ignore stop */
-
   private async fixLinks(targetContentToInsert: string): Promise<string> {
     return await updateLinksInContent({
       app: this.app,
@@ -367,6 +361,8 @@ export abstract class ComposerBase {
       oldSourcePathOrFile: this.sourceFile
     });
   }
+
+  /* v8 ignore stop */
 
   private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
     if (!this.shouldIncludeFrontmatter) {
@@ -399,6 +395,10 @@ export abstract class ComposerBase {
       const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
       return mergedDocument.toString();
     });
+  }
+
+  private isPathIgnored(path: string): boolean {
+    return this.pluginSettingsComponent.settings.isPathIgnored(path);
   }
 
   private isSelected(position: Pos, selections: Selection[]): boolean {
