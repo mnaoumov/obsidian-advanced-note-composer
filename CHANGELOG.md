@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.11
+
+- refactor: notices
+
 ## 3.26.10
 
 - chore: update libs
