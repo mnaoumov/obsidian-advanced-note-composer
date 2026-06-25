@@ -3,8 +3,8 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -33,11 +33,6 @@ interface TestableHandler {
   shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean;
 }
 
-vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
-  Notice: vi.fn()
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
@@ -56,12 +51,12 @@ vi.mock('../swapper.ts', () => ({
 
 const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
-const MockNotice = vi.mocked(Notice);
 const mockSelectFileForSwap = vi.mocked(selectFileForSwap);
 const mockSwap = vi.mocked(swap);
 
 interface SwapFileCommandHandlerConstructorParams {
   readonly app: App;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -72,6 +67,7 @@ function createMockFile(): TFile {
 function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): SwapFileCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({}),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -115,7 +111,7 @@ describe('SwapFileCommandHandler', () => {
 
     await handler.executeFile(file);
 
-    expect(MockNotice).toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockSelectFileForSwap).not.toHaveBeenCalled();
   });
 

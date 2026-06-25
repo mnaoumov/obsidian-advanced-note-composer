@@ -3,8 +3,8 @@ import type {
   TFolder,
   WorkspaceLeaf
 } from 'obsidian';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -16,11 +16,13 @@ import { swap } from '../swapper.ts';
 
 interface SwapFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 export class SwapFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: SwapFolderCommandHandlerConstructorParams) {
@@ -32,6 +34,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -42,7 +45,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
     if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
-      new Notice(
+      this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap folder ');
           f.appendChild(await renderInternalLink(this.app, folder));

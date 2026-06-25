@@ -5,8 +5,8 @@ import type {
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -37,11 +37,6 @@ interface TestableHandler {
   shouldAddToEditorMenu(): boolean;
 }
 
-vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
-  Notice: vi.fn()
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
@@ -65,11 +60,11 @@ const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const MockSplitComposer = vi.mocked(SplitComposer);
-const MockNotice = vi.mocked(Notice);
 
 interface HandlerParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -96,6 +91,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn()
     }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -152,7 +148,7 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
 
     await handler.executeEditor(editor, ctx);
 
-    expect(MockNotice).toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
 
@@ -209,6 +205,7 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
       insertMode: 'append',
       isMultipleSplit: false,
       isNewTargetFile: true,
+      pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
       shouldFixFootnotes: true,
       shouldIncludeFrontmatter: false,

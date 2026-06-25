@@ -8,8 +8,8 @@ import type {
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -44,11 +44,6 @@ interface TestableHandler {
   shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
 }
 
-vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
-  Notice: vi.fn()
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
@@ -80,7 +75,6 @@ const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const MockSplitComposer = vi.mocked(SplitComposer);
-const MockNotice = vi.mocked(Notice);
 const mockGetCacheSafe = vi.mocked(getCacheSafe);
 const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 
@@ -88,6 +82,7 @@ interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly headingLevel: Level;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -125,6 +120,7 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     headingLevel,
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -244,7 +240,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
 
     await handler.executeEditor(editor, ctx);
 
-    expect(MockNotice).toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
   });
 
@@ -304,7 +300,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
 
     await handler.executeEditor(editor, ctx);
 
-    expect(MockNotice).toHaveBeenCalledWith('Failed to find heading');
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Failed to find heading');
   });
 
   it('should return when prepareForSplitFile returns null', async () => {
@@ -372,6 +368,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       heading: 'My Heading',
       isMultipleSplit: true,
       isNewTargetFile: true,
+      pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
       sourceFile: file,
       targetFile
