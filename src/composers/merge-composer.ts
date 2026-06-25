@@ -40,7 +40,7 @@ export class MergeComposer extends ComposerBase {
     }
 
     const notice: Notice | null = this.shouldShowNotice
-      ? new Notice(
+      ? this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('Advanced Note Composer: Merging note ');
           f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
@@ -50,7 +50,9 @@ export class MergeComposer extends ComposerBase {
           f.createEl('br');
           f.createDiv('is-loading');
         }),
-        0
+        {
+          isPermanent: true
+        }
       )
       : null;
 

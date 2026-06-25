@@ -6,7 +6,6 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
@@ -47,7 +46,7 @@ export class SplitComposer extends ComposerBase {
       return;
     }
 
-    const notice = new Notice(
+    const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Splitting note ');
         f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
@@ -57,7 +56,9 @@ export class SplitComposer extends ComposerBase {
         f.createEl('br');
         f.createDiv('is-loading');
       }),
-      0
+      {
+        isPermanent: true
+      }
     );
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);

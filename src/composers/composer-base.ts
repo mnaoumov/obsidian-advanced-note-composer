@@ -4,6 +4,7 @@ import type {
   FrontMatterInfo,
   Pos
 } from 'obsidian';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
@@ -11,7 +12,6 @@ import {
   Editor,
   getFrontMatterInfo,
   moment as moment_,
-  Notice,
   parseLinktext,
   parseYaml,
   stringifyYaml,
@@ -54,10 +54,10 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorOptions {
   readonly app: App;
-
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
   readonly isNewTargetFile: boolean;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
 
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldFixFootnotes?: boolean;
@@ -86,6 +86,7 @@ export abstract class ComposerBase {
   protected readonly app: App;
   protected readonly isNewTargetFile: boolean;
 
+  protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
@@ -100,6 +101,7 @@ export abstract class ComposerBase {
 
   public constructor(options: ComposerBaseConstructorOptions, shouldIncludeFrontmatter: boolean) {
     this.app = options.app;
+    this.pluginNoticeComponent = options.pluginNoticeComponent;
     this.pluginSettingsComponent = options.pluginSettingsComponent;
 
     this.insertMode = options.insertMode ?? InsertMode.Append;
@@ -115,7 +117,7 @@ export abstract class ComposerBase {
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
     if (this.isPathIgnored(this.targetFile.path)) {
-      new Notice(
+      this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText(`You cannot ${action} into `);
           f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
@@ -199,7 +201,7 @@ export abstract class ComposerBase {
     const updatedLinks = new Set<string>();
     await this.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
     if (updatedLinks.size > 0) {
-      new Notice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
+      this.pluginNoticeComponent.showNotice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
 
     if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
@@ -209,7 +211,7 @@ export abstract class ComposerBase {
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       if (this.shouldShowNotice) {
-        new Notice(createFragment((f) => {
+        this.pluginNoticeComponent.showNotice(createFragment((f) => {
           f.appendText('Advanced Note Composer: You have enabled setting ');
           appendCodeBlock(f, 'Should run templater on destination file');
           f.appendText(', but Templater plugin is not installed.');

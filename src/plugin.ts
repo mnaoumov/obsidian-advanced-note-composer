@@ -54,39 +54,47 @@ export class Plugin extends PluginBase {
           new MergeFileCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new SwapFileCommandHandler({
             app: this.app,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new SwapFolderCommandHandler({
             app: this.app,
+            pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           ...HEADING_LEVELS.flatMap((headingLevel) => [
@@ -94,12 +102,14 @@ export class Plugin extends PluginBase {
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
               headingLevel,
+              pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
             }),
             new SplitNoteByHeadingsContentEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
               headingLevel,
+              pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
             })
           ])

@@ -4,8 +4,8 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
@@ -39,11 +39,6 @@ interface TestableHandler {
   shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean;
 }
 
-vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
-  Notice: vi.fn()
-}));
-
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
@@ -71,12 +66,12 @@ const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForMergeFile = vi.mocked(prepareForMergeFile);
 const MockMergeComposer = vi.mocked(MergeComposer);
-const MockNotice = vi.mocked(Notice);
 const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
 
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -88,6 +83,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -151,7 +147,7 @@ describe('MergeFileCommandHandler', () => {
 
     await handler.executeFile(file);
 
-    expect(MockNotice).toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockPrepareForMergeFile).not.toHaveBeenCalled();
   });
 
@@ -196,6 +192,7 @@ describe('MergeFileCommandHandler', () => {
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isNewTargetFile: true,
+      pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
       shouldFixFootnotes: true,
       shouldMergeHeadings: false,

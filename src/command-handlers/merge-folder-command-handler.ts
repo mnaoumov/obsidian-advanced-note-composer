@@ -6,11 +6,9 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import {
-  Notice,
-  Vault
-} from 'obsidian';
+import { Vault } from 'obsidian';
 import {
   appendCodeBlock,
   createFragmentAsync
@@ -45,12 +43,14 @@ import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.t
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: MergeFolderCommandHandlerConstructorParams) {
@@ -64,6 +64,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -74,7 +75,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
     if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
-      new Notice(
+      this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
           f.appendChild(await renderInternalLink(this.app, folder));
@@ -107,7 +108,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   private async mergeFolder(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
-    const notice = new Notice(
+    const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
         f.appendChild(await renderInternalLink(this.app, sourceFolder.path));
@@ -117,7 +118,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         f.createEl('br');
         f.createDiv('is-loading');
       }),
-      0
+      {
+        isPermanent: true
+      }
     );
 
     try {
@@ -178,6 +181,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         isNewTargetFile,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
         shouldShowNotice: false,
         sourceFile: sourceMdFile,
@@ -217,7 +221,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
-      new Notice(createFragment((f) => {
+      this.pluginNoticeComponent.showNotice(createFragment((f) => {
         f.appendText('Advanced Note Composer: You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
         f.appendText(', but Templater plugin is not installed.');

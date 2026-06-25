@@ -5,8 +5,8 @@ import type {
   MarkdownFileInfo
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -23,6 +23,7 @@ interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly headingLevel: Level;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -30,6 +31,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly headingLevel: Level;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams) {
@@ -42,6 +44,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.headingLevel = params.headingLevel;
   }
@@ -69,7 +72,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       return;
     }
     if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
-      new Notice(
+      this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');
           f.appendChild(await renderInternalLink(this.app, file));
@@ -95,7 +98,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       }
       const headingInfo = getSelectionUnderHeading(this.app, file, editor, heading.position.start.line);
       if (!headingInfo) {
-        new Notice('Failed to find heading');
+        this.pluginNoticeComponent.showNotice('Failed to find heading');
         return;
       }
       const splitStart: EditorPosition = { ch: 0, line: heading.position.end.line + 1 };
@@ -118,6 +121,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         heading: headingInfo.heading,
         isMultipleSplit: true,
         isNewTargetFile: result.isNewTargetFile,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
         sourceFile: file,
         targetFile: result.targetFile

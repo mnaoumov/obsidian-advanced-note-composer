@@ -5,8 +5,8 @@ import type {
   MarkdownFileInfo
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { Notice } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -21,6 +21,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -28,6 +29,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private headingInfo?: HeadingInfo;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: ExtractThisHeadingEditorCommandHandlerConstructorParams) {
@@ -40,6 +42,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -71,7 +74,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return;
     }
     if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
-      new Notice(
+      this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');
           f.appendChild(await renderInternalLink(this.app, file));
@@ -101,6 +104,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
+      pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,

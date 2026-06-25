@@ -1,6 +1,7 @@
 import type {
   App,
   MetadataCache,
+  Notice,
   TAbstractFile,
   TFile,
   TFolder,
@@ -8,12 +9,10 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { MockInstance } from 'vitest';
 
-import {
-  Notice,
-  Vault as VaultClass
-} from 'obsidian';
+import { Vault as VaultClass } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
@@ -58,8 +57,7 @@ interface TestableHandler {
 }
 
 vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
-  Notice: vi.fn()
+  ...await importOriginal<typeof import('obsidian')>()
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -102,7 +100,6 @@ vi.mock('../modals/merge-folder-modal.ts', () => ({
 const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMergeFolder);
-const MockNotice = vi.mocked(Notice);
 const MockMergeComposer = vi.mocked(MergeComposer);
 let mockRecurseChildren: MockInstance<typeof VaultClass.recurseChildren>;
 const mockIsFile = vi.mocked(isFile);
@@ -126,6 +123,7 @@ interface CreateMockPluginParams {
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -159,6 +157,7 @@ function createMockParams(params: CreateMockPluginParams = {}): MergeFolderComma
       vault: strictProxy<Vault>({})
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
@@ -218,7 +217,7 @@ describe('MergeFolderCommandHandler', () => {
 
     await handler.executeFolder(folder);
 
-    expect(MockNotice).toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockSelectTargetFolder).not.toHaveBeenCalled();
   });
 
@@ -243,10 +242,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -279,10 +275,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -340,10 +333,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -383,10 +373,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -430,10 +417,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -472,10 +456,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -496,7 +477,7 @@ describe('MergeFolderCommandHandler', () => {
 
     await handler.executeFolder(sourceFolder);
 
-    expect(MockNotice).toHaveBeenCalledTimes(2);
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledTimes(2);
   });
 
   it('should not show templater notice when templater is installed', async () => {
@@ -508,10 +489,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -532,7 +510,7 @@ describe('MergeFolderCommandHandler', () => {
 
     await handler.executeFolder(sourceFolder);
 
-    expect(MockNotice).toHaveBeenCalledTimes(1);
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledTimes(1);
   });
 
   it('should sort md files by depth ascending when source is child of target', async () => {
@@ -544,10 +522,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -622,10 +597,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -656,10 +628,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
@@ -698,10 +667,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(targetFolder);
 
     const noticeHide = vi.fn();
-    // eslint-disable-next-line prefer-arrow-callback -- Arrow functions cannot be used as constructors with `new`.
-    MockNotice.mockImplementation(function mockNoticeConstructor() {
-      return strictProxy<Notice>({ hide: noticeHide });
-    });
+    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
 
     const mockNoticeFragment = strictProxy<DocumentFragment>({
       appendChild: vi.fn(),
