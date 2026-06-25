@@ -36,7 +36,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type {
-  ComposerBaseConstructorOptions,
+  ComposerBaseConstructorParamsBase,
   Selection
 } from './composer-base.ts';
 
@@ -95,6 +95,10 @@ vi.mock('../markdown-heading-document.ts', () => ({
   parseMarkdownHeadingDocument: vi.fn()
 }));
 
+interface TestComposerConstructorParams extends ComposerBaseConstructorParamsBase {
+  readonly shouldIncludeFrontmatter?: boolean;
+}
+
 class TestComposer extends ComposerBase {
   public backlinkSubpaths = new Set<string>();
   public selectionsToReturn: Selection[] = [];
@@ -104,8 +108,11 @@ class TestComposer extends ComposerBase {
     return this.app;
   }
 
-  public constructor(options: ComposerBaseConstructorOptions, shouldIncludeFrontmatter = false) {
-    super(options, shouldIncludeFrontmatter);
+  public constructor(params: TestComposerConstructorParams) {
+    super({
+      shouldIncludeFrontmatter: false,
+      ...params
+    });
   }
 
   public async callCanIncludeFrontmatter(): Promise<boolean> {
@@ -147,9 +154,10 @@ function createComposer(settingsOverrides?: Partial<PluginSettings>, shouldInclu
   return new TestComposer({
     ...deps,
     isNewTargetFile: false,
+    shouldIncludeFrontmatter,
     sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
     targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
-  }, shouldIncludeFrontmatter);
+  });
 }
 
 function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
@@ -930,9 +938,10 @@ describe('includeFrontmatter', () => {
     const composer = new TestComposer({
       isNewTargetFile: false,
       ...deps,
+      shouldIncludeFrontmatter: true,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
-    }, true);
+    });
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 50 }];
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(castTo<CachedMetadata>({
