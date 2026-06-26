@@ -38,7 +38,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should allow only current folder')
           .setDesc('Default setting for whether to allow only current folder for destination file selector. Can be changed in the merge/split modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAllowOnlyCurrentFolderByDefault');
+            this.bind({ propertyName: 'shouldAllowOnlyCurrentFolderByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -66,7 +66,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should fix footnotes')
           .setDesc('Default setting for whether to fix footnotes. Can be changed in the merge/split modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldFixFootnotesByDefault');
+            this.bind({ propertyName: 'shouldFixFootnotesByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -74,7 +74,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should merge headings')
           .setDesc('Default setting for whether to merge headings. Can be changed in the merge/split modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldMergeHeadingsByDefault');
+            this.bind({ propertyName: 'shouldMergeHeadingsByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -110,7 +110,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
               /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
             });
-            this.bind(dropdown, 'defaultFrontmatterMergeStrategy');
+            this.bind({ propertyName: 'defaultFrontmatterMergeStrategy', valueComponent: dropdown });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -122,7 +122,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText(' on the destination file after merging/splitting.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldRunTemplaterOnDestinationFile');
+            this.bind({ propertyName: 'shouldRunTemplaterOnDestinationFile', valueComponent: toggle });
           });
       });
 
@@ -137,10 +137,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('If disabled, the error will be shown for invalid titles.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldReplaceInvalidTitleCharacters', {
+            this.bind({
               onChanged: () => {
                 this.displayLegacy();
-              }
+              },
+              propertyName: 'shouldReplaceInvalidTitleCharacters',
+              valueComponent: toggle
             });
           });
       })
@@ -153,8 +155,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('Leave blank to remove invalid characters.');
           }))
           .addText((text) => {
-            this.bind(text, 'replacement', {
-              shouldResetSettingWhenComponentIsEmpty: false
+            this.bind({
+              propertyName: 'replacement',
+              shouldResetSettingWhenComponentIsEmpty: false,
+              valueComponent: text
             });
             text.setDisabled(!this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters);
           });
@@ -164,7 +168,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should add invalid title to note aliases')
           .setDesc('Whether to add invalid title to the note alias.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAddInvalidTitleToNoteAlias');
+            this.bind({ propertyName: 'shouldAddInvalidTitleToNoteAlias', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -190,7 +194,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               [FrontmatterTitleMode.UseAlways]: 'Use always'
               /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
             });
-            this.bind(dropdown, 'frontmatterTitleMode');
+            this.bind({ propertyName: 'frontmatterTitleMode', valueComponent: dropdown });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -216,7 +220,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText(' commands, the setting will be treated as disabled.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldTreatTitleAsPathByDefault');
+            this.bind({ propertyName: 'shouldTreatTitleAsPathByDefault', valueComponent: toggle });
           });
       });
 
@@ -227,7 +231,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should open note after merge')
           .setDesc('Whether to open the note after merge.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldOpenNoteAfterMerge');
+            this.bind({ propertyName: 'shouldOpenNoteAfterMerge', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -235,7 +239,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should ask before merging')
           .setDesc('Whether to ask before merging notes.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAskBeforeMerging');
+            this.bind({ propertyName: 'shouldAskBeforeMerging', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -248,9 +252,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }))
           .addCodeHighlighter((codeHighlighter) => {
             codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-            this.bind(codeHighlighter, 'mergeTemplate', {
+            this.bind({
+              propertyName: 'mergeTemplate',
               shouldResetSettingWhenComponentIsEmpty: true,
-              shouldShowPlaceholderForDefaultValues: false
+              shouldShowPlaceholderForDefaultValues: false,
+              valueComponent: codeHighlighter
             });
           });
       });
@@ -262,7 +268,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should ask before splitting')
           .setDesc('Whether to ask before splitting notes.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAskBeforeSplitting');
+            this.bind({ propertyName: 'shouldAskBeforeSplitting', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -276,7 +282,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('If disabled, the source note will stay opened after splitting.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldOpenTargetNoteAfterSplit');
+            this.bind({ propertyName: 'shouldOpenTargetNoteAfterSplit', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -291,7 +297,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               [TextAfterExtractionMode.None]: 'None'
               /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
             });
-            this.bind(dropdown, 'textAfterExtractionMode');
+            this.bind({ propertyName: 'textAfterExtractionMode', valueComponent: dropdown });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -299,7 +305,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should include frontmatter when splitting')
           .setDesc('Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldIncludeFrontmatterWhenSplittingByDefault');
+            this.bind({ propertyName: 'shouldIncludeFrontmatterWhenSplittingByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -317,7 +323,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAllowSplitIntoUnresolvedPathByDefault');
+            this.bind({ propertyName: 'shouldAllowSplitIntoUnresolvedPathByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -334,7 +340,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }))
           .addCodeHighlighter((codeHighlighter) => {
             codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-            this.bind(codeHighlighter, 'splitTemplate');
+            this.bind({ propertyName: 'splitTemplate', valueComponent: codeHighlighter });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -346,7 +352,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               [Action.Merge]: 'Merge',
               [Action.Split]: 'Split'
             });
-            this.bind(dropdown, 'splitToExistingFileTemplate');
+            this.bind({ propertyName: 'splitToExistingFileTemplate', valueComponent: dropdown });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -354,7 +360,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should keep headings when splitting content')
           .setDesc('Whether to keep headings when splitting content.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldKeepHeadingsWhenSplittingContent');
+            this.bind({ propertyName: 'shouldKeepHeadingsWhenSplittingContent', valueComponent: toggle });
           });
       });
 
@@ -374,7 +380,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('If the setting is empty, all notes are included');
           }))
           .addMultipleText((multipleText) => {
-            this.bind(multipleText, 'includePaths');
+            this.bind({ propertyName: 'includePaths', valueComponent: multipleText });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -391,7 +397,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('If the setting is empty, no notes are excluded');
           }))
           .addMultipleText((multipleText) => {
-            this.bind(multipleText, 'excludePaths');
+            this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
           });
       });
 
@@ -402,7 +408,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should include child folders when merging folders')
           .setDesc('Default setting for whether to include child folders into the merge folder modal. Can be changed in the merge folders modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldIncludeChildFoldersWhenMergingByDefault');
+            this.bind({ propertyName: 'shouldIncludeChildFoldersWhenMergingByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -410,7 +416,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should include parent folders when merging folders')
           .setDesc('Default setting for whether to include parent folders into the merge folder modal. Can be changed in the merge folders modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldIncludeParentFoldersWhenMergingByDefault');
+            this.bind({ propertyName: 'shouldIncludeParentFoldersWhenMergingByDefault', valueComponent: toggle });
           });
       });
 
@@ -421,7 +427,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should include child folders when swapping folders')
           .setDesc('Default setting for whether to include child folders into the swap folder modal. Can be changed in the swap folders modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldIncludeChildFoldersWhenSwappingByDefault');
+            this.bind({ propertyName: 'shouldIncludeChildFoldersWhenSwappingByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -429,7 +435,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should include parent folders when swapping folders')
           .setDesc('Default setting for whether to include parent folders into the swap folder modal. Can be changed in the swap folders modal dialog.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldIncludeParentFoldersWhenSwappingByDefault');
+            this.bind({ propertyName: 'shouldIncludeParentFoldersWhenSwappingByDefault', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {
@@ -443,7 +449,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('If disabled, only the top-level files of the folders will be swapped.');
           }))
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldSwapEntireFolderStructureByDefault');
+            this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
           });
       });
 
@@ -454,7 +460,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setName('Should add commands to submenu')
           .setDesc('Whether to add commands to the submenu.')
           .addToggle((toggle) => {
-            this.bind(toggle, 'shouldAddCommandsToSubmenu');
+            this.bind({ propertyName: 'shouldAddCommandsToSubmenu', valueComponent: toggle });
           });
       });
   }

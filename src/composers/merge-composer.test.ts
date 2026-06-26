@@ -295,7 +295,7 @@ describe('MergeComposer fixBacklinks', () => {
     });
 
     // Set up editLinks to call the callback with a link pointing to source
-    vi.mocked(editLinks).mockImplementation(async (_app, pathOrFile, callback) => {
+    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback, pathOrFile }) => {
       if (pathOrFile === targetFile || (typeof pathOrFile === 'string' && pathOrFile === 'target.md')) {
         const link = { link: 'source', original: '[[source]]' };
         vi.mocked(extractLinkFile).mockReturnValue(sourceFile);
@@ -311,7 +311,7 @@ describe('MergeComposer fixBacklinks', () => {
 
     // EditLinks should be called for the target file (self-link fix)
     const editLinksCalls = vi.mocked(editLinks).mock.calls;
-    const targetFileCalls = editLinksCalls.filter((call) => call[1] === targetFile);
+    const targetFileCalls = editLinksCalls.filter((call) => call[0].pathOrFile === targetFile);
     expect(targetFileCalls.length).toBeGreaterThan(0);
   });
 });
@@ -374,7 +374,7 @@ describe('MergeComposer prepareBacklinkSubpaths', () => {
     backlinkMap.set('other.md', [{ link: 'source' }]);
     vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(backlinkMap));
 
-    vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
+    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback }) => {
       await callback(castTo<Reference>({ link: 'source' }));
     });
     vi.mocked(updateLink).mockReturnValue('updated');

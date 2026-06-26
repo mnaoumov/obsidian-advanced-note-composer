@@ -5,9 +5,9 @@ import type {
   TAbstractFile,
   TFile,
   TFolder,
-  Vault,
-  WorkspaceLeaf
+  Vault
 } from 'obsidian';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { MockInstance } from 'vitest';
@@ -53,7 +53,7 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
+  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
 }
 
 vi.mock('obsidian', async (importOriginal) => ({
@@ -395,7 +395,7 @@ describe('MergeFolderCommandHandler', () => {
     mockIsFolder.mockImplementation((f) => f === subfolder);
     mockIsFile.mockReturnValue(false);
     mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/sub' }));
-    mockIsChildOrSelf.mockImplementation((_app, targetPath, sourceSubfolder) => {
+    mockIsChildOrSelf.mockImplementation(({ childPathOrFile: targetPath, parentPathOrFile: sourceSubfolder }) => {
       if (targetPath === 'target/sub' && sourceSubfolder === subfolder) {
         return true;
       }
@@ -585,7 +585,7 @@ describe('MergeFolderCommandHandler', () => {
     const params = createMockParams();
     const handler = toTestable(new MergeFolderCommandHandler(params));
     const folder = createMockFolder('test/folder');
-    expect(handler.shouldAddToFolderMenu(folder, 'source')).toBe(true);
+    expect(handler.shouldAddToFolderMenu({ folder, source: 'source' })).toBe(true);
   });
 
   it('should hide notice even when mergeFolderImpl throws', async () => {

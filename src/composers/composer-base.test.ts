@@ -487,7 +487,7 @@ describe('insertIntoTargetFile', () => {
       .mockResolvedValueOnce(castTo<MarkdownHeadingDocument>(mockContentDoc));
 
     // Make processVault actually call the callback
-    vi.mocked(processVault).mockImplementation(async (_app, _file, callback) => {
+    vi.mocked(processVault).mockImplementation(async ({ newContentProvider: callback }) => {
       await resolveValue(callback, { content: 'existing content' });
     });
 
@@ -671,7 +671,7 @@ describe('insertIntoTargetFile', () => {
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
     vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(backlinkMap));
     const linkJson = JSON.stringify({ link: 'source' });
-    vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
+    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback }) => {
       await callback(castTo<Reference>(JSON.parse(linkJson)));
     });
     vi.mocked(updateLink).mockReturnValue('updated-link');
@@ -688,12 +688,14 @@ describe('fixBacklinks', () => {
     backlinksToFix.set('other.md', [JSON.stringify(linkObj)]);
     const updatedFilePaths = new Set<string>();
     const updatedLinks = new Set<string>();
-    vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
+    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback }) => {
       await callback(linkObj);
     });
     vi.mocked(updateLink).mockReturnValue('updated');
     await composer.callFixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
-    expect(editLinks).toHaveBeenCalledWith(expect.anything(), 'other.md', expect.any(Function));
+    const editLinksParams = vi.mocked(editLinks).mock.calls[0]?.[0];
+    expect(editLinksParams?.pathOrFile).toBe('other.md');
+    expect(typeof editLinksParams?.linkConverter).toBe('function');
     expect(updatedFilePaths.has('other.md')).toBe(true);
     expect(updatedLinks.size).toBe(1);
   });
@@ -706,7 +708,7 @@ describe('fixBacklinks', () => {
     backlinksToFix.set('other.md', [JSON.stringify(linkObj)]);
     const updatedFilePaths = new Set<string>();
     const updatedLinks = new Set<string>();
-    vi.mocked(editLinks).mockImplementation(async (_app, _path, callback) => {
+    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback }) => {
       await callback(otherLinkObj);
     });
     await composer.callFixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);

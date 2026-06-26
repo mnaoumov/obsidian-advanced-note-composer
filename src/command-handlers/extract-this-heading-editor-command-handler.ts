@@ -77,7 +77,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');
-          f.appendChild(await renderInternalLink(this.app, file));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );

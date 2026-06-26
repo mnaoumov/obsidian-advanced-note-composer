@@ -112,8 +112,8 @@ class MarkdownHeadingNode {
       children[index] = children[index].append(child);
     }
 
-    const trimText = trimEnd(this.text, '\n');
-    const trimDocText = trimStart(doc.text, '\n');
+    const trimText = trimEnd({ str: this.text, suffix: '\n' });
+    const trimDocText = trimStart({ prefix: '\n', str: doc.text });
 
     const mergedText = trimText && trimDocText ? `${trimText}\n${trimDocText}` : trimText || trimDocText || '';
 

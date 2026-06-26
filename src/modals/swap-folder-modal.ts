@@ -159,10 +159,10 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (folder === this.sourceFolder) {
       return false;
     }
-    if (!this.shouldIncludeParentFolders && isChildOrSelf(this.app, this.sourceFolder, folder)) {
+    if (!this.shouldIncludeParentFolders && isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFolder, parentPathOrFile: folder })) {
       return false;
     }
-    if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
+    if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {
       return false;
     }
     return !this.pluginSettingsComponent.settings.isPathIgnored(folder.path);

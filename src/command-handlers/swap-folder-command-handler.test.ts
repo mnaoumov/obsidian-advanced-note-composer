@@ -1,8 +1,8 @@
 import type {
   App,
-  TFolder,
-  WorkspaceLeaf
+  TFolder
 } from 'obsidian';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -31,7 +31,7 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean;
+  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -195,6 +195,6 @@ describe('SwapFolderCommandHandler', () => {
     const params = createMockParams();
     const handler = toTestable(new SwapFolderCommandHandler(params));
     const folder = createMockFolder('test/folder');
-    expect(handler.shouldAddToFolderMenu(folder, 'source')).toBe(true);
+    expect(handler.shouldAddToFolderMenu({ folder, source: 'source' })).toBe(true);
   });
 });

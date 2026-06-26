@@ -1,8 +1,11 @@
 import type {
   App,
-  TFile,
-  WorkspaceLeaf
+  TFile
 } from 'obsidian';
+import type {
+  FileCommandHandlerShouldAddToFileMenuParams,
+  FileCommandHandlerShouldAddToFilesMenuParams
+} from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
@@ -35,8 +38,8 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFileMenu(file: TFile, source: string): boolean;
-  shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean;
+  shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean;
+  shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -219,7 +222,7 @@ describe('MergeFileCommandHandler', () => {
     const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
-    expect(handler.shouldAddToFileMenu(file, 'link-context-menu')).toBe(false);
+    expect(handler.shouldAddToFileMenu({ file, source: 'link-context-menu' })).toBe(false);
   });
 
   it('should return true for non-link-context-menu source in shouldAddToFileMenu', () => {
@@ -227,7 +230,7 @@ describe('MergeFileCommandHandler', () => {
     const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
-    expect(handler.shouldAddToFileMenu(file, 'file-explorer-context-menu')).toBe(true);
+    expect(handler.shouldAddToFileMenu({ file, source: 'file-explorer-context-menu' })).toBe(true);
   });
 
   it('should return false from shouldAddToFilesMenu', () => {
@@ -235,6 +238,6 @@ describe('MergeFileCommandHandler', () => {
     const handler = toTestable(new MergeFileCommandHandler(params));
     const files = [createMockFile()];
 
-    expect(handler.shouldAddToFilesMenu(files, 'source')).toBe(false);
+    expect(handler.shouldAddToFilesMenu({ files, source: 'source' })).toBe(false);
   });
 });

@@ -36,9 +36,9 @@ async function swapFile(app: App, sourceFile: TFile, targetFile: TFile): Promise
   const sourceFilePath = sourceFile.path;
   const targetFilePath = targetFile.path;
   const targetFileTempPath = getAvailablePath(app, targetFilePath);
-  await renameSafe(app, sourceFilePath, targetFileTempPath);
-  await renameSafe(app, targetFile, sourceFilePath);
-  await renameSafe(app, targetFileTempPath, targetFilePath);
+  await renameSafe({ app, newPath: targetFileTempPath, oldPathOrAbstractFile: sourceFilePath });
+  await renameSafe({ app, newPath: sourceFilePath, oldPathOrAbstractFile: targetFile });
+  await renameSafe({ app, newPath: targetFilePath, oldPathOrAbstractFile: targetFileTempPath });
 }
 
 async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder, shouldSwapEntireFolderStructure: boolean): Promise<void> {
@@ -49,19 +49,19 @@ async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder
     /* v8 ignore start -- parent?.path ?? '' is defensive; folders always have a parent in practice. */
     const sourceFolderWithTargetName = join(sourceFolder.parent?.path ?? '', targetFolderName);
     /* v8 ignore stop */
-    await renameSafe(app, sourceFolder, sourceFolderWithTargetName);
+    await renameSafe({ app, newPath: sourceFolderWithTargetName, oldPathOrAbstractFile: sourceFolder });
 
     /* v8 ignore start -- parent?.path ?? '' is defensive; folders always have a parent in practice. */
     const targetFolderWithSourceName = join(targetFolder.parent?.path ?? '', sourceFolderName);
     /* v8 ignore stop */
-    await renameSafe(app, targetFolder, targetFolderWithSourceName);
+    await renameSafe({ app, newPath: targetFolderWithSourceName, oldPathOrAbstractFile: targetFolder });
 
-    if (sourceFolder.name !== targetFolderName && getFolderOrNull(app, sourceFolderWithTargetName) === null) {
-      await renameSafe(app, sourceFolder, sourceFolderWithTargetName);
+    if (sourceFolder.name !== targetFolderName && getFolderOrNull({ app, pathOrFolder: sourceFolderWithTargetName }) === null) {
+      await renameSafe({ app, newPath: sourceFolderWithTargetName, oldPathOrAbstractFile: sourceFolder });
     }
 
-    if (targetFolder.name !== sourceFolderName && getFolderOrNull(app, targetFolderWithSourceName) === null) {
-      await renameSafe(app, targetFolder, targetFolderWithSourceName);
+    if (targetFolder.name !== sourceFolderName && getFolderOrNull({ app, pathOrFolder: targetFolderWithSourceName }) === null) {
+      await renameSafe({ app, newPath: targetFolderWithSourceName, oldPathOrAbstractFile: targetFolder });
     }
   }
 
@@ -75,7 +75,7 @@ async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder
   const targetFolderPath = targetFolder.path;
 
   for (const sourceChild of sourceChildren) {
-    await renameSafe(app, sourceChild, join(tempFolder.path, sourceChild.name));
+    await renameSafe({ app, newPath: join(tempFolder.path, sourceChild.name), oldPathOrAbstractFile: sourceChild });
   }
 
   let targetChildren = Array.from(targetFolder.children);
@@ -84,22 +84,22 @@ async function swapFolder(app: App, sourceFolder: TFolder, targetFolder: TFolder
   }
 
   for (const targetChild of targetChildren) {
-    if (isChild(app, sourceFolder, targetChild)) {
+    if (isChild({ app, childPathOrFile: sourceFolder, parentPathOrFile: targetChild })) {
       continue;
     }
-    await renameSafe(app, targetChild, join(sourceFolder.path, targetChild.name));
+    await renameSafe({ app, newPath: join(sourceFolder.path, targetChild.name), oldPathOrAbstractFile: targetChild });
   }
 
   if (targetFolder.path !== targetFolderPath) {
-    await renameSafe(app, targetFolder, targetFolderPath);
+    await renameSafe({ app, newPath: targetFolderPath, oldPathOrAbstractFile: targetFolder });
   }
 
   for (const sourceChild of sourceChildren) {
-    if (!isChild(app, sourceChild, tempFolder)) {
+    if (!isChild({ app, childPathOrFile: sourceChild, parentPathOrFile: tempFolder })) {
       continue;
     }
-    await renameSafe(app, sourceChild, join(targetFolder.path, sourceChild.name));
+    await renameSafe({ app, newPath: join(targetFolder.path, sourceChild.name), oldPathOrAbstractFile: sourceChild });
   }
 
-  await deleteIfNotUsed(app, tempFolder);
+  await deleteIfNotUsed({ app, pathOrFile: tempFolder });
 }

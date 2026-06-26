@@ -122,7 +122,7 @@ describe('swap', () => {
     mockIsFolder.mockImplementation((f) => f === source || f === target);
     mockGetAvailablePath.mockReturnValue('__temp');
     mockRenameSafe.mockResolvedValue('');
-    mockIsChild.mockImplementation((_app, child, parent) => {
+    mockIsChild.mockImplementation(({ childPathOrFile: child, parentPathOrFile: parent }) => {
       if (parent === tempFolder) {
         return child === sourceChild;
       }
@@ -132,7 +132,7 @@ describe('swap', () => {
 
     await swap(app, source, target, true);
 
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 
   it('should swap folders with different names', async () => {
@@ -151,14 +151,14 @@ describe('swap', () => {
     mockIsFile.mockReturnValue(false);
     mockIsFolder.mockImplementation((f) => f === source || f === target);
     mockGetAvailablePath.mockReturnValue('__temp');
-    mockRenameSafe.mockImplementation((_app, file, newPath) => {
+    mockRenameSafe.mockImplementation(({ newPath, oldPathOrAbstractFile: file }) => {
       if (typeof file === 'object' && 'name' in file) {
         (file as NamedFile).name = newPath.split('/').pop() ?? '';
       }
       return Promise.resolve(newPath);
     });
     mockGetFolderOrNull.mockReturnValue(null);
-    mockIsChild.mockImplementation((_app, child, parent) => {
+    mockIsChild.mockImplementation(({ childPathOrFile: child, parentPathOrFile: parent }) => {
       if (parent === tempFolder) {
         return child === sourceChild;
       }
@@ -169,7 +169,7 @@ describe('swap', () => {
     await swap(app, source, target, true);
 
     expect(mockRenameSafe).toHaveBeenCalled();
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 
   it('should retry rename when folder name did not change after first rename', async () => {
@@ -199,7 +199,7 @@ describe('swap', () => {
 
     // RenameSafe should be called extra times for the retry
     expect(mockRenameSafe).toHaveBeenCalled();
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 
   it('should skip target child when isChild returns true for source and target child', async () => {
@@ -220,7 +220,7 @@ describe('swap', () => {
     mockGetAvailablePath.mockReturnValue('__temp');
     mockRenameSafe.mockResolvedValue('');
     // IsChild(app, sourceFolder, targetChild) returns true
-    mockIsChild.mockImplementation((_app, a, b) => {
+    mockIsChild.mockImplementation(({ childPathOrFile: a, parentPathOrFile: b }) => {
       if (a === source && b === targetChild) {
         return true;
       }
@@ -233,7 +233,7 @@ describe('swap', () => {
 
     await swap(app, source, target, true);
 
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 
   it('should rename target folder back when its path changed', async () => {
@@ -254,14 +254,14 @@ describe('swap', () => {
     mockGetAvailablePath.mockReturnValue('__temp');
 
     const originalTargetPath = target.path;
-    mockRenameSafe.mockImplementation((_app, file, _newPath) => {
+    mockRenameSafe.mockImplementation(({ oldPathOrAbstractFile: file }) => {
       // Simulate target folder path changing during swap
       if (file === targetChild) {
         Object.defineProperty(target, 'path', { configurable: true, value: 'changed-path' });
       }
       return Promise.resolve('');
     });
-    mockIsChild.mockImplementation((_app, child, parent) => {
+    mockIsChild.mockImplementation(({ childPathOrFile: child, parentPathOrFile: parent }) => {
       if (parent === tempFolder) {
         return child === sourceChild;
       }
@@ -273,7 +273,7 @@ describe('swap', () => {
 
     // Verify renameSafe was called to fix the target folder path
     expect(mockRenameSafe).toHaveBeenCalled();
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
 
     // Restore original path
     Object.defineProperty(target, 'path', { configurable: true, value: originalTargetPath });
@@ -302,7 +302,7 @@ describe('swap', () => {
 
     await swap(app, source, target, true);
 
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 
   it('should only swap files when shouldSwapEntireFolderStructure is false', async () => {
@@ -322,14 +322,14 @@ describe('swap', () => {
     mockIsFile.mockImplementation((f) => f === sourceFile || f === targetFile);
     mockIsFolder.mockImplementation((f) => f === source || f === target);
     mockGetAvailablePath.mockReturnValue('__temp');
-    mockRenameSafe.mockImplementation((_app, file, newPath) => {
+    mockRenameSafe.mockImplementation(({ newPath, oldPathOrAbstractFile: file }) => {
       if (typeof file === 'object' && 'name' in file) {
         (file as NamedFile).name = newPath.split('/').pop() ?? '';
       }
       return Promise.resolve(newPath);
     });
     mockGetFolderOrNull.mockReturnValue(null);
-    mockIsChild.mockImplementation((_app, child, parent) => {
+    mockIsChild.mockImplementation(({ childPathOrFile: child, parentPathOrFile: parent }) => {
       if (parent === tempFolder) {
         return child === sourceFile;
       }
@@ -339,6 +339,6 @@ describe('swap', () => {
 
     await swap(app, source, target, false);
 
-    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith(app, tempFolder);
+    expect(mockDeleteIfNotUsed).toHaveBeenCalledWith({ app, pathOrFile: tempFolder });
   });
 });

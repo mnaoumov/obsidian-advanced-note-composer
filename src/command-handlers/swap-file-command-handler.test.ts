@@ -1,8 +1,8 @@
 import type {
   App,
-  TFile,
-  WorkspaceLeaf
+  TFile
 } from 'obsidian';
+import type { FileCommandHandlerShouldAddToFileMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -30,7 +30,7 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean;
+  shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -157,6 +157,6 @@ describe('SwapFileCommandHandler', () => {
     const params = createMockParams();
     const handler = toTestable(new SwapFileCommandHandler(params));
     const file = createMockFile();
-    expect(handler.shouldAddToFileMenu(file, 'source')).toBe(true);
+    expect(handler.shouldAddToFileMenu({ file, source: 'source' })).toBe(true);
   });
 });

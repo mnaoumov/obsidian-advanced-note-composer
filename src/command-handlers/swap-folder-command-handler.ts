@@ -1,8 +1,8 @@
 import type {
   App,
-  TFolder,
-  WorkspaceLeaf
+  TFolder
 } from 'obsidian';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -48,7 +48,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap folder ');
-          f.appendChild(await renderInternalLink(this.app, folder));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -68,8 +68,9 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean {
-    super.shouldAddToFolderMenu(folder, source, leaf);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
+    super.shouldAddToFolderMenu(params);
     return true;
   }
 }

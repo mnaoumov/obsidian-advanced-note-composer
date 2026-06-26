@@ -147,12 +147,12 @@ class ConfirmDialogModal extends Modal {
         f.createEl('br');
         appendCodeBlock(f, 'Source');
         f.appendText(': ');
-        f.appendChild(await renderInternalLink(this.app, this.sourceFile));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile }));
         f.createEl('br');
         f.createEl('br');
         appendCodeBlock(f, 'Target');
         f.appendText(': ');
-        f.appendChild(await renderInternalLink(this.app, this.targetFile));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile }));
         f.createEl('br');
         f.createEl('br');
         f.createEl('h2', { text: 'Source content to split' });

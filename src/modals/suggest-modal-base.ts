@@ -306,7 +306,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       return suggestionText;
     }
 
-    suggestionText = trimStart(suggestionText, this.sourceFile.parent?.getParentPrefix() ?? '');
+    suggestionText = trimStart({ prefix: this.sourceFile.parent?.getParentPrefix() ?? '', str: suggestionText });
     return suggestionText;
   }
   /* v8 ignore stop */
@@ -469,7 +469,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 }
 
 function trimMarkdownExtension(path: string): string {
-  return trimEnd(path, '.md');
+  return trimEnd({ str: path, suffix: '.md' });
 }
 
 /* v8 ignore start -- truncatePathToLastMatch contains defensive ?. and branches for edge cases. */
