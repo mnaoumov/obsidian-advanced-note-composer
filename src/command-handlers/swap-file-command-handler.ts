@@ -1,8 +1,8 @@
 import type {
   App,
-  TFile,
-  WorkspaceLeaf
+  TFile
 } from 'obsidian';
+import type { FileCommandHandlerShouldAddToFileMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -43,7 +43,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap file ');
-          f.appendChild(await renderInternalLink(this.app, file));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -63,8 +63,9 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToFileMenu(file: TFile, source: string, leaf?: WorkspaceLeaf): boolean {
-    super.shouldAddToFileMenu(file, source, leaf);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean {
+    super.shouldAddToFileMenu(params);
     return true;
   }
 }

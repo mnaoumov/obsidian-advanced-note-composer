@@ -378,7 +378,7 @@ describe('SplitItemSelector', () => {
 
       await selector.selectItem();
 
-      expect(mockAddAlias).toHaveBeenCalledWith(app, invalidFile, 'invalid*name');
+      expect(mockAddAlias).toHaveBeenCalledWith({ alias: 'invalid*name', app, pathOrFile: invalidFile });
     });
 
     it('should not add alias when title is valid', async () => {

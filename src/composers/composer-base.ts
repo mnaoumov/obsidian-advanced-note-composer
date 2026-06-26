@@ -124,7 +124,7 @@ export abstract class ComposerBase {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText(`You cannot ${action} into `);
-          f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
           f.appendText(' because this path is not allowed in the plugin settings.');
         })
       );
@@ -138,23 +138,27 @@ export abstract class ComposerBase {
     for (const backlinkPath of backlinksToFix.keys()) {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
-      await editLinks(this.app, backlinkPath, (link) => {
-        linkIndex++;
-        if (!linkJsons.includes(JSON.stringify(link))) {
-          return;
-        }
+      await editLinks({
+        app: this.app,
+        linkConverter: (link) => {
+          linkIndex++;
+          if (!linkJsons.includes(JSON.stringify(link))) {
+            return;
+          }
 
-        updatedFilePaths.add(backlinkPath);
-        updatedLinks.add(`${backlinkPath}//${String(linkIndex)}`);
+          updatedFilePaths.add(backlinkPath);
+          updatedLinks.add(`${backlinkPath}//${String(linkIndex)}`);
 
-        return updateLink({
-          app: this.app,
-          link,
-          newSourcePathOrFile: backlinkPath,
-          newTargetPathOrFile: this.targetFile,
-          oldTargetPathOrFile: this.sourceFile,
-          shouldUpdateFileNameAlias: true
-        });
+          return updateLink({
+            app: this.app,
+            link,
+            newSourcePathOrFile: backlinkPath,
+            newTargetPathOrFile: this.targetFile,
+            oldTargetPathOrFile: this.sourceFile,
+            shouldUpdateFileNameAlias: true
+          });
+        },
+        pathOrFile: backlinkPath
       });
     }
   }
@@ -239,27 +243,31 @@ export abstract class ComposerBase {
 
   /* v8 ignore start -- applyTemplate contains defensive ?? on regex groups. */
   private applyTemplate(targetContentToInsert: string): string {
-    return replaceAll(this.getTemplate(), /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g, ({ groups }) => {
-      const key = groups?.['Key'] ?? '';
-      const format = groups?.['Format'];
-      switch (key.toLowerCase()) {
-        case 'fromPath'.toLowerCase():
-          return this.sourceFile.path;
-        case 'fromTitle'.toLowerCase():
-          return this.sourceFile.basename;
-        case 'newPath'.toLowerCase():
-          return this.targetFile.path;
-        case 'newTitle'.toLowerCase():
-          return this.targetFile.basename;
-        case 'content':
-          return targetContentToInsert;
-        case 'date':
-          return moment().format(format ?? 'YYYY-MM-DD');
-        case 'time':
-          return moment().format(format ?? 'HH:mm');
-        default:
-          throw new Error(`Invalid template key: ${key}`);
-      }
+    return replaceAll({
+      replacer: ({ groups }) => {
+        const key = groups?.['Key'] ?? '';
+        const format = groups?.['Format'];
+        switch (key.toLowerCase()) {
+          case 'fromPath'.toLowerCase():
+            return this.sourceFile.path;
+          case 'fromTitle'.toLowerCase():
+            return this.sourceFile.basename;
+          case 'newPath'.toLowerCase():
+            return this.targetFile.path;
+          case 'newTitle'.toLowerCase():
+            return this.targetFile.basename;
+          case 'content':
+            return targetContentToInsert;
+          case 'date':
+            return moment().format(format ?? 'YYYY-MM-DD');
+          case 'time':
+            return moment().format(format ?? 'HH:mm');
+          default:
+            throw new Error(`Invalid template key: ${key}`);
+        }
+      },
+      searchValue: /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g,
+      str: this.getTemplate()
     });
   }
 
@@ -349,9 +357,13 @@ export abstract class ComposerBase {
       }
     }
 
-    targetContentToInsert = replaceAll(targetContentToInsert, FOOTNOTE_ID_REG_EXP, ({ groups }) => {
-      const footnoteId = groups?.['FootnoteId'] ?? '';
-      return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
+    targetContentToInsert = replaceAll({
+      replacer: ({ groups }) => {
+        const footnoteId = groups?.['FootnoteId'] ?? '';
+        return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
+      },
+      searchValue: FOOTNOTE_ID_REG_EXP,
+      str: targetContentToInsert
     });
 
     this.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
@@ -394,12 +406,16 @@ export abstract class ComposerBase {
       return;
     }
 
-    await process(this.app, this.targetFile, async ({ content: targetFileContent }) => {
-      const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
-      const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
-      await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
-      const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
-      return mergedDocument.toString();
+    await process({
+      app: this.app,
+      newContentProvider: async ({ content: targetFileContent }) => {
+        const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
+        const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
+        await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
+        const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
+        return mergedDocument.toString();
+      },
+      pathOrFile: this.targetFile
     });
   }
 
@@ -499,7 +515,7 @@ export abstract class ComposerBase {
       subpaths.add(`#^${block.id}`);
     }
 
-    const backlinks = await getBacklinksForFileSafe(this.app, this.sourceFile);
+    const backlinks = await getBacklinksForFileSafe({ app: this.app, pathOrFile: this.sourceFile });
     const backlinksToFix = new Map<string, string[]>();
 
     for (const backlinkPath of backlinks.keys()) {

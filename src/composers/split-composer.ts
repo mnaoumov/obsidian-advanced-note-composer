@@ -52,9 +52,9 @@ export class SplitComposer extends ComposerBase {
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Splitting note ');
-        f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
         f.appendText(' into ');
-        f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');

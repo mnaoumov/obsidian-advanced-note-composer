@@ -2,9 +2,9 @@ import type {
   App,
   TAbstractFile,
   TFile,
-  TFolder,
-  WorkspaceLeaf
+  TFolder
 } from 'obsidian';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
@@ -78,7 +78,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
-          f.appendChild(await renderInternalLink(this.app, folder));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -98,8 +98,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToFolderMenu(folder: TFolder, source: string, leaf?: WorkspaceLeaf): boolean {
-    super.shouldAddToFolderMenu(folder, source, leaf);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
+    super.shouldAddToFolderMenu(params);
     return true;
   }
 
@@ -111,9 +112,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
-        f.appendChild(await renderInternalLink(this.app, sourceFolder.path));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
         f.appendText(' with ');
-        f.appendChild(await renderInternalLink(this.app, targetFolder.path));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFolder.path }));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');
@@ -162,11 +163,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       subfoldersMap.set(sourceSubfolder.path, targetSubfolder.path);
     }
 
-    if (isChildOrSelf(this.app, sourceFolder, targetFolder)) {
+    if (isChildOrSelf({ app: this.app, childPathOrFile: sourceFolder, parentPathOrFile: targetFolder })) {
       sourceMdFiles.sort((a, b) => this.depth(a) - this.depth(b));
     }
 
-    if (isChildOrSelf(this.app, targetFolder, sourceFolder)) {
+    if (isChildOrSelf({ app: this.app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
       sourceMdFiles.sort((a, b) => this.depth(b) - this.depth(a));
     }
 
@@ -175,7 +176,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
-      const isNewTargetFile = !exists(this.app, targetMdFilePath, FileSystemType.File);
+      const isNewTargetFile = !exists({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
       const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
       const composer = new MergeComposer({
         app: this.app,
@@ -196,7 +197,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       /* v8 ignore stop */
       let targetFilePath = join(targetParentFolderPath, sourceOtherFile.name);
       targetFilePath = getAvailablePath(this.app, targetFilePath);
-      await renameSafe(this.app, sourceOtherFile, targetFilePath);
+      await renameSafe({ app: this.app, newPath: targetFilePath, oldPathOrAbstractFile: sourceOtherFile });
     }
 
     for (const sourceSubfolder of sourceSubfolders) {
@@ -205,7 +206,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       }
       let canDeleteSourceFolder = true;
       for (const targetFolderPath of subfoldersMap.values()) {
-        if (isChildOrSelf(this.app, targetFolderPath, sourceSubfolder)) {
+        if (isChildOrSelf({ app: this.app, childPathOrFile: targetFolderPath, parentPathOrFile: sourceSubfolder })) {
           canDeleteSourceFolder = false;
           break;
         }

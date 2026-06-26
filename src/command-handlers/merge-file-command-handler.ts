@@ -1,8 +1,11 @@
 import type {
   App,
-  TFile,
-  WorkspaceLeaf
+  TFile
 } from 'obsidian';
+import type {
+  FileCommandHandlerShouldAddToFileMenuParams,
+  FileCommandHandlerShouldAddToFilesMenuParams
+} from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
@@ -53,7 +56,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge file ');
-          f.appendChild(await renderInternalLink(this.app, file));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -87,13 +90,15 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToFileMenu(file: TFile, source: string): boolean {
-    super.shouldAddToFileMenu(file, source);
-    return source !== 'link-context-menu';
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean {
+    super.shouldAddToFileMenu(params);
+    return params.source !== 'link-context-menu';
   }
 
-  protected override shouldAddToFilesMenu(files: TFile[], source: string, leaf?: WorkspaceLeaf): boolean {
-    super.shouldAddToFilesMenu(files, source, leaf);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean {
+    super.shouldAddToFilesMenu(params);
     return false;
   }
 }

@@ -72,7 +72,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
-    fileName = trimEnd(fileName, '.md');
+    fileName = trimEnd({ str: fileName, suffix: '.md' });
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
@@ -80,7 +80,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     const isInvalidTitle = file.basename !== fileName;
 
     if (isInvalidTitle && this.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
-      await addAlias(this.app, file, fileName);
+      await addAlias({ alias: fileName, app: this.app, pathOrFile: file });
     }
 
     let shouldAddTitleToFrontmatter = false;

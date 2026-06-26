@@ -108,12 +108,12 @@ class ConfirmDialogModal extends Modal {
         f.createEl('br');
         appendCodeBlock(f, 'Source');
         f.appendText(': ');
-        f.appendChild(await renderInternalLink(this.app, this.sourceFolder));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFolder }));
         f.createEl('br');
         f.createEl('br');
         appendCodeBlock(f, 'Target');
         f.appendText(': ');
-        f.appendChild(await renderInternalLink(this.app, this.targetFolder));
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFolder }));
       })
     );
 
@@ -266,10 +266,10 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
       return false;
     }
-    if (!this.shouldIncludeChildFolders && isChildOrSelf(this.app, folder, this.sourceFolder)) {
+    if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {
       return false;
     }
-    if (!this.shouldIncludeParentFolders && isChildOrSelf(this.app, this.sourceFolder, folder)) {
+    if (!this.shouldIncludeParentFolders && isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFolder, parentPathOrFile: folder })) {
       return false;
     }
     return true;

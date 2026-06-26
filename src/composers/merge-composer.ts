@@ -46,9 +46,9 @@ export class MergeComposer extends ComposerBase {
       ? this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('Advanced Note Composer: Merging note ');
-          f.appendChild(await renderInternalLink(this.app, this.sourceFile.path));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
           f.appendText(' with ');
-          f.appendChild(await renderInternalLink(this.app, this.targetFile.path));
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
           f.createEl('br');
           f.createEl('br');
           f.createDiv('is-loading');
@@ -81,24 +81,28 @@ export class MergeComposer extends ComposerBase {
     await super.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
 
     let linkIndex = 0;
-    await editLinks(this.app, this.targetFile, (link): MaybeReturn<string> => {
-      linkIndex++;
-      const linkFile = extractLinkFile(this.app, link, this.targetFile);
-      if (linkFile !== this.sourceFile) {
-        return;
-      }
+    await editLinks({
+      app: this.app,
+      linkConverter: (link): MaybeReturn<string> => {
+        linkIndex++;
+        const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
+        if (linkFile !== this.sourceFile) {
+          return;
+        }
 
-      updatedFilePaths.add(this.targetFile.path);
-      updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
+        updatedFilePaths.add(this.targetFile.path);
+        updatedLinks.add(`${this.targetFile.path}//${String(linkIndex)}`);
 
-      return updateLink({
-        app: this.app,
-        link,
-        newSourcePathOrFile: this.targetFile,
-        newTargetPathOrFile: this.targetFile,
-        oldTargetPathOrFile: this.sourceFile,
-        shouldUpdateFileNameAlias: true
-      });
+        return updateLink({
+          app: this.app,
+          link,
+          newSourcePathOrFile: this.targetFile,
+          newTargetPathOrFile: this.targetFile,
+          oldTargetPathOrFile: this.sourceFile,
+          shouldUpdateFileNameAlias: true
+        });
+      },
+      pathOrFile: this.targetFile
     });
   }
 
