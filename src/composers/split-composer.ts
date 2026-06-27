@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
+import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
@@ -29,8 +30,9 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 }
 
 export class SplitComposer extends ComposerBase {
+  private capturedSelections: Selection[] = [];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly editor: Editor;
+  private editor: Editor;
   private readonly isMultipleSplit: boolean;
 
   public constructor(params: SplitComposerConstructorParams) {
@@ -49,6 +51,12 @@ export class SplitComposer extends ComposerBase {
       return;
     }
 
+    // Snapshot the source selections up front as plain offset data.
+    // The operation uses this snapshot, not the live editor, so navigating the active leaf
+    // (e.g. clicking a progress-notice link) cannot rebind the editor and corrupt the result.
+    this.capturedSelections = getSelections(this.editor);
+    const selectedText = this.editor.getSelection();
+
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Splitting note ');
@@ -66,7 +74,11 @@ export class SplitComposer extends ComposerBase {
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-      await this.insertIntoTargetFile(this.editor.getSelection());
+      await this.insertIntoTargetFile(selectedText);
+
+      // Re-open the source note and restore the captured selections just before the destructive edits.
+      // They must target the source note even if the active leaf navigated during the operation.
+      await this.reopenSourceFileAndRestoreSelections();
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
@@ -93,12 +105,13 @@ export class SplitComposer extends ComposerBase {
       }
     } finally {
       notice.hide();
+      this.capturedSelections = [];
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise return type.
   protected override async getSelections(): Promise<Selection[]> {
-    return getSelections(this.editor);
+    return this.capturedSelections;
   }
 
   protected override getTemplate(): string {
@@ -183,6 +196,24 @@ export class SplitComposer extends ComposerBase {
     }
 
     return result;
+  }
+
+  private async reopenSourceFileAndRestoreSelections(): Promise<void> {
+    if (this.isMultipleSplit) {
+      return;
+    }
+
+    await this.app.workspace.getLeaf().openFile(this.sourceFile, { active: true });
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return;
+    }
+
+    this.editor = view.editor;
+    this.editor.setSelections(this.capturedSelections.map((selection) => ({
+      anchor: this.editor.offsetToPos(selection.startOffset),
+      head: this.editor.offsetToPos(selection.endOffset)
+    })));
   }
   /* v8 ignore stop */
 }

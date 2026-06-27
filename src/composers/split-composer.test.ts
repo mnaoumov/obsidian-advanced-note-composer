@@ -111,6 +111,7 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
       },
       workspace: {
         getActiveFile: vi.fn(),
+        getActiveViewOfType: vi.fn().mockReturnValue(null),
         getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
       }
     },
@@ -287,6 +288,47 @@ describe('splitFile', () => {
     expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
   });
 
+  it('should re-open the source note and perform edits on the re-opened editor, not the stale reference', async () => {
+    // Reproduces issue #120.
+    // Navigating the active leaf mid-operation (e.g. clicking a progress-notice link) rebinds
+    // `editor` to a different note.
+    // The fix re-opens the source note, restores selections, and mutates THAT editor.
+    const staleEditor = createMockEditor();
+    const reOpenedSourceEditor = createMockEditor();
+    const openFileMock = vi.fn().mockResolvedValue(undefined);
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
+    const appObj = getAppObj(deps.app);
+    appObj['workspace'] = {
+      getActiveFile: vi.fn(),
+      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor }),
+      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
+    };
+
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const composer = new SplitComposer({
+      editor: staleEditor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    // The source note is re-opened so the active editor is guaranteed to be the source.
+    expect(openFileMock).toHaveBeenCalledWith(sourceFile, { active: true });
+    // All editor mutations land on the re-opened source editor...
+    expect(reOpenedSourceEditor.setSelections).toHaveBeenCalled();
+    expect(reOpenedSourceEditor.replaceSelection).toHaveBeenCalledWith('[[target]]');
+    // ...and never on the stale (possibly wrong-note) reference.
+    expect(staleEditor.replaceSelection).not.toHaveBeenCalled();
+  });
+
   it('should replace with embed for EmbedNewFile mode', async () => {
     const editor = createMockEditor();
     const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
@@ -358,6 +400,7 @@ describe('splitFile', () => {
     const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
+      getActiveViewOfType: vi.fn().mockReturnValue(null),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
@@ -386,6 +429,7 @@ describe('splitFile', () => {
     const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
+      getActiveViewOfType: vi.fn().mockReturnValue(null),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
