@@ -52,10 +52,6 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
 
 const moment = extractDefaultExportInterop(moment_);
 
-export interface ComposerBaseConstructorParams extends ComposerBaseConstructorParamsBase {
-  readonly shouldIncludeFrontmatter: boolean;
-}
-
 export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
@@ -79,6 +75,10 @@ export interface Frontmatter extends GenericObject {
 export interface Selection {
   endOffset: number;
   startOffset: number;
+}
+
+interface ComposerBaseConstructorParams extends ComposerBaseConstructorParamsBase {
+  readonly shouldIncludeFrontmatter: boolean;
 }
 
 interface ExtractFrontmatterResult {
