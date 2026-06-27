@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.26.12
+
+- refactor: new template
+
 ## 3.26.11
 
 - refactor: notices
