@@ -10,6 +10,10 @@ import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
+  lockEditorForPath,
+  unlockEditorForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
+import {
   editLinks,
   extractLinkFile,
   updateLink,
@@ -57,6 +61,11 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/editor-lock', () => ({
+  lockEditorForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
+  unlockEditorForPath: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
@@ -193,6 +202,29 @@ describe('mergeFile', () => {
     await composer.mergeFile();
 
     expect(trashSafe).toHaveBeenCalled();
+  });
+
+  it('should lock the source and target notes during the merge and unlock them afterwards', async () => {
+    const deps = createDeps();
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.mergeFile();
+
+    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
+    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
   });
 
   it('should complete merge flow successfully with notice shown', async () => {

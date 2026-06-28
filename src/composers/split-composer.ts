@@ -57,6 +57,7 @@ export class SplitComposer extends ComposerBase {
     this.capturedSelections = getSelections(this.editor);
     const selectedText = this.editor.getSelection();
 
+    this.lockNotes();
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Splitting note ');
@@ -106,6 +107,7 @@ export class SplitComposer extends ComposerBase {
     } finally {
       notice.hide();
       this.capturedSelections = [];
+      this.unlockNotes();
     }
   }
 

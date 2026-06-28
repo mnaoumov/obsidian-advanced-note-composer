@@ -24,6 +24,10 @@ import {
 } from 'obsidian-dev-utils/html-element';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
 import {
+  lockEditorForPath,
+  unlockEditorForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
+import {
   editLinks,
   updateLink,
   updateLinksInContent
@@ -167,8 +171,6 @@ export abstract class ComposerBase {
 
   protected abstract getTemplate(): string;
 
-  /* v8 ignore stop */
-
   protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
@@ -231,7 +233,26 @@ export abstract class ComposerBase {
     await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
   }
 
+  /**
+   * Makes the source and target notes read-only for the duration of the operation so the user
+   * cannot accidentally edit either note while it is being composed. Balanced by {@link unlockNotes}.
+   */
+  protected lockNotes(): void {
+    lockEditorForPath(this.app, this.sourceFile);
+    lockEditorForPath(this.app, this.targetFile);
+  }
+
+  /* v8 ignore stop */
+
   protected abstract prepareBacklinkSubpaths(): Set<string>;
+
+  /**
+   * Restores the editability of the source and target notes locked by {@link lockNotes}.
+   */
+  protected unlockNotes(): void {
+    unlockEditorForPath(this.app, this.sourceFile);
+    unlockEditorForPath(this.app, this.targetFile);
+  }
 
   protected updateEditorSelections(
     _sourceCache: CachedMetadata | null,

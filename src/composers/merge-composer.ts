@@ -42,6 +42,7 @@ export class MergeComposer extends ComposerBase {
       return;
     }
 
+    this.lockNotes();
     const notice: Notice | null = this.shouldShowNotice
       ? this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
@@ -74,6 +75,7 @@ export class MergeComposer extends ComposerBase {
       }
     } finally {
       notice?.hide();
+      this.unlockNotes();
     }
   }
 

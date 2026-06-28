@@ -10,6 +10,10 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import {
+  lockEditorForPath,
+  unlockEditorForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
 import { updateLinksInContent } from 'obsidian-dev-utils/obsidian/link';
 import {
   getCacheSafe,
@@ -64,6 +68,11 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/editor-lock', () => ({
+  lockEditorForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
+  unlockEditorForPath: vi.fn()
 }));
 
 interface UpdateLinksParams {
@@ -327,6 +336,64 @@ describe('splitFile', () => {
     expect(reOpenedSourceEditor.replaceSelection).toHaveBeenCalledWith('[[target]]');
     // ...and never on the stale (possibly wrong-note) reference.
     expect(staleEditor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should lock the source and target notes during the split and unlock them afterwards', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
+    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+  });
+
+  it('should unlock the notes even when the split throws', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
+    appObj['fileManager'] = {
+      generateMarkdownLink: vi.fn(),
+      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
+      processFrontMatter: vi.fn()
+    };
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await expect(composer.splitFile()).rejects.toThrow('insert error');
+
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
+    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
   });
 
   it('should replace with embed for EmbedNewFile mode', async () => {
