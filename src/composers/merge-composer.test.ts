@@ -102,8 +102,8 @@ function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeCompo
   return new MergeComposer({
     ...deps,
     isNewTargetFile: false,
-    sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-    targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+    targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
   });
 }
 
@@ -182,8 +182,8 @@ describe('MergeComposer', () => {
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     expect(composer).toBeDefined();
@@ -211,10 +211,42 @@ describe('mergeFile', () => {
     expect(trashSafe).toHaveBeenCalled();
   });
 
+  it('should abort the merge and not trash the source when a file is modified during the operation', async () => {
+    const deps = createDeps();
+    const sourceStat = { ctime: 0, mtime: 100, size: 0 };
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: sourceStat });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 200, size: 0 } });
+    const appObj = getAppObj(deps.app);
+    appObj['vault'] = {
+      cachedRead: vi.fn().mockResolvedValue(''),
+      // Simulate an external edit to the source while the operation is in progress.
+      read: vi.fn().mockImplementation(() => {
+        sourceStat.mtime = 999;
+        return Promise.resolve('source content');
+      })
+    };
+
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    vi.mocked(trashSafe).mockClear();
+
+    await composer.mergeFile();
+
+    expect(trashSafe).not.toHaveBeenCalled();
+  });
+
   it('should lock the source and target notes during the merge and unlock them afterwards', async () => {
     const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
@@ -236,8 +268,8 @@ describe('mergeFile', () => {
 
   it('should open a minimizable progress modal during the merge and close it afterwards', async () => {
     const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
@@ -268,8 +300,8 @@ describe('mergeFile', () => {
       ...deps,
       isNewTargetFile: false,
       shouldShowNotice: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -302,8 +334,8 @@ describe('mergeFile', () => {
       ...deps,
       isNewTargetFile: false,
       shouldShowNotice: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -328,8 +360,8 @@ describe('mergeFile', () => {
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -353,8 +385,8 @@ describe('mergeFile', () => {
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -369,8 +401,8 @@ describe('mergeFile', () => {
 
 describe('MergeComposer fixBacklinks', () => {
   it('should fix self-links in target file after calling super', async () => {
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     const deps = createDeps();
 
@@ -415,8 +447,8 @@ describe('MergeComposer getSelections', () => {
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -439,8 +471,8 @@ describe('MergeComposer getTemplate', () => {
     const composer = new MergeComposer({
       ...deps,
       isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     // GetTemplate is called internally; we can verify by checking the template is applied to content
