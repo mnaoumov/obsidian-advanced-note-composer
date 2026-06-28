@@ -72,6 +72,11 @@ export interface ComposerBaseConstructorParamsBase {
   readonly targetFile: TFile;
 }
 
+export interface FileMtimes {
+  readonly sourceMtime: number;
+  readonly targetMtime: number;
+}
+
 export interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -121,6 +126,44 @@ export abstract class ComposerBase {
     this.shouldShowNotice = params.shouldShowNotice ?? true;
     this.targetFile = params.targetFile;
     this.isNewTargetFile = params.isNewTargetFile;
+  }
+
+  /**
+   * Captures the current modification times of the source and target notes so a later
+   * {@link checkFilesUnchanged} call can detect external edits made during the operation.
+   *
+   * @returns The captured modification times.
+   */
+  protected captureFileMtimes(): FileMtimes {
+    return {
+      sourceMtime: this.sourceFile.stat.mtime,
+      targetMtime: this.targetFile.stat.mtime
+    };
+  }
+
+  /**
+   * Checks whether the source and target notes are still unchanged since {@link captureFileMtimes}.
+   * If either was modified (e.g. externally, or by sync) the operation is refused and a notice is
+   * shown, guarding against clobbering external edits.
+   *
+   * @param mtimes - The modification times captured at the start of the operation.
+   * @returns `true` if both notes are unchanged, `false` if the operation should be aborted.
+   */
+  protected async checkFilesUnchanged(mtimes: FileMtimes): Promise<boolean> {
+    if (this.sourceFile.stat.mtime === mtimes.sourceMtime && this.targetFile.stat.mtime === mtimes.targetMtime) {
+      return true;
+    }
+
+    this.pluginNoticeComponent.showNotice(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Aborted because ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
+        f.appendText(' or ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.appendText(' was modified during the operation.');
+      })
+    );
+    return false;
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {

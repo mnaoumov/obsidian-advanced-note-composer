@@ -56,6 +56,7 @@ export class SplitComposer extends ComposerBase {
     this.capturedSelections = getSelections(this.editor);
     const selectedText = this.editor.getSelection();
 
+    const mtimes = this.captureFileMtimes();
     this.lockNotes();
     const progressModalHandle = this.isMultipleSplit
       ? null
@@ -67,6 +68,10 @@ export class SplitComposer extends ComposerBase {
       });
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
+
+      if (!await this.checkFilesUnchanged(mtimes)) {
+        return;
+      }
 
       await this.insertIntoTargetFile(selectedText);
 

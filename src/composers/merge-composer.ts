@@ -40,6 +40,7 @@ export class MergeComposer extends ComposerBase {
       return;
     }
 
+    const mtimes = this.captureFileMtimes();
     this.lockNotes();
     const progressModalHandle = this.shouldShowNotice
       ? await openProgressModal({
@@ -53,6 +54,9 @@ export class MergeComposer extends ComposerBase {
     try {
       this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
       const sourceContent = await this.app.vault.read(this.sourceFile);
+      if (!await this.checkFilesUnchanged(mtimes)) {
+        return;
+      }
       await this.insertIntoTargetFile(sourceContent);
       await trashSafe(this.app, this.sourceFile);
 

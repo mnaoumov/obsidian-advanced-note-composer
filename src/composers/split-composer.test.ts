@@ -242,8 +242,8 @@ describe('SplitComposer constructor', () => {
       isNewTargetFile: true,
       ...deps,
       shouldIncludeFrontmatter: true,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
     expect(composer).toBeDefined();
   });
@@ -256,8 +256,8 @@ describe('SplitComposer constructor', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
     expect(composer).toBeDefined();
   });
@@ -273,8 +273,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     await composer.splitFile();
@@ -291,8 +291,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -320,14 +320,14 @@ describe('splitFile', () => {
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new SplitComposer({
       editor: staleEditor,
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
       sourceFile,
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -348,8 +348,8 @@ describe('splitFile', () => {
   it('should lock the source and target notes during the split and unlock them afterwards', async () => {
     const editor = createMockEditor();
     const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     const composer = new SplitComposer({
       editor,
@@ -381,8 +381,8 @@ describe('splitFile', () => {
       insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
       processFrontMatter: vi.fn()
     };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     const composer = new SplitComposer({
       editor,
@@ -406,8 +406,8 @@ describe('splitFile', () => {
   it('should open a minimizable progress modal for a single split and close it afterwards', async () => {
     const editor = createMockEditor();
     const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new SplitComposer({
       editor,
       isMultipleSplit: false,
@@ -434,6 +434,40 @@ describe('splitFile', () => {
     expect(progressModalCloseMock).toHaveBeenCalled();
   });
 
+  it('should abort the split and not edit the source when a file is modified during the operation', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    let sourceMtimeReadCount = 0;
+    const sourceFile = strictProxy<TFile>({
+      basename: 'source',
+      path: 'source.md',
+      // First read (capture) returns 100; the re-check read returns a changed mtime.
+      stat: {
+        ctime: 0,
+        get mtime(): number {
+          return sourceMtimeReadCount++ === 0 ? 100 : 999;
+        },
+        size: 0
+      }
+    });
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
   it('should not open a progress modal for a multiple split', async () => {
     const editor = createMockEditor();
     const deps = createDeps();
@@ -442,8 +476,8 @@ describe('splitFile', () => {
       isMultipleSplit: true,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -465,8 +499,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -487,8 +521,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -509,8 +543,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -536,8 +570,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -565,8 +599,8 @@ describe('splitFile', () => {
       isMultipleSplit: true,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -593,8 +627,8 @@ describe('splitFile', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -623,8 +657,8 @@ describe('SplitComposer getTemplate', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -651,8 +685,8 @@ describe('SplitComposer getTemplate', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -682,8 +716,8 @@ describe('SplitComposer getTemplate', () => {
       isMultipleSplit: false,
       isNewTargetFile: false,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -713,8 +747,8 @@ describe('SplitComposer getTemplate', () => {
       isMultipleSplit: false,
       isNewTargetFile: false,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -742,8 +776,8 @@ describe('SplitComposer prepareBacklinkSubpaths', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -784,8 +818,8 @@ describe('SplitComposer updateEditorSelections', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -833,8 +867,8 @@ describe('SplitComposer updateEditorSelections with restore', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -891,8 +925,8 @@ describe('SplitComposer removeSelectionRange', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
@@ -945,8 +979,8 @@ describe('SplitComposer removeSelectionRange', () => {
       isMultipleSplit: false,
       isNewTargetFile: true,
       ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
     });
 
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
