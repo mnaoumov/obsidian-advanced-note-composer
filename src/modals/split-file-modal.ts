@@ -28,6 +28,7 @@ import { getSelections } from '../composers/split-composer.ts';
 import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
@@ -481,7 +482,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         heading,
         promiseResolve
       });
-      modal.open();
+      openMinimizableModal(modal);
     });
 
   if (!splitFileModalResult) {
@@ -518,7 +519,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve).open();
+    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve));
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */

@@ -23,6 +23,7 @@ import type {
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
@@ -381,7 +382,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
       ...params,
       promiseResolve
     });
-    modal.open();
+    openMinimizableModal(modal);
   });
 
   if (!result) {
@@ -413,11 +414,13 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   }
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    new ConfirmDialogModal({
-      ...params,
-      promiseResolve,
-      targetFile: prepareForMergeFileResult.targetFile
-    }).open();
+    openMinimizableModal(
+      new ConfirmDialogModal({
+        ...params,
+        promiseResolve,
+        targetFile: prepareForMergeFileResult.targetFile
+      })
+    );
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */

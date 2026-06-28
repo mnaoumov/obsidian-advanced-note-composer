@@ -51,6 +51,16 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   trashSafe: vi.fn().mockResolvedValue(undefined)
 }));
 
+interface OpenableModal {
+  open(): void;
+}
+
+vi.mock('../open-minimizable-modal.ts', () => ({
+  openMinimizableModal: vi.fn((modal: OpenableModal) => {
+    modal.open();
+  })
+}));
+
 vi.mock('../composers/composer-base.ts', () => ({
   getInsertModeFromEvent: vi.fn().mockReturnValue(InsertMode.Append)
 }));
