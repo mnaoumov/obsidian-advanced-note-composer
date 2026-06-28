@@ -9,6 +9,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -55,6 +56,7 @@ import {
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -181,6 +183,10 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
     },
     consoleDebugComponent: {
       consoleDebug: vi.fn()
+    },
+    editorLockComponent: {
+      lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
+      unlockForPath: vi.fn()
     },
     pluginNoticeComponent: {
       showNotice: vi.fn().mockReturnValue({ hide: vi.fn() })

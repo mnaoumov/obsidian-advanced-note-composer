@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
@@ -22,6 +23,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -30,6 +32,7 @@ interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
 export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly editorLockComponent: EditorLockComponent;
   private readonly headingLevel: Level;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -44,6 +47,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.headingLevel = params.headingLevel;
@@ -118,6 +122,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         editor,
+        editorLockComponent: this.editorLockComponent,
         heading: headingInfo.heading,
         isMultipleSplit: true,
         isNewTargetFile: result.isNewTargetFile,

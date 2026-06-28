@@ -8,6 +8,7 @@ import type {
 } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
@@ -22,6 +23,7 @@ import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -29,6 +31,7 @@ interface MergeFileCommandHandlerConstructorParams {
 export class MergeFileCommandHandler extends FileCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly editorLockComponent: EditorLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
@@ -43,6 +46,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -73,6 +77,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     const composer = new MergeComposer({
       app: this.app,
       consoleDebugComponent: this.consoleDebugComponent,
+      editorLockComponent: this.editorLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isNewTargetFile: result.isNewTargetFile,

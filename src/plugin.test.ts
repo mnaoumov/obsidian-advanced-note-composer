@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -122,6 +123,7 @@ vi.mock('./release-notes-component.ts', () => ({
 
 interface PluginInternals {
   _consoleDebugComponent: ConsoleDebugComponent;
+  _editorLockComponent: EditorLockComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
   onloadImpl(): void;
 }
@@ -142,6 +144,7 @@ describe('Plugin', () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals._editorLockComponent = strictProxy<EditorLockComponent>({});
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 

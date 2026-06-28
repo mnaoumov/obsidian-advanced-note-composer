@@ -47,6 +47,7 @@ export class Plugin extends PluginBase {
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
+    const editorLockComponent = this.editorLockComponent;
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -54,36 +55,42 @@ export class Plugin extends PluginBase {
           new MergeFileCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
@@ -101,6 +108,7 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
+              editorLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
@@ -108,6 +116,7 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsContentEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
+              editorLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
