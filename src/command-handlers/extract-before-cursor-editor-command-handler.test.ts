@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -64,6 +65,7 @@ const MockSplitComposer = vi.mocked(SplitComposer);
 interface HandlerParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -89,6 +91,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn()
     }),
+    editorLockComponent: strictProxy<EditorLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
@@ -196,6 +199,7 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
       app: params.app,
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
+      editorLockComponent: params.editorLockComponent,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isMultipleSplit: false,

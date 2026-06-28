@@ -7,13 +7,10 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import {
-  lockEditorForPath,
-  unlockEditorForPath
-} from 'obsidian-dev-utils/obsidian/editor-lock';
 import { updateLinksInContent } from 'obsidian-dev-utils/obsidian/link';
 import {
   getCacheSafe,
@@ -46,6 +43,7 @@ import {
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -69,11 +67,6 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/editor-lock', () => ({
-  lockEditorForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
-  unlockEditorForPath: vi.fn()
 }));
 
 const { progressModalCloseMock } = vi.hoisted(() => ({ progressModalCloseMock: vi.fn() }));
@@ -133,6 +126,10 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
     },
     consoleDebugComponent: {
       consoleDebug: vi.fn()
+    },
+    editorLockComponent: {
+      lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
+      unlockForPath: vi.fn()
     },
     pluginNoticeComponent: {
       showNotice: vi.fn().mockReturnValue({ hide: vi.fn() })
@@ -366,10 +363,10 @@ describe('splitFile', () => {
 
     await composer.splitFile();
 
-    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
-    expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
-    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
-    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
   it('should unlock the notes even when the split throws', async () => {
@@ -399,8 +396,8 @@ describe('splitFile', () => {
 
     await expect(composer.splitFile()).rejects.toThrow('insert error');
 
-    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
-    expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
   it('should open a minimizable progress modal for a single split and close it afterwards', async () => {

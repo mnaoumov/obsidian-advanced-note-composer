@@ -5,6 +5,7 @@ import type {
   Pos
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
@@ -23,10 +24,6 @@ import {
   createFragmentAsync
 } from 'obsidian-dev-utils/html-element';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
-import {
-  lockEditorForPath,
-  unlockEditorForPath
-} from 'obsidian-dev-utils/obsidian/editor-lock';
 import {
   editLinks,
   updateLink,
@@ -58,6 +55,7 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
+  readonly editorLockComponent: EditorLockComponent;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
   readonly isNewTargetFile: boolean;
@@ -97,6 +95,7 @@ interface ExtractFrontmatterResult {
 
 export abstract class ComposerBase {
   protected readonly app: App;
+  protected readonly editorLockComponent: EditorLockComponent;
   protected readonly isNewTargetFile: boolean;
 
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -114,6 +113,7 @@ export abstract class ComposerBase {
 
   public constructor(params: ComposerBaseConstructorParams) {
     this.app = params.app;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
 
@@ -187,6 +187,7 @@ export abstract class ComposerBase {
       let linkIndex = 0;
       await editLinks({
         app: this.app,
+        editorLockComponent: this.editorLockComponent,
         linkConverter: (link) => {
           linkIndex++;
           if (!linkJsons.includes(JSON.stringify(link))) {
@@ -281,8 +282,8 @@ export abstract class ComposerBase {
    * cannot accidentally edit either note while it is being composed. Balanced by {@link unlockNotes}.
    */
   protected lockNotes(): void {
-    lockEditorForPath(this.app, this.sourceFile);
-    lockEditorForPath(this.app, this.targetFile);
+    this.editorLockComponent.lockForPath(this.sourceFile);
+    this.editorLockComponent.lockForPath(this.targetFile);
   }
 
   /* v8 ignore stop */
@@ -293,8 +294,8 @@ export abstract class ComposerBase {
    * Restores the editability of the source and target notes locked by {@link lockNotes}.
    */
   protected unlockNotes(): void {
-    unlockEditorForPath(this.app, this.sourceFile);
-    unlockEditorForPath(this.app, this.targetFile);
+    this.editorLockComponent.unlockForPath(this.sourceFile);
+    this.editorLockComponent.unlockForPath(this.targetFile);
   }
 
   protected updateEditorSelections(
@@ -472,6 +473,7 @@ export abstract class ComposerBase {
 
     await process({
       app: this.app,
+      editorLockComponent: this.editorLockComponent,
       newContentProvider: async ({ content: targetFileContent }) => {
         const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
         const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);

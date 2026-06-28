@@ -79,6 +79,7 @@ export class MergeComposer extends ComposerBase {
     let linkIndex = 0;
     await editLinks({
       app: this.app,
+      editorLockComponent: this.editorLockComponent,
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
