@@ -7,8 +7,6 @@ import type {
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { MarkdownView } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type {
   ComposerBaseConstructorParamsBase,
@@ -19,6 +17,7 @@ import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
+import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -58,20 +57,14 @@ export class SplitComposer extends ComposerBase {
     const selectedText = this.editor.getSelection();
 
     this.lockNotes();
-    const notice = this.pluginNoticeComponent.showNotice(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Advanced Note Composer: Splitting note ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
-        f.appendText(' into ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
-        f.createEl('br');
-        f.createEl('br');
-        f.createDiv('is-loading');
-      }),
-      {
-        isPermanent: true
-      }
-    );
+    const progressModalHandle = this.isMultipleSplit
+      ? null
+      : await openProgressModal({
+        app: this.app,
+        sourceFile: this.sourceFile,
+        targetFile: this.targetFile,
+        verb: 'Splitting'
+      });
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
@@ -105,7 +98,7 @@ export class SplitComposer extends ComposerBase {
         });
       }
     } finally {
-      notice.hide();
+      progressModalHandle?.close();
       this.capturedSelections = [];
       this.unlockNotes();
     }

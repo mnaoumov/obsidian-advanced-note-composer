@@ -20,6 +20,7 @@
     "Keymap",
     "Linkpath",
     "Linktext",
+    "minimizable",
     "mnaoumov",
     "Naumov",
     "OnInputable",

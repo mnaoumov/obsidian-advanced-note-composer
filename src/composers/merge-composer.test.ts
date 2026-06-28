@@ -38,6 +38,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { openProgressModal } from '../progress-modal.ts';
 import { MergeComposer } from './merge-composer.ts';
 
 interface ComposerDeps {
@@ -66,6 +67,12 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 vi.mock('obsidian-dev-utils/obsidian/editor-lock', () => ({
   lockEditorForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
   unlockEditorForPath: vi.fn()
+}));
+
+const { progressModalCloseMock } = vi.hoisted(() => ({ progressModalCloseMock: vi.fn() }));
+
+vi.mock('../progress-modal.ts', () => ({
+  openProgressModal: vi.fn().mockResolvedValue({ close: progressModalCloseMock })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
@@ -225,6 +232,54 @@ describe('mergeFile', () => {
     expect(lockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
     expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
     expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+  });
+
+  it('should open a minimizable progress modal during the merge and close it afterwards', async () => {
+    const deps = createDeps();
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    vi.mocked(openProgressModal).mockClear();
+    progressModalCloseMock.mockClear();
+
+    await composer.mergeFile();
+
+    expect(openProgressModal).toHaveBeenCalledTimes(1);
+    const params = vi.mocked(openProgressModal).mock.calls[0]?.[0];
+    expect(params?.app).toBe(deps.app);
+    expect(params?.sourceFile).toBe(sourceFile);
+    expect(params?.targetFile).toBe(targetFile);
+    expect(params?.verb).toBe('Merging');
+    expect(progressModalCloseMock).toHaveBeenCalled();
+  });
+
+  it('should not open a progress modal when shouldShowNotice is false', async () => {
+    const deps = createDeps();
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      shouldShowNotice: false,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    vi.mocked(openProgressModal).mockClear();
+
+    await composer.mergeFile();
+
+    expect(openProgressModal).not.toHaveBeenCalled();
   });
 
   it('should complete merge flow successfully with notice shown', async () => {
