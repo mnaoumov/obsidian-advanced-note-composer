@@ -1,14 +1,11 @@
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { Notice } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   editLinks,
   extractLinkFile,
   updateLink
 } from 'obsidian-dev-utils/obsidian/link';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -18,6 +15,7 @@ import type {
 } from './composer-base.ts';
 
 import { Action } from '../plugin-settings.ts';
+import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -43,21 +41,13 @@ export class MergeComposer extends ComposerBase {
     }
 
     this.lockNotes();
-    const notice: Notice | null = this.shouldShowNotice
-      ? this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('Advanced Note Composer: Merging note ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
-          f.appendText(' with ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
-          f.createEl('br');
-          f.createEl('br');
-          f.createDiv('is-loading');
-        }),
-        {
-          isPermanent: true
-        }
-      )
+    const progressModalHandle = this.shouldShowNotice
+      ? await openProgressModal({
+        app: this.app,
+        sourceFile: this.sourceFile,
+        targetFile: this.targetFile,
+        verb: 'Merging'
+      })
       : null;
 
     try {
@@ -74,7 +64,7 @@ export class MergeComposer extends ComposerBase {
         });
       }
     } finally {
-      notice?.hide();
+      progressModalHandle?.close();
       this.unlockNotes();
     }
   }

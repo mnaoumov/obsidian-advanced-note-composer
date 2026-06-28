@@ -37,6 +37,7 @@ import {
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
+import { openProgressModal } from '../progress-modal.ts';
 import {
   getSelections,
   SplitComposer
@@ -73,6 +74,12 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 vi.mock('obsidian-dev-utils/obsidian/editor-lock', () => ({
   lockEditorForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
   unlockEditorForPath: vi.fn()
+}));
+
+const { progressModalCloseMock } = vi.hoisted(() => ({ progressModalCloseMock: vi.fn() }));
+
+vi.mock('../progress-modal.ts', () => ({
+  openProgressModal: vi.fn().mockResolvedValue({ close: progressModalCloseMock })
 }));
 
 interface UpdateLinksParams {
@@ -394,6 +401,59 @@ describe('splitFile', () => {
 
     expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, sourceFile);
     expect(unlockEditorForPath).toHaveBeenCalledWith(deps.app, targetFile);
+  });
+
+  it('should open a minimizable progress modal for a single split and close it afterwards', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md' });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md' });
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    vi.mocked(openProgressModal).mockClear();
+    progressModalCloseMock.mockClear();
+
+    await composer.splitFile();
+
+    expect(openProgressModal).toHaveBeenCalledTimes(1);
+    const params = vi.mocked(openProgressModal).mock.calls[0]?.[0];
+    expect(params?.app).toBe(deps.app);
+    expect(params?.sourceFile).toBe(sourceFile);
+    expect(params?.targetFile).toBe(targetFile);
+    expect(params?.verb).toBe('Splitting');
+    expect(progressModalCloseMock).toHaveBeenCalled();
+  });
+
+  it('should not open a progress modal for a multiple split', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: true,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md' }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md' })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    vi.mocked(openProgressModal).mockClear();
+
+    await composer.splitFile();
+
+    expect(openProgressModal).not.toHaveBeenCalled();
   });
 
   it('should replace with embed for EmbedNewFile mode', async () => {
