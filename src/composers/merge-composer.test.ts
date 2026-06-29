@@ -38,6 +38,10 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { openProgressModal } from '../progress-modal.ts';
 import { MergeComposer } from './merge-composer.ts';
 
+interface AbortableComposer {
+  readonly abortController: AbortController;
+}
+
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -257,8 +261,62 @@ describe('mergeFile', () => {
 
     await composer.mergeFile();
 
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+  });
+
+  it('should swallow the error and release the locks when the merge is cancelled by unlocking', async () => {
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
+    appObj['fileManager'] = {
+      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
+      processFrontMatter: vi.fn()
+    };
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    // Simulate the user clicking the lock indicator's "Unlock" mid-operation.
+    castTo<AbortableComposer>(composer).abortController.abort();
+
+    // The cancellation is swallowed: the operation resolves without throwing.
+    await expect(composer.mergeFile()).resolves.toBeUndefined();
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+  });
+
+  it('should rethrow and release the locks when the merge fails without cancellation', async () => {
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
+    appObj['fileManager'] = {
+      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
+      processFrontMatter: vi.fn()
+    };
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const composer = new MergeComposer({
+      ...deps,
+      isNewTargetFile: false,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await expect(composer.mergeFile()).rejects.toThrow('insert error');
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });

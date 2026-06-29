@@ -94,6 +94,7 @@ interface ExtractFrontmatterResult {
 }
 
 export abstract class ComposerBase {
+  protected readonly abortController = new AbortController();
   protected readonly app: App;
   protected readonly editorLockComponent: EditorLockComponent;
   protected readonly isNewTargetFile: boolean;
@@ -186,6 +187,7 @@ export abstract class ComposerBase {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
       await editLinks({
+        abortSignal: this.abortController.signal,
         app: this.app,
         editorLockComponent: this.editorLockComponent,
         linkConverter: (link) => {
@@ -282,8 +284,8 @@ export abstract class ComposerBase {
    * cannot accidentally edit either note while it is being composed. Balanced by {@link unlockNotes}.
    */
   protected lockNotes(): void {
-    this.editorLockComponent.lockForPath(this.sourceFile);
-    this.editorLockComponent.lockForPath(this.targetFile);
+    this.editorLockComponent.lockForPath(this.sourceFile, { abortController: this.abortController });
+    this.editorLockComponent.lockForPath(this.targetFile, { abortController: this.abortController });
   }
 
   /* v8 ignore stop */
@@ -472,6 +474,7 @@ export abstract class ComposerBase {
     }
 
     await process({
+      abortSignal: this.abortController.signal,
       app: this.app,
       editorLockComponent: this.editorLockComponent,
       newContentProvider: async ({ content: targetFileContent }) => {

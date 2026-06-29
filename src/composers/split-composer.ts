@@ -102,6 +102,12 @@ export class SplitComposer extends ComposerBase {
           active: true
         });
       }
+    } catch (error) {
+      if (this.abortController.signal.aborted) {
+        // The operation was cancelled by unlocking the note; nothing to report.
+        return;
+      }
+      throw error;
     } finally {
       progressModalHandle?.close();
       this.capturedSelections = [];
