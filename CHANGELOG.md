@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.27.0
+
+- chore: lint
+- docs: drop completed session-progress notes
+- fix: preserve context when splitting/merging, even if the editor changed #120
+
 ## 3.26.12
 
 - refactor: new template
