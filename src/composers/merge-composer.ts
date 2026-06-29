@@ -67,6 +67,12 @@ export class MergeComposer extends ComposerBase {
           active: true
         });
       }
+    } catch (error) {
+      if (this.abortController.signal.aborted) {
+        // The operation was cancelled by unlocking the note; nothing to report.
+        return;
+      }
+      throw error;
     } finally {
       progressModalHandle?.close();
       this.unlockNotes();
@@ -78,6 +84,7 @@ export class MergeComposer extends ComposerBase {
 
     let linkIndex = 0;
     await editLinks({
+      abortSignal: this.abortController.signal,
       app: this.app,
       editorLockComponent: this.editorLockComponent,
       linkConverter: (link): MaybeReturn<string> => {

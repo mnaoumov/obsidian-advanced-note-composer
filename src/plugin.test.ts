@@ -1,6 +1,9 @@
 import type {
   App,
-  PluginManifest
+  Command,
+  PluginManifest,
+  TFile,
+  Workspace
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -11,8 +14,13 @@ import { castTo } from 'obsidian-dev-utils/object-utils';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
+import {
+  isEditorLockedForPath,
+  requestEditorUnlockForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
+  beforeEach,
   describe,
   expect,
   it,
@@ -48,6 +56,12 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', 
 
 vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
   PluginDataHandler: vi.fn()
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/editor-lock', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/editor-lock')>(),
+  isEditorLockedForPath: vi.fn(),
+  requestEditorUnlockForPath: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
@@ -159,5 +173,64 @@ describe('Plugin', () => {
 
     const EXPECTED_ADD_CHILD_CALLS = 6;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
+  });
+});
+
+describe('unlock-active-note command', () => {
+  beforeEach(() => {
+    vi.mocked(isEditorLockedForPath).mockReset();
+    vi.mocked(requestEditorUnlockForPath).mockReset();
+  });
+
+  function registerCommand(activeFile: null | TFile): Command {
+    const app = strictProxy<App>({
+      workspace: strictProxy<Workspace>({
+        getActiveFile: vi.fn().mockReturnValue(activeFile)
+      })
+    });
+    const plugin = new Plugin(app, createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals._editorLockComponent = strictProxy<EditorLockComponent>({});
+    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+
+    internals.onloadImpl();
+
+    const command = addCommandSpy.mock.calls
+      .map((call) => call[0])
+      .find((candidate) => candidate.id === 'unlock-active-note');
+    if (!command) {
+      throw new Error('Command was not registered');
+    }
+    return command;
+  }
+
+  it('should be hidden when there is no active file', () => {
+    const command = registerCommand(null);
+    expect(command.checkCallback?.(true)).toBe(false);
+    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+  });
+
+  it('should be hidden when the active file is not locked', () => {
+    vi.mocked(isEditorLockedForPath).mockReturnValue(false);
+    const activeFile = strictProxy<TFile>({ path: 'active.md' });
+    const command = registerCommand(activeFile);
+    expect(command.checkCallback?.(true)).toBe(false);
+    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+  });
+
+  it('should be available and request an unlock when the active file is locked', () => {
+    vi.mocked(isEditorLockedForPath).mockReturnValue(true);
+    const activeFile = strictProxy<TFile>({ path: 'active.md' });
+    const command = registerCommand(activeFile);
+
+    // While checking, the command is enabled but performs no action.
+    expect(command.checkCallback?.(true)).toBe(true);
+    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+
+    // When executed, it requests the unlock of the active file.
+    expect(command.checkCallback?.(false)).toBe(true);
+    expect(requestEditorUnlockForPath).toHaveBeenCalledWith(expect.anything(), activeFile);
   });
 });

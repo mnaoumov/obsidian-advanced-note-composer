@@ -40,6 +40,10 @@ import {
   SplitComposer
 } from './split-composer.ts';
 
+interface AbortableComposer {
+  readonly abortController: AbortController;
+}
+
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -363,8 +367,8 @@ describe('splitFile', () => {
 
     await composer.splitFile();
 
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
+    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
@@ -396,6 +400,40 @@ describe('splitFile', () => {
 
     await expect(composer.splitFile()).rejects.toThrow('insert error');
 
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+  });
+
+  it('should swallow the error and release the locks when the split is cancelled by unlocking', async () => {
+    const editor = createMockEditor();
+    const deps = createDeps();
+    const appObj = getAppObj(deps.app);
+    appObj['fileManager'] = {
+      generateMarkdownLink: vi.fn(),
+      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
+      processFrontMatter: vi.fn()
+    };
+    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
+    const composer = new SplitComposer({
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile,
+      targetFile
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    // Simulate the user clicking the lock indicator's "Unlock" mid-operation.
+    castTo<AbortableComposer>(composer).abortController.abort();
+
+    // The cancellation is swallowed: the operation resolves without throwing.
+    await expect(composer.splitFile()).resolves.toBeUndefined();
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });

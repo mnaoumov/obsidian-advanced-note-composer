@@ -4,6 +4,10 @@ import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-regi
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import {
+  isEditorLockedForPath,
+  requestEditorUnlockForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
@@ -128,6 +132,23 @@ export class Plugin extends PluginBase {
         pluginName: this.manifest.name
       })
     );
+
+    this.addCommand({
+      checkCallback: (checking: boolean): boolean => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !isEditorLockedForPath(this.app, activeFile)) {
+          return false;
+        }
+
+        if (!checking) {
+          requestEditorUnlockForPath(this.app, activeFile);
+        }
+
+        return true;
+      },
+      id: 'unlock-active-note',
+      name: 'Unlock active note'
+    });
 
     this.addChild(new PrismComponent());
     this.addChild(
