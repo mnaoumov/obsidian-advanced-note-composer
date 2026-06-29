@@ -95,6 +95,10 @@ export class SplitComposer extends ComposerBase {
           throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
       }
 
+      // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
+      // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
+      this.revealCursor();
+
       if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
@@ -222,6 +226,22 @@ export class SplitComposer extends ComposerBase {
     })));
   }
   /* v8 ignore stop */
+
+  /**
+   * Scrolls the active source view to the current cursor line (preserving the cursor), so that after
+   * the source note is reopened the user lands where the extraction happened instead of at the top.
+   * A no-op for multiple-split (no reopen happens) or when there is no active markdown view.
+   */
+  private revealCursor(): void {
+    if (this.isMultipleSplit) {
+      return;
+    }
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return;
+    }
+    view.setEphemeralState({ line: this.editor.getCursor().line });
+  }
 }
 
 export function getSelections(editor: Editor): Selection[] {

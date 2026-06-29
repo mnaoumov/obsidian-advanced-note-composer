@@ -160,6 +160,7 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
 function createMockEditor(options?: MockEditorOptions): Editor {
   const selections = options?.listSelections ?? [{ anchor: { ch: 0, line: 0 }, head: { ch: 10, line: 0 } }];
   return strictProxy<Editor>({
+    getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
     getSelection: vi.fn().mockReturnValue(options?.selection ?? 'selected text'),
     listSelections: vi.fn().mockReturnValue(selections),
     offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
@@ -317,7 +318,7 @@ describe('splitFile', () => {
     const appObj = getAppObj(deps.app);
     appObj['workspace'] = {
       getActiveFile: vi.fn(),
-      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor }),
+      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor, setEphemeralState: vi.fn() }),
       getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
     };
 
@@ -344,6 +345,39 @@ describe('splitFile', () => {
     expect(reOpenedSourceEditor.replaceSelection).toHaveBeenCalledWith('[[target]]');
     // ...and never on the stale (possibly wrong-note) reference.
     expect(staleEditor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should reveal the cursor in the re-opened source note so the viewport is not left at the top', async () => {
+    // Reproduces the cursor-restore bug: re-opening the source note scrolls the editor to the top.
+    // (The cursor is positioned correctly but off-screen.) The fix reveals the cursor's line.
+    const staleEditor = createMockEditor();
+    const reOpenedSourceEditor = createMockEditor();
+    vi.mocked(reOpenedSourceEditor.getCursor).mockReturnValue({ ch: 3, line: 42 });
+    const setEphemeralStateMock = vi.fn();
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
+    const appObj = getAppObj(deps.app);
+    appObj['workspace'] = {
+      getActiveFile: vi.fn(),
+      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor, setEphemeralState: setEphemeralStateMock }),
+      getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
+    };
+
+    const composer = new SplitComposer({
+      editor: staleEditor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      ...deps,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    expect(setEphemeralStateMock).toHaveBeenCalledWith({ line: 42 });
   });
 
   it('should lock the source and target notes during the split and unlock them afterwards', async () => {
