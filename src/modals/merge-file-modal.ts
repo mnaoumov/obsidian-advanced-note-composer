@@ -381,14 +381,17 @@ class MergeFileModal extends SuggestModalBase {
 export async function prepareForMergeFile(params: PrepareForMergeFileParams): Promise<null | PrepareForMergeFileResult> {
   // Lock the source note for the whole setup flow so it cannot be edited while the
   // (minimizable) merge/confirmation modal is open — an external edit would corrupt the pending merge.
-  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile);
+  // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
+  // (so the setup flow cancels) and the `using` locks release on return.
+  const abortController = new AbortController();
+  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile, { abortController });
 
   const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
     const modal = new MergeFileModal({
       ...params,
       promiseResolve
     });
-    openMinimizableModal(modal);
+    openMinimizableModal(modal, abortController);
   });
 
   if (!result) {
@@ -420,7 +423,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   }
 
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.editorLockComponent.lockForPath(prepareForMergeFileResult.targetFile);
+  using _targetLock = params.editorLockComponent.lockForPath(prepareForMergeFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(
@@ -428,7 +431,8 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
         ...params,
         promiseResolve,
         targetFile: prepareForMergeFileResult.targetFile
-      })
+      }),
+      abortController
     );
   });
 

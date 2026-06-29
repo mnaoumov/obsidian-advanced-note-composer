@@ -460,7 +460,10 @@ class SplitFileModal extends SuggestModalBase {
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
   // Lock the source note for the whole setup flow so it cannot be edited while the
   // (minimizable) split/confirmation modal is open — an external edit would corrupt the pending split.
-  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile);
+  // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
+  // (so the setup flow cancels) and the `using` locks release on return.
+  const abortController = new AbortController();
+  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile, { abortController });
 
   let heading = params.heading;
   if (heading === '') {
@@ -488,7 +491,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         heading,
         promiseResolve
       });
-      openMinimizableModal(modal);
+      openMinimizableModal(modal, abortController);
     });
 
   if (!splitFileModalResult) {
@@ -525,10 +528,10 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }
 
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.editorLockComponent.lockForPath(prepareForSplitFileResult.targetFile);
+  using _targetLock = params.editorLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve));
+    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve), abortController);
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */

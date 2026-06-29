@@ -429,7 +429,7 @@ describe('prepareForSplitFile', () => {
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
     const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
-    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(vi.mocked(editorLockComponent.lockForPath).mock.calls.map((call) => call[0])).toContain(sourceFile);
     expect(editorLockComponent.unlockForPath).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(0);
     await promise;
@@ -446,9 +446,28 @@ describe('prepareForSplitFile', () => {
     const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     await promise;
-    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(mockTargetFile);
+    const lockedPaths = vi.mocked(editorLockComponent.lockForPath).mock.calls.map((call) => call[0]);
+    expect(lockedPaths).toContain(sourceFile);
+    expect(lockedPaths).toContain(mockTargetFile);
     expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(mockTargetFile);
+  });
+
+  it('should cancel and unlock when the lock is aborted while the modal is open', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
+
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
+    // Simulate the user unlocking: abort the controller the lock was registered with.
+    const abortController = vi.mocked(editorLockComponent.lockForPath).mock.calls[0]?.[1]?.abortController;
+    expect(abortController).toBeInstanceOf(AbortController);
+    abortController?.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+    expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
   });
 });
