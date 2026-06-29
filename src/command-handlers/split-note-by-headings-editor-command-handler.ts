@@ -104,6 +104,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       const result = await prepareForSplitFile({
         app: this.app,
         editor,
+        editorLockComponent: this.editorLockComponent,
         heading: headingInfo.heading,
         pluginSettingsComponent: this.pluginSettingsComponent,
         shouldSkipModal: true,
