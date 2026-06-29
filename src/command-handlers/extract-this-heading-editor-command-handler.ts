@@ -94,6 +94,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      editorLockComponent: this.editorLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       sourceFile: file
     });

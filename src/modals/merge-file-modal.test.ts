@@ -10,6 +10,8 @@ import type {
   Vault,
   Workspace
 } from 'obsidian';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -159,11 +161,26 @@ vi.mock('../item-selectors/merge-item-selector.ts', () => {
 
 interface MockPlugin {
   readonly app: App;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
+}
+
+function createMockEditorLockComponent(): EditorLockComponent {
+  const unlockForPath = vi.fn();
+  // The real lock is released by disposing the returned `Disposable`; model that as
+  // `unlockForPath` so a `using` scope-exit disposal is observable through the same spy.
+  return strictProxy<EditorLockComponent>({
+    lockForPath: castTo<EditorLockComponent['lockForPath']>(vi.fn((pathOrFile: PathOrFile) => ({
+      [Symbol.dispose]: (): void => {
+        unlockForPath(pathOrFile);
+      }
+    }))),
+    unlockForPath
+  });
 }
 
 function createMockFile(path: string): TFile {
@@ -206,6 +223,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         getRecentFiles: vi.fn().mockReturnValue([])
       })
     }),
+    editorLockComponent: createMockEditorLockComponent(),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy({
@@ -235,7 +253,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin();
 
-    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -246,7 +264,7 @@ describe('prepareForMergeFile', () => {
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
     // MergeFileModal auto-closes → onClose → resolves null → prepareForMergeFile returns null
-    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -256,7 +274,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
-    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     // Modal auto-closes without selection → null
@@ -268,7 +286,7 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
-    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).not.toBeNull();
@@ -280,12 +298,39 @@ describe('prepareForMergeFile', () => {
     const sourceFile = createMockFile('folder/source.md');
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
-    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
     // First timer: SuggestModal close
     await vi.advanceTimersByTimeAsync(0);
     // Second timer: ConfirmDialog close (auto-closes without selection → isConfirmed=false)
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
+  });
+
+  it('should lock the source note while the modal is open and unlock it afterwards', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const plugin = createMockPlugin();
+
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(plugin.editorLockComponent.unlockForPath).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+    expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+  });
+
+  it('should lock the target note while the confirmation dialog is open and unlock both notes afterwards', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
+
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(mockTargetFile);
+    expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(mockTargetFile);
   });
 });

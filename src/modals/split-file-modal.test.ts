@@ -11,6 +11,8 @@ import type {
   Vault,
   Workspace
 } from 'obsidian';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -219,6 +221,20 @@ function createMockEditor(): Editor {
   });
 }
 
+function createMockEditorLockComponent(): EditorLockComponent {
+  const unlockForPath = vi.fn();
+  // The real lock is released by disposing the returned `Disposable`; model that as
+  // `unlockForPath` so a `using` scope-exit disposal is observable through the same spy.
+  return strictProxy<EditorLockComponent>({
+    lockForPath: castTo<EditorLockComponent['lockForPath']>(vi.fn((pathOrFile: PathOrFile) => ({
+      [Symbol.dispose]: (): void => {
+        unlockForPath(pathOrFile);
+      }
+    }))),
+    unlockForPath
+  });
+}
+
 function createMockFile(path: string): TFile {
   const name = path.split('/').pop() ?? '';
   const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
@@ -265,10 +281,11 @@ describe('prepareForSplitFile', () => {
   it('should return null when modal is cancelled', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -277,10 +294,11 @@ describe('prepareForSplitFile', () => {
   it('should use extractHeading when heading is undefined', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -289,10 +307,11 @@ describe('prepareForSplitFile', () => {
   it('should treat empty string heading as undefined', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, heading: '', pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: '', pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -301,10 +320,11 @@ describe('prepareForSplitFile', () => {
   it('should use provided heading', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, heading: 'Custom Heading', pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Custom Heading', pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -313,10 +333,11 @@ describe('prepareForSplitFile', () => {
   it('should skip modal when shouldSkipModal is true', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const result = await prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.targetFile).toBe(mockTargetFile);
     expect(result?.insertMode).toBe(InsertMode.Append);
@@ -325,10 +346,11 @@ describe('prepareForSplitFile', () => {
   it('should return all settings when shouldSkipModal and not shouldAskBeforeSplitting', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const result = await prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
     expect(result?.shouldAllowOnlyCurrentFolder).toBe(false);
@@ -340,10 +362,11 @@ describe('prepareForSplitFile', () => {
   it('should return null when confirm dialog is rejected', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -352,6 +375,7 @@ describe('prepareForSplitFile', () => {
   it('should trash new target file when confirm rejected and file is new', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
@@ -360,7 +384,7 @@ describe('prepareForSplitFile', () => {
 
     mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });
 
-    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -371,10 +395,11 @@ describe('prepareForSplitFile', () => {
     shouldAutoSelect = true;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).not.toBeNull();
@@ -385,13 +410,45 @@ describe('prepareForSplitFile', () => {
     shouldAutoSelect = true;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
+  });
+
+  it('should lock the source note while the modal is open and unlock it afterwards', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
+
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, pluginSettingsComponent, sourceFile });
+    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(editorLockComponent.unlockForPath).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+    expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+  });
+
+  it('should lock the target note while the confirmation dialog is open and unlock both notes afterwards', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const editorLockComponent = createMockEditorLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
+
+    const promise = prepareForSplitFile({ app, editor, editorLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(editorLockComponent.lockForPath).toHaveBeenCalledWith(mockTargetFile);
+    expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(editorLockComponent.unlockForPath).toHaveBeenCalledWith(mockTargetFile);
   });
 });

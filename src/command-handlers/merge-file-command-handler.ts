@@ -68,6 +68,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     }
     const result = await prepareForMergeFile({
       app: this.app,
+      editorLockComponent: this.editorLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       sourceFile: file
     });

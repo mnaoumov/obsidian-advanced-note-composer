@@ -1,4 +1,5 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import {
   App,
@@ -59,6 +60,7 @@ interface MergeFileModalResult {
 
 interface PrepareForMergeFileParams {
   readonly app: App;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
 }
@@ -377,6 +379,10 @@ class MergeFileModal extends SuggestModalBase {
 /* v8 ignore stop */
 
 export async function prepareForMergeFile(params: PrepareForMergeFileParams): Promise<null | PrepareForMergeFileResult> {
+  // Lock the source note for the whole setup flow so it cannot be edited while the
+  // (minimizable) merge/confirmation modal is open — an external edit would corrupt the pending merge.
+  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile);
+
   const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
     const modal = new MergeFileModal({
       ...params,
@@ -412,6 +418,9 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return prepareForMergeFileResult;
   }
+
+  // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
+  using _targetLock = params.editorLockComponent.lockForPath(prepareForMergeFileResult.targetFile);
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(

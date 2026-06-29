@@ -1,4 +1,5 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import {
   App,
@@ -42,6 +43,7 @@ interface ConfirmDialogModalResult {
 interface PrepareForSplitFileParams {
   readonly app: App;
   readonly editor: Editor;
+  readonly editorLockComponent: EditorLockComponent;
   readonly heading?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldSkipModal?: boolean;
@@ -456,6 +458,10 @@ class SplitFileModal extends SuggestModalBase {
 }
 
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
+  // Lock the source note for the whole setup flow so it cannot be edited while the
+  // (minimizable) split/confirmation modal is open — an external edit would corrupt the pending split.
+  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile);
+
   let heading = params.heading;
   if (heading === '') {
     heading = undefined;
@@ -517,6 +523,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   if (!params.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
     return prepareForSplitFileResult;
   }
+
+  // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
+  using _targetLock = params.editorLockComponent.lockForPath(prepareForSplitFileResult.targetFile);
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve));
