@@ -20,6 +20,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface ConfirmDialogModalConstructorParams {
@@ -278,10 +279,12 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
 
 export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
   const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
-    new MergeFolderModal({
-      ...params,
-      promiseResolve
-    }).open();
+    openMinimizableModal(
+      new MergeFolderModal({
+        ...params,
+        promiseResolve
+      })
+    );
   });
   /* v8 ignore start -- requires MergeFolderModal to resolve with a selected folder which is untestable in unit tests. */
   if (!targetFolder) {
@@ -291,11 +294,13 @@ export async function selectTargetFolderForMergeFolder(params: SelectTargetFolde
     return targetFolder;
   }
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    new ConfirmDialogModal({
-      ...params,
-      promiseResolve,
-      targetFolder
-    }).open();
+    openMinimizableModal(
+      new ConfirmDialogModal({
+        ...params,
+        promiseResolve,
+        targetFolder
+      })
+    );
   });
   if (!confirmDialogResult.isConfirmed) {
     return null;

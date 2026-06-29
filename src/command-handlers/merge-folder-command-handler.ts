@@ -7,6 +7,7 @@ import type {
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { Vault } from 'obsidian';
 import {
@@ -43,6 +44,7 @@ import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.t
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -50,6 +52,7 @@ interface MergeFolderCommandHandlerConstructorParams {
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly editorLockComponent: EditorLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
@@ -64,6 +67,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -181,6 +185,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       const composer = new MergeComposer({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
+        editorLockComponent: this.editorLockComponent,
         isNewTargetFile,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,

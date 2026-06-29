@@ -80,7 +80,8 @@ export class SplitItemSelector extends ItemSelectorBase {
     const isInvalidTitle = file.basename !== fileName;
 
     if (isInvalidTitle && this.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
-      await addAlias({ alias: fileName, app: this.app, pathOrFile: file });
+      // The note was just created, so there is no open editor to lock while its alias is added.
+      await addAlias({ alias: fileName, app: this.app, editorLockComponent: null, pathOrFile: file });
     }
 
     let shouldAddTitleToFrontmatter = false;

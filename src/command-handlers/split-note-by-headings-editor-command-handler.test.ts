@@ -9,6 +9,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -81,6 +82,7 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -119,6 +121,7 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
+    editorLockComponent: strictProxy<EditorLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -349,7 +352,9 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValue(splitResult);
@@ -363,13 +368,16 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     expect(mockSplitFile).toHaveBeenCalledTimes(1);
     expect(MockSplitComposer).toHaveBeenCalledWith({
       app: params.app,
+      capturedSelections: [],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
+      editorLockComponent: params.editorLockComponent,
       heading: 'My Heading',
       isMultipleSplit: true,
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      selectedText: '',
       sourceFile: file,
       targetFile
     });
