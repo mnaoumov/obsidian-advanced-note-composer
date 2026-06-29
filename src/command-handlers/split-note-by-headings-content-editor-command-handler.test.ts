@@ -347,7 +347,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValueOnce(splitResult);
@@ -394,7 +396,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValue(splitResult);

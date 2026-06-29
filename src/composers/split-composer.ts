@@ -21,18 +21,26 @@ import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
+  // The source selection offsets and selected text, captured BEFORE the (minimizable) modal opened,
+  // While `editor` still showed the source note. They must NOT be re-read from `editor` inside the
+  // Operation: the editor is the leaf's instance, and if the user navigated that leaf to another
+  // Note during the modal, the same `editor` object now reflects THAT note — re-reading it would
+  // Extract the wrong note's content.
+  readonly capturedSelections: Selection[];
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
+  readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
-  private capturedSelections: Selection[] = [];
+  private readonly capturedSelections: Selection[];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
+  private readonly selectedText: string;
 
   public constructor(params: SplitComposerConstructorParams) {
     super({
@@ -43,18 +51,14 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
+    this.capturedSelections = params.capturedSelections;
+    this.selectedText = params.selectedText;
   }
 
   public async splitFile(): Promise<void> {
     if (!await this.checkTargetFileIgnored(Action.Split)) {
       return;
     }
-
-    // Snapshot the source selections up front as plain offset data.
-    // The operation uses this snapshot, not the live editor, so navigating the active leaf
-    // (e.g. clicking a progress-notice link) cannot rebind the editor and corrupt the result.
-    this.capturedSelections = getSelections(this.editor);
-    const selectedText = this.editor.getSelection();
 
     const mtimes = this.captureFileMtimes();
     this.lockNotes();
@@ -73,11 +77,12 @@ export class SplitComposer extends ComposerBase {
         return;
       }
 
-      await this.insertIntoTargetFile(selectedText);
-
-      // Re-open the source note and restore the captured selections just before the destructive edits.
-      // They must target the source note even if the active leaf navigated during the operation.
+      // Re-open the source note and restore the captured selections FIRST, before any edit, so every
+      // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
+      // The active leaf navigated to another note during the (minimizable) modal.
       await this.reopenSourceFileAndRestoreSelections();
+
+      await this.insertIntoTargetFile(this.selectedText);
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
@@ -114,7 +119,6 @@ export class SplitComposer extends ComposerBase {
       throw error;
     } finally {
       progressModalHandle?.close();
-      this.capturedSelections = [];
       this.unlockNotes();
     }
   }

@@ -239,9 +239,11 @@ describe('SplitComposer constructor', () => {
     const deps = createDeps();
     const editor = createMockEditor();
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       shouldIncludeFrontmatter: true,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
@@ -254,9 +256,11 @@ describe('SplitComposer constructor', () => {
     const deps = createDeps({ shouldIncludeFrontmatterWhenSplittingByDefault: true });
     const editor = createMockEditor();
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -271,9 +275,11 @@ describe('splitFile', () => {
     const deps = createDeps({ isPathIgnored: vi.fn().mockReturnValue(true) });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -284,14 +290,53 @@ describe('splitFile', () => {
     expect(editor.replaceSelection).not.toHaveBeenCalled();
   });
 
+  it('should extract the captured selectedText, never the live (possibly rebound) editor selection', async () => {
+    // Regression for the file-switch corruption: the leaf may navigate away during the modal.
+    // Rebinding the composer's `editor` to the other note must not corrupt the result.
+    // The composer uses the captured text (passed in) and never re-reads `editor.getSelection()`.
+    const editor = createMockEditor({ selection: 'LIVE-WRONG-NOTE-CONTENT' });
+    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
+    const insertIntoFileMock = vi.fn();
+    const appObj = getAppObj(deps.app);
+    appObj['fileManager'] = {
+      generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
+      insertIntoFile: insertIntoFileMock,
+      processFrontMatter: vi.fn()
+    };
+
+    const composer = new SplitComposer({
+      capturedSelections: [{ endOffset: 14, startOffset: 0 }],
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: true,
+      selectedText: 'CAPTURED-CONTENT',
+      ...deps,
+      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
+      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+    });
+
+    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.mocked(getCacheSafe).mockResolvedValue(null);
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.splitFile();
+
+    const inserted = insertIntoFileMock.mock.calls.map((call) => String(call[1])).join('');
+    expect(inserted).toContain('CAPTURED-CONTENT');
+    expect(inserted).not.toContain('LIVE-WRONG-NOTE-CONTENT');
+    expect(editor.getSelection).not.toHaveBeenCalled();
+  });
+
   it('should insert content and replace with link for LinkToNewFile mode', async () => {
     const editor = createMockEditor();
     const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -324,9 +369,11 @@ describe('splitFile', () => {
 
     const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new SplitComposer({
+      capturedSelections: [{ endOffset: 10, startOffset: 0 }],
       editor: staleEditor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -363,9 +410,11 @@ describe('splitFile', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: [{ endOffset: 10, startOffset: 0 }],
       editor: staleEditor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -387,9 +436,11 @@ describe('splitFile', () => {
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile
@@ -420,9 +471,11 @@ describe('splitFile', () => {
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile
@@ -450,9 +503,11 @@ describe('splitFile', () => {
     const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile
@@ -478,9 +533,11 @@ describe('splitFile', () => {
     const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile
@@ -520,9 +577,11 @@ describe('splitFile', () => {
       }
     });
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile,
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -541,9 +600,11 @@ describe('splitFile', () => {
     const editor = createMockEditor();
     const deps = createDeps();
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: true,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -564,9 +625,11 @@ describe('splitFile', () => {
     const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -586,9 +649,11 @@ describe('splitFile', () => {
     const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -608,9 +673,11 @@ describe('splitFile', () => {
     const deps = createDeps({ textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid') });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -635,9 +702,11 @@ describe('splitFile', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -664,9 +733,11 @@ describe('splitFile', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: true,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -692,9 +763,11 @@ describe('splitFile', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -722,9 +795,11 @@ describe('SplitComposer getTemplate', () => {
     const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -750,9 +825,11 @@ describe('SplitComposer getTemplate', () => {
     const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -781,9 +858,11 @@ describe('SplitComposer getTemplate', () => {
     });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: false,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -812,9 +891,11 @@ describe('SplitComposer getTemplate', () => {
     });
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: false,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -841,9 +922,11 @@ describe('SplitComposer prepareBacklinkSubpaths', () => {
     const deps = createDeps();
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -883,9 +966,11 @@ describe('SplitComposer updateEditorSelections', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -932,9 +1017,11 @@ describe('SplitComposer updateEditorSelections with restore', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -990,9 +1077,11 @@ describe('SplitComposer removeSelectionRange', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
@@ -1044,9 +1133,11 @@ describe('SplitComposer removeSelectionRange', () => {
     };
 
     const composer = new SplitComposer({
+      capturedSelections: getSelections(editor),
       editor,
       isMultipleSplit: false,
       isNewTargetFile: true,
+      selectedText: 'selected text',
       ...deps,
       sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
       targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })

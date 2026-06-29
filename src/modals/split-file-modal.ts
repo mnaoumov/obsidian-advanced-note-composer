@@ -18,6 +18,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
+import type { Selection } from '../composers/composer-base.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   Item,
@@ -51,9 +52,11 @@ interface PrepareForSplitFileParams {
 }
 
 interface PrepareForSplitFileResult {
+  readonly capturedSelections: Selection[];
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly insertMode: InsertMode;
   readonly isNewTargetFile: boolean;
+  readonly selectedText: string;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
@@ -458,6 +461,13 @@ class SplitFileModal extends SuggestModalBase {
 }
 
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
+  // Capture the source selection and its text NOW, before the (minimizable) modal opens, while
+  // `params.editor` still shows the source note. If the user navigates that leaf to another note
+  // During the modal, the same editor object would then reflect THAT note — so the operation must
+  // Use this snapshot, never re-read the live editor.
+  const capturedSelections = getSelections(params.editor);
+  const selectedText = params.editor.getSelection();
+
   // Lock the source note for the whole setup flow so it cannot be edited while the
   // (minimizable) split/confirmation modal is open — an external edit would corrupt the pending split.
   // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
@@ -512,9 +522,11 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
+    capturedSelections,
     frontmatterMergeStrategy: splitFileModalResult.frontmatterMergeStrategy,
     insertMode: splitFileModalResult.insertMode,
     isNewTargetFile: selectItemResult.isNewTargetFile,
+    selectedText,
     shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
     shouldAllowSplitIntoUnresolvedPath: splitFileModalResult.shouldAllowSplitIntoUnresolvedPath,
     shouldFixFootnotes: splitFileModalResult.shouldFixFootnotes,

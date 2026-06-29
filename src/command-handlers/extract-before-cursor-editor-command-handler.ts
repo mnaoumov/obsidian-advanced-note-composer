@@ -74,6 +74,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     }
     const composer = new SplitComposer({
       app: this.app,
+      capturedSelections: result.capturedSelections,
       consoleDebugComponent: this.consoleDebugComponent,
       editor,
       editorLockComponent: this.editorLockComponent,
@@ -83,6 +84,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      selectedText: result.selectedText,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
       shouldMergeHeadings: result.shouldMergeHeadings,
