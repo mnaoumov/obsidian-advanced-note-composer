@@ -9,6 +9,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -81,6 +82,7 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -125,6 +127,7 @@ function createMockParams(
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
+    editorLockComponent: strictProxy<EditorLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -344,7 +347,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValueOnce(splitResult);
@@ -391,7 +396,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValue(splitResult);

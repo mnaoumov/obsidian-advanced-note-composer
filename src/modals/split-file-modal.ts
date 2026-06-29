@@ -1,4 +1,5 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import {
   App,
@@ -17,6 +18,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
+import type { Selection } from '../composers/composer-base.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   Item,
@@ -28,6 +30,7 @@ import { getSelections } from '../composers/split-composer.ts';
 import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
@@ -41,6 +44,7 @@ interface ConfirmDialogModalResult {
 interface PrepareForSplitFileParams {
   readonly app: App;
   readonly editor: Editor;
+  readonly editorLockComponent: EditorLockComponent;
   readonly heading?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldSkipModal?: boolean;
@@ -48,9 +52,11 @@ interface PrepareForSplitFileParams {
 }
 
 interface PrepareForSplitFileResult {
+  readonly capturedSelections: Selection[];
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly insertMode: InsertMode;
   readonly isNewTargetFile: boolean;
+  readonly selectedText: string;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
@@ -455,6 +461,20 @@ class SplitFileModal extends SuggestModalBase {
 }
 
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
+  // Capture the source selection and its text NOW, before the (minimizable) modal opens, while
+  // `params.editor` still shows the source note. If the user navigates that leaf to another note
+  // During the modal, the same editor object would then reflect THAT note — so the operation must
+  // Use this snapshot, never re-read the live editor.
+  const capturedSelections = getSelections(params.editor);
+  const selectedText = params.editor.getSelection();
+
+  // Lock the source note for the whole setup flow so it cannot be edited while the
+  // (minimizable) split/confirmation modal is open — an external edit would corrupt the pending split.
+  // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
+  // (so the setup flow cancels) and the `using` locks release on return.
+  const abortController = new AbortController();
+  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile, { abortController });
+
   let heading = params.heading;
   if (heading === '') {
     heading = undefined;
@@ -481,7 +501,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         heading,
         promiseResolve
       });
-      modal.open();
+      openMinimizableModal(modal, abortController);
     });
 
   if (!splitFileModalResult) {
@@ -502,9 +522,11 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }).selectItem();
 
   const prepareForSplitFileResult: PrepareForSplitFileResult = {
+    capturedSelections,
     frontmatterMergeStrategy: splitFileModalResult.frontmatterMergeStrategy,
     insertMode: splitFileModalResult.insertMode,
     isNewTargetFile: selectItemResult.isNewTargetFile,
+    selectedText,
     shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
     shouldAllowSplitIntoUnresolvedPath: splitFileModalResult.shouldAllowSplitIntoUnresolvedPath,
     shouldFixFootnotes: splitFileModalResult.shouldFixFootnotes,
@@ -517,8 +539,11 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     return prepareForSplitFileResult;
   }
 
+  // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
+  using _targetLock = params.editorLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
+
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve).open();
+    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve), abortController);
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */

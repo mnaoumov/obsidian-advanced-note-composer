@@ -4,6 +4,10 @@ import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-regi
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import {
+  isEditorLockedForPath,
+  requestEditorUnlockForPath
+} from 'obsidian-dev-utils/obsidian/editor-lock';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
@@ -47,6 +51,7 @@ export class Plugin extends PluginBase {
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
+    const editorLockComponent = this.editorLockComponent;
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -54,36 +59,42 @@ export class Plugin extends PluginBase {
           new MergeFileCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            editorLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
@@ -101,6 +112,7 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
+              editorLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
@@ -108,6 +120,7 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsContentEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
+              editorLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
@@ -119,6 +132,23 @@ export class Plugin extends PluginBase {
         pluginName: this.manifest.name
       })
     );
+
+    this.addCommand({
+      checkCallback: (checking: boolean): boolean => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !isEditorLockedForPath(this.app, activeFile)) {
+          return false;
+        }
+
+        if (!checking) {
+          requestEditorUnlockForPath(this.app, activeFile);
+        }
+
+        return true;
+      },
+      id: 'unlock-active-note',
+      name: 'Unlock active note'
+    });
 
     this.addChild(new PrismComponent());
     this.addChild(

@@ -12,6 +12,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface SelectTargetFolderForSwapParams {
@@ -175,6 +176,6 @@ export async function selectTargetFolderForSwap(params: SelectTargetFolderForSwa
       ...params,
       promiseResolve
     });
-    modal.open();
+    openMinimizableModal(modal);
   });
 }

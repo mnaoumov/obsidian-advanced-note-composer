@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
@@ -21,6 +22,7 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -28,6 +30,7 @@ interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
 export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly editorLockComponent: EditorLockComponent;
   private headingInfo?: HeadingInfo;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -42,6 +45,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -90,6 +94,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      editorLockComponent: this.editorLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       sourceFile: file
     });
@@ -98,14 +103,17 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     }
     const composer = new SplitComposer({
       app: this.app,
+      capturedSelections: result.capturedSelections,
       consoleDebugComponent: this.consoleDebugComponent,
       editor,
+      editorLockComponent: this.editorLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      selectedText: result.selectedText,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,
       shouldMergeHeadings: result.shouldMergeHeadings,

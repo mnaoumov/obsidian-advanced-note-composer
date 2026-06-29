@@ -5,6 +5,7 @@ import type {
   Pos
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
@@ -54,6 +55,7 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
+  readonly editorLockComponent: EditorLockComponent;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
   readonly isNewTargetFile: boolean;
@@ -66,6 +68,11 @@ export interface ComposerBaseConstructorParamsBase {
   readonly sourceFile: TFile;
 
   readonly targetFile: TFile;
+}
+
+export interface FileMtimes {
+  readonly sourceMtime: number;
+  readonly targetMtime: number;
 }
 
 export interface Frontmatter extends GenericObject {
@@ -87,7 +94,9 @@ interface ExtractFrontmatterResult {
 }
 
 export abstract class ComposerBase {
+  protected readonly abortController = new AbortController();
   protected readonly app: App;
+  protected readonly editorLockComponent: EditorLockComponent;
   protected readonly isNewTargetFile: boolean;
 
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -105,6 +114,7 @@ export abstract class ComposerBase {
 
   public constructor(params: ComposerBaseConstructorParams) {
     this.app = params.app;
+    this.editorLockComponent = params.editorLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
 
@@ -117,6 +127,44 @@ export abstract class ComposerBase {
     this.shouldShowNotice = params.shouldShowNotice ?? true;
     this.targetFile = params.targetFile;
     this.isNewTargetFile = params.isNewTargetFile;
+  }
+
+  /**
+   * Captures the current modification times of the source and target notes so a later
+   * {@link checkFilesUnchanged} call can detect external edits made during the operation.
+   *
+   * @returns The captured modification times.
+   */
+  protected captureFileMtimes(): FileMtimes {
+    return {
+      sourceMtime: this.sourceFile.stat.mtime,
+      targetMtime: this.targetFile.stat.mtime
+    };
+  }
+
+  /**
+   * Checks whether the source and target notes are still unchanged since {@link captureFileMtimes}.
+   * If either was modified (e.g. externally, or by sync) the operation is refused and a notice is
+   * shown, guarding against clobbering external edits.
+   *
+   * @param mtimes - The modification times captured at the start of the operation.
+   * @returns `true` if both notes are unchanged, `false` if the operation should be aborted.
+   */
+  protected async checkFilesUnchanged(mtimes: FileMtimes): Promise<boolean> {
+    if (this.sourceFile.stat.mtime === mtimes.sourceMtime && this.targetFile.stat.mtime === mtimes.targetMtime) {
+      return true;
+    }
+
+    this.pluginNoticeComponent.showNotice(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Aborted because ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
+        f.appendText(' or ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.appendText(' was modified during the operation.');
+      })
+    );
+    return false;
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
@@ -139,7 +187,9 @@ export abstract class ComposerBase {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
       await editLinks({
+        abortSignal: this.abortController.signal,
         app: this.app,
+        editorLockComponent: this.editorLockComponent,
         linkConverter: (link) => {
           linkIndex++;
           if (!linkJsons.includes(JSON.stringify(link))) {
@@ -166,8 +216,6 @@ export abstract class ComposerBase {
   protected abstract getSelections(): Promise<Selection[]>;
 
   protected abstract getTemplate(): string;
-
-  /* v8 ignore stop */
 
   protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
@@ -231,7 +279,26 @@ export abstract class ComposerBase {
     await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
   }
 
+  /**
+   * Makes the source and target notes read-only for the duration of the operation so the user
+   * cannot accidentally edit either note while it is being composed. Balanced by {@link unlockNotes}.
+   */
+  protected lockNotes(): void {
+    this.editorLockComponent.lockForPath(this.sourceFile, { abortController: this.abortController });
+    this.editorLockComponent.lockForPath(this.targetFile, { abortController: this.abortController });
+  }
+
+  /* v8 ignore stop */
+
   protected abstract prepareBacklinkSubpaths(): Set<string>;
+
+  /**
+   * Restores the editability of the source and target notes locked by {@link lockNotes}.
+   */
+  protected unlockNotes(): void {
+    this.editorLockComponent.unlockForPath(this.sourceFile);
+    this.editorLockComponent.unlockForPath(this.targetFile);
+  }
 
   protected updateEditorSelections(
     _sourceCache: CachedMetadata | null,
@@ -407,7 +474,9 @@ export abstract class ComposerBase {
     }
 
     await process({
+      abortSignal: this.abortController.signal,
       app: this.app,
+      editorLockComponent: this.editorLockComponent,
       newContentProvider: async ({ content: targetFileContent }) => {
         const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
         const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);

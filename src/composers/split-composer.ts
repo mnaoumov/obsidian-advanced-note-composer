@@ -6,8 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { MarkdownView } from 'obsidian';
 
 import type {
   ComposerBaseConstructorParamsBase,
@@ -18,20 +17,30 @@ import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
+import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
+  // The source selection offsets and selected text, captured BEFORE the (minimizable) modal opened,
+  // While `editor` still showed the source note. They must NOT be re-read from `editor` inside the
+  // Operation: the editor is the leaf's instance, and if the user navigated that leaf to another
+  // Note during the modal, the same `editor` object now reflects THAT note — re-reading it would
+  // Extract the wrong note's content.
+  readonly capturedSelections: Selection[];
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
+  readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 }
 
 export class SplitComposer extends ComposerBase {
+  private readonly capturedSelections: Selection[];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly editor: Editor;
+  private editor: Editor;
   private readonly isMultipleSplit: boolean;
+  private readonly selectedText: string;
 
   public constructor(params: SplitComposerConstructorParams) {
     super({
@@ -42,6 +51,8 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
+    this.capturedSelections = params.capturedSelections;
+    this.selectedText = params.selectedText;
   }
 
   public async splitFile(): Promise<void> {
@@ -49,24 +60,29 @@ export class SplitComposer extends ComposerBase {
       return;
     }
 
-    const notice = this.pluginNoticeComponent.showNotice(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Advanced Note Composer: Splitting note ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
-        f.appendText(' into ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
-        f.createEl('br');
-        f.createEl('br');
-        f.createDiv('is-loading');
-      }),
-      {
-        isPermanent: true
-      }
-    );
+    const mtimes = this.captureFileMtimes();
+    this.lockNotes();
+    const progressModalHandle = this.isMultipleSplit
+      ? null
+      : await openProgressModal({
+        app: this.app,
+        sourceFile: this.sourceFile,
+        targetFile: this.targetFile,
+        verb: 'Splitting'
+      });
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-      await this.insertIntoTargetFile(this.editor.getSelection());
+      if (!await this.checkFilesUnchanged(mtimes)) {
+        return;
+      }
+
+      // Re-open the source note and restore the captured selections FIRST, before any edit, so every
+      // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
+      // The active leaf navigated to another note during the (minimizable) modal.
+      await this.reopenSourceFileAndRestoreSelections();
+
+      await this.insertIntoTargetFile(this.selectedText);
 
       const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
@@ -84,6 +100,10 @@ export class SplitComposer extends ComposerBase {
           throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
       }
 
+      // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
+      // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
+      this.revealCursor();
+
       if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
@@ -91,14 +111,21 @@ export class SplitComposer extends ComposerBase {
           active: true
         });
       }
+    } catch (error) {
+      if (this.abortController.signal.aborted) {
+        // The operation was cancelled by unlocking the note; nothing to report.
+        return;
+      }
+      throw error;
     } finally {
-      notice.hide();
+      progressModalHandle?.close();
+      this.unlockNotes();
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise return type.
   protected override async getSelections(): Promise<Selection[]> {
-    return getSelections(this.editor);
+    return this.capturedSelections;
   }
 
   protected override getTemplate(): string {
@@ -184,7 +211,41 @@ export class SplitComposer extends ComposerBase {
 
     return result;
   }
+
+  private async reopenSourceFileAndRestoreSelections(): Promise<void> {
+    if (this.isMultipleSplit) {
+      return;
+    }
+
+    await this.app.workspace.getLeaf().openFile(this.sourceFile, { active: true });
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return;
+    }
+
+    this.editor = view.editor;
+    this.editor.setSelections(this.capturedSelections.map((selection) => ({
+      anchor: this.editor.offsetToPos(selection.startOffset),
+      head: this.editor.offsetToPos(selection.endOffset)
+    })));
+  }
   /* v8 ignore stop */
+
+  /**
+   * Scrolls the active source view to the current cursor line (preserving the cursor), so that after
+   * the source note is reopened the user lands where the extraction happened instead of at the top.
+   * A no-op for multiple-split (no reopen happens) or when there is no active markdown view.
+   */
+  private revealCursor(): void {
+    if (this.isMultipleSplit) {
+      return;
+    }
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return;
+    }
+    view.setEphemeralState({ line: this.editor.getCursor().line });
+  }
 }
 
 export function getSelections(editor: Editor): Selection[] {
