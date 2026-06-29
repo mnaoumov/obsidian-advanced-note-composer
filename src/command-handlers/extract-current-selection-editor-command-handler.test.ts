@@ -190,9 +190,11 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
     const targetFile = createMockFile();
 
     const splitResult = {
+      capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       insertMode: InsertMode.Append,
       isNewTargetFile: true,
+      selectedText: 'extracted text',
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
@@ -209,6 +211,7 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
 
     expect(MockSplitComposer).toHaveBeenCalledWith({
       app: params.app,
+      capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
       editorLockComponent: params.editorLockComponent,
@@ -218,6 +221,7 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      selectedText: 'extracted text',
       shouldFixFootnotes: true,
       shouldIncludeFrontmatter: false,
       shouldMergeHeadings: false,

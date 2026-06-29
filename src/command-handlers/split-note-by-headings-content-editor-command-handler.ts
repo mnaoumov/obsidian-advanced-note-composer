@@ -121,6 +121,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       }
       const composer = new SplitComposer({
         app: this.app,
+        capturedSelections: result.capturedSelections,
         consoleDebugComponent: this.consoleDebugComponent,
         editor,
         editorLockComponent: this.editorLockComponent,
@@ -129,6 +130,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         isNewTargetFile: result.isNewTargetFile,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
+        selectedText: result.selectedText,
         sourceFile: file,
         targetFile: result.targetFile
       });

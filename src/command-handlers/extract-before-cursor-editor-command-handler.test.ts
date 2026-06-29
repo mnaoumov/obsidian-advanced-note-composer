@@ -177,9 +177,11 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
     const targetFile = createMockFile();
 
     const splitResult = {
+      capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       insertMode: InsertMode.Append,
       isNewTargetFile: true,
+      selectedText: 'extracted text',
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
@@ -197,6 +199,7 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith({ ch: 0, line: 0 }, { ch: 5, line: 3 });
     expect(MockSplitComposer).toHaveBeenCalledWith({
       app: params.app,
+      capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
       editorLockComponent: params.editorLockComponent,
@@ -206,6 +209,7 @@ describe('ExtractBeforeCursorEditorCommandHandler', () => {
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      selectedText: 'extracted text',
       shouldFixFootnotes: true,
       shouldIncludeFrontmatter: false,
       shouldMergeHeadings: false,

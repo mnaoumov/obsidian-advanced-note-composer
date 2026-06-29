@@ -272,9 +272,11 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     handler.canExecuteEditor(editor, ctx);
 
     const splitResult = {
+      capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       insertMode: InsertMode.Append,
       isNewTargetFile: true,
+      selectedText: 'extracted text',
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,

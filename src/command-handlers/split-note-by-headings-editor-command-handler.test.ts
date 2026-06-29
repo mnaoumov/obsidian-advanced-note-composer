@@ -352,7 +352,9 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     });
 
     const splitResult = strictProxy<PrepareForSplitFileResult>({
+      capturedSelections: [],
       isNewTargetFile: true,
+      selectedText: '',
       targetFile
     });
     mockPrepareForSplitFile.mockResolvedValue(splitResult);
@@ -366,6 +368,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     expect(mockSplitFile).toHaveBeenCalledTimes(1);
     expect(MockSplitComposer).toHaveBeenCalledWith({
       app: params.app,
+      capturedSelections: [],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
       editorLockComponent: params.editorLockComponent,
@@ -374,6 +377,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      selectedText: '',
       sourceFile: file,
       targetFile
     });
