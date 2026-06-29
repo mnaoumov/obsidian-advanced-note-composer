@@ -312,7 +312,7 @@ describe('prepareForMergeFile', () => {
     const plugin = createMockPlugin();
 
     const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
-    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(vi.mocked(plugin.editorLockComponent.lockForPath).mock.calls.map((call) => call[0])).toContain(sourceFile);
     expect(plugin.editorLockComponent.unlockForPath).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(0);
     await promise;
@@ -328,9 +328,25 @@ describe('prepareForMergeFile', () => {
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
     await promise;
-    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(plugin.editorLockComponent.lockForPath).toHaveBeenCalledWith(mockTargetFile);
+    const lockedPaths = vi.mocked(plugin.editorLockComponent.lockForPath).mock.calls.map((call) => call[0]);
+    expect(lockedPaths).toContain(sourceFile);
+    expect(lockedPaths).toContain(mockTargetFile);
     expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(mockTargetFile);
+  });
+
+  it('should cancel and unlock when the lock is aborted while the modal is open', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const plugin = createMockPlugin();
+
+    const promise = prepareForMergeFile({ app: plugin.app, editorLockComponent: plugin.editorLockComponent, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFile });
+    // Simulate the user unlocking: abort the controller the lock was registered with.
+    const abortController = vi.mocked(plugin.editorLockComponent.lockForPath).mock.calls[0]?.[1]?.abortController;
+    expect(abortController).toBeInstanceOf(AbortController);
+    abortController?.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+    expect(plugin.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
   });
 });
