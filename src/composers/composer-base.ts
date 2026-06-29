@@ -70,11 +70,6 @@ export interface ComposerBaseConstructorParamsBase {
   readonly targetFile: TFile;
 }
 
-export interface FileMtimes {
-  readonly sourceMtime: number;
-  readonly targetMtime: number;
-}
-
 export interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -93,19 +88,24 @@ interface ExtractFrontmatterResult {
   readonly frontmatter: Frontmatter;
 }
 
+interface FileMtimes {
+  readonly sourceMtime: number;
+  readonly targetMtime: number;
+}
+
 export abstract class ComposerBase {
   protected readonly abortController = new AbortController();
   protected readonly app: App;
   protected readonly editorLockComponent: EditorLockComponent;
   protected readonly isNewTargetFile: boolean;
 
-  protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly insertMode: InsertMode;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
 
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
