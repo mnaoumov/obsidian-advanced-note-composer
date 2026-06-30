@@ -19,11 +19,9 @@ import {
   TFile
 } from 'obsidian';
 import { noop } from 'obsidian-dev-utils/function';
-import {
-  appendCodeBlock,
-  createFragmentAsync
-} from 'obsidian-dev-utils/html-element';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import {
   editLinks,
   updateLink,

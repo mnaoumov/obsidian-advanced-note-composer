@@ -54,8 +54,11 @@ interface UpdateLinksParams {
   readonly content: string;
 }
 
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
+}));
+
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
     const fragment = activeDocument.createDocumentFragment();
     return cb(fragment).then(() => fragment);

@@ -62,8 +62,11 @@ vi.mock('obsidian', async (importOriginal) => ({
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn()
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => ({

@@ -1,7 +1,7 @@
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import { getDebugController } from 'obsidian-dev-utils/debug';
-import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';

@@ -89,8 +89,11 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  appendCodeBlock: vi.fn(),
   createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
 }));
 
 vi.mock('../markdown-heading-document.ts', () => ({

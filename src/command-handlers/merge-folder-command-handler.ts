@@ -10,10 +10,7 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 
 import { Vault } from 'obsidian';
-import {
-  appendCodeBlock,
-  createFragmentAsync
-} from 'obsidian-dev-utils/html-element';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
   exists,
@@ -22,6 +19,7 @@ import {
   isFolder,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/file-system';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   getAvailablePath,
