@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 
-import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
 import { LayoutReadyComponent } from 'obsidian-dev-utils/obsidian/components/layout-ready-component';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';

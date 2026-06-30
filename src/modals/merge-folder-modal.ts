@@ -11,10 +11,8 @@ import {
   Platform
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import {
-  appendCodeBlock,
-  createFragmentAsync
-} from 'obsidian-dev-utils/html-element';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 

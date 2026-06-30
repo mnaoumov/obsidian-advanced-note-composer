@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 
 import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
-import { appendCodeBlock } from 'obsidian-dev-utils/html-element';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -29,7 +29,7 @@ interface MockPluginSettingsComponentResult {
   readonly settings: PluginSettings;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
