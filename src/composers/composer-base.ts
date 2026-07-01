@@ -96,6 +96,7 @@ export abstract class ComposerBase {
   protected readonly app: App;
   protected readonly editorLockComponent: EditorLockComponent;
   protected readonly isNewTargetFile: boolean;
+  protected readonly pluginNoticeComponent: PluginNoticeComponent;
 
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly shouldShowNotice: boolean;
@@ -103,7 +104,6 @@ export abstract class ComposerBase {
   protected readonly targetFile: TFile;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly insertMode: InsertMode;
-  private readonly pluginNoticeComponent: PluginNoticeComponent;
 
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;

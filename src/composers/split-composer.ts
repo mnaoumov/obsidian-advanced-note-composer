@@ -17,7 +17,7 @@ import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { openProgressModal } from '../progress-modal.ts';
+import { showProgressNotice } from '../progress-notice.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -62,10 +62,11 @@ export class SplitComposer extends ComposerBase {
 
     const mtimes = this.captureFileMtimes();
     this.lockNotes();
-    const progressModalHandle = this.isMultipleSplit
+    const progressNoticeHandle = this.isMultipleSplit
       ? null
-      : await openProgressModal({
+      : showProgressNotice({
         app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         sourceFile: this.sourceFile,
         targetFile: this.targetFile,
         verb: 'Splitting'
@@ -118,7 +119,7 @@ export class SplitComposer extends ComposerBase {
       }
       throw error;
     } finally {
-      progressModalHandle?.close();
+      progressNoticeHandle?.close();
       this.unlockNotes();
     }
   }
