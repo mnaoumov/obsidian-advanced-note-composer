@@ -159,7 +159,7 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     await handler.executeEditor(editor, ctx);
 

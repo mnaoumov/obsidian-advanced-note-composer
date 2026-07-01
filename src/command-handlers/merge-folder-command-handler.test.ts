@@ -219,7 +219,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     await handler.executeFolder(folder);
 
@@ -260,7 +260,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     mockRecurseChildren.mockImplementation((_folder, _cb) => {
       // No children
@@ -293,7 +293,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const mdFile = createMockFile('src/note.md');
     const otherFile = createMockFile('src/image.png');
@@ -351,7 +351,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const emptySubfolder = createMockFolder('src/empty', false, []);
     mockRecurseChildren.mockImplementation((_folder, cb) => {
@@ -391,7 +391,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const subfolder = createMockFolder('src/sub', false, []);
     mockRecurseChildren.mockImplementation((_folder, cb) => {
@@ -435,7 +435,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const child = createMockFile('src/sub/child.md');
     const subfolder = createMockFolder('src/sub', false, [child]);
@@ -474,7 +474,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     mockRecurseChildren.mockImplementation((_folder, _cb) => {
       // No children
@@ -507,7 +507,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     mockRecurseChildren.mockImplementation((_folder, _cb) => {
       // No children
@@ -540,7 +540,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const file1 = createMockFile('src/a/b/deep.md');
     const file2 = createMockFile('src/shallow.md');
@@ -615,7 +615,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     mockRecurseChildren.mockImplementation(() => {
       throw new Error('test error');
@@ -646,7 +646,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const unknownChild = strictProxy<TAbstractFile>({ path: 'src/unknown' });
     mockRecurseChildren.mockImplementation((_folder, cb) => {
@@ -685,7 +685,7 @@ describe('MergeFolderCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
       return mockNoticeFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     const file1 = createMockFile('src/shallow.md');
     const file2 = createMockFile('src/a/b/deep.md');

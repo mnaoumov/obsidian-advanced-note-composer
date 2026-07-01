@@ -75,7 +75,7 @@ vi.mock('obsidian-dev-utils/obsidian/link', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
@@ -89,7 +89,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockResolvedValue(activeDocument.createDocumentFragment())
+  createFragmentAsync: vi.fn().mockResolvedValue(createFragment())
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
