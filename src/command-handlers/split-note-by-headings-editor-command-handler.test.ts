@@ -82,10 +82,10 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createHeading(level: number, line: number): HeadingCache {
@@ -121,7 +121,6 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -129,7 +128,8 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -371,12 +371,12 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       capturedSelections: [],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
-      resourceLockComponent: params.resourceLockComponent,
       heading: 'My Heading',
       isMultipleSplit: true,
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      resourceLockComponent: params.resourceLockComponent,
       selectedText: '',
       sourceFile: file,
       targetFile

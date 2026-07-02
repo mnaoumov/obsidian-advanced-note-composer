@@ -4,12 +4,12 @@ import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-regi
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
+import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 import {
   isResourceLockedForPath,
   requestResourceUnlockForPath
 } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
-import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
 import type { Level } from './markdown-heading-document.ts';
 
@@ -59,44 +59,44 @@ export class Plugin extends PluginBase {
           new MergeFileCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new SwapFileCommandHandler({
             app: this.app,
@@ -114,18 +114,18 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
-              resourceLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent
+              pluginSettingsComponent,
+              resourceLockComponent
             }),
             new SplitNoteByHeadingsContentEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
-              resourceLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent
+              pluginSettingsComponent,
+              resourceLockComponent
             })
           ])
         ],

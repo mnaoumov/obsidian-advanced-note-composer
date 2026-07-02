@@ -51,8 +51,6 @@ export class MergeComposer extends ComposerBase {
       await runLockedTransaction({
         abortController: this.abortController,
         app: this.app,
-        injectedVaultTransaction: this.injectedVaultTransaction,
-        resourceLockComponent: this.resourceLockComponent,
         body: async (vaultTransaction) => {
           this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
           const sourceContent = await this.app.vault.read(this.sourceFile);
@@ -65,10 +63,12 @@ export class MergeComposer extends ComposerBase {
           await this.insertIntoTargetFile(sourceContent, vaultTransaction);
           await vaultTransaction.trash(this.sourceFile);
         },
+        injectedVaultTransaction: this.injectedVaultTransaction,
         lockTargets: [
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
-        ]
+        ],
+        resourceLockComponent: this.resourceLockComponent
       });
 
       if (this.abortController.signal.aborted) {
@@ -100,7 +100,6 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      resourceLockComponent: this.resourceLockComponent,
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
@@ -120,7 +119,8 @@ export class MergeComposer extends ComposerBase {
           shouldUpdateFileNameAlias: true
         });
       },
-      pathOrFile: this.targetFile
+      pathOrFile: this.targetFile,
+      resourceLockComponent: this.resourceLockComponent
     });
   }
 

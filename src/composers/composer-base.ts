@@ -100,21 +100,21 @@ interface FileMtimes {
 export abstract class ComposerBase {
   protected readonly abortController = new AbortController();
   protected readonly app: App;
+  /**
+   * The outer transaction injected by a spanning operation (e.g. a folder merge), or `null` when this
+   * operation owns its own transaction via {@link runLockedTransaction}.
+   */
+  protected readonly injectedVaultTransaction: null | VaultTransaction;
   protected readonly isNewTargetFile: boolean;
-  protected readonly pluginNoticeComponent: PluginNoticeComponent;
 
+  protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly resourceLockComponent: ResourceLockComponent;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
-  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
-  /**
-   * The outer transaction injected by a spanning operation (e.g. a folder merge), or `null` when this
-   * operation owns its own transaction via {@link runLockedTransaction}.
-   */
-  protected readonly injectedVaultTransaction: VaultTransaction | null;
+  private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly insertMode: InsertMode;
 
   private readonly shouldFixFootnotes: boolean;
@@ -219,7 +219,6 @@ export abstract class ComposerBase {
       await editLinks({
         abortSignal: this.abortController.signal,
         app: this.app,
-        resourceLockComponent: this.resourceLockComponent,
         linkConverter: (link) => {
           linkIndex++;
           if (!linkJsons.includes(JSON.stringify(link))) {
@@ -238,7 +237,8 @@ export abstract class ComposerBase {
             shouldUpdateFileNameAlias: true
           });
         },
-        pathOrFile: backlinkPath
+        pathOrFile: backlinkPath,
+        resourceLockComponent: this.resourceLockComponent
       });
     }
   }
@@ -477,6 +477,23 @@ export abstract class ComposerBase {
     /* v8 ignore stop */
   }
 
+  /**
+   * Replicates `FileManager.insertIntoFile`'s frontmatter-aware positioning so the insert can be routed
+   * through a {@link VaultTransaction} (which must own the write to reverse it). Append adds the content
+   * at the end; prepend inserts it right after any frontmatter.
+   *
+   * @param existingContent - The current content of the target note.
+   * @param contentToInsert - The content to insert.
+   * @returns The resulting content.
+   */
+  private insertContent(existingContent: string, contentToInsert: string): string {
+    if (this.insertMode === InsertMode.Prepend) {
+      const frontmatterInfo = getFrontMatterInfo(existingContent);
+      return `${existingContent.slice(0, frontmatterInfo.contentStart)}${contentToInsert}${existingContent.slice(frontmatterInfo.contentStart)}`;
+    }
+    return `${existingContent}${contentToInsert}`;
+  }
+
   private async insertIntoTargetFileImpl(targetContentToInsert: string, vaultTransaction: VaultTransaction): Promise<void> {
     if (targetContentToInsert.startsWith('---\n')) {
       targetContentToInsert = `\n${targetContentToInsert}`;
@@ -499,23 +516,6 @@ export abstract class ComposerBase {
     await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
     const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
     await vaultTransaction.modify(this.targetFile, mergedDocument.toString());
-  }
-
-  /**
-   * Replicates `FileManager.insertIntoFile`'s frontmatter-aware positioning so the insert can be routed
-   * through a {@link VaultTransaction} (which must own the write to reverse it). Append adds the content
-   * at the end; prepend inserts it right after any frontmatter.
-   *
-   * @param existingContent - The current content of the target note.
-   * @param contentToInsert - The content to insert.
-   * @returns The resulting content.
-   */
-  private insertContent(existingContent: string, contentToInsert: string): string {
-    if (this.insertMode === InsertMode.Prepend) {
-      const frontmatterInfo = getFrontMatterInfo(existingContent);
-      return `${existingContent.slice(0, frontmatterInfo.contentStart)}${contentToInsert}${existingContent.slice(frontmatterInfo.contentStart)}`;
-    }
-    return `${existingContent}${contentToInsert}`;
   }
 
   private isPathIgnored(path: string): boolean {

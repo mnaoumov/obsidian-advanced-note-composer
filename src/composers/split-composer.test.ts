@@ -1,4 +1,5 @@
 import type {
+  App as AppOriginal,
   Editor,
   EditorPosition,
   EditorSelection,
@@ -9,13 +10,13 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { App } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { resolveValue } from 'obsidian-dev-utils/value-provider';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   beforeEach,
@@ -92,7 +93,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-let app: App;
+let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
 
 beforeEach(() => {

@@ -23,19 +23,19 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly resourceLockComponent: ResourceLockComponent;
   private readonly headingLevel: Level;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams) {
     super({
@@ -110,9 +110,9 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       const result = await prepareForSplitFile({
         app: this.app,
         editor,
-        resourceLockComponent: this.resourceLockComponent,
         heading: headingInfo.heading,
         pluginSettingsComponent: this.pluginSettingsComponent,
+        resourceLockComponent: this.resourceLockComponent,
         shouldSkipModal: true,
         sourceFile: file
       });
@@ -124,12 +124,12 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         capturedSelections: result.capturedSelections,
         consoleDebugComponent: this.consoleDebugComponent,
         editor,
-        resourceLockComponent: this.resourceLockComponent,
         heading: headingInfo.heading,
         isMultipleSplit: true,
         isNewTargetFile: result.isNewTargetFile,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
+        resourceLockComponent: this.resourceLockComponent,
         selectedText: result.selectedText,
         sourceFile: file,
         targetFile: result.targetFile

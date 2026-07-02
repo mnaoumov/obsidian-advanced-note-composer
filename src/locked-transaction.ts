@@ -38,14 +38,14 @@ export interface RunLockedTransactionParams {
   /**
    * The mutations to perform, routed through the {@link VaultTransaction} so they can be rolled back.
    */
-  readonly body: (vaultTransaction: VaultTransaction) => Promise<void>;
+  body(vaultTransaction: VaultTransaction): Promise<void>;
 
   /**
    * An outer transaction to run the mutations against (e.g. a folder merge spanning many files). When
    * provided, the body runs against it and this function does NOT lock, commit, or roll back — the outer
    * owner does.
    */
-  readonly injectedVaultTransaction?: VaultTransaction | null;
+  readonly injectedVaultTransaction?: null | VaultTransaction;
 
   /**
    * The resources to lock (against edit/delete/rename/move) for the duration of the operation.
@@ -90,7 +90,7 @@ export async function runLockedTransaction(params: RunLockedTransactionParams): 
 
   const vaultTransaction = new VaultTransaction({
     app: params.app,
-    openMutationBypass: () => params.resourceLockComponent.bypassBlockedMutations(lockedPathsOrFiles)
+    openMutationBypass: (): Disposable => params.resourceLockComponent.bypassBlockedMutations(lockedPathsOrFiles)
   });
 
   try {

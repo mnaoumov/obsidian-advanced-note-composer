@@ -8,12 +8,11 @@ import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-d
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import { Vault } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-
 import {
   exists,
   FileSystemType,
@@ -42,17 +41,17 @@ import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.t
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly resourceLockComponent: ResourceLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MergeFolderCommandHandlerConstructorParams) {
     super({
@@ -108,18 +107,6 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   private depth(file: TAbstractFile): number {
     return file.path.split('/').length;
-  }
-
-  /**
-   * Throws if the operation has been aborted (an external change to a locked path, or the user's
-   * Unlock), so the enclosing {@link runLockedTransaction} rolls the spanning transaction back.
-   *
-   * @param abortController - The operation's abort controller.
-   */
-  private throwIfAborted(abortController: AbortController): void {
-    if (abortController.signal.aborted) {
-      throw new Error('Folder merge aborted.');
-    }
   }
 
   private async mergeFolder(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
@@ -270,6 +257,18 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         appendCodeBlock(f, 'Should run templater on destination file');
         f.appendText(', but Templater plugin is not installed.');
       }));
+    }
+  }
+
+  /**
+   * Throws if the operation has been aborted (an external change to a locked path, or the user's
+   * Unlock), so the enclosing {@link runLockedTransaction} rolls the spanning transaction back.
+   *
+   * @param abortController - The operation's abort controller.
+   */
+  private throwIfAborted(abortController: AbortController): void {
+    if (abortController.signal.aborted) {
+      throw new Error('Folder merge aborted.');
     }
   }
 }

@@ -75,9 +75,9 @@ const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createMockFile(): TFile {
@@ -88,14 +88,14 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -195,12 +195,12 @@ describe('MergeFileCommandHandler', () => {
     expect(MockMergeComposer).toHaveBeenCalledWith({
       app: params.app,
       consoleDebugComponent: params.consoleDebugComponent,
-      resourceLockComponent: params.resourceLockComponent,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      resourceLockComponent: params.resourceLockComponent,
       shouldFixFootnotes: true,
       shouldMergeHeadings: false,
       sourceFile: file,

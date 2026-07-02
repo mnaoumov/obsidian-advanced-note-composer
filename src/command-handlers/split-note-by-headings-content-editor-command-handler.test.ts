@@ -82,10 +82,10 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createHeading(level: number, startLine: number, endLine?: number): HeadingCache {
@@ -127,7 +127,6 @@ function createMockParams(
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -136,7 +135,8 @@ function createMockParams(
         shouldAddCommandsToSubmenu,
         shouldKeepHeadingsWhenSplittingContent
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 

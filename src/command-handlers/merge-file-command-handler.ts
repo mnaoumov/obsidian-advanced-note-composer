@@ -23,17 +23,17 @@ import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class MergeFileCommandHandler extends FileCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly resourceLockComponent: ResourceLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MergeFileCommandHandlerConstructorParams) {
     super({
@@ -68,8 +68,8 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     }
     const result = await prepareForMergeFile({
       app: this.app,
-      resourceLockComponent: this.resourceLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       sourceFile: file
     });
     if (!result) {
@@ -78,12 +78,12 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     const composer = new MergeComposer({
       app: this.app,
       consoleDebugComponent: this.consoleDebugComponent,
-      resourceLockComponent: this.resourceLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeHeadings: result.shouldMergeHeadings,
       sourceFile: file,

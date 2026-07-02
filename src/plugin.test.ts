@@ -137,8 +137,8 @@ vi.mock('./release-notes-component.ts', () => ({
 
 interface PluginInternals {
   _consoleDebugComponent: ConsoleDebugComponent;
-  _resourceLockComponent: ResourceLockComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
+  _resourceLockComponent: ResourceLockComponent;
   onloadImpl(): void;
 }
 

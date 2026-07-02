@@ -1,14 +1,21 @@
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { TFile } from 'obsidian';
+import type {
+  App as AppOriginal,
+  TFile,
+  WorkspaceLeaf
+} from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { App } from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import {
-  ensureNonNullable,
-  type GenericObject
-} from 'obsidian-dev-utils/type-guards';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   beforeEach,
@@ -50,7 +57,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-let app: App;
+let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
 
 beforeEach(() => {
@@ -72,18 +79,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function getSourceFile(): TFile {
-  return ensureNonNullable(app.vault.getFileByPath('source.md'));
-}
-
-function getTargetFile(): TFile {
-  return ensureNonNullable(app.vault.getFileByPath('target.md'));
-}
-
 function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
   return new MergeComposer({
     app,
-    consoleDebugComponent: strictProxy({ consoleDebug: vi.fn() }),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
     isNewTargetFile: false,
     pluginNoticeComponent: createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(settingsOverrides),
@@ -96,7 +95,14 @@ function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeCompo
 function createPluginNoticeComponentStub(): PluginNoticeComponent {
   return strictProxy<PluginNoticeComponent>({
     showNotice: vi.fn(),
-    showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: vi.fn() })
+    showNoticeAfterDelay: vi.fn().mockImplementation((params: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+      // Invoke the lazy content builder so the progress-notice content is exercised (it would only run
+      // In the real component after the delay elapses); fire-and-forget — its result is not under test.
+      invokeAsyncSafely(async () => {
+        await castTo<() => Promise<unknown>>(params.content)();
+      });
+      return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+    })
   });
 }
 
@@ -113,6 +119,14 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       ...overrides
     })
   });
+}
+
+function getSourceFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('source.md'));
+}
+
+function getTargetFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('target.md'));
 }
 
 describe('MergeComposer', () => {
@@ -160,6 +174,21 @@ describe('MergeComposer', () => {
       // Rolled back: the source is untouched and the target is unchanged.
       expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
       expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    });
+
+    it('should open the target note after the merge when the setting is enabled', async () => {
+      const openFile = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile }));
+
+      await createComposer({ shouldOpenNoteAfterMerge: true }).mergeFile();
+
+      expect(openFile).toHaveBeenCalledWith(getTargetFile(), { active: true });
+    });
+
+    it('should rethrow when the merge fails for a reason other than cancellation', async () => {
+      vi.spyOn(app.fileManager, 'processFrontMatter').mockRejectedValue(new Error('boom'));
+
+      await expect(createComposer().mergeFile()).rejects.toThrow('boom');
     });
   });
 });

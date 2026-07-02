@@ -19,17 +19,17 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractCurrentSelectionEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly resourceLockComponent: ResourceLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: ExtractCurrentSelectionEditorCommandHandlerConstructorParams) {
     super({
@@ -68,8 +68,8 @@ export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHa
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
-      resourceLockComponent: this.resourceLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       sourceFile: file
     });
     if (!result) {
@@ -80,13 +80,13 @@ export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHa
       capturedSelections: result.capturedSelections,
       consoleDebugComponent: this.consoleDebugComponent,
       editor,
-      resourceLockComponent: this.resourceLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       selectedText: result.selectedText,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,

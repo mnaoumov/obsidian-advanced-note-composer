@@ -11,8 +11,8 @@ import type {
   Vault,
   Workspace
 } from 'obsidian';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -224,20 +224,6 @@ function createMockEditor(): Editor {
   });
 }
 
-function createMockResourceLockComponent(): ResourceLockComponent {
-  const unlockForPath = vi.fn();
-  // The real lock is released by disposing the returned `Disposable`; model that as
-  // `unlockForPath` so a `using` scope-exit disposal is observable through the same spy.
-  return strictProxy<ResourceLockComponent>({
-    lockForPath: castTo<ResourceLockComponent['lockForPath']>(vi.fn((pathOrFile: PathOrFile) => ({
-      [Symbol.dispose]: (): void => {
-        unlockForPath(pathOrFile);
-      }
-    }))),
-    unlockForPath
-  });
-}
-
 function createMockFile(path: string): TFile {
   const name = path.split('/').pop() ?? '';
   const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
@@ -271,6 +257,20 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
   });
 }
 
+function createMockResourceLockComponent(): ResourceLockComponent {
+  const unlockForPath = vi.fn();
+  // The real lock is released by disposing the returned `Disposable`; model that as
+  // `unlockForPath` so a `using` scope-exit disposal is observable through the same spy.
+  return strictProxy<ResourceLockComponent>({
+    lockForPath: castTo<ResourceLockComponent['lockForPath']>(vi.fn((pathOrFile: PathOrFile) => ({
+      [Symbol.dispose]: (): void => {
+        unlockForPath(pathOrFile);
+      }
+    }))),
+    unlockForPath
+  });
+}
+
 describe('prepareForSplitFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -288,7 +288,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -301,7 +301,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -314,7 +314,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, heading: '', pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, heading: '', pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -327,7 +327,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Custom Heading', pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, heading: 'Custom Heading', pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -340,7 +340,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.targetFile).toBe(mockTargetFile);
     expect(result?.insertMode).toBe(InsertMode.Append);
@@ -353,7 +353,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const result = await prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
     expect(result).not.toBeNull();
     expect(result?.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
     expect(result?.shouldAllowOnlyCurrentFolder).toBe(false);
@@ -369,7 +369,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -387,7 +387,7 @@ describe('prepareForSplitFile', () => {
 
     mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
@@ -402,7 +402,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).not.toBeNull();
@@ -417,7 +417,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
@@ -431,7 +431,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     expect(vi.mocked(resourceLockComponent.lockForPath).mock.calls.map((call) => call[0])).toContain(sourceFile);
     expect(resourceLockComponent.unlockForPath).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(0);
@@ -446,7 +446,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, heading: 'Heading', pluginSettingsComponent, shouldSkipModal: true, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     await promise;
     const lockedPaths = vi.mocked(resourceLockComponent.lockForPath).mock.calls.map((call) => call[0]);
@@ -463,7 +463,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
-    const promise = prepareForSplitFile({ app, editor, resourceLockComponent, pluginSettingsComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
     // Simulate the user unlocking: abort the controller the lock was registered with.
     const abortController = vi.mocked(resourceLockComponent.lockForPath).mock.calls[0]?.[1]?.abortController;
     expect(abortController).toBeInstanceOf(AbortController);

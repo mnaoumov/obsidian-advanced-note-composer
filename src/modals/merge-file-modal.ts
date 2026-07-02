@@ -58,8 +58,8 @@ interface MergeFileModalResult {
 
 interface PrepareForMergeFileParams {
   readonly app: App;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly sourceFile: TFile;
 }
 

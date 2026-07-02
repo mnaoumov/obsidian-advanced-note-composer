@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 
 import type {
+  App as AppOriginal,
   TFile,
   TFolder
 } from 'obsidian';
 
-import { App } from 'obsidian';
 import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
   describe,
@@ -18,7 +19,7 @@ import {
 
 import { swap } from './swapper.ts';
 
-let app: App;
+let app: AppOriginal;
 
 beforeEach(() => {
   app = App.createConfigured__().asOriginalType__();

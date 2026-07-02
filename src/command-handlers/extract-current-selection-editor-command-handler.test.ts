@@ -66,9 +66,9 @@ const MockSplitComposer = vi.mocked(SplitComposer);
 interface HandlerParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
@@ -91,14 +91,14 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn()
     }),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -214,13 +214,13 @@ describe('ExtractCurrentSelectionEditorCommandHandler', () => {
       capturedSelections: [{ endOffset: 5, startOffset: 0 }],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
-      resourceLockComponent: params.resourceLockComponent,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isMultipleSplit: false,
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      resourceLockComponent: params.resourceLockComponent,
       selectedText: 'extracted text',
       shouldFixFootnotes: true,
       shouldIncludeFrontmatter: false,

@@ -71,8 +71,6 @@ export class SplitComposer extends ComposerBase {
       await runLockedTransaction({
         abortController: this.abortController,
         app: this.app,
-        injectedVaultTransaction: this.injectedVaultTransaction,
-        resourceLockComponent: this.resourceLockComponent,
         body: async (vaultTransaction) => {
           this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
@@ -116,10 +114,12 @@ export class SplitComposer extends ComposerBase {
           // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
           this.revealCursor();
         },
+        injectedVaultTransaction: this.injectedVaultTransaction,
         lockTargets: [
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
-        ]
+        ],
+        resourceLockComponent: this.resourceLockComponent
       });
 
       if (this.abortController.signal.aborted) {

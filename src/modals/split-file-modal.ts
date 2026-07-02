@@ -42,9 +42,9 @@ interface ConfirmDialogModalResult {
 interface PrepareForSplitFileParams {
   readonly app: App;
   readonly editor: Editor;
-  readonly resourceLockComponent: ResourceLockComponent;
   readonly heading?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly shouldSkipModal?: boolean;
   readonly sourceFile: TFile;
 }
