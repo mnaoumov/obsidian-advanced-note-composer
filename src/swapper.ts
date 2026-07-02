@@ -97,7 +97,7 @@ async function swapFolder(
       await vaultTransaction.rename(sourceFolder, sourceFolderWithTargetName);
     }
 
-    /* v8 ignore start -- second name-retry: reachable only when a folder rename does not cascade to its descendants, which real Obsidian does but test-mocks does not; covered by swap-folder.desktop.integration.test.ts. */
+    /* v8 ignore start -- second name-retry: reachable only when a folder rename does not cascade to its descendants, which real Obsidian does but test-mocks does not; see obsidian-test-mocks CLAUDE.md (Vault.rename does not cascade folder-descendant paths).  */
     if (targetFolder.name !== sourceFolderName && getFolderOrNull({ app, pathOrFolder: targetFolderWithSourceName }) === null) {
       await vaultTransaction.rename(targetFolder, targetFolderWithSourceName);
     }
@@ -124,7 +124,7 @@ async function swapFolder(
   }
 
   for (const targetChild of targetChildren) {
-    /* v8 ignore start -- nested swap (target contains source): reachable only when a folder rename cascades to descendants, which test-mocks does not model; covered by swap-folder.desktop.integration.test.ts. */
+    /* v8 ignore start -- nested swap (target contains source): reachable only when a folder rename cascades to descendants, which test-mocks does not model; see obsidian-test-mocks CLAUDE.md (Vault.rename does not cascade folder-descendant paths).  */
     if (isChild({ app, childPathOrFile: sourceFolder, parentPathOrFile: targetChild })) {
       continue;
     }
@@ -132,14 +132,14 @@ async function swapFolder(
     await vaultTransaction.rename(targetChild, join(sourceFolder.path, targetChild.name));
   }
 
-  /* v8 ignore start -- final target-folder rename after a name swap: reachable only via the descendant-cascade path test-mocks lacks; covered by swap-folder.desktop.integration.test.ts. */
+  /* v8 ignore start -- final target-folder rename after a name swap: reachable only via the descendant-cascade path test-mocks lacks; see obsidian-test-mocks CLAUDE.md (Vault.rename does not cascade folder-descendant paths).  */
   if (targetFolder.path !== targetFolderPath) {
     await vaultTransaction.rename(targetFolder, targetFolderPath);
   }
   /* v8 ignore stop */
 
   for (const sourceChild of sourceChildren) {
-    /* v8 ignore start -- skip a source child no longer staged: reachable only when a folder rename cascades to descendants, which test-mocks does not model; covered by swap-folder.desktop.integration.test.ts. */
+    /* v8 ignore start -- skip a source child no longer staged: reachable only when a folder rename cascades to descendants, which test-mocks does not model; see obsidian-test-mocks CLAUDE.md (Vault.rename does not cascade folder-descendant paths).  */
     if (!isChild({ app, childPathOrFile: sourceChild, parentPathOrFile: tempFolderPath })) {
       continue;
     }

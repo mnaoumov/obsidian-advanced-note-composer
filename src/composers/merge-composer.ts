@@ -100,7 +100,7 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      /* v8 ignore start -- runs only when editLinks finds a link in the merged target resolving to the source; test-mocks has no link index, so this needs real Obsidian; covered by merge-backlinks.desktop.integration.test.ts. */
+      /* v8 ignore start -- runs only when editLinks finds a link in the merged target resolving to the source; test-mocks has no link index, so this needs real Obsidian; see obsidian-test-mocks CLAUDE.md (MetadataCache has no link indexer).  */
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
