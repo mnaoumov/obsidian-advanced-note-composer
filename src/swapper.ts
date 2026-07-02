@@ -97,9 +97,11 @@ async function swapFolder(
       await vaultTransaction.rename(sourceFolder, sourceFolderWithTargetName);
     }
 
+    /* v8 ignore start -- second name-retry: reachable only when a folder rename does not cascade to its descendants, which real Obsidian does but test-mocks does not; covered by swap-folder.desktop.integration.test.ts. */
     if (targetFolder.name !== sourceFolderName && getFolderOrNull({ app, pathOrFolder: targetFolderWithSourceName }) === null) {
       await vaultTransaction.rename(targetFolder, targetFolderWithSourceName);
     }
+    /* v8 ignore stop */
   }
 
   const tempFolderPath = getAvailablePath(app, '__temp');
@@ -122,20 +124,26 @@ async function swapFolder(
   }
 
   for (const targetChild of targetChildren) {
+    /* v8 ignore start -- nested swap (target contains source): reachable only when a folder rename cascades to descendants, which test-mocks does not model; covered by swap-folder.desktop.integration.test.ts. */
     if (isChild({ app, childPathOrFile: sourceFolder, parentPathOrFile: targetChild })) {
       continue;
     }
+    /* v8 ignore stop */
     await vaultTransaction.rename(targetChild, join(sourceFolder.path, targetChild.name));
   }
 
+  /* v8 ignore start -- final target-folder rename after a name swap: reachable only via the descendant-cascade path test-mocks lacks; covered by swap-folder.desktop.integration.test.ts. */
   if (targetFolder.path !== targetFolderPath) {
     await vaultTransaction.rename(targetFolder, targetFolderPath);
   }
+  /* v8 ignore stop */
 
   for (const sourceChild of sourceChildren) {
+    /* v8 ignore start -- skip a source child no longer staged: reachable only when a folder rename cascades to descendants, which test-mocks does not model; covered by swap-folder.desktop.integration.test.ts. */
     if (!isChild({ app, childPathOrFile: sourceChild, parentPathOrFile: tempFolderPath })) {
       continue;
     }
+    /* v8 ignore stop */
     await vaultTransaction.rename(sourceChild, join(targetFolder.path, sourceChild.name));
   }
 
