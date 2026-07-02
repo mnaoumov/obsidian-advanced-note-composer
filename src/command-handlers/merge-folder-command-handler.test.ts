@@ -1,39 +1,24 @@
 import type {
-  App,
-  MetadataCache,
-  Notice,
+  App as AppOriginal,
   TAbstractFile,
-  TFile,
-  TFolder,
-  Vault
+  TFolder
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
-import { Vault as VaultClass } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
-  exists,
-  isFile,
-  isFolder,
-  isMarkdownFile
-} from 'obsidian-dev-utils/obsidian/file-system';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import {
-  getAvailablePath,
-  getOrCreateFileSafe,
-  getOrCreateFolderSafe,
-  isChildOrSelf,
-  renameSafe,
-  trashSafe
-} from 'obsidian-dev-utils/obsidian/vault';
+  requestResourceUnlockForPath,
+  ResourceLockComponent
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
-  beforeEach,
+  afterEach,
   describe,
   expect,
   it,
@@ -43,11 +28,23 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
-import { MergeComposer } from '../composers/merge-composer.ts';
+// The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the merge
+// Proceeds without opening a suggest modal. Everything else (vault, lock, transaction, composer) is REAL.
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
+import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 
-interface TestableHandler {
+interface HandlerContext {
+  handler: Testable;
+  hide: MockInstance;
+  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+}
+
+interface InitAppOptions {
+  readonly plugins?: Record<string, unknown>;
+}
+
+interface Testable {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
   readonly icon: string;
@@ -57,669 +54,327 @@ interface TestableHandler {
   shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
 }
 
-vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>()
+// Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
+// Would otherwise poll forever. Everything else stays REAL.
+vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
+  getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
+  getCacheSafe: vi.fn().mockResolvedValue(null),
+  getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
+// UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
+// Unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
-  appendCodeBlock: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/file-system')>(),
-  exists: vi.fn(),
-  isFile: vi.fn(),
-  isFolder: vi.fn(),
-  isMarkdownFile: vi.fn()
+  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+    const fragment = createFragment();
+    return cb(fragment).then(() => fragment);
+  })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
-  getAvailablePath: vi.fn(),
-  getOrCreateFileSafe: vi.fn(),
-  getOrCreateFolderSafe: vi.fn(),
-  isChildOrSelf: vi.fn(),
-  renameSafe: vi.fn(),
-  trashSafe: vi.fn()
-}));
-
-vi.mock('../composers/merge-composer.ts', () => {
-  const MockMergeComposer = vi.fn();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- vi.fn() prototype is untyped in mock factories.
-  MockMergeComposer.prototype.mergeFile = vi.fn().mockResolvedValue(undefined);
-  return { MergeComposer: MockMergeComposer };
-});
 
 vi.mock('../modals/merge-folder-modal.ts', () => ({
   selectTargetFolderForMergeFolder: vi.fn()
 }));
 
-const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
-const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMergeFolder);
-const MockMergeComposer = vi.mocked(MergeComposer);
-let mockRecurseChildren: MockInstance<typeof VaultClass.recurseChildren>;
-const mockIsFile = vi.mocked(isFile);
-const mockIsFolder = vi.mocked(isFolder);
-const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
-const mockExists = vi.mocked(exists);
-const mockGetOrCreateFileSafe = vi.mocked(getOrCreateFileSafe);
-const mockGetOrCreateFolderSafe = vi.mocked(getOrCreateFolderSafe);
-const mockGetAvailablePath = vi.mocked(getAvailablePath);
-const mockRenameSafe = vi.mocked(renameSafe);
-const mockTrashSafe = vi.mocked(trashSafe);
-const mockIsChildOrSelf = vi.mocked(isChildOrSelf);
 
-interface CreateMockPluginParams {
-  readonly isPathIgnored?: boolean;
-  readonly shouldAddCommandsToSubmenu?: boolean;
-  readonly shouldRunTemplaterOnDestinationFile?: boolean;
-  readonly templaterInstalled?: boolean;
-}
+let app: AppOriginal;
+let resourceLockComponent: ResourceLockComponent;
 
-interface MergeFolderCommandHandlerConstructorParams {
-  readonly app: App;
-  readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
-  readonly pluginNoticeComponent: PluginNoticeComponent;
-  readonly pluginSettingsComponent: PluginSettingsComponent;
-}
+afterEach(() => {
+  resourceLockComponent.unload();
+  vi.restoreAllMocks();
+});
 
-function createMockFile(path: string): TFile {
-  const name = path.split('/').pop() ?? '';
-  return strictProxy<TFile>({ name, parent: strictProxy<TFolder>({ path: path.slice(0, path.lastIndexOf('/')) }), path });
-}
-
-function createMockFolder(path: string, isRoot = false, children: TAbstractFile[] = []): TFolder {
-  return strictProxy<TFolder>({
-    children,
-    isRoot: vi.fn().mockReturnValue(isRoot),
-    path
-  });
-}
-
-function createMockParams(params: CreateMockPluginParams = {}): MergeFolderCommandHandlerConstructorParams {
-  const {
-    isPathIgnored = false,
-    shouldAddCommandsToSubmenu = true,
-    shouldRunTemplaterOnDestinationFile = false,
-    templaterInstalled = false
-  } = params;
-  const pluginsRecord = Object.assign(Object.create(null), templaterInstalled ? { 'templater-obsidian': {} } : {});
-  return {
-    app: strictProxy<App>({
-      metadataCache: strictProxy<MetadataCache>({}),
-      plugins: strictProxy<App['plugins']>({
-        plugins: pluginsRecord
-      }),
-      vault: strictProxy<Vault>({})
-    }),
-    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
-    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
+  const hide = vi.fn();
+  const showNotice = vi.fn().mockReturnValue({ hide });
+  const handler = new MergeFolderCommandHandler({
+    app,
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
-        isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu,
-        shouldRunTemplaterOnDestinationFile
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+        isPathIgnored: () => false,
+        mergeTemplate: '{{content}}',
+        shouldAddCommandsToSubmenu: true,
+        shouldFixFootnotesByDefault: false,
+        shouldMergeHeadingsByDefault: false,
+        shouldOpenNoteAfterMerge: false,
+        shouldRunTemplaterOnDestinationFile: false,
+        ...settingsOverrides
       })
-    })
+    }),
+    resourceLockComponent
+  });
+  return {
+    handler: castTo<Testable>(handler),
+    hide,
+    showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
 }
 
-function toTestable(handler: MergeFolderCommandHandler): TestableHandler {
-  return castTo<TestableHandler>(handler);
+function getFolder(path: string): TFolder {
+  return ensureNonNullable(app.vault.getFolderByPath(path));
+}
+
+function initApp(files: Record<string, string>, options: InitAppOptions = {}): void {
+  app = App.createConfigured__({ files }).asOriginalType__();
+  // Test-mocks' MetadataCache has no indexer; the merge's processFrontMatter triggers a recompute.
+  castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  if (options.plugins) {
+    castTo<GenericObject>(app)['plugins'] = { plugins: options.plugins };
+  }
+  resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
+  resourceLockComponent.load();
+}
+
+function noticesContain(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {
+  return showNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent.includes(text));
 }
 
 describe('MergeFolderCommandHandler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockRecurseChildren = vi.spyOn(VaultClass, 'recurseChildren');
-  });
-
-  it('should construct with correct params', () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
+  it('should expose its command identity', () => {
+    initApp({});
+    const { handler } = createHandler();
     expect(handler.id).toBe('merge-folder');
     expect(handler.name).toBe('Merge current folder with another folder...');
     expect(handler.icon).toBe('merge');
   });
 
-  it('should return false from canExecuteFolder when folder is root', () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const folder = createMockFolder('/', true);
-    expect(handler.canExecuteFolder(folder)).toBe(false);
+  it('should refuse the vault root in canExecuteFolder', () => {
+    initApp({ 'a.md': 'A' });
+    const { handler } = createHandler();
+    expect(handler.canExecuteFolder(app.vault.getRoot())).toBe(false);
   });
 
-  it('should return true from canExecuteFolder when folder is not root', () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const folder = createMockFolder('some/folder', false);
-    expect(handler.canExecuteFolder(folder)).toBe(true);
+  it('should allow a non-root folder in canExecuteFolder', async () => {
+    initApp({});
+    await app.vault.createFolder('some/folder');
+    const { handler } = createHandler();
+    expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(true);
   });
 
-  it('should show notice and return when path is ignored', async () => {
-    const params = createMockParams({ isPathIgnored: true });
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const folder = createMockFolder('test/folder');
+  it('should show a notice and not merge when the folder path is ignored', async () => {
+    initApp({ 'src/note.md': 'note body' });
+    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'src' });
 
-    const mockFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
+    await handler.executeFolder(getFolder('src'));
 
-    await handler.executeFolder(folder);
-
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
+    expect(showNotice).toHaveBeenCalledOnce();
     expect(mockSelectTargetFolder).not.toHaveBeenCalled();
+    // The source is untouched.
+    expect(await app.vault.adapter.read('src/note.md')).toBe('note body');
   });
 
-  it('should return when selectTargetFolderForMergeFolder returns null', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const folder = createMockFolder('test/folder');
-
+  it('should do nothing when no target folder is selected', async () => {
+    initApp({ 'src/note.md': 'note body' });
+    const { handler } = createHandler();
     mockSelectTargetFolder.mockResolvedValue(null);
 
-    await handler.executeFolder(folder);
+    await handler.executeFolder(getFolder('src'));
 
-    expect(mockRecurseChildren).not.toHaveBeenCalled();
+    // Nothing moved; the source note is intact.
+    expect(await app.vault.adapter.read('src/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('src/sub')).toBe(false);
   });
 
-  it('should merge folders on happy path', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
+  it('should merge markdown into the target, move other files, and trash emptied source subfolders', async () => {
+    initApp({
+      'dst/existing.md': 'existing body',
+      'dst/sub/note.md': 'target note',
+      'src/sub/fresh.md': 'fresh body',
+      'src/sub/note.md': 'source note',
+      'src/sub/pic.png': 'PIC'
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
+    await app.vault.createFolder('src/empty');
+    const { handler, hide } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
-    mockRecurseChildren.mockImplementation((_folder, _cb) => {
-      // No children
-    });
-    mockIsChildOrSelf.mockReturnValue(false);
+    await handler.executeFolder(getFolder('src'));
 
-    await handler.executeFolder(sourceFolder);
-
-    expect(noticeHide).toHaveBeenCalled();
+    // Markdown merged into the pre-existing target file (isNewTargetFile === false path).
+    const mergedNote = await app.vault.adapter.read('dst/sub/note.md');
+    expect(mergedNote).toContain('target note');
+    expect(mergedNote).toContain('source note');
+    // Markdown merged into a freshly created target file (isNewTargetFile === true path).
+    expect(await app.vault.adapter.read('dst/sub/fresh.md')).toContain('fresh body');
+    // The non-markdown file was moved into the mapped target subfolder.
+    expect(await app.vault.adapter.exists('dst/sub/pic.png')).toBe(true);
+    expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(false);
+    // The merged source notes were trashed.
+    expect(await app.vault.adapter.exists('src/sub/note.md')).toBe(false);
+    expect(await app.vault.adapter.exists('src/sub/fresh.md')).toBe(false);
+    // The mapped subfolder was created and the emptied source subfolder trashed.
+    expect(await app.vault.adapter.exists('dst/empty')).toBe(true);
+    expect(await app.vault.adapter.exists('src/empty')).toBe(false);
+    // The untouched target file is preserved.
+    expect(await app.vault.adapter.read('dst/existing.md')).toBe('existing body');
+    // The permanent progress notice was hidden on completion.
+    expect(hide).toHaveBeenCalledOnce();
   });
 
-  it('should merge markdown files and move non-markdown files', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
+  it('should not trash a source subfolder that still has children', async () => {
+    initApp({
+      'dst/keep.md': 'keep',
+      'src/sub/note.md': 'source note'
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
-    const mdFile = createMockFile('src/note.md');
-    const otherFile = createMockFile('src/image.png');
-    const subfolder = createMockFolder('src/sub', false, []);
+    await handler.executeFolder(getFolder('src'));
 
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(subfolder);
-      cb(mdFile);
-      cb(otherFile);
-    });
-
-    mockIsFolder.mockImplementation((f) => f === subfolder);
-    mockIsFile.mockImplementation((f) => f === mdFile || f === otherFile);
-    mockIsMarkdownFile.mockImplementation((f) => f === mdFile);
-    mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/sub' }));
-    mockIsChildOrSelf.mockReturnValue(false);
-
-    mockExists.mockReturnValue(false);
-    const targetMdFile = createMockFile('target/note.md');
-    mockGetOrCreateFileSafe.mockResolvedValue(targetMdFile);
-
-    const mockMergeFile = vi.fn().mockResolvedValue(undefined);
-    MockMergeComposer.prototype.mergeFile = mockMergeFile;
-
-    mockGetAvailablePath.mockReturnValue('target/image.png');
-    mockRenameSafe.mockResolvedValue('');
-    mockTrashSafe.mockResolvedValue(undefined);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(MockMergeComposer).toHaveBeenCalled();
-    expect(mockMergeFile).toHaveBeenCalled();
-    expect(mockRenameSafe).toHaveBeenCalled();
-    expect(noticeHide).toHaveBeenCalled();
+    // Test-mocks does not prune the in-memory tree on adapter moves, so src/sub still "has children"
+    // And is therefore not trashed.
+    expect(await app.vault.adapter.exists('src/sub')).toBe(true);
   });
 
-  it('should delete empty source subfolders that are not target ancestors', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
+  it('should swallow the cancellation and roll everything back when unlocked mid-merge', async () => {
+    initApp({
+      'src/sub/a.md': 'a body',
+      'src/sub/b.md': 'b body'
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
-    const emptySubfolder = createMockFolder('src/empty', false, []);
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(emptySubfolder);
-    });
-
-    mockIsFolder.mockImplementation((f) => f === emptySubfolder);
-    mockIsFile.mockReturnValue(false);
-    mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/empty' }));
-    mockIsChildOrSelf.mockReturnValue(false);
-    mockTrashSafe.mockResolvedValue(undefined);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(mockTrashSafe).toHaveBeenCalled();
-    expect(noticeHide).toHaveBeenCalled();
-  });
-
-  it('should not delete source subfolder when target is a child of it', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    const subfolder = createMockFolder('src/sub', false, []);
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(subfolder);
-    });
-
-    mockIsFolder.mockImplementation((f) => f === subfolder);
-    mockIsFile.mockReturnValue(false);
-    mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/sub' }));
-    mockIsChildOrSelf.mockImplementation(({ childPathOrFile: targetPath, parentPathOrFile: sourceSubfolder }) => {
-      if (targetPath === 'target/sub' && sourceSubfolder === subfolder) {
-        return true;
+    // Simulate the user clicking the lock indicator's Unlock mid-operation: the first source read
+    // Aborts the folder-lock's controller, so the next throwIfAborted rolls the spanning transaction back.
+    const originalRead = app.vault.read.bind(app.vault);
+    let hasAborted = false;
+    vi.spyOn(app.vault, 'read').mockImplementation((file) => {
+      if (!hasAborted) {
+        hasAborted = true;
+        requestResourceUnlockForPath(app, 'src');
       }
-      return false;
+      return originalRead(file);
     });
-    mockTrashSafe.mockResolvedValue(undefined);
+
+    await expect(handler.executeFolder(getFolder('src'))).resolves.toBeUndefined();
+
+    // Rolled back: both source notes are intact and nothing was written into the target.
+    expect(await app.vault.adapter.read('src/sub/a.md')).toBe('a body');
+    expect(await app.vault.adapter.read('src/sub/b.md')).toBe('b body');
+    expect(await app.vault.adapter.exists('dst/sub')).toBe(false);
+  });
+
+  it('should roll back and rethrow a non-abort error while still hiding the notice', async () => {
+    initApp({ 'src/sub/a.md': 'a body' });
+    await app.vault.createFolder('dst');
+    const { handler, hide } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    vi.spyOn(app.vault, 'read').mockRejectedValue(new Error('boom'));
+
+    await expect(handler.executeFolder(getFolder('src'))).rejects.toThrow('boom');
+
+    // The spanning transaction rolled back: the source note is intact and no target subfolder remains.
+    expect(await app.vault.adapter.read('src/sub/a.md')).toBe('a body');
+    expect(await app.vault.adapter.exists('dst/sub')).toBe(false);
+    expect(hide).toHaveBeenCalledOnce();
+  });
+
+  it('should warn when templater is enabled but the plugin is not installed', async () => {
+    initApp({}, { plugins: {} });
+    await app.vault.createFolder('src');
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(noticesContain(showNotice, 'Templater plugin is not installed')).toBe(true);
+  });
+
+  it('should not warn about templater when the plugin is installed', async () => {
+    initApp({}, { plugins: { 'templater-obsidian': {} } });
+    await app.vault.createFolder('src');
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(noticesContain(showNotice, 'Templater plugin is not installed')).toBe(false);
+  });
+
+  it('should sort markdown ascending by depth when the source is inside the target', async () => {
+    initApp({
+      'parent/child/a.md': 'a body',
+      'parent/child/sub/b.md': 'b body'
+    });
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('parent'));
+
+    await handler.executeFolder(getFolder('parent/child'));
+
+    // The nested note is merged into the mapped target subfolder.
+    expect(await app.vault.adapter.read('parent/sub/b.md')).toContain('b body');
+  });
+
+  it('should sort markdown descending by depth when the target is inside the source', async () => {
+    initApp({
+      'src/a.md': 'a body',
+      'src/deep/b.md': 'b body'
+    });
+    await app.vault.createFolder('src/dst');
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('src/dst'));
+
+    await expect(handler.executeFolder(getFolder('src'))).resolves.toBeUndefined();
+
+    // The nested note is merged into the mapped target subfolder under the target.
+    expect(await app.vault.adapter.read('src/dst/deep/b.md')).toContain('b body');
+  });
+
+  it('should not trash an empty source subfolder that is itself a mapped merge target', async () => {
+    // With the target nested inside the source, one empty source subfolder (`s/y`) maps onto another
+    // Empty source subfolder (`s/x/y`). The latter must survive because it is a destination of the merge.
+    initApp({});
+    await app.vault.createFolder('s');
+    await app.vault.createFolder('s/x');
+    await app.vault.createFolder('s/x/y');
+    await app.vault.createFolder('s/y');
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('s/x'));
+
+    await handler.executeFolder(getFolder('s'));
+
+    // `s/x/y` is a mapped target, so it is preserved; the plain empty `s/y` is trashed.
+    expect(await app.vault.adapter.exists('s/x/y')).toBe(true);
+    expect(await app.vault.adapter.exists('s/y')).toBe(false);
+  });
+
+  it('should ignore a child that is neither a file nor a folder', async () => {
+    initApp({ 'dst/keep.md': 'keep' });
+    await app.vault.createFolder('src');
+    const sourceFolder = getFolder('src');
+    // Inject a child that is neither TFile nor TFolder to exercise the defensive skip.
+    sourceFolder.children.push(strictProxy<TAbstractFile>({ name: 'weird', path: 'src/weird' }));
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
     await handler.executeFolder(sourceFolder);
 
-    expect(mockTrashSafe).not.toHaveBeenCalled();
+    // The unknown child was ignored: the target is unchanged.
+    expect(await app.vault.adapter.read('dst/keep.md')).toBe('keep');
   });
 
-  it('should not delete subfolder when it has children', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    const child = createMockFile('src/sub/child.md');
-    const subfolder = createMockFolder('src/sub', false, [child]);
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(subfolder);
-    });
-
-    mockIsFolder.mockImplementation((f) => f === subfolder);
-    mockIsFile.mockReturnValue(false);
-    mockGetOrCreateFolderSafe.mockResolvedValue(strictProxy<TFolder>({ path: 'target/sub' }));
-    mockIsChildOrSelf.mockReturnValue(false);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(mockTrashSafe).not.toHaveBeenCalled();
+  it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {
+    initApp({});
+    expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);
+    expect(createHandler({ shouldAddCommandsToSubmenu: false }).handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
-  it('should show notice when templater setting is enabled but plugin is not installed', async () => {
-    const params = createMockParams({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: false });
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    mockRecurseChildren.mockImplementation((_folder, _cb) => {
-      // No children
-    });
-    mockIsChildOrSelf.mockReturnValue(false);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledTimes(2);
-  });
-
-  it('should not show templater notice when templater is installed', async () => {
-    const params = createMockParams({ shouldRunTemplaterOnDestinationFile: true, templaterInstalled: true });
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    mockRecurseChildren.mockImplementation((_folder, _cb) => {
-      // No children
-    });
-    mockIsChildOrSelf.mockReturnValue(false);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledTimes(1);
-  });
-
-  it('should sort md files by depth ascending when source is child of target', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    const file1 = createMockFile('src/a/b/deep.md');
-    const file2 = createMockFile('src/shallow.md');
-
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(file1);
-      cb(file2);
-    });
-
-    mockIsFolder.mockReturnValue(false);
-    mockIsFile.mockReturnValue(true);
-    mockIsMarkdownFile.mockReturnValue(true);
-
-    let isChildOrSelfCallCount = 0;
-    mockIsChildOrSelf.mockImplementation(() => {
-      isChildOrSelfCallCount++;
-      if (isChildOrSelfCallCount === 1) {
-        return true;
-      }
-      return false;
-    });
-
-    mockExists.mockReturnValue(false);
-    const targetMdFile = createMockFile('target/note.md');
-    mockGetOrCreateFileSafe.mockResolvedValue(targetMdFile);
-
-    const mockMergeFile = vi.fn().mockResolvedValue(undefined);
-    MockMergeComposer.prototype.mergeFile = mockMergeFile;
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(mockMergeFile).toHaveBeenCalledTimes(2);
-  });
-
-  it('should return shouldAddCommandsToSubmenu setting value', () => {
-    const params = createMockParams({ shouldAddCommandsToSubmenu: true });
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    expect(handler.shouldAddCommandToSubmenu()).toBe(true);
-  });
-
-  it('should return false from shouldAddCommandToSubmenu when setting is false', () => {
-    const params = createMockParams({ shouldAddCommandsToSubmenu: false });
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    expect(handler.shouldAddCommandToSubmenu()).toBe(false);
-  });
-
-  it('should return true from shouldAddToFolderMenu', () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const folder = createMockFolder('test/folder');
-    expect(handler.shouldAddToFolderMenu({ folder, source: 'source' })).toBe(true);
-  });
-
-  it('should hide notice even when mergeFolderImpl throws', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    mockRecurseChildren.mockImplementation(() => {
-      throw new Error('test error');
-    });
-
-    await expect(handler.executeFolder(sourceFolder)).rejects.toThrow('test error');
-    expect(noticeHide).toHaveBeenCalled();
-  });
-
-  it('should skip children that are neither folder nor file', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    const unknownChild = strictProxy<TAbstractFile>({ path: 'src/unknown' });
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(unknownChild);
-    });
-
-    mockIsFolder.mockReturnValue(false);
-    mockIsFile.mockReturnValue(false);
-    mockIsChildOrSelf.mockReturnValue(false);
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(MockMergeComposer).not.toHaveBeenCalled();
-    expect(mockRenameSafe).not.toHaveBeenCalled();
-    expect(noticeHide).toHaveBeenCalled();
-  });
-
-  it('should sort md files by depth descending when target is child of source', async () => {
-    const params = createMockParams();
-    const handler = toTestable(new MergeFolderCommandHandler(params));
-    const sourceFolder = createMockFolder('src');
-    const targetFolder = createMockFolder('target');
-
-    mockSelectTargetFolder.mockResolvedValue(targetFolder);
-
-    const noticeHide = vi.fn();
-    vi.mocked(params.pluginNoticeComponent.showNotice).mockReturnValue(strictProxy<Notice>({ hide: noticeHide }));
-
-    const mockNoticeFragment = strictProxy<DocumentFragment>({
-      appendChild: vi.fn(),
-      appendText: vi.fn(),
-      createDiv: vi.fn(),
-      createEl: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockNoticeFragment);
-      return mockNoticeFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
-    const file1 = createMockFile('src/shallow.md');
-    const file2 = createMockFile('src/a/b/deep.md');
-
-    mockRecurseChildren.mockImplementation((_folder, cb) => {
-      cb(file1);
-      cb(file2);
-    });
-
-    mockIsFolder.mockReturnValue(false);
-    mockIsFile.mockReturnValue(true);
-    mockIsMarkdownFile.mockReturnValue(true);
-
-    let isChildOrSelfCallCount = 0;
-    mockIsChildOrSelf.mockImplementation(() => {
-      isChildOrSelfCallCount++;
-      // First call: isChildOrSelf(sourceFolder, targetFolder) -> false
-      // Second call: isChildOrSelf(targetFolder, sourceFolder) -> true
-      if (isChildOrSelfCallCount === 2) {
-        return true;
-      }
-      return false;
-    });
-
-    mockExists.mockReturnValue(false);
-    const targetMdFile = createMockFile('target/note.md');
-    mockGetOrCreateFileSafe.mockResolvedValue(targetMdFile);
-
-    const mockMergeFile = vi.fn().mockResolvedValue(undefined);
-    MockMergeComposer.prototype.mergeFile = mockMergeFile;
-
-    await handler.executeFolder(sourceFolder);
-
-    expect(mockMergeFile).toHaveBeenCalledTimes(2);
-    expect(noticeHide).toHaveBeenCalled();
+  it('should always add the command to the folder menu', async () => {
+    initApp({});
+    await app.vault.createFolder('some/folder');
+    const { handler } = createHandler();
+    expect(handler.shouldAddToFolderMenu({ folder: getFolder('some/folder'), source: 'source' })).toBe(true);
   });
 });
