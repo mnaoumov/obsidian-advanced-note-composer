@@ -100,7 +100,7 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      /* v8 ignore start -- runs only when editLinks finds a link in the merged target resolving to the source; test-mocks has no link index, so this needs real Obsidian; see obsidian-test-mocks CLAUDE.md (MetadataCache has no link indexer).  */
+      /* v8 ignore start -- runs only when editLinks finds a target link resolving to the source; editLinks -> getCacheSafe reads app.metadataCache.fileCache (unmodeled in test-mocks) and the mock's link indexer is untracked-async (not re-run synchronously mid-merge), so this is not unit-testable against the mock. See obsidian-test-mocks CLAUDE.md. */
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
