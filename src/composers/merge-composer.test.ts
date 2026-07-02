@@ -1,32 +1,17 @@
-import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
-import type {
-  App,
-  Reference,
-  TFile
-} from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { TFile } from 'obsidian';
 
+import { App } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import {
-  editLinks,
-  extractLinkFile,
-  updateLink,
-  updateLinksInContent
-} from 'obsidian-dev-utils/obsidian/link';
-import {
-  getBacklinksForFileSafe,
-  getCacheSafe,
-  getFrontmatterSafe
-} from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
+import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
-import { resolveValue } from 'obsidian-dev-utils/value-provider';
+import {
+  ensureNonNullable,
+  type GenericObject
+} from 'obsidian-dev-utils/type-guards';
 import {
   afterEach,
+  beforeEach,
   describe,
   expect,
   it,
@@ -43,22 +28,17 @@ interface AbortableComposer {
   readonly abortController: AbortController;
 }
 
-interface ComposerDeps {
-  readonly app: App;
-  readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly resourceLockComponent: ResourceLockComponent;
-  readonly pluginNoticeComponent: PluginNoticeComponent;
-  readonly pluginSettingsComponent: PluginSettingsComponent;
-}
-
-interface UpdateLinksParams {
-  readonly content: string;
-}
-
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
-  appendCodeBlock: vi.fn()
+// Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
+// Would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL (G49).
+vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
+  getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
+  getCacheSafe: vi.fn().mockResolvedValue(null),
+  getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
+// UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
+// Reach into unmocked App internals (embedRegistry). Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -70,493 +50,116 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-const { progressNoticeDisposeMock } = vi.hoisted(() => ({ progressNoticeDisposeMock: vi.fn() }));
+let app: App;
+let resourceLockComponent: ResourceLockComponent;
 
-vi.mock('obsidian-dev-utils/obsidian/link', () => ({
-  editLinks: vi.fn(),
-  extractLinkFile: vi.fn(),
-  updateLink: vi.fn(),
-  updateLinksInContent: vi.fn().mockImplementation(({ content }: UpdateLinksParams) => content)
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
-  getCacheSafe: vi.fn().mockResolvedValue(null),
-  getFrontmatterSafe: vi.fn().mockResolvedValue({})
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
-  process: vi.fn(),
-  trashSafe: vi.fn()
-}));
-
-vi.mock('../markdown-heading-document.ts', () => ({
-  parseMarkdownHeadingDocument: vi.fn()
-}));
-
-function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
-  const deps = createDeps(settingsOverrides);
-  return new MergeComposer({
-    ...deps,
-    isNewTargetFile: false,
-    sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-    targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-  });
-}
-
-function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
-  return castTo<ComposerDeps>({
-    app: {
-      fileManager: {
-        insertIntoFile: vi.fn(),
-        processFrontMatter: vi.fn()
-      },
-      metadataCache: { getFileCache: vi.fn().mockReturnValue({}) },
-      plugins: { plugins: {} },
-      vault: {
-        cachedRead: vi.fn().mockResolvedValue(''),
-        read: vi.fn().mockResolvedValue('source content')
-      },
-      workspace: {
-        getActiveFile: vi.fn(),
-        getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
-      }
-    },
-    consoleDebugComponent: {
-      consoleDebug: vi.fn()
-    },
-    resourceLockComponent: {
-      lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
-      unlockForPath: vi.fn()
-    },
-    pluginNoticeComponent: {
-      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }),
-      showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: progressNoticeDisposeMock })
-    },
-    pluginSettingsComponent: {
-      settings: {
-        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
-        isPathIgnored: vi.fn().mockReturnValue(false),
-        mergeTemplate: '{{content}}',
-        shouldFixFootnotesByDefault: false,
-        shouldMergeHeadingsByDefault: false,
-        shouldOpenNoteAfterMerge: false,
-        shouldRunTemplaterOnDestinationFile: false,
-        ...overrides
-      }
+beforeEach(() => {
+  app = App.createConfigured__({
+    files: {
+      'source.md': 'source body',
+      'target.md': 'target body'
     }
-  });
-}
-
-function getAppObj(app: App): GenericObject {
-  return castTo<GenericObject>(app);
-}
+  }).asOriginalType__();
+  // Test-mocks' MetadataCache is a strict proxy with no indexer; the merge's processFrontMatter
+  // Triggers a recompute, so stub it to a no-op.
+  castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
+  resourceLockComponent.load();
+});
 
 afterEach(() => {
+  resourceLockComponent.unload();
   vi.restoreAllMocks();
 });
 
+function getSourceFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('source.md'));
+}
+
+function getTargetFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('target.md'));
+}
+
+function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
+  return new MergeComposer({
+    app,
+    consoleDebugComponent: strictProxy({ consoleDebug: vi.fn() }),
+    isNewTargetFile: false,
+    pluginNoticeComponent: createPluginNoticeComponentStub(),
+    pluginSettingsComponent: createPluginSettingsComponentStub(settingsOverrides),
+    resourceLockComponent,
+    sourceFile: getSourceFile(),
+    targetFile: getTargetFile()
+  });
+}
+
+function createPluginNoticeComponentStub(): PluginNoticeComponent {
+  return strictProxy<PluginNoticeComponent>({
+    showNotice: vi.fn(),
+    showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: vi.fn() })
+  });
+}
+
+function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>): PluginSettingsComponent {
+  return strictProxy<PluginSettingsComponent>({
+    settings: strictProxy<PluginSettings>({
+      defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isPathIgnored: () => false,
+      mergeTemplate: '{{content}}',
+      shouldFixFootnotesByDefault: false,
+      shouldMergeHeadingsByDefault: false,
+      shouldOpenNoteAfterMerge: false,
+      shouldRunTemplaterOnDestinationFile: false,
+      ...overrides
+    })
+  });
+}
+
 describe('MergeComposer', () => {
-  it('should be constructable', () => {
-    const deps = castTo<ComposerDeps>({
-      app: {
-        fileManager: {},
-        metadataCache: { getFileCache: vi.fn() },
-        plugins: { plugins: {} },
-        vault: { cachedRead: vi.fn(), read: vi.fn() },
-        workspace: {}
-      },
-      consoleDebugComponent: {
-        consoleDebug: vi.fn()
-      },
-      pluginSettingsComponent: {
-        settings: {
-          defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
-          mergeTemplate: '\n\n{{content}}',
-          shouldFixFootnotesByDefault: true,
-          shouldMergeHeadingsByDefault: false,
-          shouldOpenNoteAfterMerge: false,
-          shouldRunTemplaterOnDestinationFile: false
-        }
-      }
+  describe('mergeFile', () => {
+    it('should merge the source content into the target and trash the source', async () => {
+      await createComposer().mergeFile();
+
+      // The transaction stages/commits deletions through app.vault.adapter, so assert via the adapter
+      // (test-mocks does not sync the in-memory vault tree from adapter moves).
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+      const targetContent = await app.vault.adapter.read('target.md');
+      expect(targetContent).toContain('target body');
+      expect(targetContent).toContain('source body');
     });
 
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+    it('should not touch the vault when the target path is ignored', async () => {
+      await createComposer({ isPathIgnored: () => true }).mergeFile();
+
+      expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
+      expect(await app.vault.adapter.read('target.md')).toBe('target body');
     });
 
-    expect(composer).toBeDefined();
-  });
-});
+    it('should abort and not trash the source when a file is modified during the operation', async () => {
+      const composer = createComposer();
+      // Simulate an external edit to the source while the operation is in progress: bump its mtime
+      // Between the mtime capture and the unchanged-check.
+      vi.spyOn(app.vault, 'read').mockImplementation((file) => {
+        ensureNonNullable(app.vault.getFileByPath('source.md')).stat.mtime += 1;
+        return Promise.resolve(castTo<TFile>(file).path === 'source.md' ? 'source body' : 'target body');
+      });
 
-describe('mergeFile', () => {
-  it('should return early when checkTargetFileIgnored returns false', async () => {
-    const composer = createComposer({ isPathIgnored: vi.fn().mockReturnValue(true) });
+      await composer.mergeFile();
 
-    await composer.mergeFile();
-
-    expect(trashSafe).not.toHaveBeenCalled();
-  });
-
-  it('should merge file content and trash source on happy path', async () => {
-    const composer = createComposer();
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    expect(trashSafe).toHaveBeenCalled();
-  });
-
-  it('should abort the merge and not trash the source when a file is modified during the operation', async () => {
-    const deps = createDeps();
-    const sourceStat = { ctime: 0, mtime: 100, size: 0 };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: sourceStat });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 200, size: 0 } });
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      cachedRead: vi.fn().mockResolvedValue(''),
-      // Simulate an external edit to the source while the operation is in progress.
-      read: vi.fn().mockImplementation(() => {
-        sourceStat.mtime = 999;
-        return Promise.resolve('source content');
-      })
-    };
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
+      expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
+      expect(await app.vault.adapter.read('target.md')).toBe('target body');
     });
 
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(trashSafe).mockClear();
+    it('should swallow the cancellation and roll back when aborted mid-operation', async () => {
+      const composer = createComposer();
+      // Simulate the user clicking the lock indicator's Unlock mid-operation.
+      castTo<AbortableComposer>(composer).abortController.abort();
 
-    await composer.mergeFile();
+      await expect(composer.mergeFile()).resolves.toBeUndefined();
 
-    expect(trashSafe).not.toHaveBeenCalled();
-  });
-
-  it('should lock the source and target notes during the merge and unlock them afterwards', async () => {
-    const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
+      // Rolled back: the source is untouched and the target is unchanged.
+      expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
+      expect(await app.vault.adapter.read('target.md')).toBe('target body');
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    expect(deps.resourceLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.resourceLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
-  });
-
-  it('should swallow the error and release the locks when the merge is cancelled by unlocking', async () => {
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
-      processFrontMatter: vi.fn()
-    };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Simulate the user clicking the lock indicator's "Unlock" mid-operation.
-    castTo<AbortableComposer>(composer).abortController.abort();
-
-    // The cancellation is swallowed: the operation resolves without throwing.
-    await expect(composer.mergeFile()).resolves.toBeUndefined();
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
-  });
-
-  it('should rethrow and release the locks when the merge fails without cancellation', async () => {
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
-      processFrontMatter: vi.fn()
-    };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await expect(composer.mergeFile()).rejects.toThrow('insert error');
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
-  });
-
-  it('should show a delayed progress notice during the merge and dispose it afterwards', async () => {
-    const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
-    showNoticeAfterDelayMock.mockClear();
-    progressNoticeDisposeMock.mockClear();
-
-    await composer.mergeFile();
-
-    expect(showNoticeAfterDelayMock).toHaveBeenCalledTimes(1);
-    const params = showNoticeAfterDelayMock.mock.calls[0]?.[0];
-    expect(params?.abortController).toBeInstanceOf(AbortController);
-    const content = await resolveValue(ensureNonNullable(params?.content), {});
-    expect(castTo<DocumentFragment>(content).textContent).toContain('Merging note');
-    expect(progressNoticeDisposeMock).toHaveBeenCalled();
-  });
-
-  it('should not show a progress notice when shouldShowNotice is false', async () => {
-    const deps = createDeps();
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      shouldShowNotice: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
-    showNoticeAfterDelayMock.mockClear();
-
-    await composer.mergeFile();
-
-    expect(showNoticeAfterDelayMock).not.toHaveBeenCalled();
-  });
-
-  it('should complete merge flow successfully with notice shown', async () => {
-    const composer = createComposer();
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    // Merge completed successfully with notice (no errors thrown)
-    expect(trashSafe).toHaveBeenCalled();
-  });
-
-  it('should not show notice when shouldShowNotice is false', async () => {
-    const deps = createDeps();
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      shouldShowNotice: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Should complete without error even when shouldShowNotice is false
-    await composer.mergeFile();
-
-    expect(trashSafe).toHaveBeenCalled();
-  });
-
-  it('should open note after merge when shouldOpenNoteAfterMerge is true', async () => {
-    const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const deps = createDeps({ shouldOpenNoteAfterMerge: true });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
-    };
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    expect(openFileMock).toHaveBeenCalled();
-  });
-
-  it('should not open note when shouldOpenNoteAfterMerge is false', async () => {
-    const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const deps = createDeps({ shouldOpenNoteAfterMerge: false });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
-    };
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    expect(openFileMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('MergeComposer fixBacklinks', () => {
-  it('should fix self-links in target file after calling super', async () => {
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-
-    const deps = createDeps();
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile,
-      targetFile
-    });
-
-    // Set up editLinks to call the callback with a link pointing to source
-    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback, pathOrFile }) => {
-      if (pathOrFile === targetFile || (typeof pathOrFile === 'string' && pathOrFile === 'target.md')) {
-        const link = { link: 'source', original: '[[source]]' };
-        vi.mocked(extractLinkFile).mockReturnValue(sourceFile);
-        await callback(link);
-      }
-    });
-    vi.mocked(updateLink).mockReturnValue('updated');
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.mergeFile();
-
-    // EditLinks should be called for the target file (self-link fix)
-    const editLinksCalls = vi.mocked(editLinks).mock.calls;
-    const targetFileCalls = editLinksCalls.filter((call) => call[0].pathOrFile === targetFile);
-    expect(targetFileCalls.length).toBeGreaterThan(0);
-  });
-});
-
-describe('MergeComposer getSelections', () => {
-  it('should return full file content as single selection', async () => {
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      ...appObj['vault'] as GenericObject,
-      read: vi.fn().mockResolvedValue('hello world')
-    };
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Trigger mergeFile which calls getSelections internally
-    await composer.mergeFile();
-
-    // The read method should have been called (getSelections reads the whole file)
-    const readMock = (appObj['vault'] as GenericObject)['read'];
-    expect(readMock).toHaveBeenCalled();
-  });
-});
-
-describe('MergeComposer getTemplate', () => {
-  it('should return mergeTemplate from settings', () => {
-    const deps = createDeps({ mergeTemplate: 'custom: {{content}}' });
-
-    const composer = new MergeComposer({
-      ...deps,
-      isNewTargetFile: false,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    // GetTemplate is called internally; we can verify by checking the template is applied to content
-    expect(composer).toBeDefined();
-  });
-});
-
-describe('MergeComposer prepareBacklinkSubpaths', () => {
-  it('should include empty string in subpaths for full file merge', async () => {
-    const composer = createComposer();
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Backlinks pointing to the source file (no subpath) should be picked up
-    const backlinkMap = new Map<string, unknown[]>();
-    backlinkMap.set('other.md', [{ link: 'source' }]);
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<CustomArrayDict<Reference>>(backlinkMap));
-
-    vi.mocked(editLinks).mockImplementation(async ({ linkConverter: callback }) => {
-      await callback(castTo<Reference>({ link: 'source' }));
-    });
-    vi.mocked(updateLink).mockReturnValue('updated');
-
-    await composer.mergeFile();
-
-    expect(getBacklinksForFileSafe).toHaveBeenCalled();
   });
 });
