@@ -125,6 +125,26 @@ swap/merge-folder handlers.
    moved/merged/trashed, and on an induced abort the vault is restored) rather than mock-call spying.
    Then full gate (compile + `test:coverage` 100% + lint + format + spellcheck) + `npm run build`.
 
+   **BLOCKER found while starting the merge test (2026-07-02) — resolve first.** The real-bridge setup
+   works for the app/lock/tx (dev-utils' own tests prove it), BUT the composer needs its `sourceFile`/
+   `targetFile` to be the SAME real vault file objects so `tx.trash(this.sourceFile)` / `tx.process(this.
+   targetFile,…)` resolve to the real files. Two problems hit:
+   - A `strictProxy<TFile>` file (as the OLD tests used) sets the composer fields fine, but tx methods
+     that take the file OBJECT then operate on the proxy, not the real vault file — so nothing is really
+     trashed/processed. (Passing `this.sourceFile.path` strings to the tx would dodge this but that's a
+     source change motivated by tests.)
+   - A REAL file from `app.vault.getFileByPath('x.md')` (after `createConfigured__({ files })`) assigned
+     as the composer's `sourceFile`/`targetFile` comes back **`undefined` on the composer** (both fields),
+     while a `strictProxy<TFile>` does not. Isolated repro: with `import { TFile } from 'obsidian'` (value)
+     + `castTo<GenericObject>(app.metadataCache).computeMetadataAsync = vi.fn()` in `beforeEach`,
+     `getFileByPath('x.md')` returns an object with `isTFile:false` and **no `.path`** — yet a BARE probe
+     (no `TFile` value import, no `computeMetadataAsync` mutation) reads `.path` fine. So one of those two
+     (the `TFile` value import bridging, or the metadataCache mutation) corrupts the vault's file objects.
+     ROOT-CAUSE next: check the `obsidian-test-mocks` `createConfigured__`/`getFileByPath` contract and how
+     `computeMetadataAsync` should be provided (maybe via `createConfigured__` options, not a post-hoc
+     assignment); confirm files are created so `getFileByPath` returns real `TFile` instances usable both as
+     composer fields AND by the tx. Only then is the real-bridge pattern viable across all 7 files.
+
 ## Known Issues
 
 None.
