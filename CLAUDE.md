@@ -97,36 +97,35 @@ locking/rollback behavior via CDP (R2 G10r) before finalizing coverage; then pha
 
 ### Phases
 
-5. **`ComposerBase.runLockedTransaction` + injected-tx; migrate merge-file & split-file.** ✅ source done,
-   compiles against 84.0.0. `composer-base.ts`: `runLockedTransaction` (lock every target with
-   `lockForPath({ abortController, mode, shouldBlockMutations: true })` → build `VaultTransaction` with
-   `openMutationBypass: () => bypassBlockedMutations(lockedPaths)` → run `body` → commit / rollback-on-throw
-   → dispose lock disposables), `LockTarget`/`RunLockedTransactionParams`, injected-tx short-circuit,
-   field `editorLockComponent`→`resourceLockComponent`, removed `lockNotes`/`unlockNotes`, threaded the tx
-   through `insertIntoTargetFile`/`insertIntoTargetFileImpl` (plain insert via `tx.process` + `insertContent`
-   replicating `FileManager.insertIntoFile` positioning; heading-merge computes async then `tx.modify`).
-   `merge-composer.ts` uses `tx.trash(sourceFile)`; `split-composer.ts` records a restore point via identity
-   `tx.process(sourceFile, c=>c)` before its editor edit. Also renamed `editorLock*`→`resourceLock*` across
-   29 files (the whole cascade). **NOT done:** rewrite 3 composer test files (75 failing) against the real
-   API + CDP-confirm real behavior; whether `fixBacklinks` edits to OTHER files route through the tx (open).
-   **NOT yet done in this phase:** propagating the `resourceLockComponent` rename to the composer
-   construction sites (command handlers / item-selectors) — deferred to phase 8; and deciding whether
-   `fixBacklinks` edits to OTHER files route through the tx (open design point).
-   Shared lifecycle: lock each target with `this.abortController`, open an owner session, build a
-   `VaultTransaction`, run `body(tx)`, `commit` on success / `rollback` on abort or throw, release locks
-   in `finally`. When a tx is **injected** (folder-merge), reuse it and skip lock/commit. Keep
-   `captureFileMtimes`/`checkFilesUnchanged` as the pre-flight guard. Thread the tx through
-   `insertIntoTargetFile` (target writes via `tx.process`/`tx.modify`; `processFrontMatter` stays as-is
-   for now). Merge: `tx.trash(sourceFile)` replaces `trashSafe`. Split: the destructive
-   `editor.replaceSelection` is an editor edit (not a vault op) → capture source content and register an
-   inverse restoring it via `tx.process`. **Open design point:** faithful rollback of `fixBacklinks`
-   edits to OTHER files (currently via `editLinks`→`process`) — decide whether to route through the tx.
-6. **Swap file/folder** — tx-ify `swapper.ts` (`renameSafe`/`deleteIfNotUsed` → `tx.rename`/`tx.trash`);
-   inject `resourceLockComponent` into `SwapFileCommandHandler`/`SwapFolderCommandHandler` (+ plugin.ts).
-7. **Merge-folder single spanning transaction** — one `VaultTransaction` over the whole merge; inject it
-   into each `MergeComposer`; route non-md `renameSafe` + emptied-subfolder `trashSafe` through it.
-8. **plugin.ts wiring + the `editorLockComponent`→`resourceLockComponent` rename cascade** (29 files incl.
-   14 tests — mechanical, do at dev-utils-bump time) + end-to-end integration tests.
+All SOURCE is done and compiles against 84.0.0 (committed: `chore: update obsidian-dev-utils to 84.0.0`
++ `feat: lock + transactional rollback for merge/split/swap/merge-folder`). The shared runner lives in
+`src/locked-transaction.ts` (`runLockedTransaction` + `LockTarget`), used by the composers and the
+swap/merge-folder handlers.
+
+5. **merge-file & split-file** ✅ source. `composer-base.ts` threads the tx through `insertIntoTargetFile`
+   (plain insert via `tx.process`+`insertContent` replicating `FileManager.insertIntoFile` positioning;
+   heading-merge computes async then `tx.modify`). Merge uses `tx.trash(source)`. Split records a source
+   restore point via identity `tx.process(source, c=>c)` before its editor edit — **CDP-confirmed
+   insufficient under an open editor; BLOCKED on the dev-utils editor-aware restore** (see above).
+6. **swap file/folder** ✅ source. `swapper.ts` → `swap({ app, vaultTransaction, sourceFile, targetFile,
+   shouldSwapEntireFolderStructure })`, all `renameSafe`/`createFolder`/`deleteIfNotUsed` routed through
+   `tx.rename`/`tx.createFolder`/`tx.trash`. `SwapFile/FolderCommandHandler` gained `resourceLockComponent`
+   and run `swap` inside `runLockedTransaction` (files `'file'`, folders `'subtree'` by path); `plugin.ts` wires it.
+7. **merge-folder spanning transaction** ✅ source. `mergeFolder` wraps `mergeFolderImpl` in one
+   `runLockedTransaction` (both folders `'subtree'`); `mergeFolderImpl` takes `(…, vaultTransaction,
+   abortController)`, injects the tx into each `MergeComposer`, routes subfolder create / non-md rename /
+   emptied-subfolder trash through the tx, and `throwIfAborted` at each loop head so an intruder abort rolls back.
+8. **TESTS — the remaining unblocked work (currently red).** Rewrite against the REAL API per G49: use
+   `App.createConfigured__()` (NOT a partial `strictProxy<App>`) + a real `new ResourceLockComponent(app,
+   pluginId)` loaded as a child + a real `VaultTransaction` — the test-mocks vault adapter supports the tx
+   staging ops (`mkdir`/`exists`/`trashSystem`/`trashLocal`/`rmdir`), confirmed by dev-utils'
+   `src/obsidian/vault-transaction.test.ts` (the reference template; also `resource-lock.test.ts`).
+   Files: `composer-base.test.ts` (currently a partial-mock `createDeps` — convert it), `merge-composer.test.ts`,
+   `split-composer.test.ts` (all merge/split behavior EXCEPT the blocked rollback-under-editor assertion),
+   `swapper.test.ts` + `swap-file/folder-command-handler.test.ts` (26 compile errors from the new `swap`
+   signature), and verify `merge-folder-command-handler.test.ts`. Assert the observable EFFECT (files
+   moved/merged/trashed, and on an induced abort the vault is restored) rather than mock-call spying.
+   Then full gate (compile + `test:coverage` 100% + lint + format + spellcheck) + `npm run build`.
 
 ## Known Issues
 
