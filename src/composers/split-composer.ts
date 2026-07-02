@@ -60,7 +60,6 @@ export class SplitComposer extends ComposerBase {
     }
 
     const mtimes = this.captureFileMtimes();
-    this.lockNotes();
     const progressNotice = this.isMultipleSplit
       ? null
       : this.pluginNoticeComponent.showNoticeAfterDelay({
@@ -68,38 +67,58 @@ export class SplitComposer extends ComposerBase {
         content: () => this.buildProgressContent('Splitting')
       });
     try {
-      this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
+      await this.runLockedTransaction({
+        body: async (vaultTransaction) => {
+          this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-      if (!await this.checkFilesUnchanged(mtimes)) {
+          if (!await this.checkFilesUnchanged(mtimes)) {
+            // The pre-flight guard tripped (an external change): abort so nothing is committed and the
+            // Post-split open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
+            this.abortController.abort();
+            return;
+          }
+
+          // Re-open the source note and restore the captured selections FIRST, before any edit, so every
+          // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
+          // The active leaf navigated to another note during the (minimizable) modal.
+          await this.reopenSourceFileAndRestoreSelections();
+
+          await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+
+          // The replace below is an EDITOR edit on the source note, not a vault op the transaction can
+          // Capture, so snapshot the source's current content as a restore point; on rollback the
+          // Transaction restores it, undoing the extraction.
+          await vaultTransaction.captureRestorePoint(this.sourceFile);
+
+          const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+
+          switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
+            case TextAfterExtractionMode.EmbedNewFile:
+              this.editor.replaceSelection(`!${markdownLink}`);
+              break;
+            case TextAfterExtractionMode.LinkToNewFile:
+              this.editor.replaceSelection(markdownLink);
+              break;
+            case TextAfterExtractionMode.None:
+              this.editor.replaceSelection('');
+              break;
+            default:
+              throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+          }
+
+          // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
+          // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
+          this.revealCursor();
+        },
+        lockTargets: [
+          { mode: 'file', pathOrFile: this.sourceFile },
+          { mode: 'file', pathOrFile: this.targetFile }
+        ]
+      });
+
+      if (this.abortController.signal.aborted) {
         return;
       }
-
-      // Re-open the source note and restore the captured selections FIRST, before any edit, so every
-      // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
-      // The active leaf navigated to another note during the (minimizable) modal.
-      await this.reopenSourceFileAndRestoreSelections();
-
-      await this.insertIntoTargetFile(this.selectedText);
-
-      const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-
-      switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
-        case TextAfterExtractionMode.EmbedNewFile:
-          this.editor.replaceSelection(`!${markdownLink}`);
-          break;
-        case TextAfterExtractionMode.LinkToNewFile:
-          this.editor.replaceSelection(markdownLink);
-          break;
-        case TextAfterExtractionMode.None:
-          this.editor.replaceSelection('');
-          break;
-        default:
-          throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
-      }
-
-      // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
-      // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
-      this.revealCursor();
 
       if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
@@ -110,13 +129,12 @@ export class SplitComposer extends ComposerBase {
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {
-        // The operation was cancelled by unlocking the note; nothing to report.
+        // The operation was cancelled (user or external change); the transaction has rolled back.
         return;
       }
       throw error;
     } finally {
       progressNotice?.[Symbol.dispose]();
-      this.unlockNotes();
     }
   }
 
