@@ -85,15 +85,13 @@ locking/rollback behavior via CDP (R2 G10r) before finalizing coverage; then pha
 2. Async `process` → **not added**; instead the heading-merge computes the merged content async, then
    applies it via `vaultTransaction.modify(target, merged)` (captures old content for rollback like `process`).
 3. `captureRestorePoint` → **not added**; split records a source restore point via an identity
-   `vaultTransaction.process(sourceFile, (c) => c)` before its destructive editor edit. **CDP-CONFIRMED
-   INSUFFICIENT (2026-07-02):** restoring the source *file* content does NOT survive when the source is
-   open in an editor — the editor's dirty buffer autosaves the extraction and clobbers the restore (both
-   disk and editor end up extracted). So **split-rollback is BLOCKED** on a dev-utils fix: making the
-   transaction's content restore **editor-aware** (reset the open `MarkdownView` buffer to the restored
-   content, guarding against leaf navigation). Escalated to `obsidian-dev-utils` CLAUDE.md "Current Task"
-   (per the cross-repo convention); merge/swap/merge-folder are unaffected (no editor edits). The current
-   identity-process restore point stays in `split-composer.ts` as the intended hook — it becomes correct
-   once dev-utils' restore is editor-aware.
+   `vaultTransaction.process(sourceFile, (c) => c)` before its destructive editor edit. The
+   open-editor-clobber gap this originally hit (CDP-confirmed 2026-07-02) is **RESOLVED in dev-utils
+   84.1.0**: `tx.rollback` now calls `syncOpenEditorBuffersForPath` (public in
+   `obsidian-dev-utils/obsidian/editor`) so it flushes/reloads the open `MarkdownView` buffer to the
+   restored content. **No plugin code change needed** — split rolls back via `tx.rollback`, which now
+   restores disk **and** editor (dev-utils' own `vault-transaction.obsidian.integration.test.ts` asserts
+   exactly this). Split is UNBLOCKED; its rollback test is part of the phase-8 test rewrite.
 
 ### Phases
 
@@ -105,8 +103,8 @@ swap/merge-folder handlers.
 5. **merge-file & split-file** ✅ source. `composer-base.ts` threads the tx through `insertIntoTargetFile`
    (plain insert via `tx.process`+`insertContent` replicating `FileManager.insertIntoFile` positioning;
    heading-merge computes async then `tx.modify`). Merge uses `tx.trash(source)`. Split records a source
-   restore point via identity `tx.process(source, c=>c)` before its editor edit — **CDP-confirmed
-   insufficient under an open editor; BLOCKED on the dev-utils editor-aware restore** (see above).
+   restore point via identity `tx.process(source, c=>c)` before its editor edit — the open-editor gap is
+   **resolved in dev-utils 84.1.0** (`tx.rollback` → `syncOpenEditorBuffersForPath`); no plugin change needed.
 6. **swap file/folder** ✅ source. `swapper.ts` → `swap({ app, vaultTransaction, sourceFile, targetFile,
    shouldSwapEntireFolderStructure })`, all `renameSafe`/`createFolder`/`deleteIfNotUsed` routed through
    `tx.rename`/`tx.createFolder`/`tx.trash`. `SwapFile/FolderCommandHandler` gained `resourceLockComponent`
