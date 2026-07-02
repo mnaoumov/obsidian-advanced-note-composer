@@ -10,7 +10,7 @@ import type {
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { MockInstance } from 'vitest';
 
 import { Vault as VaultClass } from 'obsidian';
@@ -127,7 +127,7 @@ interface CreateMockPluginParams {
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -162,7 +162,7 @@ function createMockParams(params: CreateMockPluginParams = {}): MergeFolderComma
       vault: strictProxy<Vault>({})
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    editorLockComponent: strictProxy<EditorLockComponent>({}),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({

@@ -1,5 +1,5 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import {
   App,
@@ -42,7 +42,7 @@ interface ConfirmDialogModalResult {
 interface PrepareForSplitFileParams {
   readonly app: App;
   readonly editor: Editor;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly heading?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldSkipModal?: boolean;
@@ -471,7 +471,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
   // (so the setup flow cancels) and the `using` locks release on return.
   const abortController = new AbortController();
-  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile, { abortController });
+  using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
 
   let heading = params.heading;
   if (heading === '') {
@@ -538,7 +538,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }
 
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.editorLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
+  using _targetLock = params.resourceLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve), abortController);

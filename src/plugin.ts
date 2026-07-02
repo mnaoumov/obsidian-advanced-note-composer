@@ -5,9 +5,9 @@ import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/compone
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import {
-  isEditorLockedForPath,
-  requestEditorUnlockForPath
-} from 'obsidian-dev-utils/obsidian/editor-lock';
+  isResourceLockedForPath,
+  requestResourceUnlockForPath
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 
@@ -51,7 +51,7 @@ export class Plugin extends PluginBase {
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
-    const editorLockComponent = this.editorLockComponent;
+    const resourceLockComponent = this.resourceLockComponent;
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -59,60 +59,62 @@ export class Plugin extends PluginBase {
           new MergeFileCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
-            editorLockComponent,
+            resourceLockComponent,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent
           }),
           new SwapFileCommandHandler({
             app: this.app,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           new SwapFolderCommandHandler({
             app: this.app,
             pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent
+            pluginSettingsComponent,
+            resourceLockComponent
           }),
           ...HEADING_LEVELS.flatMap((headingLevel) => [
             new SplitNoteByHeadingsEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
-              editorLockComponent,
+              resourceLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
@@ -120,7 +122,7 @@ export class Plugin extends PluginBase {
             new SplitNoteByHeadingsContentEditorCommandHandler({
               app: this.app,
               consoleDebugComponent: this.consoleDebugComponent,
-              editorLockComponent,
+              resourceLockComponent,
               headingLevel,
               pluginNoticeComponent: this.pluginNoticeComponent,
               pluginSettingsComponent
@@ -136,12 +138,12 @@ export class Plugin extends PluginBase {
     this.addCommand({
       checkCallback: (checking: boolean): boolean => {
         const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile || !isEditorLockedForPath(this.app, activeFile)) {
+        if (!activeFile || !isResourceLockedForPath(this.app, activeFile)) {
           return false;
         }
 
         if (!checking) {
-          requestEditorUnlockForPath(this.app, activeFile);
+          requestResourceUnlockForPath(this.app, activeFile);
         }
 
         return true;

@@ -13,6 +13,7 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
@@ -47,7 +48,11 @@ export class MergeComposer extends ComposerBase {
       : null;
 
     try {
-      await this.runLockedTransaction({
+      await runLockedTransaction({
+        abortController: this.abortController,
+        app: this.app,
+        injectedVaultTransaction: this.injectedVaultTransaction,
+        resourceLockComponent: this.resourceLockComponent,
         body: async (vaultTransaction) => {
           this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
           const sourceContent = await this.app.vault.read(this.sourceFile);
@@ -95,7 +100,7 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      editorLockComponent: this.editorLockComponent,
+      resourceLockComponent: this.resourceLockComponent,
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });

@@ -1,3 +1,4 @@
+import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
@@ -9,7 +10,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -56,7 +57,7 @@ import {
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -133,7 +134,7 @@ class TestComposer extends ComposerBase {
   }
 
   public async callInsertIntoTargetFile(content: string): Promise<void> {
-    return this.insertIntoTargetFile(content);
+    return this.insertIntoTargetFile(content, new VaultTransaction({ app: this.app }));
   }
 
   public callIsPathIgnored(path: string): boolean {
@@ -187,7 +188,7 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
     consoleDebugComponent: {
       consoleDebug: vi.fn()
     },
-    editorLockComponent: {
+    resourceLockComponent: {
       lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
       unlockForPath: vi.fn()
     },

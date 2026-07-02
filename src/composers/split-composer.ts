@@ -13,6 +13,7 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import {
   Action,
   TextAfterExtractionMode
@@ -67,7 +68,11 @@ export class SplitComposer extends ComposerBase {
         content: () => this.buildProgressContent('Splitting')
       });
     try {
-      await this.runLockedTransaction({
+      await runLockedTransaction({
+        abortController: this.abortController,
+        app: this.app,
+        injectedVaultTransaction: this.injectedVaultTransaction,
+        resourceLockComponent: this.resourceLockComponent,
         body: async (vaultTransaction) => {
           this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
@@ -78,17 +83,18 @@ export class SplitComposer extends ComposerBase {
             return;
           }
 
+          // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
+          // Editor.replaceSelection below is an editor edit, not a vault op the transaction can capture,
+          // So an identity process() records a restore-to-original inverse without changing the content.
+          // Done before the re-open so the (no-op) write cannot disturb the restored selections.
+          await vaultTransaction.process(this.sourceFile, (content) => content);
+
           // Re-open the source note and restore the captured selections FIRST, before any edit, so every
           // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
           // The active leaf navigated to another note during the (minimizable) modal.
           await this.reopenSourceFileAndRestoreSelections();
 
           await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
-
-          // The replace below is an EDITOR edit on the source note, not a vault op the transaction can
-          // Capture, so snapshot the source's current content as a restore point; on rollback the
-          // Transaction restores it, undoing the extraction.
-          await vaultTransaction.captureRestorePoint(this.sourceFile);
 
           const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 

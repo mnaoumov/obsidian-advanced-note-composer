@@ -6,7 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -46,7 +46,7 @@ interface AbortableComposer {
 interface ComposerDeps {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -125,7 +125,7 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
     consoleDebugComponent: {
       consoleDebug: vi.fn()
     },
-    editorLockComponent: {
+    resourceLockComponent: {
       lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
       unlockForPath: vi.fn()
     },
@@ -262,10 +262,10 @@ describe('mergeFile', () => {
 
     await composer.mergeFile();
 
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.resourceLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
+    expect(deps.resourceLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
   it('should swallow the error and release the locks when the merge is cancelled by unlocking', async () => {
@@ -293,8 +293,8 @@ describe('mergeFile', () => {
 
     // The cancellation is swallowed: the operation resolves without throwing.
     await expect(composer.mergeFile()).resolves.toBeUndefined();
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
   it('should rethrow and release the locks when the merge fails without cancellation', async () => {
@@ -318,8 +318,8 @@ describe('mergeFile', () => {
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await expect(composer.mergeFile()).rejects.toThrow('insert error');
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
+    expect(deps.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
   it('should show a delayed progress notice during the merge and dispose it afterwards', async () => {

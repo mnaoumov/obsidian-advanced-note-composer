@@ -8,7 +8,7 @@ import type {
 } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -75,7 +75,7 @@ const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -88,7 +88,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    editorLockComponent: strictProxy<EditorLockComponent>({}),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
@@ -195,7 +195,7 @@ describe('MergeFileCommandHandler', () => {
     expect(MockMergeComposer).toHaveBeenCalledWith({
       app: params.app,
       consoleDebugComponent: params.consoleDebugComponent,
-      editorLockComponent: params.editorLockComponent,
+      resourceLockComponent: params.resourceLockComponent,
       frontmatterMergeStrategy: 'MergeAndPreferNewValues',
       insertMode: 'append',
       isNewTargetFile: true,

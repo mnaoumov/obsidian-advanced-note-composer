@@ -1,5 +1,5 @@
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import {
   App,
@@ -58,7 +58,7 @@ interface MergeFileModalResult {
 
 interface PrepareForMergeFileParams {
   readonly app: App;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
 }
@@ -382,7 +382,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
   // (so the setup flow cancels) and the `using` locks release on return.
   const abortController = new AbortController();
-  using _sourceLock = params.editorLockComponent.lockForPath(params.sourceFile, { abortController });
+  using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
 
   const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
     const modal = new MergeFileModal({
@@ -421,7 +421,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   }
 
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.editorLockComponent.lockForPath(prepareForMergeFileResult.targetFile, { abortController });
+  using _targetLock = params.resourceLockComponent.lockForPath(prepareForMergeFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(

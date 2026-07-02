@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
@@ -11,6 +12,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForSwap } from '../modals/swap-folder-modal.ts';
 import { swap } from '../swapper.ts';
 
@@ -18,12 +20,14 @@ interface SwapFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class SwapFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: SwapFolderCommandHandlerConstructorParams) {
     super({
@@ -36,6 +40,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
     this.app = params.app;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
   }
 
   protected override canExecuteFolder(folder: TFolder): boolean {
@@ -59,8 +64,36 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent,
       sourceFolder: folder
     });
-    if (result) {
-      await swap(this.app, folder, result.targetFolder, result.shouldSwapEntireFolderStructure);
+    if (!result) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    try {
+      await runLockedTransaction({
+        abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          await swap({
+            app: this.app,
+            shouldSwapEntireFolderStructure: result.shouldSwapEntireFolderStructure,
+            sourceFile: folder,
+            targetFile: result.targetFolder,
+            vaultTransaction
+          });
+        },
+        lockTargets: [
+          { mode: 'subtree', pathOrFile: folder.path },
+          { mode: 'subtree', pathOrFile: result.targetFolder.path }
+        ],
+        resourceLockComponent: this.resourceLockComponent
+      });
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        // The operation was cancelled (user or external change); the transaction has rolled back.
+        return;
+      }
+      throw error;
     }
   }
 

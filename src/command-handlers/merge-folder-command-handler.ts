@@ -7,11 +7,13 @@ import type {
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { Vault } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
+
 import {
   exists,
   FileSystemType,
@@ -24,10 +26,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   getAvailablePath,
   getOrCreateFileSafe,
-  getOrCreateFolderSafe,
-  isChildOrSelf,
-  renameSafe,
-  trashSafe
+  isChildOrSelf
 } from 'obsidian-dev-utils/obsidian/vault';
 import {
   join,
@@ -37,12 +36,13 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
+import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
@@ -50,7 +50,7 @@ interface MergeFolderCommandHandlerConstructorParams {
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly editorLockComponent: EditorLockComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
@@ -65,7 +65,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
-    this.editorLockComponent = params.editorLockComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -110,6 +110,18 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     return file.path.split('/').length;
   }
 
+  /**
+   * Throws if the operation has been aborted (an external change to a locked path, or the user's
+   * Unlock), so the enclosing {@link runLockedTransaction} rolls the spanning transaction back.
+   *
+   * @param abortController - The operation's abort controller.
+   */
+  private throwIfAborted(abortController: AbortController): void {
+    if (abortController.signal.aborted) {
+      throw new Error('Folder merge aborted.');
+    }
+  }
+
   private async mergeFolder(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
@@ -126,14 +138,37 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       }
     );
 
+    const abortController = new AbortController();
     try {
-      await this.mergeFolderImpl(sourceFolder, targetFolder);
+      await runLockedTransaction({
+        abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          await this.mergeFolderImpl(sourceFolder, targetFolder, vaultTransaction, abortController);
+        },
+        lockTargets: [
+          { mode: 'subtree', pathOrFile: sourceFolder.path },
+          { mode: 'subtree', pathOrFile: targetFolder.path }
+        ],
+        resourceLockComponent: this.resourceLockComponent
+      });
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        // The operation was cancelled (user or external change); the transaction has rolled back.
+        return;
+      }
+      throw error;
     } finally {
       notice.hide();
     }
   }
 
-  private async mergeFolderImpl(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
+  private async mergeFolderImpl(
+    sourceFolder: TFolder,
+    targetFolder: TFolder,
+    vaultTransaction: VaultTransaction,
+    abortController: AbortController
+  ): Promise<void> {
     const sourceSubfolders: TFolder[] = [];
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];
@@ -161,8 +196,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     for (const sourceSubfolder of sourceSubfolders) {
       const relativePath = relative(sourceFolder.path, sourceSubfolder.path);
       const targetSubfolderPath = join(targetFolder.path, relativePath);
-      const targetSubfolder = await getOrCreateFolderSafe(this.app, targetSubfolderPath);
-      subfoldersMap.set(sourceSubfolder.path, targetSubfolder.path);
+      await vaultTransaction.createFolder(targetSubfolderPath);
+      subfoldersMap.set(sourceSubfolder.path, targetSubfolderPath);
     }
 
     if (isChildOrSelf({ app: this.app, childPathOrFile: sourceFolder, parentPathOrFile: targetFolder })) {
@@ -174,36 +209,41 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
 
     for (const sourceMdFile of sourceMdFiles) {
+      this.throwIfAborted(abortController);
       /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
       const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
       const isNewTargetFile = !exists({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
-      const targetMdFile = await getOrCreateFileSafe(this.app, targetMdFilePath);
+      const targetMdFile = isNewTargetFile
+        ? await vaultTransaction.create(targetMdFilePath, '')
+        : await getOrCreateFileSafe(this.app, targetMdFilePath);
       const composer = new MergeComposer({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
-        editorLockComponent: this.editorLockComponent,
         isNewTargetFile,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
+        resourceLockComponent: this.resourceLockComponent,
         shouldShowNotice: false,
         sourceFile: sourceMdFile,
-        targetFile: targetMdFile
+        targetFile: targetMdFile,
+        vaultTransaction
       });
       await composer.mergeFile();
     }
 
     for (const sourceOtherFile of sourceOtherFiles) {
+      this.throwIfAborted(abortController);
       /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
       const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
-      let targetFilePath = join(targetParentFolderPath, sourceOtherFile.name);
-      targetFilePath = getAvailablePath(this.app, targetFilePath);
-      await renameSafe({ app: this.app, newPath: targetFilePath, oldPathOrAbstractFile: sourceOtherFile });
+      const targetFilePath = getAvailablePath(this.app, join(targetParentFolderPath, sourceOtherFile.name));
+      await vaultTransaction.rename(sourceOtherFile, targetFilePath);
     }
 
     for (const sourceSubfolder of sourceSubfolders) {
+      this.throwIfAborted(abortController);
       if (sourceSubfolder.children.length > 0) {
         continue;
       }
@@ -217,7 +257,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!canDeleteSourceFolder) {
         continue;
       }
-      await trashSafe(this.app, sourceSubfolder);
+      await vaultTransaction.trash(sourceSubfolder);
     }
 
     if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {

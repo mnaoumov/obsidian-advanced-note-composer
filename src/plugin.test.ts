@@ -7,7 +7,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -15,9 +15,9 @@ import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-han
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import {
-  isEditorLockedForPath,
-  requestEditorUnlockForPath
-} from 'obsidian-dev-utils/obsidian/editor-lock';
+  isResourceLockedForPath,
+  requestResourceUnlockForPath
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -58,10 +58,10 @@ vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
   PluginDataHandler: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/editor-lock', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/editor-lock')>(),
-  isEditorLockedForPath: vi.fn(),
-  requestEditorUnlockForPath: vi.fn()
+vi.mock('obsidian-dev-utils/obsidian/resource-lock', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/resource-lock')>(),
+  isResourceLockedForPath: vi.fn(),
+  requestResourceUnlockForPath: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
@@ -137,7 +137,7 @@ vi.mock('./release-notes-component.ts', () => ({
 
 interface PluginInternals {
   _consoleDebugComponent: ConsoleDebugComponent;
-  _editorLockComponent: EditorLockComponent;
+  _resourceLockComponent: ResourceLockComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
   onloadImpl(): void;
 }
@@ -158,7 +158,7 @@ describe('Plugin', () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._editorLockComponent = strictProxy<EditorLockComponent>({});
+    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
@@ -178,8 +178,8 @@ describe('Plugin', () => {
 
 describe('unlock-active-note command', () => {
   beforeEach(() => {
-    vi.mocked(isEditorLockedForPath).mockReset();
-    vi.mocked(requestEditorUnlockForPath).mockReset();
+    vi.mocked(isResourceLockedForPath).mockReset();
+    vi.mocked(requestResourceUnlockForPath).mockReset();
   });
 
   function registerCommand(activeFile: null | TFile): Command {
@@ -191,7 +191,7 @@ describe('unlock-active-note command', () => {
     const plugin = new Plugin(app, createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._editorLockComponent = strictProxy<EditorLockComponent>({});
+    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const addCommandSpy = vi.spyOn(plugin, 'addCommand');
 
@@ -209,28 +209,28 @@ describe('unlock-active-note command', () => {
   it('should be hidden when there is no active file', () => {
     const command = registerCommand(null);
     expect(command.checkCallback?.(true)).toBe(false);
-    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
   });
 
   it('should be hidden when the active file is not locked', () => {
-    vi.mocked(isEditorLockedForPath).mockReturnValue(false);
+    vi.mocked(isResourceLockedForPath).mockReturnValue(false);
     const activeFile = strictProxy<TFile>({ path: 'active.md' });
     const command = registerCommand(activeFile);
     expect(command.checkCallback?.(true)).toBe(false);
-    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
   });
 
   it('should be available and request an unlock when the active file is locked', () => {
-    vi.mocked(isEditorLockedForPath).mockReturnValue(true);
+    vi.mocked(isResourceLockedForPath).mockReturnValue(true);
     const activeFile = strictProxy<TFile>({ path: 'active.md' });
     const command = registerCommand(activeFile);
 
     // While checking, the command is enabled but performs no action.
     expect(command.checkCallback?.(true)).toBe(true);
-    expect(requestEditorUnlockForPath).not.toHaveBeenCalled();
+    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
 
     // When executed, it requests the unlock of the active file.
     expect(command.checkCallback?.(false)).toBe(true);
-    expect(requestEditorUnlockForPath).toHaveBeenCalledWith(expect.anything(), activeFile);
+    expect(requestResourceUnlockForPath).toHaveBeenCalledWith(expect.anything(), activeFile);
   });
 });

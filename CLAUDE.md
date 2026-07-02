@@ -58,47 +58,57 @@ changes and aborts, and fully rolls back on cancel/error. Full approved plan (bo
 parallel in `obsidian-dev-utils` (see that repo's CLAUDE.md "Current Task"); this repo owns plugin
 phases 5–8.
 
-**BUILD-AHEAD status.** The dev-utils API this plugin consumes is **not published yet** (installed
-dev-utils is 83.3.0; `VaultTransaction` is implemented-but-uncommitted, the `ResourceLock*` facade is
-unwritten, and phase 4 is a breaking `EditorLockComponent`→`ResourceLockComponent` rename with no
-shim). So the plugin code here is written against the **planned** API and **will not compile until
-dev-utils lands phases 1–4 and the dep is bumped**. Do not expect `build:compile`/tests to pass until
-then. Test files are intentionally NOT updated yet (per red→implement→confirm-real→cover: coverage
-comes after the API is runnable and real behavior is confirmed via CDP).
+**STATUS.** dev-utils **84.0.0** is published with the real API; the dep is bumped and **Phase 5 source
+compiles**. My build-ahead assumptions differed from the shipped API in three ways — all reconciled (see
+below). Remaining: rewrite the 3 composer test files (75 tests) against the real API + confirm real
+locking/rollback behavior via CDP (R2 G10r) before finalizing coverage; then phases 6–8.
 
-### Assumed dev-utils API surface (align dev-utils to this, or update here if it drifts)
+### Real dev-utils 84.0.0 API (as consumed here)
 
-- `obsidian-dev-utils/obsidian/vault-transaction` — `VaultTransaction` (already implemented). Constructor
-  gains `ownerSession?` in phase 4: `new VaultTransaction({ app, ownerSession?, stagingFolderPath? })`.
-  Methods: `rename`/`create`/`createFolder`/`modify`/`process`/`trash` + `commit`/`rollback`/`[Symbol.asyncDispose]`.
-- `obsidian-dev-utils/obsidian/resource-lock` — `ResourceLockComponent` (evolved `EditorLockComponent`):
-  `lockResource(pathOrFile, { abortController?, mode?: 'file' | 'subtree' }): Disposable`, `unlockResource`,
-  `isResourceLocked`, `isResourceLockedByAncestor`, `requestUnlock`,
-  `createOwnerSession(abortController): ResourceLockOwnerSession` (`.armExpectedMutation({ kind, ... })`).
-  Free wrappers renamed `isResourceLockedForPath` / `requestResourceUnlockForPath`.
-- `PluginBase.resourceLockComponent: ResourceLockComponent` (renamed from `editorLockComponent`).
+- `obsidian-dev-utils/obsidian/vault-transaction` — `new VaultTransaction({ app, openMutationBypass?, stagingFolderPath? })`.
+  `openMutationBypass?: () => Disposable` opens the owner's mutation-bypass for the tx's own writes
+  (typically `() => resourceLockComponent.bypassBlockedMutations(lockedPathsOrFiles)`); it is opened at
+  construction and disposed when the tx settles. Methods: `create`/`createFolder`/`modify`/`process`
+  (**sync** `(content: string) => string` provider)/`rename`/`trash` + `commit`/`rollback`/`[Symbol.asyncDispose]`.
+- `obsidian-dev-utils/obsidian/resource-lock` — `ResourceLockComponent`:
+  `lockForPath(pathOrFile, { abortController?, mode?: 'file'|'subtree', shouldBlockMutations? }): Disposable`,
+  `unlockForPath`, `isLockedForPath`, `isLockedByAncestorForPath`, `isMutationBlockedByAncestorForPath`,
+  `bypassBlockedMutations(pathsOrFiles): Disposable`. Free wrappers `lockResourceForPath` /
+  `unlockResourceForPath` / `isResourceLockedForPath` / `requestResourceUnlockForPath`. `ResourceLockedError`.
+  Owner-vs-intruder = `shouldBlockMutations: true` locks + an ambient `bypassBlockedMutations` scope (NOT
+  an owner session / `armExpectedMutation`). `PathOrFile = string | TFile`, so lock a folder by its `.path`.
+- `PluginBase.resourceLockComponent: ResourceLockComponent`. The `editor-lock` module is **removed**;
+  `process`/`editLinks` now take `resourceLockComponent` (not `editorLockComponent`).
 
-**Required `VaultTransaction` additions surfaced while wiring Phase 5 (feed back to dev-utils):**
-1. `VaultTransaction` constructor must accept `ownerSession?` (already in plan phase 4).
-2. `process(pathOrFile, newContentProvider)` must accept an **async / `ValueProvider`** content provider
-   — the heading-merge builder (`parseMarkdownHeadingDocument`) is async; Phase 1 typed it sync-only.
-3. New `captureRestorePoint(pathOrFile): Promise<void>` — snapshot the file's current content and push a
-   restore-to-that-content inverse **without performing a mutation now**. Needed to make an **editor-driven**
-   change reversible (split's destructive `editor.replaceSelection` is not a vault op the tx can capture).
-   Behavior of restoring a file underneath an open editor buffer needs CDP confirmation (R2 G10r) before
-   the split coverage is trusted.
+**Reconciliation of the three build-ahead assumptions:**
+1. Owner session → **replaced** by `openMutationBypass` callback + `lockForPath({ shouldBlockMutations: true })`.
+2. Async `process` → **not added**; instead the heading-merge computes the merged content async, then
+   applies it via `vaultTransaction.modify(target, merged)` (captures old content for rollback like `process`).
+3. `captureRestorePoint` → **not added**; split records a source restore point via an identity
+   `vaultTransaction.process(sourceFile, (c) => c)` before its destructive editor edit. **CDP-CONFIRMED
+   INSUFFICIENT (2026-07-02):** restoring the source *file* content does NOT survive when the source is
+   open in an editor — the editor's dirty buffer autosaves the extraction and clobbers the restore (both
+   disk and editor end up extracted). So **split-rollback is BLOCKED** on a dev-utils fix: making the
+   transaction's content restore **editor-aware** (reset the open `MarkdownView` buffer to the restored
+   content, guarding against leaf navigation). Escalated to `obsidian-dev-utils` CLAUDE.md "Current Task"
+   (per the cross-repo convention); merge/swap/merge-folder are unaffected (no editor edits). The current
+   identity-process restore point stays in `split-composer.ts` as the intended hook — it becomes correct
+   once dev-utils' restore is editor-aware.
 
 ### Phases
 
-5. **`ComposerBase.runLockedTransaction` + injected-tx; migrate merge-file & split-file.** ✅ source done
-   (build-ahead, red until dev-utils lands). `composer-base.ts`: added `runLockedTransaction`
-   (lock every target with `this.abortController` → owner session → `VaultTransaction` → `body` →
-   commit/rollback/release), `LockTarget`/`RunLockedTransactionParams`, injected-tx short-circuit,
-   renamed the field `editorLockComponent`→`resourceLockComponent`, removed `lockNotes`/`unlockNotes`,
-   threaded the tx through `insertIntoTargetFile`/`insertIntoTargetFileImpl` (writes via `tx.process`;
-   added `insertContent` to replicate `FileManager.insertIntoFile` positioning so the write is
-   tx-owned/reversible). `merge-composer.ts` + `split-composer.ts` now run inside `runLockedTransaction`
-   (`tx.trash(sourceFile)` for merge; `tx.captureRestorePoint(sourceFile)` before split's editor edit).
+5. **`ComposerBase.runLockedTransaction` + injected-tx; migrate merge-file & split-file.** ✅ source done,
+   compiles against 84.0.0. `composer-base.ts`: `runLockedTransaction` (lock every target with
+   `lockForPath({ abortController, mode, shouldBlockMutations: true })` → build `VaultTransaction` with
+   `openMutationBypass: () => bypassBlockedMutations(lockedPaths)` → run `body` → commit / rollback-on-throw
+   → dispose lock disposables), `LockTarget`/`RunLockedTransactionParams`, injected-tx short-circuit,
+   field `editorLockComponent`→`resourceLockComponent`, removed `lockNotes`/`unlockNotes`, threaded the tx
+   through `insertIntoTargetFile`/`insertIntoTargetFileImpl` (plain insert via `tx.process` + `insertContent`
+   replicating `FileManager.insertIntoFile` positioning; heading-merge computes async then `tx.modify`).
+   `merge-composer.ts` uses `tx.trash(sourceFile)`; `split-composer.ts` records a restore point via identity
+   `tx.process(sourceFile, c=>c)` before its editor edit. Also renamed `editorLock*`→`resourceLock*` across
+   29 files (the whole cascade). **NOT done:** rewrite 3 composer test files (75 failing) against the real
+   API + CDP-confirm real behavior; whether `fixBacklinks` edits to OTHER files route through the tx (open).
    **NOT yet done in this phase:** propagating the `resourceLockComponent` rename to the composer
    construction sites (command handlers / item-selectors) — deferred to phase 8; and deciding whether
    `fixBacklinks` edits to OTHER files route through the tx (open design point).

@@ -5,7 +5,6 @@ import type {
   Pos
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { PathOrAbstractFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
@@ -75,36 +74,6 @@ export interface ComposerBaseConstructorParamsBase {
   readonly vaultTransaction?: VaultTransaction;
 }
 
-/**
- * A resource to lock for the duration of an operation.
- */
-export interface LockTarget {
-  /**
-   * `'file'` locks a single file; `'subtree'` locks a folder and everything under it.
-   */
-  readonly mode: 'file' | 'subtree';
-
-  /**
-   * The file or folder to lock.
-   */
-  readonly pathOrFile: PathOrAbstractFile;
-}
-
-/**
- * Parameters for {@link ComposerBase.runLockedTransaction}.
- */
-export interface RunLockedTransactionParams {
-  /**
-   * The mutations to perform, routed through the {@link VaultTransaction} so they can be rolled back.
-   */
-  readonly body: (vaultTransaction: VaultTransaction) => Promise<void>;
-
-  /**
-   * The resources to lock for the duration of the operation.
-   */
-  readonly lockTargets: readonly LockTarget[];
-}
-
 export interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -143,9 +112,9 @@ export abstract class ComposerBase {
 
   /**
    * The outer transaction injected by a spanning operation (e.g. a folder merge), or `null` when this
-   * operation owns its own transaction via {@link ComposerBase.runLockedTransaction}.
+   * operation owns its own transaction via {@link runLockedTransaction}.
    */
-  private readonly injectedVaultTransaction: VaultTransaction | null;
+  protected readonly injectedVaultTransaction: VaultTransaction | null;
   private readonly insertMode: InsertMode;
 
   private readonly shouldFixFootnotes: boolean;
@@ -250,7 +219,7 @@ export abstract class ComposerBase {
       await editLinks({
         abortSignal: this.abortController.signal,
         app: this.app,
-        editorLockComponent: this.resourceLockComponent,
+        resourceLockComponent: this.resourceLockComponent,
         linkConverter: (link) => {
           linkIndex++;
           if (!linkJsons.includes(JSON.stringify(link))) {
@@ -343,48 +312,6 @@ export abstract class ComposerBase {
   /* v8 ignore stop */
 
   protected abstract prepareBacklinkSubpaths(): Set<string>;
-
-  /**
-   * Runs {@link RunLockedTransactionParams.body} with every {@link RunLockedTransactionParams.lockTargets}
-   * resource locked against edit/delete/rename/move and its vault mutations wrapped in a reversible
-   * {@link VaultTransaction}. On success the transaction commits; on abort (external change or user
-   * cancel) or any thrown error it rolls back to the original state; the locks are always released.
-   *
-   * When an outer transaction was injected (a spanning folder merge), the body runs against it and this
-   * method neither locks nor commits/rolls back — the outer owner does.
-   *
-   * @param params - The lock targets and the mutation body.
-   * @returns A {@link Promise} that resolves when the body has run and the transaction committed.
-   */
-  protected async runLockedTransaction(params: RunLockedTransactionParams): Promise<void> {
-    if (this.injectedVaultTransaction) {
-      await params.body(this.injectedVaultTransaction);
-      return;
-    }
-
-    const lockDisposables: Disposable[] = [];
-    for (const lockTarget of params.lockTargets) {
-      lockDisposables.push(this.resourceLockComponent.lockResource(lockTarget.pathOrFile, {
-        abortController: this.abortController,
-        mode: lockTarget.mode
-      }));
-    }
-
-    const ownerSession = this.resourceLockComponent.createOwnerSession(this.abortController);
-    const vaultTransaction = new VaultTransaction({ app: this.app, ownerSession });
-
-    try {
-      await params.body(vaultTransaction);
-      await vaultTransaction.commit();
-    } catch (error) {
-      await vaultTransaction.rollback();
-      throw error;
-    } finally {
-      for (const lockDisposable of lockDisposables) {
-        lockDisposable[Symbol.dispose]();
-      }
-    }
-  }
 
   protected updateEditorSelections(
     _sourceCache: CachedMetadata | null,
@@ -563,16 +490,15 @@ export abstract class ComposerBase {
       return;
     }
 
-    // NOTE (dev-utils build-ahead): the heading-merge content builder is async (parseMarkdownHeadingDocument),
-    // So VaultTransaction.process must accept an async / ValueProvider content provider. Phase-1 typed it
-    // Sync-only; widening it is a required dev-utils change tracked in this plugin's CLAUDE.md.
-    await vaultTransaction.process(this.targetFile, async (targetFileContent) => {
-      const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
-      const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
-      await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
-      const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
-      return mergedDocument.toString();
-    });
+    // VaultTransaction.process takes a synchronous content provider, but building the heading-merged
+    // Content is async (parseMarkdownHeadingDocument), so compute it first and apply it via modify,
+    // Which captures the old content for rollback exactly as process does.
+    const targetFileContent = await this.app.vault.read(this.targetFile);
+    const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
+    const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
+    await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
+    const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
+    await vaultTransaction.modify(this.targetFile, mergedDocument.toString());
   }
 
   /**
