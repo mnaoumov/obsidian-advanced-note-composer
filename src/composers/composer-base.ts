@@ -128,6 +128,25 @@ export abstract class ComposerBase {
   }
 
   /**
+   * Builds the progress notice content describing the operation from the source note to the target
+   * note, with clickable links to both and a loading indicator. Passed to
+   * {@link PluginNoticeComponent.showNoticeAfterDelay}, which keeps the links clickable without
+   * dismissing the notice.
+   *
+   * @param verb - The progressive verb describing the operation, e.g. `Splitting` or `Merging`.
+   * @returns A {@link Promise} resolving to the notice content fragment.
+   */
+  protected buildProgressContent(verb: string): Promise<DocumentFragment> {
+    return createFragmentAsync(async (fragmentEl) => {
+      fragmentEl.appendText(`${verb} note `);
+      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
+      fragmentEl.appendText(' into ');
+      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+      fragmentEl.createDiv('is-loading');
+    });
+  }
+
+  /**
    * Captures the current modification times of the source and target notes so a later
    * {@link checkFilesUnchanged} call can detect external edits made during the operation.
    *

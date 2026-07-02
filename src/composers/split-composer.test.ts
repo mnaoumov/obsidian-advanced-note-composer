@@ -17,7 +17,11 @@ import {
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureGenericObject } from 'obsidian-dev-utils/type-guards';
+import {
+  ensureGenericObject,
+  ensureNonNullable
+} from 'obsidian-dev-utils/type-guards';
+import { resolveValue } from 'obsidian-dev-utils/value-provider';
 import {
   afterEach,
   describe,
@@ -34,7 +38,6 @@ import {
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { showProgressNotice } from '../progress-notice.ts';
 import {
   getSelections,
   SplitComposer
@@ -67,20 +70,16 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
-    const fragment = activeDocument.createDocumentFragment();
+    const fragment = createFragment();
     return cb(fragment).then(() => fragment);
   })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-const { progressNoticeCloseMock } = vi.hoisted(() => ({ progressNoticeCloseMock: vi.fn() }));
-
-vi.mock('../progress-notice.ts', () => ({
-  showProgressNotice: vi.fn().mockReturnValue({ close: progressNoticeCloseMock })
-}));
+const { progressNoticeDisposeMock } = vi.hoisted(() => ({ progressNoticeDisposeMock: vi.fn() }));
 
 interface UpdateLinksParams {
   readonly content: string;
@@ -139,7 +138,8 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
       unlockForPath: vi.fn()
     },
     pluginNoticeComponent: {
-      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() })
+      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }),
+      showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: progressNoticeDisposeMock })
     },
     pluginSettingsComponent: {
       settings: {
@@ -549,19 +549,18 @@ describe('splitFile', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(showProgressNotice).mockClear();
-    progressNoticeCloseMock.mockClear();
+    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
+    showNoticeAfterDelayMock.mockClear();
+    progressNoticeDisposeMock.mockClear();
 
     await composer.splitFile();
 
-    expect(showProgressNotice).toHaveBeenCalledTimes(1);
-    const params = vi.mocked(showProgressNotice).mock.calls[0]?.[0];
-    expect(params?.app).toBe(deps.app);
-    expect(params?.pluginNoticeComponent).toBe(deps.pluginNoticeComponent);
-    expect(params?.sourceFile).toBe(sourceFile);
-    expect(params?.targetFile).toBe(targetFile);
-    expect(params?.verb).toBe('Splitting');
-    expect(progressNoticeCloseMock).toHaveBeenCalled();
+    expect(showNoticeAfterDelayMock).toHaveBeenCalledTimes(1);
+    const params = showNoticeAfterDelayMock.mock.calls[0]?.[0];
+    expect(params?.abortController).toBeInstanceOf(AbortController);
+    const content = await resolveValue(ensureNonNullable(params?.content), {});
+    expect(castTo<DocumentFragment>(content).textContent).toContain('Splitting note');
+    expect(progressNoticeDisposeMock).toHaveBeenCalled();
   });
 
   it('should abort the split and not edit the source when a file is modified during the operation', async () => {
@@ -617,11 +616,12 @@ describe('splitFile', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(showProgressNotice).mockClear();
+    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
+    showNoticeAfterDelayMock.mockClear();
 
     await composer.splitFile();
 
-    expect(showProgressNotice).not.toHaveBeenCalled();
+    expect(showNoticeAfterDelayMock).not.toHaveBeenCalled();
   });
 
   it('should replace with embed for EmbedNewFile mode', async () => {

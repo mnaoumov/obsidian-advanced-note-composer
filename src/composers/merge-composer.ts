@@ -15,7 +15,6 @@ import type {
 } from './composer-base.ts';
 
 import { Action } from '../plugin-settings.ts';
-import { showProgressNotice } from '../progress-notice.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -42,13 +41,10 @@ export class MergeComposer extends ComposerBase {
 
     const mtimes = this.captureFileMtimes();
     this.lockNotes();
-    const progressNoticeHandle = this.shouldShowNotice
-      ? showProgressNotice({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        sourceFile: this.sourceFile,
-        targetFile: this.targetFile,
-        verb: 'Merging'
+    const progressNotice = this.shouldShowNotice
+      ? this.pluginNoticeComponent.showNoticeAfterDelay({
+        abortController: this.abortController,
+        content: () => this.buildProgressContent('Merging')
       })
       : null;
 
@@ -75,7 +71,7 @@ export class MergeComposer extends ComposerBase {
       }
       throw error;
     } finally {
-      progressNoticeHandle?.close();
+      progressNotice?.[Symbol.dispose]();
       this.unlockNotes();
     }
   }

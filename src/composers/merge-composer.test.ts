@@ -23,6 +23,8 @@ import {
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { resolveValue } from 'obsidian-dev-utils/value-provider';
 import {
   afterEach,
   describe,
@@ -35,7 +37,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
-import { showProgressNotice } from '../progress-notice.ts';
 import { MergeComposer } from './merge-composer.ts';
 
 interface AbortableComposer {
@@ -60,20 +61,16 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
-    const fragment = activeDocument.createDocumentFragment();
+    const fragment = createFragment();
     return cb(fragment).then(() => fragment);
   })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-const { progressNoticeCloseMock } = vi.hoisted(() => ({ progressNoticeCloseMock: vi.fn() }));
-
-vi.mock('../progress-notice.ts', () => ({
-  showProgressNotice: vi.fn().mockReturnValue({ close: progressNoticeCloseMock })
-}));
+const { progressNoticeDisposeMock } = vi.hoisted(() => ({ progressNoticeDisposeMock: vi.fn() }));
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   editLinks: vi.fn(),
@@ -133,7 +130,8 @@ function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
       unlockForPath: vi.fn()
     },
     pluginNoticeComponent: {
-      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() })
+      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }),
+      showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: progressNoticeDisposeMock })
     },
     pluginSettingsComponent: {
       settings: {
@@ -324,7 +322,7 @@ describe('mergeFile', () => {
     expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
   });
 
-  it('should show a progress notice during the merge and close it afterwards', async () => {
+  it('should show a delayed progress notice during the merge and dispose it afterwards', async () => {
     const deps = createDeps();
     const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
     const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
@@ -338,19 +336,18 @@ describe('mergeFile', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(showProgressNotice).mockClear();
-    progressNoticeCloseMock.mockClear();
+    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
+    showNoticeAfterDelayMock.mockClear();
+    progressNoticeDisposeMock.mockClear();
 
     await composer.mergeFile();
 
-    expect(showProgressNotice).toHaveBeenCalledTimes(1);
-    const params = vi.mocked(showProgressNotice).mock.calls[0]?.[0];
-    expect(params?.app).toBe(deps.app);
-    expect(params?.pluginNoticeComponent).toBe(deps.pluginNoticeComponent);
-    expect(params?.sourceFile).toBe(sourceFile);
-    expect(params?.targetFile).toBe(targetFile);
-    expect(params?.verb).toBe('Merging');
-    expect(progressNoticeCloseMock).toHaveBeenCalled();
+    expect(showNoticeAfterDelayMock).toHaveBeenCalledTimes(1);
+    const params = showNoticeAfterDelayMock.mock.calls[0]?.[0];
+    expect(params?.abortController).toBeInstanceOf(AbortController);
+    const content = await resolveValue(ensureNonNullable(params?.content), {});
+    expect(castTo<DocumentFragment>(content).textContent).toContain('Merging note');
+    expect(progressNoticeDisposeMock).toHaveBeenCalled();
   });
 
   it('should not show a progress notice when shouldShowNotice is false', async () => {
@@ -366,11 +363,12 @@ describe('mergeFile', () => {
     vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
     vi.mocked(getCacheSafe).mockResolvedValue(null);
     vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(showProgressNotice).mockClear();
+    const showNoticeAfterDelayMock = vi.mocked(deps.pluginNoticeComponent.showNoticeAfterDelay);
+    showNoticeAfterDelayMock.mockClear();
 
     await composer.mergeFile();
 
-    expect(showProgressNotice).not.toHaveBeenCalled();
+    expect(showNoticeAfterDelayMock).not.toHaveBeenCalled();
   });
 
   it('should complete merge flow successfully with notice shown', async () => {

@@ -17,7 +17,6 @@ import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { showProgressNotice } from '../progress-notice.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -62,14 +61,11 @@ export class SplitComposer extends ComposerBase {
 
     const mtimes = this.captureFileMtimes();
     this.lockNotes();
-    const progressNoticeHandle = this.isMultipleSplit
+    const progressNotice = this.isMultipleSplit
       ? null
-      : showProgressNotice({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        sourceFile: this.sourceFile,
-        targetFile: this.targetFile,
-        verb: 'Splitting'
+      : this.pluginNoticeComponent.showNoticeAfterDelay({
+        abortController: this.abortController,
+        content: () => this.buildProgressContent('Splitting')
       });
     try {
       this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
@@ -119,7 +115,7 @@ export class SplitComposer extends ComposerBase {
       }
       throw error;
     } finally {
-      progressNoticeHandle?.close();
+      progressNotice?.[Symbol.dispose]();
       this.unlockNotes();
     }
   }
