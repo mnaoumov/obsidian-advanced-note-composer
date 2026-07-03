@@ -6,7 +6,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -78,9 +78,9 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface HandlerParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
@@ -105,14 +105,14 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn()
     }),
-    editorLockComponent: strictProxy<EditorLockComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -210,7 +210,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     await handler.executeEditor(editor, ctx);
 

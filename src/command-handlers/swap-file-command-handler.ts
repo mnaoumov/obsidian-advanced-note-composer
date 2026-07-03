@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 import type { FileCommandHandlerShouldAddToFileMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
@@ -11,6 +12,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { swap } from '../swapper.ts';
 
@@ -18,12 +20,14 @@ interface SwapFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class SwapFileCommandHandler extends FileCommandHandler {
   private readonly app: App;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: SwapFileCommandHandlerConstructorParams) {
     super({
@@ -36,6 +40,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     this.app = params.app;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
@@ -54,8 +59,36 @@ export class SwapFileCommandHandler extends FileCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent,
       sourceFile: file
     });
-    if (targetFile) {
-      await swap(this.app, file, targetFile, true);
+    if (!targetFile) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    try {
+      await runLockedTransaction({
+        abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          await swap({
+            app: this.app,
+            shouldSwapEntireFolderStructure: true,
+            sourceFile: file,
+            targetFile,
+            vaultTransaction
+          });
+        },
+        lockTargets: [
+          { mode: 'file', pathOrFile: file },
+          { mode: 'file', pathOrFile: targetFile }
+        ],
+        resourceLockComponent: this.resourceLockComponent
+      });
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        // The operation was cancelled (user or external change); the transaction has rolled back.
+        return;
+      }
+      throw error;
     }
   }
 

@@ -1,25 +1,25 @@
 import type {
-  App,
+  App as AppOriginal,
   Editor,
   EditorPosition,
   EditorSelection,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { updateLinksInContent } from 'obsidian-dev-utils/obsidian/link';
-import {
-  getCacheSafe,
-  getFrontmatterSafe
-} from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureGenericObject } from 'obsidian-dev-utils/type-guards';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { resolveValue } from 'obsidian-dev-utils/value-provider';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
+  beforeEach,
   describe,
   expect,
   it,
@@ -28,13 +28,13 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
+import type { Selection } from './composer-base.ts';
 
 import {
   Action,
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { openProgressModal } from '../progress-modal.ts';
 import {
   getSelections,
   SplitComposer
@@ -44,127 +44,109 @@ interface AbortableComposer {
   readonly abortController: AbortController;
 }
 
-interface ComposerDeps {
-  readonly app: App;
-  readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
-  readonly pluginNoticeComponent: PluginNoticeComponent;
-  readonly pluginSettingsComponent: PluginSettingsComponent;
+interface CreateComposerOptions {
+  readonly capturedSelections?: Selection[];
+  readonly consoleDebugComponent?: ConsoleDebugComponent;
+  readonly editor?: Editor;
+  readonly isMultipleSplit?: boolean;
+  readonly isNewTargetFile?: boolean;
+  readonly pluginNoticeComponent?: PluginNoticeComponent;
+  readonly selectedText?: string;
+  readonly settingsOverrides?: Partial<PluginSettings>;
+  readonly shouldIncludeFrontmatter?: boolean;
+}
+
+interface EditorDoubleOptions {
+  readonly listSelections?: EditorSelection[];
 }
 
 interface MockPosition {
-  ch: number;
+  readonly ch: number;
 }
 
-interface MockSelection {
-  anchor: number;
-  head: number;
-}
-
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
-  appendCodeBlock: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
-    const fragment = activeDocument.createDocumentFragment();
-    return cb(fragment).then(() => fragment);
+// Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
+// Would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL.
+vi.mock(
+  'obsidian-dev-utils/obsidian/metadata-cache',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('obsidian-dev-utils/obsidian/metadata-cache')
+    >()),
+    getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
+    getCacheSafe: vi.fn().mockResolvedValue(null),
+    getFrontmatterSafe: vi.fn().mockResolvedValue({})
   })
+);
+
+// UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
+// Reach into unmocked App internals (embedRegistry). Not the behavior under test.
+vi.mock('obsidian-dev-utils/html-element', () => ({
+  createFragmentAsync: vi
+    .fn()
+    .mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+      const fragment = createFragment();
+      return cb(fragment).then(() => fragment);
+    })
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(activeDocument.createElement('span'))
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-const { progressModalCloseMock } = vi.hoisted(() => ({ progressModalCloseMock: vi.fn() }));
+let app: AppOriginal;
+let resourceLockComponent: ResourceLockComponent;
 
-vi.mock('../progress-modal.ts', () => ({
-  openProgressModal: vi.fn().mockResolvedValue({ close: progressModalCloseMock })
-}));
-
-interface UpdateLinksParams {
-  readonly content: string;
-}
-
-vi.mock('obsidian-dev-utils/obsidian/link', () => ({
-  editLinks: vi.fn(),
-  updateLink: vi.fn(),
-  updateLinksInContent: vi.fn().mockImplementation(({ content }: UpdateLinksParams) => content)
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
-  getCacheSafe: vi.fn().mockResolvedValue(null),
-  getFrontmatterSafe: vi.fn().mockResolvedValue({})
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
-  process: vi.fn()
-}));
-
-vi.mock('../markdown-heading-document.ts', () => ({
-  parseMarkdownHeadingDocument: vi.fn()
-}));
-
-interface MockEditorOptions {
-  readonly listSelections?: EditorSelection[];
-  readonly selection?: string;
-}
-
-function createDeps(overrides?: Partial<PluginSettings>): ComposerDeps {
-  return castTo<ComposerDeps>({
-    app: {
-      fileManager: {
-        generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
-        insertIntoFile: vi.fn(),
-        processFrontMatter: vi.fn()
-      },
-      metadataCache: { getFileCache: vi.fn().mockReturnValue({}) },
-      plugins: { plugins: {} },
-      vault: {
-        cachedRead: vi.fn().mockResolvedValue(''),
-        read: vi.fn().mockResolvedValue('')
-      },
-      workspace: {
-        getActiveFile: vi.fn(),
-        getActiveViewOfType: vi.fn().mockReturnValue(null),
-        getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
-      }
-    },
-    consoleDebugComponent: {
-      consoleDebug: vi.fn()
-    },
-    editorLockComponent: {
-      lockForPath: vi.fn(() => ({ [Symbol.dispose]: vi.fn() })),
-      unlockForPath: vi.fn()
-    },
-    pluginNoticeComponent: {
-      showNotice: vi.fn().mockReturnValue({ hide: vi.fn() })
-    },
-    pluginSettingsComponent: {
-      settings: {
-        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
-        isPathIgnored: vi.fn().mockReturnValue(false),
-        mergeTemplate: '{{content}}',
-        shouldFixFootnotesByDefault: false,
-        shouldIncludeFrontmatterWhenSplittingByDefault: false,
-        shouldMergeHeadingsByDefault: false,
-        shouldOpenTargetNoteAfterSplit: false,
-        shouldRunTemplaterOnDestinationFile: false,
-        splitTemplate: '',
-        splitToExistingFileTemplate: Action.Split,
-        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
-        ...overrides
-      }
+beforeEach(() => {
+  app = App.createConfigured__({
+    files: {
+      'source.md': 'source body',
+      'target.md': 'target body'
     }
+  }).asOriginalType__();
+  // Test-mocks' MetadataCache is a strict proxy with no indexer; the frontmatter merge's
+  // ProcessFrontMatter triggers a recompute, so stub it to a no-op.
+  castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
+  resourceLockComponent.load();
+});
+
+afterEach(() => {
+  resourceLockComponent.unload();
+  vi.restoreAllMocks();
+});
+
+function createComposer(options?: CreateComposerOptions): SplitComposer {
+  const editor = options?.editor ?? createEditorDouble();
+  const shouldIncludeFrontmatter = options?.shouldIncludeFrontmatter;
+  return new SplitComposer({
+    app,
+    capturedSelections: options?.capturedSelections ?? getSelections(editor),
+    consoleDebugComponent: options?.consoleDebugComponent
+      ?? strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+    editor,
+    isMultipleSplit: options?.isMultipleSplit ?? false,
+    isNewTargetFile: options?.isNewTargetFile ?? true,
+    pluginNoticeComponent: options?.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
+    pluginSettingsComponent: createPluginSettingsComponentStub(
+      options?.settingsOverrides
+    ),
+    resourceLockComponent,
+    selectedText: options?.selectedText ?? 'selected text',
+    sourceFile: getSourceFile(),
+    targetFile: getTargetFile(),
+    ...(shouldIncludeFrontmatter === undefined
+      ? {}
+      : { shouldIncludeFrontmatter })
   });
 }
 
-function createMockEditor(options?: MockEditorOptions): Editor {
-  const selections = options?.listSelections ?? [{ anchor: { ch: 0, line: 0 }, head: { ch: 10, line: 0 } }];
+function createEditorDouble(options?: EditorDoubleOptions): Editor {
+  const selections = options?.listSelections ?? [
+    { anchor: { ch: 0, line: 0 }, head: { ch: 11, line: 0 } }
+  ];
   return strictProxy<Editor>({
     getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
-    getSelection: vi.fn().mockReturnValue(options?.selection ?? 'selected text'),
+    getSelection: vi.fn().mockReturnValue('LIVE-EDITOR-SELECTION'),
     listSelections: vi.fn().mockReturnValue(selections),
     offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
     posToOffset: vi.fn((pos: MockPosition) => pos.ch),
@@ -173,20 +155,55 @@ function createMockEditor(options?: MockEditorOptions): Editor {
   });
 }
 
-function getAppObj(app: App): GenericObject {
-  return castTo<GenericObject>(app);
+function createPluginNoticeComponentStub(
+  disposeMock: () => void = vi.fn()
+): PluginNoticeComponent {
+  return strictProxy<PluginNoticeComponent>({
+    showNotice: vi.fn(),
+    showNoticeAfterDelay: vi
+      .fn()
+      .mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: disposeMock })
+  });
 }
 
-function getComposerAppObj(composer: SplitComposer): GenericObject {
-  return ensureGenericObject(ensureGenericObject(composer)['app']);
+function createPluginSettingsComponentStub(
+  overrides?: Partial<PluginSettings>
+): PluginSettingsComponent {
+  return strictProxy<PluginSettingsComponent>({
+    settings: strictProxy<PluginSettings>({
+      defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isPathIgnored: () => false,
+      mergeTemplate: '{{content}}',
+      shouldFixFootnotesByDefault: false,
+      shouldIncludeFrontmatterWhenSplittingByDefault: false,
+      shouldMergeHeadingsByDefault: false,
+      shouldOpenTargetNoteAfterSplit: false,
+      shouldRunTemplaterOnDestinationFile: false,
+      splitTemplate: '',
+      splitToExistingFileTemplate: Action.Split,
+      textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
+      ...overrides
+    })
+  });
 }
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+function getSourceFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('source.md'));
+}
+
+function getTargetFile(): TFile {
+  return ensureNonNullable(app.vault.getFileByPath('target.md'));
+}
 
 describe('getSelections', () => {
-  function createMockEditorForGetSelections(selections: MockSelection[]): Editor {
+  interface MockSelection {
+    readonly anchor: number;
+    readonly head: number;
+  }
+
+  function createMockEditorForGetSelections(
+    selections: MockSelection[]
+  ): Editor {
     return strictProxy<Editor>({
       listSelections: vi.fn().mockReturnValue(
         selections.map((s) => ({
@@ -210,9 +227,7 @@ describe('getSelections', () => {
   });
 
   it('should normalize reversed selections', () => {
-    const editor = createMockEditorForGetSelections([
-      { anchor: 30, head: 10 }
-    ]);
+    const editor = createMockEditorForGetSelections([{ anchor: 30, head: 10 }]);
 
     const result = getSelections(editor);
     expect(result[0]?.startOffset).toBe(10);
@@ -220,9 +235,7 @@ describe('getSelections', () => {
   });
 
   it('should handle single selection', () => {
-    const editor = createMockEditorForGetSelections([
-      { anchor: 5, head: 15 }
-    ]);
+    const editor = createMockEditorForGetSelections([{ anchor: 5, head: 15 }]);
 
     const result = getSelections(editor);
     expect(result).toHaveLength(1);
@@ -239,807 +252,432 @@ describe('getSelections', () => {
 
 describe('SplitComposer constructor', () => {
   it('should use shouldIncludeFrontmatter from params when provided', () => {
-    const deps = createDeps();
-    const editor = createMockEditor();
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      shouldIncludeFrontmatter: true,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
+    const composer = createComposer({ shouldIncludeFrontmatter: true });
     expect(composer).toBeDefined();
   });
 
-  it('should use default from settings when shouldIncludeFrontmatter not provided', () => {
-    const deps = createDeps({ shouldIncludeFrontmatterWhenSplittingByDefault: true });
-    const editor = createMockEditor();
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+  it('should use the default from settings when shouldIncludeFrontmatter is not provided', () => {
+    const composer = createComposer({
+      settingsOverrides: {
+        shouldIncludeFrontmatterWhenSplittingByDefault: true
+      }
     });
     expect(composer).toBeDefined();
   });
 });
 
 describe('splitFile', () => {
-  it('should return early when checkTargetFileIgnored returns false', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ isPathIgnored: vi.fn().mockReturnValue(true) });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
+  it('should not touch the vault when the target path is ignored', async () => {
+    const editor = createEditorDouble();
+    await createComposer({
       editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
+      settingsOverrides: { isPathIgnored: () => true }
+    }).splitFile();
 
-    await composer.splitFile();
-
+    // Nothing was extracted: the target keeps its original content and the source editor was untouched.
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
     expect(editor.replaceSelection).not.toHaveBeenCalled();
   });
 
   it('should extract the captured selectedText, never the live (possibly rebound) editor selection', async () => {
-    // Regression for the file-switch corruption: the leaf may navigate away during the modal.
-    // Rebinding the composer's `editor` to the other note must not corrupt the result.
-    // The composer uses the captured text (passed in) and never re-reads `editor.getSelection()`.
-    const editor = createMockEditor({ selection: 'LIVE-WRONG-NOTE-CONTENT' });
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
-    const insertIntoFileMock = vi.fn();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      generateMarkdownLink: vi.fn().mockReturnValue('[[target]]'),
-      insertIntoFile: insertIntoFileMock,
-      processFrontMatter: vi.fn()
-    };
-
-    const composer = new SplitComposer({
+    // Regression for the file-switch corruption: the leaf may navigate away during the modal, rebinding
+    // The composer's `editor` to another note. The composer must use the captured text and never re-read
+    // `editor.getSelection()`.
+    const editor = createEditorDouble();
+    const composer = createComposer({
       capturedSelections: [{ endOffset: 14, startOffset: 0 }],
       editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
       selectedText: 'CAPTURED-CONTENT',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: {
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await composer.splitFile();
 
-    const inserted = insertIntoFileMock.mock.calls.map((call) => String(call[1])).join('');
-    expect(inserted).toContain('CAPTURED-CONTENT');
-    expect(inserted).not.toContain('LIVE-WRONG-NOTE-CONTENT');
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('CAPTURED-CONTENT');
+    expect(targetContent).not.toContain('LIVE-EDITOR-SELECTION');
     expect(editor.getSelection).not.toHaveBeenCalled();
   });
 
-  it('should insert content and replace with link for LinkToNewFile mode', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
+  it('should insert the extracted content and replace the selection with a link for LinkToNewFile mode', async () => {
+    vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue(
+      '[[target]]'
+    );
+    const editor = createEditorDouble();
+    const composer = createComposer({
       editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: {
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await composer.splitFile();
 
+    expect(await app.vault.adapter.read('target.md')).toContain(
+      'selected text'
+    );
     expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
   });
 
-  it('should re-open the source note and perform edits on the re-opened editor, not the stale reference', async () => {
-    // Reproduces issue #120.
-    // Navigating the active leaf mid-operation (e.g. clicking a progress-notice link) rebinds
-    // `editor` to a different note.
-    // The fix re-opens the source note, restores selections, and mutates THAT editor.
-    const staleEditor = createMockEditor();
-    const reOpenedSourceEditor = createMockEditor();
-    const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor, setEphemeralState: vi.fn() }),
-      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
-    };
-
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new SplitComposer({
-      capturedSelections: [{ endOffset: 10, startOffset: 0 }],
-      editor: staleEditor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+  it('should replace the selection with an embed for EmbedNewFile mode', async () => {
+    vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue(
+      '[[target]]'
+    );
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      editor,
+      settingsOverrides: {
+        textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await composer.splitFile();
 
-    // The source note is re-opened so the active editor is guaranteed to be the source.
-    expect(openFileMock).toHaveBeenCalledWith(sourceFile, { active: true });
-    // All editor mutations land on the re-opened source editor...
-    expect(reOpenedSourceEditor.setSelections).toHaveBeenCalled();
-    expect(reOpenedSourceEditor.replaceSelection).toHaveBeenCalledWith('[[target]]');
-    // ...and never on the stale (possibly wrong-note) reference.
-    expect(staleEditor.replaceSelection).not.toHaveBeenCalled();
+    expect(await app.vault.adapter.read('target.md')).toContain(
+      'selected text'
+    );
+    expect(editor.replaceSelection).toHaveBeenCalledWith('![[target]]');
   });
 
-  it('should reveal the cursor in the re-opened source note so the viewport is not left at the top', async () => {
-    // Reproduces the cursor-restore bug: re-opening the source note scrolls the editor to the top.
-    // (The cursor is positioned correctly but off-screen.) The fix reveals the cursor's line.
-    const staleEditor = createMockEditor();
-    const reOpenedSourceEditor = createMockEditor();
-    vi.mocked(reOpenedSourceEditor.getCursor).mockReturnValue({ ch: 3, line: 42 });
-    const setEphemeralStateMock = vi.fn();
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getActiveViewOfType: vi.fn().mockReturnValue({ editor: reOpenedSourceEditor, setEphemeralState: setEphemeralStateMock }),
-      getLeaf: vi.fn().mockReturnValue({ openFile: vi.fn().mockResolvedValue(undefined) })
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: [{ endOffset: 10, startOffset: 0 }],
-      editor: staleEditor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+  it('should replace the selection with an empty string for None mode', async () => {
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      editor,
+      settingsOverrides: {
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }
     });
 
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain(
+      'selected text'
+    );
+    expect(editor.replaceSelection).toHaveBeenCalledWith('');
+  });
+
+  it('should throw and roll back the target for an invalid textAfterExtractionMode', async () => {
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      editor,
+      settingsOverrides: {
+        textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid')
+      }
+    });
+
+    await expect(composer.splitFile()).rejects.toThrow(
+      'Invalid text after extraction mode'
+    );
+
+    // The insert happened before the throw; the transaction rolls the target back to its original content.
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should abort the split and leave the target unchanged when a file is modified during the operation', async () => {
+    // Bump the source mtime after the capture (the first body statement is the console-debug call) but
+    // Before the unchanged re-check, simulating an external edit mid-operation.
+    const sourceFile = getSourceFile();
+    const consoleDebugComponent = strictProxy<ConsoleDebugComponent>({
+      consoleDebug: vi.fn(() => {
+        sourceFile.stat.mtime += 1;
+      })
+    });
+    const editor = createEditorDouble();
+    const composer = createComposer({ consoleDebugComponent, editor });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should swallow the cancellation and roll back when aborted mid-operation', async () => {
+    // A failing operation whose abort flag is set is treated as a user cancellation: the thrown error is
+    // Swallowed (resolves, not rejects) and the transaction rolls the vault back. The invalid mode makes
+    // The body throw AFTER the target insert, so the rollback must restore the target.
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      editor,
+      settingsOverrides: {
+        textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid')
+      }
+    });
+    // Simulate the user clicking the lock indicator's Unlock mid-operation.
+    castTo<AbortableComposer>(composer).abortController.abort();
+
+    await expect(composer.splitFile()).resolves.toBeUndefined();
+
+    // Rolled back: the target keeps its original content and the source editor was never mutated.
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should show a progress notice for a single split and close it afterwards', async () => {
+    const disposeMock = vi.fn();
+    const pluginNoticeComponent = createPluginNoticeComponentStub(disposeMock);
+    const composer = createComposer({ pluginNoticeComponent });
+
+    await composer.splitFile();
+
+    const showNoticeAfterDelayMock = vi.mocked(
+      pluginNoticeComponent.showNoticeAfterDelay
+    );
+    expect(showNoticeAfterDelayMock).toHaveBeenCalledTimes(1);
+    const params = showNoticeAfterDelayMock.mock.calls[0]?.[0];
+    expect(params?.abortController).toBeInstanceOf(AbortController);
+    const content = await resolveValue(ensureNonNullable(params?.content), {});
+    expect(castTo<DocumentFragment>(content).textContent).toContain(
+      'Splitting note'
+    );
+    expect(disposeMock).toHaveBeenCalled();
+  });
+
+  it('should not show a progress notice for a multiple split', async () => {
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+    const composer = createComposer({
+      isMultipleSplit: true,
+      pluginNoticeComponent
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain(
+      'selected text'
+    );
+    expect(
+      vi.mocked(pluginNoticeComponent.showNoticeAfterDelay)
+    ).not.toHaveBeenCalled();
+  });
+
+  it('should reveal the cursor in the re-opened source view so the viewport is not left at the top', async () => {
+    // Re-opening the source note scrolls the editor to the top; the fix reveals the cursor's line.
+    const reOpenedEditor = createEditorDouble();
+    vi.mocked(reOpenedEditor.getCursor).mockReturnValue({ ch: 3, line: 42 });
+    const setEphemeralStateMock = vi.fn();
+    // `file: null` keeps the resource lock's status-bar reconcile (which also calls getActiveViewOfType)
+    // From resolving a lock owner, so it early-returns instead of reaching into the view's containerEl.
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor: reOpenedEditor,
+        file: null,
+        setEphemeralState: setEphemeralStateMock
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 10, startOffset: 0 }],
+      editor: createEditorDouble(),
+      settingsOverrides: {
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }
+    });
 
     await composer.splitFile();
 
     expect(setEphemeralStateMock).toHaveBeenCalledWith({ line: 42 });
   });
 
-  it('should lock the source and target notes during the split and unlock them afterwards', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile
+  it('should open the target note after a single split when shouldOpenTargetNoteAfterSplit is true', async () => {
+    const composer = createComposer({
+      settingsOverrides: { shouldOpenTargetNoteAfterSplit: true }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await composer.splitFile();
 
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(sourceFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.editorLockComponent.lockForPath).toHaveBeenCalledWith(targetFile, { abortController: expect.any(AbortController) as AbortController });
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
+    expect(app.workspace.getActiveFile()?.path).toBe('target.md');
   });
 
-  it('should unlock the notes even when the split throws', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      generateMarkdownLink: vi.fn(),
-      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
-      processFrontMatter: vi.fn()
-    };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await expect(composer.splitFile()).rejects.toThrow('insert error');
-
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
-  });
-
-  it('should swallow the error and release the locks when the split is cancelled by unlocking', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      generateMarkdownLink: vi.fn(),
-      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
-      processFrontMatter: vi.fn()
-    };
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Simulate the user clicking the lock indicator's "Unlock" mid-operation.
-    castTo<AbortableComposer>(composer).abortController.abort();
-
-    // The cancellation is swallowed: the operation resolves without throwing.
-    await expect(composer.splitFile()).resolves.toBeUndefined();
-    expect(editor.replaceSelection).not.toHaveBeenCalled();
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
-    expect(deps.editorLockComponent.unlockForPath).toHaveBeenCalledWith(targetFile);
-  });
-
-  it('should open a minimizable progress modal for a single split and close it afterwards', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const sourceFile = strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const targetFile = strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } });
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(openProgressModal).mockClear();
-    progressModalCloseMock.mockClear();
-
-    await composer.splitFile();
-
-    expect(openProgressModal).toHaveBeenCalledTimes(1);
-    const params = vi.mocked(openProgressModal).mock.calls[0]?.[0];
-    expect(params?.app).toBe(deps.app);
-    expect(params?.sourceFile).toBe(sourceFile);
-    expect(params?.targetFile).toBe(targetFile);
-    expect(params?.verb).toBe('Splitting');
-    expect(progressModalCloseMock).toHaveBeenCalled();
-  });
-
-  it('should abort the split and not edit the source when a file is modified during the operation', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    let sourceMtimeReadCount = 0;
-    const sourceFile = strictProxy<TFile>({
-      basename: 'source',
-      path: 'source.md',
-      // First read (capture) returns 100; the re-check read returns a changed mtime.
-      stat: {
-        ctime: 0,
-        get mtime(): number {
-          return sourceMtimeReadCount++ === 0 ? 100 : 999;
-        },
-        size: 0
-      }
-    });
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile,
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    expect(editor.replaceSelection).not.toHaveBeenCalled();
-  });
-
-  it('should not open a progress modal for a multiple split', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
+  it('should not open the target note when the split is a multiple split', async () => {
+    const composer = createComposer({
       isMultipleSplit: true,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: { shouldOpenTargetNoteAfterSplit: true }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-    vi.mocked(openProgressModal).mockClear();
 
     await composer.splitFile();
 
-    expect(openProgressModal).not.toHaveBeenCalled();
-  });
-
-  it('should replace with embed for EmbedNewFile mode', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    expect(editor.replaceSelection).toHaveBeenCalledWith('![[target]]');
-  });
-
-  it('should replace with empty string for None mode', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ textAfterExtractionMode: TextAfterExtractionMode.None });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    expect(editor.replaceSelection).toHaveBeenCalledWith('');
-  });
-
-  it('should throw for invalid textAfterExtractionMode', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ textAfterExtractionMode: castTo<TextAfterExtractionMode>('invalid') });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await expect(composer.splitFile()).rejects.toThrow('Invalid text after extraction mode');
-  });
-
-  it('should open target note after split when shouldOpenTargetNoteAfterSplit is true and not multiple split', async () => {
-    const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const editor = createMockEditor();
-    const deps = createDeps({ shouldOpenTargetNoteAfterSplit: true });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getActiveViewOfType: vi.fn().mockReturnValue(null),
-      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    expect(openFileMock).toHaveBeenCalled();
-  });
-
-  it('should not open target note when isMultipleSplit is true', async () => {
-    const openFileMock = vi.fn().mockResolvedValue(undefined);
-    const editor = createMockEditor();
-    const deps = createDeps({ shouldOpenTargetNoteAfterSplit: true });
-    const appObj = getAppObj(deps.app);
-    appObj['workspace'] = {
-      getActiveFile: vi.fn(),
-      getActiveViewOfType: vi.fn().mockReturnValue(null),
-      getLeaf: vi.fn().mockReturnValue({ openFile: openFileMock })
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: true,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    expect(openFileMock).not.toHaveBeenCalled();
-  });
-
-  it('should propagate errors from insertIntoFile', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
-    const appObj = getAppObj(deps.app);
-    appObj['fileManager'] = {
-      generateMarkdownLink: vi.fn(),
-      insertIntoFile: vi.fn().mockRejectedValue(new Error('insert error')),
-      processFrontMatter: vi.fn()
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    let didThrow = false;
-    try {
-      await composer.splitFile();
-    } catch {
-      didThrow = true;
-    }
-    expect(didThrow).toBe(true);
-    // ReplaceSelection should not have been called since the error occurred before it
-    expect(editor.replaceSelection).not.toHaveBeenCalled();
+    // No leaf was ever activated, so there is no active file.
+    expect(app.workspace.getActiveFile()).toBeNull();
   });
 });
 
 describe('SplitComposer getTemplate', () => {
-  it('should return mergeTemplate when splitTemplate is empty', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+  it('should use the merge template when the split template is empty', async () => {
+    const composer = createComposer({
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        splitTemplate: ''
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    const insertIntoFileMock = vi.fn();
-    const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
-    // The merge template should have been used
-    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
-    expect(insertedContent).toContain('merge:');
+    expect(await app.vault.adapter.read('target.md')).toContain('merge:');
   });
 
-  it('should return splitTemplate for new file when splitTemplate is set', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+  it('should use the split template for a new file when the split template is set', async () => {
+    const composer = createComposer({
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    const insertIntoFileMock = vi.fn();
-    const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
-    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
-    expect(insertedContent).toContain('split:');
+    expect(await app.vault.adapter.read('target.md')).toContain('split:');
   });
 
-  it('should return mergeTemplate for existing file when splitToExistingFileTemplate is Merge', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({
-      mergeTemplate: 'merge: {{content}}',
-      splitTemplate: 'split: {{content}}',
-      splitToExistingFileTemplate: Action.Merge
-    });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
+  it('should use the merge template for an existing file when splitToExistingFileTemplate is Merge', async () => {
+    const composer = createComposer({
       isNewTargetFile: false,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Merge
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    const insertIntoFileMock = vi.fn();
-    const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
-    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
-    expect(insertedContent).toContain('merge:');
+    expect(await app.vault.adapter.read('target.md')).toContain('merge:');
   });
 
-  it('should return splitTemplate for existing file when splitToExistingFileTemplate is Split', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps({
-      mergeTemplate: 'merge: {{content}}',
-      splitTemplate: 'split: {{content}}',
-      splitToExistingFileTemplate: Action.Split
-    });
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
+  it('should use the split template for an existing file when splitToExistingFileTemplate is Split', async () => {
+    const composer = createComposer({
       isNewTargetFile: false,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    const insertIntoFileMock = vi.fn();
-    const appObj = getComposerAppObj(composer);
-    (appObj['fileManager'] as GenericObject)['insertIntoFile'] = insertIntoFileMock;
 
     await composer.splitFile();
 
-    const insertedContent = insertIntoFileMock.mock.calls[0]?.[1] as string;
-    expect(insertedContent).toContain('split:');
+    expect(await app.vault.adapter.read('target.md')).toContain('split:');
   });
 });
 
 describe('SplitComposer prepareBacklinkSubpaths', () => {
-  it('should return empty Set', async () => {
-    const editor = createMockEditor();
-    const deps = createDeps();
+  it('should not add the whole-file subpath, so only extracted headings/blocks get backlinks fixed', async () => {
+    // Split (unlike merge) returns an empty subpath set, so a full-file backlink is not rewritten.
+    const composer = createComposer();
 
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue(null);
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    // Split does not include '' in subpaths (unlike merge), so no full-file backlinks
     await composer.splitFile();
 
-    expect(composer).toBeDefined();
+    // The split still completes, inserting the extracted content into the target.
+    expect(await app.vault.adapter.read('target.md')).toContain(
+      'selected text'
+    );
   });
 });
 
 describe('SplitComposer updateEditorSelections', () => {
-  it('should add footnotes to remove as editor selections', async () => {
+  it('should add the removed footnotes as editor selections', async () => {
     const setSelectionsMock = vi.fn();
     const editor = strictProxy<Editor>({
-      getSelection: vi.fn().mockReturnValue('text [^fn1]'),
-      listSelections: vi.fn().mockReturnValue([
-        { anchor: { ch: 0, line: 0 }, head: { ch: 11, line: 0 } }
-      ]),
+      getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      listSelections: vi
+        .fn()
+        .mockReturnValue([
+          { anchor: { ch: 0, line: 0 }, head: { ch: 11, line: 0 } }
+        ]),
       offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
       posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
       replaceSelection: vi.fn(),
       setSelections: setSelectionsMock
     });
-
-    const deps = createDeps({ shouldFixFootnotesByDefault: true });
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      cachedRead: vi.fn()
-        .mockResolvedValueOnce('source [^fn1]\n[^fn1]: footnote')
-        .mockResolvedValueOnce('target content')
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.spyOn(app.vault, 'cachedRead')
+      .mockResolvedValueOnce('source [^fn1]\n[^fn1]: footnote')
+      .mockResolvedValueOnce('target content');
+    // Fn1's only ref is inside the selection (offset 0-11), so fn1 is copied and then removed from the
+    // Source, adding its definition range as a removal selection. fn2's ref and definition are both
+    // Outside the selection, so fn2 is neither removed nor restored (exercising the skip branch).
     vi.mocked(getCacheSafe).mockResolvedValue({
       footnoteRefs: [
-        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 11, line: 0, offset: 11 },
+            start: { col: 5, line: 0, offset: 5 }
+          }
+        },
+        {
+          id: 'fn2',
+          position: {
+            end: { col: 6, line: 5, offset: 106 },
+            start: { col: 0, line: 5, offset: 100 }
+          }
+        }
       ],
       footnotes: [
-        { id: 'fn1', position: { end: { col: 20, line: 1, offset: 34 }, start: { col: 0, line: 1, offset: 14 } } }
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 20, line: 1, offset: 34 },
+            start: { col: 0, line: 1, offset: 14 }
+          }
+        },
+        {
+          id: 'fn2',
+          position: {
+            end: { col: 20, line: 6, offset: 220 },
+            start: { col: 0, line: 6, offset: 200 }
+          }
+        }
       ]
     });
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    const composer = createComposer({
+      editor,
+      settingsOverrides: { shouldFixFootnotesByDefault: true }
+    });
 
     await composer.splitFile();
 
     expect(setSelectionsMock).toHaveBeenCalled();
   });
-});
 
-describe('SplitComposer updateEditorSelections with restore', () => {
   it('should call removeSelectionRange for footnotes that need restoring', async () => {
     const setSelectionsMock = vi.fn();
-    // Selection covers only part of the text, not the footnote ref outside selection
     const editor = strictProxy<Editor>({
-      getSelection: vi.fn().mockReturnValue('definition text'),
-      listSelections: vi.fn().mockReturnValue([
-        { anchor: { ch: 20, line: 0 }, head: { ch: 50, line: 0 } }
-      ]),
+      getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      listSelections: vi
+        .fn()
+        .mockReturnValue([
+          { anchor: { ch: 20, line: 0 }, head: { ch: 50, line: 0 } }
+        ]),
       offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
       posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
       replaceSelection: vi.fn(),
       setSelections: setSelectionsMock
     });
-
-    const deps = createDeps({ shouldFixFootnotesByDefault: true });
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      cachedRead: vi.fn()
-        .mockResolvedValueOnce('before [^fn1] selected [^fn1]: definition after')
-        .mockResolvedValueOnce('target content')
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
+    vi.spyOn(app.vault, 'cachedRead')
+      .mockResolvedValueOnce('before [^fn1] selected [^fn1]: definition after')
+      .mockResolvedValueOnce('target content');
+    // One ref is outside the selection (kept) and one is inside (copied) — fn1 lands in both Keep and
+    // Copy — and its definition is inside the selection, so fn1 is a "restore" (removeSelectionRange).
     vi.mocked(getCacheSafe).mockResolvedValue({
       footnoteRefs: [
-        // First ref is outside selection (offset 7-13)
-        { id: 'fn1', position: { end: { col: 13, line: 0, offset: 13 }, start: { col: 7, line: 0, offset: 7 } } },
-        // Second ref is inside selection (offset 23-29)
-        { id: 'fn1', position: { end: { col: 29, line: 0, offset: 29 }, start: { col: 23, line: 0, offset: 23 } } }
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 13, line: 0, offset: 13 },
+            start: { col: 7, line: 0, offset: 7 }
+          }
+        },
+        {
+          id: 'fn1',
+          position: {
+            end: { col: 29, line: 0, offset: 29 },
+            start: { col: 23, line: 0, offset: 23 }
+          }
+        }
       ],
       footnotes: [
-        // Footnote definition is inside selection (offset 23-45)
         {
           id: 'fn1',
           position: {
@@ -1049,119 +687,12 @@ describe('SplitComposer updateEditorSelections with restore', () => {
         }
       ]
     });
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
-    await composer.splitFile();
-
-    expect(setSelectionsMock).toHaveBeenCalled();
-  });
-});
-
-describe('SplitComposer removeSelectionRange', () => {
-  it('should keep selection before range', async () => {
-    const setSelectionsMock = vi.fn();
-    const editor = strictProxy<Editor>({
-      getSelection: vi.fn().mockReturnValue('text'),
-      listSelections: vi.fn().mockReturnValue([
-        { anchor: { ch: 0, line: 0 }, head: { ch: 5, line: 0 } }
-      ]),
-      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
-      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
-      replaceSelection: vi.fn(),
-      setSelections: setSelectionsMock
-    });
-
-    const deps = createDeps({ shouldFixFootnotesByDefault: true });
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      cachedRead: vi.fn()
-        .mockResolvedValueOnce('text [^fn1]\n[^fn1]: footnote')
-        .mockResolvedValueOnce('target')
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 50, startOffset: 20 }],
       editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
+      settingsOverrides: { shouldFixFootnotesByDefault: true }
     });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue({
-      footnoteRefs: [
-        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
-      ],
-      footnotes: [
-        {
-          id: 'fn1',
-          position: {
-            end: { col: 20, line: 1, offset: 34 },
-            start: { col: 0, line: 1, offset: 14 }
-          }
-        }
-      ]
-    });
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
-
-    await composer.splitFile();
-
-    // The setSelections mock was called with updated selections
-    expect(setSelectionsMock).toHaveBeenCalled();
-  });
-
-  it('should split overlapping selection around range', async () => {
-    const setSelectionsMock = vi.fn();
-    // Selection that overlaps with a footnote range
-    const editor = strictProxy<Editor>({
-      getSelection: vi.fn().mockReturnValue('text [^fn1] and [^fn1]: footnote'),
-      listSelections: vi.fn().mockReturnValue([
-        { anchor: { ch: 0, line: 0 }, head: { ch: 40, line: 0 } }
-      ]),
-      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
-      posToOffset: vi.fn((pos: EditorPosition) => pos.ch),
-      replaceSelection: vi.fn(),
-      setSelections: setSelectionsMock
-    });
-
-    const deps = createDeps({ shouldFixFootnotesByDefault: true });
-    const appObj = getAppObj(deps.app);
-    appObj['vault'] = {
-      cachedRead: vi.fn()
-        .mockResolvedValueOnce('text [^fn1] and [^fn1]: footnote more')
-        .mockResolvedValueOnce('target')
-    };
-
-    const composer = new SplitComposer({
-      capturedSelections: getSelections(editor),
-      editor,
-      isMultipleSplit: false,
-      isNewTargetFile: true,
-      selectedText: 'selected text',
-      ...deps,
-      sourceFile: strictProxy<TFile>({ basename: 'source', path: 'source.md', stat: { ctime: 0, mtime: 0, size: 0 } }),
-      targetFile: strictProxy<TFile>({ basename: 'target', path: 'target.md', stat: { ctime: 0, mtime: 0, size: 0 } })
-    });
-
-    vi.mocked(updateLinksInContent).mockImplementation(({ content }) => Promise.resolve(content));
-    vi.mocked(getCacheSafe).mockResolvedValue({
-      footnoteRefs: [
-        { id: 'fn1', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } }
-      ],
-      footnotes: [
-        {
-          id: 'fn1',
-          position: {
-            end: { col: 35, line: 0, offset: 35 },
-            start: { col: 16, line: 0, offset: 16 }
-          }
-        }
-      ]
-    });
-    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
 
     await composer.splitFile();
 

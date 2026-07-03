@@ -49,6 +49,25 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   - `styles/` — `main.scss` plus the SCSS module type declaration.
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
 
+## Resource locking & transactional rollback
+
+Every merge/split/swap operation (files **and** folders) locks the resources it touches
+(`ResourceLockComponent.lockForPath({ shouldBlockMutations: true })`) against edit/delete/rename/move,
+detects external changes and aborts, and runs its vault mutations inside a reversible dev-utils
+`VaultTransaction` that commits on success and rolls back on cancel/error. The shared runner is
+`src/locked-transaction.ts` (`runLockedTransaction`), used by the composers and the swap/merge-folder
+handlers; folder-merge threads one spanning transaction into each `MergeComposer`. Requires
+`obsidian-dev-utils` ≥ 84.1.0 (`tx.rollback` uses `syncOpenEditorBuffersForPath` so split's rollback
+survives an open editor). Unit tests use the real bridge (`App.createConfigured__()` + real
+`ResourceLockComponent`/`VaultTransaction`), 100% coverage.
+
+The former integration-only branches are now fully unit-covered against `obsidian-test-mocks` ≥ 3.5.1,
+so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap paths in `swapper.ts`
+(3.5.0 made folder rename cascade to descendants and `getAvailablePath` de-duplicate), and the
+backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link
+indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so
+dev-utils' `editLinks` write path now completes against the mock.
+
 ## Known Issues
 
 None.

@@ -8,7 +8,7 @@ import type {
 } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
@@ -23,17 +23,17 @@ import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class MergeFileCommandHandler extends FileCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly editorLockComponent: EditorLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MergeFileCommandHandlerConstructorParams) {
     super({
@@ -46,7 +46,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
-    this.editorLockComponent = params.editorLockComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -68,8 +68,8 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     }
     const result = await prepareForMergeFile({
       app: this.app,
-      editorLockComponent: this.editorLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       sourceFile: file
     });
     if (!result) {
@@ -78,12 +78,12 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     const composer = new MergeComposer({
       app: this.app,
       consoleDebugComponent: this.consoleDebugComponent,
-      editorLockComponent: this.editorLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeHeadings: result.shouldMergeHeadings,
       sourceFile: file,

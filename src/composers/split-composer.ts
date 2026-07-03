@@ -13,11 +13,11 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -61,48 +61,70 @@ export class SplitComposer extends ComposerBase {
     }
 
     const mtimes = this.captureFileMtimes();
-    this.lockNotes();
-    const progressModalHandle = this.isMultipleSplit
+    const progressNotice = this.isMultipleSplit
       ? null
-      : await openProgressModal({
-        app: this.app,
-        sourceFile: this.sourceFile,
-        targetFile: this.targetFile,
-        verb: 'Splitting'
+      : this.pluginNoticeComponent.showNoticeAfterDelay({
+        abortController: this.abortController,
+        content: () => this.buildProgressContent('Splitting')
       });
     try {
-      this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
+      await runLockedTransaction({
+        abortController: this.abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          this.consoleDebugComponent.consoleDebug(`Splitting note ${this.sourceFile.path} into ${this.targetFile.path}`);
 
-      if (!await this.checkFilesUnchanged(mtimes)) {
+          if (!await this.checkFilesUnchanged(mtimes)) {
+            // The pre-flight guard tripped (an external change): abort so nothing is committed and the
+            // Post-split open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
+            this.abortController.abort();
+            return;
+          }
+
+          // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
+          // Editor.replaceSelection below is an editor edit, not a vault op the transaction can capture,
+          // So an identity process() records a restore-to-original inverse without changing the content.
+          // Done before the re-open so the (no-op) write cannot disturb the restored selections.
+          await vaultTransaction.process(this.sourceFile, (content) => content);
+
+          // Re-open the source note and restore the captured selections FIRST, before any edit, so every
+          // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
+          // The active leaf navigated to another note during the (minimizable) modal.
+          await this.reopenSourceFileAndRestoreSelections();
+
+          await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+
+          const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+
+          switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
+            case TextAfterExtractionMode.EmbedNewFile:
+              this.editor.replaceSelection(`!${markdownLink}`);
+              break;
+            case TextAfterExtractionMode.LinkToNewFile:
+              this.editor.replaceSelection(markdownLink);
+              break;
+            case TextAfterExtractionMode.None:
+              this.editor.replaceSelection('');
+              break;
+            default:
+              throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+          }
+
+          // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
+          // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
+          this.revealCursor();
+        },
+        injectedVaultTransaction: this.injectedVaultTransaction,
+        lockTargets: [
+          { mode: 'file', pathOrFile: this.sourceFile },
+          { mode: 'file', pathOrFile: this.targetFile }
+        ],
+        resourceLockComponent: this.resourceLockComponent
+      });
+
+      if (this.abortController.signal.aborted) {
         return;
       }
-
-      // Re-open the source note and restore the captured selections FIRST, before any edit, so every
-      // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
-      // The active leaf navigated to another note during the (minimizable) modal.
-      await this.reopenSourceFileAndRestoreSelections();
-
-      await this.insertIntoTargetFile(this.selectedText);
-
-      const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-
-      switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
-        case TextAfterExtractionMode.EmbedNewFile:
-          this.editor.replaceSelection(`!${markdownLink}`);
-          break;
-        case TextAfterExtractionMode.LinkToNewFile:
-          this.editor.replaceSelection(markdownLink);
-          break;
-        case TextAfterExtractionMode.None:
-          this.editor.replaceSelection('');
-          break;
-        default:
-          throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
-      }
-
-      // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
-      // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
-      this.revealCursor();
 
       if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
@@ -113,13 +135,12 @@ export class SplitComposer extends ComposerBase {
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {
-        // The operation was cancelled by unlocking the note; nothing to report.
+        // The operation was cancelled (user or external change); the transaction has rolled back.
         return;
       }
       throw error;
     } finally {
-      progressModalHandle?.close();
-      this.unlockNotes();
+      progressNotice?.[Symbol.dispose]();
     }
   }
 

@@ -5,7 +5,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
@@ -19,17 +19,17 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractBeforeCursorEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
-  private readonly editorLockComponent: EditorLockComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: ExtractBeforeCursorEditorCommandHandlerConstructorParams) {
     super({
@@ -41,7 +41,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
-    this.editorLockComponent = params.editorLockComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
@@ -65,8 +65,8 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
-      editorLockComponent: this.editorLockComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       sourceFile: file
     });
     if (!result) {
@@ -77,13 +77,13 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       capturedSelections: result.capturedSelections,
       consoleDebugComponent: this.consoleDebugComponent,
       editor,
-      editorLockComponent: this.editorLockComponent,
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isMultipleSplit: false,
       isNewTargetFile: result.isNewTargetFile,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
       selectedText: result.selectedText,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldIncludeFrontmatter: result.shouldIncludeFrontmatter,

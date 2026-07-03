@@ -9,7 +9,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -82,10 +82,10 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createHeading(level: number, startLine: number, endLine?: number): HeadingCache {
@@ -127,7 +127,6 @@ function createMockParams(
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    editorLockComponent: strictProxy<EditorLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -136,7 +135,8 @@ function createMockParams(
         shouldAddCommandsToSubmenu,
         shouldKeepHeadingsWhenSplittingContent
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -246,7 +246,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     await handler.executeEditor(editor, ctx);
 

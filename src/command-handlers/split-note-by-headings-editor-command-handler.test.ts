@@ -9,7 +9,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -82,10 +82,10 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
-  readonly editorLockComponent: EditorLockComponent;
   readonly headingLevel: Level;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
 }
 
 function createHeading(level: number, line: number): HeadingCache {
@@ -121,7 +121,6 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    editorLockComponent: strictProxy<EditorLockComponent>({}),
     headingLevel,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -129,7 +128,8 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu
       })
-    })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
@@ -239,7 +239,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
-    mockRenderInternalLink.mockResolvedValue(activeDocument.createElement('a'));
+    mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
     await handler.executeEditor(editor, ctx);
 
@@ -371,12 +371,12 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       capturedSelections: [],
       consoleDebugComponent: params.consoleDebugComponent,
       editor,
-      editorLockComponent: params.editorLockComponent,
       heading: 'My Heading',
       isMultipleSplit: true,
       isNewTargetFile: true,
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
+      resourceLockComponent: params.resourceLockComponent,
       selectedText: '',
       sourceFile: file,
       targetFile

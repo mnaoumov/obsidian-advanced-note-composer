@@ -6,7 +6,6 @@ import {
   extractLinkFile,
   updateLink
 } from 'obsidian-dev-utils/obsidian/link';
-import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
@@ -14,8 +13,8 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import { runLockedTransaction } from '../locked-transaction.ts';
 import { Action } from '../plugin-settings.ts';
-import { openProgressModal } from '../progress-modal.ts';
 import { ComposerBase } from './composer-base.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
@@ -41,24 +40,40 @@ export class MergeComposer extends ComposerBase {
     }
 
     const mtimes = this.captureFileMtimes();
-    this.lockNotes();
-    const progressModalHandle = this.shouldShowNotice
-      ? await openProgressModal({
-        app: this.app,
-        sourceFile: this.sourceFile,
-        targetFile: this.targetFile,
-        verb: 'Merging'
+    const progressNotice = this.shouldShowNotice
+      ? this.pluginNoticeComponent.showNoticeAfterDelay({
+        abortController: this.abortController,
+        content: () => this.buildProgressContent('Merging')
       })
       : null;
 
     try {
-      this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
-      const sourceContent = await this.app.vault.read(this.sourceFile);
-      if (!await this.checkFilesUnchanged(mtimes)) {
+      await runLockedTransaction({
+        abortController: this.abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
+          const sourceContent = await this.app.vault.read(this.sourceFile);
+          if (!await this.checkFilesUnchanged(mtimes)) {
+            // The pre-flight guard tripped (an external change): abort so nothing is committed and the
+            // Post-merge open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
+            this.abortController.abort();
+            return;
+          }
+          await this.insertIntoTargetFile(sourceContent, vaultTransaction);
+          await vaultTransaction.trash(this.sourceFile);
+        },
+        injectedVaultTransaction: this.injectedVaultTransaction,
+        lockTargets: [
+          { mode: 'file', pathOrFile: this.sourceFile },
+          { mode: 'file', pathOrFile: this.targetFile }
+        ],
+        resourceLockComponent: this.resourceLockComponent
+      });
+
+      if (this.abortController.signal.aborted) {
         return;
       }
-      await this.insertIntoTargetFile(sourceContent);
-      await trashSafe(this.app, this.sourceFile);
 
       if (this.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
@@ -69,13 +84,12 @@ export class MergeComposer extends ComposerBase {
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {
-        // The operation was cancelled by unlocking the note; nothing to report.
+        // The operation was cancelled (user or external change); the transaction has rolled back.
         return;
       }
       throw error;
     } finally {
-      progressModalHandle?.close();
-      this.unlockNotes();
+      progressNotice?.[Symbol.dispose]();
     }
   }
 
@@ -86,7 +100,6 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      editorLockComponent: this.editorLockComponent,
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
@@ -106,7 +119,8 @@ export class MergeComposer extends ComposerBase {
           shouldUpdateFileNameAlias: true
         });
       },
-      pathOrFile: this.targetFile
+      pathOrFile: this.targetFile,
+      resourceLockComponent: this.resourceLockComponent
     });
   }
 

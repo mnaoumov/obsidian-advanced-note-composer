@@ -5,7 +5,7 @@ import type {
   Pos
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { EditorLockComponent } from 'obsidian-dev-utils/obsidian/editor-lock';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
@@ -33,7 +33,7 @@ import {
   getCacheSafe,
   getFrontmatterSafe
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { process } from 'obsidian-dev-utils/obsidian/vault';
+import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { replaceAll } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -53,19 +53,25 @@ const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
-  readonly editorLockComponent: EditorLockComponent;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
   readonly isNewTargetFile: boolean;
   readonly pluginNoticeComponent: PluginNoticeComponent;
 
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
   readonly shouldFixFootnotes?: boolean;
   readonly shouldMergeHeadings?: boolean;
   readonly shouldShowNotice?: boolean;
   readonly sourceFile: TFile;
-
   readonly targetFile: TFile;
+
+  /**
+   * An outer transaction to run this operation's mutations against (e.g. a folder merge spanning many
+   * files). When provided, {@link ComposerBase.runLockedTransaction} reuses it and does NOT lock,
+   * commit, or roll back — the outer owner does. When omitted, the operation owns its own transaction.
+   */
+  readonly vaultTransaction?: VaultTransaction;
 }
 
 export interface Frontmatter extends GenericObject {
@@ -94,16 +100,22 @@ interface FileMtimes {
 export abstract class ComposerBase {
   protected readonly abortController = new AbortController();
   protected readonly app: App;
-  protected readonly editorLockComponent: EditorLockComponent;
+  /**
+   * The outer transaction injected by a spanning operation (e.g. a folder merge), or `null` when this
+   * operation owns its own transaction via {@link runLockedTransaction}.
+   */
+  protected readonly injectedVaultTransaction: null | VaultTransaction;
   protected readonly isNewTargetFile: boolean;
 
+  protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  protected readonly resourceLockComponent: ResourceLockComponent;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
+
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly insertMode: InsertMode;
-  private readonly pluginNoticeComponent: PluginNoticeComponent;
 
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
@@ -112,9 +124,10 @@ export abstract class ComposerBase {
 
   public constructor(params: ComposerBaseConstructorParams) {
     this.app = params.app;
-    this.editorLockComponent = params.editorLockComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.injectedVaultTransaction = params.vaultTransaction ?? null;
 
     this.insertMode = params.insertMode ?? InsertMode.Append;
     this.sourceFile = params.sourceFile;
@@ -125,6 +138,25 @@ export abstract class ComposerBase {
     this.shouldShowNotice = params.shouldShowNotice ?? true;
     this.targetFile = params.targetFile;
     this.isNewTargetFile = params.isNewTargetFile;
+  }
+
+  /**
+   * Builds the progress notice content describing the operation from the source note to the target
+   * note, with clickable links to both and a loading indicator. Passed to
+   * {@link PluginNoticeComponent.showNoticeAfterDelay}, which keeps the links clickable without
+   * dismissing the notice.
+   *
+   * @param verb - The progressive verb describing the operation, e.g. `Splitting` or `Merging`.
+   * @returns A {@link Promise} resolving to the notice content fragment.
+   */
+  protected buildProgressContent(verb: string): Promise<DocumentFragment> {
+    return createFragmentAsync(async (fragmentEl) => {
+      fragmentEl.appendText(`${verb} note `);
+      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
+      fragmentEl.appendText(' into ');
+      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+      fragmentEl.createDiv('is-loading');
+    });
   }
 
   /**
@@ -187,7 +219,6 @@ export abstract class ComposerBase {
       await editLinks({
         abortSignal: this.abortController.signal,
         app: this.app,
-        editorLockComponent: this.editorLockComponent,
         linkConverter: (link) => {
           linkIndex++;
           if (!linkJsons.includes(JSON.stringify(link))) {
@@ -206,7 +237,8 @@ export abstract class ComposerBase {
             shouldUpdateFileNameAlias: true
           });
         },
-        pathOrFile: backlinkPath
+        pathOrFile: backlinkPath,
+        resourceLockComponent: this.resourceLockComponent
       });
     }
   }
@@ -215,7 +247,7 @@ export abstract class ComposerBase {
 
   protected abstract getTemplate(): string;
 
-  protected async insertIntoTargetFile(targetContentToInsert: string): Promise<void> {
+  protected async insertIntoTargetFile(targetContentToInsert: string, vaultTransaction: VaultTransaction): Promise<void> {
     targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
@@ -231,7 +263,7 @@ export abstract class ComposerBase {
     targetContentToInsert = this.applyTemplate(newContent);
     const { content: templateContent, frontmatter: templateFrontmatter } = this.extractFrontmatter(targetContentToInsert);
 
-    await this.insertIntoTargetFileImpl(templateContent);
+    await this.insertIntoTargetFileImpl(templateContent, vaultTransaction);
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
@@ -277,26 +309,9 @@ export abstract class ComposerBase {
     await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
   }
 
-  /**
-   * Makes the source and target notes read-only for the duration of the operation so the user
-   * cannot accidentally edit either note while it is being composed. Balanced by {@link unlockNotes}.
-   */
-  protected lockNotes(): void {
-    this.editorLockComponent.lockForPath(this.sourceFile, { abortController: this.abortController });
-    this.editorLockComponent.lockForPath(this.targetFile, { abortController: this.abortController });
-  }
-
   /* v8 ignore stop */
 
   protected abstract prepareBacklinkSubpaths(): Set<string>;
-
-  /**
-   * Restores the editability of the source and target notes locked by {@link lockNotes}.
-   */
-  protected unlockNotes(): void {
-    this.editorLockComponent.unlockForPath(this.sourceFile);
-    this.editorLockComponent.unlockForPath(this.targetFile);
-  }
 
   protected updateEditorSelections(
     _sourceCache: CachedMetadata | null,
@@ -462,28 +477,45 @@ export abstract class ComposerBase {
     /* v8 ignore stop */
   }
 
-  private async insertIntoTargetFileImpl(targetContentToInsert: string): Promise<void> {
+  /**
+   * Replicates `FileManager.insertIntoFile`'s frontmatter-aware positioning so the insert can be routed
+   * through a {@link VaultTransaction} (which must own the write to reverse it). Append adds the content
+   * at the end; prepend inserts it right after any frontmatter.
+   *
+   * @param existingContent - The current content of the target note.
+   * @param contentToInsert - The content to insert.
+   * @returns The resulting content.
+   */
+  private insertContent(existingContent: string, contentToInsert: string): string {
+    if (this.insertMode === InsertMode.Prepend) {
+      const frontmatterInfo = getFrontMatterInfo(existingContent);
+      return `${existingContent.slice(0, frontmatterInfo.contentStart)}${contentToInsert}${existingContent.slice(frontmatterInfo.contentStart)}`;
+    }
+    return `${existingContent}${contentToInsert}`;
+  }
+
+  private async insertIntoTargetFileImpl(targetContentToInsert: string, vaultTransaction: VaultTransaction): Promise<void> {
     if (targetContentToInsert.startsWith('---\n')) {
       targetContentToInsert = `\n${targetContentToInsert}`;
     }
     if (!this.shouldMergeHeadings) {
-      await this.app.fileManager.insertIntoFile(this.targetFile, targetContentToInsert, this.insertMode);
+      // Route the write through the transaction (which captures the old content and registers the
+      // Restore) so a merge/split can be rolled back. This replicates FileManager.insertIntoFile's
+      // Frontmatter-aware positioning in insertContent rather than calling it directly, because the
+      // Transaction must own the write to be able to reverse it.
+      await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent(targetFileContent, targetContentToInsert));
       return;
     }
 
-    await process({
-      abortSignal: this.abortController.signal,
-      app: this.app,
-      editorLockComponent: this.editorLockComponent,
-      newContentProvider: async ({ content: targetFileContent }) => {
-        const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
-        const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
-        await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
-        const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
-        return mergedDocument.toString();
-      },
-      pathOrFile: this.targetFile
-    });
+    // VaultTransaction.process takes a synchronous content provider, but building the heading-merged
+    // Content is async (parseMarkdownHeadingDocument), so compute it first and apply it via modify,
+    // Which captures the old content for rollback exactly as process does.
+    const targetFileContent = await this.app.vault.read(this.targetFile);
+    const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
+    const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
+    await targetContentDocumentToInsert.wrapText(this.wrapText.bind(this));
+    const mergedDocument = targetFileDocument.mergeWith(targetContentDocumentToInsert, this.insertMode);
+    await vaultTransaction.modify(this.targetFile, mergedDocument.toString());
   }
 
   private isPathIgnored(path: string): boolean {
