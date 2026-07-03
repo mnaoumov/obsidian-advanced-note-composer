@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.28.0
+
+- fix: re #122
+- test: wire integration-testing vitest-setup into integration projects
+- chore: update libs
+
 ## 3.27.0
 
 - chore: lint
