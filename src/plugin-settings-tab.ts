@@ -115,6 +115,24 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should use source title when destination has none')
+          .setDesc(createFragment((f) => {
+            f.appendText('When merging, if the destination note (note B) has no ');
+            appendCodeBlock(f, 'title');
+            f.appendText(' property, use the ');
+            appendCodeBlock(f, 'title');
+            f.appendText(' from the merged-in note (note A) instead of leaving it empty.');
+            f.createEl('br');
+            f.appendText('When the destination note already has a ');
+            appendCodeBlock(f, 'title');
+            f.appendText(', it is always kept.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldUseSourceTitleWhenTargetHasNoTitle', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Should run templater on destination file')
           .setDesc(createFragment((f) => {
             f.appendText('Whether to run ');

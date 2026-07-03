@@ -51,6 +51,7 @@ export class PluginSettings {
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
+  public shouldUseSourceTitleWhenTargetHasNoTitle = false;
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;

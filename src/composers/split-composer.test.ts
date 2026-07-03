@@ -179,6 +179,7 @@ function createPluginSettingsComponentStub(
       shouldMergeHeadingsByDefault: false,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldUseSourceTitleWhenTargetHasNoTitle: false,
       splitTemplate: '',
       splitToExistingFileTemplate: Action.Split,
       textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,

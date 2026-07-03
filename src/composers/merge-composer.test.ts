@@ -114,6 +114,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       shouldMergeHeadingsByDefault: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldUseSourceTitleWhenTargetHasNoTitle: false,
       ...overrides
     })
   });

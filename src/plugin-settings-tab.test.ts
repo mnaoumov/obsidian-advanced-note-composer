@@ -161,6 +161,7 @@ describe('PluginSettingsTab', () => {
     expect(allNames).toContain('Should replace invalid characters');
     expect(allNames).toContain('Replacement string');
     expect(allNames).toContain('Frontmatter merge strategy');
+    expect(allNames).toContain('Should use source title when destination has none');
     expect(allNames).toContain('Should add commands to submenu');
   });
 
