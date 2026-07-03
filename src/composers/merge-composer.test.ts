@@ -35,12 +35,13 @@ interface AbortableComposer {
   readonly abortController: AbortController;
 }
 
-// Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
-// Would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL (G49).
+// Return-value stubs for the two metadata reads test-mocks does not fully model: the backlink index
+// (getBacklinksForFileSafe) and frontmatter extraction (getFrontmatterSafe). getCacheSafe runs for
+// REAL against test-mocks' synchronous indexer, so editLinks sees the target's links; the vault, lock,
+// Transaction, and link rewriting are all real too.
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
-  getCacheSafe: vi.fn().mockResolvedValue(null),
   getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
@@ -67,9 +68,6 @@ beforeEach(() => {
       'target.md': 'target body'
     }
   }).asOriginalType__();
-  // Test-mocks' MetadataCache is a strict proxy with no indexer; the merge's processFrontMatter
-  // Triggers a recompute, so stub it to a no-op.
-  castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
 });
@@ -189,6 +187,33 @@ describe('MergeComposer', () => {
       vi.spyOn(app.fileManager, 'processFrontMatter').mockRejectedValue(new Error('boom'));
 
       await expect(createComposer().mergeFile()).rejects.toThrow('boom');
+    });
+
+    it('should rewrite a target link that resolved to the merged-away source and leave others alone', async () => {
+      // The target links to both the source and an unrelated note. After the merge folds the source
+      // Into the target, the [[source]] backlink must be rewritten to the surviving target note, while
+      // The [[other]] link (which does not resolve to the source) is left untouched.
+      await app.vault.create('other.md', 'other body');
+      await app.vault.modify(getTargetFile(), 'target body\n[[source]]\n[[other]]\n');
+      // Link-format resolution (getNewLinkFormat / shouldUseWikilinks) reads Vault.getConfig, which
+      // Test-mocks does not model; absolute format plus wikilinks emits a plain [[target]] wikilink.
+      castTo<GenericObject>(app.vault)['getConfig'] = vi.fn((key: string) => {
+        switch (key) {
+          case 'newLinkFormat':
+            return 'absolute';
+          case 'useMarkdownLinks':
+            return false;
+          default:
+            return undefined;
+        }
+      });
+
+      await createComposer().mergeFile();
+
+      const targetContent = await app.vault.adapter.read('target.md');
+      expect(targetContent).toContain('[[target]]');
+      expect(targetContent).not.toContain('[[source]]');
+      expect(targetContent).toContain('[[other]]');
     });
   });
 });

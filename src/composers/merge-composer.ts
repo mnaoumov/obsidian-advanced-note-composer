@@ -100,7 +100,6 @@ export class MergeComposer extends ComposerBase {
     await editLinks({
       abortSignal: this.abortController.signal,
       app: this.app,
-      /* v8 ignore start -- runs only when editLinks finds a target link resolving to the source. obsidian-test-mocks 3.5.0 fixed the read side (synchronous link indexing), but its markdown parser still reports a link position end offset as start plus length minus one (inclusive) instead of Obsidian's exclusive start plus length. So the editLinks write path (applyFileChanges then validateChanges) compares the sliced content, one char short of the link, against the original link text and never matches, retrying until timeout. This branch becomes testable once obsidian-test-mocks emits exclusive end offsets. */
       linkConverter: (link): MaybeReturn<string> => {
         linkIndex++;
         const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
@@ -120,7 +119,6 @@ export class MergeComposer extends ComposerBase {
           shouldUpdateFileNameAlias: true
         });
       },
-      /* v8 ignore stop */
       pathOrFile: this.targetFile,
       resourceLockComponent: this.resourceLockComponent
     });
