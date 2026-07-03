@@ -107,6 +107,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldMergeHeadingsByDefault: false,
         shouldOpenNoteAfterMerge: false,
         shouldRunTemplaterOnDestinationFile: false,
+        shouldUseSourceTitleWhenTargetHasNoTitle: false,
         ...settingsOverrides
       })
     }),

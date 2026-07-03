@@ -197,6 +197,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       shouldMergeHeadingsByDefault: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldUseSourceTitleWhenTargetHasNoTitle: false,
       ...overrides
     })
   });
@@ -652,6 +653,51 @@ describe('mergeFrontmatter strategies', () => {
     await composer.callInsertIntoTargetFile('---\ntitle: New Title\n---\ncontent');
 
     expect(seeded['title']).toBe('Original Title');
+  });
+
+  it('should discard the source title when the target has no title and the setting is off', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      settingsOverrides: { shouldUseSourceTitleWhenTargetHasNoTitle: false }
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.callInsertIntoTargetFile('---\ntitle: New Title\n---\ncontent');
+
+    expect(seeded['title']).toBeUndefined();
+  });
+
+  it('should use the source title when the target has no title and the setting is on', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      settingsOverrides: { shouldUseSourceTitleWhenTargetHasNoTitle: true }
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.callInsertIntoTargetFile('---\ntitle: New Title\n---\ncontent');
+
+    expect(seeded['title']).toBe('New Title');
+  });
+
+  it('should not add a title when neither target nor source has one and the setting is on', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      settingsOverrides: { shouldUseSourceTitleWhenTargetHasNoTitle: true }
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.callInsertIntoTargetFile('---\nfoo: bar\n---\ncontent');
+
+    expect(seeded['title']).toBeUndefined();
   });
 });
 

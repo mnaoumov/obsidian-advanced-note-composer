@@ -270,7 +270,11 @@ export abstract class ComposerBase {
       let mergedFrontmatter = this.mergeFrontmatter(originalFrontmatter, newFrontmatter);
       mergedFrontmatter = this.mergeFrontmatter(mergedFrontmatter, templateFrontmatter);
       if (originalTitle === undefined) {
-        delete mergedFrontmatter.title;
+        // The target note has no `title`; by default the merged-in source title is discarded here.
+        // When the setting is on, keep the merged title (the source note's, per the merge strategy) instead.
+        if (!this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle) {
+          delete mergedFrontmatter.title;
+        }
       } else {
         mergedFrontmatter.title = originalTitle;
       }
