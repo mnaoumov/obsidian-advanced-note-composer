@@ -61,18 +61,12 @@ handlers; folder-merge threads one spanning transaction into each `MergeComposer
 survives an open editor). Unit tests use the real bridge (`App.createConfigured__()` + real
 `ResourceLockComponent`/`VaultTransaction`), 100% coverage.
 
-The nested / differently-named folder-swap paths in `swapper.ts` are now unit-covered against
-`obsidian-test-mocks` ≥ 3.5.0 (its folder rename cascades to descendants and `getAvailablePath`
-de-duplicates), so their former `/* v8 ignore */`s are gone.
-
-**One remaining `/* v8 ignore */`d branch:** the backlink-rewrite `linkConverter` in
-`merge-composer.ts` (`fixBacklinks`). test-mocks 3.5.0 fixed the read side (synchronous link
-indexing), so the branch now executes, but its markdown parser still reports a link's
-`position.end.offset` as `start + length - 1` (inclusive) instead of Obsidian's exclusive
-`start + length`; dev-utils' `editLinks` write path slices one char short of the link, never matches,
-and retries until timeout (recorded as a known bug in `obsidian-test-mocks` CLAUDE.md). Drop the
-v8-ignore and cover it with a real backlink-rewrite unit test once test-mocks emits exclusive end
-offsets (or cover it with a `*.desktop.integration.test.ts`).
+The former integration-only branches are now fully unit-covered against `obsidian-test-mocks` ≥ 3.5.1,
+so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap paths in `swapper.ts`
+(3.5.0 made folder rename cascade to descendants and `getAvailablePath` de-duplicate), and the
+backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link
+indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so
+dev-utils' `editLinks` write path now completes against the mock.
 
 ## Known Issues
 
