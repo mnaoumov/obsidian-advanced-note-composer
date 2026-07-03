@@ -61,11 +61,18 @@ handlers; folder-merge threads one spanning transaction into each `MergeComposer
 survives an open editor). Unit tests use the real bridge (`App.createConfigured__()` + real
 `ResourceLockComponent`/`VaultTransaction`), 100% coverage.
 
-**Integration-only branches (deferred, `/* v8 ignore */`d):** the nested-folder-swap paths in
-`swapper.ts` and the backlink-rewrite `linkConverter` in `merge-composer.ts` are unreachable in unit
-tests because `obsidian-test-mocks` does not cascade descendant paths on a folder rename and has no
-metadata/link indexer (recorded in `obsidian-test-mocks` CLAUDE.md). Cover them with real
-`*.desktop.integration.test.ts` (or drop the v8-ignores) once test-mocks models those behaviors.
+The nested / differently-named folder-swap paths in `swapper.ts` are now unit-covered against
+`obsidian-test-mocks` ≥ 3.5.0 (its folder rename cascades to descendants and `getAvailablePath`
+de-duplicates), so their former `/* v8 ignore */`s are gone.
+
+**One remaining `/* v8 ignore */`d branch:** the backlink-rewrite `linkConverter` in
+`merge-composer.ts` (`fixBacklinks`). test-mocks 3.5.0 fixed the read side (synchronous link
+indexing), so the branch now executes, but its markdown parser still reports a link's
+`position.end.offset` as `start + length - 1` (inclusive) instead of Obsidian's exclusive
+`start + length`; dev-utils' `editLinks` write path slices one char short of the link, never matches,
+and retries until timeout (recorded as a known bug in `obsidian-test-mocks` CLAUDE.md). Drop the
+v8-ignore and cover it with a real backlink-rewrite unit test once test-mocks emits exclusive end
+offsets (or cover it with a `*.desktop.integration.test.ts`).
 
 ## Known Issues
 
