@@ -34,6 +34,7 @@ interface DropDownCommand {
 
 interface InstructionEx extends Instruction {
   init?(purposeEl: HTMLSpanElement, scope: Scope): void;
+  registerScope?(scope: Scope): void;
 }
 
 interface KeyboardCommand {
@@ -41,6 +42,17 @@ interface KeyboardCommand {
   modifiers?: Modifier[];
   onKey?(evt: KeyboardEvent, ctx: KeymapContext): boolean;
   purpose: string;
+}
+
+interface SuggestModalCommandBuilderBuildOptions {
+  /**
+   * Whether to render the instruction bar (checkboxes, dropdowns, keyboard hints) and register the
+   * option-toggle keyboard shortcuts. When `false`, no instruction UI is shown and the option-toggle
+   * shortcuts are not registered; only the essential navigation key handlers remain active.
+   *
+   * @default `true`
+   */
+  readonly shouldShowInstructions?: boolean;
 }
 
 export class SuggestModalCommandBuilder {
@@ -99,19 +111,30 @@ export class SuggestModalCommandBuilder {
   public addKeyboardCommand(command: KeyboardCommand): this {
     this.instructions.push({
       command: this.buildCommand(command),
-      init: (_purposeEl, scope) => {
+      purpose: command.purpose,
+      registerScope: (scope) => {
         if (command.onKey) {
           /* v8 ignore start -- defensive ?? on optional modifiers. */
           scope.register(command.modifiers ?? [], command.key, command.onKey.bind(command));
           /* v8 ignore stop */
         }
-      },
-      purpose: command.purpose
+      }
     });
     return this;
   }
 
-  public build(modal: SuggestModal<unknown>): void {
+  public build(modal: SuggestModal<unknown>, options: SuggestModalCommandBuilderBuildOptions = {}): void {
+    const { shouldShowInstructions = true } = options;
+
+    // Essential navigation/action key handlers must stay active even when the instruction bar is hidden.
+    for (const instruction of this.instructions) {
+      instruction.registerScope?.(modal.scope);
+    }
+
+    if (!shouldShowInstructions) {
+      return;
+    }
+
     modal.setInstructions(this.instructions);
     const purposeEls = Array.from(modal.instructionsEl.findAll('.prompt-instruction > span:nth-child(2)')) as HTMLSpanElement[];
     for (let i = 0; i < purposeEls.length; i++) {

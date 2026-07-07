@@ -356,6 +356,43 @@ describe('SuggestModalCommandBuilder', () => {
         builder.build(modal);
       }).not.toThrow();
     });
+
+    it('should show instructions by default', () => {
+      builder.addCheckbox({ key: '1', modifiers: ['Alt'], onChange: vi.fn(), onInit: vi.fn(), purpose: 'Test' });
+      const modal = createMockModal();
+      builder.build(modal);
+      expect(modal.setInstructions).toHaveBeenCalled();
+      expect(modal.instructionsEl.querySelector('input[type="checkbox"]')).toBeTruthy();
+    });
+
+    it('should not render the instruction bar when shouldShowInstructions is false', () => {
+      const onInit = vi.fn();
+      builder.addCheckbox({ key: '1', modifiers: ['Alt'], onChange: vi.fn(), onInit, purpose: 'Test' });
+      const modal = createMockModal();
+      builder.build(modal, { shouldShowInstructions: false });
+      expect(modal.setInstructions).not.toHaveBeenCalled();
+      expect(onInit).not.toHaveBeenCalled();
+      expect(modal.instructionsEl.querySelector('input[type="checkbox"]')).toBeNull();
+    });
+
+    it('should still register essential keyboard handlers when shouldShowInstructions is false', () => {
+      const onKey = vi.fn();
+      builder.addKeyboardCommand({ key: 'Enter', modifiers: ['Mod'], onKey, purpose: 'to create' });
+      const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
+      builder.build(modal, { shouldShowInstructions: false });
+      const call = registerCalls.find((c) => c.key === 'Enter' && c.modifiers.includes('Mod'));
+      expect(call).toBeDefined();
+    });
+
+    it('should not register option-toggle shortcuts when shouldShowInstructions is false', () => {
+      builder.addCheckbox({ key: '1', modifiers: ['Alt'], onChange: vi.fn(), onInit: vi.fn(), purpose: 'Test' });
+      const modal = createMockModal();
+      const registerCalls = captureRegisterCalls(modal.scope);
+      builder.build(modal, { shouldShowInstructions: false });
+      const call = registerCalls.find((c) => c.key === '1');
+      expect(call).toBeUndefined();
+    });
   });
 
   describe('getModifierString', () => {

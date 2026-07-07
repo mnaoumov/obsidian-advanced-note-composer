@@ -439,7 +439,7 @@ class SplitFileModal extends SuggestModalBase {
       purpose: 'Frontmatter merge strategy'
     });
 
-    builder.build(this);
+    builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
   private async canIncludeFrontmatter(): Promise<boolean> {

@@ -252,6 +252,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldFixFootnotesByDefault: true,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldMergeHeadingsByDefault: false,
+      shouldShowModalInstructions: true,
       shouldTreatTitleAsPathByDefault: true
     })
   });

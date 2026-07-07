@@ -107,7 +107,8 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         isPathIgnored: vi.fn().mockReturnValue(false),
         shouldAskBeforeMerging,
         shouldIncludeChildFoldersWhenMergingByDefault: true,
-        shouldIncludeParentFoldersWhenMergingByDefault: true
+        shouldIncludeParentFoldersWhenMergingByDefault: true,
+        shouldShowModalInstructions: true
       })
     })
   };

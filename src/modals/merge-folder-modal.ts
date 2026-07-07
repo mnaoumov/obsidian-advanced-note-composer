@@ -198,7 +198,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       },
       purpose: 'Include parent folders in selector'
     });
-    builder.build(this);
+    builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
   public override getItems(): TFolder[] {

@@ -49,6 +49,7 @@ export class PluginSettings {
   public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
+  public shouldShowModalInstructions = true;
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;

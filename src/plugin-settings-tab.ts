@@ -480,6 +480,20 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldAddCommandsToSubmenu', valueComponent: toggle });
           });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show modal instructions')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the instruction bar at the bottom of the merge/split/swap modal dialogs.');
+            f.createEl('br');
+            f.appendText('The instruction bar contains the checkboxes, dropdowns, and keyboard hints for toggling per-operation options.');
+            f.createEl('br');
+            f.appendText('When disabled, the modals use the configured default settings and the option-toggle keyboard shortcuts are unavailable.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowModalInstructions', valueComponent: toggle });
+          });
       });
   }
 }

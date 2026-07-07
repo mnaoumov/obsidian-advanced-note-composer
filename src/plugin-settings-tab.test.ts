@@ -165,6 +165,13 @@ describe('PluginSettingsTab', () => {
     expect(allNames).toContain('Should add commands to submenu');
   });
 
+  it('should render the show-modal-instructions toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should show modal instructions').getValue()).toBe(true);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

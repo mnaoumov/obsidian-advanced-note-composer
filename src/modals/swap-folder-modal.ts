@@ -94,7 +94,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
       },
       purpose: 'Should swap entire folder structure'
     });
-    builder.build(this);
+    builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
   public override getItems(): TFolder[] {

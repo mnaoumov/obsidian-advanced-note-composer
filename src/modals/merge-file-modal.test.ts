@@ -221,7 +221,8 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
         shouldAskBeforeMerging,
         shouldFixFootnotesByDefault: true,
-        shouldMergeHeadingsByDefault: false
+        shouldMergeHeadingsByDefault: false,
+        shouldShowModalInstructions: true
       })
     }),
     resourceLockComponent: createMockResourceLockComponent()

@@ -343,7 +343,7 @@ class MergeFileModal extends SuggestModalBase {
       purpose: 'Frontmatter merge strategy'
     });
 
-    builder.build(this);
+    builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
   public override onClose(): void {

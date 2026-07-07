@@ -72,6 +72,7 @@ function createMockPluginSettingsComponent(): PluginSettingsComponent {
       isPathIgnored: vi.fn().mockReturnValue(false),
       shouldIncludeChildFoldersWhenSwappingByDefault: true,
       shouldIncludeParentFoldersWhenSwappingByDefault: true,
+      shouldShowModalInstructions: true,
       shouldSwapEntireFolderStructureByDefault: true
     })
   });

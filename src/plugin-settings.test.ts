@@ -98,6 +98,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldOpenTargetNoteAfterSplit).toBe(false);
     expect(settings.shouldReplaceInvalidTitleCharacters).toBe(true);
     expect(settings.shouldRunTemplaterOnDestinationFile).toBe(false);
+    expect(settings.shouldShowModalInstructions).toBe(true);
     expect(settings.shouldSwapEntireFolderStructureByDefault).toBe(true);
     expect(settings.shouldTreatTitleAsPathByDefault).toBe(true);
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);
