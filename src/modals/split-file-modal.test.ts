@@ -72,27 +72,6 @@ vi.mock('../composers/composer-base.ts', () => ({
 
 let shouldAutoSelect = false;
 
-vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
-  class MockSuggestModalCommandBuilder {
-    public addCheckbox(): this {
-      return this;
-    }
-
-    public addDropDown(): this {
-      return this;
-    }
-
-    public addKeyboardCommand(): this {
-      return this;
-    }
-
-    public build(): void {
-      noop();
-    }
-  }
-  return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
-});
-
 interface AsyncModule {
   invokeAsyncSafely(fn: () => Promise<void>): void;
 }

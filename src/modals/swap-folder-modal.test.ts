@@ -5,7 +5,6 @@ import type {
   Workspace
 } from 'obsidian';
 
-import { noop } from 'obsidian-dev-utils/function';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -23,27 +22,6 @@ import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
 vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
-
-vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
-  class MockSuggestModalCommandBuilder {
-    public addCheckbox(): this {
-      return this;
-    }
-
-    public addDropDown(): this {
-      return this;
-    }
-
-    public addKeyboardCommand(): this {
-      return this;
-    }
-
-    public build(): void {
-      noop();
-    }
-  }
-  return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
-});
 
 function createMockApp(): App {
   return strictProxy<App>({

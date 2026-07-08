@@ -125,27 +125,6 @@ vi.mock('./suggest-modal-base.ts', async () => {
   return { SuggestModalBase: MockSuggestModalBase };
 });
 
-vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
-  class MockSuggestModalCommandBuilder {
-    public addCheckbox(): this {
-      return this;
-    }
-
-    public addDropDown(): this {
-      return this;
-    }
-
-    public addKeyboardCommand(): this {
-      return this;
-    }
-
-    public build(): void {
-      noop();
-    }
-  }
-  return { SuggestModalCommandBuilder: MockSuggestModalCommandBuilder };
-});
-
 const mockTargetFile = strictProxy<TFile>({ path: 'folder/target.md' });
 
 interface SelectItemResult {
