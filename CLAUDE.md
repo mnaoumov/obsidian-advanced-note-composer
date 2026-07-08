@@ -70,4 +70,10 @@ dev-utils' `editLinks` write path now completes against the mock.
 
 ## Known Issues
 
-None.
+- The four modal tests (`merge-file`, `merge-folder`, `split-file`, `swap-folder`) still hand-roll a
+  `MockSuggestModalCommandBuilder` via `vi.mock(...)` instead of using the real
+  `SuggestModalCommandBuilder` from `obsidian-dev-utils`. Dropping the mock makes the real `build()`
+  throw `Property "instructionsEl" is not mocked`, because `obsidian-test-mocks`' `SuggestModal` does
+  not model `instructionsEl` or the `.prompt-instruction` instruction-bar rendering the builder
+  queries. The fix belongs in `obsidian-test-mocks` (model the instruction bar); the plan is recorded
+  in that repo's `CLAUDE.md`. Once released and the dependency is bumped, delete the four mock blocks.
