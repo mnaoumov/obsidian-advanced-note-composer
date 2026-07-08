@@ -24,7 +24,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
 
-vi.mock('./suggest-modal-command-builder.ts', () => {
+vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;

@@ -125,7 +125,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
   return { SuggestModalBase: MockSuggestModalBase };
 });
 
-vi.mock('./suggest-modal-command-builder.ts', () => {
+vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;

@@ -21,16 +21,14 @@ describe('shouldShowModalInstructions', () => {
   it('should show the modal instruction bar only when the setting is enabled', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId }) {
+      async fn({ app, obsidianModule, pluginId, waitUntil }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
-        const POLL_INTERVAL_IN_MILLISECONDS = 50;
-        const POLL_TIMEOUT_IN_MILLISECONDS = 5000;
 
         const sourceFile = await ensureMarkdownFile('anc-instructions-source.md', '# Source\n\ncontent');
         await ensureMarkdownFile('anc-instructions-other.md', '# Other\n\ncontent');
         await app.workspace.getLeaf(false).openFile(sourceFile);
-        await waitUntil(() => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined);
+        await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
 
         await setShowInstructions(true);
         const withInstructions = await openMergeModalAndCount();
@@ -80,7 +78,7 @@ describe('shouldShowModalInstructions', () => {
 
         async function openMergeModalAndCount(): Promise<InstructionCounts> {
           app.commands.executeCommandById(`${pluginId}:merge-file`);
-          await waitUntil(() => document.querySelector('.prompt') !== null);
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const prompt = document.querySelector('.prompt');
@@ -90,20 +88,9 @@ describe('shouldShowModalInstructions', () => {
           // Cancel the merge via the plugin's own unlock command. Aborting the setup flow closes the
           // Locked modal and releases the source-file lock, leaving no lingering modal or lock behind.
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
-          await waitUntil(() => document.querySelector('.prompt') === null);
+          await waitUntil({ predicate: () => document.querySelector('.prompt') === null });
 
           return { checkboxCount, instructionCount };
-        }
-
-        async function waitUntil(predicate: () => boolean): Promise<void> {
-          const startTime = performance.now();
-          while (performance.now() - startTime < POLL_TIMEOUT_IN_MILLISECONDS) {
-            if (predicate()) {
-              return;
-            }
-            await sleep(POLL_INTERVAL_IN_MILLISECONDS);
-          }
-          throw new Error('Timed out waiting for condition.');
         }
       },
       vaultPath: getTempVault().path

@@ -43,7 +43,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 let shouldAutoSelect = false;
 let autoSelectFolder: null | TFolder = null;
 
-vi.mock('./suggest-modal-command-builder.ts', () => {
+vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;

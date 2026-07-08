@@ -8,12 +8,12 @@ import {
   FuzzySuggestModal,
   TFolder
 } from 'obsidian';
+import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
-import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface SelectTargetFolderForSwapParams {
   readonly app: App;

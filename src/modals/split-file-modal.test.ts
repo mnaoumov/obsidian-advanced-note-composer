@@ -72,7 +72,7 @@ vi.mock('../composers/composer-base.ts', () => ({
 
 let shouldAutoSelect = false;
 
-vi.mock('./suggest-modal-command-builder.ts', () => {
+vi.mock('obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder', () => {
   class MockSuggestModalCommandBuilder {
     public addCheckbox(): this {
       return this;

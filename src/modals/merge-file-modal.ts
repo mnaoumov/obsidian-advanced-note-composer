@@ -12,6 +12,7 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
@@ -25,7 +26,6 @@ import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
-import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface ConfirmDialogModalConstructorParams {
   readonly app: App;

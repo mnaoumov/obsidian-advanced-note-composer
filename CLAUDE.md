@@ -45,7 +45,7 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   - `command-handlers/` — one class per command (merge file/folder, swap file/folder, extract before/after cursor/current selection/this heading, split-by-headings), each extending an `obsidian-dev-utils` command-handler base.
   - `composers/` — core merge/split engine: `ComposerBase` (frontmatter merge, footnote/backlink/link fixing, templating) with `MergeComposer` and `SplitComposer` subclasses.
   - `item-selectors/` — resolve a chosen suggestion into a concrete target file: `ItemSelectorBase`, `MergeItemSelector`, `SplitItemSelector`.
-  - `modals/` — suggestion/confirmation UI: `SuggestModalBase`, the merge/split/swap file/folder modals, and `SuggestModalCommandBuilder`.
+  - `modals/` — suggestion/confirmation UI: `SuggestModalBase` and the merge/split/swap file/folder modals. The instruction-bar builder (`SuggestModalCommandBuilder`) now comes from `obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder`.
   - `styles/` — `main.scss` plus the SCSS module type declaration.
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
 

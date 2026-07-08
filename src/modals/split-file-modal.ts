@@ -14,6 +14,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { Selection } from '../composers/composer-base.ts';
@@ -31,7 +32,6 @@ import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
-import { SuggestModalCommandBuilder } from './suggest-modal-command-builder.ts';
 
 interface ConfirmDialogModalResult {
   readonly insertMode: InsertMode;
