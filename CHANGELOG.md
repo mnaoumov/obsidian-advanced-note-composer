@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.31.0
+
+- feat: re #119
+
 ## 3.30.1
 
 - docs: fix changelog wrong ref
