@@ -19,6 +19,7 @@ describe('move marked selection', () => {
       args: { pluginId: PLUGIN_ID },
       async fn({ app, obsidianModule, pluginId, waitUntil }) {
         const SETTLE_IN_MILLISECONDS = 400;
+        const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
 
         // --- Cross-file move: mark "BBB" in the source and move it to the cursor in the target. ---
         const source = await resetFile('move-it-source.md', 'AAA BBB CCC');
@@ -28,6 +29,13 @@ describe('move marked selection', () => {
         sourceEditor.setSelection(sourceEditor.offsetToPos(4), sourceEditor.offsetToPos(7));
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
+
+        // The mark shows a permanent notice whose body renders the two command names as code blocks.
+        const markNoticeEl = findMarkNotice();
+        const markNoticeText = markNoticeEl?.textContent ?? '';
+        const markNoticeCodeTexts = markNoticeEl
+          ? Array.from(markNoticeEl.querySelectorAll('code')).map((codeEl) => codeEl.textContent)
+          : [];
 
         const target = await resetFile('move-it-target.md', 'target end');
         const targetEditor = await openAndGetEditor(target);
@@ -54,7 +62,20 @@ describe('move marked selection', () => {
 
         const sameNote = editorValueFor('move-it-same.md') ?? '';
 
-        return { crossFileSource, crossFileTarget, sameNote };
+        // Once the mark is released (by the move), the permanent notice is hidden again.
+        await sleep(NOTICE_REMOVAL_IN_MILLISECONDS);
+        const markNoticeGoneAfterMoves = findMarkNotice() === null;
+
+        return { crossFileSource, crossFileTarget, markNoticeCodeTexts, markNoticeGoneAfterMoves, markNoticeText, sameNote };
+
+        function findMarkNotice(): Element | null {
+          for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
+            if (el.textContent.includes('Marked selection to move')) {
+              return el;
+            }
+          }
+          return null;
+        }
 
         async function resetFile(path: string, content: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);
@@ -96,12 +117,19 @@ describe('move marked selection', () => {
     expect(result.crossFileTarget.indexOf('BBB')).toBeLessThan(result.crossFileTarget.indexOf('end'));
     expect(result.crossFileSource).not.toContain('BBB');
 
-    // Same-note: the marked "one" was cut from the front and re-inserted at the end cursor — a move,
-    // Not a copy. It appears exactly once, and (with the setting off) leaves no meaningless self-link.
+    // Same-note: the marked "one" was removed from the front and re-inserted at the end cursor. With
+    // The default setting, a same-note move leaves nothing (no meaningless self-link) in its place.
     expect(result.sameNote).toContain('one');
     expect(result.sameNote.startsWith('one ')).toBe(false);
     expect(result.sameNote.endsWith('one')).toBe(true);
-    expect(result.sameNote.match(/one/g)?.length).toBe(1);
     expect(result.sameNote).not.toContain('[[move-it-same');
+    // A move, not a copy: the marked "one" appears exactly once (it was cut from the front, not left there).
+    expect(result.sameNote.match(/one/g)?.length).toBe(1);
+
+    // The mark notice is permanent and renders the two command names as code blocks, then is hidden
+    // Once the mark is released.
+    expect(result.markNoticeText).toContain('Marked selection to move');
+    expect(result.markNoticeCodeTexts).toEqual(['Move marked selection here', 'Cancel move']);
+    expect(result.markNoticeGoneAfterMoves).toBe(true);
   });
 });

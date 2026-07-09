@@ -1,6 +1,7 @@
 import type {
   Editor,
   EditorPosition,
+  Notice,
   TFile
 } from 'obsidian';
 
@@ -21,6 +22,7 @@ function createMarkedSelection(overrides: Partial<MarkedSelection> = {}): Marked
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 10, startOffset: 5 }],
     lock: { [Symbol.dispose]: vi.fn() },
+    notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
     sourceFile: strictProxy<TFile>({ path: 'source.md' }),
     sourceMtime: 123,
@@ -50,12 +52,13 @@ describe('MoveSelectionBuffer', () => {
     expect(buffer.get()).toBe(marked);
   });
 
-  it('disposes the held lock on clear', () => {
+  it('disposes the held lock and hides the notice on clear', () => {
     const buffer = new MoveSelectionBuffer();
     const marked = createMarkedSelection();
     buffer.mark(marked);
     buffer.clear();
     expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(marked.notice.hide).toHaveBeenCalledTimes(1);
     expect(buffer.hasMark()).toBe(false);
     expect(buffer.get()).toBeNull();
   });

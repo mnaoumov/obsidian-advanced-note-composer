@@ -61,6 +61,9 @@ Commands:
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
   without moving anything. (The built-in `Unlock active note` command also releases the lock.)
 
+While a selection is marked, a persistent notice reminds you that a move is pending until you complete
+or cancel it.
+
 Notes:
 
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and

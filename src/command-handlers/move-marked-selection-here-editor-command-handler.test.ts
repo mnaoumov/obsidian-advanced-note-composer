@@ -2,6 +2,7 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
+  Notice,
   TFile,
   Vault
 } from 'obsidian';
@@ -116,6 +117,7 @@ function createMarkedBuffer(sourceFile: TFile): MoveSelectionBuffer {
     abortController: new AbortController(),
     capturedSelections: CAPTURED_SELECTIONS,
     lock: { [Symbol.dispose]: vi.fn() },
+    notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
     sourceFile,
     sourceMtime: SOURCE_MTIME

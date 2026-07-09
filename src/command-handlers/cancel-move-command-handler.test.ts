@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  Notice,
+  TFile
+} from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -39,6 +42,7 @@ function createMarkedBuffer(): MoveSelectionBuffer {
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 1, startOffset: 0 }],
     lock: { [Symbol.dispose]: vi.fn() },
+    notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'text',
     sourceFile: strictProxy<TFile>({ path: 'source.md' }),
     sourceMtime: 1

@@ -8,6 +8,7 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -74,16 +75,28 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       shouldBlockMutations: true
     });
 
+    // A permanent notice reminds the user a selection is marked for the whole time the mark is held; it
+    // Is hidden when the mark is released (move, `Cancel move`, or re-mark) via `MoveSelectionBuffer.clear`.
+    const notice = this.pluginNoticeComponent.showNotice(
+      createFragment((f) => {
+        f.appendText('Marked selection to move. Run ');
+        appendCodeBlock(f, 'Move marked selection here');
+        f.appendText(' in the target note, or ');
+        appendCodeBlock(f, 'Cancel move');
+        f.appendText(' to release.');
+      }),
+      { isPermanent: true }
+    );
+
     this.moveSelectionBuffer.mark({
       abortController,
       capturedSelections: getSelections(editor),
       lock,
+      notice,
       selectedText: editor.getSelection(),
       sourceFile: file,
       sourceMtime: file.stat.mtime
     });
-
-    this.pluginNoticeComponent.showNotice('Marked selection to move. Run "Move marked selection here" in the target note, or "Cancel move" to release.');
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

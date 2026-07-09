@@ -1,5 +1,6 @@
 import type {
   Editor,
+  Notice,
   TFile
 } from 'obsidian';
 
@@ -24,6 +25,11 @@ export interface MarkedSelection {
    * The held source-note lock, disposed by {@link MoveSelectionBuffer.clear}.
    */
   readonly lock: Disposable;
+
+  /**
+   * The permanent notice reminding the user a selection is marked, hidden by {@link MoveSelectionBuffer.clear}.
+   */
+  readonly notice: Notice;
 
   /**
    * The marked text.
@@ -56,6 +62,7 @@ export class MoveSelectionBuffer {
       return;
     }
     this.markedSelection.lock[Symbol.dispose]();
+    this.markedSelection.notice.hide();
     this.markedSelection = null;
   }
 

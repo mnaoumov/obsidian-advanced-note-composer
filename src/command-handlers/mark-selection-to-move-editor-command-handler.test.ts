@@ -169,7 +169,11 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
     expect(marked?.selectedText).toBe('marked text');
     expect(marked?.sourceFile).toBe(file);
     expect(marked?.sourceMtime).toBe(2000);
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
+    expect(marked?.notice).toBeDefined();
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith(
+      expect.anything(),
+      { isPermanent: true }
+    );
   });
 
   it('should add to the editor menu', () => {
