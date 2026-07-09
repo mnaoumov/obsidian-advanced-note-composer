@@ -109,22 +109,21 @@ export class SplitComposer extends ComposerBase {
           // The active leaf navigated to another note during the (minimizable) modal.
           await this.reopenSourceFileAndRestoreSelections();
 
-          await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
-
-          const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-
-          switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
-            case TextAfterExtractionMode.EmbedNewFile:
-              this.editor.replaceSelection(`!${markdownLink}`);
-              break;
-            case TextAfterExtractionMode.LinkToNewFile:
-              this.editor.replaceSelection(markdownLink);
-              break;
-            case TextAfterExtractionMode.None:
-              this.editor.replaceSelection('');
-              break;
-            default:
-              throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+          if (this.isSameNoteMove()) {
+            // Same-note move: the target write is on the note the editor shows, and it collapses the
+            // Editor selection — so a later `replaceSelection` would be a no-op (leaving the source text
+            // In place, turning the move into a copy). Remove the source FIRST; the write reads the
+            // Post-removal buffer, so the removal survives. Footnote definitions need no cleanup here:
+            // Refs and defs both remain in the same note, so they stay resolved.
+            this.replaceSourceSelection();
+            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+          } else {
+            // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
+            // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
+            // Then removes from the source along with the extracted text. The target write is a different
+            // File, so it does not disturb the source editor selection.
+            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+            this.replaceSourceSelection();
           }
 
           // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
@@ -234,6 +233,10 @@ export class SplitComposer extends ComposerBase {
     );
   }
 
+  private isSameNoteMove(): boolean {
+    return this.insertToken !== null && this.sourceFile === this.targetFile;
+  }
+
   /* v8 ignore start -- removeSelectionRange branches are defensive for various selection/range overlap cases. */
   private removeSelectionRange(editorSelections: EditorSelection[], rangeToRemove: Pos): EditorSelection[] {
     const rangeStart = rangeToRemove.start.offset;
@@ -291,6 +294,28 @@ export class SplitComposer extends ComposerBase {
     })));
   }
   /* v8 ignore stop */
+
+  /**
+   * Replaces the extracted source selection (in the reopened source editor) with the residual dictated
+   * by {@link textAfterExtractionMode}: an embed, a link to the target note, or nothing.
+   */
+  private replaceSourceSelection(): void {
+    const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+
+    switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
+      case TextAfterExtractionMode.EmbedNewFile:
+        this.editor.replaceSelection(`!${markdownLink}`);
+        break;
+      case TextAfterExtractionMode.LinkToNewFile:
+        this.editor.replaceSelection(markdownLink);
+        break;
+      case TextAfterExtractionMode.None:
+        this.editor.replaceSelection('');
+        break;
+      default:
+        throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+    }
+  }
 
   /**
    * Scrolls the active source view to the current cursor line (preserving the cursor), so that after

@@ -96,9 +96,11 @@ describe('move marked selection', () => {
     expect(result.crossFileTarget.indexOf('BBB')).toBeLessThan(result.crossFileTarget.indexOf('end'));
     expect(result.crossFileSource).not.toContain('BBB');
 
-    // Same-note: the marked "one" was removed from the front and re-inserted at the end cursor.
+    // Same-note: the marked "one" was cut from the front and re-inserted at the end cursor — a move,
+    // Not a copy. It appears exactly once (previously the source text was left in place).
     expect(result.sameNote).toContain('one');
     expect(result.sameNote.startsWith('one ')).toBe(false);
     expect(result.sameNote.endsWith('one')).toBe(true);
+    expect(result.sameNote.match(/one/g)?.length).toBe(1);
   });
 });
