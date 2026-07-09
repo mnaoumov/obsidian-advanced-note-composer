@@ -41,6 +41,41 @@ If `Treat title as path` option is
 - **enabled** - the split file will be `a/b/c/d.md`. Leading and trailing spaces are trimmed.
 - **disabled** - the split file will be `a _ b _ c _ d.md`. Spaces are preserved. `/` is replaced with `_` (or another replacement string as per settings).
 
+## Move selection to another note (smart cut & paste)
+
+The core `Extract current selection...` command moves a selection into another note in one step, always
+appending/prepending it to that note. This plugin adds a decoupled, two-step **move** that lets you drop
+the selection at an exact cursor position in any note (including the same note), while still running the
+full extraction workflow (relative-link fixing, footnotes, frontmatter, templating).
+
+Commands:
+
+- **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
+  and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
+  unchanged — nothing is removed yet.
+- **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
+  cursor in the current note, using your default settings, as a single reversible operation.
+- **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
+  strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
+  text (see **Text after extraction** below).
+- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
+  without moving anything. (The built-in `Unlock active note` command also releases the lock.)
+
+While a selection is marked, a persistent notice reminds you that a move is pending until you complete
+or cancel it.
+
+Notes:
+
+- The move only removes the text from the source note when you run the paste, so footnotes, links, and
+  frontmatter are still resolved from the intact source.
+- When the target is the same note as the source, `Move marked selection here` is unavailable while the
+  cursor is inside the marked selection.
+- **Same-note moves and *Text after extraction*.** The **Text after extraction** setting decides what is
+  left in place of the extracted text (a link to the target note, an embed, or nothing). When you move
+  within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
+  moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
+  setting to same-note moves anyway, or override it per move in the advanced command.
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=advanced-note-composer).

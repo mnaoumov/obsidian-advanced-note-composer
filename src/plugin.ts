@@ -13,16 +13,20 @@ import {
 
 import type { Level } from './markdown-heading-document.ts';
 
+import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
 import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/extract-current-selection-editor-command-handler.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
+import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark-selection-to-move-editor-command-handler.ts';
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
+import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
@@ -52,6 +56,13 @@ export class Plugin extends PluginBase {
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
     const resourceLockComponent = this.resourceLockComponent;
+
+    const moveSelectionBuffer = new MoveSelectionBuffer();
+    // Release any held source-note lock when the plugin unloads so a mark never leaks a lock.
+    this.register(() => {
+      moveSelectionBuffer.clear();
+    });
+
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -90,6 +101,35 @@ export class Plugin extends PluginBase {
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
             resourceLockComponent
+          }),
+          new MarkSelectionToMoveEditorCommandHandler({
+            app: this.app,
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent
+          }),
+          new MoveMarkedSelectionHereEditorCommandHandler({
+            app: this.app,
+            consoleDebugComponent: this.consoleDebugComponent,
+            isAdvanced: false,
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent
+          }),
+          new MoveMarkedSelectionHereEditorCommandHandler({
+            app: this.app,
+            consoleDebugComponent: this.consoleDebugComponent,
+            isAdvanced: true,
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent
+          }),
+          new CancelMoveCommandHandler({
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent
           }),
           new MergeFolderCommandHandler({
             app: this.app,

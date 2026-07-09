@@ -35,6 +35,7 @@ export class PluginSettings {
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
+  public shouldApplyTextAfterExtractionToSameFile = false;
   public shouldAskBeforeMerging = true;
   public shouldAskBeforeSplitting = true;
   public shouldFixFootnotesByDefault = true;

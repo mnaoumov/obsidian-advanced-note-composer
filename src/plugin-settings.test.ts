@@ -84,6 +84,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldAddInvalidTitleToNoteAlias).toBe(true);
     expect(settings.shouldAllowOnlyCurrentFolderByDefault).toBe(false);
     expect(settings.shouldAllowSplitIntoUnresolvedPathByDefault).toBe(true);
+    expect(settings.shouldApplyTextAfterExtractionToSameFile).toBe(false);
     expect(settings.shouldAskBeforeMerging).toBe(true);
     expect(settings.shouldAskBeforeSplitting).toBe(true);
     expect(settings.shouldFixFootnotesByDefault).toBe(true);

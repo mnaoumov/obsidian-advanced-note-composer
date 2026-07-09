@@ -320,6 +320,24 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Apply text after extraction to the same file')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to apply the ');
+            appendCodeBlock(f, 'Text after extraction');
+            f.appendText(' setting when moving a selection within the same note.');
+            f.createEl('br');
+            f.appendText('When disabled, moving within the same note leaves nothing in place of the moved text, since a self-link would be meaningless.');
+            f.createEl('br');
+            f.appendText('This can still be overridden per move in ');
+            appendCodeBlock(f, 'Move marked selection here (advanced)...');
+            f.appendText('.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldApplyTextAfterExtractionToSameFile', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Should include frontmatter when splitting')
           .setDesc('Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.')
           .addToggle((toggle) => {

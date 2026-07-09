@@ -5,8 +5,10 @@ import type {
   Pos
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import { MarkdownView } from 'obsidian';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
   ComposerBaseConstructorParamsBase,
@@ -33,14 +35,25 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly isMultipleSplit: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
+
+  // The offset in the target note where the move (mark → move here) flow inserts the token. Required
+  // When `insertToken` is set (move mode); ignored otherwise.
+  readonly targetCursorOffset?: number;
+
+  // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
+  // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
+  readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
 export class SplitComposer extends ComposerBase {
-  private readonly capturedSelections: Selection[];
+  // Not `readonly`: the same-note move flow re-maps these offsets after inserting the token.
+  private capturedSelections: Selection[];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
   private readonly selectedText: string;
+  private readonly targetCursorOffset: null | number;
+  private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
   public constructor(params: SplitComposerConstructorParams) {
     super({
@@ -53,6 +66,8 @@ export class SplitComposer extends ComposerBase {
     this.isMultipleSplit = params.isMultipleSplit;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
+    this.targetCursorOffset = params.targetCursorOffset ?? null;
+    this.textAfterExtractionMode = params.textAfterExtractionMode ?? params.pluginSettingsComponent.settings.textAfterExtractionMode;
   }
 
   public async splitFile(): Promise<void> {
@@ -81,6 +96,14 @@ export class SplitComposer extends ComposerBase {
             return;
           }
 
+          // Move (mark → move here) flow: place the token at the paste cursor in the target note FIRST,
+          // Inside the transaction (so rollback captures the pre-token content). The processed content
+          // Later replaces the token by string match, so the insert point survives the source-selection
+          // Removal even when the target IS the source note.
+          if (this.insertToken !== null) {
+            await this.insertTokenIntoTargetFile(vaultTransaction);
+          }
+
           // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
           // Editor.replaceSelection below is an editor edit, not a vault op the transaction can capture,
           // So an identity process() records a restore-to-original inverse without changing the content.
@@ -92,22 +115,21 @@ export class SplitComposer extends ComposerBase {
           // The active leaf navigated to another note during the (minimizable) modal.
           await this.reopenSourceFileAndRestoreSelections();
 
-          await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
-
-          const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
-
-          switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
-            case TextAfterExtractionMode.EmbedNewFile:
-              this.editor.replaceSelection(`!${markdownLink}`);
-              break;
-            case TextAfterExtractionMode.LinkToNewFile:
-              this.editor.replaceSelection(markdownLink);
-              break;
-            case TextAfterExtractionMode.None:
-              this.editor.replaceSelection('');
-              break;
-            default:
-              throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+          if (this.isSameNoteMove()) {
+            // Same-note move: the target write is on the note the editor shows, and it collapses the
+            // Editor selection — so a later `replaceSelection` would be a no-op (leaving the source text
+            // In place, turning the move into a copy). Remove the source FIRST; the write reads the
+            // Post-removal buffer, so the removal survives. Footnote definitions need no cleanup here:
+            // Refs and defs both remain in the same note, so they stay resolved.
+            this.replaceSourceSelection();
+            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+          } else {
+            // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
+            // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
+            // Then removes from the source along with the extracted text. The target write is a different
+            // File, so it does not disturb the source editor selection.
+            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+            this.replaceSourceSelection();
           }
 
           // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
@@ -126,7 +148,7 @@ export class SplitComposer extends ComposerBase {
         return;
       }
 
-      if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
+      if (!this.isMultipleSplit && (this.insertToken !== null || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit)) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -194,6 +216,33 @@ export class SplitComposer extends ComposerBase {
     this.editor.setSelections(editorSelections);
   }
 
+  private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<void> {
+    const insertToken = ensureNonNullable(this.insertToken);
+    const offset = ensureNonNullable(this.targetCursorOffset);
+    await vaultTransaction.process(
+      this.targetFile,
+      (content) => `${content.slice(0, offset)}${insertToken}${content.slice(offset)}`
+    );
+
+    if (this.sourceFile !== this.targetFile) {
+      return;
+    }
+
+    // Same-note move: the token shifted every offset at or after the cursor. Shift the captured
+    // Selection offsets so the re-opened source selects the original text. The cursor is guaranteed
+    // Outside the selection (the paste command is unavailable inside it), so each selection shifts
+    // Wholly or not at all.
+    this.capturedSelections = this.capturedSelections.map((selection) =>
+      offset <= selection.startOffset
+        ? { endOffset: selection.endOffset + insertToken.length, startOffset: selection.startOffset + insertToken.length }
+        : selection
+    );
+  }
+
+  private isSameNoteMove(): boolean {
+    return this.insertToken !== null && this.sourceFile === this.targetFile;
+  }
+
   /* v8 ignore start -- removeSelectionRange branches are defensive for various selection/range overlap cases. */
   private removeSelectionRange(editorSelections: EditorSelection[], rangeToRemove: Pos): EditorSelection[] {
     const rangeStart = rangeToRemove.start.offset;
@@ -251,6 +300,28 @@ export class SplitComposer extends ComposerBase {
     })));
   }
   /* v8 ignore stop */
+
+  /**
+   * Replaces the extracted source selection (in the reopened source editor) with the residual dictated
+   * by {@link textAfterExtractionMode}: an embed, a link to the target note, or nothing.
+   */
+  private replaceSourceSelection(): void {
+    const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+
+    switch (this.textAfterExtractionMode) {
+      case TextAfterExtractionMode.EmbedNewFile:
+        this.editor.replaceSelection(`!${markdownLink}`);
+        break;
+      case TextAfterExtractionMode.LinkToNewFile:
+        this.editor.replaceSelection(markdownLink);
+        break;
+      case TextAfterExtractionMode.None:
+        this.editor.replaceSelection('');
+        break;
+      default:
+        throw new Error(`Invalid text after extraction mode: ${this.textAfterExtractionMode as string}`);
+    }
+  }
 
   /**
    * Scrolls the active source view to the current cursor line (preserving the cursor), so that after
