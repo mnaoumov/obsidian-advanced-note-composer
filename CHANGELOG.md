@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.32.0
+
+- feat: move selection to another note re #97 #100
+
 ## 3.31.0
 
 - feat: re #119
