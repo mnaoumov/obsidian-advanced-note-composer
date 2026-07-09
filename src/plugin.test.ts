@@ -84,12 +84,24 @@ vi.mock('./command-handlers/extract-this-heading-editor-command-handler.ts', () 
   ExtractThisHeadingEditorCommandHandler: vi.fn()
 }));
 
+vi.mock('./command-handlers/cancel-move-command-handler.ts', () => ({
+  CancelMoveCommandHandler: vi.fn()
+}));
+
+vi.mock('./command-handlers/mark-selection-to-move-editor-command-handler.ts', () => ({
+  MarkSelectionToMoveEditorCommandHandler: vi.fn()
+}));
+
 vi.mock('./command-handlers/merge-file-command-handler.ts', () => ({
   MergeFileCommandHandler: vi.fn()
 }));
 
 vi.mock('./command-handlers/merge-folder-command-handler.ts', () => ({
   MergeFolderCommandHandler: vi.fn()
+}));
+
+vi.mock('./command-handlers/move-marked-selection-here-editor-command-handler.ts', () => ({
+  MoveMarkedSelectionHereEditorCommandHandler: vi.fn()
 }));
 
 vi.mock('./command-handlers/split-note-by-headings-content-editor-command-handler.ts', () => ({
@@ -173,6 +185,26 @@ describe('Plugin', () => {
 
     const EXPECTED_ADD_CHILD_CALLS = 6;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
+  });
+
+  it('should register an unload cleanup that releases the marked selection', () => {
+    const plugin = new Plugin(createMockApp(), createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    const registerSpy = vi.spyOn(plugin, 'register');
+
+    internals.onloadImpl();
+
+    const cleanups = registerSpy.mock.calls.map((call) => call[0]);
+    expect(cleanups.length).toBeGreaterThan(0);
+    // Invoking the cleanup (as unload would) clears the empty buffer without throwing.
+    for (const cleanup of cleanups) {
+      expect(() => {
+        cleanup();
+      }).not.toThrow();
+    }
   });
 });
 

@@ -5,8 +5,10 @@ import type {
   Pos
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import { MarkdownView } from 'obsidian';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
   ComposerBaseConstructorParamsBase,
@@ -33,14 +35,20 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly isMultipleSplit: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
+
+  // The offset in the target note where the move (mark → move here) flow inserts the token. Required
+  // When `insertToken` is set (move mode); ignored otherwise.
+  readonly targetCursorOffset?: number;
 }
 
 export class SplitComposer extends ComposerBase {
-  private readonly capturedSelections: Selection[];
+  // Not `readonly`: the same-note move flow re-maps these offsets after inserting the token.
+  private capturedSelections: Selection[];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
   private readonly selectedText: string;
+  private readonly targetCursorOffset: null | number;
 
   public constructor(params: SplitComposerConstructorParams) {
     super({
@@ -53,6 +61,7 @@ export class SplitComposer extends ComposerBase {
     this.isMultipleSplit = params.isMultipleSplit;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
+    this.targetCursorOffset = params.targetCursorOffset ?? null;
   }
 
   public async splitFile(): Promise<void> {
@@ -79,6 +88,14 @@ export class SplitComposer extends ComposerBase {
             // Post-split open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
             this.abortController.abort();
             return;
+          }
+
+          // Move (mark → move here) flow: place the token at the paste cursor in the target note FIRST,
+          // Inside the transaction (so rollback captures the pre-token content). The processed content
+          // Later replaces the token by string match, so the insert point survives the source-selection
+          // Removal even when the target IS the source note.
+          if (this.insertToken !== null) {
+            await this.insertTokenIntoTargetFile(vaultTransaction);
           }
 
           // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
@@ -126,7 +143,7 @@ export class SplitComposer extends ComposerBase {
         return;
       }
 
-      if (!this.isMultipleSplit && this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit) {
+      if (!this.isMultipleSplit && (this.insertToken !== null || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit)) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
@@ -192,6 +209,29 @@ export class SplitComposer extends ComposerBase {
     }
 
     this.editor.setSelections(editorSelections);
+  }
+
+  private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<void> {
+    const insertToken = ensureNonNullable(this.insertToken);
+    const offset = ensureNonNullable(this.targetCursorOffset);
+    await vaultTransaction.process(
+      this.targetFile,
+      (content) => `${content.slice(0, offset)}${insertToken}${content.slice(offset)}`
+    );
+
+    if (this.sourceFile !== this.targetFile) {
+      return;
+    }
+
+    // Same-note move: the token shifted every offset at or after the cursor. Shift the captured
+    // Selection offsets so the re-opened source selects the original text. The cursor is guaranteed
+    // Outside the selection (the paste command is unavailable inside it), so each selection shifts
+    // Wholly or not at all.
+    this.capturedSelections = this.capturedSelections.map((selection) =>
+      offset <= selection.startOffset
+        ? { endOffset: selection.endOffset + insertToken.length, startOffset: selection.startOffset + insertToken.length }
+        : selection
+    );
   }
 
   /* v8 ignore start -- removeSelectionRange branches are defensive for various selection/range overlap cases. */

@@ -40,12 +40,13 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   - `headings.ts` — helpers to extract a heading from editor selection/line.
   - `markdown-heading-document.ts` — parses markdown into a heading tree and merges documents heading-by-heading.
   - `insert-mode.ts` — `InsertMode` enum (append/prepend).
+  - `move-selection-buffer.ts` — `MoveSelectionBuffer`, the transient holder for the "mark selection to move" feature (source note + captured selection + held source-note lock); shared by the mark/move/cancel command handlers.
   - `filename-validation.ts` — regexes for invalid filename characters / trailing dots-or-spaces.
   - `templater.ts` — type augmentation for the optional Templater plugin API.
-  - `command-handlers/` — one class per command (merge file/folder, swap file/folder, extract before/after cursor/current selection/this heading, split-by-headings), each extending an `obsidian-dev-utils` command-handler base.
-  - `composers/` — core merge/split engine: `ComposerBase` (frontmatter merge, footnote/backlink/link fixing, templating) with `MergeComposer` and `SplitComposer` subclasses.
+  - `command-handlers/` — one class per command (merge file/folder, swap file/folder, extract before/after cursor/current selection/this heading, split-by-headings), each extending an `obsidian-dev-utils` command-handler base. The "smart cut & paste" feature adds `mark-selection-to-move`, `move-marked-selection-here` (one class, registered twice via an `isAdvanced` flag for the default and advanced-options commands), and `cancel-move` (a `GlobalCommandHandler`).
+  - `composers/` — core merge/split engine: `ComposerBase` (frontmatter merge, footnote/backlink/link fixing, templating) with `MergeComposer` and `SplitComposer` subclasses. `ComposerBase` also supports a move mode via an `insertToken` (content replaces the token at the paste cursor instead of appending/prepending); `SplitComposer.splitFile` inserts that token into the target and re-maps captured offsets for same-note moves.
   - `item-selectors/` — resolve a chosen suggestion into a concrete target file: `ItemSelectorBase`, `MergeItemSelector`, `SplitItemSelector`.
-  - `modals/` — suggestion/confirmation UI: `SuggestModalBase` and the merge/split/swap file/folder modals. The instruction-bar builder (`SuggestModalCommandBuilder`) now comes from `obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder`.
+  - `modals/` — suggestion/confirmation UI: `SuggestModalBase` and the merge/split/swap file/folder modals, plus `paste-options-modal.ts` (the advanced-move options modal + `MoveOptions`). The instruction-bar builder (`SuggestModalCommandBuilder`) now comes from `obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder`.
   - `styles/` — `main.scss` plus the SCSS module type declaration.
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
 

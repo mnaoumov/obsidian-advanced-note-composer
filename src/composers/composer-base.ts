@@ -55,6 +55,12 @@ export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
   readonly insertMode?: InsertMode;
+
+  /**
+   * When set, the content is inserted by replacing this unique token in the target note (placed at the
+   * paste cursor) instead of being appended/prepended. Used by the move (mark → move here) flow.
+   */
+  readonly insertToken?: string | undefined;
   readonly isNewTargetFile: boolean;
   readonly pluginNoticeComponent: PluginNoticeComponent;
 
@@ -105,6 +111,12 @@ export abstract class ComposerBase {
    * operation owns its own transaction via {@link runLockedTransaction}.
    */
   protected readonly injectedVaultTransaction: null | VaultTransaction;
+
+  /**
+   * When set, {@link insertContent} inserts by replacing this token in the target note (see
+   * {@link ComposerBaseConstructorParamsBase.insertToken}); `null` for the append/prepend flow.
+   */
+  protected readonly insertToken: null | string;
   protected readonly isNewTargetFile: boolean;
 
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -130,6 +142,7 @@ export abstract class ComposerBase {
     this.injectedVaultTransaction = params.vaultTransaction ?? null;
 
     this.insertMode = params.insertMode ?? InsertMode.Append;
+    this.insertToken = params.insertToken ?? null;
     this.sourceFile = params.sourceFile;
     this.shouldIncludeFrontmatter = params.shouldIncludeFrontmatter;
     this.shouldFixFootnotes = params.shouldFixFootnotes ?? params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
@@ -491,6 +504,10 @@ export abstract class ComposerBase {
    * @returns The resulting content.
    */
   private insertContent(existingContent: string, contentToInsert: string): string {
+    if (this.insertToken !== null) {
+      // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
+      return existingContent.replace(this.insertToken, contentToInsert);
+    }
     if (this.insertMode === InsertMode.Prepend) {
       const frontmatterInfo = getFrontMatterInfo(existingContent);
       return `${existingContent.slice(0, frontmatterInfo.contentStart)}${contentToInsert}${existingContent.slice(frontmatterInfo.contentStart)}`;
@@ -502,11 +519,12 @@ export abstract class ComposerBase {
     if (targetContentToInsert.startsWith('---\n')) {
       targetContentToInsert = `\n${targetContentToInsert}`;
     }
-    if (!this.shouldMergeHeadings) {
+    if (!this.shouldMergeHeadings || this.insertToken !== null) {
       // Route the write through the transaction (which captures the old content and registers the
       // Restore) so a merge/split can be rolled back. This replicates FileManager.insertIntoFile's
       // Frontmatter-aware positioning in insertContent rather than calling it directly, because the
-      // Transaction must own the write to be able to reverse it.
+      // Transaction must own the write to be able to reverse it. The move (insertToken) flow always
+      // Takes this path — it is a positional insert at the token, not a heading merge.
       await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent(targetFileContent, targetContentToInsert));
       return;
     }

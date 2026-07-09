@@ -10,7 +10,10 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import {
+  castTo,
+  normalizeOptionalProperties
+} from 'obsidian-dev-utils/object-utils';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -48,12 +51,14 @@ interface CreateComposerOptions {
   readonly capturedSelections?: Selection[];
   readonly consoleDebugComponent?: ConsoleDebugComponent;
   readonly editor?: Editor;
+  readonly insertToken?: string;
   readonly isMultipleSplit?: boolean;
   readonly isNewTargetFile?: boolean;
   readonly pluginNoticeComponent?: PluginNoticeComponent;
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorOffset?: number;
 }
 
 interface EditorDoubleOptions {
@@ -62,6 +67,12 @@ interface EditorDoubleOptions {
 
 interface MockPosition {
   readonly ch: number;
+}
+
+interface OptionalComposerParams {
+  readonly insertToken?: string;
+  readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorOffset?: number;
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
@@ -117,7 +128,6 @@ afterEach(() => {
 
 function createComposer(options?: CreateComposerOptions): SplitComposer {
   const editor = options?.editor ?? createEditorDouble();
-  const shouldIncludeFrontmatter = options?.shouldIncludeFrontmatter;
   return new SplitComposer({
     app,
     capturedSelections: options?.capturedSelections ?? getSelections(editor),
@@ -127,16 +137,12 @@ function createComposer(options?: CreateComposerOptions): SplitComposer {
     isMultipleSplit: options?.isMultipleSplit ?? false,
     isNewTargetFile: options?.isNewTargetFile ?? true,
     pluginNoticeComponent: options?.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
-    pluginSettingsComponent: createPluginSettingsComponentStub(
-      options?.settingsOverrides
-    ),
+    pluginSettingsComponent: createPluginSettingsComponentStub(options?.settingsOverrides),
     resourceLockComponent,
     selectedText: options?.selectedText ?? 'selected text',
     sourceFile: getSourceFile(),
     targetFile: getTargetFile(),
-    ...(shouldIncludeFrontmatter === undefined
-      ? {}
-      : { shouldIncludeFrontmatter })
+    ...optionalComposerParams(options)
   });
 }
 
@@ -194,6 +200,17 @@ function getSourceFile(): TFile {
 
 function getTargetFile(): TFile {
   return ensureNonNullable(app.vault.getFileByPath('target.md'));
+}
+
+// Only the composer params that must be omitted (not passed as `undefined`) under
+// `exactOptionalPropertyTypes` when the test does not set them. Extracted to keep `createComposer`
+// Below the cyclomatic-complexity limit.
+function optionalComposerParams(options?: CreateComposerOptions): OptionalComposerParams {
+  return normalizeOptionalProperties<OptionalComposerParams>({
+    insertToken: options?.insertToken,
+    shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
+    targetCursorOffset: options?.targetCursorOffset
+  });
 }
 
 describe('getSelections', () => {
@@ -501,6 +518,117 @@ describe('splitFile', () => {
 
     // No leaf was ever activated, so there is no active file.
     expect(app.workspace.getActiveFile()).toBeNull();
+  });
+});
+
+describe('splitFile move mode', () => {
+  it('should insert the moved content at the cursor token for a cross-file move and open the target', async () => {
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor,
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        // `shouldMergeHeadingsByDefault: true` proves the token flow still takes the positional-insert
+        // Path (it never heading-merges), and KeepOriginalFrontmatter isolates the inserted content.
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        shouldMergeHeadingsByDefault: true,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).not.toContain('TK');
+    expect(targetContent.indexOf('MOVED')).toBe(7);
+    expect(editor.replaceSelection).toHaveBeenCalledWith('');
+    expect(app.workspace.getActiveFile()?.path).toBe('target.md');
+  });
+
+  it('should shift the captured selection offsets by the token length for a same-note move before the cursor', async () => {
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+    const sourceFile = getSourceFile();
+    const composer = new SplitComposer({
+      app,
+      capturedSelections: [{ endOffset: 11, startOffset: 7 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      insertToken: 'TK',
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: createPluginNoticeComponentStub(),
+      pluginSettingsComponent: createPluginSettingsComponentStub({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }),
+      resourceLockComponent,
+      selectedText: 'MOVED',
+      sourceFile,
+      targetCursorOffset: 0,
+      targetFile: sourceFile
+    });
+
+    await composer.splitFile();
+
+    // Token 'TK' (length 2) inserted at offset 0 shifts the captured selection [7,11) to [9,13), so the
+    // Re-opened source restores the shifted range and removes the originally-marked text.
+    expect(editor.setSelections).toHaveBeenCalledWith([
+      { anchor: { ch: 9, line: 0 }, head: { ch: 13, line: 0 } }
+    ]);
+    const content = await app.vault.adapter.read('source.md');
+    expect(content.indexOf('MOVED')).toBe(0);
+    expect(content).not.toContain('TK');
+  });
+
+  it('should not shift the captured selection offsets for a same-note move after the cursor', async () => {
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+    const sourceFile = getSourceFile();
+    const composer = new SplitComposer({
+      app,
+      capturedSelections: [{ endOffset: 6, startOffset: 0 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      insertToken: 'TK',
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: createPluginNoticeComponentStub(),
+      pluginSettingsComponent: createPluginSettingsComponentStub({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }),
+      resourceLockComponent,
+      selectedText: 'MOVED',
+      sourceFile,
+      targetCursorOffset: 11,
+      targetFile: sourceFile
+    });
+
+    await composer.splitFile();
+
+    // The cursor (offset 11) is after the selection [0,6), so the offsets are restored unchanged.
+    expect(editor.setSelections).toHaveBeenCalledWith([
+      { anchor: { ch: 0, line: 0 }, head: { ch: 6, line: 0 } }
+    ]);
+    const content = await app.vault.adapter.read('source.md');
+    expect(content.indexOf('MOVED')).toBe(11);
   });
 });
 
