@@ -97,10 +97,11 @@ describe('move marked selection', () => {
     expect(result.crossFileSource).not.toContain('BBB');
 
     // Same-note: the marked "one" was cut from the front and re-inserted at the end cursor — a move,
-    // Not a copy. It appears exactly once (previously the source text was left in place).
+    // Not a copy. It appears exactly once, and (with the setting off) leaves no meaningless self-link.
     expect(result.sameNote).toContain('one');
     expect(result.sameNote.startsWith('one ')).toBe(false);
     expect(result.sameNote.endsWith('one')).toBe(true);
     expect(result.sameNote.match(/one/g)?.length).toBe(1);
+    expect(result.sameNote).not.toContain('[[move-it-same');
   });
 });

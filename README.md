@@ -56,7 +56,8 @@ Commands:
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
   cursor in the current note, using your default settings, as a single reversible operation.
 - **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
-  strategy and whether to fix footnotes / include frontmatter.
+  strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
+  text (see **Text after extraction** below).
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
   without moving anything. (The built-in `Unlock active note` command also releases the lock.)
 
@@ -66,6 +67,11 @@ Notes:
   frontmatter are still resolved from the intact source.
 - When the target is the same note as the source, `Move marked selection here` is unavailable while the
   cursor is inside the marked selection.
+- **Same-note moves and *Text after extraction*.** The **Text after extraction** setting decides what is
+  left in place of the extracted text (a link to the target note, an embed, or nothing). When you move
+  within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
+  moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
+  setting to same-note moves anyway, or override it per move in the advanced command.
 
 ## Installation
 

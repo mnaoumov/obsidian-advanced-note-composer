@@ -17,6 +17,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { openPasteOptionsModal } from '../modals/paste-options-modal.ts';
+import { TextAfterExtractionMode } from '../plugin-settings.ts';
 
 interface MoveMarkedSelectionHereEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -110,7 +111,14 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends EditorCommandHa
       return;
     }
 
-    const options = await this.resolveOptions();
+    const isSameFile = sourceFile.path === targetFile.path;
+    // A same-note move would otherwise leave a self-link (or self-embed) in place of the moved text,
+    // Which is meaningless — so default to leaving nothing unless the user opted in via settings.
+    const defaultTextAfterExtractionMode = isSameFile && !this.pluginSettingsComponent.settings.shouldApplyTextAfterExtractionToSameFile
+      ? TextAfterExtractionMode.None
+      : this.pluginSettingsComponent.settings.textAfterExtractionMode;
+
+    const options = await this.resolveOptions(defaultTextAfterExtractionMode);
     if (!options) {
       return;
     }
@@ -141,7 +149,8 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends EditorCommandHa
       shouldIncludeFrontmatter: options.shouldIncludeFrontmatter,
       sourceFile,
       targetCursorOffset,
-      targetFile
+      targetFile,
+      textAfterExtractionMode: options.textAfterExtractionMode
     });
     await composer.splitFile();
   }
@@ -154,12 +163,13 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends EditorCommandHa
     return true;
   }
 
-  private async resolveOptions(): Promise<MoveOptions | null> {
+  private async resolveOptions(defaultTextAfterExtractionMode: TextAfterExtractionMode): Promise<MoveOptions | null> {
     const settings = this.pluginSettingsComponent.settings;
     const defaultOptions: MoveOptions = {
       frontmatterMergeStrategy: settings.defaultFrontmatterMergeStrategy,
       shouldFixFootnotes: settings.shouldFixFootnotesByDefault,
-      shouldIncludeFrontmatter: settings.shouldIncludeFrontmatterWhenSplittingByDefault
+      shouldIncludeFrontmatter: settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+      textAfterExtractionMode: defaultTextAfterExtractionMode
     };
     if (!this.isAdvanced) {
       return defaultOptions;

@@ -39,6 +39,10 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // The offset in the target note where the move (mark → move here) flow inserts the token. Required
   // When `insertToken` is set (move mode); ignored otherwise.
   readonly targetCursorOffset?: number;
+
+  // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
+  // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
+  readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
 export class SplitComposer extends ComposerBase {
@@ -49,6 +53,7 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
   private readonly selectedText: string;
   private readonly targetCursorOffset: null | number;
+  private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
   public constructor(params: SplitComposerConstructorParams) {
     super({
@@ -62,6 +67,7 @@ export class SplitComposer extends ComposerBase {
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
+    this.textAfterExtractionMode = params.textAfterExtractionMode ?? params.pluginSettingsComponent.settings.textAfterExtractionMode;
   }
 
   public async splitFile(): Promise<void> {
@@ -302,7 +308,7 @@ export class SplitComposer extends ComposerBase {
   private replaceSourceSelection(): void {
     const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
-    switch (this.pluginSettingsComponent.settings.textAfterExtractionMode) {
+    switch (this.textAfterExtractionMode) {
       case TextAfterExtractionMode.EmbedNewFile:
         this.editor.replaceSelection(`!${markdownLink}`);
         break;
@@ -313,7 +319,7 @@ export class SplitComposer extends ComposerBase {
         this.editor.replaceSelection('');
         break;
       default:
-        throw new Error(`Invalid text after extraction mode: ${this.pluginSettingsComponent.settings.textAfterExtractionMode as string}`);
+        throw new Error(`Invalid text after extraction mode: ${this.textAfterExtractionMode as string}`);
     }
   }
 

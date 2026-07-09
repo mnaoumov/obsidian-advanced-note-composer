@@ -6,7 +6,10 @@ import {
   Setting
 } from 'obsidian';
 
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  FrontmatterMergeStrategy,
+  TextAfterExtractionMode
+} from '../plugin-settings.ts';
 
 /**
  * The options that apply to a `Move marked selection here` operation. The target note and insert
@@ -16,6 +19,7 @@ export interface MoveOptions {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
+  readonly textAfterExtractionMode: TextAfterExtractionMode;
 }
 
 /**
@@ -89,6 +93,22 @@ class PasteOptionsModal extends Modal {
         });
         dropdown.setValue(this.options.frontmatterMergeStrategy).onChange((value) => {
           this.options = { ...this.options, frontmatterMergeStrategy: value as FrontmatterMergeStrategy };
+        });
+      });
+
+    new Setting(this.contentEl)
+      .setName('Text after extraction')
+      .setDesc('What to leave in place of the moved text in the source note.')
+      .addDropdown((dropdown) => {
+        dropdown.addOptions({
+          /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+          [TextAfterExtractionMode.LinkToNewFile]: 'Link to new file',
+          [TextAfterExtractionMode.EmbedNewFile]: 'Embed new file',
+          [TextAfterExtractionMode.None]: 'None'
+          /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+        });
+        dropdown.setValue(this.options.textAfterExtractionMode).onChange((value) => {
+          this.options = { ...this.options, textAfterExtractionMode: value as TextAfterExtractionMode };
         });
       });
 

@@ -29,7 +29,10 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { openPasteOptionsModal } from '../modals/paste-options-modal.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  FrontmatterMergeStrategy,
+  TextAfterExtractionMode
+} from '../plugin-settings.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './move-marked-selection-here-editor-command-handler.ts';
 
 interface CapturedComposerArgs {
@@ -43,6 +46,7 @@ interface CapturedComposerArgs {
   readonly sourceFile: TFile;
   readonly targetCursorOffset: number;
   readonly targetFile: TFile;
+  readonly textAfterExtractionMode: TextAfterExtractionMode;
 }
 
 interface TestableHandler {
@@ -92,6 +96,8 @@ interface CreateMockParamsOptions {
   readonly isPathIgnored?: boolean;
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
   readonly shouldAddCommandsToSubmenu?: boolean;
+  readonly shouldApplyTextAfterExtractionToSameFile?: boolean;
+  readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
 interface HandlerParams {
@@ -152,8 +158,10 @@ function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams 
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: options.shouldAddCommandsToSubmenu ?? true,
+        shouldApplyTextAfterExtractionToSameFile: options.shouldApplyTextAfterExtractionToSameFile ?? false,
         shouldFixFootnotesByDefault: true,
-        shouldIncludeFrontmatterWhenSplittingByDefault: false
+        shouldIncludeFrontmatterWhenSplittingByDefault: false,
+        textAfterExtractionMode: options.textAfterExtractionMode ?? TextAfterExtractionMode.LinkToNewFile
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -317,8 +325,43 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       expect(args.sourceFile).toBe(resolvedSource);
       expect(args.targetCursorOffset).toBe(42);
       expect(args.targetFile).toBe(target);
+      expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
       expect(mockSplitFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('should default text after extraction to None for a same-note move when the setting is disabled', async () => {
+      const source = createMockFile('source.md');
+      const resolvedSource = createMockFile('source.md');
+      const buffer = createMarkedBuffer(source);
+      const params = createMockParams({
+        getFileByPathResult: resolvedSource,
+        moveSelectionBuffer: buffer,
+        shouldApplyTextAfterExtractionToSameFile: false,
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
+      });
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
+
+      await handler.executeEditor(createMockEditor(42), createMockCtx(createMockFile('source.md')));
+
+      expect(capturedComposerArgs().textAfterExtractionMode).toBe(TextAfterExtractionMode.None);
+    });
+
+    it('should keep the configured text after extraction for a same-note move when the setting is enabled', async () => {
+      const source = createMockFile('source.md');
+      const resolvedSource = createMockFile('source.md');
+      const buffer = createMarkedBuffer(source);
+      const params = createMockParams({
+        getFileByPathResult: resolvedSource,
+        moveSelectionBuffer: buffer,
+        shouldApplyTextAfterExtractionToSameFile: true,
+        textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile
+      });
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
+
+      await handler.executeEditor(createMockEditor(42), createMockCtx(createMockFile('source.md')));
+
+      expect(capturedComposerArgs().textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
     });
 
     it('should prompt for options and move with them when advanced', async () => {
@@ -330,7 +373,8 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const chosen: MoveOptions = {
         frontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         shouldFixFootnotes: false,
-        shouldIncludeFrontmatter: true
+        shouldIncludeFrontmatter: true,
+        textAfterExtractionMode: TextAfterExtractionMode.EmbedNewFile
       };
       mockOpenPasteOptionsModal.mockResolvedValue(chosen);
 
@@ -342,6 +386,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       expect(args.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.KeepOriginalFrontmatter);
       expect(args.shouldFixFootnotes).toBe(false);
       expect(args.shouldIncludeFrontmatter).toBe(true);
+      expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
       expect(buffer.hasMark()).toBe(false);
     });
 
