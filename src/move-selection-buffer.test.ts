@@ -105,4 +105,33 @@ describe('MoveSelectionBuffer', () => {
     const buffer = new MoveSelectionBuffer();
     expect(buffer.isCursorInsideMarkedSelection(createMockEditor(7))).toBe(false);
   });
+
+  describe('isRangeOverlappingMarkedSelection', () => {
+    function markedBuffer(): MoveSelectionBuffer {
+      const buffer = new MoveSelectionBuffer();
+      buffer.mark(createMarkedSelection({ capturedSelections: [{ endOffset: 10, startOffset: 5 }] }));
+      return buffer;
+    }
+
+    it('reports overlap when a range intersects the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection(7, 9)).toBe(true);
+    });
+
+    it('reports no overlap for a range entirely before the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection(1, 4)).toBe(false);
+    });
+
+    it('reports no overlap for a range entirely after the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection(12, 15)).toBe(false);
+    });
+
+    it('treats a range touching a boundary as no overlap', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection(2, 5)).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection(10, 12)).toBe(false);
+    });
+
+    it('reports no overlap when nothing is marked', () => {
+      expect(new MoveSelectionBuffer().isRangeOverlappingMarkedSelection(7, 9)).toBe(false);
+    });
+  });
 });

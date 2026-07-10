@@ -59,6 +59,7 @@ interface CreateComposerOptions {
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
 
@@ -73,6 +74,7 @@ interface MockPosition {
 interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
 
@@ -218,6 +220,7 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
   return normalizeOptionalProperties<OptionalComposerParams>({
     insertToken: options?.insertToken,
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
+    targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset
   });
 }
@@ -556,6 +559,30 @@ describe('splitFile move mode', () => {
     expect(targetContent.indexOf('MOVED')).toBe(7);
     expect(editor.replaceSelection).toHaveBeenCalledWith('');
     expect(app.workspace.getActiveFile()?.path).toBe('target.md');
+  });
+
+  it('should replace the target selection range with the moved content (paste-over-selection)', async () => {
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor,
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      // 'target body' -> replace [7, 11) ('body') with the token, so the moved content overwrites it.
+      targetCursorEndOffset: 11,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toBe('target MOVED');
+    expect(targetContent).not.toContain('body');
   });
 
   it('should shift the captured selection offsets by the token length for a same-note move before the cursor', async () => {

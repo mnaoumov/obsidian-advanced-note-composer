@@ -12,6 +12,8 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
+import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
@@ -22,6 +24,8 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly moveNoticeComponent: MoveNoticeComponent;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -31,6 +35,8 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private headingInfo?: HeadingInfo;
+  private readonly moveNoticeComponent: MoveNoticeComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -45,6 +51,8 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.moveNoticeComponent = params.moveNoticeComponent;
+    this.moveSelectionBuffer = params.moveSelectionBuffer;
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
@@ -94,6 +102,8 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      moveNoticeComponent: this.moveNoticeComponent,
+      moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
       sourceFile: file

@@ -29,6 +29,7 @@ import {
 
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { MoveNoticeComponent } from './move-notice-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import { PrismComponent } from './prism-component.ts';
@@ -102,6 +103,14 @@ vi.mock('./command-handlers/merge-folder-command-handler.ts', () => ({
 
 vi.mock('./command-handlers/move-marked-selection-here-editor-command-handler.ts', () => ({
   MoveMarkedSelectionHereEditorCommandHandler: vi.fn()
+}));
+
+vi.mock('./command-handlers/move-marked-selection-to-edge-editor-command-handler.ts', () => ({
+  MoveMarkedSelectionToEdgeEditorCommandHandler: vi.fn()
+}));
+
+vi.mock('./move-notice-component.ts', () => ({
+  MoveNoticeComponent: vi.fn()
 }));
 
 vi.mock('./command-handlers/split-note-by-headings-content-editor-command-handler.ts', () => ({
@@ -182,8 +191,9 @@ describe('Plugin', () => {
     expect(CommandHandlerComponent).toHaveBeenCalledOnce();
     expect(PrismComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
+    expect(MoveNoticeComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 6;
+    const EXPECTED_ADD_CHILD_CALLS = 7;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 

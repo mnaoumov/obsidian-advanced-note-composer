@@ -20,12 +20,14 @@ import {
   vi
 } from 'vitest';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './extract-after-cursor-editor-command-handler.ts';
 
@@ -65,6 +67,8 @@ const MockSplitComposer = vi.mocked(SplitComposer);
 interface HandlerParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly moveNoticeComponent: MoveNoticeComponent;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -93,6 +97,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn()
     }),
+    moveNoticeComponent: strictProxy<MoveNoticeComponent>({}),
+    moveSelectionBuffer: new MoveSelectionBuffer(),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({

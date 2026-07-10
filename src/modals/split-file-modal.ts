@@ -3,6 +3,7 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import {
   App,
+  ButtonComponent,
   Editor,
   Keymap,
   Modal,
@@ -16,8 +17,11 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { Selection } from '../composers/composer-base.ts';
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
+import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   Item,
@@ -29,6 +33,7 @@ import { getSelections } from '../composers/split-composer.ts';
 import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
+import { markSelectionToMove } from '../mark-selection-to-move.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
@@ -43,6 +48,18 @@ interface PrepareForSplitFileParams {
   readonly app: App;
   readonly editor: Editor;
   readonly heading?: string;
+
+  /**
+   * The marked-selection notice component. Wired together with {@link PrepareForSplitFileParams.moveSelectionBuffer}
+   * to enable the modal's "switch to smart cut & paste" action; omit to disable it.
+   */
+  readonly moveNoticeComponent?: MoveNoticeComponent;
+
+  /**
+   * The marked-selection buffer. Wired together with {@link PrepareForSplitFileParams.moveNoticeComponent}
+   * to enable the modal's "switch to smart cut & paste" action; omit to disable it.
+   */
+  readonly moveSelectionBuffer?: MoveSelectionBuffer;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
   readonly shouldSkipModal?: boolean;
@@ -64,6 +81,11 @@ interface PrepareForSplitFileResult {
 }
 
 interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {
+  /**
+   * Whether the modal offers the "switch to smart cut & paste" action (only when the caller wired the
+   * marked-selection buffer and notice).
+   */
+  readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
   readonly heading: string;
   readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
@@ -71,7 +93,13 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
 
 /* v8 ignore stop */
 
-interface SplitFileModalResult {
+type SplitFileModalResult = SplitFileModalSplitResult | SplitFileModalSwitchToSmartCutResult;
+
+/**
+ * The user chose a target and confirmed a normal split/extract.
+ */
+interface SplitFileModalSplitResult {
+  readonly action: 'split';
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly inputValue: string;
   readonly insertMode: InsertMode;
@@ -83,6 +111,15 @@ interface SplitFileModalResult {
   readonly shouldIncludeFrontmatter: boolean;
   readonly shouldMergeHeadings: boolean;
   readonly shouldTreatTitleAsPath: boolean;
+}
+
+/**
+ * The user chose to switch to "smart cut & paste": mark the selection to move and open the highlighted
+ * target note (when it is an existing file) instead of splitting.
+ */
+interface SplitFileModalSwitchToSmartCutResult {
+  readonly action: 'switch-to-smart-cut';
+  readonly targetFile: null | TFile;
 }
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
@@ -222,6 +259,7 @@ class ConfirmDialogModal extends Modal {
 
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
+  private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
   private readonly heading: string;
@@ -238,6 +276,7 @@ class SplitFileModal extends SuggestModalBase {
   public constructor(params: SplitFileModalConstructorParams) {
     super(params);
 
+    this.canSwitchToSmartCut = params.canSwitchToSmartCut;
     this.editor = params.editor;
     this.heading = params.heading;
     this.promiseResolve = params.promiseResolve;
@@ -274,6 +313,7 @@ class SplitFileModal extends SuggestModalBase {
     super.onOpen();
     this.inputEl.value = this.heading;
     this.updateSuggestions();
+    this.renderSwitchToSmartCutButton();
   }
 
   public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
@@ -284,6 +324,7 @@ class SplitFileModal extends SuggestModalBase {
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
   protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
     this.promiseResolve({
+      action: 'split',
       frontmatterMergeStrategy: this.frontmatterMergeStrategy,
       inputValue: this.inputEl.value,
       insertMode: getInsertModeFromEvent(evt),
@@ -330,6 +371,18 @@ class SplitFileModal extends SuggestModalBase {
       },
       purpose: 'to dismiss'
     });
+
+    if (this.canSwitchToSmartCut) {
+      builder.addKeyboardCommand({
+        key: 's',
+        modifiers: ['Alt'],
+        onKey: () => {
+          this.switchToSmartCut();
+          return false;
+        },
+        purpose: 'to switch to smart cut & paste'
+      });
+    }
 
     builder.addCheckbox({
       key: '1',
@@ -459,6 +512,36 @@ class SplitFileModal extends SuggestModalBase {
     }
     return true;
   }
+
+  /**
+   * Closes the modal and resolves with a "switch to smart cut & paste" result carrying the highlighted
+   * target note (when it is an existing file). The caller marks the selection to move and opens that
+   * note.
+   */
+  private switchToSmartCut(): void {
+    const selectedItem = this.chooser.values?.[this.chooser.selectedItem] ?? null;
+    this.isSelected = true;
+    this.promiseResolve({
+      action: 'switch-to-smart-cut',
+      targetFile: selectedItem?.file ?? null
+    });
+    this.close();
+  }
+
+  /**
+   * Adds a "Switch to smart cut & paste" button below the picker (mirroring the `Alt+S` shortcut). The
+   * button is always shown but disabled when switching is unavailable.
+   */
+  private renderSwitchToSmartCutButton(): void {
+    const buttonContainerEl = this.modalEl.createDiv('advanced-note-composer-switch-to-smart-cut');
+    new ButtonComponent(buttonContainerEl)
+      .setButtonText('Switch to smart cut & paste')
+      .setTooltip('Mark the selection to move and open the highlighted note (Alt+S)')
+      .setDisabled(!this.canSwitchToSmartCut)
+      .onClick(() => {
+        this.switchToSmartCut();
+      });
+  }
 }
 
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
@@ -482,8 +565,13 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }
   heading ??= extractHeading(params.editor);
 
+  // The "switch to smart cut" action is offered only when the caller wired both the marked-selection
+  // Buffer and its notice component.
+  const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer);
+
   const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
     ? {
+      action: 'split',
       frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
       inputValue: heading,
       insertMode: InsertMode.Append,
@@ -499,6 +587,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
       const modal = new SplitFileModal({
         ...params,
+        canSwitchToSmartCut,
         heading,
         promiseResolve
       });
@@ -506,6 +595,24 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     });
 
   if (!splitFileModalResult) {
+    return null;
+  }
+
+  if (splitFileModalResult.action === 'switch-to-smart-cut') {
+    // Behave as if `Mark selection to move` had been invoked on the source selection, then open the
+    // Highlighted target note so the user can position the caret and paste. `canSwitchToSmartCut`
+    // Guarantees both collaborators are present.
+    markSelectionToMove({
+      capturedSelections,
+      moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
+      moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
+      resourceLockComponent: params.resourceLockComponent,
+      selectedText,
+      sourceFile: params.sourceFile
+    });
+    if (splitFileModalResult.targetFile) {
+      await params.app.workspace.getLeaf(false).openFile(splitFileModalResult.targetFile, { active: true });
+    }
     return null;
   }
 

@@ -41,15 +41,20 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends MoveMarkedSelec
     super({
       ...params,
       id: params.isAdvanced ? 'move-marked-selection-here-advanced' : 'move-marked-selection-here',
-      name: params.isAdvanced ? 'Move marked selection here (advanced)...' : 'Move marked selection here'
+      name: params.isAdvanced ? 'Smart cut & paste: Move marked selection here (advanced)...' : 'Smart cut & paste: Move marked selection here'
     });
     this.isAdvanced = params.isAdvanced;
   }
 
   protected override resolveInsertion(editor: Editor): Insertion {
+    // Paste semantics: when the target has an active selection, the moved content replaces it (the
+    // `[from, to]` range); with no selection, `from === to` collapses to a plain insertion at the caret.
+    const from = editor.posToOffset(editor.getCursor('from'));
+    const to = editor.posToOffset(editor.getCursor('to'));
     return {
       insertMode: InsertMode.Append,
-      targetCursorOffset: editor.posToOffset(editor.getCursor())
+      targetCursorEndOffset: to,
+      targetCursorOffset: from
     };
   }
 

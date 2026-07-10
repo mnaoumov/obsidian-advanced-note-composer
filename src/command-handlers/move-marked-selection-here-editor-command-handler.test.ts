@@ -2,9 +2,11 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
+  MarkdownView,
   Notice,
   TFile,
-  Vault
+  Vault,
+  Workspace
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -45,14 +47,21 @@ interface CapturedComposerArgs {
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
   readonly sourceFile: TFile;
+  readonly targetCursorEndOffset: number;
   readonly targetCursorOffset: number;
   readonly targetFile: TFile;
   readonly textAfterExtractionMode: TextAfterExtractionMode;
 }
 
+interface MockPosition {
+  readonly ch: number;
+}
+
 interface TestableHandler {
   canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  canExecuteInActiveEditor(): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  executeInActiveEditor(): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
@@ -92,6 +101,7 @@ const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 10, startOffset: 5 }];
 const SOURCE_MTIME = 1000;
 
 interface CreateMockParamsOptions {
+  readonly activeView?: MarkdownView | null;
   readonly getFileByPathResult?: null | TFile;
   readonly isAdvanced?: boolean;
   readonly isPathIgnored?: boolean;
@@ -136,6 +146,14 @@ function createMockEditor(cursorOffset = 42): Editor {
   });
 }
 
+// An editor whose `from`/`to` cursor map to distinct offsets, i.e. an active selection in the target.
+function createMockEditorWithSelection(fromOffset: number, toOffset: number): Editor {
+  return strictProxy<Editor>({
+    getCursor: vi.fn().mockImplementation((which?: string) => ({ ch: which === 'to' ? toOffset : fromOffset, line: 0 })),
+    posToOffset: vi.fn().mockImplementation((pos: MockPosition) => pos.ch)
+  });
+}
+
 function createMockFile(path: string, mtime = SOURCE_MTIME): TFile {
   return strictProxy<TFile>({
     path,
@@ -149,6 +167,9 @@ function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams 
     app: strictProxy<App>({
       vault: strictProxy<Vault>({
         getFileByPath: vi.fn().mockReturnValue(getFileByPathResult)
+      }),
+      workspace: strictProxy<Workspace>({
+        getActiveViewOfType: vi.fn().mockReturnValue(options.activeView ?? null)
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
@@ -183,14 +204,14 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
   it('should construct the default command', () => {
     const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ isAdvanced: false })));
     expect(handler.id).toBe('move-marked-selection-here');
-    expect(handler.name).toBe('Move marked selection here');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection here');
     expect(handler.icon).toBe('lucide-clipboard-paste');
   });
 
   it('should construct the advanced command', () => {
     const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ isAdvanced: true })));
     expect(handler.id).toBe('move-marked-selection-here-advanced');
-    expect(handler.name).toBe('Move marked selection here (advanced)...');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection here (advanced)...');
   });
 
   describe('canExecuteEditor', () => {
@@ -232,6 +253,20 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(true);
+    });
+
+    it('should be unavailable when the target selection overlaps the marked selection in the same note', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
+      // Marked selection is offsets 5..10; a target selection of 7..9 overlaps it.
+      expect(handler.canExecuteEditor(createMockEditorWithSelection(7, 9), createMockCtx(createMockFile('source.md')))).toBe(false);
+    });
+
+    it('should be available when the target selection is clear of the marked selection in the same note', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
+      // A target selection of 12..15 does not overlap the marked 5..10.
+      expect(handler.canExecuteEditor(createMockEditorWithSelection(12, 15), createMockCtx(createMockFile('source.md')))).toBe(true);
     });
   });
 
@@ -326,10 +361,25 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       expect(args.shouldIncludeFrontmatter).toBe(false);
       expect(args.sourceFile).toBe(resolvedSource);
       expect(args.targetCursorOffset).toBe(42);
+      expect(args.targetCursorEndOffset).toBe(42);
       expect(args.targetFile).toBe(target);
       expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
       expect(mockSplitFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('should replace the target selection (paste semantics) when one is active', async () => {
+      const source = createMockFile('source.md');
+      const target = createMockFile('target.md');
+      const buffer = createMarkedBuffer(source);
+      const params = createMockParams({ getFileByPathResult: createMockFile('source.md'), moveSelectionBuffer: buffer });
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
+
+      await handler.executeEditor(createMockEditorWithSelection(12, 15), createMockCtx(target));
+
+      const args = capturedComposerArgs();
+      expect(args.targetCursorOffset).toBe(12);
+      expect(args.targetCursorEndOffset).toBe(15);
     });
 
     it('should default text after extraction to None for a same-note move when the setting is disabled', async () => {
@@ -404,6 +454,59 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
 
       expect(MockSplitComposer).not.toHaveBeenCalled();
       expect(buffer.hasMark()).toBe(true);
+    });
+  });
+
+  describe('active-editor entry points (used by the notice buttons)', () => {
+    function createActiveView(): MarkdownView {
+      return strictProxy<MarkdownView>({
+        editor: createMockEditor(),
+        file: createMockFile('target.md')
+      });
+    }
+
+    it('canExecuteInActiveEditor is false when there is no active markdown view', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ activeView: null, moveSelectionBuffer: createMarkedBuffer(source) })));
+      expect(handler.canExecuteInActiveEditor()).toBe(false);
+    });
+
+    it('canExecuteInActiveEditor delegates to canExecuteEditor for the active view', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({
+          activeView: createActiveView(),
+          getFileByPathResult: createMockFile('source.md'),
+          moveSelectionBuffer: createMarkedBuffer(source)
+        }))
+      );
+      expect(handler.canExecuteInActiveEditor()).toBe(true);
+    });
+
+    it('executeInActiveEditor is a no-op when there is no active markdown view', async () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ activeView: null, moveSelectionBuffer: createMarkedBuffer(source) })));
+      await handler.executeInActiveEditor();
+      expect(MockSplitComposer).not.toHaveBeenCalled();
+    });
+
+    it('executeInActiveEditor is a no-op when the command cannot run in the active view', async () => {
+      const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ activeView: createActiveView() })));
+      await handler.executeInActiveEditor();
+      expect(MockSplitComposer).not.toHaveBeenCalled();
+    });
+
+    it('executeInActiveEditor runs the move against the active view', async () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({
+          activeView: createActiveView(),
+          getFileByPathResult: createMockFile('source.md'),
+          moveSelectionBuffer: createMarkedBuffer(source)
+        }))
+      );
+      await handler.executeInActiveEditor();
+      expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     });
   });
 

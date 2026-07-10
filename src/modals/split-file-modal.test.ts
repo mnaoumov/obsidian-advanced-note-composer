@@ -6,10 +6,12 @@ import type {
   App,
   Editor,
   MetadataCache,
+  Notice,
   TFile,
   TFolder,
   Vault,
-  Workspace
+  Workspace,
+  WorkspaceLeaf
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -26,10 +28,12 @@ import {
   vi
 } from 'vitest';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
+import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { prepareForSplitFile } from './split-file-modal.ts';
 
@@ -71,13 +75,25 @@ vi.mock('../composers/composer-base.ts', () => ({
 }));
 
 let shouldAutoSelect = false;
+let shouldAutoSwitchToSmartCut = false;
+let switchTargetFile: null | TFile = null;
 
 interface AsyncModule {
   invokeAsyncSafely(fn: () => Promise<void>): void;
 }
 
+interface SwitchToSmartCutResult {
+  readonly action: 'switch-to-smart-cut';
+  readonly targetFile: null | TFile;
+}
+
 interface WithChooseAsync {
   onChooseSuggestionAsync(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
+}
+
+interface WithSwitchToSmartCut {
+  isSelected: boolean;
+  promiseResolve(result: SwitchToSmartCutResult): void;
 }
 
 vi.mock('./suggest-modal-base.ts', async () => {
@@ -114,6 +130,14 @@ vi.mock('./suggest-modal-base.ts', async () => {
     }
 
     public override onOpen(): void {
+      if (shouldAutoSwitchToSmartCut) {
+        // Emulate the modal's Alt+S "switch to smart cut" action (its own code is UI-only / v8-ignored):
+        // Resolve with a switch result so prepareForSplitFile takes its switch branch.
+        const modal = castTo<WithSwitchToSmartCut>(this);
+        modal.isSelected = true;
+        modal.promiseResolve({ action: 'switch-to-smart-cut', targetFile: switchTargetFile });
+        return;
+      }
       if (shouldAutoSelect) {
         this.onChooseSuggestion(null, { shiftKey: false } as MouseEvent);
       }
@@ -187,6 +211,9 @@ function createMockApp(): App {
       isExtensionRegistered: vi.fn().mockReturnValue(true)
     }),
     workspace: strictProxy<Workspace>({
+      getLeaf: castTo<Workspace['getLeaf']>(
+        vi.fn().mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile: vi.fn().mockResolvedValue(undefined) }))
+      ),
       getRecentFiles: vi.fn().mockReturnValue([])
     })
   });
@@ -213,7 +240,15 @@ function createMockFile(path: string): TFile {
       getParentPrefix: () => parentPath ? `${parentPath}/` : '',
       path: parentPath
     }),
-    path
+    path,
+    stat: strictProxy({ mtime: 0 })
+  });
+}
+
+function createMockMoveNoticeComponent(): MoveNoticeComponent {
+  return strictProxy<MoveNoticeComponent>({
+    refreshButtons: vi.fn(),
+    showNotice: vi.fn().mockReturnValue(strictProxy<Notice>({ hide: vi.fn() }))
   });
 }
 
@@ -255,6 +290,8 @@ describe('prepareForSplitFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     shouldAutoSelect = false;
+    shouldAutoSwitchToSmartCut = false;
+    switchTargetFile = null;
   });
 
   afterEach(() => {
@@ -285,6 +322,48 @@ describe('prepareForSplitFile', () => {
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
+  });
+
+  it('marks the selection to move and opens the target when switching to smart cut', async () => {
+    shouldAutoSwitchToSmartCut = true;
+    const targetFile = createMockFile('folder/target.md');
+    switchTargetFile = targetFile;
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
+    const moveSelectionBuffer = new MoveSelectionBuffer();
+    const moveNoticeComponent = createMockMoveNoticeComponent();
+
+    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+
+    expect(result).toBeNull();
+    expect(moveSelectionBuffer.hasMark()).toBe(true);
+    expect(moveNoticeComponent.showNotice).toHaveBeenCalled();
+    expect(vi.mocked(app.workspace.getLeaf(false).openFile)).toHaveBeenCalledWith(targetFile, { active: true });
+  });
+
+  it('marks the selection to move without opening a note when no target is highlighted on switch', async () => {
+    shouldAutoSwitchToSmartCut = true;
+    switchTargetFile = null;
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
+    const moveSelectionBuffer = new MoveSelectionBuffer();
+    const moveNoticeComponent = createMockMoveNoticeComponent();
+
+    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+
+    expect(result).toBeNull();
+    expect(moveSelectionBuffer.hasMark()).toBe(true);
+    expect(vi.mocked(app.workspace.getLeaf(false).openFile)).not.toHaveBeenCalled();
   });
 
   it('should treat empty string heading as undefined', async () => {

@@ -48,13 +48,15 @@ appending/prepending it to that note. This plugin adds a decoupled, two-step **m
 the selection at an exact cursor position in any note (including the same note), while still running the
 full extraction workflow (relative-link fixing, footnotes, frontmatter, templating).
 
-Commands:
+Commands (each appears as **`Smart cut & paste: …`** in the command palette):
 
 - **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
   and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
   unchanged — nothing is removed yet.
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
-  cursor in the current note, using your default settings, as a single reversible operation.
+  cursor in the current note, using your default settings, as a single reversible operation. If you have
+  text selected in the target when you run it, the moved text **replaces that selection** (like pasting over
+  a selection); with no selection, it is inserted at the cursor.
 - **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
   strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
   text (see **Text after extraction** below).
@@ -65,10 +67,18 @@ Commands:
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
   without moving anything. (The built-in `Unlock active note` command also releases the lock.)
 
-While a selection is marked, a persistent notice reminds you that a move is pending until you complete
-or cancel it.
+While a selection is marked, a persistent **Smart cut & paste** notice reminds you that a move is pending
+until you complete or cancel it. The notice carries buttons — **Move marked selection to top of file**,
+**Move marked selection to bottom of file**, **Move marked selection at cursor**, and **Cancel move** —
+each enabled only while it applies to the active note, so you can drive the whole move from the notice
+without opening the command palette.
 
 Notes:
+
+- **Switch to smart cut from the split picker.** Because splitting and smart cut share the same setup, the
+  `Extract …` picker shows a **Switch to smart cut & paste** button (or press `Alt+S`) that switches to smart
+  cut & paste instead of splitting: the picker closes, your selection is marked to move, and the note
+  highlighted in the picker opens so you can position the cursor and paste.
 
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.

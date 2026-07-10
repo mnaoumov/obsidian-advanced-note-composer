@@ -150,13 +150,13 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
   it('should construct the bottom command for append', () => {
     const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(createMockParams({ insertMode: InsertMode.Append })));
     expect(handler.id).toBe('move-marked-selection-to-bottom-of-file');
-    expect(handler.name).toBe('Move marked selection to bottom of file');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection to bottom of file');
   });
 
   it('should construct the top command for prepend', () => {
     const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(createMockParams({ insertMode: InsertMode.Prepend })));
     expect(handler.id).toBe('move-marked-selection-to-top-of-file');
-    expect(handler.name).toBe('Move marked selection to top of file');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection to top of file');
   });
 
   it('should throw for an unknown insert mode', () => {
