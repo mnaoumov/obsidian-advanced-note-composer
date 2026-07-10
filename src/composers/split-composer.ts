@@ -16,11 +16,15 @@ import type {
 } from './composer-base.ts';
 
 import { runLockedTransaction } from '../locked-transaction.ts';
+import { createMoveToken } from '../move-token.ts';
 import {
   Action,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { ComposerBase } from './composer-base.ts';
+import {
+  ComposerBase,
+  resolveInsertOffset
+} from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   // The source selection offsets and selected text, captured BEFORE the (minimizable) modal opened,
@@ -36,9 +40,11 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 
-  // The offset in the target note where the move (mark → move here) flow inserts the token. Required
-  // When `insertToken` is set (move mode); ignored otherwise.
-  readonly targetCursorOffset?: number;
+  // The offset in the target note where the move flow inserts the token. With an `insertToken` set,
+  // `null`/omitted means derive the offset from `insertMode` (top = just after frontmatter, bottom =
+  // End of note) — used by the top/bottom move commands and same-note extract; a number pins it to a
+  // Specific offset (the paste cursor of `Move marked selection here`). Ignored without an `insertToken`.
+  readonly targetCursorOffset?: null | number;
 
   // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
   // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
@@ -56,9 +62,18 @@ export class SplitComposer extends ComposerBase {
   private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
   public constructor(params: SplitComposerConstructorParams) {
+    // A same-note split IS a move: the append/prepend path would write the note before removing the
+    // Source selection, collapsing the editor selection so the removal becomes a no-op (turning the
+    // Move into a copy). So synthesize a token (unless one was passed) to route it through the proven
+    // Same-note-move ordering. Footnote-fixing and frontmatter-inclusion are meaningless within one
+    // Note — footnote-fixing would even rename the moved ref and leave it dangling — so force them off.
+    const isSameFile = params.sourceFile === params.targetFile;
+    const settings = params.pluginSettingsComponent.settings;
     super({
       ...params,
-      shouldIncludeFrontmatter: params.shouldIncludeFrontmatter ?? params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault
+      insertToken: params.insertToken ?? (isSameFile ? createMoveToken() : undefined),
+      shouldFixFootnotes: isSameFile ? false : (params.shouldFixFootnotes ?? settings.shouldFixFootnotesByDefault),
+      shouldIncludeFrontmatter: isSameFile ? false : (params.shouldIncludeFrontmatter ?? settings.shouldIncludeFrontmatterWhenSplittingByDefault)
     });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
@@ -67,7 +82,12 @@ export class SplitComposer extends ComposerBase {
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
-    this.textAfterExtractionMode = params.textAfterExtractionMode ?? params.pluginSettingsComponent.settings.textAfterExtractionMode;
+    // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
+    // Opted in — mirroring the `Move marked selection here` handler.
+    this.textAfterExtractionMode = params.textAfterExtractionMode
+      ?? (isSameFile && !settings.shouldApplyTextAfterExtractionToSameFile
+        ? TextAfterExtractionMode.None
+        : settings.textAfterExtractionMode);
   }
 
   public async splitFile(): Promise<void> {
@@ -96,12 +116,20 @@ export class SplitComposer extends ComposerBase {
             return;
           }
 
-          // Move (mark → move here) flow: place the token at the paste cursor in the target note FIRST,
-          // Inside the transaction (so rollback captures the pre-token content). The processed content
-          // Later replaces the token by string match, so the insert point survives the source-selection
+          // Move flow: place the token at the insert point in the target note FIRST, inside the
+          // Transaction (so rollback captures the pre-token content). The processed content later
+          // Replaces the token by string match, so the insert point survives the source-selection
           // Removal even when the target IS the source note.
           if (this.insertToken !== null) {
-            await this.insertTokenIntoTargetFile(vaultTransaction);
+            const wasTokenInserted = await this.insertTokenIntoTargetFile(vaultTransaction);
+            if (!wasTokenInserted) {
+              // The insert point falls inside the text being moved (a same-note move of a selection that
+              // Spans the frontmatter boundary, sent to the top). The token would be removed with the
+              // Source, losing the content — so abort with a notice instead of corrupting the note.
+              this.pluginNoticeComponent.showNotice('Cannot move a selection to the top of a note when the selection spans the note\'s frontmatter.');
+              this.abortController.abort();
+              return;
+            }
           }
 
           // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
@@ -216,27 +244,41 @@ export class SplitComposer extends ComposerBase {
     this.editor.setSelections(editorSelections);
   }
 
-  private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<void> {
+  private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
     const insertToken = ensureNonNullable(this.insertToken);
-    const offset = ensureNonNullable(this.targetCursorOffset);
+    // A pinned `targetCursorOffset` (the paste cursor) is used as-is; otherwise the offset is derived
+    // From `insertMode` against the pre-token content (bottom = end of note, top = after frontmatter).
+    const offset = this.targetCursorOffset
+      ?? resolveInsertOffset(await this.app.vault.read(this.targetFile), this.insertMode);
+
+    if (this.sourceFile === this.targetFile && this.isOffsetInsideCapturedSelection(offset)) {
+      // The insert point lands inside the text being moved, which will be removed — the token (and thus
+      // The moved content) would be lost. The caller aborts with a notice.
+      return false;
+    }
+
     await vaultTransaction.process(
       this.targetFile,
       (content) => `${content.slice(0, offset)}${insertToken}${content.slice(offset)}`
     );
 
     if (this.sourceFile !== this.targetFile) {
-      return;
+      return true;
     }
 
-    // Same-note move: the token shifted every offset at or after the cursor. Shift the captured
-    // Selection offsets so the re-opened source selects the original text. The cursor is guaranteed
-    // Outside the selection (the paste command is unavailable inside it), so each selection shifts
-    // Wholly or not at all.
+    // Same-note move: the token shifted every offset at or after the insert point. Shift the captured
+    // Selection offsets so the re-opened source selects the original text. The insert point is
+    // Guaranteed outside the selection (checked above), so each selection shifts wholly or not at all.
     this.capturedSelections = this.capturedSelections.map((selection) =>
       offset <= selection.startOffset
         ? { endOffset: selection.endOffset + insertToken.length, startOffset: selection.startOffset + insertToken.length }
         : selection
     );
+    return true;
+  }
+
+  private isOffsetInsideCapturedSelection(offset: number): boolean {
+    return this.capturedSelections.some((selection) => offset > selection.startOffset && offset < selection.endOffset);
   }
 
   private isSameNoteMove(): boolean {
