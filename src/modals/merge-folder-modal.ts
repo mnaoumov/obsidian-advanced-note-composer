@@ -19,7 +19,10 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 
 interface ConfirmDialogModalConstructorParams {
   readonly app: App;
@@ -277,7 +280,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
 
 export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
   const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
-    openMinimizableModal(
+    openModal(
       new MergeFolderModal({
         ...params,
         promiseResolve

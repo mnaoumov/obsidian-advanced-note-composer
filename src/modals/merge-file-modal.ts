@@ -23,7 +23,10 @@ import type {
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
@@ -377,10 +380,10 @@ class MergeFileModal extends SuggestModalBase {
 /* v8 ignore stop */
 
 export async function prepareForMergeFile(params: PrepareForMergeFileParams): Promise<null | PrepareForMergeFileResult> {
-  // Lock the source note for the whole setup flow so it cannot be edited while the
-  // (minimizable) merge/confirmation modal is open — an external edit would corrupt the pending merge.
-  // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
-  // (so the setup flow cancels) and the `using` locks release on return.
+  // Lock the source note for the whole setup flow so it cannot be edited while a modal is open
+  // (the merge picker, or the minimizable confirmation dialog) — an external edit would corrupt
+  // The pending merge. The lock is cancelable: an unlock request aborts this controller, which
+  // Closes the open modal (so the setup flow cancels) and the `using` locks release on return.
   const abortController = new AbortController();
   using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
 
@@ -389,7 +392,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
       ...params,
       promiseResolve
     });
-    openMinimizableModal(modal, abortController);
+    openModal(modal, abortController);
   });
 
   if (!result) {

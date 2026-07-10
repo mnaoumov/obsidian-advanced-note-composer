@@ -29,7 +29,10 @@ import { getSelections } from '../composers/split-composer.ts';
 import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
@@ -462,17 +465,18 @@ class SplitFileModal extends SuggestModalBase {
 }
 
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
-  // Capture the source selection and its text NOW, before the (minimizable) modal opens, while
+  // Capture the source selection and its text NOW, before any modal opens, while
   // `params.editor` still shows the source note. If the user navigates that leaf to another note
-  // During the modal, the same editor object would then reflect THAT note — so the operation must
-  // Use this snapshot, never re-read the live editor.
+  // During the setup flow (e.g. while the minimizable confirmation modal is minimized), the same
+  // Editor object would then reflect THAT note — so the operation must use this snapshot, never
+  // Re-read the live editor.
   const capturedSelections = getSelections(params.editor);
   const selectedText = params.editor.getSelection();
 
-  // Lock the source note for the whole setup flow so it cannot be edited while the
-  // (minimizable) split/confirmation modal is open — an external edit would corrupt the pending split.
-  // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
-  // (so the setup flow cancels) and the `using` locks release on return.
+  // Lock the source note for the whole setup flow so it cannot be edited while a modal is open
+  // (the split picker, or the minimizable confirmation dialog) — an external edit would corrupt
+  // The pending split. The lock is cancelable: an unlock request aborts this controller, which
+  // Closes the open modal (so the setup flow cancels) and the `using` locks release on return.
   const abortController = new AbortController();
   using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
 
@@ -502,7 +506,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         heading,
         promiseResolve
       });
-      openMinimizableModal(modal, abortController);
+      openModal(modal, abortController);
     });
 
   if (!splitFileModalResult) {
