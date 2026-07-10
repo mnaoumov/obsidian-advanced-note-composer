@@ -83,7 +83,9 @@ Notes:
 - **Switch to smart cut from the split picker.** Because splitting and smart cut share the same setup, the
   `Extract …` picker shows a **Switch to smart cut & paste** button (or press `Alt+S`) that switches to smart
   cut & paste instead of splitting: the picker closes, your selection is marked to move, and the note
-  highlighted in the picker opens so you can position the cursor and paste.
+  highlighted in the picker opens so you can position the cursor and paste. The same **Switch to smart cut &
+  paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
+  can switch after the target is chosen.
 
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.

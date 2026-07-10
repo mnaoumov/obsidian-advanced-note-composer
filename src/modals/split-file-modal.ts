@@ -43,6 +43,7 @@ interface ConfirmDialogModalResult {
   readonly insertMode: InsertMode;
   readonly isConfirmed: boolean;
   readonly shouldAskBeforeSplitting: boolean;
+  readonly shouldSwitchToSmartCut: boolean;
 }
 
 interface PrepareForSplitFileParams {
@@ -139,6 +140,7 @@ class ConfirmDialogModal extends Modal {
     private readonly sourceFile: TFile,
     private readonly targetFile: TFile,
     private readonly editor: Editor,
+    private readonly canSwitchToSmartCut: boolean,
     private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
   ) {
     super(app);
@@ -158,7 +160,8 @@ class ConfirmDialogModal extends Modal {
       this.promiseResolve({
         insertMode: InsertMode.Append,
         isConfirmed: false,
-        shouldAskBeforeSplitting: false
+        shouldAskBeforeSplitting: false,
+        shouldSwitchToSmartCut: false
       });
     }
   }
@@ -173,7 +176,8 @@ class ConfirmDialogModal extends Modal {
     this.promiseResolve({
       insertMode: getInsertModeFromEvent(evt),
       isConfirmed: true,
-      shouldAskBeforeSplitting: this.shouldAskBeforeSplitting
+      shouldAskBeforeSplitting: this.shouldAskBeforeSplitting,
+      shouldSwitchToSmartCut: false
     });
     this.close();
   }
@@ -242,6 +246,14 @@ class ConfirmDialogModal extends Modal {
       });
     }
 
+    new ButtonComponent(buttonContainerEl)
+      .setButtonText('Switch to smart cut & paste')
+      .setTooltip('Mark the selection to move and open the target note instead of splitting')
+      .setDisabled(!this.canSwitchToSmartCut)
+      .onClick(() => {
+        this.switchToSmartCut();
+      });
+
     buttonContainerEl.createEl('button', {
       cls: 'mod-warning',
       text: 'Split'
@@ -259,6 +271,17 @@ class ConfirmDialogModal extends Modal {
         this.close();
       });
     });
+  }
+
+  private switchToSmartCut(): void {
+    this.isSelected = true;
+    this.promiseResolve({
+      insertMode: InsertMode.Append,
+      isConfirmed: false,
+      shouldAskBeforeSplitting: false,
+      shouldSwitchToSmartCut: true
+    });
+    this.close();
   }
 }
 
@@ -663,10 +686,25 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   using _targetLock = params.resourceLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, promiseResolve), abortController);
+    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, canSwitchToSmartCut, promiseResolve), abortController);
   });
 
-  /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
+  /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
+  if (confirmDialogResult.shouldSwitchToSmartCut) {
+    // Switch to smart cut from the confirmation dialog: the target is already resolved, so mark the
+    // Selection to move and open that target instead of splitting.
+    markSelectionToMove({
+      capturedSelections,
+      moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
+      moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
+      resourceLockComponent: params.resourceLockComponent,
+      selectedText,
+      selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
+      sourceFile: params.sourceFile
+    });
+    await params.app.workspace.getLeaf(false).openFile(prepareForSplitFileResult.targetFile, { active: true });
+    return null;
+  }
   if (!confirmDialogResult.isConfirmed) {
     if (prepareForSplitFileResult.isNewTargetFile) {
       await trashSafe(params.app, prepareForSplitFileResult.targetFile);
