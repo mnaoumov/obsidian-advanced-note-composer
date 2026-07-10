@@ -165,6 +165,14 @@ class ConfirmDialogModal extends Modal {
     this.scope.register([], 'Escape', () => {
       this.close();
     });
+
+    this.scope.register(['Alt'], 's', () => {
+      if (!this.canSwitchToSmartCut) {
+        return;
+      }
+      this.switchToSmartCut();
+      return false;
+    });
   }
 
   public override onClose(): void {
