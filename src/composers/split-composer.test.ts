@@ -33,6 +33,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type { Selection } from './composer-base.ts';
 
+import { InsertMode } from '../insert-mode.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
@@ -72,6 +73,13 @@ interface MockPosition {
 interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorOffset?: number;
+}
+
+interface SameNoteComposerParams {
+  readonly capturedSelections: Selection[];
+  readonly insertMode: InsertMode;
+  readonly pluginNoticeComponent?: PluginNoticeComponent;
   readonly targetCursorOffset?: number;
 }
 
@@ -180,6 +188,7 @@ function createPluginSettingsComponentStub(
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
+      shouldApplyTextAfterExtractionToSameFile: false,
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldMergeHeadingsByDefault: false,
@@ -629,6 +638,91 @@ describe('splitFile move mode', () => {
     ]);
     const content = await app.vault.adapter.read('source.md');
     expect(content.indexOf('MOVED')).toBe(11);
+  });
+});
+
+describe('splitFile same-note extract', () => {
+  function createSameNoteComposer(params: SameNoteComposerParams): SplitComposer {
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+    const sourceFile = getSourceFile();
+    return new SplitComposer({
+      app,
+      capturedSelections: params.capturedSelections,
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      insertMode: params.insertMode,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: params.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
+      pluginSettingsComponent: createPluginSettingsComponentStub({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        shouldFixFootnotesByDefault: true,
+        shouldIncludeFrontmatterWhenSplittingByDefault: true
+      }),
+      resourceLockComponent,
+      selectedText: 'MOVED',
+      sourceFile,
+      targetFile: sourceFile,
+      ...normalizeOptionalProperties<OptionalComposerParams>({ targetCursorOffset: params.targetCursorOffset })
+    });
+  }
+
+  it('should synthesize a move token and append the selection to the bottom of the same note', async () => {
+    // No `insertToken` and no `targetCursorOffset`: the constructor synthesizes a token and the offset
+    // Is derived from `insertMode` (Append = end of note). 'source body' is 11 chars, selection [0,6).
+    const composer = createSameNoteComposer({
+      capturedSelections: [{ endOffset: 6, startOffset: 0 }],
+      insertMode: InsertMode.Append
+    });
+
+    await composer.splitFile();
+
+    const content = await app.vault.adapter.read('source.md');
+    // 'source' cut from the front and appended to the end, exactly once, no synthesized token left behind.
+    expect(content.match(/MOVED/g)?.length).toBe(1);
+    expect(content.trimEnd().endsWith('MOVED')).toBe(true);
+    expect(content).not.toContain('advanced-note-composer-move-');
+  });
+
+  it('should derive the top offset from prepend and place the selection after any frontmatter', async () => {
+    // No frontmatter, so the top offset is 0; selection [7,11) ('body') is after it and shifts by the
+    // Token length, so the re-opened source removes it and the moved content lands at the top.
+    const composer = createSameNoteComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 7 }],
+      insertMode: InsertMode.Prepend
+    });
+
+    await composer.splitFile();
+
+    const content = await app.vault.adapter.read('source.md');
+    expect(content.indexOf('MOVED')).toBe(0);
+    expect(content).not.toContain('advanced-note-composer-move-');
+  });
+
+  it('should abort with a notice when the derived insert point falls inside the moved selection', async () => {
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+    // A pinned offset (7) strictly inside the captured selection [0,11): the token would be removed with
+    // The source. The move aborts and nothing is written.
+    const composer = createSameNoteComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      insertMode: InsertMode.Append,
+      pluginNoticeComponent,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(pluginNoticeComponent.showNotice).toHaveBeenCalledWith(expect.stringContaining('frontmatter'));
+    const content = await app.vault.adapter.read('source.md');
+    expect(content).toBe('source body');
+    expect(castTo<AbortableComposer>(composer).abortController.signal.aborted).toBe(true);
   });
 });
 

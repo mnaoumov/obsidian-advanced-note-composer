@@ -49,6 +49,22 @@ export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertM
   return evt.shiftKey ? InsertMode.Prepend : InsertMode.Append;
 }
 
+/**
+ * Resolves the offset at which {@link InsertMode} inserts content into the given note content: the end
+ * of the note for {@link InsertMode.Append} (bottom), or just after any frontmatter for
+ * {@link InsertMode.Prepend} (top).
+ *
+ * @param content - The note content to resolve the offset in.
+ * @param insertMode - Whether to insert at the top (prepend) or bottom (append).
+ * @returns The insert offset.
+ */
+export function resolveInsertOffset(content: string, insertMode: InsertMode): number {
+  if (insertMode === InsertMode.Prepend) {
+    return getFrontMatterInfo(content).contentStart;
+  }
+  return content.length;
+}
+
 const moment = extractDefaultExportInterop(moment_);
 
 export interface ComposerBaseConstructorParamsBase {
@@ -111,6 +127,7 @@ export abstract class ComposerBase {
    * operation owns its own transaction via {@link runLockedTransaction}.
    */
   protected readonly injectedVaultTransaction: null | VaultTransaction;
+  protected readonly insertMode: InsertMode;
 
   /**
    * When set, {@link insertContent} inserts by replacing this token in the target note (see
@@ -127,7 +144,6 @@ export abstract class ComposerBase {
   protected readonly targetFile: TFile;
 
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  private readonly insertMode: InsertMode;
 
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
@@ -508,11 +524,8 @@ export abstract class ComposerBase {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
       return existingContent.replace(this.insertToken, contentToInsert);
     }
-    if (this.insertMode === InsertMode.Prepend) {
-      const frontmatterInfo = getFrontMatterInfo(existingContent);
-      return `${existingContent.slice(0, frontmatterInfo.contentStart)}${contentToInsert}${existingContent.slice(frontmatterInfo.contentStart)}`;
-    }
-    return `${existingContent}${contentToInsert}`;
+    const offset = resolveInsertOffset(existingContent, this.insertMode);
+    return `${existingContent.slice(0, offset)}${contentToInsert}${existingContent.slice(offset)}`;
   }
 
   private async insertIntoTargetFileImpl(targetContentToInsert: string, vaultTransaction: VaultTransaction): Promise<void> {

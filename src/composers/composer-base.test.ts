@@ -43,7 +43,8 @@ import {
 import {
   ComposerBase,
   getInsertModeFromEvent,
-  getSelectionUnderHeading
+  getSelectionUnderHeading,
+  resolveInsertOffset
 } from './composer-base.ts';
 
 interface CreateComposerOptions {
@@ -245,6 +246,21 @@ describe('getInsertModeFromEvent', () => {
   it('should return Prepend for mouse event with shift', () => {
     const event = strictProxy<MouseEvent>({ shiftKey: true });
     expect(getInsertModeFromEvent(event)).toBe(InsertMode.Prepend);
+  });
+});
+
+describe('resolveInsertOffset', () => {
+  it('should return the end of the content for append', () => {
+    expect(resolveInsertOffset('hello world', InsertMode.Append)).toBe('hello world'.length);
+  });
+
+  it('should return 0 for prepend when there is no frontmatter', () => {
+    expect(resolveInsertOffset('hello world', InsertMode.Prepend)).toBe(0);
+  });
+
+  it('should return the offset after the frontmatter for prepend', () => {
+    const content = '---\ntitle: T\n---\nbody';
+    expect(resolveInsertOffset(content, InsertMode.Prepend)).toBe(content.indexOf('body'));
   });
 });
 

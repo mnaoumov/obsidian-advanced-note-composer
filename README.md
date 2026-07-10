@@ -70,6 +70,9 @@ Notes:
   frontmatter are still resolved from the intact source.
 - When the target is the same note as the source, `Move marked selection here` is unavailable while the
   cursor is inside the marked selection.
+- **Same-note extraction from the picker.** The `Extract current selection...` / `Extract this heading...`
+  pickers now also offer the *current* note as a target, so you can extract a selection to the top or
+  bottom of the same note: press `Enter` (bottom) or `Shift+Enter` (top) on the current note in the picker.
 - **Same-note moves and *Text after extraction*.** The **Text after extraction** setting decides what is
   left in place of the extracted text (a link to the target note, an embed, or nothing). When you move
   within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the

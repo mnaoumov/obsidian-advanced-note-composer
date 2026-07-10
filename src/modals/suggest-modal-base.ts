@@ -51,6 +51,13 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected shouldAllowOnlyCurrentFolder: boolean;
+
+  /**
+   * When `true`, the source note itself is offered as a suggestion (used by the split picker so a
+   * selection can be extracted to the top/bottom of the same note). Default `false` — merging or
+   * swapping a file with itself is meaningless.
+   */
+  protected shouldAllowSameFile = false;
   protected shouldShowImages: boolean;
   protected shouldShowNonAttachments: boolean;
   protected shouldShowNonImageAttachments: boolean;
@@ -437,7 +444,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       return false;
     }
 
-    if (file === this.sourceFile) {
+    if (!this.shouldAllowSameFile && file === this.sourceFile) {
       return false;
     }
 

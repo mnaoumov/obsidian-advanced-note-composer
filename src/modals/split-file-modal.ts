@@ -250,6 +250,9 @@ class SplitFileModal extends SuggestModalBase {
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
     this.allowCreateNewFile = true;
+    // The split picker offers the current note so a selection can be extracted to its top/bottom
+    // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery.
+    this.shouldAllowSameFile = true;
     this.shouldShowUnresolved = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
