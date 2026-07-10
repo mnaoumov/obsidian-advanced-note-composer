@@ -23,6 +23,7 @@ import {
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -72,6 +73,7 @@ interface HandlerParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
@@ -106,7 +108,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
         shouldAddCommandsToSubmenu
       })
     }),
-    resourceLockComponent: strictProxy<ResourceLockComponent>({})
+    resourceLockComponent: strictProxy<ResourceLockComponent>({}),
+    selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({})
   };
 }
 

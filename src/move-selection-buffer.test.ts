@@ -21,6 +21,7 @@ function createMarkedSelection(overrides: Partial<MarkedSelection> = {}): Marked
   return {
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 10, startOffset: 5 }],
+    highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
@@ -52,12 +53,13 @@ describe('MoveSelectionBuffer', () => {
     expect(buffer.get()).toBe(marked);
   });
 
-  it('disposes the held lock and hides the notice on clear', () => {
+  it('disposes the held lock, removes the highlight, and hides the notice on clear', () => {
     const buffer = new MoveSelectionBuffer();
     const marked = createMarkedSelection();
     buffer.mark(marked);
     buffer.clear();
     expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(marked.highlight[Symbol.dispose]).toHaveBeenCalledTimes(1);
     expect(marked.notice.hide).toHaveBeenCalledTimes(1);
     expect(buffer.hasMark()).toBe(false);
     expect(buffer.get()).toBeNull();

@@ -15,6 +15,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
@@ -29,6 +30,7 @@ interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
@@ -40,6 +42,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: ExtractThisHeadingEditorCommandHandlerConstructorParams) {
     super({
@@ -56,6 +59,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
@@ -106,6 +110,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      selectionHighlightComponent: this.selectionHighlightComponent,
       sourceFile: file
     });
     if (!result) {

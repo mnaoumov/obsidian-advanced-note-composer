@@ -41,6 +41,7 @@ function createMarkedBuffer(): MoveSelectionBuffer {
   buffer.mark({
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 1, startOffset: 0 }],
+    highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'text',

@@ -15,6 +15,7 @@ import {
 
 import type { Selection } from './composers/composer-base.ts';
 import type { MoveNoticeComponent } from './move-notice-component.ts';
+import type { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 import { markSelectionToMove } from './mark-selection-to-move.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
@@ -28,20 +29,24 @@ const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 12, startOffset: 5 }];
 interface TestContext {
   readonly capturedAbortControllers: AbortController[];
   readonly dispose: ReturnType<typeof vi.fn>;
+  readonly disposeHighlight: ReturnType<typeof vi.fn>;
   readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly notice: Notice;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
   readonly sourceFile: TFile;
 }
 
 function createContext(): TestContext {
   const capturedAbortControllers: AbortController[] = [];
   const dispose = vi.fn();
+  const disposeHighlight = vi.fn();
   const notice = strictProxy<Notice>({ hide: vi.fn() });
   return {
     capturedAbortControllers,
     dispose,
+    disposeHighlight,
     moveNoticeComponent: strictProxy<MoveNoticeComponent>({
       refreshButtons: vi.fn(),
       showNotice: vi.fn().mockReturnValue(notice)
@@ -55,6 +60,9 @@ function createContext(): TestContext {
         }
         return { [Symbol.dispose]: dispose };
       })
+    }),
+    selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({
+      addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: disposeHighlight })
     }),
     sourceFile: strictProxy<TFile>({
       path: 'source.md',
@@ -70,6 +78,7 @@ function mark(context: TestContext): void {
     moveSelectionBuffer: context.moveSelectionBuffer,
     resourceLockComponent: context.resourceLockComponent,
     selectedText: 'marked text',
+    selectionHighlightComponent: context.selectionHighlightComponent,
     sourceFile: context.sourceFile
   });
 }
@@ -89,6 +98,7 @@ describe('markSelectionToMove', () => {
     );
     expect(context.moveNoticeComponent.showNotice).toHaveBeenCalledOnce();
     expect(context.moveNoticeComponent.refreshButtons).toHaveBeenCalledOnce();
+    expect(context.selectionHighlightComponent.addHighlight).toHaveBeenCalledWith(context.sourceFile, CAPTURED_SELECTIONS);
 
     const marked = context.moveSelectionBuffer.get();
     expect(marked?.capturedSelections).toBe(CAPTURED_SELECTIONS);
@@ -108,6 +118,7 @@ describe('markSelectionToMove', () => {
     expect(context.moveSelectionBuffer.hasMark()).toBe(false);
     expect(context.notice.hide).toHaveBeenCalledOnce();
     expect(context.dispose).toHaveBeenCalled();
+    expect(context.disposeHighlight).toHaveBeenCalled();
   });
 
   it('does not clear a newer mark when a stale controller aborts', () => {

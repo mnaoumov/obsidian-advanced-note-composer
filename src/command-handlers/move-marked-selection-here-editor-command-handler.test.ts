@@ -126,6 +126,7 @@ function createMarkedBuffer(sourceFile: TFile): MoveSelectionBuffer {
   buffer.mark({
     abortController: new AbortController(),
     capturedSelections: CAPTURED_SELECTIONS,
+    highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',

@@ -7,6 +7,7 @@ import type {
   MarkedSelection,
   MoveSelectionBuffer
 } from './move-selection-buffer.ts';
+import type { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 /**
  * Parameters for {@link markSelectionToMove}.
@@ -17,6 +18,7 @@ export interface MarkSelectionToMoveParams {
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly resourceLockComponent: ResourceLockComponent;
   readonly selectedText: string;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
   readonly sourceFile: TFile;
 }
 
@@ -40,10 +42,12 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
   });
 
   const notice = params.moveNoticeComponent.showNotice();
+  const highlight = params.selectionHighlightComponent.addHighlight(params.sourceFile, params.capturedSelections);
 
   const markedSelection: MarkedSelection = {
     abortController,
     capturedSelections: params.capturedSelections,
+    highlight,
     lock,
     notice,
     selectedText: params.selectedText,

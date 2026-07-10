@@ -13,6 +13,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
@@ -24,6 +25,7 @@ interface MarkSelectionToMoveEditorCommandHandlerConstructorParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandler {
@@ -33,6 +35,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: MarkSelectionToMoveEditorCommandHandlerConstructorParams) {
     super({
@@ -48,6 +51,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override canExecuteEditor(editor: Editor): boolean {
@@ -76,6 +80,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       moveSelectionBuffer: this.moveSelectionBuffer,
       resourceLockComponent: this.resourceLockComponent,
       selectedText: editor.getSelection(),
+      selectionHighlightComponent: this.selectionHighlightComponent,
       sourceFile: file
     });
   }

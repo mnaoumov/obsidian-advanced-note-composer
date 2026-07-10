@@ -30,6 +30,7 @@ import {
 
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
@@ -286,6 +287,12 @@ function createMockResourceLockComponent(): ResourceLockComponent {
   });
 }
 
+function createMockSelectionHighlightComponent(): SelectionHighlightComponent {
+  return strictProxy<SelectionHighlightComponent>({
+    addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+  });
+}
+
 describe('prepareForSplitFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -335,8 +342,9 @@ describe('prepareForSplitFile', () => {
     const pluginSettingsComponent = createMockPluginSettingsComponent();
     const moveSelectionBuffer = new MoveSelectionBuffer();
     const moveNoticeComponent = createMockMoveNoticeComponent();
+    const selectionHighlightComponent = createMockSelectionHighlightComponent();
 
-    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, selectionHighlightComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
 
@@ -356,8 +364,9 @@ describe('prepareForSplitFile', () => {
     const pluginSettingsComponent = createMockPluginSettingsComponent();
     const moveSelectionBuffer = new MoveSelectionBuffer();
     const moveNoticeComponent = createMockMoveNoticeComponent();
+    const selectionHighlightComponent = createMockSelectionHighlightComponent();
 
-    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, sourceFile });
+    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, selectionHighlightComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
 

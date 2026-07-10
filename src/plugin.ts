@@ -34,6 +34,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
@@ -65,6 +66,11 @@ export class Plugin extends PluginBase {
     this.register(() => {
       moveSelectionBuffer.clear();
     });
+
+    // Persistently highlights the captured selection of a pending smart-cut mark or split/extract setup
+    // In its source note. The editor extension must be registered for the field to exist in every editor.
+    const selectionHighlightComponent = this.addChild(new SelectionHighlightComponent({ app: this.app }));
+    this.registerEditorExtension(selectionHighlightComponent.getEditorExtension());
 
     // The three move commands are created up front so the marked-selection notice can offer them as
     // Buttons (and reflect their availability) — see MoveNoticeComponent.
@@ -140,7 +146,8 @@ export class Plugin extends PluginBase {
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
@@ -149,7 +156,8 @@ export class Plugin extends PluginBase {
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
@@ -158,7 +166,8 @@ export class Plugin extends PluginBase {
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
@@ -167,7 +176,8 @@ export class Plugin extends PluginBase {
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new MarkSelectionToMoveEditorCommandHandler({
             app: this.app,
@@ -175,7 +185,8 @@ export class Plugin extends PluginBase {
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           moveAtCursorHandler,
           moveAtCursorAdvancedHandler,

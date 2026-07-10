@@ -13,6 +13,13 @@
   margin-top: var(--size-4-2);
 }
 
+// Persistent highlight of the captured source selection of a pending smart-cut mark or split/extract
+// Setup. Uses the theme's text-selection color so it reads as "this is the selection being moved".
+.advanced-note-composer-pending-selection {
+  background-color: var(--text-selection);
+  border-radius: var(--radius-s);
+}
+
 .advanced-note-composer {
   &.suggest-modal-base {
     input[type=checkbox] {

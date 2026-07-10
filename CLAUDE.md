@@ -42,6 +42,7 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   - `insert-mode.ts` — `InsertMode` enum (append/prepend).
   - `move-selection-buffer.ts` — `MoveSelectionBuffer`, the transient holder for the "mark selection to move" feature (source note + captured selection + held source-note lock + the permanent notice); shared by the mark/move/cancel command handlers. `isOffsetInsideMarkedSelection` / `isRangeOverlappingMarkedSelection` reject an insert point/range that overlaps the marked text (a point is a zero-length range).
   - `mark-selection-to-move.ts` — `markSelectionToMove()`, the shared helper that locks the source note (blocking mutations), shows the marked-selection notice, records the mark, and wires `abortController.signal → buffer.clear()` (with an identity guard) so `Unlock active note` — which aborts every lock on the note, cancelling all operations that hold one — also tears down the mark. Used by the `Mark selection to move` command and the split picker's "switch to smart cut".
+  - `selection-highlight-component.ts` — `SelectionHighlightComponent`, persistently highlights the captured selection of a pending operation (a smart-cut mark, or a split/extract while its picker is open) in its source note. A CodeMirror 6 `StateField` (`selectionHighlightField`) + `setSelectionHighlightsEffect` (registered once via `plugin.registerEditorExtension`) renders the decorations; `addHighlight(file, ranges)` returns a `Disposable`, and `refresh()` (on add/remove + `active-leaf-change`) dispatches the effect to every markdown editor. The `@codemirror/*` imports are externalized by the dev-utils build, so they use Obsidian's runtime CM instance. Pure range logic (`computeHighlightRangesForFile`, `mergeHighlightRanges`, `buildSelectionHighlightDecorations`) is unit-tested; the workspace/editor glue (`refreshLeaf`) is `v8 ignore`d and confirmed via a desktop integration test.
   - `move-notice-component.ts` — `MoveNoticeComponent`, owns the permanent "Smart cut & paste" notice while a selection is marked. Builds it with four `ButtonComponent`s — move to top / bottom / at cursor (each `MoveMarkedSelectionEditorCommandHandlerBase.executeInActiveEditor()`), and Cancel move (`CancelMoveCommandHandler.cancelMove()`). Enabled state is refreshed via each move handler's `canExecuteInActiveEditor()` on `active-leaf-change` + `selectionchange`; the Cancel button is always enabled.
   - `filename-validation.ts` — regexes for invalid filename characters / trailing dots-or-spaces.
   - `templater.ts` — type augmentation for the optional Templater plugin API.
@@ -70,21 +71,6 @@ so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap
 backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link
 indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so
 dev-utils' `editLinks` write path now completes against the mock.
-
-## Current Task
-
-Smart-cut UX enhancements (branch `smart-cut`). Done (committed): split-modal "Switch to smart cut &
-paste" button + `Alt+S`; the permanent notice's four buttons (top/bottom/at-cursor/cancel);
-replace-the-target-selection paste semantics for `Move marked selection here`; `Smart cut & paste:`
-command-name prefix; abort→clear so `Unlock active note` cancels a pending mark.
-
-Remaining: **permanently highlight the marked source selection** while in smart-cut mode — a CodeMirror 6
-decoration over the captured ranges in the source note's editor(s), shown while a selection is marked and
-cleared on move/cancel/unlock. Plan: a `moveHighlightField` StateField + `setMoveHighlightsEffect`
-(registered via `plugin.registerEditorExtension`), a `MoveHighlightComponent` that dispatches the effect
-to every markdown editor on mark-change (via a new `MoveSelectionBuffer` on-change hook) and
-`active-leaf-change`, with the pure range/decoration logic extracted for unit tests and the
-workspace/editor glue confirmed against a real Obsidian per R5/G10r.
 
 ## Known Issues
 

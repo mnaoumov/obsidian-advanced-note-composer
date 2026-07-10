@@ -14,6 +14,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
@@ -26,6 +27,7 @@ interface ExtractBeforeCursorEditorCommandHandlerConstructorParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandler {
@@ -36,6 +38,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: ExtractBeforeCursorEditorCommandHandlerConstructorParams) {
     super({
@@ -52,6 +55,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
@@ -77,6 +81,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      selectionHighlightComponent: this.selectionHighlightComponent,
       sourceFile: file
     });
     if (!result) {

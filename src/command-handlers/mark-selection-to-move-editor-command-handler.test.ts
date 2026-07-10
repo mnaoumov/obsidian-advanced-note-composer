@@ -24,6 +24,7 @@ import type { Selection } from '../composers/composer-base.ts';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -64,6 +65,7 @@ interface HandlerParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 const MOCK_NOTICE: Notice = strictProxy<Notice>({ hide: vi.fn() });
@@ -103,6 +105,9 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({
       lockForPath: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+    }),
+    selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({
+      addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
     })
   };
 }

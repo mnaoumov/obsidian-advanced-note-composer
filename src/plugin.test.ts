@@ -34,6 +34,7 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
   AppActiveFileProvider: vi.fn()
@@ -111,6 +112,13 @@ vi.mock('./command-handlers/move-marked-selection-to-edge-editor-command-handler
 
 vi.mock('./move-notice-component.ts', () => ({
   MoveNoticeComponent: vi.fn()
+}));
+
+vi.mock('./selection-highlight-component.ts', () => ({
+  // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
+  SelectionHighlightComponent: vi.fn(function selectionHighlightComponentStub() {
+    return { getEditorExtension: vi.fn().mockReturnValue([]) };
+  })
 }));
 
 vi.mock('./command-handlers/split-note-by-headings-content-editor-command-handler.ts', () => ({
@@ -192,8 +200,9 @@ describe('Plugin', () => {
     expect(PrismComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
+    expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 7;
+    const EXPECTED_ADD_CHILD_CALLS = 8;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 

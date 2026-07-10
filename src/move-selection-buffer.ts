@@ -22,6 +22,11 @@ export interface MarkedSelection {
   readonly capturedSelections: Selection[];
 
   /**
+   * The persistent source-selection highlight, removed by {@link MoveSelectionBuffer.clear}.
+   */
+  readonly highlight: Disposable;
+
+  /**
    * The held source-note lock, disposed by {@link MoveSelectionBuffer.clear}.
    */
   readonly lock: Disposable;
@@ -62,6 +67,7 @@ export class MoveSelectionBuffer {
       return;
     }
     this.markedSelection.lock[Symbol.dispose]();
+    this.markedSelection.highlight[Symbol.dispose]();
     this.markedSelection.notice.hide();
     this.markedSelection = null;
   }

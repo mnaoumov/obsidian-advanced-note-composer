@@ -73,6 +73,11 @@ until you complete or cancel it. The notice carries buttons — **Move marked se
 each enabled only while it applies to the active note, so you can drive the whole move from the notice
 without opening the command palette.
 
+The captured selection is also **persistently highlighted in the source note** so you always see exactly
+what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /
+split picker is open (the selection stays highlighted while you choose the target). The highlight clears
+when the operation completes or is cancelled.
+
 Notes:
 
 - **Switch to smart cut from the split picker.** Because splitting and smart cut share the same setup, the

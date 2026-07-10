@@ -30,12 +30,15 @@ describe('move marked selection', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
 
-        // The mark shows a permanent notice whose body renders the two command names as code blocks.
+        // The mark shows a permanent "Smart cut & paste" notice whose body offers the move buttons.
         const markNoticeEl = findMarkNotice();
         const markNoticeText = markNoticeEl?.textContent ?? '';
-        const markNoticeCodeTexts = markNoticeEl
-          ? Array.from(markNoticeEl.querySelectorAll('code')).map((codeEl) => codeEl.textContent)
+        const markNoticeButtonTexts = markNoticeEl
+          ? Array.from(markNoticeEl.querySelectorAll('button')).map((buttonEl) => buttonEl.textContent)
           : [];
+
+        // The marked selection is persistently highlighted in the source editor.
+        const highlightAfterMark = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length;
 
         const target = await resetFile('move-it-target.md', 'target end');
         const targetEditor = await openAndGetEditor(target);
@@ -62,15 +65,17 @@ describe('move marked selection', () => {
 
         const sameNote = editorValueFor('move-it-same.md') ?? '';
 
-        // Once the mark is released (by the move), the permanent notice is hidden again.
+        // Once the mark is released (by the move), the permanent notice is hidden again and the
+        // Persistent highlight is removed from every editor.
         await sleep(NOTICE_REMOVAL_IN_MILLISECONDS);
         const markNoticeGoneAfterMoves = findMarkNotice() === null;
+        const highlightGoneAfterMoves = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
 
-        return { crossFileSource, crossFileTarget, markNoticeCodeTexts, markNoticeGoneAfterMoves, markNoticeText, sameNote };
+        return { crossFileSource, crossFileTarget, highlightAfterMark, highlightGoneAfterMoves, markNoticeButtonTexts, markNoticeGoneAfterMoves, markNoticeText, sameNote };
 
         function findMarkNotice(): Element | null {
           for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
-            if (el.textContent.includes('Marked selection to move')) {
+            if (el.textContent.includes('Smart cut & paste')) {
               return el;
             }
           }
@@ -126,10 +131,20 @@ describe('move marked selection', () => {
     // A move, not a copy: the marked "one" appears exactly once (it was cut from the front, not left there).
     expect(result.sameNote.match(/one/g)?.length).toBe(1);
 
-    // The mark notice is permanent and renders the two command names as code blocks, then is hidden
-    // Once the mark is released.
-    expect(result.markNoticeText).toContain('Marked selection to move');
-    expect(result.markNoticeCodeTexts).toEqual(['Move marked selection here', 'Cancel move']);
+    // The mark notice is permanent and branded "Smart cut & paste", offering the move buttons, then is
+    // Hidden once the mark is released.
+    expect(result.markNoticeText).toContain('Smart cut & paste');
+    expect(result.markNoticeButtonTexts).toEqual([
+      'Move marked selection to top of file',
+      'Move marked selection to bottom of file',
+      'Move marked selection at cursor',
+      'Cancel move'
+    ]);
     expect(result.markNoticeGoneAfterMoves).toBe(true);
+
+    // The marked selection is persistently highlighted while marked, and the highlight is removed once
+    // The mark is released.
+    expect(result.highlightAfterMark).toBeGreaterThan(0);
+    expect(result.highlightGoneAfterMoves).toBe(true);
   });
 });

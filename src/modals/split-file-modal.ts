@@ -23,6 +23,7 @@ import type { Selection } from '../composers/composer-base.ts';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 import type {
   Item,
   SuggestModalBaseConstructorParams
@@ -62,6 +63,12 @@ interface PrepareForSplitFileParams {
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+
+  /**
+   * The pending-selection highlight component. When provided, the captured selection is highlighted in the
+   * source note while the split/extract setup is open (and it also enables the switch-to-smart-cut action).
+   */
+  readonly selectionHighlightComponent?: SelectionHighlightComponent;
   readonly shouldSkipModal?: boolean;
   readonly sourceFile: TFile;
 }
@@ -514,21 +521,6 @@ class SplitFileModal extends SuggestModalBase {
   }
 
   /**
-   * Closes the modal and resolves with a "switch to smart cut & paste" result carrying the highlighted
-   * target note (when it is an existing file). The caller marks the selection to move and opens that
-   * note.
-   */
-  private switchToSmartCut(): void {
-    const selectedItem = this.chooser.values?.[this.chooser.selectedItem] ?? null;
-    this.isSelected = true;
-    this.promiseResolve({
-      action: 'switch-to-smart-cut',
-      targetFile: selectedItem?.file ?? null
-    });
-    this.close();
-  }
-
-  /**
    * Adds a "Switch to smart cut & paste" button below the picker (mirroring the `Alt+S` shortcut). The
    * button is always shown but disabled when switching is unavailable.
    */
@@ -541,6 +533,21 @@ class SplitFileModal extends SuggestModalBase {
       .onClick(() => {
         this.switchToSmartCut();
       });
+  }
+
+  /**
+   * Closes the modal and resolves with a "switch to smart cut & paste" result carrying the highlighted
+   * target note (when it is an existing file). The caller marks the selection to move and opens that
+   * note.
+   */
+  private switchToSmartCut(): void {
+    const selectedItem = this.chooser.values?.[this.chooser.selectedItem] ?? null;
+    this.isSelected = true;
+    this.promiseResolve({
+      action: 'switch-to-smart-cut',
+      targetFile: selectedItem?.file ?? null
+    });
+    this.close();
   }
 }
 
@@ -559,15 +566,19 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   const abortController = new AbortController();
   using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
 
+  // Highlight the captured selection in the source note for the whole (minimizable) setup flow, so the
+  // User can see exactly what is being extracted while they pick the target. Released on return.
+  using _highlight = params.selectionHighlightComponent?.addHighlight(params.sourceFile, capturedSelections);
+
   let heading = params.heading;
   if (heading === '') {
     heading = undefined;
   }
   heading ??= extractHeading(params.editor);
 
-  // The "switch to smart cut" action is offered only when the caller wired both the marked-selection
-  // Buffer and its notice component.
-  const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer);
+  // The "switch to smart cut" action is offered only when the caller wired the marked-selection buffer,
+  // Its notice component, and the highlight component (all needed by markSelectionToMove).
+  const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer && params.selectionHighlightComponent);
 
   const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
     ? {
@@ -608,6 +619,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
       resourceLockComponent: params.resourceLockComponent,
       selectedText,
+      selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
       sourceFile: params.sourceFile
     });
     if (splitFileModalResult.targetFile) {
