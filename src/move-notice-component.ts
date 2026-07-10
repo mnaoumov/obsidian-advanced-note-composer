@@ -6,7 +6,7 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 
 import { ButtonComponent } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
+import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
 
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
@@ -52,8 +52,12 @@ interface MoveNoticeButtonDefinition {
  * buttons — move to top / bottom / at cursor — each enabled only while its command can run against the
  * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
  */
-export class MoveNoticeComponent extends ComponentEx {
-  private readonly app: App;
+export class MoveNoticeComponent extends AllWindowsEventComponent {
+  // TODO: Drop this field and use the inherited `this.app` once obsidian-dev-utils exposes
+  // AllWindowsEventComponent's `app` as `protected` (see that repo's CLAUDE.md "expose component `app` as
+  // `protected`" task). The base stores `app` privately, so a `private app` here would collide (TS2415);
+  // `app2` is the temporary non-colliding name.
+  private readonly app2: App;
   private buttons: MoveNoticeButton[] | null = null;
   private readonly cancelMoveCommandHandler: CancelMoveCommandHandler;
   private readonly moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
@@ -63,8 +67,8 @@ export class MoveNoticeComponent extends ComponentEx {
   private readonly pluginNoticeComponent: PluginNoticeComponent;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
-    super();
-    this.app = params.app;
+    super(params.app);
+    this.app2 = params.app;
     this.cancelMoveCommandHandler = params.cancelMoveCommandHandler;
     this.moveAtCursorHandler = params.moveAtCursorHandler;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
@@ -77,11 +81,14 @@ export class MoveNoticeComponent extends ComponentEx {
     super.onload();
     // Re-evaluate button availability whenever the user switches note (top/bottom/at-cursor validity
     // Depends on the active note) or moves the caret (at-cursor validity depends on the caret position).
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+    this.registerEvent(this.app2.workspace.on('active-leaf-change', () => {
       this.refreshButtons();
     }));
-    this.registerDomEvent(activeDocument, 'selectionchange', () => {
-      this.refreshButtons();
+    this.registerAllDocumentsDomEvent({
+      callback: () => {
+        this.refreshButtons();
+      },
+      type: 'selectionchange'
     });
   }
 
