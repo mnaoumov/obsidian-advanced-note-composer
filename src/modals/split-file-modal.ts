@@ -39,6 +39,15 @@ import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
+interface ConfirmDialogModalConstructorParams {
+  readonly app: App;
+  readonly canSwitchToSmartCut: boolean;
+  readonly editor: Editor;
+  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
+  readonly sourceFile: TFile;
+  readonly targetFile: TFile;
+}
+
 interface ConfirmDialogModalResult {
   readonly insertMode: InsertMode;
   readonly isConfirmed: boolean;
@@ -88,6 +97,8 @@ interface PrepareForSplitFileResult {
   readonly targetFile: TFile;
 }
 
+/* v8 ignore stop */
+
 interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {
   /**
    * Whether the modal offers the "switch to smart cut & paste" action (only when the caller wired the
@@ -98,8 +109,6 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
   readonly heading: string;
   readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
 }
-
-/* v8 ignore stop */
 
 type SplitFileModalResult = SplitFileModalSplitResult | SplitFileModalSwitchToSmartCutResult;
 
@@ -132,18 +141,22 @@ interface SplitFileModalSwitchToSmartCutResult {
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
 class ConfirmDialogModal extends Modal {
+  private readonly canSwitchToSmartCut: boolean;
+  private readonly editor: Editor;
   private isSelected = false;
+  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
   private shouldAskBeforeSplitting = true;
+  private readonly sourceFile: TFile;
+  private readonly targetFile: TFile;
 
-  public constructor(
-    app: App,
-    private readonly sourceFile: TFile,
-    private readonly targetFile: TFile,
-    private readonly editor: Editor,
-    private readonly canSwitchToSmartCut: boolean,
-    private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>
-  ) {
-    super(app);
+  public constructor(params: ConfirmDialogModalConstructorParams) {
+    super(params.app);
+
+    this.canSwitchToSmartCut = params.canSwitchToSmartCut;
+    this.editor = params.editor;
+    this.promiseResolve = params.promiseResolve;
+    this.sourceFile = params.sourceFile;
+    this.targetFile = params.targetFile;
 
     this.scope.register([], 'Enter', (evt) => {
       this.confirm(evt);
@@ -686,7 +699,17 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   using _targetLock = params.resourceLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(new ConfirmDialogModal(params.app, params.sourceFile, prepareForSplitFileResult.targetFile, params.editor, canSwitchToSmartCut, promiseResolve), abortController);
+    openMinimizableModal(
+      new ConfirmDialogModal({
+        app: params.app,
+        canSwitchToSmartCut,
+        editor: params.editor,
+        promiseResolve,
+        sourceFile: params.sourceFile,
+        targetFile: prepareForSplitFileResult.targetFile
+      }),
+      abortController
+    );
   });
 
   /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
