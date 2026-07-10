@@ -22,6 +22,11 @@ export interface MarkedSelection {
   readonly capturedSelections: Selection[];
 
   /**
+   * The persistent source-selection highlight, removed by {@link MoveSelectionBuffer.clear}.
+   */
+  readonly highlight: Disposable;
+
+  /**
    * The held source-note lock, disposed by {@link MoveSelectionBuffer.clear}.
    */
   readonly lock: Disposable;
@@ -62,6 +67,7 @@ export class MoveSelectionBuffer {
       return;
     }
     this.markedSelection.lock[Symbol.dispose]();
+    this.markedSelection.highlight[Symbol.dispose]();
     this.markedSelection.notice.hide();
     this.markedSelection = null;
   }
@@ -104,11 +110,26 @@ export class MoveSelectionBuffer {
    * @returns Whether the offset is inside a marked selection.
    */
   public isOffsetInsideMarkedSelection(offset: number): boolean {
+    return this.isRangeOverlappingMarkedSelection(offset, offset);
+  }
+
+  /**
+   * Checks whether the given `[startOffset, endOffset]` range overlaps any marked selection. Only
+   * meaningful when the offsets refer to the note the selection was marked in. Used to reject an insert
+   * range (a derived top/bottom offset, or a replace-over-selection range at the cursor) that overlaps
+   * the text being moved, which would corrupt it. A zero-length range (`startOffset === endOffset`)
+   * overlaps only when it is strictly inside a marked selection.
+   *
+   * @param startOffset - The start of the range to check.
+   * @param endOffset - The end of the range to check.
+   * @returns Whether the range overlaps a marked selection.
+   */
+  public isRangeOverlappingMarkedSelection(startOffset: number, endOffset: number): boolean {
     if (!this.markedSelection) {
       return false;
     }
     return this.markedSelection.capturedSelections.some(
-      (selection) => offset > selection.startOffset && offset < selection.endOffset
+      (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
     );
   }
 

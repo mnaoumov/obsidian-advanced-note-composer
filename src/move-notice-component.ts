@@ -1,0 +1,175 @@
+import type {
+  App,
+  Notice
+} from 'obsidian';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+
+import { ButtonComponent } from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
+
+import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
+import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
+import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
+
+/**
+ * Parameters for creating a {@link MoveNoticeComponent}.
+ */
+export interface MoveNoticeComponentConstructorParams {
+  readonly app: App;
+  readonly cancelMoveCommandHandler: CancelMoveCommandHandler;
+  readonly moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
+  readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+}
+
+/**
+ * A button in the marked-selection notice, paired with the predicate that decides whether it is
+ * enabled (or `null` when the button is always enabled, e.g. `Cancel move`).
+ */
+interface MoveNoticeButton {
+  readonly component: ButtonComponent;
+  readonly getIsEnabled: (() => boolean) | null;
+}
+
+/**
+ * A labelled action offered as a button in the marked-selection notice.
+ */
+interface MoveNoticeButtonDefinition {
+  /**
+   * Predicate deciding whether the button is enabled, re-evaluated on refresh; `null` for a button
+   * that is always enabled (e.g. `Cancel move`).
+   */
+  readonly getIsEnabled: (() => boolean) | null;
+  readonly label: string;
+  onClick(): void;
+}
+
+/**
+ * Owns the permanent notice shown while a selection is marked for moving. The notice carries three
+ * buttons — move to top / bottom / at cursor — each enabled only while its command can run against the
+ * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
+ */
+export class MoveNoticeComponent extends AllWindowsEventComponent {
+  // TODO: Drop this field and use the inherited `this.app` once obsidian-dev-utils exposes
+  // AllWindowsEventComponent's `app` as `protected` (see that repo's CLAUDE.md "expose component `app` as
+  // `protected`" task). The base stores `app` privately, so a `private app` here would collide (TS2415);
+  // `app2` is the temporary non-colliding name.
+  private readonly app2: App;
+  private buttons: MoveNoticeButton[] | null = null;
+  private readonly cancelMoveCommandHandler: CancelMoveCommandHandler;
+  private readonly moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
+  private readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  private readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+
+  public constructor(params: MoveNoticeComponentConstructorParams) {
+    super(params.app);
+    this.app2 = params.app;
+    this.cancelMoveCommandHandler = params.cancelMoveCommandHandler;
+    this.moveAtCursorHandler = params.moveAtCursorHandler;
+    this.moveSelectionBuffer = params.moveSelectionBuffer;
+    this.moveToBottomHandler = params.moveToBottomHandler;
+    this.moveToTopHandler = params.moveToTopHandler;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+  }
+
+  public override onload(): void {
+    super.onload();
+    // Re-evaluate button availability whenever the user switches note (top/bottom/at-cursor validity
+    // Depends on the active note) or moves the caret (at-cursor validity depends on the caret position).
+    this.registerEvent(this.app2.workspace.on('active-leaf-change', () => {
+      this.refreshButtons();
+    }));
+    this.registerAllDocumentsDomEvent({
+      callback: () => {
+        this.refreshButtons();
+      },
+      type: 'selectionchange'
+    });
+  }
+
+  /**
+   * Refreshes the enabled state of the notice buttons: each is enabled only while its move command can
+   * run against the active editor. A no-op when nothing is marked (the notice is gone) — the stale
+   * button references are then dropped. Call after marking a selection to seed the initial state.
+   */
+  public refreshButtons(): void {
+    if (!this.moveSelectionBuffer.hasMark()) {
+      // Nothing marked: the notice (if any) is being torn down, so drop the stale button references.
+      this.buttons = null;
+      return;
+    }
+    if (!this.buttons) {
+      return;
+    }
+    for (const button of this.buttons) {
+      if (button.getIsEnabled) {
+        button.component.setDisabled(!button.getIsEnabled());
+      }
+    }
+  }
+
+  /**
+   * Builds and shows the permanent marked-selection notice with its three move buttons, returning the
+   * notice so the caller can hide it when the mark is released. Call {@link refreshButtons} after the
+   * buffer is marked to seed the buttons' enabled state.
+   *
+   * @returns The shown notice.
+   */
+  public showNotice(): Notice {
+    const buttons: MoveNoticeButton[] = [];
+    const message = createFragment((f) => {
+      f.appendText('Smart cut & paste: selection marked to move.');
+      const buttonContainerEl = f.createDiv('advanced-note-composer-move-notice-buttons');
+      for (const definition of this.getButtonDefinitions()) {
+        const component = new ButtonComponent(buttonContainerEl)
+          .setButtonText(definition.label)
+          .onClick(() => {
+            definition.onClick();
+          });
+        buttons.push({ component, getIsEnabled: definition.getIsEnabled });
+      }
+    });
+
+    const notice = this.pluginNoticeComponent.showNotice(message, { isPermanent: true });
+    this.buttons = buttons;
+    return notice;
+  }
+
+  private getButtonDefinitions(): MoveNoticeButtonDefinition[] {
+    return [
+      {
+        getIsEnabled: () => this.moveToTopHandler.canExecuteInActiveEditor(),
+        label: 'Move marked selection to top of file',
+        onClick: (): void => {
+          invokeAsyncSafely(() => this.moveToTopHandler.executeInActiveEditor());
+        }
+      },
+      {
+        getIsEnabled: () => this.moveToBottomHandler.canExecuteInActiveEditor(),
+        label: 'Move marked selection to bottom of file',
+        onClick: (): void => {
+          invokeAsyncSafely(() => this.moveToBottomHandler.executeInActiveEditor());
+        }
+      },
+      {
+        getIsEnabled: () => this.moveAtCursorHandler.canExecuteInActiveEditor(),
+        label: 'Move marked selection at cursor',
+        onClick: (): void => {
+          invokeAsyncSafely(() => this.moveAtCursorHandler.executeInActiveEditor());
+        }
+      },
+      {
+        getIsEnabled: null,
+        label: 'Cancel move',
+        onClick: (): void => {
+          this.cancelMoveCommandHandler.cancelMove();
+        }
+      }
+    ];
+  }
+}

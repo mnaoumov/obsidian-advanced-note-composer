@@ -2,6 +2,7 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
+  Notice,
   TFile
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -20,8 +21,10 @@ import {
 } from 'vitest';
 
 import type { Selection } from '../composers/composer-base.ts';
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -57,11 +60,15 @@ const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 12, startOffset: 5 }];
 
 interface HandlerParams {
   readonly app: App;
+  readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
+
+const MOCK_NOTICE: Notice = strictProxy<Notice>({ hide: vi.fn() });
 
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
@@ -84,6 +91,10 @@ function createMockFile(mtime = 1000): TFile {
 function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
   return {
     app: strictProxy<App>({}),
+    moveNoticeComponent: strictProxy<MoveNoticeComponent>({
+      refreshButtons: vi.fn(),
+      showNotice: vi.fn().mockReturnValue(MOCK_NOTICE)
+    }),
     moveSelectionBuffer: new MoveSelectionBuffer(),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -94,6 +105,9 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({
       lockForPath: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+    }),
+    selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({
+      addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
     })
   };
 }
@@ -111,7 +125,7 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
   it('should construct with correct params', () => {
     const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams()));
     expect(handler.id).toBe('mark-selection-to-move');
-    expect(handler.name).toBe('Mark selection to move');
+    expect(handler.name).toBe('Smart cut & paste: Mark selection to move');
     expect(handler.icon).toBe('lucide-scissors');
   });
 
@@ -169,11 +183,8 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
     expect(marked?.selectedText).toBe('marked text');
     expect(marked?.sourceFile).toBe(file);
     expect(marked?.sourceMtime).toBe(2000);
-    expect(marked?.notice).toBeDefined();
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith(
-      expect.anything(),
-      { isPermanent: true }
-    );
+    expect(marked?.notice).toBe(MOCK_NOTICE);
+    expect(params.moveNoticeComponent.showNotice).toHaveBeenCalled();
   });
 
   it('should add to the editor menu', () => {

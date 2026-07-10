@@ -28,11 +28,13 @@ import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/spli
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
+import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
@@ -65,6 +67,67 @@ export class Plugin extends PluginBase {
       moveSelectionBuffer.clear();
     });
 
+    // Persistently highlights the captured selection of a pending smart-cut mark or split/extract setup
+    // In its source note. The editor extension must be registered for the field to exist in every editor.
+    const selectionHighlightComponent = this.addChild(new SelectionHighlightComponent({ app: this.app }));
+    this.registerEditorExtension(selectionHighlightComponent.getEditorExtension());
+
+    // The three move commands are created up front so the marked-selection notice can offer them as
+    // Buttons (and reflect their availability) — see MoveNoticeComponent.
+    const moveAtCursorHandler = new MoveMarkedSelectionHereEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isAdvanced: false,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveAtCursorAdvancedHandler = new MoveMarkedSelectionHereEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isAdvanced: true,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveToTopHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      insertMode: InsertMode.Prepend,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveToBottomHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      insertMode: InsertMode.Append,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+
+    const cancelMoveCommandHandler = new CancelMoveCommandHandler({
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+
+    const moveNoticeComponent = this.addChild(
+      new MoveNoticeComponent({
+        app: this.app,
+        cancelMoveCommandHandler,
+        moveAtCursorHandler,
+        moveSelectionBuffer,
+        moveToBottomHandler,
+        moveToTopHandler,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      })
+    );
+
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -79,78 +142,57 @@ export class Plugin extends PluginBase {
           new ExtractCurrentSelectionEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            moveNoticeComponent,
+            moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            moveNoticeComponent,
+            moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractBeforeCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            moveNoticeComponent,
+            moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new ExtractAfterCursorEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
+            moveNoticeComponent,
+            moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
           new MarkSelectionToMoveEditorCommandHandler({
             app: this.app,
+            moveNoticeComponent,
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,
-            resourceLockComponent
+            resourceLockComponent,
+            selectionHighlightComponent
           }),
-          new MoveMarkedSelectionHereEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            isAdvanced: false,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionHereEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            isAdvanced: true,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionToEdgeEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            insertMode: InsertMode.Prepend,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionToEdgeEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            insertMode: InsertMode.Append,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new CancelMoveCommandHandler({
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent
-          }),
+          moveAtCursorHandler,
+          moveAtCursorAdvancedHandler,
+          moveToTopHandler,
+          moveToBottomHandler,
+          cancelMoveCommandHandler,
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,

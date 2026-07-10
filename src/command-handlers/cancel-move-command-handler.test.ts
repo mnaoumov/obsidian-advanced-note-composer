@@ -41,6 +41,7 @@ function createMarkedBuffer(): MoveSelectionBuffer {
   buffer.mark({
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 1, startOffset: 0 }],
+    highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'text',
@@ -54,7 +55,7 @@ describe('CancelMoveCommandHandler', () => {
   it('should construct with correct id and name', () => {
     const { handler } = createHandler(new MoveSelectionBuffer());
     expect(handler.id).toBe('cancel-move');
-    expect(handler.name).toBe('Cancel move');
+    expect(handler.name).toBe('Smart cut & paste: Cancel move');
   });
 
   it('should be unavailable when nothing is marked', () => {

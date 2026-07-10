@@ -11,7 +11,10 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
+import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
@@ -19,17 +22,23 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractBeforeCursorEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly moveNoticeComponent: MoveNoticeComponent;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly moveNoticeComponent: MoveNoticeComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: ExtractBeforeCursorEditorCommandHandlerConstructorParams) {
     super({
@@ -41,9 +50,12 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.moveNoticeComponent = params.moveNoticeComponent;
+    this.moveSelectionBuffer = params.moveSelectionBuffer;
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
@@ -65,8 +77,11 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      moveNoticeComponent: this.moveNoticeComponent,
+      moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      selectionHighlightComponent: this.selectionHighlightComponent,
       sourceFile: file
     });
     if (!result) {
