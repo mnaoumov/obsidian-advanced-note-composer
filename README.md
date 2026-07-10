@@ -52,7 +52,8 @@ Commands:
 
 - **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
   and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
-  unchanged — nothing is removed yet.
+  unchanged — nothing is removed yet. Enable **Should lock all notes when marking selection** to lock *every*
+  note (not just the source) while a mark is held, so you must finish the extraction before editing anything.
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
   cursor in the current note, using your default settings, as a single reversible operation.
 - **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
@@ -62,8 +63,9 @@ Commands:
   once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
   the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
   own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
-- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
-  without moving anything. (The built-in `Unlock active note` command also releases the lock.)
+- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
+  without moving anything. (The built-in `Unlock active note` command, or right-clicking a note's lock
+  indicator, also releases the lock.)
 
 While a selection is marked, a persistent notice reminds you that a move is pending until you complete
 or cancel it.

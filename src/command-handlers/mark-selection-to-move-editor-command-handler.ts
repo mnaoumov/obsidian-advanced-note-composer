@@ -66,12 +66,16 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       return;
     }
 
-    // Lock the source note (blocking edit/delete/rename/move) for as long as the mark is held, so the
-    // Captured selection offsets cannot be invalidated before the move runs. Released by
+    // Lock (blocking edit/delete/rename/move) for as long as the mark is held, so the captured
+    // Selection offsets cannot be invalidated before the move runs. By default only the source note is
+    // Locked; when `shouldLockAllNotesWhenMarkingSelection` is on, a subtree lock on the vault root
+    // Locks every note so the user must finish the extraction before editing anything. Released by
     // `MoveSelectionBuffer.clear` (on move, `Cancel move`, or re-mark) or the built-in `Unlock active note`.
     const abortController = new AbortController();
-    const lock = this.resourceLockComponent.lockForPath(file, {
+    const shouldLockAllNotes = this.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection;
+    const lock = this.resourceLockComponent.lockForPath(shouldLockAllNotes ? this.app.vault.getRoot().path : file, {
       abortController,
+      mode: shouldLockAllNotes ? 'subtree' : 'file',
       shouldBlockMutations: true
     });
 

@@ -2,7 +2,9 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
-  TFile
+  TFile,
+  TFolder,
+  Vault
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -81,15 +83,22 @@ function createMockFile(mtime = 1000): TFile {
   });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
+const ROOT_FOLDER = strictProxy<TFolder>({ path: '/' });
+
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldLockAllNotesWhenMarkingSelection = false): HandlerParams {
   return {
-    app: strictProxy<App>({}),
+    app: strictProxy<App>({
+      vault: strictProxy<Vault>({
+        getRoot: vi.fn().mockReturnValue(ROOT_FOLDER)
+      })
+    }),
     moveSelectionBuffer: new MoveSelectionBuffer(),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldLockAllNotesWhenMarkingSelection
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({
@@ -161,7 +170,7 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
 
     expect(params.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
       file,
-      expect.objectContaining({ shouldBlockMutations: true })
+      expect.objectContaining({ mode: 'file', shouldBlockMutations: true })
     );
     const marked = params.moveSelectionBuffer.get();
     expect(marked).not.toBeNull();
@@ -174,6 +183,20 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
       expect.anything(),
       { isPermanent: true }
     );
+  });
+
+  it('should subtree-lock the vault root when shouldLockAllNotesWhenMarkingSelection is on', async () => {
+    const params = createMockParams(false, true, true);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+    const file = createMockFile(2000);
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+
+    expect(params.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
+      ROOT_FOLDER.path,
+      expect.objectContaining({ mode: 'subtree', shouldBlockMutations: true })
+    );
+    expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(file);
   });
 
   it('should add to the editor menu', () => {

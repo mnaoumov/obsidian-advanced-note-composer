@@ -338,6 +338,20 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should lock all notes when marking selection')
+          .setDesc(createFragment((f) => {
+            f.appendText('When you run ');
+            appendCodeBlock(f, 'Mark selection to move');
+            f.appendText(', whether to lock every note (blocking edits) until the move is completed or cancelled, so you must finish the extraction before editing anything.');
+            f.createEl('br');
+            f.appendText('When disabled, only the source note is locked.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldLockAllNotesWhenMarkingSelection', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Should include frontmatter when splitting')
           .setDesc('Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.')
           .addToggle((toggle) => {

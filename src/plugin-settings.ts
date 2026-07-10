@@ -45,6 +45,7 @@ export class PluginSettings {
   public shouldIncludeParentFoldersWhenMergingByDefault = true;
   public shouldIncludeParentFoldersWhenSwappingByDefault = true;
   public shouldKeepHeadingsWhenSplittingContent = true;
+  public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
