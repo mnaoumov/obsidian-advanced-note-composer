@@ -11,7 +11,10 @@ import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handle
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
+import type {
+  MarkedSelection,
+  MoveSelectionBuffer
+} from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
@@ -70,7 +73,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     // Selection offsets cannot be invalidated before the move runs. By default only the source note is
     // Locked; when `shouldLockAllNotesWhenMarkingSelection` is on, a subtree lock on the vault root
     // Locks every note so the user must finish the extraction before editing anything. Released by
-    // `MoveSelectionBuffer.clear` (on move, `Cancel move`, or re-mark) or the built-in `Unlock active note`.
+    // `MoveSelectionBuffer.clear` (on move, `Cancel move`, or re-mark) or by aborting `abortController`.
     const abortController = new AbortController();
     const shouldLockAllNotes = this.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection;
     const lock = this.resourceLockComponent.lockForPath(shouldLockAllNotes ? this.app.vault.getRoot().path : file, {
@@ -92,7 +95,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       { isPermanent: true }
     );
 
-    this.moveSelectionBuffer.mark({
+    const markedSelection: MarkedSelection = {
       abortController,
       capturedSelections: getSelections(editor),
       lock,
@@ -100,7 +103,18 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       selectedText: editor.getSelection(),
       sourceFile: file,
       sourceMtime: file.stat.mtime
-    });
+    };
+
+    // Aborting the lock (the `Unlock active note` command or the lock indicator's right-click unlock)
+    // Cancels the entire pending move: `clear` releases the lock, drops the mark, and hides the notice.
+    // Guarded on identity so a stale controller can never cancel a subsequently-marked selection.
+    abortController.signal.addEventListener('abort', () => {
+      if (this.moveSelectionBuffer.get() === markedSelection) {
+        this.moveSelectionBuffer.clear();
+      }
+    }, { once: true });
+
+    this.moveSelectionBuffer.mark(markedSelection);
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

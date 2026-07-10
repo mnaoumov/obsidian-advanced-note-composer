@@ -64,8 +64,8 @@ Commands:
   the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
   own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
-  without moving anything. (The built-in `Unlock active note` command, or right-clicking a note's lock
-  indicator, also releases the lock.)
+  without moving anything. The built-in `Unlock active note` command (available on any locked note), or
+  right-clicking a note's lock indicator, cancels the whole pending move the same way.
 
 While a selection is marked, a persistent notice reminds you that a move is pending until you complete
 or cancel it.

@@ -199,6 +199,37 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
     expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(file);
   });
 
+  it('should cancel the whole move when the held lock is aborted', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+
+    const marked = params.moveSelectionBuffer.get();
+    expect(marked).not.toBeNull();
+
+    marked?.abortController.abort();
+
+    expect(params.moveSelectionBuffer.hasMark()).toBe(false);
+    expect(marked?.notice.hide).toHaveBeenCalled();
+  });
+
+  it('should not let a stale aborted controller cancel a subsequently marked selection', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile(1000)));
+    const staleController = params.moveSelectionBuffer.get()?.abortController;
+
+    const fileB = createMockFile(2000);
+    await handler.executeEditor(createMockEditor(), createMockCtx(fileB));
+
+    staleController?.abort();
+
+    expect(params.moveSelectionBuffer.hasMark()).toBe(true);
+    expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(fileB);
+  });
+
   it('should add to the editor menu', () => {
     const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams()));
     expect(handler.shouldAddToEditorMenu()).toBe(true);
