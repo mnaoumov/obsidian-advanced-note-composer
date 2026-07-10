@@ -14,10 +14,8 @@ import {
   Decoration,
   EditorView
 } from '@codemirror/view';
-import {
-  Component,
-  MarkdownView
-} from 'obsidian';
+import { MarkdownView } from 'obsidian';
+import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 
 import type { Selection } from './composers/composer-base.ts';
 
@@ -80,7 +78,7 @@ export const selectionHighlightField = StateField.define<DecorationSet>({
  * completes or is cancelled. Register the extension via `plugin.registerEditorExtension`, then call
  * {@link addHighlight} for the duration of the operation.
  */
-export class SelectionHighlightComponent extends Component {
+export class SelectionHighlightComponent extends ComponentEx {
   private readonly app: App;
   private readonly highlights = new Map<symbol, Highlight>();
 

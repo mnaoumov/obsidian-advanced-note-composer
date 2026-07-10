@@ -4,11 +4,9 @@ import type {
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import {
-  ButtonComponent,
-  Component
-} from 'obsidian';
+import { ButtonComponent } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
@@ -54,7 +52,7 @@ interface MoveNoticeButtonDefinition {
  * buttons — move to top / bottom / at cursor — each enabled only while its command can run against the
  * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
  */
-export class MoveNoticeComponent extends Component {
+export class MoveNoticeComponent extends ComponentEx {
   private readonly app: App;
   private buttons: MoveNoticeButton[] | null = null;
   private readonly cancelMoveCommandHandler: CancelMoveCommandHandler;
