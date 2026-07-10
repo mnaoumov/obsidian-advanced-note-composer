@@ -22,10 +22,12 @@ import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
+import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { InsertMode } from './insert-mode.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
@@ -122,6 +124,24 @@ export class Plugin extends PluginBase {
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
             isAdvanced: true,
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent
+          }),
+          new MoveMarkedSelectionToEdgeEditorCommandHandler({
+            app: this.app,
+            consoleDebugComponent: this.consoleDebugComponent,
+            insertMode: InsertMode.Prepend,
+            moveSelectionBuffer,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent
+          }),
+          new MoveMarkedSelectionToEdgeEditorCommandHandler({
+            app: this.app,
+            consoleDebugComponent: this.consoleDebugComponent,
+            insertMode: InsertMode.Append,
             moveSelectionBuffer,
             pluginNoticeComponent: this.pluginNoticeComponent,
             pluginSettingsComponent,

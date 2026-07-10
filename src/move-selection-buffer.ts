@@ -92,12 +92,23 @@ export class MoveSelectionBuffer {
    * @returns Whether the cursor is inside a marked selection.
    */
   public isCursorInsideMarkedSelection(editor: Editor): boolean {
+    return this.isOffsetInsideMarkedSelection(editor.posToOffset(editor.getCursor()));
+  }
+
+  /**
+   * Checks whether the given offset is strictly inside any marked selection range. Only meaningful when
+   * the offset refers to the note the selection was marked in. Used to reject an insert point (cursor
+   * or a derived top/bottom offset) that falls inside the text being moved, which would corrupt it.
+   *
+   * @param offset - The offset to check.
+   * @returns Whether the offset is inside a marked selection.
+   */
+  public isOffsetInsideMarkedSelection(offset: number): boolean {
     if (!this.markedSelection) {
       return false;
     }
-    const cursorOffset = editor.posToOffset(editor.getCursor());
     return this.markedSelection.capturedSelections.some(
-      (selection) => cursorOffset > selection.startOffset && cursorOffset < selection.endOffset
+      (selection) => offset > selection.startOffset && offset < selection.endOffset
     );
   }
 

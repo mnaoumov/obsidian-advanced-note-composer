@@ -58,6 +58,10 @@ Commands:
 - **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
   strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
   text (see **Text after extraction** below).
+- **`Move marked selection to top of file`** / **`Move marked selection to bottom of file`** — available
+  once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
+  the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
+  own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
   without moving anything. (The built-in `Unlock active note` command also releases the lock.)
 
@@ -69,7 +73,8 @@ Notes:
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.
 - When the target is the same note as the source, `Move marked selection here` is unavailable while the
-  cursor is inside the marked selection.
+  cursor is inside the marked selection (and the top/bottom commands are unavailable when the top would
+  land inside a selection that spans the note's frontmatter).
 - **Same-note extraction from the picker.** The `Extract current selection...` / `Extract this heading...`
   pickers now also offer the *current* note as a target, so you can extract a selection to the top or
   bottom of the same note: press `Enter` (bottom) or `Shift+Enter` (top) on the current note in the picker.
