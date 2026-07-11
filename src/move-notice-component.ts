@@ -53,11 +53,6 @@ interface MoveNoticeButtonDefinition {
  * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
-  // TODO: Drop this field and use the inherited `this.app` once obsidian-dev-utils exposes
-  // AllWindowsEventComponent's `app` as `protected` (see that repo's CLAUDE.md "expose component `app` as
-  // `protected`" task). The base stores `app` privately, so a `private app` here would collide (TS2415);
-  // `app2` is the temporary non-colliding name.
-  private readonly app2: App;
   private buttons: MoveNoticeButton[] | null = null;
   private readonly cancelMoveCommandHandler: CancelMoveCommandHandler;
   private readonly moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
@@ -68,7 +63,6 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
     super(params.app);
-    this.app2 = params.app;
     this.cancelMoveCommandHandler = params.cancelMoveCommandHandler;
     this.moveAtCursorHandler = params.moveAtCursorHandler;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
@@ -81,7 +75,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     super.onload();
     // Re-evaluate button availability whenever the user switches note (top/bottom/at-cursor validity
     // Depends on the active note) or moves the caret (at-cursor validity depends on the caret position).
-    this.registerEvent(this.app2.workspace.on('active-leaf-change', () => {
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
       this.refreshButtons();
     }));
     this.registerAllDocumentsDomEvent({
