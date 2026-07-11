@@ -150,6 +150,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
           { mode: 'subtree', pathOrFile: sourceFolder.path },
           { mode: 'subtree', pathOrFile: targetFolder.path }
         ],
+        operationName: 'Merge folder',
         resourceLockComponent: this.resourceLockComponent
       });
     } catch (error) {

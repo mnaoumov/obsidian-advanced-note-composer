@@ -69,6 +69,7 @@ export class MergeComposer extends ComposerBase {
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
         ],
+        operationName: 'Merge notes',
         resourceLockComponent: this.resourceLockComponent
       });
 

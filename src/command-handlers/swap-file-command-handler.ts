@@ -81,6 +81,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
           { mode: 'file', pathOrFile: file },
           { mode: 'file', pathOrFile: targetFile }
         ],
+        operationName: 'Swap files',
         resourceLockComponent: this.resourceLockComponent
       });
     } catch (error) {

@@ -608,7 +608,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   // The lock is cancelable: an unlock request aborts this controller, which closes the open modal
   // (so the setup flow cancels) and the `using` locks release on return.
   const abortController = new AbortController();
-  using _sourceLock = params.resourceLockComponent.lockForPath(params.sourceFile, { abortController });
+  using _sourceLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Split note', pathOrFile: params.sourceFile });
 
   // Highlight the captured selection in the source note for the whole (minimizable) setup flow, so the
   // User can see exactly what is being extracted while they pick the target. Released on return.
@@ -706,7 +706,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   }
 
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.resourceLockComponent.lockForPath(prepareForSplitFileResult.targetFile, { abortController });
+  using _targetLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Split note', pathOrFile: prepareForSplitFileResult.targetFile });
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(

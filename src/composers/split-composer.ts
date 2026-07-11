@@ -181,6 +181,7 @@ export class SplitComposer extends ComposerBase {
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
         ],
+        operationName: 'Split note',
         resourceLockComponent: this.resourceLockComponent
       });
 

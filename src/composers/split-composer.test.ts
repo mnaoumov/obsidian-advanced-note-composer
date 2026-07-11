@@ -847,6 +847,7 @@ describe('SplitComposer updateEditorSelections', () => {
     // Source, adding its definition range as a removal selection. fn2's ref and definition are both
     // Outside the selection, so fn2 is neither removed nor restored (exercising the skip branch).
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         {
           id: 'fn1',
@@ -911,6 +912,7 @@ describe('SplitComposer updateEditorSelections', () => {
     // One ref is outside the selection (kept) and one is inside (copied) — fn1 lands in both Keep and
     // Copy — and its definition is inside the selection, so fn1 is a "restore" (removeSelectionRange).
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         {
           id: 'fn1',
