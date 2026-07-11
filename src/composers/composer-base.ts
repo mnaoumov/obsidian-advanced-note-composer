@@ -115,13 +115,6 @@ export interface Frontmatter extends GenericObject {
   title?: string;
 }
 
-export interface GetSelectionUnderHeadingParams {
-  readonly app: App;
-  readonly editor: Editor;
-  readonly file: TFile;
-  readonly lineNumber: number;
-}
-
 export interface Selection {
   endOffset: number;
   startOffset: number;
@@ -160,6 +153,13 @@ interface ExtractFrontmatterResult {
 interface FileMtimes {
   readonly sourceMtime: number;
   readonly targetMtime: number;
+}
+
+interface GetSelectionUnderHeadingParams {
+  readonly app: App;
+  readonly editor: Editor;
+  readonly file: TFile;
+  readonly lineNumber: number;
 }
 
 export abstract class ComposerBase {

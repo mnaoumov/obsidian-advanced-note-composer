@@ -39,7 +39,7 @@ export interface Insertion {
   readonly targetCursorOffset: null | number;
 }
 
-export interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
+interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly id: string;
@@ -58,11 +58,11 @@ export interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
  */
 export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends EditorCommandHandler {
   protected readonly app: App;
-  protected readonly consoleDebugComponent: ConsoleDebugComponent;
-  protected readonly moveSelectionBuffer: MoveSelectionBuffer;
-  protected readonly pluginNoticeComponent: PluginNoticeComponent;
-  protected readonly pluginSettingsComponent: PluginSettingsComponent;
-  protected readonly resourceLockComponent: ResourceLockComponent;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams) {
     super({
