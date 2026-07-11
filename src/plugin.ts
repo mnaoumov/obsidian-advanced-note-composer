@@ -1,5 +1,6 @@
 import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
+import { UnlockActiveNoteCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/unlock-active-note-command-handler';
 import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
@@ -23,7 +24,6 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handle
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
-import { UnlockActiveNoteCommandHandler } from './command-handlers/unlock-active-note-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
 import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
@@ -192,7 +192,6 @@ export class Plugin extends PluginBase {
           cancelMoveCommandHandler,
           new UnlockActiveNoteCommandHandler({
             app: this.app,
-            moveSelectionBuffer,
             resourceLockComponent
           }),
           new MergeFolderCommandHandler({

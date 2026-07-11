@@ -8,7 +8,10 @@ import type {
   Vault
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -113,7 +116,14 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({
-      lockForPath: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+      lockForPath: vi.fn().mockImplementation((lockParams: ResourceLockComponentLockForPathParams) => {
+        // Mirror the real library's `shouldReleaseOnAbort` + `onUnlockRequested`: aborting the
+        // Controller invokes the unlock callback so the mark tears itself down.
+        lockParams.abortController?.signal.addEventListener('abort', () => {
+          lockParams.onUnlockRequested?.();
+        }, { once: true });
+        return { [Symbol.dispose]: vi.fn() };
+      })
     }),
     selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({
       addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })

@@ -67,6 +67,11 @@ function createContext(): TestContext {
       lockForPath: vi.fn().mockImplementation((params: ResourceLockComponentLockForPathParams) => {
         if (params.abortController) {
           capturedAbortControllers.push(params.abortController);
+          // Mirror the real library's `shouldReleaseOnAbort` + `onUnlockRequested`: aborting the
+          // Controller invokes the unlock callback so the consumer can tear its state down.
+          params.abortController.signal.addEventListener('abort', () => {
+            params.onUnlockRequested?.();
+          }, { once: true });
         }
         return { [Symbol.dispose]: dispose };
       })
@@ -108,6 +113,8 @@ describe('markSelectionToMove', () => {
     expect(lockParams?.mode).toBe('file');
     expect(lockParams?.pathOrFile).toBe(context.sourceFile);
     expect(lockParams?.shouldBlockMutations).toBe(true);
+    expect(lockParams?.shouldReleaseOnAbort).toBe(true);
+    expect(typeof lockParams?.onUnlockRequested).toBe('function');
     expect(context.moveNoticeComponent.showNotice).toHaveBeenCalledOnce();
     expect(context.moveNoticeComponent.refreshButtons).toHaveBeenCalledOnce();
     expect(context.selectionHighlightComponent.addHighlight).toHaveBeenCalledWith(context.sourceFile, CAPTURED_SELECTIONS);

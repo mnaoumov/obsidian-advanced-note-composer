@@ -38,8 +38,9 @@ export interface MarkSelectionToMoveParams {
  * before editing anything.
  *
  * The held lock is cancelable: the built-in `Unlock active note` aborts every lock on the note (thereby
- * cancelling all operations that hold one), and this mark observes that abort to release itself — the
- * buffer is cleared and the notice hidden — so unlocking also cancels a pending move.
+ * cancelling all operations that hold one). The lock is taken with `shouldReleaseOnAbort`, so that abort
+ * releases the lock itself, and its `onUnlockRequested` callback tears this mark down — the buffer is
+ * cleared and the notice hidden — so unlocking also cancels a pending move.
  *
  * @param params - The parameters.
  */
@@ -48,9 +49,18 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
   const lock = params.resourceLockComponent.lockForPath({
     abortController,
     mode: params.shouldLockAllNotes ? 'subtree' : 'file',
+    // When the source note is unlocked, its abort tears this mark down too — but only while it is still
+    // The current mark, since a later re-mark installs its own controller and must not be cleared by
+    // This one (identity-guarded on the unique controller).
+    onUnlockRequested: () => {
+      if (params.moveSelectionBuffer.get()?.abortController === abortController) {
+        params.moveSelectionBuffer.clear();
+      }
+    },
     operationName: 'Move selection',
     pathOrFile: params.shouldLockAllNotes ? params.app.vault.getRoot().path : params.sourceFile,
-    shouldBlockMutations: true
+    shouldBlockMutations: true,
+    shouldReleaseOnAbort: true
   });
 
   const notice = params.moveNoticeComponent.showNotice();
@@ -68,13 +78,4 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
   };
   params.moveSelectionBuffer.mark(markedSelection);
   params.moveNoticeComponent.refreshButtons();
-
-  // When the source note is unlocked, `requestResourceUnlockForPath` aborts every lock on it (cancelling
-  // Every operation that holds one); tear this mark down too — but only while it is still the current
-  // Mark, since a later re-mark installs its own controller and must not be cleared by this one.
-  abortController.signal.addEventListener('abort', () => {
-    if (params.moveSelectionBuffer.get() === markedSelection) {
-      params.moveSelectionBuffer.clear();
-    }
-  }, { once: true });
 }

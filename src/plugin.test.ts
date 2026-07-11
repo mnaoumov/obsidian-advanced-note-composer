@@ -123,7 +123,7 @@ vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
   SwapFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/unlock-active-note-command-handler.ts', () => ({
+vi.mock('obsidian-dev-utils/obsidian/command-handlers/unlock-active-note-command-handler', () => ({
   UnlockActiveNoteCommandHandler: vi.fn()
 }));
 

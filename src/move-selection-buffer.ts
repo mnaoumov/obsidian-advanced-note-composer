@@ -12,9 +12,11 @@ import type { Selection } from './composers/composer-base.ts';
  */
 export interface MarkedSelection {
   /**
-   * Aborting this cancels the entire pending move: the mark handler wires the abort to
-   * {@link MoveSelectionBuffer.clear}, which releases the held lock, drops the mark, and hides the
-   * notice. Aborted by the `Unlock active note` command and by the lock indicator's right-click unlock.
+   * Aborting this cancels the entire pending move: the held lock is taken with `shouldReleaseOnAbort`
+   * and an `onUnlockRequested` callback that calls {@link MoveSelectionBuffer.clear}, so the abort
+   * releases the held lock, drops the mark, and hides the notice. Aborted by the `Unlock active note`
+   * command and by the lock indicator's right-click unlock. Also serves as the mark's unique identity
+   * used to guard against a stale controller clearing a newer mark.
    */
   readonly abortController: AbortController;
 
