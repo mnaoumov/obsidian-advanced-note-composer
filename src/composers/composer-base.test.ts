@@ -280,7 +280,7 @@ describe('getSelectionUnderHeading', () => {
   it('should return null when no cache exists', () => {
     const mockApp = createMockApp(null);
     const editor = createMockEditor(['# Heading', 'text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 })).toBeNull();
   });
 
   it('should return null when no heading at line number', () => {
@@ -292,7 +292,7 @@ describe('getSelectionUnderHeading', () => {
       }]
     });
     const editor = createMockEditor(['# Heading', 'text', 'more text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 1)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 1 })).toBeNull();
   });
 
   it('should return heading info when heading found at line', () => {
@@ -304,7 +304,7 @@ describe('getSelectionUnderHeading', () => {
       }]
     });
     const editor = createMockEditor(['# Heading', 'text under heading', 'more text']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.heading).toBe('Heading');
     expect(result?.start.line).toBe(0);
@@ -319,7 +319,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['## First', 'content 1', '', '## Second', 'content 2']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.heading).toBe('First');
     expect(result?.end.line).toBe(1);
@@ -333,7 +333,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['# First', 'content', '', '', '# Second']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.end.line).toBe(1);
   });
@@ -346,7 +346,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['# Parent', 'text', '## Child', 'child text']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.end.line).toBe(3);
   });
@@ -354,7 +354,7 @@ describe('getSelectionUnderHeading', () => {
   it('should handle cache without headings', () => {
     const mockApp = createMockApp({});
     const editor = createMockEditor(['text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 })).toBeNull();
   });
 });
 

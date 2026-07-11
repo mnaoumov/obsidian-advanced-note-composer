@@ -46,6 +46,18 @@ interface MergeFolderCommandHandlerConstructorParams {
   readonly resourceLockComponent: ResourceLockComponent;
 }
 
+interface MergeFolderCommandHandlerMergeFolderImplParams {
+  readonly abortController: AbortController;
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
+  readonly vaultTransaction: VaultTransaction;
+}
+
+interface MergeFolderCommandHandlerMergeFolderParams {
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
+}
+
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -91,7 +103,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       sourceFolder: folder
     });
     if (targetFolder) {
-      await this.mergeFolder(folder, targetFolder);
+      await this.mergeFolder({ sourceFolder: folder, targetFolder });
     }
   }
 
@@ -109,7 +121,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     return file.path.split('/').length;
   }
 
-  private async mergeFolder(sourceFolder: TFolder, targetFolder: TFolder): Promise<void> {
+  private async mergeFolder(params: MergeFolderCommandHandlerMergeFolderParams): Promise<void> {
+    const { sourceFolder, targetFolder } = params;
     const notice = this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
@@ -131,7 +144,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         abortController,
         app: this.app,
         body: async (vaultTransaction) => {
-          await this.mergeFolderImpl(sourceFolder, targetFolder, vaultTransaction, abortController);
+          await this.mergeFolderImpl({ abortController, sourceFolder, targetFolder, vaultTransaction });
         },
         lockTargets: [
           { mode: 'subtree', pathOrFile: sourceFolder.path },
@@ -150,12 +163,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
   }
 
-  private async mergeFolderImpl(
-    sourceFolder: TFolder,
-    targetFolder: TFolder,
-    vaultTransaction: VaultTransaction,
-    abortController: AbortController
-  ): Promise<void> {
+  private async mergeFolderImpl(params: MergeFolderCommandHandlerMergeFolderImplParams): Promise<void> {
+    const { abortController, sourceFolder, targetFolder, vaultTransaction } = params;
     const sourceSubfolders: TFolder[] = [];
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];

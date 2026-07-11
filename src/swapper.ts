@@ -47,23 +47,39 @@ export interface SwapParams {
   readonly vaultTransaction: VaultTransaction;
 }
 
+interface SwapFileParams {
+  readonly app: App;
+  readonly sourceFile: TFile;
+  readonly targetFile: TFile;
+  readonly vaultTransaction: VaultTransaction;
+}
+
+interface SwapFolderParams {
+  readonly app: App;
+  readonly shouldSwapEntireFolderStructure: boolean;
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
+  readonly vaultTransaction: VaultTransaction;
+}
+
 export async function swap(params: SwapParams): Promise<void> {
   const { app, shouldSwapEntireFolderStructure, sourceFile, targetFile, vaultTransaction } = params;
 
   if (isFile(sourceFile) && isFile(targetFile)) {
-    await swapFile(vaultTransaction, app, sourceFile, targetFile);
+    await swapFile({ app, sourceFile, targetFile, vaultTransaction });
     return;
   }
 
   if (isFolder(sourceFile) && isFolder(targetFile)) {
-    await swapFolder(vaultTransaction, app, sourceFile, targetFile, shouldSwapEntireFolderStructure);
+    await swapFolder({ app, shouldSwapEntireFolderStructure, sourceFolder: sourceFile, targetFolder: targetFile, vaultTransaction });
     return;
   }
 
   throw new Error('Cannot swap files and folders.');
 }
 
-async function swapFile(vaultTransaction: VaultTransaction, app: App, sourceFile: TFile, targetFile: TFile): Promise<void> {
+async function swapFile(params: SwapFileParams): Promise<void> {
+  const { app, sourceFile, targetFile, vaultTransaction } = params;
   const sourceFilePath = sourceFile.path;
   const targetFilePath = targetFile.path;
   const targetFileTempPath = getAvailablePath(app, targetFilePath);
@@ -72,13 +88,8 @@ async function swapFile(vaultTransaction: VaultTransaction, app: App, sourceFile
   await vaultTransaction.rename(targetFileTempPath, targetFilePath);
 }
 
-async function swapFolder(
-  vaultTransaction: VaultTransaction,
-  app: App,
-  sourceFolder: TFolder,
-  targetFolder: TFolder,
-  shouldSwapEntireFolderStructure: boolean
-): Promise<void> {
+async function swapFolder(params: SwapFolderParams): Promise<void> {
+  const { app, shouldSwapEntireFolderStructure, sourceFolder, targetFolder, vaultTransaction } = params;
   const sourceFolderName = sourceFolder.name;
   const targetFolderName = targetFolder.name;
 

@@ -30,18 +30,22 @@ export interface OpenPasteOptionsModalParams {
   readonly defaultOptions: MoveOptions;
 }
 
+interface PasteOptionsModalConstructorParams {
+  readonly app: App;
+  readonly defaultOptions: MoveOptions;
+  readonly promiseResolve: PromiseResolve<MoveOptions | null>;
+}
+
 /* v8 ignore start -- PasteOptionsModal is an internal UI class tested through the real app (integration). */
 class PasteOptionsModal extends Modal {
   private isConfirmed = false;
   private options: MoveOptions;
+  private readonly promiseResolve: PromiseResolve<MoveOptions | null>;
 
-  public constructor(
-    app: App,
-    defaultOptions: MoveOptions,
-    private readonly promiseResolve: PromiseResolve<MoveOptions | null>
-  ) {
-    super(app);
-    this.options = defaultOptions;
+  public constructor(params: PasteOptionsModalConstructorParams) {
+    super(params.app);
+    this.options = params.defaultOptions;
+    this.promiseResolve = params.promiseResolve;
 
     this.scope.register([], 'Enter', () => {
       this.confirm();
@@ -151,7 +155,7 @@ class PasteOptionsModal extends Modal {
 /* v8 ignore start -- thin modal-open glue tested via the real app (integration). */
 export async function openPasteOptionsModal(params: OpenPasteOptionsModalParams): Promise<MoveOptions | null> {
   return await new Promise<MoveOptions | null>((promiseResolve) => {
-    new PasteOptionsModal(params.app, params.defaultOptions, promiseResolve).open();
+    new PasteOptionsModal({ app: params.app, defaultOptions: params.defaultOptions, promiseResolve }).open();
   });
 }
 /* v8 ignore stop */

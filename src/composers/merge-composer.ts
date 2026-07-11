@@ -10,6 +10,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   ComposerBaseConstructorParamsBase,
+  ComposerBaseFixBacklinksParams,
   Selection
 } from './composer-base.ts';
 
@@ -93,8 +94,10 @@ export class MergeComposer extends ComposerBase {
     }
   }
 
-  protected override async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
-    await super.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override async fixBacklinks(params: ComposerBaseFixBacklinksParams): Promise<void> {
+    const { updatedFilePaths, updatedLinks } = params;
+    await super.fixBacklinks(params);
 
     let linkIndex = 0;
     await editLinks({

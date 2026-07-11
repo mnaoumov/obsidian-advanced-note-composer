@@ -22,6 +22,15 @@ import type { Selection } from './composers/composer-base.ts';
 const HIGHLIGHT_CLASS = 'advanced-note-composer-pending-selection';
 
 /**
+ * Parameters for {@link computeHighlightRangesForFile}.
+ */
+export interface ComputeHighlightRangesForFileParams {
+  readonly docLength: number;
+  readonly file: null | TFile;
+  readonly highlights: Iterable<Highlight>;
+}
+
+/**
  * A resolved highlight range in a note (document offsets).
  */
 export interface HighlightRange {
@@ -140,7 +149,7 @@ export class SelectionHighlightComponent extends ComponentEx {
       return;
     }
     const editorView = view.editor.cm;
-    const ranges = computeHighlightRangesForFile(this.highlights.values(), view.file, editorView.state.doc.length);
+    const ranges = computeHighlightRangesForFile({ docLength: editorView.state.doc.length, file: view.file, highlights: this.highlights.values() });
     editorView.dispatch({ effects: setSelectionHighlightsEffect.of(buildSelectionHighlightDecorations(ranges)) });
   }
   /* v8 ignore stop */
@@ -160,12 +169,11 @@ export function buildSelectionHighlightDecorations(ranges: HighlightRange[]): De
  * Collects the highlight ranges that apply to the given file from all registered highlights, clamped to
  * the document length, with empty ranges dropped and overlaps merged.
  *
- * @param highlights - All registered highlights.
- * @param file - The file of the editor being decorated (or `null` for an editor with no file).
- * @param docLength - The length of the editor's document.
+ * @param params - The parameters.
  * @returns The merged ranges to highlight in that editor.
  */
-export function computeHighlightRangesForFile(highlights: Iterable<Highlight>, file: null | TFile, docLength: number): HighlightRange[] {
+export function computeHighlightRangesForFile(params: ComputeHighlightRangesForFileParams): HighlightRange[] {
+  const { docLength, file, highlights } = params;
   if (!file) {
     return [];
   }
