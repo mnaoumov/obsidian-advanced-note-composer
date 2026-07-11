@@ -52,7 +52,8 @@ Commands (each appears as **`Smart cut & paste: …`** in the command palette):
 
 - **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
   and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
-  unchanged — nothing is removed yet.
+  unchanged — nothing is removed yet. Enable **Should lock all notes when marking selection** to lock *every*
+  note (not just the source) while a mark is held, so you must finish the extraction before editing anything.
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
   cursor in the current note, using your default settings, as a single reversible operation. If you have
   text selected in the target when you run it, the moved text **replaces that selection** (like pasting over
@@ -64,8 +65,9 @@ Commands (each appears as **`Smart cut & paste: …`** in the command palette):
   once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
   the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
   own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
-- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
-  without moving anything. (The built-in `Unlock active note` command also releases the lock.)
+- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
+  without moving anything. The built-in `Unlock active note` command (available on any locked note), or
+  right-clicking a note's lock indicator, cancels the whole pending move the same way.
 
 While a selection is marked, a persistent **Smart cut & paste** notice reminds you that a move is pending
 until you complete or cancel it. The notice carries buttons — **Move marked selection to top of file**,

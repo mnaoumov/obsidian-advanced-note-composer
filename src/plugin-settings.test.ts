@@ -94,6 +94,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldIncludeParentFoldersWhenMergingByDefault).toBe(true);
     expect(settings.shouldIncludeParentFoldersWhenSwappingByDefault).toBe(true);
     expect(settings.shouldKeepHeadingsWhenSplittingContent).toBe(true);
+    expect(settings.shouldLockAllNotesWhenMarkingSelection).toBe(false);
     expect(settings.shouldMergeHeadingsByDefault).toBe(false);
     expect(settings.shouldOpenNoteAfterMerge).toBe(false);
     expect(settings.shouldOpenTargetNoteAfterSplit).toBe(false);

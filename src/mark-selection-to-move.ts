@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  App,
+  TFile
+} from 'obsidian';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { Selection } from './composers/composer-base.ts';
@@ -13,12 +16,14 @@ import type { SelectionHighlightComponent } from './selection-highlight-componen
  * Parameters for {@link markSelectionToMove}.
  */
 export interface MarkSelectionToMoveParams {
+  readonly app: App;
   readonly capturedSelections: Selection[];
   readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly resourceLockComponent: ResourceLockComponent;
   readonly selectedText: string;
   readonly selectionHighlightComponent: SelectionHighlightComponent;
+  readonly shouldLockAllNotes: boolean;
   readonly sourceFile: TFile;
 }
 
@@ -28,6 +33,10 @@ export interface MarkSelectionToMoveParams {
  * buffer. Shared by the `Mark selection to move` command and the split picker's "switch to smart cut"
  * action.
  *
+ * By default only the source note is locked; when `shouldLockAllNotes` is set, a subtree lock on the
+ * vault root locks every note (read-only + mutation-blocked) so the user must finish the extraction
+ * before editing anything.
+ *
  * The held lock is cancelable: the built-in `Unlock active note` aborts every lock on the note (thereby
  * cancelling all operations that hold one), and this mark observes that abort to release itself — the
  * buffer is cleared and the notice hidden — so unlocking also cancels a pending move.
@@ -36,10 +45,14 @@ export interface MarkSelectionToMoveParams {
  */
 export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
   const abortController = new AbortController();
-  const lock = params.resourceLockComponent.lockForPath(params.sourceFile, {
-    abortController,
-    shouldBlockMutations: true
-  });
+  const lock = params.resourceLockComponent.lockForPath(
+    params.shouldLockAllNotes ? params.app.vault.getRoot().path : params.sourceFile,
+    {
+      abortController,
+      mode: params.shouldLockAllNotes ? 'subtree' : 'file',
+      shouldBlockMutations: true
+    }
+  );
 
   const notice = params.moveNoticeComponent.showNotice();
   const highlight = params.selectionHighlightComponent.addHighlight(params.sourceFile, params.capturedSelections);

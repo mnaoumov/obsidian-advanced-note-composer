@@ -658,12 +658,14 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     // Highlighted target note so the user can position the caret and paste. `canSwitchToSmartCut`
     // Guarantees both collaborators are present.
     markSelectionToMove({
+      app: params.app,
       capturedSelections,
       moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
       moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
       resourceLockComponent: params.resourceLockComponent,
       selectedText,
       selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
+      shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
       sourceFile: params.sourceFile
     });
     if (splitFileModalResult.targetFile) {
@@ -725,12 +727,14 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     // Switch to smart cut from the confirmation dialog: the target is already resolved, so mark the
     // Selection to move and open that target instead of splitting.
     markSelectionToMove({
+      app: params.app,
       capturedSelections,
       moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
       moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
       resourceLockComponent: params.resourceLockComponent,
       selectedText,
       selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
+      shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
       sourceFile: params.sourceFile
     });
     await params.app.workspace.getLeaf(false).openFile(prepareForSplitFileResult.targetFile, { active: true });

@@ -1,6 +1,9 @@
 import type {
+  App,
   Notice,
-  TFile
+  TFile,
+  TFolder,
+  Vault
 } from 'obsidian';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
@@ -26,7 +29,10 @@ interface LockForPathOptions {
 
 const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 12, startOffset: 5 }];
 
+const ROOT_FOLDER = strictProxy<TFolder>({ path: '/' });
+
 interface TestContext {
+  readonly app: App;
   readonly capturedAbortControllers: AbortController[];
   readonly dispose: ReturnType<typeof vi.fn>;
   readonly disposeHighlight: ReturnType<typeof vi.fn>;
@@ -44,6 +50,11 @@ function createContext(): TestContext {
   const disposeHighlight = vi.fn();
   const notice = strictProxy<Notice>({ hide: vi.fn() });
   return {
+    app: strictProxy<App>({
+      vault: strictProxy<Vault>({
+        getRoot: vi.fn().mockReturnValue(ROOT_FOLDER)
+      })
+    }),
     capturedAbortControllers,
     dispose,
     disposeHighlight,
@@ -71,14 +82,16 @@ function createContext(): TestContext {
   };
 }
 
-function mark(context: TestContext): void {
+function mark(context: TestContext, shouldLockAllNotes = false): void {
   markSelectionToMove({
+    app: context.app,
     capturedSelections: CAPTURED_SELECTIONS,
     moveNoticeComponent: context.moveNoticeComponent,
     moveSelectionBuffer: context.moveSelectionBuffer,
     resourceLockComponent: context.resourceLockComponent,
     selectedText: 'marked text',
     selectionHighlightComponent: context.selectionHighlightComponent,
+    shouldLockAllNotes,
     sourceFile: context.sourceFile
   });
 }
@@ -94,7 +107,7 @@ describe('markSelectionToMove', () => {
 
     expect(context.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
       context.sourceFile,
-      expect.objectContaining({ shouldBlockMutations: true })
+      expect.objectContaining({ mode: 'file', shouldBlockMutations: true })
     );
     expect(context.moveNoticeComponent.showNotice).toHaveBeenCalledOnce();
     expect(context.moveNoticeComponent.refreshButtons).toHaveBeenCalledOnce();
@@ -106,6 +119,17 @@ describe('markSelectionToMove', () => {
     expect(marked?.sourceFile).toBe(context.sourceFile);
     expect(marked?.sourceMtime).toBe(4321);
     expect(marked?.notice).toBe(context.notice);
+  });
+
+  it('subtree-locks the vault root when shouldLockAllNotes is set', () => {
+    const context = createContext();
+    mark(context, true);
+
+    expect(context.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
+      ROOT_FOLDER.path,
+      expect.objectContaining({ mode: 'subtree', shouldBlockMutations: true })
+    );
+    expect(context.moveSelectionBuffer.get()?.sourceFile).toBe(context.sourceFile);
   });
 
   it('clears the mark when the source lock is aborted (e.g. Unlock active note)', () => {

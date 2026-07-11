@@ -75,12 +75,14 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     }
 
     markSelectionToMove({
+      app: this.app,
       capturedSelections: getSelections(editor),
       moveNoticeComponent: this.moveNoticeComponent,
       moveSelectionBuffer: this.moveSelectionBuffer,
       resourceLockComponent: this.resourceLockComponent,
       selectedText: editor.getSelection(),
       selectionHighlightComponent: this.selectionHighlightComponent,
+      shouldLockAllNotes: this.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
       sourceFile: file
     });
   }

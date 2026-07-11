@@ -1,9 +1,6 @@
 import type {
   App,
-  Command,
-  PluginManifest,
-  TFile,
-  Workspace
+  PluginManifest
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -14,13 +11,8 @@ import { castTo } from 'obsidian-dev-utils/object-utils';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
-import {
-  isResourceLockedForPath,
-  requestResourceUnlockForPath
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
-  beforeEach,
   describe,
   expect,
   it,
@@ -58,12 +50,6 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', 
 
 vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
   PluginDataHandler: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/resource-lock', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/resource-lock')>(),
-  isResourceLockedForPath: vi.fn(),
-  requestResourceUnlockForPath: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
@@ -135,6 +121,10 @@ vi.mock('./command-handlers/swap-file-command-handler.ts', () => ({
 
 vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
   SwapFolderCommandHandler: vi.fn()
+}));
+
+vi.mock('./command-handlers/unlock-active-note-command-handler.ts', () => ({
+  UnlockActiveNoteCommandHandler: vi.fn()
 }));
 
 vi.mock('./plugin-settings-component.ts', () => {
@@ -224,64 +214,5 @@ describe('Plugin', () => {
         cleanup();
       }).not.toThrow();
     }
-  });
-});
-
-describe('unlock-active-note command', () => {
-  beforeEach(() => {
-    vi.mocked(isResourceLockedForPath).mockReset();
-    vi.mocked(requestResourceUnlockForPath).mockReset();
-  });
-
-  function registerCommand(activeFile: null | TFile): Command {
-    const app = strictProxy<App>({
-      workspace: strictProxy<Workspace>({
-        getActiveFile: vi.fn().mockReturnValue(activeFile)
-      })
-    });
-    const plugin = new Plugin(app, createMockManifest());
-    const internals = castTo<PluginInternals>(plugin);
-    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
-    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
-    const addCommandSpy = vi.spyOn(plugin, 'addCommand');
-
-    internals.onloadImpl();
-
-    const command = addCommandSpy.mock.calls
-      .map((call) => call[0])
-      .find((candidate) => candidate.id === 'unlock-active-note');
-    if (!command) {
-      throw new Error('Command was not registered');
-    }
-    return command;
-  }
-
-  it('should be hidden when there is no active file', () => {
-    const command = registerCommand(null);
-    expect(command.checkCallback?.(true)).toBe(false);
-    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
-  });
-
-  it('should be hidden when the active file is not locked', () => {
-    vi.mocked(isResourceLockedForPath).mockReturnValue(false);
-    const activeFile = strictProxy<TFile>({ path: 'active.md' });
-    const command = registerCommand(activeFile);
-    expect(command.checkCallback?.(true)).toBe(false);
-    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
-  });
-
-  it('should be available and request an unlock when the active file is locked', () => {
-    vi.mocked(isResourceLockedForPath).mockReturnValue(true);
-    const activeFile = strictProxy<TFile>({ path: 'active.md' });
-    const command = registerCommand(activeFile);
-
-    // While checking, the command is enabled but performs no action.
-    expect(command.checkCallback?.(true)).toBe(true);
-    expect(requestResourceUnlockForPath).not.toHaveBeenCalled();
-
-    // When executed, it requests the unlock of the active file.
-    expect(command.checkCallback?.(false)).toBe(true);
-    expect(requestResourceUnlockForPath).toHaveBeenCalledWith(expect.anything(), activeFile);
   });
 });

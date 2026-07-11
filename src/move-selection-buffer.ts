@@ -12,7 +12,9 @@ import type { Selection } from './composers/composer-base.ts';
  */
 export interface MarkedSelection {
   /**
-   * Aborts the held source-note lock (also aborted by the built-in `Unlock active note` command).
+   * Aborting this cancels the entire pending move: the mark handler wires the abort to
+   * {@link MoveSelectionBuffer.clear}, which releases the held lock, drops the mark, and hides the
+   * notice. Aborted by the `Unlock active note` command and by the lock indicator's right-click unlock.
    */
   readonly abortController: AbortController;
 

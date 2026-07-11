@@ -6,10 +6,6 @@ import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/componen
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
-import {
-  isResourceLockedForPath,
-  requestResourceUnlockForPath
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { Level } from './markdown-heading-document.ts';
 
@@ -27,6 +23,7 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handle
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { UnlockActiveNoteCommandHandler } from './command-handlers/unlock-active-note-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
 import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
@@ -193,6 +190,11 @@ export class Plugin extends PluginBase {
           moveToTopHandler,
           moveToBottomHandler,
           cancelMoveCommandHandler,
+          new UnlockActiveNoteCommandHandler({
+            app: this.app,
+            moveSelectionBuffer,
+            resourceLockComponent
+          }),
           new MergeFolderCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
@@ -236,23 +238,6 @@ export class Plugin extends PluginBase {
         pluginName: this.manifest.name
       })
     );
-
-    this.addCommand({
-      checkCallback: (checking: boolean): boolean => {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile || !isResourceLockedForPath(this.app, activeFile)) {
-          return false;
-        }
-
-        if (!checking) {
-          requestResourceUnlockForPath(this.app, activeFile);
-        }
-
-        return true;
-      },
-      id: 'unlock-active-note',
-      name: 'Unlock active note'
-    });
 
     this.addChild(new PrismComponent());
     this.addChild(

@@ -172,6 +172,13 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should show modal instructions').getValue()).toBe(true);
   });
 
+  it('should render the lock-all-notes toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();
