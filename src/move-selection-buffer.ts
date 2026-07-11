@@ -54,6 +54,11 @@ export interface MarkedSelection {
   readonly sourceMtime: number;
 }
 
+interface MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams {
+  readonly endOffset: number;
+  readonly startOffset: number;
+}
+
 /**
  * Holds the transient (non-persisted) selection marked for moving, shared between the mark, move, and
  * cancel command handlers.
@@ -112,7 +117,7 @@ export class MoveSelectionBuffer {
    * @returns Whether the offset is inside a marked selection.
    */
   public isOffsetInsideMarkedSelection(offset: number): boolean {
-    return this.isRangeOverlappingMarkedSelection(offset, offset);
+    return this.isRangeOverlappingMarkedSelection({ endOffset: offset, startOffset: offset });
   }
 
   /**
@@ -122,11 +127,11 @@ export class MoveSelectionBuffer {
    * the text being moved, which would corrupt it. A zero-length range (`startOffset === endOffset`)
    * overlaps only when it is strictly inside a marked selection.
    *
-   * @param startOffset - The start of the range to check.
-   * @param endOffset - The end of the range to check.
+   * @param params - The parameters.
    * @returns Whether the range overlaps a marked selection.
    */
-  public isRangeOverlappingMarkedSelection(startOffset: number, endOffset: number): boolean {
+  public isRangeOverlappingMarkedSelection(params: MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams): boolean {
+    const { endOffset, startOffset } = params;
     if (!this.markedSelection) {
       return false;
     }

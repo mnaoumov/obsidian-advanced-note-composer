@@ -95,7 +95,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       if (!heading) {
         break;
       }
-      const headingInfo = getSelectionUnderHeading(this.app, file, editor, heading.position.start.line);
+      const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
       if (!headingInfo) {
         this.pluginNoticeComponent.showNotice('Failed to find heading');
         return;

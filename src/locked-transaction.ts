@@ -53,6 +53,12 @@ export interface RunLockedTransactionParams {
   readonly lockTargets: readonly LockTarget[];
 
   /**
+   * A human-readable name of the operation holding the locks (e.g. `'Merge notes'`, `'Split note'`),
+   * shown in the unlock confirmation dialog.
+   */
+  readonly operationName: string;
+
+  /**
    * The per-plugin resource-lock component (from `PluginBase.resourceLockComponent`).
    */
   readonly resourceLockComponent: ResourceLockComponent;
@@ -81,9 +87,11 @@ export async function runLockedTransaction(params: RunLockedTransactionParams): 
   const lockedPathsOrFiles = params.lockTargets.map((lockTarget) => lockTarget.pathOrFile);
   const lockDisposables: Disposable[] = [];
   for (const lockTarget of params.lockTargets) {
-    lockDisposables.push(params.resourceLockComponent.lockForPath(lockTarget.pathOrFile, {
+    lockDisposables.push(params.resourceLockComponent.lockForPath({
       abortController: params.abortController,
       mode: lockTarget.mode,
+      operationName: params.operationName,
+      pathOrFile: lockTarget.pathOrFile,
       shouldBlockMutations: true
     }));
   }

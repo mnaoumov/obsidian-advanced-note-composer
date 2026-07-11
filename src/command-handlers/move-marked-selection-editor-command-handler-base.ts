@@ -147,7 +147,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
     const insertion = this.resolveInsertion(editor);
     const startOffset = insertion.targetCursorOffset ?? resolveInsertOffset(editor.getValue(), insertion.insertMode);
     const endOffset = insertion.targetCursorEndOffset ?? startOffset;
-    return !this.moveSelectionBuffer.isRangeOverlappingMarkedSelection(startOffset, endOffset);
+    return !this.moveSelectionBuffer.isRangeOverlappingMarkedSelection({ endOffset, startOffset });
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {

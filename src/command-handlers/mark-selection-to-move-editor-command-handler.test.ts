@@ -182,10 +182,10 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
 
     await handler.executeEditor(createMockEditor(), createMockCtx(file));
 
-    expect(params.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
-      file,
-      expect.objectContaining({ mode: 'file', shouldBlockMutations: true })
-    );
+    const lockParams = vi.mocked(params.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('file');
+    expect(lockParams?.pathOrFile).toBe(file);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
     const marked = params.moveSelectionBuffer.get();
     expect(marked).not.toBeNull();
     expect(marked?.capturedSelections).toBe(CAPTURED_SELECTIONS);
@@ -203,10 +203,10 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
 
     await handler.executeEditor(createMockEditor(), createMockCtx(file));
 
-    expect(params.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
-      ROOT_FOLDER.path,
-      expect.objectContaining({ mode: 'subtree', shouldBlockMutations: true })
-    );
+    const lockParams = vi.mocked(params.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('subtree');
+    expect(lockParams?.pathOrFile).toBe(ROOT_FOLDER.path);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
     expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(file);
   });
 

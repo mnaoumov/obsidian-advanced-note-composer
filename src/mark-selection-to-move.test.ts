@@ -5,7 +5,10 @@ import type {
   TFolder,
   Vault
 } from 'obsidian';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -22,10 +25,6 @@ import type { SelectionHighlightComponent } from './selection-highlight-componen
 
 import { markSelectionToMove } from './mark-selection-to-move.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
-
-interface LockForPathOptions {
-  readonly abortController?: AbortController;
-}
 
 const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 12, startOffset: 5 }];
 
@@ -65,9 +64,9 @@ function createContext(): TestContext {
     moveSelectionBuffer: new MoveSelectionBuffer(),
     notice,
     resourceLockComponent: strictProxy<ResourceLockComponent>({
-      lockForPath: vi.fn().mockImplementation((_pathOrFile, options?: LockForPathOptions) => {
-        if (options?.abortController) {
-          capturedAbortControllers.push(options.abortController);
+      lockForPath: vi.fn().mockImplementation((params: ResourceLockComponentLockForPathParams) => {
+        if (params.abortController) {
+          capturedAbortControllers.push(params.abortController);
         }
         return { [Symbol.dispose]: dispose };
       })
@@ -105,10 +104,10 @@ describe('markSelectionToMove', () => {
     const context = createContext();
     mark(context);
 
-    expect(context.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
-      context.sourceFile,
-      expect.objectContaining({ mode: 'file', shouldBlockMutations: true })
-    );
+    const lockParams = vi.mocked(context.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('file');
+    expect(lockParams?.pathOrFile).toBe(context.sourceFile);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
     expect(context.moveNoticeComponent.showNotice).toHaveBeenCalledOnce();
     expect(context.moveNoticeComponent.refreshButtons).toHaveBeenCalledOnce();
     expect(context.selectionHighlightComponent.addHighlight).toHaveBeenCalledWith(context.sourceFile, CAPTURED_SELECTIONS);
@@ -125,10 +124,10 @@ describe('markSelectionToMove', () => {
     const context = createContext();
     mark(context, true);
 
-    expect(context.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
-      ROOT_FOLDER.path,
-      expect.objectContaining({ mode: 'subtree', shouldBlockMutations: true })
-    );
+    const lockParams = vi.mocked(context.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('subtree');
+    expect(lockParams?.pathOrFile).toBe(ROOT_FOLDER.path);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
     expect(context.moveSelectionBuffer.get()?.sourceFile).toBe(context.sourceFile);
   });
 

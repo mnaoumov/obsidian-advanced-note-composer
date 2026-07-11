@@ -116,24 +116,24 @@ describe('MoveSelectionBuffer', () => {
     }
 
     it('reports overlap when a range intersects the marked selection', () => {
-      expect(markedBuffer().isRangeOverlappingMarkedSelection(7, 9)).toBe(true);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 9, startOffset: 7 })).toBe(true);
     });
 
     it('reports no overlap for a range entirely before the marked selection', () => {
-      expect(markedBuffer().isRangeOverlappingMarkedSelection(1, 4)).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 4, startOffset: 1 })).toBe(false);
     });
 
     it('reports no overlap for a range entirely after the marked selection', () => {
-      expect(markedBuffer().isRangeOverlappingMarkedSelection(12, 15)).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 15, startOffset: 12 })).toBe(false);
     });
 
     it('treats a range touching a boundary as no overlap', () => {
-      expect(markedBuffer().isRangeOverlappingMarkedSelection(2, 5)).toBe(false);
-      expect(markedBuffer().isRangeOverlappingMarkedSelection(10, 12)).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 5, startOffset: 2 })).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 12, startOffset: 10 })).toBe(false);
     });
 
     it('reports no overlap when nothing is marked', () => {
-      expect(new MoveSelectionBuffer().isRangeOverlappingMarkedSelection(7, 9)).toBe(false);
+      expect(new MoveSelectionBuffer().isRangeOverlappingMarkedSelection({ endOffset: 9, startOffset: 7 })).toBe(false);
     });
   });
 });

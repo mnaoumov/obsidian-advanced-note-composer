@@ -75,7 +75,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return false;
     }
 
-    const headingInfo = getSelectionUnderHeading(this.app, file, editor, lineNumber);
+    const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber });
     if (!headingInfo) {
       return false;
     }

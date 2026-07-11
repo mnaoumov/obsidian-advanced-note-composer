@@ -1,5 +1,4 @@
 import type {
-  CachedMetadata,
   Editor,
   EditorSelection,
   Pos
@@ -12,6 +11,7 @@ import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
   ComposerBaseConstructorParamsBase,
+  ComposerBaseUpdateEditorSelectionsParams,
   Selection
 } from './composer-base.ts';
 
@@ -54,6 +54,11 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
   // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
   readonly textAfterExtractionMode?: TextAfterExtractionMode;
+}
+
+interface SplitComposerIsRangeOverlappingCapturedSelectionParams {
+  readonly endOffset: number;
+  readonly startOffset: number;
 }
 
 export class SplitComposer extends ComposerBase {
@@ -176,6 +181,7 @@ export class SplitComposer extends ComposerBase {
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
         ],
+        operationName: 'Split note',
         resourceLockComponent: this.resourceLockComponent
       });
 
@@ -226,12 +232,10 @@ export class SplitComposer extends ComposerBase {
     return new Set();
   }
 
-  protected override updateEditorSelections(
-    sourceCache: CachedMetadata | null,
-    sourceFootnoteIdsToRemove: Set<string>,
-    sourceFootnoteIdsToRestore: Set<string>
-  ): void {
-    super.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override updateEditorSelections(params: ComposerBaseUpdateEditorSelectionsParams): void {
+    const { sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore } = params;
+    super.updateEditorSelections(params);
 
     let editorSelections = this.editor.listSelections();
 
@@ -261,7 +265,7 @@ export class SplitComposer extends ComposerBase {
     // (`endOffset === startOffset`), so it is a plain insertion at the caret.
     const endOffset = this.targetCursorEndOffset ?? startOffset;
 
-    if (this.sourceFile === this.targetFile && this.isRangeOverlappingCapturedSelection(startOffset, endOffset)) {
+    if (this.sourceFile === this.targetFile && this.isRangeOverlappingCapturedSelection({ endOffset, startOffset })) {
       // The insert range overlaps the text being moved, which will be removed — the token (and thus the
       // Moved content) would be lost. The caller aborts with a notice.
       return false;
@@ -289,7 +293,8 @@ export class SplitComposer extends ComposerBase {
     return true;
   }
 
-  private isRangeOverlappingCapturedSelection(startOffset: number, endOffset: number): boolean {
+  private isRangeOverlappingCapturedSelection(params: SplitComposerIsRangeOverlappingCapturedSelectionParams): boolean {
+    const { endOffset, startOffset } = params;
     return this.capturedSelections.some((selection) => startOffset < selection.endOffset && selection.startOffset < endOffset);
   }
 

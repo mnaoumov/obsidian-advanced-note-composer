@@ -67,17 +67,17 @@ describe('computeHighlightRangesForFile', () => {
 
   it('returns nothing for an editor with no file', () => {
     const highlights: Highlight[] = [{ file: sourceFile, ranges: [selection(0, 5)] }];
-    expect(computeHighlightRangesForFile(highlights, null, 100)).toEqual([]);
+    expect(computeHighlightRangesForFile({ docLength: 100, file: null, highlights })).toEqual([]);
   });
 
   it('ignores highlights registered for a different file', () => {
     const highlights: Highlight[] = [{ file: file('other.md'), ranges: [selection(0, 5)] }];
-    expect(computeHighlightRangesForFile(highlights, sourceFile, 100)).toEqual([]);
+    expect(computeHighlightRangesForFile({ docLength: 100, file: sourceFile, highlights })).toEqual([]);
   });
 
   it('clamps ranges to the document length and drops empty ones', () => {
     const highlights: Highlight[] = [{ file: sourceFile, ranges: [selection(3, 10), selection(20, 20)] }];
-    expect(computeHighlightRangesForFile(highlights, sourceFile, 5)).toEqual([{ from: 3, to: 5 }]);
+    expect(computeHighlightRangesForFile({ docLength: 5, file: sourceFile, highlights })).toEqual([{ from: 3, to: 5 }]);
   });
 
   it('merges overlapping ranges across all matching highlights', () => {
@@ -85,7 +85,7 @@ describe('computeHighlightRangesForFile', () => {
       { file: sourceFile, ranges: [selection(0, 5)] },
       { file: sourceFile, ranges: [selection(4, 8)] }
     ];
-    expect(computeHighlightRangesForFile(highlights, sourceFile, 100)).toEqual([{ from: 0, to: 8 }]);
+    expect(computeHighlightRangesForFile({ docLength: 100, file: sourceFile, highlights })).toEqual([{ from: 0, to: 8 }]);
   });
 });
 

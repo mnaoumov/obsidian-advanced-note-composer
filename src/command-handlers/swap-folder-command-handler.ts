@@ -86,6 +86,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
           { mode: 'subtree', pathOrFile: folder.path },
           { mode: 'subtree', pathOrFile: result.targetFolder.path }
         ],
+        operationName: 'Swap folders',
         resourceLockComponent: this.resourceLockComponent
       });
     } catch (error) {

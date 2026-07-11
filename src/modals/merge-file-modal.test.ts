@@ -10,8 +10,10 @@ import type {
   Vault,
   Workspace
 } from 'obsidian';
-import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -213,9 +215,9 @@ function createMockResourceLockComponent(): ResourceLockComponent {
   // The real lock is released by disposing the returned `Disposable`; model that as
   // `unlockForPath` so a `using` scope-exit disposal is observable through the same spy.
   return strictProxy<ResourceLockComponent>({
-    lockForPath: castTo<ResourceLockComponent['lockForPath']>(vi.fn((pathOrFile: PathOrFile) => ({
+    lockForPath: castTo<ResourceLockComponent['lockForPath']>(vi.fn((params: ResourceLockComponentLockForPathParams) => ({
       [Symbol.dispose]: (): void => {
-        unlockForPath(pathOrFile);
+        unlockForPath(params.pathOrFile);
       }
     }))),
     unlockForPath
@@ -295,7 +297,7 @@ describe('prepareForMergeFile', () => {
     const plugin = createMockPlugin();
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
-    expect(vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls.map((call) => call[0])).toContain(sourceFile);
+    expect(vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls.map((call) => call[0].pathOrFile)).toContain(sourceFile);
     expect(plugin.resourceLockComponent.unlockForPath).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(0);
     await promise;
@@ -311,7 +313,7 @@ describe('prepareForMergeFile', () => {
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
     await promise;
-    const lockedPaths = vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls.map((call) => call[0]);
+    const lockedPaths = vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls.map((call) => call[0].pathOrFile);
     expect(lockedPaths).toContain(sourceFile);
     expect(lockedPaths).toContain(mockTargetFile);
     expect(plugin.resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
@@ -324,7 +326,7 @@ describe('prepareForMergeFile', () => {
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
     // Simulate the user unlocking: abort the controller the lock was registered with.
-    const abortController = vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls[0]?.[1]?.abortController;
+    const abortController = vi.mocked(plugin.resourceLockComponent.lockForPath).mock.calls[0]?.[0]?.abortController;
     expect(abortController).toBeInstanceOf(AbortController);
     abortController?.abort();
     await vi.advanceTimersByTimeAsync(0);

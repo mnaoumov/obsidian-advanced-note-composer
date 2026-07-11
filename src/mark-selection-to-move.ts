@@ -45,14 +45,13 @@ export interface MarkSelectionToMoveParams {
  */
 export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
   const abortController = new AbortController();
-  const lock = params.resourceLockComponent.lockForPath(
-    params.shouldLockAllNotes ? params.app.vault.getRoot().path : params.sourceFile,
-    {
-      abortController,
-      mode: params.shouldLockAllNotes ? 'subtree' : 'file',
-      shouldBlockMutations: true
-    }
-  );
+  const lock = params.resourceLockComponent.lockForPath({
+    abortController,
+    mode: params.shouldLockAllNotes ? 'subtree' : 'file',
+    operationName: 'Move selection',
+    pathOrFile: params.shouldLockAllNotes ? params.app.vault.getRoot().path : params.sourceFile,
+    shouldBlockMutations: true
+  });
 
   const notice = params.moveNoticeComponent.showNotice();
   const highlight = params.selectionHighlightComponent.addHighlight(params.sourceFile, params.capturedSelections);
