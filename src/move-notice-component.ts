@@ -7,9 +7,11 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import { ButtonComponent } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
+import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
 
 /**
@@ -48,9 +50,10 @@ interface MoveNoticeButtonDefinition {
 }
 
 /**
- * Owns the permanent notice shown while a selection is marked for moving. The notice carries three
- * buttons — move to top / bottom / at cursor — each enabled only while its command can run against the
- * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
+ * Owns the permanent notice shown while a selection is marked for moving. The notice carries a
+ * "Switch to split/extract" button (always available), the three move buttons — move to top / bottom /
+ * at cursor — each enabled only while its command can run against the active editor, and "Cancel move".
+ * Button state is refreshed whenever the active leaf or the editor selection changes.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
   private buttons: MoveNoticeButton[] | null = null;
@@ -59,6 +62,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   private readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+  private openSplitModalCommandHandler: null | OpenSplitModalCommandHandler = null;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
@@ -108,9 +112,20 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Builds and shows the permanent marked-selection notice with its three move buttons, returning the
-   * notice so the caller can hide it when the mark is released. Call {@link refreshButtons} after the
-   * buffer is marked to seed the buttons' enabled state.
+   * Sets the handler backing the "Switch to split/extract" button. Injected after construction to break
+   * the construction cycle (the handler ultimately depends on this component). Always set during plugin
+   * load, before any notice is shown.
+   *
+   * @param openSplitModalCommandHandler - The handler to back the button.
+   */
+  public setOpenSplitModalCommandHandler(openSplitModalCommandHandler: OpenSplitModalCommandHandler): void {
+    this.openSplitModalCommandHandler = openSplitModalCommandHandler;
+  }
+
+  /**
+   * Builds and shows the permanent marked-selection notice with its buttons, returning the notice so the
+   * caller can hide it when the mark is released. Call {@link refreshButtons} after the buffer is marked
+   * to seed the buttons' enabled state.
    *
    * @returns The shown notice.
    */
@@ -136,6 +151,13 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
 
   private getButtonDefinitions(): MoveNoticeButtonDefinition[] {
     return [
+      {
+        getIsEnabled: null,
+        label: 'Switch to split/extract',
+        onClick: (): void => {
+          invokeAsyncSafely(() => ensureNonNullable(this.openSplitModalCommandHandler).openSplitModal());
+        }
+      },
       {
         getIsEnabled: () => this.moveToTopHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection to top of file',

@@ -20,6 +20,7 @@ import { MergeFileCommandHandler } from './command-handlers/merge-file-command-h
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
+import { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
@@ -125,6 +126,29 @@ export class Plugin extends PluginBase {
       })
     );
 
+    // Reused by the "Switch to split/extract" notice button / command to re-enter the split flow with the
+    // Marked selection.
+    const extractCurrentSelectionEditorCommandHandler = new ExtractCurrentSelectionEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      moveNoticeComponent,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent,
+      selectionHighlightComponent
+    });
+
+    // Late-bound into the notice to break the construction cycle (the handler depends on the extract
+    // Handler, which depends on the notice).
+    const openSplitModalCommandHandler = new OpenSplitModalCommandHandler({
+      app: this.app,
+      extractCurrentSelectionEditorCommandHandler,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+    moveNoticeComponent.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
+
     this.addChild(
       new CommandHandlerComponent({
         activeFileProvider: new AppActiveFileProvider(this.app),
@@ -136,16 +160,7 @@ export class Plugin extends PluginBase {
             pluginSettingsComponent,
             resourceLockComponent
           }),
-          new ExtractCurrentSelectionEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
+          extractCurrentSelectionEditorCommandHandler,
           new ExtractThisHeadingEditorCommandHandler({
             app: this.app,
             consoleDebugComponent: this.consoleDebugComponent,
@@ -190,6 +205,7 @@ export class Plugin extends PluginBase {
           moveToTopHandler,
           moveToBottomHandler,
           cancelMoveCommandHandler,
+          openSplitModalCommandHandler,
           new UnlockActiveNoteCommandHandler({
             app: this.app,
             resourceLockComponent

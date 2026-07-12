@@ -18,6 +18,7 @@ import {
 
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
+import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import type { MarkedSelection } from './move-selection-buffer.ts';
 
 import { MoveNoticeComponent } from './move-notice-component.ts';
@@ -57,6 +58,7 @@ let moveSelectionBuffer: MoveSelectionBuffer;
 let moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
+let openSplitModalCommandHandler: OpenSplitModalCommandHandler;
 let notice: Notice;
 let capturedMessage: DocumentFragment | null | string;
 let pluginNoticeComponent: PluginNoticeComponent;
@@ -70,6 +72,9 @@ beforeEach(() => {
   moveAtCursorHandler = createHandler(true);
   cancelMoveCommandHandler = strictProxy<CancelMoveCommandHandler>({
     cancelMove: vi.fn()
+  });
+  openSplitModalCommandHandler = strictProxy<OpenSplitModalCommandHandler>({
+    openSplitModal: vi.fn().mockResolvedValue(undefined)
   });
   notice = strictProxy<Notice>({ hide: vi.fn() });
   capturedMessage = null;
@@ -88,6 +93,7 @@ beforeEach(() => {
     moveToTopHandler,
     pluginNoticeComponent
   });
+  component.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
   component.load();
 });
 
@@ -103,7 +109,7 @@ function getButtons(): TestButton[] {
 }
 
 describe('MoveNoticeComponent', () => {
-  it('shows a permanent notice with the three move buttons plus Cancel move', () => {
+  it('shows a permanent notice with the Switch to split/extract button, the three move buttons, plus Cancel move', () => {
     const shownNotice = component.showNotice();
 
     expect(shownNotice).toBe(notice);
@@ -112,6 +118,7 @@ describe('MoveNoticeComponent', () => {
     const fragment = castTo<DocumentFragment>(capturedMessage);
     const labels = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
     expect(labels).toEqual([
+      'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
@@ -119,17 +126,19 @@ describe('MoveNoticeComponent', () => {
     ]);
   });
 
-  it('enables each move button only when its command can run, and keeps Cancel move enabled', () => {
+  it('enables each move button only when its command can run, and keeps the always-on buttons enabled', () => {
     component.showNotice();
     moveSelectionBuffer.mark(createMarkedSelection());
     component.refreshButtons();
 
     const buttons = getButtons();
+    // Switch to split/extract has no enablement predicate, so it is never disabled.
     expect(buttons[0]?.component.disabled).toBe(false);
-    expect(buttons[1]?.component.disabled).toBe(true);
-    expect(buttons[2]?.component.disabled).toBe(false);
-    // Cancel move has no enablement predicate, so it is never disabled.
+    expect(buttons[1]?.component.disabled).toBe(false);
+    expect(buttons[2]?.component.disabled).toBe(true);
     expect(buttons[3]?.component.disabled).toBe(false);
+    // Cancel move has no enablement predicate, so it is never disabled.
+    expect(buttons[4]?.component.disabled).toBe(false);
   });
 
   it('drops the buttons and does nothing when nothing is marked', () => {
@@ -169,12 +178,18 @@ describe('MoveNoticeComponent', () => {
     expect(vi.mocked(moveToTopHandler.canExecuteInActiveEditor)).toHaveBeenCalled();
   });
 
+  it('opens the split/extract flow when the Switch to split/extract button is clicked', () => {
+    component.showNotice();
+    getButtons()[0]?.component.simulateClick__();
+    expect(vi.mocked(openSplitModalCommandHandler.openSplitModal)).toHaveBeenCalledOnce();
+  });
+
   it('runs the corresponding command when a move button is clicked', () => {
     component.showNotice();
     const buttons = getButtons();
-    buttons[0]?.component.simulateClick__();
     buttons[1]?.component.simulateClick__();
     buttons[2]?.component.simulateClick__();
+    buttons[3]?.component.simulateClick__();
     expect(vi.mocked(moveToTopHandler.executeInActiveEditor)).toHaveBeenCalledOnce();
     expect(vi.mocked(moveToBottomHandler.executeInActiveEditor)).toHaveBeenCalledOnce();
     expect(vi.mocked(moveAtCursorHandler.executeInActiveEditor)).toHaveBeenCalledOnce();
@@ -182,7 +197,7 @@ describe('MoveNoticeComponent', () => {
 
   it('cancels the move when the Cancel move button is clicked', () => {
     component.showNotice();
-    getButtons()[3]?.component.simulateClick__();
+    getButtons()[4]?.component.simulateClick__();
     expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).toHaveBeenCalledOnce();
   });
 });

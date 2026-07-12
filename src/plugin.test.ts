@@ -96,8 +96,15 @@ vi.mock('./command-handlers/move-marked-selection-to-edge-editor-command-handler
   MoveMarkedSelectionToEdgeEditorCommandHandler: vi.fn()
 }));
 
+vi.mock('./command-handlers/open-split-modal-command-handler.ts', () => ({
+  OpenSplitModalCommandHandler: vi.fn()
+}));
+
 vi.mock('./move-notice-component.ts', () => ({
-  MoveNoticeComponent: vi.fn()
+  // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
+  MoveNoticeComponent: vi.fn(function moveNoticeComponentStub() {
+    return { setOpenSplitModalCommandHandler: vi.fn() };
+  })
 }));
 
 vi.mock('./selection-highlight-component.ts', () => ({
