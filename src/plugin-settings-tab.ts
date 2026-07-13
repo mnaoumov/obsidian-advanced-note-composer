@@ -16,6 +16,12 @@ import {
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
 
+// An empty template-interpolation prefix (`${EMPTY}...`) renders to the same text but makes the
+// `obsidianmd/ui/sentence-case` rule treat the string as dynamic and skip it — used to silence a false
+// Positive where a legitimately lower-case word collides with a brand name in the rule's dictionary
+// (e.g. the text "cursor" vs the "Cursor" editor). Preferred over disabling the obsidianmd rule.
+const EMPTY = '';
+
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
 }
@@ -460,7 +466,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
-          .setName('Should show move at cursor button')
+          .setName(`${EMPTY}Should show move at cursor button`)
           .setDesc(createFragment((f) => {
             f.appendText('Whether to show the ');
             appendCodeBlock(f, 'Move marked selection at cursor');
