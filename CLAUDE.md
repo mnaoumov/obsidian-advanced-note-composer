@@ -71,7 +71,3 @@ so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap
 backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link
 indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so
 dev-utils' `editLinks` write path now completes against the mock.
-
-## Known Issues
-
-None.
