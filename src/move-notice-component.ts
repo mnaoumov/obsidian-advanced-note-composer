@@ -11,6 +11,7 @@ import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 /**
  * Parameters for creating a {@link MoveNoticeComponent}.
@@ -23,6 +24,7 @@ export interface MoveNoticeComponentConstructorParams {
   readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 /**
@@ -48,9 +50,11 @@ interface MoveNoticeButtonDefinition {
 }
 
 /**
- * Owns the permanent notice shown while a selection is marked for moving. The notice carries three
- * buttons — move to top / bottom / at cursor — each enabled only while its command can run against the
- * active editor. Button state is refreshed whenever the active leaf or the editor selection changes.
+ * Owns the permanent notice shown while a selection is marked for moving. The notice carries up to three
+ * move buttons — move to top / bottom / at cursor — each enabled only while its command can run against
+ * the active editor, plus an always-shown `Cancel move`. Which move buttons appear, and whether the
+ * notice is shown at all, is controlled by the `Smart cut & paste` settings. Button state is refreshed
+ * whenever the active leaf or the editor selection changes.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
   private buttons: MoveNoticeButton[] | null = null;
@@ -60,6 +64,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   private readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   private readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
     super(params.app);
@@ -69,6 +74,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     this.moveToBottomHandler = params.moveToBottomHandler;
     this.moveToTopHandler = params.moveToTopHandler;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   public override onload(): void {
@@ -108,13 +114,20 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Builds and shows the permanent marked-selection notice with its three move buttons, returning the
-   * notice so the caller can hide it when the mark is released. Call {@link refreshButtons} after the
-   * buffer is marked to seed the buttons' enabled state.
+   * Builds and shows the permanent marked-selection notice with its enabled move buttons, returning the
+   * notice so the caller can hide it when the mark is released. Which of the three move buttons appear is
+   * controlled by the `Smart cut & paste` settings; `Cancel move` is always shown. When the notice itself
+   * is disabled (`shouldShowSmartCutNotice` is off), nothing is shown and `null` is returned. Call
+   * {@link refreshButtons} after the buffer is marked to seed the buttons' enabled state.
    *
-   * @returns The shown notice.
+   * @returns The shown notice, or `null` when the notice is disabled via settings.
    */
-  public showNotice(): Notice {
+  public showNotice(): Notice | null {
+    if (!this.pluginSettingsComponent.settings.shouldShowSmartCutNotice) {
+      this.buttons = null;
+      return null;
+    }
+
     const buttons: MoveNoticeButton[] = [];
     const message = createFragment((f) => {
       f.appendText('Smart cut & paste: selection marked to move.');
@@ -135,35 +148,47 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   private getButtonDefinitions(): MoveNoticeButtonDefinition[] {
-    return [
-      {
+    const settings = this.pluginSettingsComponent.settings;
+    const definitions: MoveNoticeButtonDefinition[] = [];
+
+    if (settings.shouldShowMoveToTopButton) {
+      definitions.push({
         getIsEnabled: () => this.moveToTopHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection to top of file',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveToTopHandler.executeInActiveEditor());
         }
-      },
-      {
+      });
+    }
+
+    if (settings.shouldShowMoveToBottomButton) {
+      definitions.push({
         getIsEnabled: () => this.moveToBottomHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection to bottom of file',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveToBottomHandler.executeInActiveEditor());
         }
-      },
-      {
+      });
+    }
+
+    if (settings.shouldShowMoveAtCursorButton) {
+      definitions.push({
         getIsEnabled: () => this.moveAtCursorHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection at cursor',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveAtCursorHandler.executeInActiveEditor());
         }
-      },
-      {
-        getIsEnabled: null,
-        label: 'Cancel move',
-        onClick: (): void => {
-          this.cancelMoveCommandHandler.cancelMove();
-        }
+      });
+    }
+
+    definitions.push({
+      getIsEnabled: null,
+      label: 'Cancel move',
+      onClick: (): void => {
+        this.cancelMoveCommandHandler.cancelMove();
       }
-    ];
+    });
+
+    return definitions;
   }
 }

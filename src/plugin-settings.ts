@@ -52,6 +52,10 @@ export class PluginSettings {
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldShowModalInstructions = true;
+  public shouldShowMoveAtCursorButton = true;
+  public shouldShowMoveToBottomButton = true;
+  public shouldShowMoveToTopButton = true;
+  public shouldShowSmartCutNotice = true;
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;

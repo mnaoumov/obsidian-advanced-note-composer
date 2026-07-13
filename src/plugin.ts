@@ -121,7 +121,8 @@ export class Plugin extends PluginBase {
         moveSelectionBuffer,
         moveToBottomHandler,
         moveToTopHandler,
-        pluginNoticeComponent: this.pluginNoticeComponent
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent
       })
     );
 
