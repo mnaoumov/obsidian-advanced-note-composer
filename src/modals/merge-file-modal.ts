@@ -4,17 +4,16 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 import {
   App,
   Keymap,
-  Modal,
-  Platform,
+  TAbstractFile,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
+import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 import type {
   Item,
   SuggestModalBaseConstructorParams
@@ -25,19 +24,22 @@ import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
-interface ConfirmDialogModalConstructorParams {
+interface BuildMergeConfirmContentParams {
   readonly app: App;
-  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  readonly sourceFile: TFile;
-  readonly targetFile: TFile;
+  readonly fragment: DocumentFragment;
+  readonly source: TAbstractFile;
+  readonly target: TAbstractFile;
 }
 
-interface ConfirmDialogModalResult {
-  readonly insertMode: InsertMode;
-  readonly isConfirmed: boolean;
-  readonly shouldAskBeforeMerging: boolean;
+interface ConfirmMergeParams {
+  readonly abortController: AbortController;
+  readonly app: App;
+  readonly resourceLockComponent: ResourceLockComponent;
+  readonly sourceFile: TFile;
+  readonly targetFile: TFile;
 }
 
 interface MergeFileModalConstructorParams extends SuggestModalBaseConstructorParams {
@@ -74,133 +76,6 @@ interface PrepareForMergeFileResult {
   readonly shouldFixFootnotes: boolean;
   readonly shouldMergeHeadings: boolean;
   readonly targetFile: TFile;
-}
-
-/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
-class ConfirmDialogModal extends Modal {
-  private isSelected = false;
-  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  private shouldAskBeforeMerging = true;
-
-  private readonly sourceFile: TFile;
-  private readonly targetFile: TFile;
-
-  public constructor(params: ConfirmDialogModalConstructorParams) {
-    super(params.app);
-
-    this.sourceFile = params.sourceFile;
-    this.targetFile = params.targetFile;
-    this.promiseResolve = params.promiseResolve;
-
-    this.scope.register([], 'Enter', (evt) => {
-      this.confirm(evt);
-    });
-
-    this.scope.register([], 'Escape', () => {
-      this.close();
-    });
-  }
-
-  public override onClose(): void {
-    super.onClose();
-    if (!this.isSelected) {
-      this.promiseResolve({
-        insertMode: InsertMode.Append,
-        isConfirmed: false,
-        shouldAskBeforeMerging: false
-      });
-    }
-  }
-
-  public override onOpen(): void {
-    super.onOpen();
-    invokeAsyncSafely(this.onOpenAsync.bind(this));
-  }
-
-  private confirm(evt: KeyboardEvent | MouseEvent): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: getInsertModeFromEvent(evt),
-      isConfirmed: true,
-      shouldAskBeforeMerging: this.shouldAskBeforeMerging
-    });
-    this.close();
-  }
-
-  private async onOpenAsync(): Promise<void> {
-    this.setTitle('Merge file');
-
-    this.containerEl.addClass('mod-confirmation');
-    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
-
-    this.setContent(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Are you sure you want to merge ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' into ');
-        appendCodeBlock(f, 'Target');
-        f.appendText('? ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' will be deleted.');
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Source');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile }));
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Target');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile }));
-      })
-    );
-
-    if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', {
-        cls: 'mod-warning',
-        text: 'Merge and don\'t ask again'
-      }, (button) => {
-        button.addEventListener('click', (evt) => {
-          this.shouldAskBeforeMerging = false;
-          this.confirm(evt);
-        });
-      });
-    } else {
-      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label
-          .createEl('input', {
-            attr: { tabindex: -1 },
-            type: 'checkbox'
-          }, (checkbox) => {
-            checkbox.addEventListener('change', (evt) => {
-              if (!(evt.target instanceof HTMLInputElement)) {
-                return;
-              }
-              this.shouldAskBeforeMerging = !evt.target.checked;
-            });
-          });
-        label.appendText('Don\'t ask again');
-      });
-    }
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-warning',
-      text: 'Merge'
-    }, (button) => {
-      button.addEventListener('click', (evt) => {
-        this.confirm(evt);
-      });
-    });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-cancel',
-      text: 'Cancel'
-    }, (button) => {
-      button.addEventListener('click', () => {
-        this.close();
-      });
-    });
-  }
 }
 
 /* v8 ignore start -- MergeFileModal is an internal UI class tested through exported functions. */
@@ -384,69 +259,142 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   const abortController = new AbortController();
   using _sourceLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Merge notes', pathOrFile: params.sourceFile });
 
-  const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
-    const modal = new MergeFileModal({
-      ...params,
-      promiseResolve
+  // The confirmation dialog can send the flow back to the target picker ("Change target"); loop until
+  // The user confirms the merge or cancels. `pickerSeed` seeds the picker input with the previously-chosen
+  // Target's query when the picker is reopened.
+  let pickerSeed = '';
+
+  for (;;) {
+    // Capture the picker seed in a per-iteration const so the modal-opening closure does not close over
+    // The mutable `pickerSeed` (reassigned below on "Change target").
+    const currentSeed = pickerSeed;
+
+    const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
+      const modal = new MergeFileModal({
+        ...params,
+        initialInputValue: currentSeed,
+        promiseResolve
+      });
+      openMinimizableModal(modal, abortController);
     });
-    openMinimizableModal(modal, abortController);
-  });
 
-  if (!result) {
-    return null;
+    if (!result) {
+      return null;
+    }
+
+    const selectItemResult = await new MergeItemSelector({
+      app: params.app,
+      inputValue: result.inputValue,
+      isMod: result.isMod,
+      item: result.item,
+      pluginSettingsComponent: params.pluginSettingsComponent,
+      sourceFile: params.sourceFile
+    }).selectItem();
+
+    const prepareForMergeFileResult: PrepareForMergeFileResult = {
+      frontmatterMergeStrategy: result.frontmatterMergeStrategy,
+      insertMode: result.insertMode,
+      isNewTargetFile: selectItemResult.isNewTargetFile,
+      shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: result.shouldFixFootnotes,
+      shouldMergeHeadings: result.shouldMergeHeadings,
+      targetFile: selectItemResult.targetFile
+    };
+
+    if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
+      return prepareForMergeFileResult;
+    }
+
+    const confirmDialogResult = await confirmMerge({
+      abortController,
+      app: params.app,
+      resourceLockComponent: params.resourceLockComponent,
+      sourceFile: params.sourceFile,
+      targetFile: prepareForMergeFileResult.targetFile
+    });
+
+    /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
+    if (confirmDialogResult.shouldReselectTarget) {
+      // Go back to the target picker: discard the abandoned target (trash it when it was freshly created
+      // For this choice) and preselect the previous choice on reopen. `confirmMerge` already released the
+      // Target lock, so reopening the picker re-locks only the next target.
+      if (prepareForMergeFileResult.isNewTargetFile) {
+        await trashSafe(params.app, prepareForMergeFileResult.targetFile);
+      }
+      pickerSeed = result.inputValue;
+      continue;
+    }
+    if (!confirmDialogResult.isConfirmed) {
+      if (prepareForMergeFileResult.isNewTargetFile) {
+        await trashSafe(params.app, prepareForMergeFileResult.targetFile);
+      }
+      return null;
+    }
+    await params.pluginSettingsComponent.editAndSave((settings) => {
+      settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskAgain;
+    });
+
+    return {
+      ...prepareForMergeFileResult,
+      insertMode: confirmDialogResult.insertMode
+    };
+    /* v8 ignore stop */
   }
+}
 
-  const selectItemResult = await new MergeItemSelector({
-    app: params.app,
-    inputValue: result.inputValue,
-    isMod: result.isMod,
-    item: result.item,
-    pluginSettingsComponent: params.pluginSettingsComponent,
-    sourceFile: params.sourceFile
-  }).selectItem();
+/* v8 ignore start -- builds the confirmation dialog DOM; exercised via desktop integration tests, not unit tests. */
+async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams): Promise<void> {
+  const {
+    app,
+    fragment,
+    source,
+    target
+  } = params;
+  fragment.appendText('Are you sure you want to merge ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' into ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('? ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' will be deleted.');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+}
 
-  let prepareForMergeFileResult: PrepareForMergeFileResult = {
-    frontmatterMergeStrategy: result.frontmatterMergeStrategy,
-    insertMode: result.insertMode,
-    isNewTargetFile: selectItemResult.isNewTargetFile,
-    shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
-    shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
-    shouldFixFootnotes: result.shouldFixFootnotes,
-    shouldMergeHeadings: result.shouldMergeHeadings,
-    targetFile: selectItemResult.targetFile
-  };
-
-  if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
-    return prepareForMergeFileResult;
-  }
-
+async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogModalResult> {
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Merge notes', pathOrFile: prepareForMergeFileResult.targetFile });
+  // Released when this function returns, before the merge runs (and before the picker is reopened when the
+  // User chooses "Change target").
+  using _targetLock = params.resourceLockComponent.lockForPath({ abortController: params.abortController, operationName: 'Merge notes', pathOrFile: params.targetFile });
 
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+  const {
+    app,
+    sourceFile,
+    targetFile
+  } = params;
+  return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(
       new ConfirmDialogModal({
-        ...params,
+        app,
+        buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app, fragment, source: sourceFile, target: targetFile }),
+        canReselectTarget: true,
+        confirmButtonMobileText: 'Merge and don\'t ask again',
+        confirmButtonText: 'Merge',
         promiseResolve,
-        targetFile: prepareForMergeFileResult.targetFile
+        title: 'Merge file'
       }),
-      abortController
+      params.abortController
     );
   });
-
-  /* v8 ignore start -- requires ConfirmDialogModal to resolve with isConfirmed=true which is untestable in unit tests. */
-  if (!confirmDialogResult.isConfirmed) {
-    return null;
-  }
-  await params.pluginSettingsComponent.editAndSave((settings) => {
-    settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
-  });
-
-  prepareForMergeFileResult = {
-    ...prepareForMergeFileResult,
-    insertMode: confirmDialogResult.insertMode
-  };
-
-  return prepareForMergeFileResult;
-  /* v8 ignore stop */
 }
+
+/* v8 ignore stop */

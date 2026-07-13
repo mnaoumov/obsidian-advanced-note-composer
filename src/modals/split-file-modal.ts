@@ -6,12 +6,9 @@ import {
   ButtonComponent,
   Editor,
   Keymap,
-  Modal,
-  Platform,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -24,6 +21,7 @@ import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
+import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 import type {
   Item,
   SuggestModalBaseConstructorParams
@@ -37,29 +35,15 @@ import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
-interface ConfirmDialogModalConstructorParams {
+interface BuildSplitConfirmContentParams {
   readonly app: App;
-
-  /**
-   * Whether the dialog offers the "Change target" action to send the flow back to the target picker
-   * (only when there is a picker to reopen — i.e. not a heading-driven split).
-   */
-  readonly canReselectTarget: boolean;
-  readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
-  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
+  readonly fragment: DocumentFragment;
   readonly sourceFile: TFile;
   readonly targetFile: TFile;
-}
-
-interface ConfirmDialogModalResult {
-  readonly insertMode: InsertMode;
-  readonly isConfirmed: boolean;
-  readonly shouldAskBeforeSplitting: boolean;
-  readonly shouldReselectTarget: boolean;
-  readonly shouldSwitchToSmartCut: boolean;
 }
 
 interface ConfirmSplitParams {
@@ -124,13 +108,6 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
    */
   readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
-  readonly heading: string;
-
-  /**
-   * The value to seed the picker input with, overriding {@link SplitFileModalConstructorParams.heading}.
-   * Used to preselect the previously-chosen target when the picker is reopened via "Change target".
-   */
-  readonly initialInputValue?: string;
   readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
 }
 
@@ -163,214 +140,11 @@ interface SplitFileModalSwitchToSmartCutResult {
   readonly targetFile: null | TFile;
 }
 
-/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
-class ConfirmDialogModal extends Modal {
-  private readonly canReselectTarget: boolean;
-  private readonly canSwitchToSmartCut: boolean;
-  private readonly editor: Editor;
-  private isSelected = false;
-  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  private shouldAskBeforeSplitting = true;
-  private readonly sourceFile: TFile;
-  private readonly targetFile: TFile;
-
-  public constructor(params: ConfirmDialogModalConstructorParams) {
-    super(params.app);
-
-    this.canReselectTarget = params.canReselectTarget;
-    this.canSwitchToSmartCut = params.canSwitchToSmartCut;
-    this.editor = params.editor;
-    this.promiseResolve = params.promiseResolve;
-    this.sourceFile = params.sourceFile;
-    this.targetFile = params.targetFile;
-
-    this.scope.register([], 'Enter', (evt) => {
-      this.confirm(evt);
-    });
-
-    this.scope.register([], 'Escape', () => {
-      this.close();
-    });
-
-    this.scope.register(['Alt'], 's', () => {
-      if (!this.canSwitchToSmartCut) {
-        return;
-      }
-      this.switchToSmartCut();
-      return false;
-    });
-
-    this.scope.register(['Alt'], 'c', () => {
-      if (!this.canReselectTarget) {
-        return;
-      }
-      this.reselectTarget();
-      return false;
-    });
-  }
-
-  public override onClose(): void {
-    super.onClose();
-    if (!this.isSelected) {
-      this.promiseResolve({
-        insertMode: InsertMode.Append,
-        isConfirmed: false,
-        shouldAskBeforeSplitting: false,
-        shouldReselectTarget: false,
-        shouldSwitchToSmartCut: false
-      });
-    }
-  }
-
-  public override onOpen(): void {
-    super.onOpen();
-    invokeAsyncSafely(this.onOpenAsync.bind(this));
-  }
-
-  private confirm(evt: KeyboardEvent | MouseEvent): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: getInsertModeFromEvent(evt),
-      isConfirmed: true,
-      shouldAskBeforeSplitting: this.shouldAskBeforeSplitting,
-      shouldReselectTarget: false,
-      shouldSwitchToSmartCut: false
-    });
-    this.close();
-  }
-
-  private async onOpenAsync(): Promise<void> {
-    this.setTitle('Split file');
-
-    this.containerEl.addClass('mod-confirmation');
-    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
-
-    this.setContent(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Are you sure you want to split ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' into ');
-        appendCodeBlock(f, 'Target');
-        f.appendText('?');
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Source');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile }));
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Target');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile }));
-        f.createEl('br');
-        f.createEl('br');
-        f.createEl('h2', { text: 'Source content to split' });
-        const selectedText = getSelections(this.editor).map((selection) => this.editor.cm.state.sliceDoc(selection.startOffset, selection.endOffset))
-          .join('\n');
-        const lines = selectedText.split('\n');
-        for (const line of lines) {
-          appendCodeBlock(f, line);
-          f.createEl('br');
-        }
-      })
-    );
-
-    if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', {
-        cls: 'mod-warning',
-        text: 'Split and don\'t ask again'
-      }, (button) => {
-        button.addEventListener('click', (evt) => {
-          this.shouldAskBeforeSplitting = false;
-          this.confirm(evt);
-        });
-      });
-    } else {
-      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label
-          .createEl('input', {
-            attr: { tabindex: -1 },
-            type: 'checkbox'
-          }, (checkbox) => {
-            checkbox.addEventListener('change', (evt) => {
-              if (!(evt.target instanceof HTMLInputElement)) {
-                return;
-              }
-              this.shouldAskBeforeSplitting = !evt.target.checked;
-            });
-          });
-        label.appendText('Don\'t ask again');
-      });
-    }
-
-    new ButtonComponent(buttonContainerEl)
-      .setButtonText('Change target')
-      .setTooltip('Go back to the target picker to choose a different note (Alt+C)')
-      .setDisabled(!this.canReselectTarget)
-      .onClick(() => {
-        this.reselectTarget();
-      });
-
-    new ButtonComponent(buttonContainerEl)
-      .setButtonText('Switch to smart cut & paste')
-      .setTooltip('Mark the selection to move and open the target note instead of splitting')
-      .setDisabled(!this.canSwitchToSmartCut)
-      .onClick(() => {
-        this.switchToSmartCut();
-      });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-warning',
-      text: 'Split'
-    }, (button) => {
-      button.addEventListener('click', (evt) => {
-        this.confirm(evt);
-      });
-    });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-cancel',
-      text: 'Cancel'
-    }, (button) => {
-      button.addEventListener('click', () => {
-        this.close();
-      });
-    });
-  }
-
-  private reselectTarget(): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: InsertMode.Append,
-      isConfirmed: false,
-      shouldAskBeforeSplitting: false,
-      shouldReselectTarget: true,
-      shouldSwitchToSmartCut: false
-    });
-    this.close();
-  }
-
-  private switchToSmartCut(): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: InsertMode.Append,
-      isConfirmed: false,
-      shouldAskBeforeSplitting: false,
-      shouldReselectTarget: false,
-      shouldSwitchToSmartCut: true
-    });
-    this.close();
-  }
-}
-
-/* v8 ignore stop */
-
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
   private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  private readonly initialInputValue: string;
   private isSelected = false;
   private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -386,8 +160,6 @@ class SplitFileModal extends SuggestModalBase {
 
     this.canSwitchToSmartCut = params.canSwitchToSmartCut;
     this.editor = params.editor;
-    // Seed the picker with the reselect value when reopened via "Change target", else the heading.
-    this.initialInputValue = params.initialInputValue ?? params.heading;
     this.promiseResolve = params.promiseResolve;
 
     this.shouldIncludeFrontmatter = this.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
@@ -420,8 +192,6 @@ class SplitFileModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
-    this.inputEl.value = this.initialInputValue;
-    this.updateSuggestions();
     this.renderSwitchToSmartCutButton();
   }
 
@@ -715,7 +485,6 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         const modal = new SplitFileModal({
           ...params,
           canSwitchToSmartCut,
-          heading,
           initialInputValue: currentSeed,
           promiseResolve
         });
@@ -824,11 +593,46 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       return null;
     }
     await params.pluginSettingsComponent.editAndSave((settings) => {
-      settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskBeforeSplitting;
+      settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskAgain;
     });
 
     return prepareForSplitFileResult;
     /* v8 ignore stop */
+  }
+}
+
+async function buildSplitConfirmContent(params: BuildSplitConfirmContentParams): Promise<void> {
+  const {
+    app,
+    editor,
+    fragment,
+    sourceFile,
+    targetFile
+  } = params;
+  fragment.appendText('Are you sure you want to split ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' into ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('?');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  fragment.createEl('h2', { text: 'Source content to split' });
+  const selectedText = getSelections(editor).map((selection) => editor.cm.state.sliceDoc(selection.startOffset, selection.endOffset))
+    .join('\n');
+  const lines = selectedText.split('\n');
+  for (const line of lines) {
+    appendCodeBlock(fragment, line);
+    fragment.createEl('br');
   }
 }
 
@@ -838,16 +642,18 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
   // (and before the picker is reopened when the user chooses "Change target").
   using _targetLock = params.resourceLockComponent.lockForPath({ abortController: params.abortController, operationName: 'Split note', pathOrFile: params.targetFile });
 
+  const { app, editor, sourceFile, targetFile } = params;
   return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(
       new ConfirmDialogModal({
-        app: params.app,
+        app,
+        buildContent: (fragment): Promise<void> => buildSplitConfirmContent({ app, editor, fragment, sourceFile, targetFile }),
         canReselectTarget: params.canReselectTarget,
-        canSwitchToSmartCut: params.canSwitchToSmartCut,
-        editor: params.editor,
+        confirmButtonMobileText: 'Split and don\'t ask again',
+        confirmButtonText: 'Split',
         promiseResolve,
-        sourceFile: params.sourceFile,
-        targetFile: params.targetFile
+        switchToSmartCut: { canSwitch: params.canSwitchToSmartCut },
+        title: 'Split file'
       }),
       params.abortController
     );
