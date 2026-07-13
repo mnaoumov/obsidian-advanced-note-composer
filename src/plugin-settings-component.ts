@@ -66,5 +66,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
         return 'Split template should contain {{content}} token';
       }
     });
+
+    this.registerValidator('smartCutAndPasteTemplate', (value): MaybeReturn<string> => {
+      if (value && !value.includes('{{content}}')) {
+        return 'Smart cut & paste template should contain {{content}} token';
+      }
+    });
   }
 }

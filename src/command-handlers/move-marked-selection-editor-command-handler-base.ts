@@ -213,6 +213,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
       insertToken,
       isMultipleSplit: false,
       isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,

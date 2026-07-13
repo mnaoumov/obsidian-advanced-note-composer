@@ -84,6 +84,12 @@ The **Smart cut & paste** settings group lets you tailor this notice:
   **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
   tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
   hotkey you assigned to it keeps working.
+- **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
+  via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
+  file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
+  the same tokens as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`,
+  `{{newPath}}`, `{{date:FORMAT}}`). Leave it empty to reuse the **Split template** (which itself falls back
+  to the **Merge template**), preserving the previous behavior.
 
 The captured selection is also **persistently highlighted in the source note** so you always see exactly
 what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /

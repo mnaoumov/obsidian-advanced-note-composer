@@ -16,6 +16,12 @@ import {
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
 
+// An empty template-interpolation prefix (`${EMPTY}...`) renders to the same text but makes the
+// `obsidianmd/ui/sentence-case` rule treat the string as dynamic and skip it — used to silence a false
+// Positive where a legitimately lower-case word collides with a brand name in the rule's dictionary
+// (e.g. the text "cursor" vs the "Cursor" editor). Preferred over disabling the obsidianmd rule.
+const EMPTY = '';
+
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
 }
@@ -460,7 +466,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
-          .setName('Should show move at cursor button')
+          .setName(`${EMPTY}Should show move at cursor button`)
           .setDesc(createFragment((f) => {
             f.appendText('Whether to show the ');
             appendCodeBlock(f, 'Move marked selection at cursor');
@@ -470,6 +476,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }))
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste template')
+          .setDesc(createFragment((f) => {
+            f.appendText('Template to use when pasting a marked selection via smart cut & paste (');
+            appendCodeBlock(f, 'Move marked selection here');
+            f.appendText(', ');
+            appendCodeBlock(f, 'at cursor');
+            f.appendText(', ');
+            appendCodeBlock(f, 'to top of file');
+            f.appendText(', or ');
+            appendCodeBlock(f, 'to bottom of file');
+            f.appendText(').');
+            f.createEl('br');
+            f.appendText('Leave empty to reuse ');
+            appendCodeBlock(f, 'Split template');
+            f.appendText(' setting.');
+            f.createEl('br');
+            addAvailableTokens(f);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
           });
       });
 

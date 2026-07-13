@@ -84,7 +84,7 @@ describe('Smart cut & paste notice settings', () => {
           if (!container) {
             return [];
           }
-          return [...container.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent ?? '');
+          return [...container.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
         }
 
         // Selects the text again, marks it to move, waits for the mark to settle, captures the notice

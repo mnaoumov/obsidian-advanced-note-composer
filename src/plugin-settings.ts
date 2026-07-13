@@ -59,6 +59,7 @@ export class PluginSettings {
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
+  public smartCutAndPasteTemplate = '';
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
