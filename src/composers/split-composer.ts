@@ -37,6 +37,11 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
+
+  // When `true`, this split is a smart cut & paste move (mark → move here / at cursor / to top /
+  // Bottom), so `getTemplate` prefers the `Smart cut & paste template` setting (falling back to the
+  // Split → merge chain when it is empty). Ordinary split-to-new-file extracts leave this `false`.
+  readonly isSmartCutAndPasteMove?: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 
@@ -67,6 +72,7 @@ export class SplitComposer extends ComposerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
+  private readonly isSmartCutAndPasteMove: boolean;
   private readonly selectedText: string;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
@@ -90,6 +96,7 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
+    this.isSmartCutAndPasteMove = params.isSmartCutAndPasteMove ?? false;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
@@ -213,6 +220,12 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
+    // A smart cut & paste move prefers its own template; when it is empty, fall through to the ordinary
+    // Split → merge resolution below (the documented fallback chain).
+    if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.smartCutAndPasteTemplate) {
+      return this.pluginSettingsComponent.settings.smartCutAndPasteTemplate;
+    }
+
     if (!this.pluginSettingsComponent.settings.splitTemplate) {
       return this.pluginSettingsComponent.settings.mergeTemplate;
     }

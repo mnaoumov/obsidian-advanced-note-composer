@@ -477,6 +477,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
           });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste template')
+          .setDesc(createFragment((f) => {
+            f.appendText('Template to use when pasting a marked selection via smart cut & paste (');
+            appendCodeBlock(f, 'Move marked selection here');
+            f.appendText(', ');
+            appendCodeBlock(f, 'at cursor');
+            f.appendText(', ');
+            appendCodeBlock(f, 'to top of file');
+            f.appendText(', or ');
+            appendCodeBlock(f, 'to bottom of file');
+            f.appendText(').');
+            f.createEl('br');
+            f.appendText('Leave empty to reuse ');
+            appendCodeBlock(f, 'Split template');
+            f.appendText(' setting.');
+            f.createEl('br');
+            addAvailableTokens(f);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
+          });
       });
 
     new SettingGroupEx(this.containerEl)
