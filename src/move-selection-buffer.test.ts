@@ -60,9 +60,21 @@ describe('MoveSelectionBuffer', () => {
     buffer.clear();
     expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
     expect(marked.highlight[Symbol.dispose]).toHaveBeenCalledTimes(1);
-    expect(marked.notice.hide).toHaveBeenCalledTimes(1);
+    expect(marked.notice?.hide).toHaveBeenCalledTimes(1);
     expect(buffer.hasMark()).toBe(false);
     expect(buffer.get()).toBeNull();
+  });
+
+  it('disposes the held lock and removes the highlight on clear even when no notice is shown', () => {
+    const buffer = new MoveSelectionBuffer();
+    const marked = createMarkedSelection({ notice: null });
+    buffer.mark(marked);
+    expect(() => {
+      buffer.clear();
+    }).not.toThrow();
+    expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(marked.highlight[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(buffer.hasMark()).toBe(false);
   });
 
   it('is a no-op to clear when empty', () => {

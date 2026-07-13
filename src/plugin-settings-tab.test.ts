@@ -144,6 +144,7 @@ describe('PluginSettingsTab', () => {
       'Title',
       'Merge',
       'Split/extract',
+      'Smart cut & paste',
       'Include/exclude paths',
       'Merge folders',
       'Swap folders',

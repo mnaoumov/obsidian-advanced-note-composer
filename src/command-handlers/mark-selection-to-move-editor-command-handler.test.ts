@@ -232,7 +232,7 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
     marked?.abortController.abort();
 
     expect(params.moveSelectionBuffer.hasMark()).toBe(false);
-    expect(marked?.notice.hide).toHaveBeenCalled();
+    expect(marked?.notice?.hide).toHaveBeenCalled();
   });
 
   it('should not let a stale aborted controller cancel a subsequently marked selection', async () => {

@@ -75,6 +75,16 @@ until you complete or cancel it. The notice carries buttons — **Move marked se
 each enabled only while it applies to the active note, so you can drive the whole move from the notice
 without opening the command palette.
 
+The **Smart cut & paste** settings group lets you tailor this notice:
+
+- **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
+  moving, and cancelling purely through the commands (and their hotkeys). Nothing is shown when a
+  selection is marked.
+- **Should show move to top of file button** / **Should show move to bottom of file button** /
+  **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
+  tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
+  hotkey you assigned to it keeps working.
+
 The captured selection is also **persistently highlighted in the source note** so you always see exactly
 what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /
 split picker is open (the selection stays highlighted while you choose the target). The highlight clears

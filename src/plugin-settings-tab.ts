@@ -415,6 +415,65 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       });
 
     new SettingGroupEx(this.containerEl)
+      .setHeading('Smart cut & paste')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show smart cut & paste notice')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the notice after you run ');
+            appendCodeBlock(f, 'Mark selection to move');
+            f.appendText('. The notice reminds you a selection is marked and offers buttons to move or cancel it.');
+            f.createEl('br');
+            f.appendText('When disabled, no notice is shown; you drive the move and cancel purely through the commands (and their hotkeys).');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowSmartCutNotice', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show move to top of file button')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection to top of file');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveToTopButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show move to bottom of file button')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection to bottom of file');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveToBottomButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show move at cursor button')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection at cursor');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
+          });
+      });
+
+    new SettingGroupEx(this.containerEl)
       .setHeading('Include/exclude paths')
       .addSettingEx((setting: SettingEx) => {
         setting
