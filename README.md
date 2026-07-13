@@ -105,6 +105,11 @@ Notes:
   paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
   can switch after the target is chosen.
 
+- **Change target from the split confirmation dialog.** When *Ask before splitting* is on, the confirmation
+  dialog also shows a **Change target** button (or press `Alt+C`) that sends you back to the target picker to
+  pick a different note — without cancelling and re-triggering the whole extract. Your selection is kept, and
+  the picker reopens preselected with your previous choice.
+
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.
 - When the target is the same note as the source, `Move marked selection here` is unavailable while the
