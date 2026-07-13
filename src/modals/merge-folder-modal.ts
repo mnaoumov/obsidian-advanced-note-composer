@@ -1,36 +1,28 @@
 import type {
   App,
   FuzzyMatch,
+  TAbstractFile,
   TFolder
 } from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
-import {
-  FuzzySuggestModal,
-  Modal,
-  Platform
-} from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { FuzzySuggestModal } from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
-interface ConfirmDialogModalConstructorParams {
+interface BuildMergeConfirmContentParams {
   readonly app: App;
-  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  readonly sourceFolder: TFolder;
-  readonly targetFolder: TFolder;
-}
-
-interface ConfirmDialogModalResult {
-  readonly isConfirmed: boolean;
-  readonly shouldAskBeforeMerging: boolean;
+  readonly fragment: DocumentFragment;
+  readonly source: TAbstractFile;
+  readonly target: TAbstractFile;
 }
 
 interface MergeFolderModalConstructorParams {
@@ -47,110 +39,6 @@ interface SelectTargetFolderForMergeFolderParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFolder: TFolder;
 }
-
-/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
-class ConfirmDialogModal extends Modal {
-  private isSelected = false;
-  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  private shouldAskBeforeMerging = true;
-  private readonly sourceFolder: TFolder;
-  private readonly targetFolder: TFolder;
-
-  public constructor(params: ConfirmDialogModalConstructorParams) {
-    super(params.app);
-
-    this.sourceFolder = params.sourceFolder;
-    this.targetFolder = params.targetFolder;
-    this.promiseResolve = params.promiseResolve;
-
-    this.scope.register([], 'Enter', () => {
-      this.confirm();
-    });
-    this.scope.register([], 'Escape', () => {
-      this.close();
-    });
-  }
-
-  public override onClose(): void {
-    super.onClose();
-    if (!this.isSelected) {
-      this.promiseResolve({ isConfirmed: false, shouldAskBeforeMerging: false });
-    }
-  }
-
-  public override onOpen(): void {
-    super.onOpen();
-    invokeAsyncSafely(this.onOpenAsync.bind(this));
-  }
-
-  private confirm(): void {
-    this.isSelected = true;
-    this.promiseResolve({ isConfirmed: true, shouldAskBeforeMerging: this.shouldAskBeforeMerging });
-    this.close();
-  }
-
-  private async onOpenAsync(): Promise<void> {
-    this.setTitle('Merge folder');
-    this.containerEl.addClass('mod-confirmation');
-    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
-
-    this.setContent(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Are you sure you want to merge ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' into ');
-        appendCodeBlock(f, 'Target');
-        f.appendText('? ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' will be deleted.');
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Source');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFolder }));
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Target');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFolder }));
-      })
-    );
-
-    if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', { cls: 'mod-warning', text: 'Merge and don\'t ask again' }, (button) => {
-        button.addEventListener('click', () => {
-          this.shouldAskBeforeMerging = false;
-          this.confirm();
-        });
-      });
-    } else {
-      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label.createEl('input', { attr: { tabindex: -1 }, type: 'checkbox' }, (checkbox) => {
-          checkbox.addEventListener('change', (evt) => {
-            if (!(evt.target instanceof HTMLInputElement)) {
-              return;
-            }
-            this.shouldAskBeforeMerging = !evt.target.checked;
-          });
-        });
-        label.appendText('Don\'t ask again');
-      });
-    }
-
-    buttonContainerEl.createEl('button', { cls: 'mod-warning', text: 'Merge' }, (button) => {
-      button.addEventListener('click', () => {
-        this.confirm();
-      });
-    });
-    buttonContainerEl.createEl('button', { cls: 'mod-cancel', text: 'Cancel' }, (button) => {
-      button.addEventListener('click', () => {
-        this.close();
-      });
-    });
-  }
-}
-
-/* v8 ignore stop */
 
 /* v8 ignore start -- MergeFolderModal is an internal UI class tested through exported functions. */
 class MergeFolderModal extends FuzzySuggestModal<TFolder> {
@@ -276,36 +164,78 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
 }
 
 export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
-  const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
-    openMinimizableModal(
-      new MergeFolderModal({
-        ...params,
-        promiseResolve
-      })
-    );
-  });
-  /* v8 ignore start -- requires MergeFolderModal to resolve with a selected folder which is untestable in unit tests. */
-  if (!targetFolder) {
-    return null;
-  }
-  if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
+  // The confirmation dialog can send the flow back to the folder picker ("Change target"); loop until the
+  // User confirms the merge or cancels.
+  for (;;) {
+    const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
+      openMinimizableModal(
+        new MergeFolderModal({
+          ...params,
+          promiseResolve
+        })
+      );
+    });
+
+    /* v8 ignore start -- requires MergeFolderModal / ConfirmDialogModal to resolve with a selection, which is untestable in unit tests. */
+    if (!targetFolder) {
+      return null;
+    }
+    if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
+      return targetFolder;
+    }
+    const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+      openMinimizableModal(
+        new ConfirmDialogModal({
+          app: params.app,
+          buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app: params.app, fragment, source: params.sourceFolder, target: targetFolder }),
+          canReselectTarget: true,
+          confirmButtonMobileText: 'Merge and don\'t ask again',
+          confirmButtonText: 'Merge',
+          promiseResolve,
+          title: 'Merge folder'
+        })
+      );
+    });
+    if (confirmDialogResult.shouldReselectTarget) {
+      // Go back to the folder picker to choose a different target.
+      continue;
+    }
+    if (!confirmDialogResult.isConfirmed) {
+      return null;
+    }
+    await params.pluginSettingsComponent.editAndSave((settings) => {
+      settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskAgain;
+    });
     return targetFolder;
+    /* v8 ignore stop */
   }
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(
-      new ConfirmDialogModal({
-        ...params,
-        promiseResolve,
-        targetFolder
-      })
-    );
-  });
-  if (!confirmDialogResult.isConfirmed) {
-    return null;
-  }
-  await params.pluginSettingsComponent.editAndSave((settings) => {
-    settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskBeforeMerging;
-  });
-  return targetFolder;
-  /* v8 ignore stop */
 }
+
+/* v8 ignore start -- builds the confirmation dialog DOM; exercised via desktop integration tests, not unit tests. */
+async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams): Promise<void> {
+  const {
+    app,
+    fragment,
+    source,
+    target
+  } = params;
+  fragment.appendText('Are you sure you want to merge ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' into ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('? ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' will be deleted.');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+}
+
+/* v8 ignore stop */

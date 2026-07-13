@@ -6,12 +6,9 @@ import {
   ButtonComponent,
   Editor,
   Keymap,
-  Modal,
-  Platform,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -24,6 +21,7 @@ import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
+import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 import type {
   Item,
   SuggestModalBaseConstructorParams
@@ -37,22 +35,26 @@ import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
-interface ConfirmDialogModalConstructorParams {
+interface BuildSplitConfirmContentParams {
   readonly app: App;
-  readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
-  readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
+  readonly fragment: DocumentFragment;
   readonly sourceFile: TFile;
   readonly targetFile: TFile;
 }
 
-interface ConfirmDialogModalResult {
-  readonly insertMode: InsertMode;
-  readonly isConfirmed: boolean;
-  readonly shouldAskBeforeSplitting: boolean;
-  readonly shouldSwitchToSmartCut: boolean;
+interface ConfirmSplitParams {
+  readonly abortController: AbortController;
+  readonly app: App;
+  readonly canReselectTarget: boolean;
+  readonly canSwitchToSmartCut: boolean;
+  readonly editor: Editor;
+  readonly resourceLockComponent: ResourceLockComponent;
+  readonly sourceFile: TFile;
+  readonly targetFile: TFile;
 }
 
 interface PrepareForSplitFileParams {
@@ -106,7 +108,6 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
    */
   readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
-  readonly heading: string;
   readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
 }
 
@@ -139,181 +140,11 @@ interface SplitFileModalSwitchToSmartCutResult {
   readonly targetFile: null | TFile;
 }
 
-/* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions. */
-class ConfirmDialogModal extends Modal {
-  private readonly canSwitchToSmartCut: boolean;
-  private readonly editor: Editor;
-  private isSelected = false;
-  private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
-  private shouldAskBeforeSplitting = true;
-  private readonly sourceFile: TFile;
-  private readonly targetFile: TFile;
-
-  public constructor(params: ConfirmDialogModalConstructorParams) {
-    super(params.app);
-
-    this.canSwitchToSmartCut = params.canSwitchToSmartCut;
-    this.editor = params.editor;
-    this.promiseResolve = params.promiseResolve;
-    this.sourceFile = params.sourceFile;
-    this.targetFile = params.targetFile;
-
-    this.scope.register([], 'Enter', (evt) => {
-      this.confirm(evt);
-    });
-
-    this.scope.register([], 'Escape', () => {
-      this.close();
-    });
-
-    this.scope.register(['Alt'], 's', () => {
-      if (!this.canSwitchToSmartCut) {
-        return;
-      }
-      this.switchToSmartCut();
-      return false;
-    });
-  }
-
-  public override onClose(): void {
-    super.onClose();
-    if (!this.isSelected) {
-      this.promiseResolve({
-        insertMode: InsertMode.Append,
-        isConfirmed: false,
-        shouldAskBeforeSplitting: false,
-        shouldSwitchToSmartCut: false
-      });
-    }
-  }
-
-  public override onOpen(): void {
-    super.onOpen();
-    invokeAsyncSafely(this.onOpenAsync.bind(this));
-  }
-
-  private confirm(evt: KeyboardEvent | MouseEvent): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: getInsertModeFromEvent(evt),
-      isConfirmed: true,
-      shouldAskBeforeSplitting: this.shouldAskBeforeSplitting,
-      shouldSwitchToSmartCut: false
-    });
-    this.close();
-  }
-
-  private async onOpenAsync(): Promise<void> {
-    this.setTitle('Split file');
-
-    this.containerEl.addClass('mod-confirmation');
-    const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
-
-    this.setContent(
-      await createFragmentAsync(async (f) => {
-        f.appendText('Are you sure you want to split ');
-        appendCodeBlock(f, 'Source');
-        f.appendText(' into ');
-        appendCodeBlock(f, 'Target');
-        f.appendText('?');
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Source');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile }));
-        f.createEl('br');
-        f.createEl('br');
-        appendCodeBlock(f, 'Target');
-        f.appendText(': ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile }));
-        f.createEl('br');
-        f.createEl('br');
-        f.createEl('h2', { text: 'Source content to split' });
-        const selectedText = getSelections(this.editor).map((selection) => this.editor.cm.state.sliceDoc(selection.startOffset, selection.endOffset))
-          .join('\n');
-        const lines = selectedText.split('\n');
-        for (const line of lines) {
-          appendCodeBlock(f, line);
-          f.createEl('br');
-        }
-      })
-    );
-
-    if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', {
-        cls: 'mod-warning',
-        text: 'Split and don\'t ask again'
-      }, (button) => {
-        button.addEventListener('click', (evt) => {
-          this.shouldAskBeforeSplitting = false;
-          this.confirm(evt);
-        });
-      });
-    } else {
-      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label
-          .createEl('input', {
-            attr: { tabindex: -1 },
-            type: 'checkbox'
-          }, (checkbox) => {
-            checkbox.addEventListener('change', (evt) => {
-              if (!(evt.target instanceof HTMLInputElement)) {
-                return;
-              }
-              this.shouldAskBeforeSplitting = !evt.target.checked;
-            });
-          });
-        label.appendText('Don\'t ask again');
-      });
-    }
-
-    new ButtonComponent(buttonContainerEl)
-      .setButtonText('Switch to smart cut & paste')
-      .setTooltip('Mark the selection to move and open the target note instead of splitting')
-      .setDisabled(!this.canSwitchToSmartCut)
-      .onClick(() => {
-        this.switchToSmartCut();
-      });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-warning',
-      text: 'Split'
-    }, (button) => {
-      button.addEventListener('click', (evt) => {
-        this.confirm(evt);
-      });
-    });
-
-    buttonContainerEl.createEl('button', {
-      cls: 'mod-cancel',
-      text: 'Cancel'
-    }, (button) => {
-      button.addEventListener('click', () => {
-        this.close();
-      });
-    });
-  }
-
-  private switchToSmartCut(): void {
-    this.isSelected = true;
-    this.promiseResolve({
-      insertMode: InsertMode.Append,
-      isConfirmed: false,
-      shouldAskBeforeSplitting: false,
-      shouldSwitchToSmartCut: true
-    });
-    this.close();
-  }
-}
-
-/* v8 ignore stop */
-
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
   private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
-  private readonly heading: string;
   private isSelected = false;
   private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -329,7 +160,6 @@ class SplitFileModal extends SuggestModalBase {
 
     this.canSwitchToSmartCut = params.canSwitchToSmartCut;
     this.editor = params.editor;
-    this.heading = params.heading;
     this.promiseResolve = params.promiseResolve;
 
     this.shouldIncludeFrontmatter = this.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
@@ -362,8 +192,6 @@ class SplitFileModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
-    this.inputEl.value = this.heading;
-    this.updateSuggestions();
     this.renderSwitchToSmartCutButton();
   }
 
@@ -624,132 +452,210 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   // Its notice component, and the highlight component (all needed by markSelectionToMove).
   const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer && params.selectionHighlightComponent);
 
-  const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
-    ? {
-      action: 'split',
-      frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
-      inputValue: heading,
-      insertMode: InsertMode.Append,
-      isMod: false,
-      item: null,
-      shouldAllowOnlyCurrentFolder: params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
-      shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
-      shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
-      shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
-      shouldMergeHeadings: params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
-      shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
-    }
-    : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
-      const modal = new SplitFileModal({
-        ...params,
-        canSwitchToSmartCut,
-        heading,
-        promiseResolve
+  // The target can be re-selected from the confirmation dialog only when there is a picker to reopen
+  // (a heading-driven split derives its target automatically, so there is nothing to reopen).
+  const canReselectTarget = !params.shouldSkipModal;
+
+  // The confirmation dialog can send the flow back to the target picker ("Change target"); loop until
+  // The user confirms the split, cancels, or switches to smart cut. `pickerSeed` seeds the picker input:
+  // The heading initially, then the previously-chosen target's query when the picker is reopened.
+  let pickerSeed = heading;
+
+  for (;;) {
+    // Capture the picker seed in a per-iteration const so the modal-opening closure does not close over
+    // The mutable `pickerSeed` (reassigned below on "Change target").
+    const currentSeed = pickerSeed;
+
+    const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
+      ? {
+        action: 'split',
+        frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
+        inputValue: heading,
+        insertMode: InsertMode.Append,
+        isMod: false,
+        item: null,
+        shouldAllowOnlyCurrentFolder: params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
+        shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
+        shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
+        shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+        shouldMergeHeadings: params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
+        shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
+      }
+      : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
+        const modal = new SplitFileModal({
+          ...params,
+          canSwitchToSmartCut,
+          initialInputValue: currentSeed,
+          promiseResolve
+        });
+        openMinimizableModal(modal, abortController);
       });
-      openMinimizableModal(modal, abortController);
-    });
 
-  if (!splitFileModalResult) {
-    return null;
-  }
-
-  if (splitFileModalResult.action === 'switch-to-smart-cut') {
-    // Behave as if `Mark selection to move` had been invoked on the source selection, then open the
-    // Highlighted target note so the user can position the caret and paste. `canSwitchToSmartCut`
-    // Guarantees both collaborators are present.
-    markSelectionToMove({
-      app: params.app,
-      capturedSelections,
-      moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
-      moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
-      resourceLockComponent: params.resourceLockComponent,
-      selectedText,
-      selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
-      shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
-      sourceFile: params.sourceFile
-    });
-    if (splitFileModalResult.targetFile) {
-      await params.app.workspace.getLeaf(false).openFile(splitFileModalResult.targetFile, { active: true });
+    if (!splitFileModalResult) {
+      return null;
     }
-    return null;
-  }
 
-  const selectItemResult = await new SplitItemSelector({
-    app: params.app,
-    inputValue: splitFileModalResult.inputValue,
-    isMod: splitFileModalResult.isMod,
-    item: splitFileModalResult.item,
-    pluginSettingsComponent: params.pluginSettingsComponent,
-    shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
-    /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
-    shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
-    /* v8 ignore stop */
-    sourceFile: params.sourceFile
-  }).selectItem();
+    if (splitFileModalResult.action === 'switch-to-smart-cut') {
+      // Behave as if `Mark selection to move` had been invoked on the source selection, then open the
+      // Highlighted target note so the user can position the caret and paste. `canSwitchToSmartCut`
+      // Guarantees both collaborators are present.
+      markSelectionToMove({
+        app: params.app,
+        capturedSelections,
+        moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
+        moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
+        resourceLockComponent: params.resourceLockComponent,
+        selectedText,
+        selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
+        shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
+        sourceFile: params.sourceFile
+      });
+      if (splitFileModalResult.targetFile) {
+        await params.app.workspace.getLeaf(false).openFile(splitFileModalResult.targetFile, { active: true });
+      }
+      return null;
+    }
 
-  const prepareForSplitFileResult: PrepareForSplitFileResult = {
-    capturedSelections,
-    frontmatterMergeStrategy: splitFileModalResult.frontmatterMergeStrategy,
-    insertMode: splitFileModalResult.insertMode,
-    isNewTargetFile: selectItemResult.isNewTargetFile,
-    selectedText,
-    shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
-    shouldAllowSplitIntoUnresolvedPath: splitFileModalResult.shouldAllowSplitIntoUnresolvedPath,
-    shouldFixFootnotes: splitFileModalResult.shouldFixFootnotes,
-    shouldIncludeFrontmatter: splitFileModalResult.shouldIncludeFrontmatter,
-    shouldMergeHeadings: splitFileModalResult.shouldMergeHeadings,
-    targetFile: selectItemResult.targetFile
-  };
+    const selectItemResult = await new SplitItemSelector({
+      app: params.app,
+      inputValue: splitFileModalResult.inputValue,
+      isMod: splitFileModalResult.isMod,
+      item: splitFileModalResult.item,
+      pluginSettingsComponent: params.pluginSettingsComponent,
+      shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+      /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
+      shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
+      /* v8 ignore stop */
+      sourceFile: params.sourceFile
+    }).selectItem();
 
-  if (!params.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
+    const prepareForSplitFileResult: PrepareForSplitFileResult = {
+      capturedSelections,
+      frontmatterMergeStrategy: splitFileModalResult.frontmatterMergeStrategy,
+      insertMode: splitFileModalResult.insertMode,
+      isNewTargetFile: selectItemResult.isNewTargetFile,
+      selectedText,
+      shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+      shouldAllowSplitIntoUnresolvedPath: splitFileModalResult.shouldAllowSplitIntoUnresolvedPath,
+      shouldFixFootnotes: splitFileModalResult.shouldFixFootnotes,
+      shouldIncludeFrontmatter: splitFileModalResult.shouldIncludeFrontmatter,
+      shouldMergeHeadings: splitFileModalResult.shouldMergeHeadings,
+      targetFile: selectItemResult.targetFile
+    };
+
+    if (!params.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
+      return prepareForSplitFileResult;
+    }
+
+    const confirmDialogResult = await confirmSplit({
+      abortController,
+      app: params.app,
+      canReselectTarget,
+      canSwitchToSmartCut,
+      editor: params.editor,
+      resourceLockComponent: params.resourceLockComponent,
+      sourceFile: params.sourceFile,
+      targetFile: prepareForSplitFileResult.targetFile
+    });
+
+    /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
+    if (confirmDialogResult.shouldReselectTarget) {
+      // Go back to the target picker: discard the abandoned target (trash it when it was freshly
+      // Created for this choice) and preselect the previous choice on reopen. `confirmSplit` already
+      // Released the target lock, so reopening the picker re-locks only the next target.
+      if (prepareForSplitFileResult.isNewTargetFile) {
+        await trashSafe(params.app, prepareForSplitFileResult.targetFile);
+      }
+      pickerSeed = splitFileModalResult.inputValue;
+      continue;
+    }
+    if (confirmDialogResult.shouldSwitchToSmartCut) {
+      // Switch to smart cut from the confirmation dialog: the target is already resolved, so mark the
+      // Selection to move and open that target instead of splitting.
+      markSelectionToMove({
+        app: params.app,
+        capturedSelections,
+        moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
+        moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
+        resourceLockComponent: params.resourceLockComponent,
+        selectedText,
+        selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
+        shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
+        sourceFile: params.sourceFile
+      });
+      await params.app.workspace.getLeaf(false).openFile(prepareForSplitFileResult.targetFile, { active: true });
+      return null;
+    }
+    if (!confirmDialogResult.isConfirmed) {
+      if (prepareForSplitFileResult.isNewTargetFile) {
+        await trashSafe(params.app, prepareForSplitFileResult.targetFile);
+      }
+      return null;
+    }
+    await params.pluginSettingsComponent.editAndSave((settings) => {
+      settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskAgain;
+    });
+
     return prepareForSplitFileResult;
+    /* v8 ignore stop */
   }
+}
 
+async function buildSplitConfirmContent(params: BuildSplitConfirmContentParams): Promise<void> {
+  const {
+    app,
+    editor,
+    fragment,
+    sourceFile,
+    targetFile
+  } = params;
+  fragment.appendText('Are you sure you want to split ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' into ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('?');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  fragment.createEl('h2', { text: 'Source content to split' });
+  const selectedText = getSelections(editor).map((selection) => editor.cm.state.sliceDoc(selection.startOffset, selection.endOffset))
+    .join('\n');
+  const lines = selectedText.split('\n');
+  for (const line of lines) {
+    appendCodeBlock(fragment, line);
+    fragment.createEl('br');
+  }
+}
+
+async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogModalResult> {
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
-  using _targetLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Split note', pathOrFile: prepareForSplitFileResult.targetFile });
+  // Released when this function returns, before the split operation re-locks both notes to do the work
+  // (and before the picker is reopened when the user chooses "Change target").
+  using _targetLock = params.resourceLockComponent.lockForPath({ abortController: params.abortController, operationName: 'Split note', pathOrFile: params.targetFile });
 
-  const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+  const { app, editor, sourceFile, targetFile } = params;
+  return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openMinimizableModal(
       new ConfirmDialogModal({
-        app: params.app,
-        canSwitchToSmartCut,
-        editor: params.editor,
+        app,
+        buildContent: (fragment): Promise<void> => buildSplitConfirmContent({ app, editor, fragment, sourceFile, targetFile }),
+        canReselectTarget: params.canReselectTarget,
+        confirmButtonMobileText: 'Split and don\'t ask again',
+        confirmButtonText: 'Split',
         promiseResolve,
-        sourceFile: params.sourceFile,
-        targetFile: prepareForSplitFileResult.targetFile
+        switchToSmartCut: { canSwitch: params.canSwitchToSmartCut },
+        title: 'Split file'
       }),
-      abortController
+      params.abortController
     );
   });
-
-  /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
-  if (confirmDialogResult.shouldSwitchToSmartCut) {
-    // Switch to smart cut from the confirmation dialog: the target is already resolved, so mark the
-    // Selection to move and open that target instead of splitting.
-    markSelectionToMove({
-      app: params.app,
-      capturedSelections,
-      moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
-      moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
-      resourceLockComponent: params.resourceLockComponent,
-      selectedText,
-      selectionHighlightComponent: ensureNonNullable(params.selectionHighlightComponent),
-      shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
-      sourceFile: params.sourceFile
-    });
-    await params.app.workspace.getLeaf(false).openFile(prepareForSplitFileResult.targetFile, { active: true });
-    return null;
-  }
-  if (!confirmDialogResult.isConfirmed) {
-    if (prepareForSplitFileResult.isNewTargetFile) {
-      await trashSafe(params.app, prepareForSplitFileResult.targetFile);
-    }
-    return null;
-  }
-  await params.pluginSettingsComponent.editAndSave((settings) => {
-    settings.shouldAskBeforeSplitting = confirmDialogResult.shouldAskBeforeSplitting;
-  });
-
-  return prepareForSplitFileResult;
-  /* v8 ignore stop */
 }

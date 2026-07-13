@@ -34,6 +34,11 @@ interface OnInputable {
   onInput(): void;
 }
 
+interface SuggestModalSuper {
+  onOpen(): void;
+  updateSuggestions(): void;
+}
+
 interface TestableSuggestModalBase {
   shouldShowAlias: boolean;
   shouldShowMarkdown: boolean;
@@ -140,6 +145,16 @@ function createTestSuggestModal(plugin: MockPlugin, sourceFile: TFile): TestSugg
   });
 }
 
+// Walks up to the prototype that defines `onOpen` (SuggestModalBase) and returns its super prototype
+// (the Obsidian SuggestModal), where `super.onOpen()` / `updateSuggestions()` can be stubbed.
+function getSuggestModalSuperProto(modal: object): SuggestModalSuper {
+  let proto = castTo<object>(Object.getPrototypeOf(modal));
+  while (!Object.hasOwn(proto, 'onOpen')) {
+    proto = castTo<object>(Object.getPrototypeOf(proto));
+  }
+  return castTo<SuggestModalSuper>(Object.getPrototypeOf(proto));
+}
+
 describe('SuggestModalBase', () => {
   let plugin: MockPlugin;
   let sourceFile: TFile;
@@ -159,6 +174,48 @@ describe('SuggestModalBase', () => {
       const modal = createTestSuggestModal(plugin, sourceFile);
       expect(modal.inputEl).toBeTruthy();
       expect(modal.limit).toBe(20);
+    });
+  });
+
+  describe('onOpen', () => {
+    it('should seed the input with initialInputValue and refresh suggestions', () => {
+      plugin = createMockPlugin();
+      sourceFile = createMockFile('folder/source.md');
+      const modal = new TestSuggestModal({
+        app: plugin.app,
+        initialInputValue: 'seed-value',
+        pluginSettingsComponent: plugin.pluginSettingsComponent,
+        sourceFile
+      });
+
+      // Super.onOpen() and updateSuggestions() are Obsidian-internal and not modeled by the mock; stub
+      // Them on the SuggestModal super prototype so the real SuggestModalBase.onOpen can run.
+      const superProto = getSuggestModalSuperProto(modal);
+      const superOnOpen = vi.fn();
+      const updateSuggestions = vi.fn();
+      superProto.onOpen = superOnOpen;
+      superProto.updateSuggestions = updateSuggestions;
+
+      modal.onOpen();
+
+      expect(superOnOpen).toHaveBeenCalled();
+      expect(modal.inputEl.value).toBe('seed-value');
+      expect(updateSuggestions).toHaveBeenCalled();
+    });
+
+    it('should seed the input with an empty string when initialInputValue is omitted', () => {
+      plugin = createMockPlugin();
+      sourceFile = createMockFile('folder/source.md');
+      const modal = createTestSuggestModal(plugin, sourceFile);
+
+      const superProto = getSuggestModalSuperProto(modal);
+      superProto.onOpen = vi.fn();
+      superProto.updateSuggestions = vi.fn();
+
+      modal.inputEl.value = 'stale';
+      modal.onOpen();
+
+      expect(modal.inputEl.value).toBe('');
     });
   });
 
