@@ -1,8 +1,3 @@
-import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
-import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import { UnlockActiveNoteCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/unlock-active-note-command-handler';
-import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
@@ -55,7 +50,6 @@ export class Plugin extends PluginBase {
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
-    const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
     const resourceLockComponent = this.resourceLockComponent;
 
     const moveSelectionBuffer = new MoveSelectionBuffer();
@@ -126,118 +120,106 @@ export class Plugin extends PluginBase {
       })
     );
 
-    this.addChild(
-      new CommandHandlerComponent({
-        activeFileProvider: new AppActiveFileProvider(this.app),
-        commandHandlers: [
-          new MergeFileCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new ExtractCurrentSelectionEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
-          new ExtractThisHeadingEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
-          new ExtractBeforeCursorEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
-          new ExtractAfterCursorEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
-          new MarkSelectionToMoveEditorCommandHandler({
-            app: this.app,
-            moveNoticeComponent,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent,
-            selectionHighlightComponent
-          }),
-          moveAtCursorHandler,
-          moveAtCursorAdvancedHandler,
-          moveToTopHandler,
-          moveToBottomHandler,
-          cancelMoveCommandHandler,
-          new UnlockActiveNoteCommandHandler({
-            app: this.app,
-            resourceLockComponent
-          }),
-          new MergeFolderCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new SwapFileCommandHandler({
-            app: this.app,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new SwapFolderCommandHandler({
-            app: this.app,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          ...HEADING_LEVELS.flatMap((headingLevel) => [
-            new SplitNoteByHeadingsEditorCommandHandler({
-              app: this.app,
-              consoleDebugComponent: this.consoleDebugComponent,
-              headingLevel,
-              pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent,
-              resourceLockComponent
-            }),
-            new SplitNoteByHeadingsContentEditorCommandHandler({
-              app: this.app,
-              consoleDebugComponent: this.consoleDebugComponent,
-              headingLevel,
-              pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent,
-              resourceLockComponent
-            })
-          ])
-        ],
-        commandRegistrar: new PluginCommandRegistrar(this),
-        menuEventRegistrar,
-        pluginName: this.manifest.name
-      })
-    );
+    this.commandHandlerComponent.registerCommandHandlers([
+      new MergeFileCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new ExtractCurrentSelectionEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractThisHeadingEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractBeforeCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractAfterCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new MarkSelectionToMoveEditorCommandHandler({
+        app: this.app,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      moveAtCursorHandler,
+      moveAtCursorAdvancedHandler,
+      moveToTopHandler,
+      moveToBottomHandler,
+      cancelMoveCommandHandler,
+      new MergeFolderCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new SwapFileCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new SwapFolderCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      ...HEADING_LEVELS.flatMap((headingLevel) => [
+        new SplitNoteByHeadingsEditorCommandHandler({
+          app: this.app,
+          consoleDebugComponent: this.consoleDebugComponent,
+          headingLevel,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent,
+          resourceLockComponent
+        }),
+        new SplitNoteByHeadingsContentEditorCommandHandler({
+          app: this.app,
+          consoleDebugComponent: this.consoleDebugComponent,
+          headingLevel,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent,
+          resourceLockComponent
+        })
+      ])
+    ]);
 
     this.addChild(new PrismComponent());
     this.addChild(

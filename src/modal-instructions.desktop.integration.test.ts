@@ -21,7 +21,7 @@ describe('shouldShowModalInstructions', () => {
   it('should show the modal instruction bar only when the setting is enabled', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
 

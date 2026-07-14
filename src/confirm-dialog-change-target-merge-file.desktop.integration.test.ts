@@ -16,7 +16,7 @@ describe('change target from the merge-file confirmation dialog', () => {
   it('reopens the picker and merges into the newly chosen target', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const originalShouldAsk = await setAskBeforeMerging(true);

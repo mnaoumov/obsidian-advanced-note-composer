@@ -19,7 +19,7 @@ describe('Smart cut & paste notice settings', () => {
   it('shows/hides the notice and its move buttons according to the settings', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
 

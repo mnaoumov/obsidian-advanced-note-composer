@@ -73,7 +73,7 @@ interface WithSelectSuggestion {
 
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
-  // eslint-disable-next-line no-restricted-syntax -- Need to import for mock delegation.
+
   const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {

@@ -19,7 +19,7 @@ describe('switch to smart cut from the split confirmation dialog', () => {
   it('marks the selection and opens the target instead of splitting', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const originalShouldAsk = await setAskBeforeSplitting(true);

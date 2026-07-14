@@ -17,7 +17,7 @@ describe('move marked selection to top/bottom of file', () => {
   it('should move a marked selection to the top and bottom of the same note and another note', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
 
         // --- Same-note bottom: mark "one" at the front and move it to the bottom of the same note. ---

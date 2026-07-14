@@ -101,7 +101,7 @@ interface WithSwitchToSmartCut {
 
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
-  // eslint-disable-next-line no-restricted-syntax -- Need to import for mock delegation.
+
   const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
@@ -453,7 +453,6 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    // eslint-disable-next-line no-restricted-syntax -- Dynamic import required for accessing mocked module.
     const { trashSafe } = await import('obsidian-dev-utils/obsidian/vault');
 
     mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });

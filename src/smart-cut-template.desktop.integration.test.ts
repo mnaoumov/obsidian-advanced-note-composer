@@ -19,7 +19,7 @@ describe('Smart cut & paste template', () => {
   it('uses the smart cut & paste template for a marked-selection move, falling back to the split template when empty', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
