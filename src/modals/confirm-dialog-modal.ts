@@ -12,7 +12,20 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
 
-export interface ConfirmDialogModalConstructorParams {
+export interface ConfirmDialogModalResult {
+  readonly insertMode: InsertMode;
+  readonly isConfirmed: boolean;
+
+  /**
+   * Whether the "Don't ask again" box is unchecked, i.e. whether the flow's `shouldAskBefore*` setting
+   * should stay `true`. Each flow maps this back to its own setting.
+   */
+  readonly shouldAskAgain: boolean;
+  readonly shouldReselectTarget: boolean;
+  readonly shouldSwitchToSmartCut: boolean;
+}
+
+interface ConfirmDialogModalConstructorParams {
   readonly app: App;
 
   /**
@@ -46,20 +59,7 @@ export interface ConfirmDialogModalConstructorParams {
   readonly title: string;
 }
 
-export interface ConfirmDialogModalResult {
-  readonly insertMode: InsertMode;
-  readonly isConfirmed: boolean;
-
-  /**
-   * Whether the "Don't ask again" box is unchecked, i.e. whether the flow's `shouldAskBefore*` setting
-   * should stay `true`. Each flow maps this back to its own setting.
-   */
-  readonly shouldAskAgain: boolean;
-  readonly shouldReselectTarget: boolean;
-  readonly shouldSwitchToSmartCut: boolean;
-}
-
-export interface SwitchToSmartCutOptions {
+interface SwitchToSmartCutOptions {
   readonly canSwitch: boolean;
 }
 
