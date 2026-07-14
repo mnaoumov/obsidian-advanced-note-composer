@@ -12,7 +12,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import { openModal } from '../open-minimizable-modal.ts';
 
 interface SelectFileForSwapParams {
   readonly app: App;
@@ -122,6 +122,6 @@ export async function selectFileForSwap(params: SelectFileForSwapParams): Promis
       ...params,
       promiseResolve
     });
-    openMinimizableModal(modal);
+    openModal(modal);
   });
 }
