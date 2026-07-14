@@ -15,6 +15,7 @@ import { MergeFileCommandHandler } from './command-handlers/merge-file-command-h
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
+import { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
@@ -120,6 +121,24 @@ export class Plugin extends PluginBase {
       })
     );
 
+    const extractCurrentSelectionEditorCommandHandler = new ExtractCurrentSelectionEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      moveNoticeComponent,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent,
+      selectionHighlightComponent
+    });
+    const openSplitModalCommandHandler = new OpenSplitModalCommandHandler({
+      app: this.app,
+      extractCurrentSelectionEditorCommandHandler,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+    moveNoticeComponent.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
+
     this.commandHandlerComponent.registerCommandHandlers([
       new MergeFileCommandHandler({
         app: this.app,
@@ -128,16 +147,7 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent
       }),
-      new ExtractCurrentSelectionEditorCommandHandler({
-        app: this.app,
-        consoleDebugComponent: this.consoleDebugComponent,
-        moveNoticeComponent,
-        moveSelectionBuffer,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent,
-        resourceLockComponent,
-        selectionHighlightComponent
-      }),
+      extractCurrentSelectionEditorCommandHandler,
       new ExtractThisHeadingEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
@@ -182,6 +192,7 @@ export class Plugin extends PluginBase {
       moveToTopHandler,
       moveToBottomHandler,
       cancelMoveCommandHandler,
+      openSplitModalCommandHandler,
       new MergeFolderCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,

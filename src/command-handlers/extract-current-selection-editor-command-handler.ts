@@ -8,7 +8,6 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
@@ -18,6 +17,7 @@ import type { SelectionHighlightComponent } from '../selection-highlight-compone
 
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 interface ExtractCurrentSelectionEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -30,8 +30,7 @@ interface ExtractCurrentSelectionEditorCommandHandlerConstructorParams {
   readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
-export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHandler {
-  private readonly app: App;
+export class ExtractCurrentSelectionEditorCommandHandler extends ActiveEditorCommandHandlerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly moveNoticeComponent: MoveNoticeComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
@@ -42,13 +41,13 @@ export class ExtractCurrentSelectionEditorCommandHandler extends EditorCommandHa
 
   public constructor(params: ExtractCurrentSelectionEditorCommandHandlerConstructorParams) {
     super({
+      app: params.app,
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'extract-current-selection',
       name: 'Extract current selection...'
     });
 
-    this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.moveNoticeComponent = params.moveNoticeComponent;
     this.moveSelectionBuffer = params.moveSelectionBuffer;

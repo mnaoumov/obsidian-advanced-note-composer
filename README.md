@@ -112,6 +112,11 @@ Notes:
   before merging* is on). For the split and merge-file pickers, the reopened picker is preselected with your
   previous choice.
 
+- **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
+  the Smart cut & paste notice (or the `Smart cut & paste: Switch to split/extract` command) re-opens the
+  source note with the selection restored and opens the split/extract picker, so you can search for a target
+  and split into it with the full option set.
+
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.
 - When the target is the same note as the source, `Move marked selection here` is unavailable while the

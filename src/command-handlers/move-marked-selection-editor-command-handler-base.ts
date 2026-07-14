@@ -7,9 +7,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { InsertMode } from '../insert-mode.ts';
@@ -21,6 +19,7 @@ import { resolveInsertOffset } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { createMoveToken } from '../move-token.ts';
 import { TextAfterExtractionMode } from '../plugin-settings.ts';
+import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 /**
  * Where a marked selection is inserted in the target note: a specific `targetCursorOffset` (the paste
@@ -56,8 +55,7 @@ interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
  * are resolved ({@link resolveOptions}); all validation, locking, and the `SplitComposer` handoff live
  * here.
  */
-export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends EditorCommandHandler {
-  protected readonly app: App;
+export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -66,45 +64,18 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
 
   public constructor(params: MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams) {
     super({
+      app: params.app,
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-clipboard-paste',
       id: params.id,
       name: params.name
     });
 
-    this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
-  }
-
-  /**
-   * Checks whether this move command can run against the active markdown editor. Used by the marked
-   * selection notice to enable or disable its button for this command. Mirrors what Obsidian's command
-   * dispatch checks: an active markdown view must exist and {@link canExecuteEditor} must pass for it.
-   *
-   * @returns Whether the command can run against the active markdown editor.
-   */
-  public canExecuteInActiveEditor(): boolean {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view?.file) {
-      return false;
-    }
-    return this.canExecuteEditor(view.editor, view);
-  }
-
-  /**
-   * Runs this move command against the active markdown editor, if it can. Used by the marked selection
-   * notice buttons. A no-op when there is no active markdown view or the command cannot run there.
-   */
-  public async executeInActiveEditor(): Promise<void> {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view?.file || !this.canExecuteEditor(view.editor, view)) {
-      return;
-    }
-    await this.executeEditor(view.editor, view);
   }
 
   /**
