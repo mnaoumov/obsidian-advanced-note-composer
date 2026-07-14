@@ -5,6 +5,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
+import { EMPTY } from 'obsidian-dev-utils/string';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
@@ -15,12 +16,6 @@ import {
   TextAfterExtractionMode
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
-
-// An empty template-interpolation prefix (`${EMPTY}...`) renders to the same text but makes the
-// `obsidianmd/ui/sentence-case` rule treat the string as dynamic and skip it — used to silence a false
-// Positive where a legitimately lower-case word collides with a brand name in the rule's dictionary
-// (e.g. the text "cursor" vs the "Cursor" editor). Preferred over disabling the obsidianmd rule.
-const EMPTY = '';
 
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
@@ -466,6 +461,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
           .setName(`${EMPTY}Should show move at cursor button`)
           .setDesc(createFragment((f) => {
             f.appendText('Whether to show the ');
