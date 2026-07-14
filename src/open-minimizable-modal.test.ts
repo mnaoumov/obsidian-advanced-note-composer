@@ -11,7 +11,10 @@ import {
   vi
 } from 'vitest';
 
-import { openMinimizableModal } from './open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from './open-minimizable-modal.ts';
 
 let app: AppOriginal;
 
@@ -32,5 +35,39 @@ describe('openMinimizableModal', () => {
 
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(modal.modalEl.querySelector('.minimize-button')).not.toBeNull();
+  });
+
+  it('closes the modal when the abort controller aborts', () => {
+    const closeSpy = vi.spyOn(Modal.prototype, 'close');
+    const modal = new Modal(app);
+    const abortController = new AbortController();
+
+    openMinimizableModal(modal, abortController);
+    abortController.abort();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('openModal', () => {
+  it('opens the modal without adding a minimize button', () => {
+    const openSpy = vi.spyOn(Modal.prototype, 'open');
+    const modal = new Modal(app);
+
+    openModal(modal);
+
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(modal.modalEl.querySelector('.minimize-button')).toBeNull();
+  });
+
+  it('closes the modal when the abort controller aborts', () => {
+    const closeSpy = vi.spyOn(Modal.prototype, 'close');
+    const modal = new Modal(app);
+    const abortController = new AbortController();
+
+    openModal(modal, abortController);
+    abortController.abort();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
   });
 });

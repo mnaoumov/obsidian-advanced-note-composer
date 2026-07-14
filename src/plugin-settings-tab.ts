@@ -5,6 +5,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
+import { EMPTY } from 'obsidian-dev-utils/string';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
@@ -411,6 +412,91 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setDesc('Whether to keep headings when splitting content.')
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldKeepHeadingsWhenSplittingContent', valueComponent: toggle });
+          });
+      });
+
+    new SettingGroupEx(this.containerEl)
+      .setHeading('Smart cut & paste')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show smart cut & paste notice')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the notice after you run ');
+            appendCodeBlock(f, 'Mark selection to move');
+            f.appendText('. The notice reminds you a selection is marked and offers buttons to move or cancel it.');
+            f.createEl('br');
+            f.appendText('When disabled, no notice is shown; you drive the move and cancel purely through the commands (and their hotkeys).');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowSmartCutNotice', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show move to top of file button')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection to top of file');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveToTopButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should show move to bottom of file button')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection to bottom of file');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveToBottomButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+          .setName(`${EMPTY}Should show move at cursor button`)
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show the ');
+            appendCodeBlock(f, 'Move marked selection at cursor');
+            f.appendText(' button in the smart cut & paste notice.');
+            f.createEl('br');
+            f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste template')
+          .setDesc(createFragment((f) => {
+            f.appendText('Template to use when pasting a marked selection via smart cut & paste (');
+            appendCodeBlock(f, 'Move marked selection here');
+            f.appendText(', ');
+            appendCodeBlock(f, 'at cursor');
+            f.appendText(', ');
+            appendCodeBlock(f, 'to top of file');
+            f.appendText(', or ');
+            appendCodeBlock(f, 'to bottom of file');
+            f.appendText(').');
+            f.createEl('br');
+            f.appendText('Leave empty to reuse ');
+            appendCodeBlock(f, 'Split template');
+            f.appendText(' setting.');
+            f.createEl('br');
+            addAvailableTokens(f);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
           });
       });
 

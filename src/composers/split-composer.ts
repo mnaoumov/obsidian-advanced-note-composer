@@ -27,16 +27,21 @@ import {
 } from './composer-base.ts';
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
-  // The source selection offsets and selected text, captured BEFORE the (minimizable) modal opened,
-  // While `editor` still showed the source note. They must NOT be re-read from `editor` inside the
-  // Operation: the editor is the leaf's instance, and if the user navigated that leaf to another
-  // Note during the modal, the same `editor` object now reflects THAT note — re-reading it would
-  // Extract the wrong note's content.
+  // The source selection offsets and selected text, captured BEFORE any modal opened, while `editor`
+  // Still showed the source note. They must NOT be re-read from `editor` inside the operation: the
+  // Editor is the leaf's instance, and if the user navigated that leaf to another note during the
+  // Setup flow (e.g. while the minimizable confirmation modal was minimized), the same `editor`
+  // Object now reflects THAT note — re-reading it would extract the wrong note's content.
   readonly capturedSelections: Selection[];
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
+
+  // When `true`, this split is a smart cut & paste move (mark → move here / at cursor / to top /
+  // Bottom), so `getTemplate` prefers the `Smart cut & paste template` setting (falling back to the
+  // Split → merge chain when it is empty). Ordinary split-to-new-file extracts leave this `false`.
+  readonly isSmartCutAndPasteMove?: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 
@@ -67,6 +72,7 @@ export class SplitComposer extends ComposerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
+  private readonly isSmartCutAndPasteMove: boolean;
   private readonly selectedText: string;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
@@ -90,6 +96,7 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
+    this.isSmartCutAndPasteMove = params.isSmartCutAndPasteMove ?? false;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
@@ -152,7 +159,8 @@ export class SplitComposer extends ComposerBase {
 
           // Re-open the source note and restore the captured selections FIRST, before any edit, so every
           // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
-          // The active leaf navigated to another note during the (minimizable) modal.
+          // The active leaf navigated to another note during the setup flow (e.g. while the minimizable
+          // Confirmation modal was minimized).
           await this.reopenSourceFileAndRestoreSelections();
 
           if (this.isSameNoteMove()) {
@@ -213,6 +221,12 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
+    // A smart cut & paste move prefers its own template; when it is empty, fall through to the ordinary
+    // Split → merge resolution below (the documented fallback chain).
+    if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.smartCutAndPasteTemplate) {
+      return this.pluginSettingsComponent.settings.smartCutAndPasteTemplate;
+    }
+
     if (!this.pluginSettingsComponent.settings.splitTemplate) {
       return this.pluginSettingsComponent.settings.mergeTemplate;
     }

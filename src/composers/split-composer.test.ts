@@ -55,6 +55,7 @@ interface CreateComposerOptions {
   readonly insertToken?: string;
   readonly isMultipleSplit?: boolean;
   readonly isNewTargetFile?: boolean;
+  readonly isSmartCutAndPasteMove?: boolean;
   readonly pluginNoticeComponent?: PluginNoticeComponent;
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
@@ -146,6 +147,7 @@ function createComposer(options?: CreateComposerOptions): SplitComposer {
     editor,
     isMultipleSplit: options?.isMultipleSplit ?? false,
     isNewTargetFile: options?.isNewTargetFile ?? true,
+    isSmartCutAndPasteMove: options?.isSmartCutAndPasteMove ?? false,
     pluginNoticeComponent: options?.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(options?.settingsOverrides),
     resourceLockComponent,
@@ -197,6 +199,7 @@ function createPluginSettingsComponentStub(
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
+      smartCutAndPasteTemplate: '',
       splitTemplate: '',
       splitToExistingFileTemplate: Action.Split,
       textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
@@ -808,6 +811,57 @@ describe('SplitComposer getTemplate', () => {
     await composer.splitFile();
 
     expect(await app.vault.adapter.read('target.md')).toContain('split:');
+  });
+
+  it('should use the smart cut & paste template for a smart-cut move when it is set', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      }
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain('smart:');
+  });
+
+  it('should fall back to the split template for a smart-cut move when the smart cut & paste template is empty', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: '',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      }
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain('split:');
+  });
+
+  it('should not use the smart cut & paste template for an ordinary split when the move flag is off', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      }
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('split:');
+    expect(targetContent).not.toContain('smart:');
   });
 });
 

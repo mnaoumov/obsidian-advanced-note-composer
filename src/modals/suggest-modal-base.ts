@@ -41,6 +41,12 @@ export interface Item extends SearchResultContainer {
 
 export interface SuggestModalBaseConstructorParams {
   readonly app: App;
+
+  /**
+   * The value to seed the picker input with when it opens. Used to preselect the previously-chosen target
+   * when the picker is reopened via the confirmation dialog's "Change target" action.
+   */
+  readonly initialInputValue?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
 }
@@ -78,6 +84,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowUnresolved: boolean;
   protected readonly sourceFile: TFile;
   private readonly createButtonEl: HTMLElement;
+  private readonly initialInputValue: string;
   private readonly shouldShowAlias: boolean;
   private readonly shouldShowAllTypes: boolean;
 
@@ -93,6 +100,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     this.sourceFile = params.sourceFile;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.initialInputValue = params.initialInputValue ?? '';
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
@@ -180,6 +188,12 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       : 'No recent files found. Type to search...';
     this.chooser.setSuggestions(null);
     this.chooser.addMessage(message);
+  }
+
+  public override onOpen(): void {
+    super.onOpen();
+    this.inputEl.value = this.initialInputValue;
+    this.updateSuggestions();
   }
 
   /* v8 ignore start -- renderSuggestion contains many defensive ?? fallbacks on item properties that never take the null path in tests. */

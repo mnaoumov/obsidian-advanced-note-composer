@@ -13,6 +13,7 @@ import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-co
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 /**
  * Parameters for creating a {@link MoveNoticeComponent}.
@@ -25,6 +26,7 @@ export interface MoveNoticeComponentConstructorParams {
   readonly moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 /**
@@ -51,9 +53,8 @@ interface MoveNoticeButtonDefinition {
 
 /**
  * Owns the permanent notice shown while a selection is marked for moving. The notice carries a
- * "Switch to split/extract" button (always available), the three move buttons — move to top / bottom /
- * at cursor — each enabled only while its command can run against the active editor, and "Cancel move".
- * Button state is refreshed whenever the active leaf or the editor selection changes.
+ * `Switch to split/extract` button, up to three configurable move buttons, and an always-shown
+ * `Cancel move` button. Button state is refreshed whenever the active leaf or the editor selection changes.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
   private buttons: MoveNoticeButton[] | null = null;
@@ -64,6 +65,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   private readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   private openSplitModalCommandHandler: null | OpenSplitModalCommandHandler = null;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
     super(params.app);
@@ -73,6 +75,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     this.moveToBottomHandler = params.moveToBottomHandler;
     this.moveToTopHandler = params.moveToTopHandler;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   public override onload(): void {
@@ -112,9 +115,8 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Sets the handler backing the "Switch to split/extract" button. Injected after construction to break
-   * the construction cycle (the handler ultimately depends on this component). Always set during plugin
-   * load, before any notice is shown.
+   * Sets the handler backing the `Switch to split/extract` button. It is injected after construction to
+   * break the construction cycle because the handler itself depends on this component.
    *
    * @param openSplitModalCommandHandler - The handler to back the button.
    */
@@ -123,13 +125,19 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Builds and shows the permanent marked-selection notice with its buttons, returning the notice so the
-   * caller can hide it when the mark is released. Call {@link refreshButtons} after the buffer is marked
-   * to seed the buttons' enabled state.
+   * Builds and shows the permanent marked-selection notice with its enabled buttons, returning the notice
+   * so the caller can hide it when the mark is released. The three move buttons are controlled by the
+   * `Smart cut & paste` settings; switching to split/extract and cancelling are always shown. When the
+   * notice itself is disabled (`shouldShowSmartCutNotice` is off), nothing is shown and `null` is returned.
    *
-   * @returns The shown notice.
+   * @returns The shown notice, or `null` when the notice is disabled via settings.
    */
-  public showNotice(): Notice {
+  public showNotice(): Notice | null {
+    if (!this.pluginSettingsComponent.settings.shouldShowSmartCutNotice) {
+      this.buttons = null;
+      return null;
+    }
+
     const buttons: MoveNoticeButton[] = [];
     const message = createFragment((f) => {
       f.appendText('Smart cut & paste: selection marked to move.');
@@ -150,42 +158,55 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   private getButtonDefinitions(): MoveNoticeButtonDefinition[] {
-    return [
+    const settings = this.pluginSettingsComponent.settings;
+    const definitions: MoveNoticeButtonDefinition[] = [
       {
         getIsEnabled: null,
         label: 'Switch to split/extract',
         onClick: (): void => {
           invokeAsyncSafely(() => ensureNonNullable(this.openSplitModalCommandHandler).openSplitModal());
         }
-      },
-      {
+      }
+    ];
+
+    if (settings.shouldShowMoveToTopButton) {
+      definitions.push({
         getIsEnabled: () => this.moveToTopHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection to top of file',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveToTopHandler.executeInActiveEditor());
         }
-      },
-      {
+      });
+    }
+
+    if (settings.shouldShowMoveToBottomButton) {
+      definitions.push({
         getIsEnabled: () => this.moveToBottomHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection to bottom of file',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveToBottomHandler.executeInActiveEditor());
         }
-      },
-      {
+      });
+    }
+
+    if (settings.shouldShowMoveAtCursorButton) {
+      definitions.push({
         getIsEnabled: () => this.moveAtCursorHandler.canExecuteInActiveEditor(),
         label: 'Move marked selection at cursor',
         onClick: (): void => {
           invokeAsyncSafely(() => this.moveAtCursorHandler.executeInActiveEditor());
         }
-      },
-      {
-        getIsEnabled: null,
-        label: 'Cancel move',
-        onClick: (): void => {
-          this.cancelMoveCommandHandler.cancelMove();
-        }
+      });
+    }
+
+    definitions.push({
+      getIsEnabled: null,
+      label: 'Cancel move',
+      onClick: (): void => {
+        this.cancelMoveCommandHandler.cancelMove();
       }
-    ];
+    });
+
+    return definitions;
   }
 }

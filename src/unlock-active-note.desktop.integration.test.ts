@@ -17,7 +17,7 @@ describe('unlock active note', () => {
   it('should cancel a pending mark: release the source-note lock, drop the mark, and hide the notice', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
 

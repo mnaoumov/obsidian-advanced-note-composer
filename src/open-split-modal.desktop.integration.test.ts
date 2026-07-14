@@ -19,7 +19,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const originalShouldAsk = await setAskBeforeSplitting(false);

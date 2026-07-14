@@ -65,20 +65,31 @@ Commands (each appears as **`Smart cut & paste: …`** in the command palette):
   once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
   the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
   own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
-- **`Switch to split/extract`** — available once something is marked. Abandons the pending smart-cut mark
-  and re-opens the source note in the full split/extract picker with the marked selection restored, so you
-  can search for a target note and use every extraction option instead of pasting manually. It is the
-  reverse of the picker's **Switch to smart cut & paste** button, so the two flows toggle.
 - **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
   without moving anything. The built-in `Unlock active note` command (available on any locked note), or
   right-clicking a note's lock indicator, cancels the whole pending move the same way.
 
 While a selection is marked, a persistent **Smart cut & paste** notice reminds you that a move is pending
-until you complete or cancel it. The notice carries buttons — **Switch to split/extract**, **Move marked
-selection to top of file**, **Move marked selection to bottom of file**, **Move marked selection at
-cursor**, and **Cancel move** — each move button enabled only while it applies to the active note, so you
-can drive the whole move (or hand it off to the split picker) from the notice without opening the command
-palette.
+until you complete or cancel it. The notice carries buttons — **Move marked selection to top of file**,
+**Move marked selection to bottom of file**, **Move marked selection at cursor**, and **Cancel move** —
+each enabled only while it applies to the active note, so you can drive the whole move from the notice
+without opening the command palette.
+
+The **Smart cut & paste** settings group lets you tailor this notice:
+
+- **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
+  moving, and cancelling purely through the commands (and their hotkeys). Nothing is shown when a
+  selection is marked.
+- **Should show move to top of file button** / **Should show move to bottom of file button** /
+  **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
+  tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
+  hotkey you assigned to it keeps working.
+- **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
+  via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
+  file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
+  the same tokens as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`,
+  `{{newPath}}`, `{{date:FORMAT}}`). Leave it empty to reuse the **Split template** (which itself falls back
+  to the **Merge template**), preserving the previous behavior.
 
 The captured selection is also **persistently highlighted in the source note** so you always see exactly
 what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /
@@ -93,6 +104,13 @@ Notes:
   highlighted in the picker opens so you can position the cursor and paste. The same **Switch to smart cut &
   paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
   can switch after the target is chosen.
+
+- **Change target from a confirmation dialog.** Every confirmation dialog that follows a target picker shows a
+  **Change target** button (or press `Alt+C`) that sends you back to the picker to pick a different target —
+  without cancelling and re-triggering the whole operation. This applies to the split confirmation dialog
+  (when *Ask before splitting* is on) and to the merge-file and merge-folder confirmation dialogs (when *Ask
+  before merging* is on). For the split and merge-file pickers, the reopened picker is preselected with your
+  previous choice.
 
 - **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
   the Smart cut & paste notice (or the `Smart cut & paste: Switch to split/extract` command) re-opens the
@@ -112,6 +130,13 @@ Notes:
   within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
   moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
   setting to same-note moves anyway, or override it per move in the advanced command.
+
+## Minimizing dialogs
+
+Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
+
+- **Restore** — reopens the dialog where you left off.
+- **Cancel** — closes the dialog. For an operation that locks its note while the dialog is open (an extract/split or a merge), cancelling this way also **unlocks the note and cancels the operation** — the same effect as the built-in `Unlock active note` command or right-clicking the note's lock indicator, but reachable directly from the minimized bar.
 
 ## Installation
 
@@ -135,7 +160,7 @@ To show them, run the following command:
 window.DEBUG.enable('advanced-note-composer');
 ```
 
-For more details, refer to the [documentation](https://github.com/mnaoumov/obsidian-dev-utils/blob/main/docs/debugging.md).
+For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
 
 ## Support
 

@@ -20,9 +20,11 @@ import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-co
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import type { MarkedSelection } from './move-selection-buffer.ts';
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
+import { PluginSettings } from './plugin-settings.ts';
 
 interface TestableComponent {
   readonly buttons: null | TestButton[];
@@ -62,6 +64,8 @@ let openSplitModalCommandHandler: OpenSplitModalCommandHandler;
 let notice: Notice;
 let capturedMessage: DocumentFragment | null | string;
 let pluginNoticeComponent: PluginNoticeComponent;
+let pluginSettings: PluginSettings;
+let pluginSettingsComponent: PluginSettingsComponent;
 let component: MoveNoticeComponent;
 
 beforeEach(() => {
@@ -84,6 +88,12 @@ beforeEach(() => {
       return notice;
     })
   });
+  pluginSettings = new PluginSettings();
+  pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
+    get settings(): PluginSettings {
+      return pluginSettings;
+    }
+  });
   component = new MoveNoticeComponent({
     app,
     cancelMoveCommandHandler,
@@ -91,7 +101,8 @@ beforeEach(() => {
     moveSelectionBuffer,
     moveToBottomHandler,
     moveToTopHandler,
-    pluginNoticeComponent
+    pluginNoticeComponent,
+    pluginSettingsComponent
   });
   component.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
   component.load();
@@ -200,4 +211,63 @@ describe('MoveNoticeComponent', () => {
     getButtons()[4]?.component.simulateClick__();
     expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).toHaveBeenCalledOnce();
   });
+
+  it('hides the top button when shouldShowMoveToTopButton is off, keeping the rest', () => {
+    pluginSettings.shouldShowMoveToTopButton = false;
+    component.showNotice();
+    expect(getButtonLabels()).toEqual([
+      'Switch to split/extract',
+      'Move marked selection to bottom of file',
+      'Move marked selection at cursor',
+      'Cancel move'
+    ]);
+  });
+
+  it('hides the bottom button when shouldShowMoveToBottomButton is off, keeping the rest', () => {
+    pluginSettings.shouldShowMoveToBottomButton = false;
+    component.showNotice();
+    expect(getButtonLabels()).toEqual([
+      'Switch to split/extract',
+      'Move marked selection to top of file',
+      'Move marked selection at cursor',
+      'Cancel move'
+    ]);
+  });
+
+  it('hides the at-cursor button when shouldShowMoveAtCursorButton is off, keeping the rest', () => {
+    pluginSettings.shouldShowMoveAtCursorButton = false;
+    component.showNotice();
+    expect(getButtonLabels()).toEqual([
+      'Switch to split/extract',
+      'Move marked selection to top of file',
+      'Move marked selection to bottom of file',
+      'Cancel move'
+    ]);
+  });
+
+  it('shows the reverse switch and Cancel move when all three move buttons are off', () => {
+    pluginSettings.shouldShowMoveToTopButton = false;
+    pluginSettings.shouldShowMoveToBottomButton = false;
+    pluginSettings.shouldShowMoveAtCursorButton = false;
+    component.showNotice();
+    expect(getButtonLabels()).toEqual([
+      'Switch to split/extract',
+      'Cancel move'
+    ]);
+  });
+
+  it('shows no notice and returns null when shouldShowSmartCutNotice is off', () => {
+    pluginSettings.shouldShowSmartCutNotice = false;
+
+    const shownNotice = component.showNotice();
+
+    expect(shownNotice).toBeNull();
+    expect(pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
+    expect(castTo<TestableComponent>(component).buttons).toBeNull();
+  });
 });
+
+function getButtonLabels(): (null | string)[] {
+  const fragment = castTo<DocumentFragment>(capturedMessage);
+  return [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
+}

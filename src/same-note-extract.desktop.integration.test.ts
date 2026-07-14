@@ -19,7 +19,7 @@ describe('same-note extract via the split picker', () => {
   it('should offer the source note and extract the selection to its bottom (Enter) or top (Shift+Enter)', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const originalShouldAsk = await setAskBeforeSplitting(false);

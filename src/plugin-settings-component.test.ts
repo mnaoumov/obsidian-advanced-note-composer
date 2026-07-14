@@ -88,6 +88,23 @@ describe('PluginSettingsComponent', () => {
         expect(await validateProperty(component, 'splitTemplate', '')).toBeUndefined();
       });
     });
+
+    describe('smartCutAndPasteTemplate validator', () => {
+      it('should reject non-empty template without content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteTemplate', 'no token here')).toBe('Smart cut & paste template should contain {{content}} token');
+      });
+
+      it('should accept template with content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '{{content}}')).toBeUndefined();
+      });
+
+      it('should accept empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '')).toBeUndefined();
+      });
+    });
   });
 
   describe('legacy settings converters', () => {

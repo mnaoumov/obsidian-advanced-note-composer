@@ -17,7 +17,7 @@ describe('move marked selection', () => {
   it('should move a marked selection to the cursor across notes and within the same note', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
 

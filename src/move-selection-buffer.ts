@@ -37,8 +37,9 @@ export interface MarkedSelection {
 
   /**
    * The permanent notice reminding the user a selection is marked, hidden by {@link MoveSelectionBuffer.clear}.
+   * `null` when the `Smart cut & paste` notice is disabled via settings, in which case nothing is shown.
    */
-  readonly notice: Notice;
+  readonly notice: Notice | null;
 
   /**
    * The marked text.
@@ -77,7 +78,7 @@ export class MoveSelectionBuffer {
     }
     this.markedSelection.lock[Symbol.dispose]();
     this.markedSelection.highlight[Symbol.dispose]();
-    this.markedSelection.notice.hide();
+    this.markedSelection.notice?.hide();
     this.markedSelection = null;
   }
 

@@ -15,8 +15,8 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 const PLUGIN_ID = 'advanced-note-composer';
 
-describe('switch to smart cut from the split confirmation dialog', () => {
-  it('marks the selection and opens the target instead of splitting', async () => {
+describe('change target from the split confirmation dialog', () => {
+  it('reopens the picker and splits into the newly chosen target', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
@@ -24,8 +24,9 @@ describe('switch to smart cut from the split confirmation dialog', () => {
 
         const originalShouldAsk = await setAskBeforeSplitting(true);
         try {
-          const source = await resetFile('confirm-switch-source.md', 'alpha bravo charlie');
-          const target = await resetFile('confirm-switch-target.md', 'target body');
+          const source = await resetFile('change-target-source.md', 'alpha bravo charlie');
+          const targetA = await resetFile('change-target-a.md', 'target a body');
+          const targetB = await resetFile('change-target-b.md', 'target b body');
 
           // Open the source, select "bravo", and start an extract.
           const editor = await openAndGetEditor(source);
@@ -34,56 +35,61 @@ describe('switch to smart cut from the split confirmation dialog', () => {
           await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          // Choose the (existing) target note in the picker.
-          const input = document.querySelector('.prompt-input');
-          if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
-          }
-          input.value = target.basename;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(target.basename)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          // Choose target A in the picker.
+          await chooseInPicker(targetA.basename);
 
-          // The confirmation dialog appears (with the switch button); trigger the switch via Alt+S.
-          await waitUntil({ predicate: () => findSwitchButton() !== null });
+          // The confirmation dialog appears (for target A) with the "Change target" button.
+          await waitUntil({ predicate: () => findButton('Change target') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const switchButtonPresent = findSwitchButton() !== null;
-          activeDocument.dispatchEvent(new KeyboardEvent('keydown', { altKey: true, bubbles: true, code: 'KeyS', key: 's' }));
+          const changeTargetButtonPresent = findButton('Change target') !== null;
 
-          // The mark is now active: the permanent notice shows and the target note is opened.
-          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'confirm-switch-target.md' });
+          // Click "Change target": the picker reopens.
+          findButton('Change target')?.click();
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const markNoticeShown = findMarkNotice() !== null;
-          const activePath = app.workspace.getActiveFile()?.path ?? '';
-          const sourceContent = await app.vault.read(source);
-          const targetContent = await app.vault.read(target);
+          // Choose target B in the reopened picker.
+          await chooseInPicker(targetB.basename);
 
-          // Clean up: release the mark so the source note is unlocked.
-          app.commands.executeCommandById(`${pluginId}:cancel-move`);
+          // The confirmation dialog appears again (for target B); confirm the split.
+          await waitUntil({ predicate: () => findButton('Split') !== null });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          findButton('Split')?.click();
+
+          // The split completes: target B receives the extracted text, source loses it.
+          await waitUntil({ predicate: () => !document.body.querySelector('.mod-confirmation') });
+          await waitUntil({ predicate: () => !editor.getValue().includes('bravo') });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          return { activePath, markNoticeShown, sourceContent, switchButtonPresent, targetContent };
+          // Read the source from the live editor buffer (the removal is applied there before it is
+          // Auto-saved to disk); the targets are transaction-written, so read those from the vault.
+          const sourceContent = editor.getValue();
+          const targetAContent = await app.vault.read(targetA);
+          const targetBContent = await app.vault.read(targetB);
+
+          return { changeTargetButtonPresent, sourceContent, targetAContent, targetBContent };
         } finally {
           await setAskBeforeSplitting(originalShouldAsk);
         }
 
-        function findSwitchButton(): HTMLButtonElement | null {
+        function findButton(text: string): HTMLButtonElement | null {
           for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to smart cut & paste') {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
           }
           return null;
         }
 
-        function findMarkNotice(): Element | null {
-          for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
-            if (el.textContent.includes('Smart cut & paste')) {
-              return el;
-            }
+        async function chooseInPicker(basename: string): Promise<void> {
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new Error('No split picker input.');
           }
-          return null;
+          input.value = basename;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(basename)) });
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
         async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
@@ -134,13 +140,11 @@ describe('switch to smart cut from the split confirmation dialog', () => {
       vaultPath: getTempVault().path
     });
 
-    // The confirmation dialog showed the switch button, and Alt+S marked the selection (permanent
-    // Notice) and opened the target...
-    expect(result.switchButtonPresent).toBe(true);
-    expect(result.markNoticeShown).toBe(true);
-    expect(result.activePath).toBe('confirm-switch-target.md');
-    // ...without splitting: the source still holds "bravo" and the target is untouched.
-    expect(result.sourceContent).toContain('bravo');
-    expect(result.targetContent).toBe('target body');
+    // The confirmation dialog offered "Change target"...
+    expect(result.changeTargetButtonPresent).toBe(true);
+    // ...and after re-picking, the split landed in target B (not target A), removing the text from source.
+    expect(result.targetBContent).toContain('bravo');
+    expect(result.targetAContent).toBe('target a body');
+    expect(result.sourceContent).not.toContain('bravo');
   });
 });

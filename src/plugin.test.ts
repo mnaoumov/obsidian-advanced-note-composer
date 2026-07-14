@@ -2,14 +2,13 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
+import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -27,22 +26,6 @@ import { Plugin } from './plugin.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
-
-vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
-  AppActiveFileProvider: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/command-handler-component', () => ({
-  CommandHandlerComponent: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/command-registrar', () => ({
-  PluginCommandRegistrar: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/menu-event-registrar-component', () => ({
-  MenuEventRegistrarComponent: vi.fn()
-}));
 
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
@@ -130,10 +113,6 @@ vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
   SwapFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/unlock-active-note-command-handler', () => ({
-  UnlockActiveNoteCommandHandler: vi.fn()
-}));
-
 vi.mock('./plugin-settings-component.ts', () => {
   class MockPluginSettingsComponent {
     public settings: PluginSettings = strictProxy<PluginSettings>({
@@ -162,6 +141,7 @@ vi.mock('./release-notes-component.ts', () => ({
 }));
 
 interface PluginInternals {
+  _commandHandlerComponent: CommandHandlerComponent;
   _consoleDebugComponent: ConsoleDebugComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
   _resourceLockComponent: ResourceLockComponent;
@@ -186,20 +166,21 @@ describe('Plugin', () => {
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
     internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    const registerCommandHandlers = vi.fn();
+    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
     internals.onloadImpl();
 
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
-    expect(MenuEventRegistrarComponent).toHaveBeenCalledOnce();
-    expect(CommandHandlerComponent).toHaveBeenCalledOnce();
+    expect(registerCommandHandlers).toHaveBeenCalledOnce();
     expect(PrismComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 8;
+    const EXPECTED_ADD_CHILD_CALLS = 6;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 
@@ -209,6 +190,7 @@ describe('Plugin', () => {
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
     internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers: vi.fn() });
     const registerSpy = vi.spyOn(plugin, 'register');
 
     internals.onloadImpl();
