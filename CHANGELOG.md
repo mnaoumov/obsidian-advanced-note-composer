@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 3.34.0
+
+- refactor: reuse EMPTY hack
+- fix: re #130
+- feat: re #131
+- feat: re #138
+- feat: re #139
+- docs: update
+
 ## 3.33.0
 
 - chore: overexposed
