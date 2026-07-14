@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 3.34.0
+
+- refactor: reuse EMPTY hack
+- fix: re #130
+- feat: re #131
+- feat: re #138
+- feat: re #139
+- docs: update
+
+## 3.33.0
+
+- chore: overexposed
+- chore: update libs
+- refactor: drop app2 hack, use inherited protected app
+- refactor: consume dev-utils 85 resource-lock unlock + release-on-abort
+- refactor: better API
+- Merge branch 'issue-129'
+- feat: `Smart cut & paste` UX improvements
+- fix: re #126
+- feat: re #127
+
 ## 3.32.0
 
 - feat: move selection to another note re #97 #100

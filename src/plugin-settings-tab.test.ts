@@ -144,6 +144,7 @@ describe('PluginSettingsTab', () => {
       'Title',
       'Merge',
       'Split/extract',
+      'Smart cut & paste',
       'Include/exclude paths',
       'Merge folders',
       'Swap folders',
@@ -170,6 +171,13 @@ describe('PluginSettingsTab', () => {
     tab.displayLegacy();
 
     expect(findToggle('Should show modal instructions').getValue()).toBe(true);
+  });
+
+  it('should render the lock-all-notes toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
   });
 
   it('should re-render settings when display is called twice', async () => {

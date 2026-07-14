@@ -19,7 +19,7 @@ describe('same-note extract via the split picker', () => {
   it('should offer the source note and extract the selection to its bottom (Enter) or top (Shift+Enter)', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const originalShouldAsk = await setAskBeforeSplitting(false);
@@ -27,6 +27,8 @@ describe('same-note extract via the split picker', () => {
           // --- Enter: extract "bravo" to the BOTTOM of the same note. ---
           const bottomFile = await resetFile('extract-same-bottom.md', 'alpha bravo charlie');
           const bottomSuggestions = await openSplitPickerForSelection(bottomFile, 6, 11);
+          // While the split picker is open, the captured selection is highlighted in the source note.
+          const highlightWhileExtracting = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length;
           dispatchSelectSuggestion(false);
           await waitUntil({ predicate: () => editorValueFor('extract-same-bottom.md')?.trimEnd().endsWith('bravo') === true });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -40,7 +42,7 @@ describe('same-note extract via the split picker', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const topNote = editorValueFor('extract-same-top.md') ?? '';
 
-          return { bottomNote, bottomSuggestions, topNote };
+          return { bottomNote, bottomSuggestions, highlightWhileExtracting, topNote };
         } finally {
           await setAskBeforeSplitting(originalShouldAsk);
         }
@@ -147,6 +149,9 @@ describe('same-note extract via the split picker', () => {
 
     // The split picker now offers the current note itself as a target.
     expect(result.bottomSuggestions).toContain('extract-same-bottom');
+
+    // The captured selection is highlighted in the source note while the split/extract picker is open.
+    expect(result.highlightWhileExtracting).toBeGreaterThan(0);
 
     // Enter extracted "bravo" to the bottom: removed from the middle, appended, exactly once, no self-link.
     expect(result.bottomNote).toContain('bravo');

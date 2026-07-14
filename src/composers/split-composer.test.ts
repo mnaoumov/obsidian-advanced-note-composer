@@ -55,10 +55,12 @@ interface CreateComposerOptions {
   readonly insertToken?: string;
   readonly isMultipleSplit?: boolean;
   readonly isNewTargetFile?: boolean;
+  readonly isSmartCutAndPasteMove?: boolean;
   readonly pluginNoticeComponent?: PluginNoticeComponent;
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
 
@@ -73,6 +75,7 @@ interface MockPosition {
 interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
 
@@ -144,6 +147,7 @@ function createComposer(options?: CreateComposerOptions): SplitComposer {
     editor,
     isMultipleSplit: options?.isMultipleSplit ?? false,
     isNewTargetFile: options?.isNewTargetFile ?? true,
+    isSmartCutAndPasteMove: options?.isSmartCutAndPasteMove ?? false,
     pluginNoticeComponent: options?.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(options?.settingsOverrides),
     resourceLockComponent,
@@ -195,6 +199,7 @@ function createPluginSettingsComponentStub(
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
+      smartCutAndPasteTemplate: '',
       splitTemplate: '',
       splitToExistingFileTemplate: Action.Split,
       textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
@@ -218,6 +223,7 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
   return normalizeOptionalProperties<OptionalComposerParams>({
     insertToken: options?.insertToken,
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
+    targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset
   });
 }
@@ -558,6 +564,30 @@ describe('splitFile move mode', () => {
     expect(app.workspace.getActiveFile()?.path).toBe('target.md');
   });
 
+  it('should replace the target selection range with the moved content (paste-over-selection)', async () => {
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor,
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      // 'target body' -> replace [7, 11) ('body') with the token, so the moved content overwrites it.
+      targetCursorEndOffset: 11,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toBe('target MOVED');
+    expect(targetContent).not.toContain('body');
+  });
+
   it('should shift the captured selection offsets by the token length for a same-note move before the cursor', async () => {
     const editor = createEditorDouble();
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
@@ -782,6 +812,57 @@ describe('SplitComposer getTemplate', () => {
 
     expect(await app.vault.adapter.read('target.md')).toContain('split:');
   });
+
+  it('should use the smart cut & paste template for a smart-cut move when it is set', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      }
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain('smart:');
+  });
+
+  it('should fall back to the split template for a smart-cut move when the smart cut & paste template is empty', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: '',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      }
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain('split:');
+  });
+
+  it('should not use the smart cut & paste template for an ordinary split when the move flag is off', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      }
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('split:');
+    expect(targetContent).not.toContain('smart:');
+  });
 });
 
 describe('SplitComposer prepareBacklinkSubpaths', () => {
@@ -820,6 +901,7 @@ describe('SplitComposer updateEditorSelections', () => {
     // Source, adding its definition range as a removal selection. fn2's ref and definition are both
     // Outside the selection, so fn2 is neither removed nor restored (exercising the skip branch).
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         {
           id: 'fn1',
@@ -884,6 +966,7 @@ describe('SplitComposer updateEditorSelections', () => {
     // One ref is outside the selection (kept) and one is inside (copied) — fn1 lands in both Keep and
     // Copy — and its definition is inside the selection, so fn1 is a "restore" (removeSelectionRange).
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         {
           id: 'fn1',

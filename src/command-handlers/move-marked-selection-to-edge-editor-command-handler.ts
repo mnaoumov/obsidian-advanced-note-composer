@@ -51,6 +51,7 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
   protected override resolveInsertion(): Insertion {
     return {
       insertMode: this.insertMode,
+      targetCursorEndOffset: null,
       targetCursorOffset: null
     };
   }
@@ -61,12 +62,12 @@ function getCommandDefinition(insertMode: InsertMode): CommandDefinition {
     case InsertMode.Append:
       return {
         id: 'move-marked-selection-to-bottom-of-file',
-        name: 'Move marked selection to bottom of file'
+        name: 'Smart cut & paste: Move marked selection to bottom of file'
       };
     case InsertMode.Prepend:
       return {
         id: 'move-marked-selection-to-top-of-file',
-        name: 'Move marked selection to top of file'
+        name: 'Smart cut & paste: Move marked selection to top of file'
       };
     default:
       assertNever(insertMode);

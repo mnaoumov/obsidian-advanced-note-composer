@@ -1,15 +1,7 @@
-import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
-import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
-import {
-  isResourceLockedForPath,
-  requestResourceUnlockForPath
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { Level } from './markdown-heading-document.ts';
 
@@ -28,11 +20,13 @@ import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/spli
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
+import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
@@ -56,7 +50,6 @@ export class Plugin extends PluginBase {
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
-    const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
     const resourceLockComponent = this.resourceLockComponent;
 
     const moveSelectionBuffer = new MoveSelectionBuffer();
@@ -65,152 +58,168 @@ export class Plugin extends PluginBase {
       moveSelectionBuffer.clear();
     });
 
-    this.addChild(
-      new CommandHandlerComponent({
-        activeFileProvider: new AppActiveFileProvider(this.app),
-        commandHandlers: [
-          new MergeFileCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new ExtractCurrentSelectionEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new ExtractThisHeadingEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new ExtractBeforeCursorEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new ExtractAfterCursorEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MarkSelectionToMoveEditorCommandHandler({
-            app: this.app,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionHereEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            isAdvanced: false,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionHereEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            isAdvanced: true,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionToEdgeEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            insertMode: InsertMode.Prepend,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new MoveMarkedSelectionToEdgeEditorCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            insertMode: InsertMode.Append,
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new CancelMoveCommandHandler({
-            moveSelectionBuffer,
-            pluginNoticeComponent: this.pluginNoticeComponent
-          }),
-          new MergeFolderCommandHandler({
-            app: this.app,
-            consoleDebugComponent: this.consoleDebugComponent,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new SwapFileCommandHandler({
-            app: this.app,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          new SwapFolderCommandHandler({
-            app: this.app,
-            pluginNoticeComponent: this.pluginNoticeComponent,
-            pluginSettingsComponent,
-            resourceLockComponent
-          }),
-          ...HEADING_LEVELS.flatMap((headingLevel) => [
-            new SplitNoteByHeadingsEditorCommandHandler({
-              app: this.app,
-              consoleDebugComponent: this.consoleDebugComponent,
-              headingLevel,
-              pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent,
-              resourceLockComponent
-            }),
-            new SplitNoteByHeadingsContentEditorCommandHandler({
-              app: this.app,
-              consoleDebugComponent: this.consoleDebugComponent,
-              headingLevel,
-              pluginNoticeComponent: this.pluginNoticeComponent,
-              pluginSettingsComponent,
-              resourceLockComponent
-            })
-          ])
-        ],
-        commandRegistrar: new PluginCommandRegistrar(this),
-        menuEventRegistrar,
-        pluginName: this.manifest.name
+    // Persistently highlights the captured selection of a pending smart-cut mark or split/extract setup
+    // In its source note. The editor extension must be registered for the field to exist in every editor.
+    const selectionHighlightComponent = this.addChild(new SelectionHighlightComponent({ app: this.app }));
+    this.registerEditorExtension(selectionHighlightComponent.getEditorExtension());
+
+    // The three move commands are created up front so the marked-selection notice can offer them as
+    // Buttons (and reflect their availability) — see MoveNoticeComponent.
+    const moveAtCursorHandler = new MoveMarkedSelectionHereEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isAdvanced: false,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveAtCursorAdvancedHandler = new MoveMarkedSelectionHereEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isAdvanced: true,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveToTopHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      insertMode: InsertMode.Prepend,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+    const moveToBottomHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      insertMode: InsertMode.Append,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+
+    const cancelMoveCommandHandler = new CancelMoveCommandHandler({
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+
+    const moveNoticeComponent = this.addChild(
+      new MoveNoticeComponent({
+        app: this.app,
+        cancelMoveCommandHandler,
+        moveAtCursorHandler,
+        moveSelectionBuffer,
+        moveToBottomHandler,
+        moveToTopHandler,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent
       })
     );
 
-    this.addCommand({
-      checkCallback: (checking: boolean): boolean => {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile || !isResourceLockedForPath(this.app, activeFile)) {
-          return false;
-        }
-
-        if (!checking) {
-          requestResourceUnlockForPath(this.app, activeFile);
-        }
-
-        return true;
-      },
-      id: 'unlock-active-note',
-      name: 'Unlock active note'
-    });
+    this.commandHandlerComponent.registerCommandHandlers([
+      new MergeFileCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new ExtractCurrentSelectionEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractThisHeadingEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractBeforeCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractAfterCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new MarkSelectionToMoveEditorCommandHandler({
+        app: this.app,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      moveAtCursorHandler,
+      moveAtCursorAdvancedHandler,
+      moveToTopHandler,
+      moveToBottomHandler,
+      cancelMoveCommandHandler,
+      new MergeFolderCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new SwapFileCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new SwapFolderCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      ...HEADING_LEVELS.flatMap((headingLevel) => [
+        new SplitNoteByHeadingsEditorCommandHandler({
+          app: this.app,
+          consoleDebugComponent: this.consoleDebugComponent,
+          headingLevel,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent,
+          resourceLockComponent
+        }),
+        new SplitNoteByHeadingsContentEditorCommandHandler({
+          app: this.app,
+          consoleDebugComponent: this.consoleDebugComponent,
+          headingLevel,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent,
+          resourceLockComponent
+        })
+      ])
+    ]);
 
     this.addChild(new PrismComponent());
     this.addChild(

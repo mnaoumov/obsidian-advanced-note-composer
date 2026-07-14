@@ -41,11 +41,31 @@ export interface Item extends SearchResultContainer {
 
 export interface SuggestModalBaseConstructorParams {
   readonly app: App;
+
+  /**
+   * The value to seed the picker input with when it opens. Used to preselect the previously-chosen target
+   * when the picker is reopened via the confirmation dialog's "Change target" action.
+   */
+  readonly initialInputValue?: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
 }
 
 type SearchFn = (text: string) => null | SearchResult;
+
+interface SuggestModalBaseAddAliasMatchesParams {
+  readonly file: TFile;
+  readonly isUserIgnored: boolean;
+  readonly items: Item[];
+  readonly scoreStep: number;
+  readonly searchFn: SearchFn;
+}
+
+interface TraverseBookmarksParams {
+  readonly bookmarkItems: BookmarkItem[];
+  callback(this: void, bookmarkItem: BookmarkItem, path: string): void;
+  readonly parentPath?: string;
+}
 
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
@@ -64,6 +84,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowUnresolved: boolean;
   protected readonly sourceFile: TFile;
   private readonly createButtonEl: HTMLElement;
+  private readonly initialInputValue: string;
   private readonly shouldShowAlias: boolean;
   private readonly shouldShowAllTypes: boolean;
 
@@ -79,6 +100,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     this.sourceFile = params.sourceFile;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.initialInputValue = params.initialInputValue ?? '';
 
     addPluginCssClasses(this.containerEl, 'suggest-modal-base');
 
@@ -168,6 +190,12 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     this.chooser.addMessage(message);
   }
 
+  public override onOpen(): void {
+    super.onOpen();
+    this.inputEl.value = this.initialInputValue;
+    this.updateSuggestions();
+  }
+
   /* v8 ignore start -- renderSuggestion contains many defensive ?? fallbacks on item properties that never take the null path in tests. */
   public override renderSuggestion(item: Item | null, el: HTMLElement): void {
     el.addClass('mod-complex');
@@ -240,7 +268,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected abstract onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void>;
 
   /* v8 ignore start -- addAliasMatches contains defensive ?? and ?. fallbacks that never take the null path. */
-  private addAliasMatches(file: TFile, searchFn: SearchFn, items: Item[], isUserIgnored: boolean, scoreStep: number): void {
+  private addAliasMatches(params: SuggestModalBaseAddAliasMatchesParams): void {
+    const { file, isUserIgnored, items, scoreStep, searchFn } = params;
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) {
       return;
@@ -365,15 +394,18 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
     }
 
-    traverseBookmarks(bookmarksPlugin.items, (bookmarkItem: BookmarkItem, parentPath: string) => {
-      if (bookmarkItem.type !== 'file' || bookmarkItem.subpath) {
-        if (this.shouldShowNonFileBookmarks && bookmarkItem.type !== 'group') {
-          addBookmarkItem(bookmarkItem, parentPath);
-        }
-      } else {
-        const file = this.app.vault.getFileByPath(bookmarkItem.path ?? '');
-        if (file && this.shouldIncludeFile(file)) {
-          addBookmarkItem(bookmarkItem, parentPath);
+    traverseBookmarks({
+      bookmarkItems: bookmarksPlugin.items,
+      callback: (bookmarkItem: BookmarkItem, parentPath: string) => {
+        if (bookmarkItem.type !== 'file' || bookmarkItem.subpath) {
+          if (this.shouldShowNonFileBookmarks && bookmarkItem.type !== 'group') {
+            addBookmarkItem(bookmarkItem, parentPath);
+          }
+        } else {
+          const file = this.app.vault.getFileByPath(bookmarkItem.path ?? '');
+          if (file && this.shouldIncludeFile(file)) {
+            addBookmarkItem(bookmarkItem, parentPath);
+          }
         }
       }
     });
@@ -399,7 +431,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
 
       if (this.shouldShowAlias) {
-        this.addAliasMatches(file, searchFn, items, isUserIgnored, SCORE_STEP);
+        this.addAliasMatches({ file, isUserIgnored, items, scoreStep: SCORE_STEP, searchFn });
       }
     }
 
@@ -525,12 +557,13 @@ function searchFilePath(searchFn: SearchFn, filePath: string): null | SearchResu
 
 /* v8 ignore stop */
 
-function traverseBookmarks(bookmarkItems: BookmarkItem[], callback: (bookmarkItem: BookmarkItem, path: string) => void, parentPath = ''): void {
+function traverseBookmarks(params: TraverseBookmarksParams): void {
+  const { bookmarkItems, callback, parentPath = '' } = params;
   for (const bookmarkItem of bookmarkItems) {
     callback(bookmarkItem, parentPath);
 
     if (bookmarkItem.type === 'group' && bookmarkItem.items) {
-      traverseBookmarks(bookmarkItem.items, callback, `${parentPath + bookmarkItem.title}/`);
+      traverseBookmarks({ bookmarkItems: bookmarkItem.items, callback, parentPath: `${parentPath + bookmarkItem.title}/` });
     }
   }
 }

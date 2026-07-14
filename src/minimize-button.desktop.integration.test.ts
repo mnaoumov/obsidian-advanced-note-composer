@@ -19,7 +19,7 @@ describe('minimize button', () => {
   it('should not render a minimize button on the initial merge picker', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
-      async fn({ app, obsidianModule, pluginId, waitUntil }) {
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
 
         const sourceFile = await ensureMarkdownFile('anc-minimize-source.md', '# Source\n\ncontent');

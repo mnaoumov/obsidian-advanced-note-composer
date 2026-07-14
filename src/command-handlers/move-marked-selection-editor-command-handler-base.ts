@@ -7,6 +7,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -24,13 +25,21 @@ import { TextAfterExtractionMode } from '../plugin-settings.ts';
 /**
  * Where a marked selection is inserted in the target note: a specific `targetCursorOffset` (the paste
  * cursor), or `null` to derive the offset from `insertMode` (top = after frontmatter, bottom = end).
+ * When {@link Insertion.targetCursorEndOffset} is greater than `targetCursorOffset`, the moved content
+ * replaces that `[targetCursorOffset, targetCursorEndOffset]` range (paste-over-selection).
  */
 export interface Insertion {
   readonly insertMode: InsertMode;
+
+  /**
+   * The end of the target range to replace with the moved content. Equal to `targetCursorOffset` (no
+   * selection to replace — a plain insertion) or `null` (top/bottom, where the offset is derived).
+   */
+  readonly targetCursorEndOffset: null | number;
   readonly targetCursorOffset: null | number;
 }
 
-export interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
+interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly id: string;
@@ -49,11 +58,11 @@ export interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
  */
 export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends EditorCommandHandler {
   protected readonly app: App;
-  protected readonly consoleDebugComponent: ConsoleDebugComponent;
-  protected readonly moveSelectionBuffer: MoveSelectionBuffer;
-  protected readonly pluginNoticeComponent: PluginNoticeComponent;
-  protected readonly pluginSettingsComponent: PluginSettingsComponent;
-  protected readonly resourceLockComponent: ResourceLockComponent;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams) {
     super({
@@ -69,6 +78,33 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
+  }
+
+  /**
+   * Checks whether this move command can run against the active markdown editor. Used by the marked
+   * selection notice to enable or disable its button for this command. Mirrors what Obsidian's command
+   * dispatch checks: an active markdown view must exist and {@link canExecuteEditor} must pass for it.
+   *
+   * @returns Whether the command can run against the active markdown editor.
+   */
+  public canExecuteInActiveEditor(): boolean {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.file) {
+      return false;
+    }
+    return this.canExecuteEditor(view.editor, view);
+  }
+
+  /**
+   * Runs this move command against the active markdown editor, if it can. Used by the marked selection
+   * notice buttons. A no-op when there is no active markdown view or the command cannot run there.
+   */
+  public async executeInActiveEditor(): Promise<void> {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view?.file || !this.canExecuteEditor(view.editor, view)) {
+      return;
+    }
+    await this.executeEditor(view.editor, view);
   }
 
   /**
@@ -104,12 +140,14 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
       return true;
     }
 
-    // Same-note move: forbid an insert point inside the marked selection — the moved content would be
-    // Removed along with the source. The bottom offset (end of note) can never be inside a selection;
-    // The top offset (after frontmatter) can when the selection spans the frontmatter boundary.
+    // Same-note move: forbid an insert range that overlaps the marked selection — the moved content
+    // Would be removed along with the source. The bottom offset (end of note) can never be inside a
+    // Selection; the top offset (after frontmatter) can when the selection spans the frontmatter
+    // Boundary; the at-cursor range can when the user selected text overlapping the marked selection.
     const insertion = this.resolveInsertion(editor);
-    const candidateOffset = insertion.targetCursorOffset ?? resolveInsertOffset(editor.getValue(), insertion.insertMode);
-    return !this.moveSelectionBuffer.isOffsetInsideMarkedSelection(candidateOffset);
+    const startOffset = insertion.targetCursorOffset ?? resolveInsertOffset(editor.getValue(), insertion.insertMode);
+    const endOffset = insertion.targetCursorEndOffset ?? startOffset;
+    return !this.moveSelectionBuffer.isRangeOverlappingMarkedSelection({ endOffset, startOffset });
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
@@ -175,6 +213,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
       insertToken,
       isMultipleSplit: false,
       isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
@@ -182,6 +221,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Editor
       shouldFixFootnotes: options.shouldFixFootnotes,
       shouldIncludeFrontmatter: options.shouldIncludeFrontmatter,
       sourceFile,
+      targetCursorEndOffset: insertion.targetCursorEndOffset,
       targetCursorOffset: insertion.targetCursorOffset,
       targetFile,
       textAfterExtractionMode: options.textAfterExtractionMode

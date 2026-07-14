@@ -21,6 +21,7 @@ function createMarkedSelection(overrides: Partial<MarkedSelection> = {}): Marked
   return {
     abortController: new AbortController(),
     capturedSelections: [{ endOffset: 10, startOffset: 5 }],
+    highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
@@ -52,15 +53,28 @@ describe('MoveSelectionBuffer', () => {
     expect(buffer.get()).toBe(marked);
   });
 
-  it('disposes the held lock and hides the notice on clear', () => {
+  it('disposes the held lock, removes the highlight, and hides the notice on clear', () => {
     const buffer = new MoveSelectionBuffer();
     const marked = createMarkedSelection();
     buffer.mark(marked);
     buffer.clear();
     expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
-    expect(marked.notice.hide).toHaveBeenCalledTimes(1);
+    expect(marked.highlight[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(marked.notice?.hide).toHaveBeenCalledTimes(1);
     expect(buffer.hasMark()).toBe(false);
     expect(buffer.get()).toBeNull();
+  });
+
+  it('disposes the held lock and removes the highlight on clear even when no notice is shown', () => {
+    const buffer = new MoveSelectionBuffer();
+    const marked = createMarkedSelection({ notice: null });
+    buffer.mark(marked);
+    expect(() => {
+      buffer.clear();
+    }).not.toThrow();
+    expect(marked.lock[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(marked.highlight[Symbol.dispose]).toHaveBeenCalledTimes(1);
+    expect(buffer.hasMark()).toBe(false);
   });
 
   it('is a no-op to clear when empty', () => {
@@ -104,5 +118,34 @@ describe('MoveSelectionBuffer', () => {
   it('reports the cursor as outside when nothing is marked', () => {
     const buffer = new MoveSelectionBuffer();
     expect(buffer.isCursorInsideMarkedSelection(createMockEditor(7))).toBe(false);
+  });
+
+  describe('isRangeOverlappingMarkedSelection', () => {
+    function markedBuffer(): MoveSelectionBuffer {
+      const buffer = new MoveSelectionBuffer();
+      buffer.mark(createMarkedSelection({ capturedSelections: [{ endOffset: 10, startOffset: 5 }] }));
+      return buffer;
+    }
+
+    it('reports overlap when a range intersects the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 9, startOffset: 7 })).toBe(true);
+    });
+
+    it('reports no overlap for a range entirely before the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 4, startOffset: 1 })).toBe(false);
+    });
+
+    it('reports no overlap for a range entirely after the marked selection', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 15, startOffset: 12 })).toBe(false);
+    });
+
+    it('treats a range touching a boundary as no overlap', () => {
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 5, startOffset: 2 })).toBe(false);
+      expect(markedBuffer().isRangeOverlappingMarkedSelection({ endOffset: 12, startOffset: 10 })).toBe(false);
+    });
+
+    it('reports no overlap when nothing is marked', () => {
+      expect(new MoveSelectionBuffer().isRangeOverlappingMarkedSelection({ endOffset: 9, startOffset: 7 })).toBe(false);
+    });
   });
 });

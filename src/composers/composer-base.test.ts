@@ -5,6 +5,7 @@ import type {
   TFile
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
@@ -280,7 +281,7 @@ describe('getSelectionUnderHeading', () => {
   it('should return null when no cache exists', () => {
     const mockApp = createMockApp(null);
     const editor = createMockEditor(['# Heading', 'text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 })).toBeNull();
   });
 
   it('should return null when no heading at line number', () => {
@@ -292,7 +293,7 @@ describe('getSelectionUnderHeading', () => {
       }]
     });
     const editor = createMockEditor(['# Heading', 'text', 'more text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 1)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 1 })).toBeNull();
   });
 
   it('should return heading info when heading found at line', () => {
@@ -304,7 +305,7 @@ describe('getSelectionUnderHeading', () => {
       }]
     });
     const editor = createMockEditor(['# Heading', 'text under heading', 'more text']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.heading).toBe('Heading');
     expect(result?.start.line).toBe(0);
@@ -319,7 +320,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['## First', 'content 1', '', '## Second', 'content 2']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.heading).toBe('First');
     expect(result?.end.line).toBe(1);
@@ -333,7 +334,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['# First', 'content', '', '', '# Second']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.end.line).toBe(1);
   });
@@ -346,7 +347,7 @@ describe('getSelectionUnderHeading', () => {
       ]
     });
     const editor = createMockEditor(['# Parent', 'text', '## Child', 'child text']);
-    const result = getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0);
+    const result = getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 });
     expect(result).not.toBeNull();
     expect(result?.end.line).toBe(3);
   });
@@ -354,7 +355,7 @@ describe('getSelectionUnderHeading', () => {
   it('should handle cache without headings', () => {
     const mockApp = createMockApp({});
     const editor = createMockEditor(['text']);
-    expect(getSelectionUnderHeading(mockApp, getSourceFile(), editor, 0)).toBeNull();
+    expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 })).toBeNull();
   });
 });
 
@@ -495,7 +496,7 @@ describe('includeFrontmatter', () => {
     stubProcessFrontMatter(seeded);
     const composer = createComposer({ shouldIncludeFrontmatter: true });
     composer.selectionsToReturn = [{ endOffset: 100, startOffset: 50 }];
-    vi.mocked(getCacheSafe).mockResolvedValue(castTo<CachedMetadata>({
+    vi.mocked(getCacheSafe).mockResolvedValue(castTo<CachedMetadataEx>({
       frontmatter: { key: 'value' },
       frontmatterPosition: { end: { col: 0, line: 3, offset: 30 }, start: { col: 0, line: 0, offset: 0 } }
     }));
@@ -526,6 +527,7 @@ describe('fixFootnotes', () => {
       .mockResolvedValueOnce('source [^fn1] and [^fn1] again')
       .mockResolvedValueOnce('target [^fn1]');
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         { id: 'fn1', position: { end: { col: 13, line: 0, offset: 13 }, start: { col: 7, line: 0, offset: 7 } } },
         { id: 'fn1', position: { end: { col: 27, line: 0, offset: 27 }, start: { col: 18, line: 0, offset: 18 } } }
@@ -547,6 +549,7 @@ describe('fixFootnotes', () => {
       .mockResolvedValueOnce('source [^uniq]')
       .mockResolvedValueOnce('target with no footnotes');
     vi.mocked(getCacheSafe).mockResolvedValue({
+      features: [],
       footnoteRefs: [
         { id: 'uniq', position: { end: { col: 11, line: 0, offset: 11 }, start: { col: 5, line: 0, offset: 5 } } },
         { id: 'other', position: { end: { col: 7, line: 5, offset: 207 }, start: { col: 0, line: 5, offset: 200 } } }

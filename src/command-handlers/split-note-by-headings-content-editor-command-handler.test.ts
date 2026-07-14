@@ -1,6 +1,5 @@
 import type {
   App,
-  CachedMetadata,
   Editor,
   HeadingCache,
   MarkdownFileInfo,
@@ -9,6 +8,7 @@ import type {
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
@@ -186,7 +186,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const ctx = createMockCtx(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
-      strictProxy<CachedMetadata>({ headings: [createHeading(1, 0)] })
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0)] })
     );
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
@@ -214,7 +214,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const ctx = createMockCtx(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
-      strictProxy<CachedMetadata>({ headings: [createHeading(2, 0)] })
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
@@ -275,7 +275,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const file = createMockFile();
     const ctx = createMockCtx(file);
 
-    mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadata>({ headings: [createHeading(1, 0)] }));
+    mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0)] }));
 
     await handler.executeEditor(editor, ctx);
 
@@ -290,7 +290,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const ctx = createMockCtx(file);
 
     mockGetCacheSafe.mockResolvedValue(
-      strictProxy<CachedMetadata>({ headings: [createHeading(2, 0)] })
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
     mockGetSelectionUnderHeading.mockReturnValue(null);
 
@@ -307,7 +307,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const ctx = createMockCtx(file);
 
     mockGetCacheSafe.mockResolvedValue(
-      strictProxy<CachedMetadata>({ headings: [createHeading(2, 0)] })
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
     mockGetSelectionUnderHeading.mockReturnValue({
       end: { ch: 0, line: 5 },
@@ -335,9 +335,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return Promise.resolve(strictProxy<CachedMetadata>({ headings: [heading] }));
+        return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
       }
-      return Promise.resolve(strictProxy<CachedMetadata>({ headings: [heading] }));
+      return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValueOnce({
@@ -358,7 +358,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     MockSplitComposer.prototype.splitFile = mockSplitFile;
 
     // Second iteration: no heading at index 1
-    mockGetCacheSafe.mockResolvedValueOnce(strictProxy<CachedMetadata>({ headings: [heading] }));
+    mockGetCacheSafe.mockResolvedValueOnce(strictProxy<CachedMetadataEx>({ headings: [heading] }));
 
     await handler.executeEditor(editor, ctx);
 
@@ -384,9 +384,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return Promise.resolve(strictProxy<CachedMetadata>({ headings: [heading] }));
+        return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
       }
-      return Promise.resolve(strictProxy<CachedMetadata>({ headings: [] }));
+      return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValue({

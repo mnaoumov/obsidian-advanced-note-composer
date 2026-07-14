@@ -1,5 +1,4 @@
 import type {
-  CachedMetadata,
   Editor,
   EditorSelection,
   Pos
@@ -12,6 +11,7 @@ import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
   ComposerBaseConstructorParamsBase,
+  ComposerBaseUpdateEditorSelectionsParams,
   Selection
 } from './composer-base.ts';
 
@@ -37,8 +37,18 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
+
+  // When `true`, this split is a smart cut & paste move (mark → move here / at cursor / to top /
+  // Bottom), so `getTemplate` prefers the `Smart cut & paste template` setting (falling back to the
+  // Split → merge chain when it is empty). Ordinary split-to-new-file extracts leave this `false`.
+  readonly isSmartCutAndPasteMove?: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
+
+  // The end of the target range the move flow replaces with the token. When greater than
+  // `targetCursorOffset`, the moved content replaces that range (paste-over-selection at the cursor);
+  // `null`/omitted (or equal to `targetCursorOffset`) means a plain insertion at `targetCursorOffset`.
+  readonly targetCursorEndOffset?: null | number;
 
   // The offset in the target note where the move flow inserts the token. With an `insertToken` set,
   // `null`/omitted means derive the offset from `insertMode` (top = just after frontmatter, bottom =
@@ -51,13 +61,20 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
+interface SplitComposerIsRangeOverlappingCapturedSelectionParams {
+  readonly endOffset: number;
+  readonly startOffset: number;
+}
+
 export class SplitComposer extends ComposerBase {
   // Not `readonly`: the same-note move flow re-maps these offsets after inserting the token.
   private capturedSelections: Selection[];
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
+  private readonly isSmartCutAndPasteMove: boolean;
   private readonly selectedText: string;
+  private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
   private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
@@ -79,9 +96,11 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
+    this.isSmartCutAndPasteMove = params.isSmartCutAndPasteMove ?? false;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
+    this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
     // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
     // Opted in — mirroring the `Move marked selection here` handler.
     this.textAfterExtractionMode = params.textAfterExtractionMode
@@ -170,6 +189,7 @@ export class SplitComposer extends ComposerBase {
           { mode: 'file', pathOrFile: this.sourceFile },
           { mode: 'file', pathOrFile: this.targetFile }
         ],
+        operationName: 'Split note',
         resourceLockComponent: this.resourceLockComponent
       });
 
@@ -201,6 +221,12 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
+    // A smart cut & paste move prefers its own template; when it is empty, fall through to the ordinary
+    // Split → merge resolution below (the documented fallback chain).
+    if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.smartCutAndPasteTemplate) {
+      return this.pluginSettingsComponent.settings.smartCutAndPasteTemplate;
+    }
+
     if (!this.pluginSettingsComponent.settings.splitTemplate) {
       return this.pluginSettingsComponent.settings.mergeTemplate;
     }
@@ -220,12 +246,10 @@ export class SplitComposer extends ComposerBase {
     return new Set();
   }
 
-  protected override updateEditorSelections(
-    sourceCache: CachedMetadata | null,
-    sourceFootnoteIdsToRemove: Set<string>,
-    sourceFootnoteIdsToRestore: Set<string>
-  ): void {
-    super.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override updateEditorSelections(params: ComposerBaseUpdateEditorSelectionsParams): void {
+    const { sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore } = params;
+    super.updateEditorSelections(params);
 
     let editorSelections = this.editor.listSelections();
 
@@ -249,37 +273,43 @@ export class SplitComposer extends ComposerBase {
     const insertToken = ensureNonNullable(this.insertToken);
     // A pinned `targetCursorOffset` (the paste cursor) is used as-is; otherwise the offset is derived
     // From `insertMode` against the pre-token content (bottom = end of note, top = after frontmatter).
-    const offset = this.targetCursorOffset
+    const startOffset = this.targetCursorOffset
       ?? resolveInsertOffset(await this.app.vault.read(this.targetFile), this.insertMode);
+    // The token replaces `[startOffset, endOffset]`; with no selection to replace the range is empty
+    // (`endOffset === startOffset`), so it is a plain insertion at the caret.
+    const endOffset = this.targetCursorEndOffset ?? startOffset;
 
-    if (this.sourceFile === this.targetFile && this.isOffsetInsideCapturedSelection(offset)) {
-      // The insert point lands inside the text being moved, which will be removed — the token (and thus
-      // The moved content) would be lost. The caller aborts with a notice.
+    if (this.sourceFile === this.targetFile && this.isRangeOverlappingCapturedSelection({ endOffset, startOffset })) {
+      // The insert range overlaps the text being moved, which will be removed — the token (and thus the
+      // Moved content) would be lost. The caller aborts with a notice.
       return false;
     }
 
     await vaultTransaction.process(
       this.targetFile,
-      (content) => `${content.slice(0, offset)}${insertToken}${content.slice(offset)}`
+      (content) => `${content.slice(0, startOffset)}${insertToken}${content.slice(endOffset)}`
     );
 
     if (this.sourceFile !== this.targetFile) {
       return true;
     }
 
-    // Same-note move: the token shifted every offset at or after the insert point. Shift the captured
-    // Selection offsets so the re-opened source selects the original text. The insert point is
-    // Guaranteed outside the selection (checked above), so each selection shifts wholly or not at all.
+    // Same-note move: replacing `[startOffset, endOffset]` with the token shifted every offset at or
+    // After the range by `delta`. Shift the captured selection offsets so the re-opened source selects
+    // The original text. The range is guaranteed not to overlap the selection (checked above), so each
+    // Selection shifts wholly or not at all.
+    const delta = insertToken.length - (endOffset - startOffset);
     this.capturedSelections = this.capturedSelections.map((selection) =>
-      offset <= selection.startOffset
-        ? { endOffset: selection.endOffset + insertToken.length, startOffset: selection.startOffset + insertToken.length }
+      endOffset <= selection.startOffset
+        ? { endOffset: selection.endOffset + delta, startOffset: selection.startOffset + delta }
         : selection
     );
     return true;
   }
 
-  private isOffsetInsideCapturedSelection(offset: number): boolean {
-    return this.capturedSelections.some((selection) => offset > selection.startOffset && offset < selection.endOffset);
+  private isRangeOverlappingCapturedSelection(params: SplitComposerIsRangeOverlappingCapturedSelectionParams): boolean {
+    const { endOffset, startOffset } = params;
+    return this.capturedSelections.some((selection) => startOffset < selection.endOffset && selection.startOffset < endOffset);
   }
 
   private isSameNoteMove(): boolean {

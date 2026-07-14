@@ -8,42 +8,50 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
+import { markSelectionToMove } from '../mark-selection-to-move.ts';
 
 interface MarkSelectionToMoveEditorCommandHandlerConstructorParams {
   readonly app: App;
+  readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
+  private readonly moveNoticeComponent: MoveNoticeComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: MarkSelectionToMoveEditorCommandHandlerConstructorParams) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
       id: 'mark-selection-to-move',
-      name: 'Mark selection to move'
+      name: 'Smart cut & paste: Mark selection to move'
     });
 
     this.app = params.app;
+    this.moveNoticeComponent = params.moveNoticeComponent;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override canExecuteEditor(editor: Editor): boolean {
@@ -66,36 +74,16 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       return;
     }
 
-    // Lock the source note (blocking edit/delete/rename/move) for as long as the mark is held, so the
-    // Captured selection offsets cannot be invalidated before the move runs. Released by
-    // `MoveSelectionBuffer.clear` (on move, `Cancel move`, or re-mark) or the built-in `Unlock active note`.
-    const abortController = new AbortController();
-    const lock = this.resourceLockComponent.lockForPath(file, {
-      abortController,
-      shouldBlockMutations: true
-    });
-
-    // A permanent notice reminds the user a selection is marked for the whole time the mark is held; it
-    // Is hidden when the mark is released (move, `Cancel move`, or re-mark) via `MoveSelectionBuffer.clear`.
-    const notice = this.pluginNoticeComponent.showNotice(
-      createFragment((f) => {
-        f.appendText('Marked selection to move. Run ');
-        appendCodeBlock(f, 'Move marked selection here');
-        f.appendText(' in the target note, or ');
-        appendCodeBlock(f, 'Cancel move');
-        f.appendText(' to release.');
-      }),
-      { isPermanent: true }
-    );
-
-    this.moveSelectionBuffer.mark({
-      abortController,
+    markSelectionToMove({
+      app: this.app,
       capturedSelections: getSelections(editor),
-      lock,
-      notice,
+      moveNoticeComponent: this.moveNoticeComponent,
+      moveSelectionBuffer: this.moveSelectionBuffer,
+      resourceLockComponent: this.resourceLockComponent,
       selectedText: editor.getSelection(),
-      sourceFile: file,
-      sourceMtime: file.stat.mtime
+      selectionHighlightComponent: this.selectionHighlightComponent,
+      shouldLockAllNotes: this.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
+      sourceFile: file
     });
   }
 

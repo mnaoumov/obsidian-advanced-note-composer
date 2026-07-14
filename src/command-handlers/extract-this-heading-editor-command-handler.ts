@@ -12,7 +12,10 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
+import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
@@ -22,18 +25,24 @@ import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly moveNoticeComponent: MoveNoticeComponent;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
 export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private headingInfo?: HeadingInfo;
+  private readonly moveNoticeComponent: MoveNoticeComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
+  private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
   public constructor(params: ExtractThisHeadingEditorCommandHandlerConstructorParams) {
     super({
@@ -45,9 +54,12 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
     this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.moveNoticeComponent = params.moveNoticeComponent;
+    this.moveSelectionBuffer = params.moveSelectionBuffer;
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
@@ -63,7 +75,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return false;
     }
 
-    const headingInfo = getSelectionUnderHeading(this.app, file, editor, lineNumber);
+    const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber });
     if (!headingInfo) {
       return false;
     }
@@ -94,8 +106,11 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      moveNoticeComponent: this.moveNoticeComponent,
+      moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      selectionHighlightComponent: this.selectionHighlightComponent,
       sourceFile: file
     });
     if (!result) {

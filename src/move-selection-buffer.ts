@@ -12,7 +12,11 @@ import type { Selection } from './composers/composer-base.ts';
  */
 export interface MarkedSelection {
   /**
-   * Aborts the held source-note lock (also aborted by the built-in `Unlock active note` command).
+   * Aborting this cancels the entire pending move: the held lock is taken with `shouldReleaseOnAbort`
+   * and an `onUnlockRequested` callback that calls {@link MoveSelectionBuffer.clear}, so the abort
+   * releases the held lock, drops the mark, and hides the notice. Aborted by the `Unlock active note`
+   * command and by the lock indicator's right-click unlock. Also serves as the mark's unique identity
+   * used to guard against a stale controller clearing a newer mark.
    */
   readonly abortController: AbortController;
 
@@ -22,14 +26,20 @@ export interface MarkedSelection {
   readonly capturedSelections: Selection[];
 
   /**
+   * The persistent source-selection highlight, removed by {@link MoveSelectionBuffer.clear}.
+   */
+  readonly highlight: Disposable;
+
+  /**
    * The held source-note lock, disposed by {@link MoveSelectionBuffer.clear}.
    */
   readonly lock: Disposable;
 
   /**
    * The permanent notice reminding the user a selection is marked, hidden by {@link MoveSelectionBuffer.clear}.
+   * `null` when the `Smart cut & paste` notice is disabled via settings, in which case nothing is shown.
    */
-  readonly notice: Notice;
+  readonly notice: Notice | null;
 
   /**
    * The marked text.
@@ -47,6 +57,11 @@ export interface MarkedSelection {
   readonly sourceMtime: number;
 }
 
+interface MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams {
+  readonly endOffset: number;
+  readonly startOffset: number;
+}
+
 /**
  * Holds the transient (non-persisted) selection marked for moving, shared between the mark, move, and
  * cancel command handlers.
@@ -62,7 +77,8 @@ export class MoveSelectionBuffer {
       return;
     }
     this.markedSelection.lock[Symbol.dispose]();
-    this.markedSelection.notice.hide();
+    this.markedSelection.highlight[Symbol.dispose]();
+    this.markedSelection.notice?.hide();
     this.markedSelection = null;
   }
 
@@ -104,11 +120,26 @@ export class MoveSelectionBuffer {
    * @returns Whether the offset is inside a marked selection.
    */
   public isOffsetInsideMarkedSelection(offset: number): boolean {
+    return this.isRangeOverlappingMarkedSelection({ endOffset: offset, startOffset: offset });
+  }
+
+  /**
+   * Checks whether the given `[startOffset, endOffset]` range overlaps any marked selection. Only
+   * meaningful when the offsets refer to the note the selection was marked in. Used to reject an insert
+   * range (a derived top/bottom offset, or a replace-over-selection range at the cursor) that overlaps
+   * the text being moved, which would corrupt it. A zero-length range (`startOffset === endOffset`)
+   * overlaps only when it is strictly inside a marked selection.
+   *
+   * @param params - The parameters.
+   * @returns Whether the range overlaps a marked selection.
+   */
+  public isRangeOverlappingMarkedSelection(params: MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams): boolean {
+    const { endOffset, startOffset } = params;
     if (!this.markedSelection) {
       return false;
     }
     return this.markedSelection.capturedSelections.some(
-      (selection) => offset > selection.startOffset && offset < selection.endOffset
+      (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
     );
   }
 

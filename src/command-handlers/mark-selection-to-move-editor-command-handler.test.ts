@@ -2,10 +2,16 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
-  TFile
+  Notice,
+  TFile,
+  TFolder,
+  Vault
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -20,8 +26,10 @@ import {
 } from 'vitest';
 
 import type { Selection } from '../composers/composer-base.ts';
+import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
+import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { getSelections } from '../composers/split-composer.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -57,11 +65,15 @@ const CAPTURED_SELECTIONS: Selection[] = [{ endOffset: 12, startOffset: 5 }];
 
 interface HandlerParams {
   readonly app: App;
+  readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
+
+const MOCK_NOTICE: Notice = strictProxy<Notice>({ hide: vi.fn() });
 
 function createMockCtx(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
@@ -81,19 +93,40 @@ function createMockFile(mtime = 1000): TFile {
   });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
+const ROOT_FOLDER = strictProxy<TFolder>({ path: '/' });
+
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldLockAllNotesWhenMarkingSelection = false): HandlerParams {
   return {
-    app: strictProxy<App>({}),
+    app: strictProxy<App>({
+      vault: strictProxy<Vault>({
+        getRoot: vi.fn().mockReturnValue(ROOT_FOLDER)
+      })
+    }),
+    moveNoticeComponent: strictProxy<MoveNoticeComponent>({
+      refreshButtons: vi.fn(),
+      showNotice: vi.fn().mockReturnValue(MOCK_NOTICE)
+    }),
     moveSelectionBuffer: new MoveSelectionBuffer(),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldLockAllNotesWhenMarkingSelection
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({
-      lockForPath: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+      lockForPath: vi.fn().mockImplementation((lockParams: ResourceLockComponentLockForPathParams) => {
+        // Mirror the real library's `shouldReleaseOnAbort` + `onUnlockRequested`: aborting the
+        // Controller invokes the unlock callback so the mark tears itself down.
+        lockParams.abortController?.signal.addEventListener('abort', () => {
+          lockParams.onUnlockRequested?.();
+        }, { once: true });
+        return { [Symbol.dispose]: vi.fn() };
+      })
+    }),
+    selectionHighlightComponent: strictProxy<SelectionHighlightComponent>({
+      addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
     })
   };
 }
@@ -111,7 +144,7 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
   it('should construct with correct params', () => {
     const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams()));
     expect(handler.id).toBe('mark-selection-to-move');
-    expect(handler.name).toBe('Mark selection to move');
+    expect(handler.name).toBe('Smart cut & paste: Mark selection to move');
     expect(handler.icon).toBe('lucide-scissors');
   });
 
@@ -159,21 +192,63 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
 
     await handler.executeEditor(createMockEditor(), createMockCtx(file));
 
-    expect(params.resourceLockComponent.lockForPath).toHaveBeenCalledWith(
-      file,
-      expect.objectContaining({ shouldBlockMutations: true })
-    );
+    const lockParams = vi.mocked(params.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('file');
+    expect(lockParams?.pathOrFile).toBe(file);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
     const marked = params.moveSelectionBuffer.get();
     expect(marked).not.toBeNull();
     expect(marked?.capturedSelections).toBe(CAPTURED_SELECTIONS);
     expect(marked?.selectedText).toBe('marked text');
     expect(marked?.sourceFile).toBe(file);
     expect(marked?.sourceMtime).toBe(2000);
-    expect(marked?.notice).toBeDefined();
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith(
-      expect.anything(),
-      { isPermanent: true }
-    );
+    expect(marked?.notice).toBe(MOCK_NOTICE);
+    expect(params.moveNoticeComponent.showNotice).toHaveBeenCalled();
+  });
+
+  it('should subtree-lock the vault root when shouldLockAllNotesWhenMarkingSelection is on', async () => {
+    const params = createMockParams(false, true, true);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+    const file = createMockFile(2000);
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+
+    const lockParams = vi.mocked(params.resourceLockComponent.lockForPath).mock.calls[0]?.[0];
+    expect(lockParams?.mode).toBe('subtree');
+    expect(lockParams?.pathOrFile).toBe(ROOT_FOLDER.path);
+    expect(lockParams?.shouldBlockMutations).toBe(true);
+    expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(file);
+  });
+
+  it('should cancel the whole move when the held lock is aborted', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+
+    const marked = params.moveSelectionBuffer.get();
+    expect(marked).not.toBeNull();
+
+    marked?.abortController.abort();
+
+    expect(params.moveSelectionBuffer.hasMark()).toBe(false);
+    expect(marked?.notice?.hide).toHaveBeenCalled();
+  });
+
+  it('should not let a stale aborted controller cancel a subsequently marked selection', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile(1000)));
+    const staleController = params.moveSelectionBuffer.get()?.abortController;
+
+    const fileB = createMockFile(2000);
+    await handler.executeEditor(createMockEditor(), createMockCtx(fileB));
+
+    staleController?.abort();
+
+    expect(params.moveSelectionBuffer.hasMark()).toBe(true);
+    expect(params.moveSelectionBuffer.get()?.sourceFile).toBe(fileB);
   });
 
   it('should add to the editor menu', () => {

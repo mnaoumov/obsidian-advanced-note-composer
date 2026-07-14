@@ -25,6 +25,7 @@ function createMockApp(): App {
 describe('parseMarkdownHeadingDocument', () => {
   it('should parse simple document without headings', async () => {
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: []
     });
 
@@ -36,6 +37,7 @@ describe('parseMarkdownHeadingDocument', () => {
   it('should parse document with frontmatter', async () => {
     const content = '---\ntitle: Test\n---\nHello World';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       frontmatterPosition: {
         end: { col: 0, line: 2, offset: 18 },
         start: { col: 0, line: 0, offset: 0 }
@@ -51,6 +53,7 @@ describe('parseMarkdownHeadingDocument', () => {
   it('should parse document with single heading', async () => {
     const content = '## Heading\nContent under heading';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: [
         {
           heading: 'Heading',
@@ -71,6 +74,7 @@ describe('parseMarkdownHeadingDocument', () => {
   it('should parse document with multiple headings at same level', async () => {
     const content = '## First\nContent 1\n## Second\nContent 2';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: [
         {
           heading: 'First',
@@ -99,6 +103,7 @@ describe('parseMarkdownHeadingDocument', () => {
   it('should parse document with nested headings', async () => {
     const content = '# Parent\nParent text\n## Child\nChild text';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: [
         {
           heading: 'Parent',
@@ -125,7 +130,7 @@ describe('parseMarkdownHeadingDocument', () => {
   });
 
   it('should handle null headings from metadata', async () => {
-    mockParseMetadata.mockResolvedValue({});
+    mockParseMetadata.mockResolvedValue({ features: [] });
 
     const app = createMockApp();
     const doc = await parseMarkdownHeadingDocument(app, 'No headings');
@@ -136,9 +141,11 @@ describe('parseMarkdownHeadingDocument', () => {
 describe('MarkdownHeadingDocument.mergeWith', () => {
   it('should merge documents with append mode', async () => {
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: []
     });
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: []
     });
 
@@ -152,9 +159,11 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
 
   it('should merge documents with prepend mode', async () => {
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: []
     });
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: []
     });
 
@@ -169,6 +178,7 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
   it('should merge documents with matching headings', async () => {
     const contentA = '# Title\nText A\n## Sub\nSub A';
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: [
         {
           heading: 'Title',
@@ -191,6 +201,7 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
 
     const contentB = '# Title\nText B\n## Sub\nSub B';
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: [
         {
           heading: 'Title',
@@ -228,6 +239,7 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
   it('should add non-matching sub-headings from merged document', async () => {
     const contentA = '# Title\nText A';
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: [
         {
           heading: 'Title',
@@ -242,6 +254,7 @@ describe('MarkdownHeadingDocument.mergeWith', () => {
 
     const contentB = '# Title\nText B\n## NewSub\nNew Sub Content';
     mockParseMetadata.mockResolvedValueOnce({
+      features: [],
       headings: [
         {
           heading: 'Title',
@@ -280,6 +293,7 @@ describe('MarkdownHeadingDocument.wrapText', () => {
   it('should transform text in all nodes', async () => {
     const content = '# Heading\nSome text';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: [
         {
           heading: 'Heading',
@@ -303,6 +317,7 @@ describe('MarkdownHeadingDocument.wrapText', () => {
   it('should handle async text transformation', async () => {
     const content = 'Simple text';
     mockParseMetadata.mockResolvedValue({
+      features: [],
       headings: []
     });
 

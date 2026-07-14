@@ -96,6 +96,21 @@ export interface ComposerBaseConstructorParamsBase {
   readonly vaultTransaction?: VaultTransaction;
 }
 
+export interface ComposerBaseFixBacklinksParams {
+  readonly backlinksToFix: Map<string, string[]>;
+  readonly updatedFilePaths: Set<string>;
+  readonly updatedLinks: Set<string>;
+}
+
+export interface ComposerBaseUpdateEditorSelectionsParams {
+  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  readonly sourceCache: CachedMetadata | null;
+  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  readonly sourceFootnoteIdsToRemove: Set<string>;
+  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  readonly sourceFootnoteIdsToRestore: Set<string>;
+}
+
 export interface Frontmatter extends GenericObject {
   title?: string;
 }
@@ -109,6 +124,27 @@ interface ComposerBaseConstructorParams extends ComposerBaseConstructorParamsBas
   readonly shouldIncludeFrontmatter: boolean;
 }
 
+interface ComposerBaseInsertContentParams {
+  readonly contentToInsert: string;
+  readonly existingContent: string;
+}
+
+interface ComposerBaseMergeFrontmatterParams {
+  readonly newFrontmatter: Frontmatter;
+  readonly originalFrontmatter: Frontmatter;
+}
+
+interface ComposerBaseMergeRecursivelyParams {
+  readonly newObj: GenericObject;
+  readonly oldObj: GenericObject;
+}
+
+interface ComposerBaseUpdateTargetFootnoteIdRenameMapParams {
+  readonly existingTargetIds: Set<string>;
+  readonly sourceFootnoteId: string;
+  readonly targetFootnoteIdRenameMap: Map<string, string>;
+}
+
 interface ExtractFrontmatterResult {
   readonly content: string;
   readonly frontmatter: Frontmatter;
@@ -117,6 +153,13 @@ interface ExtractFrontmatterResult {
 interface FileMtimes {
   readonly sourceMtime: number;
   readonly targetMtime: number;
+}
+
+interface GetSelectionUnderHeadingParams {
+  readonly app: App;
+  readonly editor: Editor;
+  readonly file: TFile;
+  readonly lineNumber: number;
 }
 
 export abstract class ComposerBase {
@@ -241,7 +284,8 @@ export abstract class ComposerBase {
   }
 
   /* v8 ignore start -- fixBacklinks contains defensive ?? on Map.get() results. */
-  protected async fixBacklinks(backlinksToFix: Map<string, string[]>, updatedFilePaths: Set<string>, updatedLinks: Set<string>): Promise<void> {
+  protected async fixBacklinks(params: ComposerBaseFixBacklinksParams): Promise<void> {
+    const { backlinksToFix, updatedFilePaths, updatedLinks } = params;
     for (const backlinkPath of backlinksToFix.keys()) {
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
@@ -296,8 +340,8 @@ export abstract class ComposerBase {
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
-      let mergedFrontmatter = this.mergeFrontmatter(originalFrontmatter, newFrontmatter);
-      mergedFrontmatter = this.mergeFrontmatter(mergedFrontmatter, templateFrontmatter);
+      let mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter, originalFrontmatter });
+      mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter: templateFrontmatter, originalFrontmatter: mergedFrontmatter });
       if (originalTitle === undefined) {
         // The target note has no `title`; by default the merged-in source title is discarded here.
         // When the setting is on, keep the merged title (the source note's, per the merge strategy) instead.
@@ -318,7 +362,7 @@ export abstract class ComposerBase {
 
     const updatedFilePaths = new Set<string>();
     const updatedLinks = new Set<string>();
-    await this.fixBacklinks(backlinksToFix, updatedFilePaths, updatedLinks);
+    await this.fixBacklinks({ backlinksToFix, updatedFilePaths, updatedLinks });
     if (updatedLinks.size > 0) {
       this.pluginNoticeComponent.showNotice(`Updated ${String(updatedLinks.size)} links in ${String(updatedFilePaths.size)} files.`);
     }
@@ -346,11 +390,7 @@ export abstract class ComposerBase {
 
   protected abstract prepareBacklinkSubpaths(): Set<string>;
 
-  protected updateEditorSelections(
-    _sourceCache: CachedMetadata | null,
-    _sourceFootnoteIdsToRemove: Set<string>,
-    _sourceFootnoteIdsToRestore: Set<string>
-  ): void {
+  protected updateEditorSelections(_params: ComposerBaseUpdateEditorSelectionsParams): void {
     noop();
   }
 
@@ -446,7 +486,7 @@ export abstract class ComposerBase {
 
     for (const sourceFootnoteRef of sourceCache?.footnoteRefs ?? []) {
       if (this.isSelected(sourceFootnoteRef.position, selections)) {
-        this.updateTargetFootnoteIdRenameMap(sourceFootnoteRef.id, targetFootnoteIdRenameMap, existingTargetIds);
+        this.updateTargetFootnoteIdRenameMap({ existingTargetIds, sourceFootnoteId: sourceFootnoteRef.id, targetFootnoteIdRenameMap });
         sourceFootnoteIdsToCopy.add(sourceFootnoteRef.id);
       } else {
         sourceFootnoteIdsToKeep.add(sourceFootnoteRef.id);
@@ -457,7 +497,7 @@ export abstract class ComposerBase {
       const sourceFootnoteContent = `\n${sourceContent.slice(sourceFootnote.position.start.offset, sourceFootnote.position.end.offset)}`;
 
       if (this.isSelected(sourceFootnote.position, selections)) {
-        this.updateTargetFootnoteIdRenameMap(sourceFootnote.id, targetFootnoteIdRenameMap, existingTargetIds);
+        this.updateTargetFootnoteIdRenameMap({ existingTargetIds, sourceFootnoteId: sourceFootnote.id, targetFootnoteIdRenameMap });
         if (sourceFootnoteIdsToKeep.has(sourceFootnote.id)) {
           sourceFootnoteIdsToRestore.add(sourceFootnote.id);
         }
@@ -479,7 +519,7 @@ export abstract class ComposerBase {
       str: targetContentToInsert
     });
 
-    this.updateEditorSelections(sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore);
+    this.updateEditorSelections({ sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore });
 
     return targetContentToInsert;
   }
@@ -515,11 +555,11 @@ export abstract class ComposerBase {
    * through a {@link VaultTransaction} (which must own the write to reverse it). Append adds the content
    * at the end; prepend inserts it right after any frontmatter.
    *
-   * @param existingContent - The current content of the target note.
-   * @param contentToInsert - The content to insert.
+   * @param params - The parameters.
    * @returns The resulting content.
    */
-  private insertContent(existingContent: string, contentToInsert: string): string {
+  private insertContent(params: ComposerBaseInsertContentParams): string {
+    const { contentToInsert, existingContent } = params;
     if (this.insertToken !== null) {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
       return existingContent.replace(this.insertToken, contentToInsert);
@@ -538,7 +578,7 @@ export abstract class ComposerBase {
       // Frontmatter-aware positioning in insertContent rather than calling it directly, because the
       // Transaction must own the write to be able to reverse it. The move (insertToken) flow always
       // Takes this path — it is a positional insert at the token, not a heading merge.
-      await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent(targetFileContent, targetContentToInsert));
+      await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent({ contentToInsert: targetContentToInsert, existingContent: targetFileContent }));
       return;
     }
 
@@ -563,16 +603,17 @@ export abstract class ComposerBase {
     });
   }
 
-  private mergeFrontmatter(originalFrontmatter: Frontmatter, newFrontmatter: Frontmatter): Frontmatter {
+  private mergeFrontmatter(params: ComposerBaseMergeFrontmatterParams): Frontmatter {
+    const { newFrontmatter, originalFrontmatter } = params;
     /* v8 ignore start -- KeepOriginalFrontmatter and default cases are unreachable from insertIntoTargetFile. */
     switch (this.frontmatterMergeStrategy) {
       case FrontmatterMergeStrategy.KeepOriginalFrontmatter:
         return originalFrontmatter;
       /* v8 ignore stop */
       case FrontmatterMergeStrategy.MergeAndPreferNewValues:
-        return this.mergeRecursively(originalFrontmatter, newFrontmatter);
+        return this.mergeRecursively({ newObj: newFrontmatter, oldObj: originalFrontmatter });
       case FrontmatterMergeStrategy.MergeAndPreferOriginalValues:
-        return this.mergeRecursively(newFrontmatter, originalFrontmatter);
+        return this.mergeRecursively({ newObj: originalFrontmatter, oldObj: newFrontmatter });
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
         let suffix = 0;
         let mergeKey: string;
@@ -606,7 +647,8 @@ export abstract class ComposerBase {
     }
   }
 
-  private mergeRecursively(oldObj: GenericObject, newObj: GenericObject): GenericObject {
+  private mergeRecursively(params: ComposerBaseMergeRecursivelyParams): GenericObject {
+    const { newObj, oldObj } = params;
     const oldKeys = Object.keys(oldObj);
     for (const [newKey, newValue] of Object.entries(newObj)) {
       if (oldKeys.includes(newKey)) {
@@ -616,7 +658,7 @@ export abstract class ComposerBase {
         } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
           oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
         } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
-          oldObj[newKey] = this.mergeRecursively(oldObj[newKey] as GenericObject, newValue as GenericObject);
+          oldObj[newKey] = this.mergeRecursively({ newObj: newValue as GenericObject, oldObj: oldObj[newKey] as GenericObject });
         } else {
           oldObj[newKey] = newValue;
         }
@@ -685,7 +727,8 @@ export abstract class ComposerBase {
     }
   }
 
-  private updateTargetFootnoteIdRenameMap(sourceFootnoteId: string, targetFootnoteIdRenameMap: Map<string, string>, existingTargetIds: Set<string>): void {
+  private updateTargetFootnoteIdRenameMap(params: ComposerBaseUpdateTargetFootnoteIdRenameMapParams): void {
+    const { existingTargetIds, sourceFootnoteId, targetFootnoteIdRenameMap } = params;
     if (targetFootnoteIdRenameMap.has(sourceFootnoteId)) {
       return;
     }
@@ -733,7 +776,8 @@ export abstract class ComposerBase {
   /* v8 ignore stop */
 }
 
-export function getSelectionUnderHeading(app: App, file: TFile, editor: Editor, lineNumber: number): HeadingInfo | null {
+export function getSelectionUnderHeading(params: GetSelectionUnderHeadingParams): HeadingInfo | null {
+  const { app, editor, file, lineNumber } = params;
   const cache = app.metadataCache.getFileCache(file);
   if (!cache) {
     return null;

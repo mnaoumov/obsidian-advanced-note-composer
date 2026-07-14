@@ -48,13 +48,16 @@ appending/prepending it to that note. This plugin adds a decoupled, two-step **m
 the selection at an exact cursor position in any note (including the same note), while still running the
 full extraction workflow (relative-link fixing, footnotes, frontmatter, templating).
 
-Commands:
+Commands (each appears as **`Smart cut & paste: …`** in the command palette):
 
 - **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
   and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
-  unchanged — nothing is removed yet.
+  unchanged — nothing is removed yet. Enable **Should lock all notes when marking selection** to lock *every*
+  note (not just the source) while a mark is held, so you must finish the extraction before editing anything.
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
-  cursor in the current note, using your default settings, as a single reversible operation.
+  cursor in the current note, using your default settings, as a single reversible operation. If you have
+  text selected in the target when you run it, the moved text **replaces that selection** (like pasting over
+  a selection); with no selection, it is inserted at the cursor.
 - **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
   strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
   text (see **Text after extraction** below).
@@ -62,13 +65,52 @@ Commands:
   once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
   the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
   own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
-- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the source note
-  without moving anything. (The built-in `Unlock active note` command also releases the lock.)
+- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
+  without moving anything. The built-in `Unlock active note` command (available on any locked note), or
+  right-clicking a note's lock indicator, cancels the whole pending move the same way.
 
-While a selection is marked, a persistent notice reminds you that a move is pending until you complete
-or cancel it.
+While a selection is marked, a persistent **Smart cut & paste** notice reminds you that a move is pending
+until you complete or cancel it. The notice carries buttons — **Move marked selection to top of file**,
+**Move marked selection to bottom of file**, **Move marked selection at cursor**, and **Cancel move** —
+each enabled only while it applies to the active note, so you can drive the whole move from the notice
+without opening the command palette.
+
+The **Smart cut & paste** settings group lets you tailor this notice:
+
+- **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
+  moving, and cancelling purely through the commands (and their hotkeys). Nothing is shown when a
+  selection is marked.
+- **Should show move to top of file button** / **Should show move to bottom of file button** /
+  **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
+  tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
+  hotkey you assigned to it keeps working.
+- **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
+  via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
+  file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
+  the same tokens as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`,
+  `{{newPath}}`, `{{date:FORMAT}}`). Leave it empty to reuse the **Split template** (which itself falls back
+  to the **Merge template**), preserving the previous behavior.
+
+The captured selection is also **persistently highlighted in the source note** so you always see exactly
+what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /
+split picker is open (the selection stays highlighted while you choose the target). The highlight clears
+when the operation completes or is cancelled.
 
 Notes:
+
+- **Switch to smart cut from the split picker.** Because splitting and smart cut share the same setup, the
+  `Extract …` picker shows a **Switch to smart cut & paste** button (or press `Alt+S`) that switches to smart
+  cut & paste instead of splitting: the picker closes, your selection is marked to move, and the note
+  highlighted in the picker opens so you can position the cursor and paste. The same **Switch to smart cut &
+  paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
+  can switch after the target is chosen.
+
+- **Change target from a confirmation dialog.** Every confirmation dialog that follows a target picker shows a
+  **Change target** button (or press `Alt+C`) that sends you back to the picker to pick a different target —
+  without cancelling and re-triggering the whole operation. This applies to the split confirmation dialog
+  (when *Ask before splitting* is on) and to the merge-file and merge-folder confirmation dialogs (when *Ask
+  before merging* is on). For the split and merge-file pickers, the reopened picker is preselected with your
+  previous choice.
 
 - The move only removes the text from the source note when you run the paste, so footnotes, links, and
   frontmatter are still resolved from the intact source.
@@ -83,6 +125,13 @@ Notes:
   within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
   moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
   setting to same-note moves anyway, or override it per move in the advanced command.
+
+## Minimizing dialogs
+
+Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
+
+- **Restore** — reopens the dialog where you left off.
+- **Cancel** — closes the dialog. For an operation that locks its note while the dialog is open (an extract/split or a merge), cancelling this way also **unlocks the note and cancels the operation** — the same effect as the built-in `Unlock active note` command or right-clicking the note's lock indicator, but reachable directly from the minimized bar.
 
 ## Installation
 
@@ -106,7 +155,7 @@ To show them, run the following command:
 window.DEBUG.enable('advanced-note-composer');
 ```
 
-For more details, refer to the [documentation](https://github.com/mnaoumov/obsidian-dev-utils/blob/main/docs/debugging.md).
+For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
 
 ## Support
 
