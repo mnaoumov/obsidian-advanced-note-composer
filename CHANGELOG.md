@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.34.2
+
+- feat: re #137
+
 ## 3.34.1
 
 - fix: re #136
