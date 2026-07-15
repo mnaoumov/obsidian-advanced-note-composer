@@ -152,7 +152,15 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       }
     });
 
-    const notice = this.pluginNoticeComponent.showNotice(message, { isPermanent: true });
+    const notice = this.pluginNoticeComponent.showNotice(message, {
+      isPermanent: true,
+      onHide: () => {
+        if (this.moveSelectionBuffer.hasMark()) {
+          this.cancelMoveCommandHandler.cancelMove();
+        }
+      },
+      requiresCloseConfirmation: true
+    });
     this.buttons = buttons;
     return notice;
   }

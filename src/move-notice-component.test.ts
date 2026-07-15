@@ -2,7 +2,10 @@ import type {
   App as AppOriginal,
   Notice
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeOptions
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -63,6 +66,7 @@ let moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let openSplitModalCommandHandler: OpenSplitModalCommandHandler;
 let notice: Notice;
 let capturedMessage: DocumentFragment | null | string;
+let capturedOptions: PluginNoticeComponentShowNoticeOptions | undefined;
 let pluginNoticeComponent: PluginNoticeComponent;
 let pluginSettings: PluginSettings;
 let pluginSettingsComponent: PluginSettingsComponent;
@@ -82,9 +86,11 @@ beforeEach(() => {
   });
   notice = strictProxy<Notice>({ hide: vi.fn() });
   capturedMessage = null;
+  capturedOptions = undefined;
   pluginNoticeComponent = strictProxy<PluginNoticeComponent>({
-    showNotice: vi.fn().mockImplementation((message: DocumentFragment | string) => {
+    showNotice: vi.fn<PluginNoticeComponent['showNotice']>().mockImplementation((message, options) => {
       capturedMessage = message;
+      capturedOptions = options;
       return notice;
     })
   });
@@ -124,7 +130,11 @@ describe('MoveNoticeComponent', () => {
     const shownNotice = component.showNotice();
 
     expect(shownNotice).toBe(notice);
-    expect(pluginNoticeComponent.showNotice).toHaveBeenCalledWith(expect.anything(), { isPermanent: true });
+    expect(capturedOptions).toMatchObject({
+      isPermanent: true,
+      requiresCloseConfirmation: true
+    });
+    expect(capturedOptions?.onHide).toBeTypeOf('function');
 
     const fragment = castTo<DocumentFragment>(capturedMessage);
     const labels = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
@@ -135,6 +145,23 @@ describe('MoveNoticeComponent', () => {
       'Move marked selection at cursor',
       'Cancel move'
     ]);
+  });
+
+  it('cancels the move when the user dismisses the notice while a selection is marked', async () => {
+    component.showNotice();
+    moveSelectionBuffer.mark(createMarkedSelection());
+
+    await capturedOptions?.onHide?.();
+
+    expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).toHaveBeenCalledOnce();
+  });
+
+  it('does not cancel when the user dismisses the notice after the mark is cleared', async () => {
+    component.showNotice();
+
+    await capturedOptions?.onHide?.();
+
+    expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).not.toHaveBeenCalled();
   });
 
   it('enables each move button only when its command can run, and keeps the always-on buttons enabled', () => {

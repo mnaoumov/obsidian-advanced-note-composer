@@ -78,8 +78,9 @@ export class MoveSelectionBuffer {
     }
     this.markedSelection.lock[Symbol.dispose]();
     this.markedSelection.highlight[Symbol.dispose]();
-    this.markedSelection.notice?.hide();
+    const notice = this.markedSelection.notice;
     this.markedSelection = null;
+    notice?.hide();
   }
 
   /**
