@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.34.1
+
+- fix: re #136
+- feat: re #125
+- docs: fix link
+- docs: migrate to AGENTS.md
+
 ## 3.34.0
 
 - refactor: reuse EMPTY hack
