@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.34.3
+
+- fix: re #140
+- docs: update
+
 ## 3.34.2
 
 - feat: re #137
