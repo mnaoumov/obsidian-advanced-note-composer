@@ -60,6 +60,12 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   restores the source-editor selection, then delegates to the normal extract-current-selection handler.
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
 
+## Demo vault
+
+- **`demo-vault/`** is a self-contained Obsidian vault demoing every headline feature (merge/split/extract/swap/smart-cut). It ships a lean `.obsidian/` skeleton — `app.json`, `community-plugins.json` = `["advanced-note-composer", "fix-require-modules"]`, and baked `plugins/<id>/data.json` for both the plugin and the CodeScript Toolkit prerequisite (no `appearance.json`/`core-plugins.json`). The built plugin is **not** committed — `main.js`/`manifest.json`/`styles.css` are gitignored and injected at release by ODU's `archivePluginDemoVault` (inherited via the `version` script; runs automatically once `demo-vault/` exists, zipping to `dist/build/demo-vault-<version>.zip`). At runtime the `advanced-note-composer:open-demo-vault` command (`OpenDemoVaultCommandHandler`, registered in `plugin.ts`'s command batch) downloads and opens that asset.
+- **Interactive setup uses CodeScript Toolkit (`fix-require-modules`) code-buttons** — a documented one-time manual prerequisite (`CodeScript Toolkit prerequisite.md`). `_assets/AdvancedNoteComposer/` is CST's `modulesRoot`; `demoSetup.ts` (`installAndEnable` / `changeSettingsAndReload` / `bindHotkey`) backs the notes' "change a setting and reload" buttons, and `Invocables/startup.js` opens `00 Start.md`. Every button note also lists the manual equivalent, so the vault works without CST.
+- **Gate wiring for the vault.** ESLint and `tsc` are include-based, so they ignore `demo-vault/`. A root `dprint.json` (extends the ODU template, adds `demo-vault` to `excludes`) keeps dprint off it. cspell + markdownlint + linkinator **do** scan the notes: `demo-vault/.markdownlint-cli2.jsonc` disables `MD041`/`MD052`, demo words live in `cspell.json`, and intra-vault links to spaced filenames use angle-bracket markdown (`[t](<./Spaced name.md>)`) since wikilinks aren't linkinator-checked. Requires `obsidian-dev-utils >= 87.0.2` (the linkinator spaced-filename fix).
+
 ## Resource locking & transactional rollback
 
 Every merge/split/swap operation (files **and** folders) locks the resources it touches

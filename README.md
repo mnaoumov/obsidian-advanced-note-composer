@@ -138,6 +138,10 @@ Every picker and confirmation dialog this plugin opens — the `Merge …`, `Ext
 - **Restore** — reopens the dialog where you left off.
 - **Cancel** — closes the dialog. For an operation that locks its note while the dialog is open (an extract/split or a merge), cancelling this way also **unlocks the note and cancels the operation** — the same effect as the built-in `Unlock active note` command or right-clicking the note's lock indicator, but reachable directly from the minimized bar.
 
+## Demo vault
+
+A ready-made [demo vault](./demo-vault/README.md) showcases every feature with step-by-step notes. If you already have the plugin installed, run the `Advanced Note Composer: Open demo vault` command to download and open it. Otherwise download `demo-vault-<version>.zip` from the [releases](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases) and open the unzipped folder as a vault. See [demo-vault/README.md](./demo-vault/README.md).
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=advanced-note-composer).

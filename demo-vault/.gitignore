@@ -1,0 +1,14 @@
+# Churny / runtime-generated Obsidian state.
+.obsidian/workspace.json
+.obsidian/hotkeys.json
+
+# Built plugins are release-injected by archivePluginDemoVault; commit only the
+# baked settings file for the plugin under test and the CodeScript Toolkit
+# prerequisite config that powers the demo buttons.
+.obsidian/plugins/*
+!.obsidian/plugins/advanced-note-composer/
+.obsidian/plugins/advanced-note-composer/*
+!.obsidian/plugins/advanced-note-composer/data.json
+!.obsidian/plugins/fix-require-modules/
+.obsidian/plugins/fix-require-modules/*
+!.obsidian/plugins/fix-require-modules/data.json

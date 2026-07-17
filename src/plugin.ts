@@ -1,3 +1,4 @@
+import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
@@ -211,6 +212,11 @@ export class Plugin extends PluginBase {
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
+      }),
+      new OpenDemoVaultCommandHandler({
+        app: this.app,
+        manifest: this.manifest,
+        pluginNoticeComponent: this.pluginNoticeComponent
       }),
       ...HEADING_LEVELS.flatMap((headingLevel) => [
         new SplitNoteByHeadingsEditorCommandHandler({

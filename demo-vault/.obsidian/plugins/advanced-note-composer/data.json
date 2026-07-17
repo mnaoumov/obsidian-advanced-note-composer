@@ -1,0 +1,14 @@
+{
+  "defaultFrontmatterMergeStrategy": "MergeAndPreferNewValues",
+  "frontmatterTitleMode": "UseForInvalidTitleOnly",
+  "mergeTemplate": "\n\n{{content}}",
+  "shouldAddInvalidTitleToNoteAlias": true,
+  "shouldAskBeforeMerging": true,
+  "shouldAskBeforeSplitting": true,
+  "shouldKeepHeadingsWhenSplittingContent": true,
+  "shouldLockAllNotesWhenMarkingSelection": false,
+  "shouldTreatTitleAsPathByDefault": true,
+  "smartCutAndPasteTemplate": "",
+  "splitTemplate": "",
+  "textAfterExtractionMode": "link"
+}
