@@ -12,3 +12,10 @@
 !.obsidian/plugins/fix-require-modules/
 .obsidian/plugins/fix-require-modules/*
 !.obsidian/plugins/fix-require-modules/data.json
+
+# The Demo Vault Helper bootstrap plugin IS committed (it installs CodeScript
+# Toolkit and opens the start note on first open), so re-include its files that
+# the root .gitignore's `main.js` rule would otherwise drop.
+!.obsidian/plugins/demo-vault-helper/
+!.obsidian/plugins/demo-vault-helper/main.js
+!.obsidian/plugins/demo-vault-helper/manifest.json

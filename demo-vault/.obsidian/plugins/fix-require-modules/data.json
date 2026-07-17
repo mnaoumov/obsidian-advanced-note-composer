@@ -1,4 +1,3 @@
 {
-  "modulesRoot": "_assets/AdvancedNoteComposer",
-  "startupScriptPath": "Invocables/startup.js"
+  "modulesRoot": "_assets/AdvancedNoteComposer"
 }
