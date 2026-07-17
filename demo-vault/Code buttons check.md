@@ -2,7 +2,7 @@
 
 # Code buttons check
 
-If [CodeScript Toolkit](https://github.com/mnaoumov/obsidian-codescript-toolkit/) is installed and enabled, the block below renders as a **Run** button. Click it - a notice should appear. If you only see a code block, install the prerequisite first: [[CodeScript Toolkit prerequisite]].
+If [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/) is installed and enabled, the block below renders as a **Run** button. Click it - a notice should appear. If you only see a code block, install the prerequisite first: [[CodeScript Toolkit prerequisite]].
 
 ```code-button
 ---

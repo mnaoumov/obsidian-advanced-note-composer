@@ -1,7 +1,7 @@
 {
   "author": "mnaoumov",
   "authorUrl": "https://github.com/mnaoumov/",
-  "description": "Bootstraps the Advanced Note Composer demo vault: installs CodeScript Toolkit and opens the start note.",
+  "description": "Universal bootstrap for a plugin demo vault: installs CodeScript Toolkit, then runs the vault's startup script.",
   "id": "demo-vault-helper",
   "isDesktopOnly": false,
   "name": "Demo Vault Helper",
