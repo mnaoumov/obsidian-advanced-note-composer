@@ -14,6 +14,10 @@
 // It replicates obsidian-dev-utils' installCommunityPlugin flow with plain Obsidian internals because
 // it cannot import obsidian-dev-utils: that module is only reachable through CodeScript Toolkit's
 // require(), which is exactly what this plugin bootstraps.
+//
+// TODO(T115): this committed per-vault copy is a stand-in until obsidian-dev-utils ships a shared,
+// release-injected version of this helper; replace it with that (and drop the committed files) once
+// T115 lands.
 
 const { Plugin, Notice, requestUrl } = require('obsidian');
 
