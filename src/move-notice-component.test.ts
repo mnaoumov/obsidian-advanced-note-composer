@@ -132,9 +132,9 @@ describe('MoveNoticeComponent', () => {
     expect(shownNotice).toBe(notice);
     expect(capturedOptions).toMatchObject({
       isPermanent: true,
-      requiresCloseConfirmation: true
+      shouldHideOnClick: false,
+      shouldShowCloseButton: false
     });
-    expect(capturedOptions?.onHide).toBeTypeOf('function');
 
     const fragment = castTo<DocumentFragment>(capturedMessage);
     const labels = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
@@ -145,23 +145,6 @@ describe('MoveNoticeComponent', () => {
       'Move marked selection at cursor',
       'Cancel move'
     ]);
-  });
-
-  it('cancels the move when the user dismisses the notice while a selection is marked', async () => {
-    component.showNotice();
-    moveSelectionBuffer.mark(createMarkedSelection());
-
-    await capturedOptions?.onHide?.();
-
-    expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).toHaveBeenCalledOnce();
-  });
-
-  it('does not cancel when the user dismisses the notice after the mark is cleared', async () => {
-    component.showNotice();
-
-    await capturedOptions?.onHide?.();
-
-    expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).not.toHaveBeenCalled();
   });
 
   it('enables each move button only when its command can run, and keeps the always-on buttons enabled', () => {
