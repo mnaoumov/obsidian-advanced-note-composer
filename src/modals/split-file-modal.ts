@@ -132,12 +132,12 @@ interface SplitFileModalSplitResult {
 }
 
 /**
- * The user chose to switch to "smart cut & paste": mark the selection to move and open the highlighted
- * target note (when it is an existing file) instead of splitting.
+ * The user chose to switch to "smart cut & paste" from the picker: mark the selection to move and
+ * stay on the source note instead of splitting. No target is opened, because the picker has no
+ * confirmed target yet — only a merely-highlighted suggestion the user never chose.
  */
 interface SplitFileModalSwitchToSmartCutResult {
   readonly action: 'switch-to-smart-cut';
-  readonly targetFile: null | TFile;
 }
 
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
@@ -400,7 +400,7 @@ class SplitFileModal extends SuggestModalBase {
     const buttonContainerEl = this.modalEl.createDiv('advanced-note-composer-switch-to-smart-cut');
     new ButtonComponent(buttonContainerEl)
       .setButtonText('Switch to smart cut & paste')
-      .setTooltip('Mark the selection to move and open the highlighted note (Alt+S)')
+      .setTooltip('Mark the selection to move and switch to smart cut & paste (Alt+S)')
       .setDisabled(!this.canSwitchToSmartCut)
       .onClick(() => {
         this.switchToSmartCut();
@@ -408,16 +408,15 @@ class SplitFileModal extends SuggestModalBase {
   }
 
   /**
-   * Closes the modal and resolves with a "switch to smart cut & paste" result carrying the highlighted
-   * target note (when it is an existing file). The caller marks the selection to move and opens that
-   * note.
+   * Closes the modal and resolves with a "switch to smart cut & paste" result. The caller marks the
+   * selection to move and stays on the source note; no target is opened, because the picker has no
+   * confirmed target yet (opening the merely-highlighted suggestion would switch the note the user
+   * never chose — see issue #141).
    */
   private switchToSmartCut(): void {
-    const selectedItem = this.chooser.values?.[this.chooser.selectedItem] ?? null;
     this.isSelected = true;
     this.promiseResolve({
-      action: 'switch-to-smart-cut',
-      targetFile: selectedItem?.file ?? null
+      action: 'switch-to-smart-cut'
     });
     this.close();
   }
@@ -496,9 +495,10 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     }
 
     if (splitFileModalResult.action === 'switch-to-smart-cut') {
-      // Behave as if `Mark selection to move` had been invoked on the source selection, then open the
-      // Highlighted target note so the user can position the caret and paste. `canSwitchToSmartCut`
-      // Guarantees both collaborators are present.
+      // Behave as if `Mark selection to move` had been invoked on the source selection, and stay on the
+      // Source note. The picker has no confirmed target — only a merely-highlighted suggestion the user
+      // Never chose — so opening it would switch the active note unexpectedly (issue #141).
+      // `canSwitchToSmartCut` guarantees both collaborators are present.
       markSelectionToMove({
         app: params.app,
         capturedSelections,
@@ -510,9 +510,6 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         shouldLockAllNotes: params.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
         sourceFile: params.sourceFile
       });
-      if (splitFileModalResult.targetFile) {
-        await params.app.workspace.getLeaf(false).openFile(splitFileModalResult.targetFile, { active: true });
-      }
       return null;
     }
 

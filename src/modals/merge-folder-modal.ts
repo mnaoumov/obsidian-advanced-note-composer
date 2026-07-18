@@ -15,7 +15,10 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 interface BuildMergeConfirmContentParams {
@@ -168,7 +171,10 @@ export async function selectTargetFolderForMergeFolder(params: SelectTargetFolde
   // User confirms the merge or cancels.
   for (;;) {
     const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
-      openMinimizableModal(
+      // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
+      // Chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the merge
+      // Was triggered on.
+      openModal(
         new MergeFolderModal({
           ...params,
           promiseResolve

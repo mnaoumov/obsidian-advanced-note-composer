@@ -139,23 +139,29 @@ describe('Smart cut & paste notice settings', () => {
       vaultPath: getTempVault().path
     });
 
+    // "Switch to split/extract" is always shown (independent of the three move-button toggles), so it
+    // Leads every non-empty list.
     expect(result.allOn).toEqual([
+      'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
       'Cancel move'
     ]);
     expect(result.topOff).toEqual([
+      'Switch to split/extract',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
       'Cancel move'
     ]);
     expect(result.bottomOff).toEqual([
+      'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection at cursor',
       'Cancel move'
     ]);
     expect(result.atCursorOff).toEqual([
+      'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Cancel move'

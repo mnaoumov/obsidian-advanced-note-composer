@@ -22,7 +22,10 @@ import type {
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
@@ -275,7 +278,10 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
         initialInputValue: currentSeed,
         promiseResolve
       });
-      openMinimizableModal(modal, abortController);
+      // The initial picker is opened plainly (no minimize button): a target has not been chosen yet, so
+      // Minimizing serves no purpose and risks the user forgetting which note the merge was triggered on
+      // (issue #125). The abort still closes it so an unlock request cancels the flow.
+      openModal(modal, abortController);
     });
 
     if (!result) {

@@ -5,10 +5,13 @@
  * bar and restored (keeping the app usable while the modal is out of the way).
  *
  * - {@link openMinimizableModal} wraps the modal so it can be minimized — used for the confirmation
- *   dialogs, where minimizing to inspect the two involved notes before confirming is the point.
- * - {@link openModal} opens the modal plainly, without a minimize button — used for the initial
- *   picker modals, where a target has not been chosen yet: minimizing there serves no purpose and
- *   risks the user forgetting which note the operation was triggered on (see issue #125).
+ *   dialogs (minimizing to inspect the two involved notes before confirming is the point), and for the
+ *   split/extract picker, which is deliberately minimizable so a pending extract can be parked and later
+ *   cancelled from the minimized bar (see issue #130).
+ * - {@link openModal} opens the modal plainly, without a minimize button — used for the other initial
+ *   picker modals (merge file/folder, swap file/folder), where a target has not been chosen yet:
+ *   minimizing there serves no purpose and risks the user forgetting which note the operation was
+ *   triggered on (see issue #125).
  */
 
 import type { Modal } from 'obsidian';

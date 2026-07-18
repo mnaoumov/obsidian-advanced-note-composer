@@ -82,7 +82,6 @@ vi.mock('../composers/composer-base.ts', () => ({
 
 let shouldAutoSelect = false;
 let shouldAutoSwitchToSmartCut = false;
-let switchTargetFile: null | TFile = null;
 
 interface AsyncModule {
   invokeAsyncSafely(fn: () => Promise<void>): void;
@@ -90,7 +89,6 @@ interface AsyncModule {
 
 interface SwitchToSmartCutResult {
   readonly action: 'switch-to-smart-cut';
-  readonly targetFile: null | TFile;
 }
 
 interface WithChooseAsync {
@@ -141,7 +139,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
         // Resolve with a switch result so prepareForSplitFile takes its switch branch.
         const modal = castTo<WithSwitchToSmartCut>(this);
         modal.isSelected = true;
-        modal.promiseResolve({ action: 'switch-to-smart-cut', targetFile: switchTargetFile });
+        modal.promiseResolve({ action: 'switch-to-smart-cut' });
         return;
       }
       if (shouldAutoSelect) {
@@ -304,7 +302,6 @@ describe('prepareForSplitFile', () => {
     vi.useFakeTimers();
     shouldAutoSelect = false;
     shouldAutoSwitchToSmartCut = false;
-    switchTargetFile = null;
   });
 
   afterEach(() => {
@@ -337,10 +334,10 @@ describe('prepareForSplitFile', () => {
     expect(result).toBeNull();
   });
 
-  it('marks the selection to move and opens the target when switching to smart cut', async () => {
+  it('marks the selection to move and stays on the source note when switching to smart cut', async () => {
+    // Switching to smart cut from the picker must NOT open any note (issue #141): the picker only has a
+    // Merely-highlighted suggestion the user never chose, so the active note must stay put.
     shouldAutoSwitchToSmartCut = true;
-    const targetFile = createMockFile('folder/target.md');
-    switchTargetFile = targetFile;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
@@ -357,27 +354,6 @@ describe('prepareForSplitFile', () => {
     expect(result).toBeNull();
     expect(moveSelectionBuffer.hasMark()).toBe(true);
     expect(moveNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(vi.mocked(app.workspace.getLeaf(false).openFile)).toHaveBeenCalledWith(targetFile, { active: true });
-  });
-
-  it('marks the selection to move without opening a note when no target is highlighted on switch', async () => {
-    shouldAutoSwitchToSmartCut = true;
-    switchTargetFile = null;
-    const sourceFile = createMockFile('folder/source.md');
-    const editor = createMockEditor();
-    const resourceLockComponent = createMockResourceLockComponent();
-    const app = createMockApp();
-    const pluginSettingsComponent = createMockPluginSettingsComponent();
-    const moveSelectionBuffer = new MoveSelectionBuffer();
-    const moveNoticeComponent = createMockMoveNoticeComponent();
-    const selectionHighlightComponent = createMockSelectionHighlightComponent();
-
-    const promise = prepareForSplitFile({ app, editor, moveNoticeComponent, moveSelectionBuffer, pluginSettingsComponent, resourceLockComponent, selectionHighlightComponent, sourceFile });
-    await vi.advanceTimersByTimeAsync(0);
-    const result = await promise;
-
-    expect(result).toBeNull();
-    expect(moveSelectionBuffer.hasMark()).toBe(true);
     expect(vi.mocked(app.workspace.getLeaf(false).openFile)).not.toHaveBeenCalled();
   });
 
