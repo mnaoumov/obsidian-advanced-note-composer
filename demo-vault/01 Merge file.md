@@ -13,7 +13,7 @@ links, renumbers footnotes, and merges frontmatter along the way.
 4. Confirm the dialog.
 
 The body of this note is appended to **Merge target**, and the two notes' frontmatter is
-combined using your **Frontmatter merge strategy** (see [[Frontmatter merge strategy]]).
+combined using your **Frontmatter merge strategy** (see [[13 Frontmatter merge strategy]]).
 
 ## Content to merge
 

@@ -2,40 +2,40 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 > [!TIP] Interactive buttons
 >
-> Some notes have **Run** buttons that flip a plugin setting for you. They are powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). Every note also spells out the manual equivalent, so you never strictly need it.
+> Some notes have **Run** buttons that flip a plugin setting for you. They are powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[16 CodeScript Toolkit prerequisite]]). Every note also spells out the manual equivalent, so you never strictly need it.
 
 ## Merge
 
-- [[Merge file]]
-- [[Merge folder]]
+- [[01 Merge file]]
+- [[02 Merge folder]]
 
 ## Extract
 
-- [[Extract selection]]
-- [[Extract heading]]
-- [[Text after extraction]]
+- [[03 Extract selection]]
+- [[04 Extract heading]]
+- [[05 Text after extraction]]
 
 ## Split
 
-- [[Split by headings]]
+- [[06 Split by headings]]
 
 ## Swap
 
-- [[Swap file]]
-- [[Swap folder]]
+- [[07 Swap file]]
+- [[08 Swap folder]]
 
 ## Smart cut & paste
 
-- [[Smart cut and paste]]
+- [[09 Smart cut and paste]]
 
 ## Titles, links & frontmatter
 
-- [[Relative links]]
-- [[Invalid titles]]
-- [[Treat title as path]]
-- [[Frontmatter merge strategy]]
-- [[Templates]]
+- [[10 Relative links]]
+- [[11 Invalid titles]]
+- [[12 Treat title as path]]
+- [[13 Frontmatter merge strategy]]
+- [[14 Templates]]
 
 ## UI
 
-- [[Minimizing dialogs]]
+- [[15 Minimizing dialogs]]

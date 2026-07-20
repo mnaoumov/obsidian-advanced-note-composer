@@ -18,7 +18,7 @@ The two notes conflict on `title` and `status`, share the `tags` key with differ
 and each has a unique key (`author` vs `year`), so every strategy produces a visibly
 different result.
 
-The buttons need the [[CodeScript Toolkit prerequisite]].
+The buttons need the [[16 CodeScript Toolkit prerequisite]].
 
 ```code-button
 ---

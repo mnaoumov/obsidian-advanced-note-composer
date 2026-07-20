@@ -8,7 +8,7 @@ Some notes in this vault contain **Run** buttons (rendered from ```` ```code-but
 
 You normally do **not** need to do anything. This vault ships a tiny bundled `Demo Vault Helper` plugin that, the first time you open the vault (right after you trust it), automatically installs and enables `CodeScript Toolkit`, then opens [[00 Start]]. It also points `CodeScript Toolkit`'s modules root at `_assets/CodeScriptToolkit`, so the **Run** buttons work immediately afterwards.
 
-If you ever want to check, open [[Code buttons check]] and click the button - a notice means everything is ready.
+If you ever want to check, open [[17 Code buttons check]] and click the button - a notice means everything is ready.
 
 ## Manual fallback
 

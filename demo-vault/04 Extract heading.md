@@ -14,8 +14,8 @@ Extract a heading **and everything under it** into its own note, named after the
 ## Ideas worth their own note
 
 This whole section - heading and body - becomes a separate note. The heading text becomes
-the new note's title, so invalid characters and slashes matter here (see [[Invalid titles]]
-and [[Treat title as path]]).
+the new note's title, so invalid characters and slashes matter here (see [[11 Invalid titles]]
+and [[12 Treat title as path]]).
 
 ## Another section
 
