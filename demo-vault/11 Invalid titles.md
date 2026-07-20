@@ -23,8 +23,7 @@ the resulting file is named, and where the original title is preserved.
 - **Should add invalid title to note aliases** - keep the original title reachable from the
   Quick switcher.
 
-The block below switches to always writing a frontmatter `title` (needs the
-[[CodeScript Toolkit prerequisite]]). Manual equivalent: set **Frontmatter title mode** to
+The block below switches to always writing a frontmatter `title`. Manual equivalent: set **Frontmatter title mode** to
 `UseAlways` in **Settings → Advanced Note Composer**.
 
 ```code-button

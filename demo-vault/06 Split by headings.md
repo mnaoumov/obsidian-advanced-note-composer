@@ -13,7 +13,7 @@ Use `Split note by headings content - H2` instead to move only the **content** u
 heading. Whether the heading line is kept is controlled by **Should keep headings when
 splitting content**.
 
-The block below flips that setting for you (needs the [[CodeScript Toolkit prerequisite]]).
+The block below flips that setting for you.
 Manual equivalent: toggle **Should keep headings when splitting content** in
 **Settings → Advanced Note Composer**.
 

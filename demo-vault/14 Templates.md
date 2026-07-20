@@ -20,7 +20,7 @@ smart cut and paste falls back to split, which falls back to merge.
 ## Try it
 
 The button below sets a **Merge template** that stamps a heading and date onto merged
-content (needs the [[CodeScript Toolkit prerequisite]]). Manual equivalent: paste the same
+content. Manual equivalent: paste the same
 template into **Merge template** in **Settings → Advanced Note Composer**. Then run
 `Merge current file with another file...` from any note and inspect the result.
 

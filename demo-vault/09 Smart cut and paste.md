@@ -25,8 +25,7 @@ stay highlighted so you always see what will move.
 ## Move to top / bottom hotkeys
 
 `Move marked selection to top of file` and `... to bottom of file` ship with **no default
-hotkey**. The block below binds `Alt+Shift+Up` to the "move to top" command (needs the
-[[CodeScript Toolkit prerequisite]]). Manual equivalent: assign a hotkey in
+hotkey**. The block below binds `Alt+Shift+Up` to the "move to top" command. Manual equivalent: assign a hotkey in
 **Settings → Hotkeys**.
 
 ```code-button
@@ -39,7 +38,7 @@ require('/demoSetup.ts').bindHotkey(app, 'advanced-note-composer:move-marked-sel
 ## Lock every note while marking
 
 By default only the source note is locked. The block below locks **all** notes while a mark
-is pending (needs the [[CodeScript Toolkit prerequisite]]). Manual equivalent: toggle
+is pending. Manual equivalent: toggle
 **Should lock all notes when marking selection** in **Settings → Advanced Note Composer**.
 
 ```code-button

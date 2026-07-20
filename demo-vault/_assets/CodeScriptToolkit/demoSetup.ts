@@ -4,10 +4,6 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import {
-  enableCommunityPlugin,
-  installCommunityPlugin
-} from 'obsidian-dev-utils/obsidian/community-plugins';
 
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -23,12 +19,6 @@ interface DemoSettingsPatch {
   smartCutAndPasteTemplate?: string;
   splitTemplate?: string;
   textAfterExtractionMode?: string;
-}
-
-export async function installAndEnable(app: App, pluginId: string): Promise<void> {
-  await installCommunityPlugin({ app, pluginId });
-  await enableCommunityPlugin({ app, pluginId });
-  new Notice(`Installed and enabled: ${pluginId}`);
 }
 
 export async function changeSettingsAndReload(app: App, patch: DemoSettingsPatch): Promise<void> {

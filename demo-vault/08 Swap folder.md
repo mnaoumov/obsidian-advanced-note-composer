@@ -11,7 +11,7 @@ Exchange two folders - either their entire structures or just the top-level note
 3. Pick `Folder B` and confirm.
 
 By default the **entire folder structure** is swapped. The block below turns that off so
-only top-level notes swap (needs the [[CodeScript Toolkit prerequisite]]). Manual
+only top-level notes swap. Manual
 equivalent: toggle **Should swap entire folder structure** in
 **Settings → Advanced Note Composer**.
 
