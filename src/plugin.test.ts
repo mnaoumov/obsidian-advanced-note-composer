@@ -155,7 +155,8 @@ function createMockApp(): App {
 function createMockManifest(): PluginManifest {
   return strictProxy<PluginManifest>({
     id: 'test-plugin',
-    name: 'Test Plugin'
+    name: 'Test Plugin',
+    version: '1.0.0'
   });
 }
 
