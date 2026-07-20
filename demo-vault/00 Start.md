@@ -2,7 +2,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 > [!TIP] Interactive buttons
 >
-> Some notes have **Run** buttons that flip a plugin setting for you. They are powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[16 CodeScript Toolkit prerequisite]]). Every note also spells out the manual equivalent, so you never strictly need it.
+> Some notes have **Run** buttons that flip a plugin setting for you. They are powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). Every note also spells out the manual equivalent, so you never strictly need it.
 
 ## Merge
 

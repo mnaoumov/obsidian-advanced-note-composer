@@ -18,7 +18,7 @@ Extract this heading and watch where the file lands.
 ## Switch the setting
 
 The block below turns **Treat title as path** off (needs the
-[[16 CodeScript Toolkit prerequisite]]). Manual equivalent: toggle **Should treat title as
+[[CodeScript Toolkit prerequisite]]). Manual equivalent: toggle **Should treat title as
 path** in **Settings → Advanced Note Composer**, then extract the heading again to compare.
 
 ```code-button

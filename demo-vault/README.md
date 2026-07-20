@@ -12,6 +12,6 @@ When plugins prompt on first open, enable them using one of these methods:
 - **Enable manually** - turn on Community plugins.
     ![Turn on Community plugins](<./_assets/attachments/turn-on.png>)
 
-The interactive **Run** buttons in these notes are powered by the [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/) plugin. A bundled `Demo Vault Helper` installs it for you automatically the first time you open this vault (after you trust it) - see [CodeScript Toolkit prerequisite](<./16 CodeScript Toolkit prerequisite.md>). Every note also lists the manual steps, so the vault works fully without it.
+The interactive **Run** buttons in these notes are powered by the [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/) plugin. A bundled `Demo Vault Helper` installs it for you automatically the first time you open this vault (after you trust it) - see [CodeScript Toolkit prerequisite](<./CodeScript Toolkit prerequisite.md>). Every note also lists the manual steps, so the vault works fully without it.
 
 Then open [00 Start](<./00 Start.md>).
