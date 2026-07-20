@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 3.34.5
+
+- docs: standardize demo-vault README
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by ODU harness)
+- docs: unnumber demo-vault setup notes
+- Merge branch 'T95-renumber': number OANC demo vault example notes (S2)
+- docs: reconcile the demo vault helper description with T95
+- Merge branch 'T95': add OANC demo vault (S2)
+
 ## 3.34.4
 
 - fix: re #141
