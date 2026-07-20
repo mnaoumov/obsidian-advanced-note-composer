@@ -88,10 +88,12 @@ export class ConfirmDialogModal extends Modal {
 
     this.scope.register([], 'Enter', (evt) => {
       this.confirm(evt);
+      return false;
     });
 
     this.scope.register([], 'Escape', () => {
       this.close();
+      return false;
     });
 
     if (this.switchToSmartCut) {

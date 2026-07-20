@@ -49,10 +49,12 @@ class PasteOptionsModal extends Modal {
 
     this.scope.register([], 'Enter', () => {
       this.confirm();
+      return false;
     });
 
     this.scope.register([], 'Escape', () => {
       this.close();
+      return false;
     });
   }
 
