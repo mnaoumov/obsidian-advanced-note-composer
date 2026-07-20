@@ -24,7 +24,7 @@ the resulting file is named, and where the original title is preserved.
   Quick switcher.
 
 The block below switches to always writing a frontmatter `title` (needs the
-[[CodeScript Toolkit prerequisite]]). Manual equivalent: set **Frontmatter title mode** to
+[[16 CodeScript Toolkit prerequisite]]). Manual equivalent: set **Frontmatter title mode** to
 `UseAlways` in **Settings → Advanced Note Composer**.
 
 ```code-button

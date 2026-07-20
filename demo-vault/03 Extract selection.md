@@ -11,7 +11,7 @@ Pull part of a note out into another note. Three commands cover the common cases
 3. Choose an existing note or type a new name, then confirm.
 
 What is left behind (a link, an embed, or nothing) is controlled by
-[[Text after extraction]].
+[[05 Text after extraction]].
 
 ---
 

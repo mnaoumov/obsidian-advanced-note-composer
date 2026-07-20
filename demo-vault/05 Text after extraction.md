@@ -12,7 +12,7 @@ note, an **embed** of it, or **nothing**.
 2. Select the paragraph under the rule and run `Extract current selection...` into a new note.
 3. Look at what is left here - a link, an embed, or an empty gap.
 
-The buttons need the [[CodeScript Toolkit prerequisite]].
+The buttons need the [[16 CodeScript Toolkit prerequisite]].
 
 ```code-button
 ---
