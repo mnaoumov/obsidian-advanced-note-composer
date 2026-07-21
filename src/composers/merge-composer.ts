@@ -24,6 +24,8 @@ interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBa
 }
 
 export class MergeComposer extends ComposerBase {
+  protected override readonly shouldKeepSourceTitleForNewTargetFile: boolean = true;
+
   private readonly consoleDebugComponent: ConsoleDebugComponent;
 
   public constructor(params: MergeComposerConstructorParams) {

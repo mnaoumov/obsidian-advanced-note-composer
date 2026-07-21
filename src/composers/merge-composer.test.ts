@@ -77,11 +77,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function createComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
+function createComposer(settingsOverrides?: Partial<PluginSettings>, isNewTargetFile = false): MergeComposer {
   return new MergeComposer({
     app,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
-    isNewTargetFile: false,
+    isNewTargetFile,
     pluginNoticeComponent: createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(settingsOverrides),
     resourceLockComponent,
@@ -138,6 +138,18 @@ describe('MergeComposer', () => {
       expect(await app.vault.adapter.exists('source.md')).toBe(false);
       const targetContent = await app.vault.adapter.read('target.md');
       expect(targetContent).toContain('target body');
+      expect(targetContent).toContain('source body');
+    });
+
+    it('should keep the source title when merging into a brand-new target file (issue #114)', async () => {
+      // A folder merge routes each non-colliding source note into a freshly created empty target file
+      // (isNewTargetFile === true). The moved note's `title` must survive rather than being dropped.
+      await app.vault.modify(getSourceFile(), '---\ntitle: Source Title\n---\nsource body');
+
+      await createComposer(undefined, true).mergeFile();
+
+      const targetContent = await app.vault.adapter.read('target.md');
+      expect(targetContent).toContain('title: Source Title');
       expect(targetContent).toContain('source body');
     });
 
