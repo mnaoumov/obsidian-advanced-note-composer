@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.34.9
+
+- fix: re #114
+- chore: update libs
+- refactor: new endpoint
+
 ## 3.34.8
 
 - chore: update libs
