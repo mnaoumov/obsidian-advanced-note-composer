@@ -220,6 +220,22 @@ describe('MergeFolderCommandHandler', () => {
     expect(hide).toHaveBeenCalledOnce();
   });
 
+  it('should keep a moved child note title when the target folder has no colliding note (issue #114)', async () => {
+    initApp({ 'src/child/note.md': '---\ntitle: Child Title\n---\nchild body' });
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The child note lands in the mirrored target subfolder as a brand-new file (isNewTargetFile === true);
+    // Its `title` frontmatter must survive the move rather than being dropped.
+    const moved = await app.vault.adapter.read('dst/child/note.md');
+    expect(moved).toContain('title: Child Title');
+    expect(moved).toContain('child body');
+    expect(await app.vault.adapter.exists('src/child/note.md')).toBe(false);
+  });
+
   it('should not trash a source subfolder that still has children', async () => {
     initApp({
       'dst/keep.md': 'keep',

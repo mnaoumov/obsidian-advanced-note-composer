@@ -718,6 +718,24 @@ describe('mergeFrontmatter strategies', () => {
 
     expect(seeded['title']).toBeUndefined();
   });
+
+  it('should discard the source title for a brand-new target file by default (base behavior)', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isNewTargetFile: true,
+      settingsOverrides: { shouldUseSourceTitleWhenTargetHasNoTitle: false }
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.callInsertIntoTargetFile('---\ntitle: New Title\n---\ncontent');
+
+    // The base default keeps the drop behavior even for a brand-new target file; MergeComposer overrides
+    // It (via `shouldKeepSourceTitleForNewTargetFile`) so a folder/file merge into a new note keeps it.
+    expect(seeded['title']).toBeUndefined();
+  });
 });
 
 describe('safeParseFrontmatter', () => {

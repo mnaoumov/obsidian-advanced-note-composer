@@ -182,6 +182,14 @@ export abstract class ComposerBase {
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly resourceLockComponent: ResourceLockComponent;
+
+  /**
+   * Whether a brand-new (empty) target file should keep the merged-in source `title`. A merge relocates
+   * the entire source note, so a fresh note created to receive it should keep the source's title; a split
+   * carves a fragment into a new file whose title is governed by `frontmatterTitleMode`, so it must not
+   * inherit. Defaults to the drop behavior; {@link MergeComposer} overrides it.
+   */
+  protected readonly shouldKeepSourceTitleForNewTargetFile: boolean = false;
   protected readonly shouldShowNotice: boolean;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
@@ -343,9 +351,15 @@ export abstract class ComposerBase {
       let mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter, originalFrontmatter });
       mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter: templateFrontmatter, originalFrontmatter: mergedFrontmatter });
       if (originalTitle === undefined) {
-        // The target note has no `title`; by default the merged-in source title is discarded here.
-        // When the setting is on, keep the merged title (the source note's, per the merge strategy) instead.
-        if (!this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle) {
+        // The target note has no `title`. For a brand-new (empty) target file, the operation decides via
+        // `shouldKeepSourceTitleForNewTargetFile` (a merge relocates the whole source note, so it keeps
+        // The source title; a split's new-file title is governed by `frontmatterTitleMode` instead). For
+        // An existing target that has no title, the `shouldUseSourceTitleWhenTargetHasNoTitle` governs.
+        // Otherwise the merged-in source title is discarded.
+        const shouldKeepSourceTitle = this.isNewTargetFile
+          ? this.shouldKeepSourceTitleForNewTargetFile
+          : this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle;
+        if (!shouldKeepSourceTitle) {
           delete mergedFrontmatter.title;
         }
       } else {
