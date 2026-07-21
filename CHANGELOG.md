@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.34.7
+
+- docs: rewrite
+- fix: re #142
+- chore: update libs
+
 ## 3.34.6
 
 - chore: update libs
