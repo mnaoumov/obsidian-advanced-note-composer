@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.34.8
+
+- chore: update libs
+
 ## 3.34.7
 
 - docs: rewrite
