@@ -14,6 +14,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 - [[03 Extract selection]]
 - [[04 Extract heading]]
 - [[05 Text after extraction]]
+- [[16 Extract between horizontal rules]]
 
 ## Split
 

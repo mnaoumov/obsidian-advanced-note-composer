@@ -41,6 +41,24 @@ If `Treat title as path` option is
 - **enabled** - the split file will be `a/b/c/d.md`. Leading and trailing spaces are trimmed.
 - **disabled** - the split file will be `a _ b _ c _ d.md`. Spaces are preserved. `/` is replaced with `_` (or another replacement string as per settings).
 
+## Extract between horizontal rules
+
+The core plugin can only extract a heading's section or an explicit selection. When you keep a long note
+divided by horizontal rules (`---`, `***`, `___`, and their spaced/longer variants such as `- - -`), the
+**`Extract between horizontal rules...`** command extracts the block **between the rules closest to the
+cursor** in one step — no manual selection, which is especially handy on mobile.
+
+- The note's start and end act as implicit boundaries: with the cursor above the first rule it extracts
+  from the note start to that rule; below the last rule, from that rule to the note end.
+- The bounding rules themselves stay in place — only the content between them is moved.
+- If the cursor is on a rule line, the block *below* that rule is extracted.
+- The command is unavailable in a note that contains no horizontal rules.
+
+It runs the same extraction workflow as the other `Extract …` commands (target picker, relative-link
+fixing, footnotes, frontmatter, templating, and the *Text after extraction* residual). Horizontal rules are
+detected via Obsidian's own parser, so `---` inside a code block and the frontmatter delimiters are never
+mistaken for a rule.
+
 ## Move selection to another note (smart cut & paste)
 
 The core `Extract current selection...` command moves a selection into another note in one step, always

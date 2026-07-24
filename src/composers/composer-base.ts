@@ -319,6 +319,7 @@ export abstract class ComposerBase {
           });
         },
         pathOrFile: backlinkPath,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         resourceLockComponent: this.resourceLockComponent
       });
     }
