@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.35.0
+
+- feat: re #113
+- chore: update libs
+
 ## 3.34.9
 
 - fix: re #114
