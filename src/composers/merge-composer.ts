@@ -126,6 +126,7 @@ export class MergeComposer extends ComposerBase {
         });
       },
       pathOrFile: this.targetFile,
+      pluginNoticeComponent: this.pluginNoticeComponent,
       resourceLockComponent: this.resourceLockComponent
     });
   }

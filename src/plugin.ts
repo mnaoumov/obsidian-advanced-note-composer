@@ -9,6 +9,7 @@ import type { Level } from './markdown-heading-document.ts';
 import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
+import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './command-handlers/extract-between-horizontal-rules-editor-command-handler.ts';
 import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/extract-current-selection-editor-command-handler.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
 import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark-selection-to-move-editor-command-handler.ts';
@@ -170,6 +171,16 @@ export class Plugin extends PluginBase {
         selectionHighlightComponent
       }),
       new ExtractAfterCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      new ExtractBetweenHorizontalRulesEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         moveNoticeComponent,
