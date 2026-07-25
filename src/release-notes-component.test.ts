@@ -1,7 +1,9 @@
+import type { InternalPlugins } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 
 import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -40,10 +42,15 @@ vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);
 const mockAlert = vi.mocked(alert);
 
-function createMockApp(): MockAppResult {
+function createMockApp(isNoteComposerEnabled = true): MockAppResult {
   let layoutReadyCallback: (() => void) | undefined;
 
   const app = strictProxy<App>({
+    internalPlugins: strictProxy<InternalPlugins>({
+      getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(
+        vi.fn((id: string) => (id === 'note-composer' && isNoteComposerEnabled ? strictProxy({}) : null))
+      )
+    }),
     workspace: {
       onLayoutReady: vi.fn((callback: () => void) => {
         layoutReadyCallback = callback;
@@ -132,6 +139,38 @@ describe('ReleaseNotesComponent', () => {
       await triggerLayoutReadyAndWait(triggerLayoutReady);
 
       expect(editAndSave).not.toHaveBeenCalled();
+      expect(mockAlert).not.toHaveBeenCalled();
+    });
+
+    it('should show and persist release notes when the core note-composer plugin is enabled', async () => {
+      const { app, triggerLayoutReady } = createMockApp(true);
+      const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
+      const component = new ReleaseNotesComponent({
+        app,
+        pluginSettingsComponent
+      });
+
+      component.load();
+      await triggerLayoutReadyAndWait(triggerLayoutReady);
+
+      expect(editAndSave).toHaveBeenCalledTimes(1);
+      expect(settings.releaseNotesShown).toContain('3.0.0');
+      expect(mockAlert).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not show or persist release notes when the core note-composer plugin is disabled', async () => {
+      const { app, triggerLayoutReady } = createMockApp(false);
+      const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
+      const component = new ReleaseNotesComponent({
+        app,
+        pluginSettingsComponent
+      });
+
+      component.load();
+      await triggerLayoutReadyAndWait(triggerLayoutReady);
+
+      expect(editAndSave).not.toHaveBeenCalled();
+      expect(settings.releaseNotesShown).not.toContain('3.0.0');
       expect(mockAlert).not.toHaveBeenCalled();
     });
   });
