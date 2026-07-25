@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 4.0.0
+
+- chore: fix overexposed
+- feat: re #103
+- feat: re #108
+- fix: re #95
+- fix: re #102
+- feat: re #73
+- feat: re #105
+- fix: re #72
+- feat: re #89
+- feat: re #143
+
 ## 3.35.0
 
 - feat: re #113
