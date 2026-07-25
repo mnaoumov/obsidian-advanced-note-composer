@@ -12,6 +12,7 @@ import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extr
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './command-handlers/extract-between-horizontal-rules-editor-command-handler.ts';
 import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/extract-current-selection-editor-command-handler.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
+import { FlattenFolderCommandHandler } from './command-handlers/flatten-folder-command-handler.ts';
 import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark-selection-to-move-editor-command-handler.ts';
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
@@ -219,6 +220,12 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       new SwapFolderCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new FlattenFolderCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
