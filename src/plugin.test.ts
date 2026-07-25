@@ -25,6 +25,7 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
@@ -148,6 +149,10 @@ vi.mock('./release-notes-component.ts', () => ({
   ReleaseNotesComponent: vi.fn()
 }));
 
+vi.mock('./render-link-handlers-warmup-component.ts', () => ({
+  RenderLinkHandlersWarmupComponent: vi.fn()
+}));
+
 interface PluginInternals {
   _commandHandlerComponent: CommandHandlerComponent;
   _consoleDebugComponent: ConsoleDebugComponent;
@@ -186,10 +191,11 @@ describe('Plugin', () => {
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
     expect(PrismComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
+    expect(RenderLinkHandlersWarmupComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 6;
+    const EXPECTED_ADD_CHILD_CALLS = 7;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 
