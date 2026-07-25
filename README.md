@@ -154,6 +154,10 @@ Notes:
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves every direct child of the chosen folder — files **and** subfolders — up one level, so they become siblings of that folder. Subfolders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The emptied folder is left in place; delete it manually if you no longer need it.
 
+## Move folder to…
+
+The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.
+
 ## Minimizing dialogs
 
 Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
