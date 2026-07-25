@@ -16,7 +16,7 @@ export function extractHeading(editor: Editor): string {
   /* v8 ignore stop */
 }
 
-export function extractHeadingFromLine(line: string): null | string {
+function extractHeadingFromLine(line: string): null | string {
   const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
   return match?.groups?.['Heading'] ?? null;
 }
