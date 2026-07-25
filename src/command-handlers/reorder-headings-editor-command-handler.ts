@@ -1,0 +1,118 @@
+import type {
+  App,
+  Editor,
+  HeadingCache,
+  MarkdownFileInfo,
+  TFile
+} from 'obsidian';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+
+import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+
+import {
+  countReorderableSections,
+  joinReorderedSections,
+  splitIntoReorderableSections
+} from '../heading-sections.ts';
+import { runLockedTransaction } from '../locked-transaction.ts';
+import { openReorderHeadingsModal } from '../modals/reorder-headings-modal.ts';
+
+const MINIMUM_SECTIONS_TO_REORDER = 2;
+
+interface ReorderHeadingsEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
+}
+
+/**
+ * Reorders a note's top-level heading sections. Opens a modal listing the headings; the user moves each
+ * heading (and everything under it) up or down; on confirm the note is rewritten with the sections in the
+ * chosen order, nested subheadings preserved, inside a reversible resource-locked transaction.
+ */
+export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
+  private readonly app: App;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
+
+  public constructor(params: ReorderHeadingsEditorCommandHandlerConstructorParams) {
+    super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
+      icon: 'lucide-list-ordered',
+      id: 'reorder-headings',
+      name: 'Reorder headings...'
+    });
+
+    this.app = params.app;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
+  }
+
+  protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
+    const file = ctx.file;
+    if (!file) {
+      return false;
+    }
+    return countReorderableSections(this.getHeadings(file)) >= MINIMUM_SECTIONS_TO_REORDER;
+  }
+
+  protected override async executeEditor(_editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
+    const file = ctx.file;
+    if (!file) {
+      return;
+    }
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+      this.pluginNoticeComponent.showNotice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot reorder headings in file ');
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
+
+    const content = await this.app.vault.read(file);
+    const split = splitIntoReorderableSections(content, this.getHeadings(file));
+
+    const order = await openReorderHeadingsModal({ app: this.app, sections: split.sections });
+    if (!order) {
+      return;
+    }
+    if (order.every((sectionIndex, position) => sectionIndex === position)) {
+      return;
+    }
+
+    const newContent = joinReorderedSections(split, order);
+    await runLockedTransaction({
+      abortController: new AbortController(),
+      app: this.app,
+      body: async (vaultTransaction) => {
+        await vaultTransaction.modify(file, newContent);
+      },
+      lockTargets: [{ mode: 'file', pathOrFile: file }],
+      operationName: 'Reorder headings',
+      resourceLockComponent: this.resourceLockComponent
+    });
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToEditorMenu(): boolean {
+    return true;
+  }
+
+  private getHeadings(file: TFile): readonly HeadingCache[] {
+    return this.app.metadataCache.getFileCache(file)?.headings ?? [];
+  }
+}
