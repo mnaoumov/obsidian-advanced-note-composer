@@ -155,6 +155,12 @@ interface FileMtimes {
   readonly targetMtime: number;
 }
 
+interface GetEnclosingHeadingLineParams {
+  readonly app: App;
+  readonly cursorLine: number;
+  readonly file: TFile;
+}
+
 interface GetSelectionUnderHeadingParams {
   readonly app: App;
   readonly editor: Editor;
@@ -789,6 +795,33 @@ export abstract class ComposerBase {
     return wrappedText;
   }
   /* v8 ignore stop */
+}
+
+/**
+ * Resolves the line number of the heading whose section contains the cursor.
+ *
+ * Returns the start line of the last heading at or above `cursorLine` (i.e. the nearest heading the
+ * cursor is under), or `null` when the cursor is before the first heading / the note has none. This
+ * lets `Extract this heading` work from anywhere inside a heading's body, not only on the heading line
+ * itself (issue #143).
+ */
+export function getEnclosingHeadingLine(params: GetEnclosingHeadingLineParams): null | number {
+  const { app, cursorLine, file } = params;
+  const cache = app.metadataCache.getFileCache(file);
+  if (!cache) {
+    return null;
+  }
+
+  let enclosingHeadingLine: null | number = null;
+  for (const heading of cache.headings ?? []) {
+    if (heading.position.start.line > cursorLine) {
+      break;
+    }
+
+    enclosingHeadingLine = heading.position.start.line;
+  }
+
+  return enclosingHeadingLine;
 }
 
 export function getSelectionUnderHeading(params: GetSelectionUnderHeadingParams): HeadingInfo | null {

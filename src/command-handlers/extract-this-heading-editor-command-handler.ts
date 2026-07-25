@@ -17,9 +17,11 @@ import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
-import { getSelectionUnderHeading } from '../composers/composer-base.ts';
+import {
+  getEnclosingHeadingLine,
+  getSelectionUnderHeading
+} from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
-import { extractHeadingFromLine } from '../headings.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
@@ -68,14 +70,13 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       return false;
     }
 
-    const lineNumber = editor.getCursor().line;
-    const line = editor.getLine(lineNumber);
-    const heading = extractHeadingFromLine(line);
-    if (!heading) {
+    const cursorLine = editor.getCursor().line;
+    const headingLine = getEnclosingHeadingLine({ app: this.app, cursorLine, file });
+    if (headingLine === null) {
       return false;
     }
 
-    const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber });
+    const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine });
     if (!headingInfo) {
       return false;
     }
