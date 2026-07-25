@@ -10,6 +10,8 @@ filled in at merge/split time.
 - `{{content}}` - the extracted or merged text (**required** in every non-empty template).
 - `{{fromTitle}}` / `{{fromPath}}` - the source note's title / path.
 - `{{newTitle}}` / `{{newPath}}` - the destination note's title / path.
+- `{{fromParentFolder}}` / `{{newParentFolder}}` - the source / destination note's parent folder name.
+  `{{parentFolder}}` is an alias for `{{newParentFolder}}`.
 - `{{date:FORMAT}}` / `{{time:FORMAT}}` - the current date / time, formatted with a
   [moment.js](https://momentjs.com/docs/#/displaying/format/) format string.
 

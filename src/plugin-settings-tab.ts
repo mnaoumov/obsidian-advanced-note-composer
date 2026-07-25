@@ -635,6 +635,16 @@ function addAvailableTokens(f: DocumentFragment): void {
   appendCodeBlock(f, '{{newPath}}');
   f.createEl('br');
   f.appendText('- ');
+  appendCodeBlock(f, '{{fromParentFolder}}');
+  f.appendText(' / ');
+  appendCodeBlock(f, '{{newParentFolder}}');
+  f.appendText(' - the source / destination note\'s parent folder name (');
+  appendCodeBlock(f, '{{parentFolder}}');
+  f.appendText(' is an alias for ');
+  appendCodeBlock(f, '{{newParentFolder}}');
+  f.appendText(').');
+  f.createEl('br');
+  f.appendText('- ');
   appendCodeBlock(f, '{{date:FORMAT}}');
   f.appendText(', e.g. ');
   appendCodeBlock(f, '{{date:YYYY-MM-DD}}');

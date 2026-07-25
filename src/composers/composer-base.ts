@@ -168,6 +168,29 @@ interface GetSelectionUnderHeadingParams {
   readonly lineNumber: number;
 }
 
+interface ResolveTemplateTokensParams {
+  /**
+   * The value substituted for the `{{content}}` token.
+   */
+  readonly content: string;
+
+  /**
+   * The source note. Backs `{{fromPath}}` / `{{fromTitle}}` / `{{fromParentFolder}}`.
+   */
+  readonly sourceFile: TFile;
+
+  /**
+   * The destination note. Backs `{{newPath}}` / `{{newTitle}}` / `{{newParentFolder}}` and the bare
+   * `{{parentFolder}}` alias.
+   */
+  readonly targetFile: TFile;
+
+  /**
+   * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
+   */
+  readonly template: string;
+}
+
 export abstract class ComposerBase {
   protected readonly abortController = new AbortController();
   protected readonly app: App;
@@ -415,35 +438,16 @@ export abstract class ComposerBase {
     noop();
   }
 
-  /* v8 ignore start -- applyTemplate contains defensive ?? on regex groups. */
   private applyTemplate(targetContentToInsert: string): string {
-    return replaceAll({
-      replacer: ({ groups }) => {
-        const key = groups?.['Key'] ?? '';
-        const format = groups?.['Format'];
-        switch (key.toLowerCase()) {
-          case 'fromPath'.toLowerCase():
-            return this.sourceFile.path;
-          case 'fromTitle'.toLowerCase():
-            return this.sourceFile.basename;
-          case 'newPath'.toLowerCase():
-            return this.targetFile.path;
-          case 'newTitle'.toLowerCase():
-            return this.targetFile.basename;
-          case 'content':
-            return targetContentToInsert;
-          case 'date':
-            return moment().format(format ?? 'YYYY-MM-DD');
-          case 'time':
-            return moment().format(format ?? 'HH:mm');
-          default:
-            throw new Error(`Invalid template key: ${key}`);
-        }
-      },
-      searchValue: /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g,
-      str: this.getTemplate()
+    return resolveTemplateTokens({
+      content: targetContentToInsert,
+      sourceFile: this.sourceFile,
+      targetFile: this.targetFile,
+      template: this.getTemplate()
     });
   }
+
+  /* v8 ignore start -- canIncludeFrontmatter contains defensive ?? on cache/frontmatter reads. */
 
   private async canIncludeFrontmatter(): Promise<boolean> {
     const sourceCache = await getCacheSafe(this.app, this.sourceFile);
@@ -871,4 +875,49 @@ export function getSelectionUnderHeading(params: GetSelectionUnderHeadingParams)
       line: lineNumber
     }
   };
+}
+
+/**
+ * Resolves the template tokens (`{{content}}`, `{{fromTitle}}`, `{{parentFolder}}`, ...) inside a
+ * template string. See {@link ResolveTemplateTokensParams} for the token semantics.
+ */
+export function resolveTemplateTokens(params: ResolveTemplateTokensParams): string {
+  const { content, sourceFile, targetFile, template } = params;
+  return replaceAll({
+    replacer: ({ groups }) => {
+      /* v8 ignore start -- defensive optional access on always-present named regex groups. */
+      const key = groups?.['Key'] ?? '';
+      const format = groups?.['Format'];
+      /* v8 ignore stop */
+      switch (key.toLowerCase()) {
+        case 'fromParentFolder'.toLowerCase():
+          return getParentFolderName(sourceFile);
+        case 'fromPath'.toLowerCase():
+          return sourceFile.path;
+        case 'fromTitle'.toLowerCase():
+          return sourceFile.basename;
+        case 'newParentFolder'.toLowerCase():
+        case 'parentFolder'.toLowerCase():
+          return getParentFolderName(targetFile);
+        case 'newPath'.toLowerCase():
+          return targetFile.path;
+        case 'newTitle'.toLowerCase():
+          return targetFile.basename;
+        case 'content':
+          return content;
+        case 'date':
+          return moment().format(format ?? 'YYYY-MM-DD');
+        case 'time':
+          return moment().format(format ?? 'HH:mm');
+        default:
+          throw new Error(`Invalid template key: ${key}`);
+      }
+    },
+    searchValue: /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g,
+    str: template
+  });
+}
+
+function getParentFolderName(file: TFile): string {
+  return file.parent?.name ?? '';
 }

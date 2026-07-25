@@ -106,7 +106,8 @@ The **Smart cut & paste** settings group lets you tailor this notice:
   via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
   file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
   the same tokens as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`,
-  `{{newPath}}`, `{{date:FORMAT}}`). Leave it empty to reuse the **Split template** (which itself falls back
+  `{{newPath}}`, `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`).
+  Leave it empty to reuse the **Split template** (which itself falls back
   to the **Merge template**), preserving the previous behavior.
 
 The captured selection is also **persistently highlighted in the source note** so you always see exactly
