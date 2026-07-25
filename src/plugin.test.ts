@@ -114,6 +114,14 @@ vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
   SwapFolderCommandHandler: vi.fn()
 }));
 
+vi.mock('./command-handlers/mark-selection-to-swap-editor-command-handler.ts', () => ({
+  MarkSelectionToSwapEditorCommandHandler: vi.fn()
+}));
+
+vi.mock('./command-handlers/swap-with-marked-selection-editor-command-handler.ts', () => ({
+  SwapWithMarkedSelectionEditorCommandHandler: vi.fn()
+}));
+
 vi.mock('./command-handlers/flatten-folder-command-handler.ts', () => ({
   FlattenFolderCommandHandler: vi.fn()
 }));

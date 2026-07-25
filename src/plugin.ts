@@ -14,6 +14,7 @@ import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/
 import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
 import { FlattenFolderCommandHandler } from './command-handlers/flatten-folder-command-handler.ts';
 import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark-selection-to-move-editor-command-handler.ts';
+import { MarkSelectionToSwapEditorCommandHandler } from './command-handlers/mark-selection-to-swap-editor-command-handler.ts';
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
 import { MoveFolderCommandHandler } from './command-handlers/move-folder-command-handler.ts';
@@ -24,6 +25,7 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handle
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { SwapWithMarkedSelectionEditorCommandHandler } from './command-handlers/swap-with-marked-selection-editor-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
 import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
@@ -33,6 +35,7 @@ import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
+import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
 
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
@@ -62,6 +65,13 @@ export class Plugin extends PluginBase {
     // Release any held source-note lock when the plugin unloads so a mark never leaks a lock.
     this.register(() => {
       moveSelectionBuffer.clear();
+    });
+
+    // Holds the first side of a pending selection swap (no lock is held while marked). Clear it on
+    // Unload so a stale mark never survives a reload.
+    const swapSelectionBuffer = new SwapSelectionBuffer();
+    this.register(() => {
+      swapSelectionBuffer.clear();
     });
 
     // Persistently highlights the captured selection of a pending smart-cut mark or split/extract setup
@@ -226,6 +236,19 @@ export class Plugin extends PluginBase {
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
+      }),
+      new MarkSelectionToSwapEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        swapSelectionBuffer
+      }),
+      new SwapWithMarkedSelectionEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        swapSelectionBuffer
       }),
       new FlattenFolderCommandHandler({
         app: this.app,
