@@ -31,6 +31,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 
 export class Plugin extends PluginBase {
@@ -265,6 +266,9 @@ export class Plugin extends PluginBase {
     ]);
 
     this.addChild(new PrismComponent());
+    // Pay the one-time leaf-creating cost of `registerLinkHandlers` at startup so the first
+    // Extract/split/merge confirmation dialog no longer switches the active tab (issue #102).
+    this.addChild(new RenderLinkHandlersWarmupComponent({ app: this.app }));
     this.addChild(
       new ReleaseNotesComponent({
         app: this.app,
