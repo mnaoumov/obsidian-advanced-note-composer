@@ -117,6 +117,10 @@ vi.mock('./command-handlers/flatten-folder-command-handler.ts', () => ({
   FlattenFolderCommandHandler: vi.fn()
 }));
 
+vi.mock('./command-handlers/move-folder-command-handler.ts', () => ({
+  MoveFolderCommandHandler: vi.fn()
+}));
+
 vi.mock('./plugin-settings-component.ts', () => {
   class MockPluginSettingsComponent {
     public settings: PluginSettings = strictProxy<PluginSettings>({
