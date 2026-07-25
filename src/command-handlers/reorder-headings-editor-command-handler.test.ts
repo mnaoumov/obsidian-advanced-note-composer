@@ -140,7 +140,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(null))).toBe(false);
     });
 
-    it('should be unavailable with fewer than two top-level headings', () => {
+    it('should be unavailable without a reorderable sibling group', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: [heading(1, 'A', 0)] })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(false);
     });
@@ -152,6 +152,12 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
 
     it('should be available with two or more top-level headings', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: TWO_SECTION_HEADINGS })));
+      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(true);
+    });
+
+    it('should be available with two or more nested siblings under one parent', () => {
+      const headings = [heading(1, 'A', 0), heading(2, 'A.1', 4), heading(2, 'A.2', 12)];
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(true);
     });
   });

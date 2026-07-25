@@ -15,14 +15,12 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import {
-  countReorderableSections,
+  hasReorderableSiblings,
   joinReorderedSections,
   splitIntoReorderableSections
 } from '../heading-sections.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { openReorderHeadingsModal } from '../modals/reorder-headings-modal.ts';
-
-const MINIMUM_SECTIONS_TO_REORDER = 2;
 
 interface ReorderHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -32,9 +30,10 @@ interface ReorderHeadingsEditorCommandHandlerConstructorParams {
 }
 
 /**
- * Reorders a note's top-level heading sections. Opens a modal listing the headings; the user moves each
- * heading (and everything under it) up or down; on confirm the note is rewritten with the sections in the
- * chosen order, nested subheadings preserved, inside a reversible resource-locked transaction.
+ * Reorders a note's heading sections at any nesting level. Opens a modal listing the whole heading tree
+ * as an indented list; the user moves each heading (and everything nested under it) up or down among its
+ * same-parent siblings; on confirm the note is rewritten with the sections in the chosen order, nested
+ * subheadings preserved, inside a reversible resource-locked transaction.
  */
 export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
@@ -61,7 +60,7 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
     if (!file) {
       return false;
     }
-    return countReorderableSections(this.getHeadings(file)) >= MINIMUM_SECTIONS_TO_REORDER;
+    return hasReorderableSiblings(this.getHeadings(file));
   }
 
   protected override async executeEditor(_editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
@@ -83,7 +82,7 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
     const content = await this.app.vault.read(file);
     const split = splitIntoReorderableSections(content, this.getHeadings(file));
 
-    const order = await openReorderHeadingsModal({ app: this.app, sections: split.sections });
+    const order = await openReorderHeadingsModal({ app: this.app, split });
     if (!order) {
       return;
     }
