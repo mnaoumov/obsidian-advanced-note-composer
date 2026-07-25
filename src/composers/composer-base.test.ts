@@ -43,6 +43,7 @@ import {
 } from '../plugin-settings.ts';
 import {
   ComposerBase,
+  getEnclosingHeadingLine,
   getInsertModeFromEvent,
   getSelectionUnderHeading,
   resolveInsertOffset
@@ -356,6 +357,58 @@ describe('getSelectionUnderHeading', () => {
     const mockApp = createMockApp({});
     const editor = createMockEditor(['text']);
     expect(getSelectionUnderHeading({ app: mockApp, editor, file: getSourceFile(), lineNumber: 0 })).toBeNull();
+  });
+});
+
+describe('getEnclosingHeadingLine', () => {
+  function createMockApp(cache: CachedMetadata | null): AppOriginal {
+    vi.spyOn(app.metadataCache, 'getFileCache').mockReturnValue(cache);
+    return app;
+  }
+
+  const cacheWithHeadings: CachedMetadata = {
+    headings: [
+      { heading: 'First', level: 1, position: { end: { col: 7, line: 0, offset: 7 }, start: { col: 0, line: 0, offset: 0 } } },
+      { heading: 'Child', level: 2, position: { end: { col: 8, line: 3, offset: 30 }, start: { col: 0, line: 3, offset: 22 } } },
+      { heading: 'Second', level: 1, position: { end: { col: 8, line: 6, offset: 60 }, start: { col: 0, line: 6, offset: 52 } } }
+    ]
+  };
+
+  it('should return null when no cache exists', () => {
+    const mockApp = createMockApp(null);
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 5, file: getSourceFile() })).toBeNull();
+  });
+
+  it('should return null when the cursor is before the first heading', () => {
+    const mockApp = createMockApp({
+      headings: [{ heading: 'H', level: 1, position: { end: { col: 3, line: 2, offset: 5 }, start: { col: 0, line: 2, offset: 2 } } }]
+    });
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 1, file: getSourceFile() })).toBeNull();
+  });
+
+  it('should return null when the note has no headings', () => {
+    const mockApp = createMockApp({});
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 3, file: getSourceFile() })).toBeNull();
+  });
+
+  it('should return the heading line when the cursor is on the heading line', () => {
+    const mockApp = createMockApp(cacheWithHeadings);
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 0, file: getSourceFile() })).toBe(0);
+  });
+
+  it('should return the enclosing heading line when the cursor is in the body', () => {
+    const mockApp = createMockApp(cacheWithHeadings);
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 2, file: getSourceFile() })).toBe(0);
+  });
+
+  it('should return the nearest sub-heading when the cursor is under it', () => {
+    const mockApp = createMockApp(cacheWithHeadings);
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 4, file: getSourceFile() })).toBe(3);
+  });
+
+  it('should return the last heading line when the cursor is past all headings', () => {
+    const mockApp = createMockApp(cacheWithHeadings);
+    expect(getEnclosingHeadingLine({ app: mockApp, cursorLine: 10, file: getSourceFile() })).toBe(6);
   });
 });
 
