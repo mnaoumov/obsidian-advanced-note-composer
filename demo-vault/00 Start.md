@@ -19,11 +19,18 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 ## Split
 
 - [[06 Split by headings]]
+- [[19 Reorder headings]]
 
 ## Swap
 
 - [[07 Swap file]]
 - [[08 Swap folder]]
+- [[20 Swap selections]]
+
+## Folder operations
+
+- [[17 Flatten folder]]
+- [[18 Move folder to]]
 
 ## Smart cut & paste
 
