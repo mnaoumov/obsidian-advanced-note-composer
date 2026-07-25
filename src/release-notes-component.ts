@@ -21,6 +21,13 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
   }
 
   protected override async onLayoutReady(): Promise<void> {
+    // Only show the release notes when the enhanced built-in `Note composer` core plugin is enabled (issue #95).
+    // When it is disabled, nothing is shown and no version is persisted.
+    // This makes the notes appear the first time the user later enables the core plugin.
+    if (!this.app.internalPlugins.getEnabledPluginById('note-composer')) {
+      return;
+    }
+
     const RELEASE_NOTES: Record<string, DocumentFragment> = {
       '3.0.0': createFragment((f) => {
         f.appendText('The plugin no longer requires ');
