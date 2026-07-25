@@ -173,6 +173,44 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('src/note.md')).toBe('note body');
   });
 
+  it('should skip an ignored markdown file without creating an empty target and report it (issue #72)', async () => {
+    initApp({
+      'src/sub/keep.md': 'keep body',
+      'src/sub/secret.md': 'secret body'
+    });
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path.endsWith('secret.md') });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The non-ignored file merged into the target.
+    expect(await app.vault.adapter.read('dst/sub/keep.md')).toContain('keep body');
+    // The ignored file was NOT merged: no empty target file was created and the source is intact.
+    expect(await app.vault.adapter.exists('dst/sub/secret.md')).toBe(false);
+    expect(await app.vault.adapter.read('src/sub/secret.md')).toBe('secret body');
+    // A summary notice reported the skipped file.
+    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
+  it('should skip an ignored non-markdown file without moving it and report it (issue #72)', async () => {
+    initApp({
+      'src/sub/note.md': 'note body',
+      'src/sub/pic.png': 'PIC'
+    });
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path.endsWith('pic.png') });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The markdown merged; the ignored picture stayed in place and was reported.
+    expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('note body');
+    expect(await app.vault.adapter.exists('dst/sub/pic.png')).toBe(false);
+    expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(true);
+    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
   it('should do nothing when no target folder is selected', async () => {
     initApp({ 'src/note.md': 'note body' });
     const { handler } = createHandler();

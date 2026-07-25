@@ -58,6 +58,18 @@ interface MergeFolderCommandHandlerMergeFolderParams {
   readonly targetFolder: TFolder;
 }
 
+interface MergeFolderCommandHandlerMergeMarkdownFilesParams {
+  readonly abortController: AbortController;
+
+  /**
+   * Accumulator: source files skipped because their source/target path is ignored are pushed here.
+   */
+  readonly ignoredSourceFiles: TFile[];
+  readonly sourceMdFiles: TFile[];
+  readonly subfoldersMap: Map<string, string>;
+  readonly vaultTransaction: VaultTransaction;
+}
+
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -119,6 +131,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   private depth(file: TAbstractFile): number {
     return file.path.split('/').length;
+  }
+
+  private isMergeIgnored(sourcePath: string, targetPath: string): boolean {
+    const { settings } = this.pluginSettingsComponent;
+    return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
   }
 
   private async mergeFolder(params: MergeFolderCommandHandlerMergeFolderParams): Promise<void> {
@@ -205,36 +222,21 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       sourceMdFiles.sort((a, b) => this.depth(b) - this.depth(a));
     }
 
-    for (const sourceMdFile of sourceMdFiles) {
-      this.throwIfAborted(abortController);
-      /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
-      const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
-      /* v8 ignore stop */
-      const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
-      const isNewTargetFile = !exists({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
-      const targetMdFile = isNewTargetFile
-        ? await vaultTransaction.create(targetMdFilePath, '')
-        : await getOrCreateFileSafe(this.app, targetMdFilePath);
-      const composer = new MergeComposer({
-        app: this.app,
-        consoleDebugComponent: this.consoleDebugComponent,
-        isNewTargetFile,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent: this.pluginSettingsComponent,
-        resourceLockComponent: this.resourceLockComponent,
-        shouldShowNotice: false,
-        sourceFile: sourceMdFile,
-        targetFile: targetMdFile,
-        vaultTransaction
-      });
-      await composer.mergeFile();
-    }
+    // Files whose source or mapped-target path is ignored in the plugin settings are skipped entirely
+    // (issue #72): the empty target file is never created, and they are reported afterwards.
+    const ignoredSourceFiles: TFile[] = [];
+
+    await this.mergeMarkdownFiles({ abortController, ignoredSourceFiles, sourceMdFiles, subfoldersMap, vaultTransaction });
 
     for (const sourceOtherFile of sourceOtherFiles) {
       this.throwIfAborted(abortController);
       /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
       const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
+      if (this.isMergeIgnored(sourceOtherFile.path, join(targetParentFolderPath, sourceOtherFile.name))) {
+        ignoredSourceFiles.push(sourceOtherFile);
+        continue;
+      }
       const targetFilePath = getAvailablePath(this.app, join(targetParentFolderPath, sourceOtherFile.name));
       await vaultTransaction.rename(sourceOtherFile, targetFilePath);
     }
@@ -257,6 +259,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       await vaultTransaction.trash(sourceSubfolder);
     }
 
+    await this.showIgnoredFilesNotice(ignoredSourceFiles);
+
     if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
@@ -268,6 +272,55 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         f.appendText(', but Templater plugin is not installed.');
       }));
     }
+  }
+
+  private async mergeMarkdownFiles(params: MergeFolderCommandHandlerMergeMarkdownFilesParams): Promise<void> {
+    const { abortController, ignoredSourceFiles, sourceMdFiles, subfoldersMap, vaultTransaction } = params;
+    for (const sourceMdFile of sourceMdFiles) {
+      this.throwIfAborted(abortController);
+      /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
+      const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
+      /* v8 ignore stop */
+      const targetMdFilePath = join(targetParentFolderPath, sourceMdFile.name);
+      if (this.isMergeIgnored(sourceMdFile.path, targetMdFilePath)) {
+        ignoredSourceFiles.push(sourceMdFile);
+        continue;
+      }
+      const isNewTargetFile = !exists({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
+      const targetMdFile = isNewTargetFile
+        ? await vaultTransaction.create(targetMdFilePath, '')
+        : await getOrCreateFileSafe(this.app, targetMdFilePath);
+      const composer = new MergeComposer({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        isNewTargetFile,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        resourceLockComponent: this.resourceLockComponent,
+        shouldShowNotice: false,
+        sourceFile: sourceMdFile,
+        targetFile: targetMdFile,
+        vaultTransaction
+      });
+      await composer.mergeFile();
+    }
+  }
+
+  private async showIgnoredFilesNotice(ignoredSourceFiles: TFile[]): Promise<void> {
+    if (ignoredSourceFiles.length === 0) {
+      return;
+    }
+    this.pluginNoticeComponent.showNotice(
+      await createFragmentAsync(async (f) => {
+        f.appendText(
+          `Advanced Note Composer: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
+        );
+        for (const ignoredSourceFile of ignoredSourceFiles) {
+          f.createEl('br');
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: ignoredSourceFile.path }));
+        }
+      })
+    );
   }
 
   /**
