@@ -113,7 +113,7 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddCommandsToSubmenu = true): SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
+function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({
       metadataCache: strictProxy<MetadataCache>({
@@ -126,7 +126,8 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -211,6 +212,20 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     );
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+  });
+
+  it('should return false from canExecuteEditor when the command is blocked on the path', () => {
+    const params = createMockParams(2, false, true, true);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
+    const editor = createMockEditor();
+    const file = createMockFile();
+    const ctx = createMockCtx(file);
+
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
+    );
+
+    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
   });
 
   it('should return early when ctx.file is null in executeEditor', async () => {

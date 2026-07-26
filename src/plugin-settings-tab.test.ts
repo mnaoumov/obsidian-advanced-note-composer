@@ -187,6 +187,13 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should always merge excluded items').getValue()).toBe(false);
   });
 
+  it('should render the block-commands-on-excluded-paths toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should block commands on excluded paths').getValue()).toBe(false);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

@@ -36,6 +36,7 @@ interface CreateParamsOptions {
   readonly content?: string;
   readonly headings?: readonly HeadingCache[];
   readonly isPathIgnored?: boolean;
+  readonly shouldBlockCommandOnPath?: boolean;
 }
 
 interface HandlerParams {
@@ -108,7 +109,8 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
-        shouldAddCommandsToSubmenu: true
+        shouldAddCommandsToSubmenu: true,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -159,6 +161,11 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       const headings = [heading(1, 'A', 0), heading(2, 'A.1', 4), heading(2, 'A.2', 12)];
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(true);
+    });
+
+    it('should be unavailable when the command is blocked on the path', () => {
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: TWO_SECTION_HEADINGS, shouldBlockCommandOnPath: true })));
+      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(false);
     });
   });
 

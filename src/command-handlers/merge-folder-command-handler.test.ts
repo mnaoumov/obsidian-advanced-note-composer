@@ -104,6 +104,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
+        shouldBlockCommandOnPath: () => false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
         shouldOpenNoteAfterMerge: false,
@@ -160,6 +161,13 @@ describe('MergeFolderCommandHandler', () => {
     await app.vault.createFolder('some/folder');
     const { handler } = createHandler();
     expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(true);
+  });
+
+  it('should block a non-root folder in canExecuteFolder when the command is blocked on its path', async () => {
+    initApp({});
+    await app.vault.createFolder('some/folder');
+    const { handler } = createHandler({ shouldBlockCommandOnPath: () => true });
+    expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(false);
   });
 
   it('should show a notice and not merge when the folder path is ignored', async () => {

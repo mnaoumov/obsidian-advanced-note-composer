@@ -545,6 +545,18 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addMultipleText((multipleText) => {
             this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
           });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should block commands on excluded paths')
+          .setDesc(createFragment((f) => {
+            f.appendText('When enabled, Advanced Note Composer commands are hidden entirely (from the command palette and the editor/file/folder menus) on notes and folders whose path is excluded/ignored by the settings above.');
+            f.createEl('br');
+            f.appendText('When disabled (the default), the commands stay visible on excluded paths and show an "ignored in the plugin settings" notice when triggered instead.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldBlockCommandsOnExcludedPaths', valueComponent: toggle });
+          });
       });
 
     new SettingGroupEx(this.containerEl)

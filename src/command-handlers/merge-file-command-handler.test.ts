@@ -84,7 +84,7 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): MergeFileCommandHandlerConstructorParams {
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): MergeFileCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
@@ -92,7 +92,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -132,6 +133,16 @@ describe('MergeFileCommandHandler', () => {
     const file = createMockFile();
 
     mockIsMarkdownFile.mockReturnValue(false);
+
+    expect(handler.canExecuteFile(file)).toBe(false);
+  });
+
+  it('should return false from canExecuteFile when the command is blocked on the path', () => {
+    const params = createMockParams(false, true, true);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    const file = createMockFile();
+
+    mockIsMarkdownFile.mockReturnValue(true);
 
     expect(handler.canExecuteFile(file)).toBe(false);
   });

@@ -44,6 +44,10 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 - [[13 Frontmatter merge strategy]]
 - [[14 Templates]]
 
+## Include / exclude paths
+
+- [[21 Block commands on excluded paths]]
+
 ## UI
 
 - [[15 Minimizing dialogs]]

@@ -17,6 +17,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 
@@ -52,7 +53,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override canExecuteFile(file: TFile): boolean {
-    return isMarkdownFile(file);
+    return isMarkdownFile(file) && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file);
   }
 
   protected override async executeFile(file: TFile): Promise<void> {

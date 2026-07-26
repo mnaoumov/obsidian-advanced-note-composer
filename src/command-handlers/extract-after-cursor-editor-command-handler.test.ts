@@ -33,6 +33,7 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './extract-after-cursor-editor-command-handler.ts';
 
 interface TestableHandler {
+  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
@@ -93,7 +94,7 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): HandlerParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
@@ -105,7 +106,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({}),
@@ -249,5 +251,17 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     const params = createMockParams(false, false);
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
+  });
+
+  it('should block canExecuteEditor when the command is blocked on the path', () => {
+    const params = createMockParams(false, true, true);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
+    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+  });
+
+  it('should allow canExecuteEditor when the command is not blocked on the path', () => {
+    const params = createMockParams(false, true, false);
+    const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
+    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
   });
 });

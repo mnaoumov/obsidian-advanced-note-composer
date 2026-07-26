@@ -16,6 +16,7 @@ import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
@@ -56,6 +57,10 @@ export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.selectionHighlightComponent = params.selectionHighlightComponent;
+  }
+
+  protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
+    return !isEditorCommandBlocked(this.pluginSettingsComponent, ctx);
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {

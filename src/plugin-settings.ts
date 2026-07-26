@@ -39,6 +39,7 @@ export class PluginSettings {
   public shouldApplyTextAfterExtractionToSameFile = false;
   public shouldAskBeforeMerging = true;
   public shouldAskBeforeSplitting = true;
+  public shouldBlockCommandsOnExcludedPaths = false;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
@@ -85,5 +86,18 @@ export class PluginSettings {
 
   public isPathIgnored(path: string): boolean {
     return this._pathSettings.isPathIgnored(path);
+  }
+
+  /**
+   * Whether an Advanced Note Composer command must be blocked (hidden) on the given path: only when the
+   * `shouldBlockCommandsOnExcludedPaths` setting is on AND the path is excluded/ignored in the settings
+   * (issue #93). When off, commands stay visible on excluded paths and show an "ignored" notice on
+   * trigger instead.
+   *
+   * @param path - The path to check.
+   * @returns Whether commands must be blocked on the path.
+   */
+  public shouldBlockCommandOnPath(path: string): boolean {
+    return this.shouldBlockCommandsOnExcludedPaths && this.isPathIgnored(path);
   }
 }

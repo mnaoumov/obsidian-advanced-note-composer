@@ -68,6 +68,7 @@ const mockModify = vi.fn().mockResolvedValue(undefined);
 interface CreateParamsOptions {
   readonly files?: readonly TFile[];
   readonly isPathIgnored?: boolean;
+  readonly shouldBlockCommandOnPath?: boolean;
   readonly sourceContent?: string;
 }
 
@@ -115,7 +116,8 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
-        shouldAddCommandsToSubmenu: true
+        shouldAddCommandsToSubmenu: true,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({}),
@@ -214,6 +216,15 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       markSelection(params.swapSelectionBuffer, { endOffset: 3, sourceFile, startOffset: 0 });
       const handler = toTestable(new SwapWithMarkedSelectionEditorCommandHandler(params));
       expect(handler.canExecuteEditor(createMockEditor({ fromOffset: 8, toOffset: 13 }), createMockCtx(sourceFile))).toBe(true);
+    });
+
+    it('should be unavailable when the command is blocked on the path', () => {
+      const sourceFile = createMockFile('source.md');
+      const targetFile = createMockFile('target.md');
+      const params = createMockParams({ files: [sourceFile, targetFile], shouldBlockCommandOnPath: true });
+      markSelection(params.swapSelectionBuffer, { sourceFile });
+      const handler = toTestable(new SwapWithMarkedSelectionEditorCommandHandler(params));
+      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(targetFile))).toBe(false);
     });
   });
 

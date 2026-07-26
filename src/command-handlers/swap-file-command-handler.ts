@@ -12,6 +12,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { swap } from '../swapper.ts';
@@ -41,6 +42,10 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
+  }
+
+  protected override canExecuteFile(file: TFile): boolean {
+    return !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file);
   }
 
   protected override async executeFile(file: TFile): Promise<void> {

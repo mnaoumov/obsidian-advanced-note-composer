@@ -12,6 +12,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForSwap } from '../modals/swap-folder-modal.ts';
 import { swap } from '../swapper.ts';
@@ -45,7 +46,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot();
+    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

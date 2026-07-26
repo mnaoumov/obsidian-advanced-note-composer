@@ -118,7 +118,8 @@ function createMockParams(
   headingLevel: Level,
   isPathIgnored = false,
   shouldAddCommandsToSubmenu = true,
-  shouldKeepHeadingsWhenSplittingContent = true
+  shouldKeepHeadingsWhenSplittingContent = true,
+  shouldBlockCommandOnPath = false
 ): SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({
@@ -133,6 +134,7 @@ function createMockParams(
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
         shouldKeepHeadingsWhenSplittingContent
       })
     }),
@@ -218,6 +220,20 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     );
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+  });
+
+  it('should return false from canExecuteEditor when the command is blocked on the path', () => {
+    const params = createMockParams(2, false, true, true, true);
+    const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
+    const editor = createMockEditor();
+    const file = createMockFile();
+    const ctx = createMockCtx(file);
+
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
+    );
+
+    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
   });
 
   it('should return early when ctx.file is null in executeEditor', async () => {

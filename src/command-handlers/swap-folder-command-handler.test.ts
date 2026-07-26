@@ -81,6 +81,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
+        shouldBlockCommandOnPath: () => false,
         ...settingsOverrides
       })
     }),
@@ -134,6 +135,13 @@ describe('SwapFolderCommandHandler', () => {
     await app.vault.createFolder('some/folder');
     const { handler } = createHandler();
     expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(true);
+  });
+
+  it('should block a non-root folder in canExecuteFolder when the command is blocked on its path', async () => {
+    initApp();
+    await app.vault.createFolder('some/folder');
+    const { handler } = createHandler({ shouldBlockCommandOnPath: () => true });
+    expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(false);
   });
 
   it('should show a notice and not swap when the folder path is ignored', async () => {

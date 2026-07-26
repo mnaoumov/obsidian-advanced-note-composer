@@ -87,6 +87,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldApplyTextAfterExtractionToSameFile).toBe(false);
     expect(settings.shouldAskBeforeMerging).toBe(true);
     expect(settings.shouldAskBeforeSplitting).toBe(true);
+    expect(settings.shouldBlockCommandsOnExcludedPaths).toBe(false);
     expect(settings.shouldFixFootnotesByDefault).toBe(true);
     expect(settings.shouldIncludeChildFoldersWhenMergingByDefault).toBe(true);
     expect(settings.shouldIncludeChildFoldersWhenSwappingByDefault).toBe(true);
@@ -147,5 +148,28 @@ describe('PluginSettings', () => {
     const settings = new PluginSettings();
     settings.includePaths = ['allowed'];
     expect(settings.isPathIgnored('not-allowed/file.md')).toBe(true);
+  });
+});
+
+describe('PluginSettings.shouldBlockCommandOnPath', () => {
+  it('should block an excluded path when blocking is enabled', () => {
+    const settings = new PluginSettings();
+    settings.shouldBlockCommandsOnExcludedPaths = true;
+    settings.excludePaths = ['secret'];
+    expect(settings.shouldBlockCommandOnPath('secret/file.md')).toBe(true);
+  });
+
+  it('should not block a non-excluded path even when blocking is enabled', () => {
+    const settings = new PluginSettings();
+    settings.shouldBlockCommandsOnExcludedPaths = true;
+    settings.excludePaths = ['secret'];
+    expect(settings.shouldBlockCommandOnPath('public/file.md')).toBe(false);
+  });
+
+  it('should not block an excluded path when blocking is disabled', () => {
+    const settings = new PluginSettings();
+    settings.shouldBlockCommandsOnExcludedPaths = false;
+    settings.excludePaths = ['secret'];
+    expect(settings.shouldBlockCommandOnPath('secret/file.md')).toBe(false);
   });
 });

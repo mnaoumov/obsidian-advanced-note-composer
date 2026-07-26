@@ -36,7 +36,7 @@ import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { MarkSelectionToMoveEditorCommandHandler } from './mark-selection-to-move-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor): boolean;
+  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
   executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
@@ -95,7 +95,7 @@ function createMockFile(mtime = 1000): TFile {
 
 const ROOT_FOLDER = strictProxy<TFolder>({ path: '/' });
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldLockAllNotesWhenMarkingSelection = false): HandlerParams {
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldLockAllNotesWhenMarkingSelection = false, shouldBlockCommandOnPath = false): HandlerParams {
   return {
     app: strictProxy<App>({
       vault: strictProxy<Vault>({
@@ -112,6 +112,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
         shouldLockAllNotesWhenMarkingSelection
       })
     }),
@@ -150,8 +151,18 @@ describe('MarkSelectionToMoveEditorCommandHandler', () => {
 
   it('should be available only when something is selected', () => {
     const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams()));
-    expect(handler.canExecuteEditor(createMockEditor(true))).toBe(true);
-    expect(handler.canExecuteEditor(createMockEditor(false))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(false), createMockCtx(createMockFile()))).toBe(false);
+  });
+
+  it('should block canExecuteEditor when the command is blocked on the path', () => {
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams(false, true, false, true)));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(false);
+  });
+
+  it('should allow canExecuteEditor when the command is not blocked on the path', () => {
+    const handler = toTestable(new MarkSelectionToMoveEditorCommandHandler(createMockParams(false, true, false, false)));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(true);
   });
 
   it('should return early and not mark when ctx.file is null', async () => {

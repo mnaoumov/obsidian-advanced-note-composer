@@ -79,6 +79,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
+        shouldBlockCommandOnPath: () => false,
         ...settingsOverrides
       })
     }),
@@ -129,6 +130,12 @@ describe('MoveFolderCommandHandler', () => {
     initApp({ 'parent/a/note.md': 'note' });
     const { handler } = createHandler();
     expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+  });
+
+  it('should block a non-root folder in canExecuteFolder when the command is blocked on its path', () => {
+    initApp({ 'parent/a/note.md': 'note' });
+    const { handler } = createHandler({ shouldBlockCommandOnPath: () => true });
+    expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
   });
 
   it('should show a notice and not move when the folder path is ignored', async () => {

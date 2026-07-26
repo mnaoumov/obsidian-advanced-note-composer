@@ -34,6 +34,7 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
@@ -95,7 +96,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot();
+    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

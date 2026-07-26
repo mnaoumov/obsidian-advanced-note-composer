@@ -16,6 +16,7 @@ import { join } from 'obsidian-dev-utils/path';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 
 interface FlattenFolderCommandHandlerConstructorParams {
@@ -62,6 +63,9 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
     if (folder.isRoot()) {
+      return false;
+    }
+    if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
       return false;
     }
     return folder.children.length > 0;

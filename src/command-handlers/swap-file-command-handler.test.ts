@@ -37,6 +37,7 @@ interface HandlerContext {
 }
 
 interface Testable {
+  canExecuteFile(file: TFile): boolean;
   executeFile(file: TFile): Promise<void>;
   readonly icon: string;
   readonly id: string;
@@ -82,6 +83,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
+        shouldBlockCommandOnPath: () => false,
         ...settingsOverrides
       })
     }),
@@ -124,6 +126,18 @@ describe('SwapFileCommandHandler', () => {
     expect(handler.id).toBe('swap-file');
     expect(handler.name).toBe('Swap file with...');
     expect(handler.icon).toBe('switch-camera');
+  });
+
+  it('should allow canExecuteFile when the command is not blocked on the path', () => {
+    initApp({ 'source.md': 'source body' });
+    const { handler } = createHandler();
+    expect(handler.canExecuteFile(getFile('source.md'))).toBe(true);
+  });
+
+  it('should block canExecuteFile when the command is blocked on the path', () => {
+    initApp({ 'source.md': 'source body' });
+    const { handler } = createHandler({ shouldBlockCommandOnPath: (path) => path === 'source.md' });
+    expect(handler.canExecuteFile(getFile('source.md'))).toBe(false);
   });
 
   it('should show a notice and not swap when the file path is ignored', async () => {

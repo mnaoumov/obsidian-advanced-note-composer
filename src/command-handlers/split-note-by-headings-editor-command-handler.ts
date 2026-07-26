@@ -15,6 +15,7 @@ import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { Level } from '../markdown-heading-document.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
@@ -54,6 +55,9 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
     super.canExecuteEditor(editor, ctx);
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+      return false;
+    }
     const file = ctx.file;
     if (!file) {
       return false;

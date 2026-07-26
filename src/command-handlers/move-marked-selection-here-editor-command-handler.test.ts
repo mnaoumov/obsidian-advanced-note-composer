@@ -108,6 +108,7 @@ interface CreateMockParamsOptions {
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
   readonly shouldAddCommandsToSubmenu?: boolean;
   readonly shouldApplyTextAfterExtractionToSameFile?: boolean;
+  readonly shouldBlockCommandOnPath?: boolean;
   readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
@@ -183,6 +184,7 @@ function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams 
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: options.shouldAddCommandsToSubmenu ?? true,
         shouldApplyTextAfterExtractionToSameFile: options.shouldApplyTextAfterExtractionToSameFile ?? false,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
         shouldFixFootnotesByDefault: true,
         shouldIncludeFrontmatterWhenSplittingByDefault: false,
         textAfterExtractionMode: options.textAfterExtractionMode ?? TextAfterExtractionMode.LinkToNewFile
@@ -268,6 +270,14 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
       // A target selection of 12..15 does not overlap the marked 5..10.
       expect(handler.canExecuteEditor(createMockEditorWithSelection(12, 15), createMockCtx(createMockFile('source.md')))).toBe(true);
+    });
+
+    it('should be unavailable when the command is blocked on the target path', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source), shouldBlockCommandOnPath: true }))
+      );
+      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
     });
   });
 

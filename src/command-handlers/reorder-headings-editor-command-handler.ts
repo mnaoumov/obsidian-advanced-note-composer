@@ -14,6 +14,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import {
   hasReorderableSiblings,
   joinReorderedSections,
@@ -56,6 +57,9 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
   }
 
   protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+      return false;
+    }
     const file = ctx.file;
     if (!file) {
       return false;

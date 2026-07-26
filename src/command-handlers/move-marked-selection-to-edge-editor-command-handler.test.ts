@@ -47,6 +47,7 @@ interface CapturedComposerArgs {
 interface CreateMockParamsOptions {
   readonly insertMode?: InsertMode;
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
+  readonly shouldBlockCommandOnPath?: boolean;
 }
 
 interface HandlerParams {
@@ -129,6 +130,7 @@ function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams 
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: vi.fn().mockReturnValue(false),
         shouldApplyTextAfterExtractionToSameFile: false,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
         shouldFixFootnotesByDefault: true,
         shouldIncludeFrontmatterWhenSplittingByDefault: false,
         textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
@@ -194,6 +196,20 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
         )
       );
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(true);
+    });
+
+    it('should be unavailable when the command is blocked on the target path', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({
+            insertMode: InsertMode.Append,
+            moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]),
+            shouldBlockCommandOnPath: true
+          })
+        )
+      );
+      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
     });
   });
 

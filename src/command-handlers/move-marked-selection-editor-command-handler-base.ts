@@ -15,6 +15,7 @@ import type { MoveOptions } from '../modals/paste-options-modal.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import { resolveInsertOffset } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { createMoveToken } from '../move-token.ts';
@@ -96,6 +97,9 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+      return false;
+    }
     const marked = this.moveSelectionBuffer.get();
     if (!marked) {
       return false;

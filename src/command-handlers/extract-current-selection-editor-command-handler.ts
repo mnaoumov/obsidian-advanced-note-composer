@@ -15,6 +15,7 @@ import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
@@ -57,7 +58,10 @@ export class ExtractCurrentSelectionEditorCommandHandler extends ActiveEditorCom
     this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
-  protected override canExecuteEditor(editor: Editor): boolean {
+  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+      return false;
+    }
     return editor.somethingSelected();
   }
 

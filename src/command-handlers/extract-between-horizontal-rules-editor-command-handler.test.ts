@@ -103,7 +103,7 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true): HandlerParams {
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): HandlerParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
@@ -115,7 +115,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
-        shouldAddCommandsToSubmenu
+        shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({}),
@@ -154,6 +155,12 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
     expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+  });
+
+  it('should return false from canExecuteEditor when the command is blocked on the path', () => {
+    const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams(false, true, true)));
+    mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
   });
 
   it('should return early when ctx.file is null in executeEditor', async () => {

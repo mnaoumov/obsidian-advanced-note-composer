@@ -11,6 +11,7 @@ import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handle
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SwapSelectionBuffer } from '../swap-selection-buffer.ts';
 
+import { isEditorCommandBlocked } from '../command-block.ts';
 import {
   canSwapWithSelection,
   swapWithSelection
@@ -52,6 +53,9 @@ export class SwapWithMarkedSelectionEditorCommandHandler extends EditorCommandHa
   }
 
   protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+      return false;
+    }
     const marked = this.swapSelectionBuffer.get();
     if (!marked) {
       return false;
