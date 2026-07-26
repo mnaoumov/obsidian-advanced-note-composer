@@ -103,8 +103,11 @@ function createMockCtx(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(): Editor {
+function createMockEditor(fromLine = 0, toLine = fromLine): Editor {
+  const getCursor = vi.fn();
+  getCursor.mockImplementation((which?: string) => ({ ch: 0, line: which === 'to' ? toLine : fromLine }));
   return strictProxy<Editor>({
+    getCursor,
     setSelection: vi.fn()
   });
 }
@@ -226,6 +229,48 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     );
 
     expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+  });
+
+  it('should return true from canExecuteEditor when the cursor is inside a section of the level', () => {
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
+    const editor = createMockEditor(3);
+    const file = createMockFile();
+    const ctx = createMockCtx(file);
+
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0), createHeading(2, 2)] })
+    );
+
+    expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+  });
+
+  it('should return false from canExecuteEditor when the cursor does not intersect any section of the level', () => {
+    const params = createMockParams(2);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
+    const editor = createMockEditor(1);
+    const file = createMockFile();
+    const ctx = createMockCtx(file);
+
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0), createHeading(2, 5)] })
+    );
+
+    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+  });
+
+  it('should return true from canExecuteEditor for a higher level whose section still contains the cursor', () => {
+    const params = createMockParams(1);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
+    const editor = createMockEditor(1);
+    const file = createMockFile();
+    const ctx = createMockCtx(file);
+
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
+      strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0), createHeading(2, 5)] })
+    );
+
+    expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
   });
 
   it('should return early when ctx.file is null in executeEditor', async () => {

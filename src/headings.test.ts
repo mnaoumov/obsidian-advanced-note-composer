@@ -1,4 +1,7 @@
-import type { Editor } from 'obsidian';
+import type {
+  Editor,
+  HeadingCache
+} from 'obsidian';
 
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -8,7 +11,23 @@ import {
   vi
 } from 'vitest';
 
-import { extractHeading } from './headings.ts';
+import type { Level } from './markdown-heading-document.ts';
+
+import {
+  doesSelectionIntersectHeadingOfLevel,
+  extractHeading
+} from './headings.ts';
+
+function createHeading(level: Level, line: number): HeadingCache {
+  return strictProxy<HeadingCache>({
+    heading: `Heading ${String(line)}`,
+    level,
+    position: {
+      end: { col: 0, line, offset: 0 },
+      start: { col: 0, line, offset: 0 }
+    }
+  });
+}
 
 function createMockEditor(selection: string): Editor {
   return strictProxy<Editor>({
@@ -83,5 +102,88 @@ describe('extractHeading', () => {
   it('should extract heading from single-line selection', () => {
     const editor = createMockEditor('# Title');
     expect(extractHeading(editor)).toBe('Title');
+  });
+});
+
+describe('doesSelectionIntersectHeadingOfLevel', () => {
+  it('should return false when there are no headings', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [],
+      level: 2,
+      selectionEndLine: 3,
+      selectionStartLine: 3
+    })).toBe(false);
+  });
+
+  it('should return false when no heading matches the level', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(1, 0), createHeading(3, 2)],
+      level: 2,
+      selectionEndLine: 2,
+      selectionStartLine: 2
+    })).toBe(false);
+  });
+
+  it('should return true when the cursor is on the heading line itself', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(2, 4)],
+      level: 2,
+      selectionEndLine: 4,
+      selectionStartLine: 4
+    })).toBe(true);
+  });
+
+  it('should return true when the cursor is below the heading in its unbounded section', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(1, 0), createHeading(2, 2)],
+      level: 2,
+      selectionEndLine: 10,
+      selectionStartLine: 10
+    })).toBe(true);
+  });
+
+  it('should return true when the cursor is inside a bounded section of the level', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(2, 0), createHeading(2, 5)],
+      level: 2,
+      selectionEndLine: 3,
+      selectionStartLine: 3
+    })).toBe(true);
+  });
+
+  it('should return false when the cursor is before every section of the level', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(1, 0), createHeading(2, 5)],
+      level: 2,
+      selectionEndLine: 1,
+      selectionStartLine: 1
+    })).toBe(false);
+  });
+
+  it('should return false when the cursor is after a bounded section of the level', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(2, 0), createHeading(1, 5)],
+      level: 2,
+      selectionEndLine: 8,
+      selectionStartLine: 8
+    })).toBe(false);
+  });
+
+  it('should return true for a parent level whose section contains a deeply nested cursor', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(1, 0), createHeading(2, 2), createHeading(3, 4)],
+      level: 1,
+      selectionEndLine: 6,
+      selectionStartLine: 6
+    })).toBe(true);
+  });
+
+  it('should return true when a multi-line selection overlaps the edge of a section', () => {
+    expect(doesSelectionIntersectHeadingOfLevel({
+      headings: [createHeading(1, 0), createHeading(2, 5)],
+      level: 2,
+      selectionEndLine: 6,
+      selectionStartLine: 1
+    })).toBe(true);
   });
 });

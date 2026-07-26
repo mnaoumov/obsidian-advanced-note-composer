@@ -19,6 +19,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
+import { doesSelectionIntersectHeadingOfLevel } from '../headings.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
@@ -67,11 +68,14 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
     if (!cache) {
       return false;
     }
-    const headings = cache.headings?.filter((heading) => heading.level === this.headingLevel);
-    if (!headings || headings.length === 0) {
-      return false;
-    }
-    return true;
+    const from = editor.getCursor('from');
+    const to = editor.getCursor('to');
+    return doesSelectionIntersectHeadingOfLevel({
+      headings: cache.headings ?? [],
+      level: this.headingLevel,
+      selectionEndLine: to.line,
+      selectionStartLine: from.line
+    });
   }
 
   protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
