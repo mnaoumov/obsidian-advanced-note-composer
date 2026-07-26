@@ -12,6 +12,7 @@ import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
+import type { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
 import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
@@ -27,6 +28,7 @@ export interface MoveNoticeComponentConstructorParams {
   readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly swapMarkedSelectionHandler: SwapMarkedSelectionEditorCommandHandler;
 }
 
 /**
@@ -53,7 +55,8 @@ interface MoveNoticeButtonDefinition {
 
 /**
  * Owns the permanent notice shown while a selection is marked for moving. The notice carries a
- * `Switch to split/extract` button, up to three configurable move buttons, and an always-shown
+ * `Switch to split/extract` button, up to three configurable move buttons, a `Swap with selection`
+ * button (swaps the marked selection with the active editor's current selection), and an always-shown
  * `Cancel move` button. Button state is refreshed whenever the active leaf or the editor selection changes.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
@@ -66,6 +69,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   private openSplitModalCommandHandler: null | OpenSplitModalCommandHandler = null;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly swapMarkedSelectionHandler: SwapMarkedSelectionEditorCommandHandler;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
     super(params.app);
@@ -76,6 +80,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     this.moveToTopHandler = params.moveToTopHandler;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.swapMarkedSelectionHandler = params.swapMarkedSelectionHandler;
   }
 
   public override onload(): void {
@@ -202,6 +207,14 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
         }
       });
     }
+
+    definitions.push({
+      getIsEnabled: () => this.swapMarkedSelectionHandler.canExecuteInActiveEditor(),
+      label: 'Swap with selection',
+      onClick: (): void => {
+        invokeAsyncSafely(() => this.swapMarkedSelectionHandler.executeInActiveEditor());
+      }
+    });
 
     definitions.push({
       getIsEnabled: null,

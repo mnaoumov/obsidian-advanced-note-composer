@@ -22,6 +22,7 @@ import {
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
+import type { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
 import type { MarkedSelection } from './move-selection-buffer.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
@@ -57,6 +58,13 @@ function createMarkedSelection(): MarkedSelection {
   });
 }
 
+function createSwapHandler(canExecute: boolean): SwapMarkedSelectionEditorCommandHandler {
+  return strictProxy<SwapMarkedSelectionEditorCommandHandler>({
+    canExecuteInActiveEditor: vi.fn().mockReturnValue(canExecute),
+    executeInActiveEditor: vi.fn().mockResolvedValue(undefined)
+  });
+}
+
 let app: AppOriginal;
 let cancelMoveCommandHandler: CancelMoveCommandHandler;
 let moveSelectionBuffer: MoveSelectionBuffer;
@@ -64,6 +72,7 @@ let moveAtCursorHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let moveToBottomHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
 let openSplitModalCommandHandler: OpenSplitModalCommandHandler;
+let swapMarkedSelectionHandler: SwapMarkedSelectionEditorCommandHandler;
 let notice: Notice;
 let capturedMessage: DocumentFragment | null | string;
 let capturedOptions: PluginNoticeComponentShowNoticeOptions | undefined;
@@ -84,6 +93,7 @@ beforeEach(() => {
   openSplitModalCommandHandler = strictProxy<OpenSplitModalCommandHandler>({
     openSplitModal: vi.fn().mockResolvedValue(undefined)
   });
+  swapMarkedSelectionHandler = createSwapHandler(true);
   notice = strictProxy<Notice>({ hide: vi.fn() });
   capturedMessage = null;
   capturedOptions = undefined;
@@ -108,7 +118,8 @@ beforeEach(() => {
     moveToBottomHandler,
     moveToTopHandler,
     pluginNoticeComponent,
-    pluginSettingsComponent
+    pluginSettingsComponent,
+    swapMarkedSelectionHandler
   });
   component.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
   component.load();
@@ -143,6 +154,7 @@ describe('MoveNoticeComponent', () => {
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
   });
@@ -158,8 +170,34 @@ describe('MoveNoticeComponent', () => {
     expect(buttons[1]?.component.disabled).toBe(false);
     expect(buttons[2]?.component.disabled).toBe(true);
     expect(buttons[3]?.component.disabled).toBe(false);
-    // Cancel move has no enablement predicate, so it is never disabled.
+    // Swap with selection is enabled while its handler reports it can run against the active editor.
     expect(buttons[4]?.component.disabled).toBe(false);
+    // Cancel move has no enablement predicate, so it is never disabled.
+    expect(buttons[5]?.component.disabled).toBe(false);
+  });
+
+  it('disables the Swap with selection button when its handler cannot run against the active editor', () => {
+    swapMarkedSelectionHandler = createSwapHandler(false);
+    component.unload();
+    component = new MoveNoticeComponent({
+      app,
+      cancelMoveCommandHandler,
+      moveAtCursorHandler,
+      moveSelectionBuffer,
+      moveToBottomHandler,
+      moveToTopHandler,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      swapMarkedSelectionHandler
+    });
+    component.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
+    component.load();
+
+    component.showNotice();
+    moveSelectionBuffer.mark(createMarkedSelection());
+    component.refreshButtons();
+
+    expect(getButtons()[4]?.component.disabled).toBe(true);
   });
 
   it('drops the buttons and does nothing when nothing is marked', () => {
@@ -216,9 +254,15 @@ describe('MoveNoticeComponent', () => {
     expect(vi.mocked(moveAtCursorHandler.executeInActiveEditor)).toHaveBeenCalledOnce();
   });
 
-  it('cancels the move when the Cancel move button is clicked', () => {
+  it('runs the swap when the Swap with selection button is clicked', () => {
     component.showNotice();
     getButtons()[4]?.component.simulateClick__();
+    expect(vi.mocked(swapMarkedSelectionHandler.executeInActiveEditor)).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the move when the Cancel move button is clicked', () => {
+    component.showNotice();
+    getButtons()[5]?.component.simulateClick__();
     expect(vi.mocked(cancelMoveCommandHandler.cancelMove)).toHaveBeenCalledOnce();
   });
 
@@ -229,6 +273,7 @@ describe('MoveNoticeComponent', () => {
       'Switch to split/extract',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
   });
@@ -240,6 +285,7 @@ describe('MoveNoticeComponent', () => {
       'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
   });
@@ -251,6 +297,7 @@ describe('MoveNoticeComponent', () => {
       'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
+      'Swap with selection',
       'Cancel move'
     ]);
   });
@@ -262,6 +309,7 @@ describe('MoveNoticeComponent', () => {
     component.showNotice();
     expect(getButtonLabels()).toEqual([
       'Switch to split/extract',
+      'Swap with selection',
       'Cancel move'
     ]);
   });

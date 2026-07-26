@@ -17,6 +17,15 @@ even in the same note - as a single reversible operation.
 Changed your mind? Run `Smart cut & paste: Cancel move`, or click **Cancel move** in the
 notice - the mark is discarded and the note unlocked.
 
+## Swap instead of move
+
+The persistent notice also has a **Swap with selection** button. Instead of moving the marked
+selection, it **swaps** it with the text you have selected in the active note: mark a selection,
+then select some text in any note (or elsewhere in the same note) and click **Swap with
+selection**. The two pieces of text trade places, both notes are locked during the swap, and it
+runs as a single reversible operation. The button is enabled only while a single marked selection
+and a non-overlapping active selection both exist.
+
 ---
 
 Mark me, then move me somewhere else. While I am marked, my source note stays locked and I

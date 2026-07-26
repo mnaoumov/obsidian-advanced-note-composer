@@ -182,6 +182,15 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('t.md')))).toBe(false);
     });
 
+    it('should be unavailable when nothing is selected even though the source note exists', () => {
+      const sourceFile = createMockFile('source.md');
+      const targetFile = createMockFile('target.md');
+      const params = createMockParams({ files: [sourceFile, targetFile] });
+      markSelection(params.swapSelectionBuffer, { sourceFile });
+      const handler = toTestable(new SwapWithMarkedSelectionEditorCommandHandler(params));
+      expect(handler.canExecuteEditor(createMockEditor({ somethingSelected: false }), createMockCtx(targetFile))).toBe(false);
+    });
+
     it('should be available for a different existing target note', () => {
       const sourceFile = createMockFile('source.md');
       const targetFile = createMockFile('target.md');

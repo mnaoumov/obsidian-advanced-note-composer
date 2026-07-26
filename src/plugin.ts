@@ -26,6 +26,7 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handle
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
+import { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
 import { SwapWithMarkedSelectionEditorCommandHandler } from './command-handlers/swap-with-marked-selection-editor-command-handler.ts';
 import { InsertMode } from './insert-mode.ts';
 import { MoveNoticeComponent } from './move-notice-component.ts';
@@ -124,6 +125,16 @@ export class Plugin extends PluginBase {
       pluginNoticeComponent: this.pluginNoticeComponent
     });
 
+    // Backs the notice's `Swap with selection` button only (not registered as a command, so no hotkey
+    // And no main-editor key interception).
+    const swapMarkedSelectionHandler = new SwapMarkedSelectionEditorCommandHandler({
+      app: this.app,
+      moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent,
+      resourceLockComponent
+    });
+
     const moveNoticeComponent = this.addChild(
       new MoveNoticeComponent({
         app: this.app,
@@ -133,7 +144,8 @@ export class Plugin extends PluginBase {
         moveToBottomHandler,
         moveToTopHandler,
         pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent
+        pluginSettingsComponent,
+        swapMarkedSelectionHandler
       })
     );
 
