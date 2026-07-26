@@ -216,6 +216,13 @@ export abstract class ComposerBase {
   protected readonly insertToken: null | string;
   protected readonly isNewTargetFile: boolean;
 
+  /**
+   * The exact content string that replaced {@link insertToken} in the target note, captured by
+   * {@link insertContent} so a move flow can select the moved region after re-opening the target
+   * (issue #144). Stays `null` for the append/prepend flow (no token).
+   */
+  protected movedContent: null | string = null;
+
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly resourceLockComponent: ResourceLockComponent;
@@ -598,6 +605,8 @@ export abstract class ComposerBase {
     const { contentToInsert, existingContent } = params;
     if (this.insertToken !== null) {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
+      // Remember the inserted string so the move flow can select the moved region afterwards.
+      this.movedContent = contentToInsert;
       return existingContent.replace(this.insertToken, contentToInsert);
     }
     const offset = resolveInsertOffset(existingContent, this.insertMode);

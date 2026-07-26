@@ -165,10 +165,13 @@ function createEditorDouble(options?: EditorDoubleOptions): Editor {
   return strictProxy<Editor>({
     getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
     getSelection: vi.fn().mockReturnValue('LIVE-EDITOR-SELECTION'),
+    getValue: vi.fn().mockReturnValue(''),
     listSelections: vi.fn().mockReturnValue(selections),
     offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
     posToOffset: vi.fn((pos: MockPosition) => pos.ch),
     replaceSelection: vi.fn(),
+    scrollIntoView: vi.fn(),
+    setSelection: vi.fn(),
     setSelections: vi.fn()
   });
 }
@@ -668,6 +671,94 @@ describe('splitFile move mode', () => {
     ]);
     const content = await app.vault.adapter.read('source.md');
     expect(content.indexOf('MOVED')).toBe(11);
+  });
+
+  it('selects the moved content in the target after a smart cut & paste move (issue #144)', async () => {
+    const targetEditor = createEditorDouble();
+    // The freshly opened target shows the moved text; the cursor selects exactly it (offset 7..12 in
+    // 'target MOVED'). The selection is computed from the (whitespace-trimmed) content string that
+    // Replaced the insert token, located in the live editor value.
+    vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
+    const setEphemeralStateMock = vi.fn();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor: targetEditor,
+        file: null,
+        setEphemeralState: setEphemeralStateMock
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
+    expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
+  });
+
+  it('does not select in the target when there is no active markdown view', async () => {
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(null);
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor,
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(editor.setSelection).not.toHaveBeenCalled();
+  });
+
+  it('does not select in the target when the moved content is not found there', async () => {
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('unrelated content');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor: targetEditor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).not.toHaveBeenCalled();
   });
 });
 

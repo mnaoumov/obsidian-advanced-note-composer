@@ -203,6 +203,16 @@ export class SplitComposer extends ComposerBase {
         await this.app.workspace.getLeaf().openFile(this.targetFile, {
           active: true
         });
+
+        // For a smart cut & paste move (mark → move here / at cursor / to top / bottom), land the cursor
+        // On the moved content in the freshly opened target note, instead of leaving it wherever the
+        // Opened note happened to place it (issue #144). Wait for the just-opened editor to settle
+        // (load its content and apply its own default cursor) first, so the selection sticks.
+        if (this.isSmartCutAndPasteMove) {
+          const DELAY_BEFORE_SELECT_IN_MILLISECONDS = 300;
+          await sleep(DELAY_BEFORE_SELECT_IN_MILLISECONDS);
+          this.selectMovedContentInTarget();
+        }
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {
@@ -410,6 +420,36 @@ export class SplitComposer extends ComposerBase {
       return;
     }
     view.setEphemeralState({ line: this.editor.getCursor().line });
+  }
+
+  /**
+   * Selects the just-moved content in the (freshly re-opened) target note so the cursor follows the move
+   * (issue #144). Locates the exact string {@link ComposerBase.movedContent} that replaced the insert
+   * token in the target's current content, and selects it with any template-added leading/trailing
+   * whitespace trimmed off. A no-op when there is no active markdown view or the content cannot be found.
+   */
+  private selectMovedContentInTarget(): void {
+    const movedContent = ensureNonNullable(this.movedContent);
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return;
+    }
+
+    const editor = view.editor;
+    const index = editor.getValue().indexOf(movedContent);
+    if (index === -1) {
+      return;
+    }
+
+    const leadingWhitespaceLength = movedContent.length - movedContent.trimStart().length;
+    const startOffset = index + leadingWhitespaceLength;
+    const endOffset = startOffset + movedContent.trim().length;
+    const startPos = editor.offsetToPos(startOffset);
+    const endPos = editor.offsetToPos(endOffset);
+    // Select the moved region and scroll it into view. NOTE: do NOT follow this with
+    // `setEphemeralState({ line })` — that repositions the caret and collapses the selection.
+    editor.setSelection(startPos, endPos);
+    editor.scrollIntoView({ from: startPos, to: endPos }, true);
   }
 }
 
