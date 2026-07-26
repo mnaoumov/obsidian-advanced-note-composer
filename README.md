@@ -163,6 +163,10 @@ The `Move folder to...` command (also on a folder's right-click menu) moves the 
 
 The `Merge current folder contents into a single file...` command (also on a folder's right-click menu) concatenates **every note inside a folder** — recursively, in path order — into **one brand-new note** named after the folder and placed next to it. This is distinct from `Merge current folder with another folder...`, which mirrors the folder's structure into another folder; here everything collapses into a single file. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The whole batch runs in one reversible, resource-locked transaction (cancel or an external change rolls everything back), the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on.
 
+## Merge multiple selected files
+
+Select two or more notes in the file explorer, right-click, and choose `Merge these files into one file...` to merge them all into a single target note at once (instead of merging one pair at a time). You pick the target from a suggester — your existing notes, with the selected notes excluded; to combine into a fresh note, create an empty note first and pick it. Each selected note is run through the same merge pipeline as a single-file merge (**Merge template**, **frontmatter merge strategy**, footnote fixing, link/backlink updates), the whole batch runs in one reversible, resource-locked transaction, the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on. The item appears only when two or more markdown notes are selected.
+
 ## Minimizing dialogs
 
 Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:

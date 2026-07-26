@@ -28,13 +28,17 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
+import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
+import { selectTargetFileForMergeFiles } from '../modals/merge-files-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeFileCommandHandler } from './merge-file-command-handler.ts';
 
 interface TestableHandler {
   canExecuteFile(file: TFile): boolean;
+  canExecuteFiles(files: TFile[]): boolean;
   executeFile(file: TFile): Promise<void>;
+  executeFiles(files: TFile[]): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
@@ -66,11 +70,21 @@ vi.mock('../modals/merge-file-modal.ts', () => ({
   prepareForMergeFile: vi.fn()
 }));
 
+vi.mock('../modals/merge-files-modal.ts', () => ({
+  selectTargetFileForMergeFiles: vi.fn()
+}));
+
+vi.mock('../merge-into-single-file-runner.ts', () => ({
+  mergeFilesIntoSingleFile: vi.fn().mockResolvedValue({ aborted: false, ignoredSourceFiles: [], mergedCount: 0 })
+}));
+
 const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForMergeFile = vi.mocked(prepareForMergeFile);
 const MockMergeComposer = vi.mocked(MergeComposer);
 const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
+const mockSelectTargetFileForMergeFiles = vi.mocked(selectTargetFileForMergeFiles);
+const mockMergeFilesIntoSingleFile = vi.mocked(mergeFilesIntoSingleFile);
 
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
@@ -80,8 +94,8 @@ interface MergeFileCommandHandlerConstructorParams {
   readonly resourceLockComponent: ResourceLockComponent;
 }
 
-function createMockFile(): TFile {
-  return strictProxy<TFile>({ path: 'test/note.md' });
+function createMockFile(path = 'test/note.md'): TFile {
+  return strictProxy<TFile>({ path });
 }
 
 function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): MergeFileCommandHandlerConstructorParams {
@@ -248,11 +262,93 @@ describe('MergeFileCommandHandler', () => {
     expect(handler.shouldAddToFileMenu({ file, source: 'file-explorer-context-menu' })).toBe(true);
   });
 
-  it('should return false from shouldAddToFilesMenu', () => {
+  it('should return true from shouldAddToFilesMenu', () => {
     const params = createMockParams();
     const handler = toTestable(new MergeFileCommandHandler(params));
     const files = [createMockFile()];
 
-    expect(handler.shouldAddToFilesMenu({ files, source: 'source' })).toBe(false);
+    expect(handler.shouldAddToFilesMenu({ files, source: 'source' })).toBe(true);
+  });
+
+  it('should allow canExecuteFiles when there are at least two mergeable markdown files', () => {
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+
+    expect(handler.canExecuteFiles([createMockFile('a.md'), createMockFile('b.md')])).toBe(true);
+  });
+
+  it('should refuse canExecuteFiles with fewer than two mergeable files', () => {
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+
+    expect(handler.canExecuteFiles([createMockFile('a.md')])).toBe(false);
+  });
+
+  it('should refuse canExecuteFiles when the files are not markdown', () => {
+    const params = createMockParams();
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(false);
+
+    expect(handler.canExecuteFiles([createMockFile('a.png'), createMockFile('b.png')])).toBe(false);
+  });
+
+  it('should refuse canExecuteFiles when the command is blocked on a path', () => {
+    const params = createMockParams(false, true, true);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+
+    expect(handler.canExecuteFiles([createMockFile('a.md'), createMockFile('b.md')])).toBe(false);
+  });
+
+  it('should merge the selected files into the picked target in executeFiles', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+    const sourceFiles = [createMockFile('a.md'), createMockFile('b.md')];
+    const targetFile = createMockFile('target.md');
+    mockSelectTargetFileForMergeFiles.mockResolvedValue(targetFile);
+
+    await handler.executeFiles(sourceFiles);
+
+    expect(mockSelectTargetFileForMergeFiles).toHaveBeenCalledWith({
+      app: params.app,
+      pluginSettingsComponent: params.pluginSettingsComponent,
+      sourceFiles
+    });
+    expect(mockMergeFilesIntoSingleFile).toHaveBeenCalledWith({
+      app: params.app,
+      consoleDebugComponent: params.consoleDebugComponent,
+      isNewTargetFile: false,
+      pluginNoticeComponent: params.pluginNoticeComponent,
+      pluginSettingsComponent: params.pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent: params.resourceLockComponent,
+      sourceFiles,
+      targetFile
+    });
+  });
+
+  it('should do nothing in executeFiles when fewer than two files are mergeable', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+
+    await handler.executeFiles([createMockFile('a.md')]);
+
+    expect(mockSelectTargetFileForMergeFiles).not.toHaveBeenCalled();
+    expect(mockMergeFilesIntoSingleFile).not.toHaveBeenCalled();
+  });
+
+  it('should do nothing in executeFiles when no target is picked', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    mockIsMarkdownFile.mockReturnValue(true);
+    mockSelectTargetFileForMergeFiles.mockResolvedValue(null);
+
+    await handler.executeFiles([createMockFile('a.md'), createMockFile('b.md')]);
+
+    expect(mockMergeFilesIntoSingleFile).not.toHaveBeenCalled();
   });
 });

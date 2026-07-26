@@ -19,7 +19,11 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
+import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
+import { selectTargetFileForMergeFiles } from '../modals/merge-files-modal.ts';
+
+const MIN_MERGEABLE_FILE_COUNT = 2;
 
 interface MergeFileCommandHandlerConstructorParams {
   readonly app: App;
@@ -40,6 +44,8 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     super({
       fileMenuItemName: 'Merge entire file with...',
       fileMenuSubmenuIcon: 'lucide-git-merge',
+      filesMenuItemName: 'Merge these files into one file...',
+      filesMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-git-merge',
       id: 'merge-file',
       name: 'Merge current file with another file...'
@@ -54,6 +60,11 @@ export class MergeFileCommandHandler extends FileCommandHandler {
 
   protected override canExecuteFile(file: TFile): boolean {
     return isMarkdownFile(file) && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file);
+  }
+
+  protected override canExecuteFiles(files: TFile[]): boolean {
+    // The multi-select merge needs at least two mergeable (markdown, non-blocked) notes.
+    return this.mergeableFiles(files).length >= MIN_MERGEABLE_FILE_COUNT;
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
@@ -93,6 +104,34 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     await composer.mergeFile();
   }
 
+  protected override async executeFiles(files: TFile[]): Promise<void> {
+    // Multi-select (files-menu) merge: pick one target, then merge every selected note into it in one
+    // Reversible transaction (issue #92). The picker excludes the selected sources and ignored files.
+    const sourceFiles = this.mergeableFiles(files);
+    if (sourceFiles.length < MIN_MERGEABLE_FILE_COUNT) {
+      return;
+    }
+    const targetFile = await selectTargetFileForMergeFiles({
+      app: this.app,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFiles
+    });
+    if (!targetFile) {
+      return;
+    }
+    await mergeFilesIntoSingleFile({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isNewTargetFile: false,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent: this.resourceLockComponent,
+      sourceFiles,
+      targetFile
+    });
+  }
+
   protected override shouldAddCommandToSubmenu(): boolean {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
@@ -106,6 +145,10 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean {
     super.shouldAddToFilesMenu(params);
-    return false;
+    return true;
+  }
+
+  private mergeableFiles(files: TFile[]): TFile[] {
+    return files.filter((file) => isMarkdownFile(file) && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file));
   }
 }
