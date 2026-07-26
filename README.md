@@ -159,6 +159,10 @@ The `Flatten folder...` command (also on a folder's right-click menu) moves ever
 
 The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.
 
+## Merge folder contents into a single file
+
+The `Merge current folder contents into a single file...` command (also on a folder's right-click menu) concatenates **every note inside a folder** — recursively, in path order — into **one brand-new note** named after the folder and placed next to it. This is distinct from `Merge current folder with another folder...`, which mirrors the folder's structure into another folder; here everything collapses into a single file. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The whole batch runs in one reversible, resource-locked transaction (cancel or an external change rolls everything back), the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on.
+
 ## Minimizing dialogs
 
 Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:

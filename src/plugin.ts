@@ -17,6 +17,7 @@ import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark
 import { MarkSelectionToSwapEditorCommandHandler } from './command-handlers/mark-selection-to-swap-editor-command-handler.ts';
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './command-handlers/merge-folder-command-handler.ts';
+import { MergeFolderIntoFileCommandHandler } from './command-handlers/merge-folder-into-file-command-handler.ts';
 import { MoveFolderCommandHandler } from './command-handlers/move-folder-command-handler.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
@@ -233,6 +234,13 @@ export class Plugin extends PluginBase {
       cancelMoveCommandHandler,
       openSplitModalCommandHandler,
       new MergeFolderCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new MergeFolderIntoFileCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,

@@ -1,0 +1,216 @@
+import type { App } from 'obsidian';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+
+import { TFile } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+
+import type { LockTarget } from './locked-transaction.ts';
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+
+import { MergeComposer } from './composers/merge-composer.ts';
+import { runLockedTransaction } from './locked-transaction.ts';
+
+/**
+ * Parameters for {@link mergeFilesIntoSingleFile}.
+ */
+export interface MergeFilesIntoSingleFileParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  /**
+   * Whether {@link MergeFilesIntoSingleFileParams.targetFile} was freshly created (empty) for this
+   * operation. When `true`, the FIRST merged source is treated as a new-target merge (so it keeps the
+   * source note's `title` and seeds the target frontmatter); every later source merges into the
+   * now-existing target.
+   */
+  readonly isNewTargetFile: boolean;
+
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  /**
+   * The progressive label shown in the permanent progress notice, e.g. `Merging folder` or
+   * `Merging files`.
+   */
+  readonly progressLabel: string;
+  readonly resourceLockComponent: ResourceLockComponent;
+
+  /**
+   * The source notes to merge, in the order they should be concatenated into the target. The target
+   * itself (if present) is skipped.
+   */
+  readonly sourceFiles: readonly TFile[];
+  readonly targetFile: TFile;
+}
+
+/**
+ * The outcome of a {@link mergeFilesIntoSingleFile} run.
+ */
+export interface MergeFilesIntoSingleFileResult {
+  /**
+   * `true` when the operation was cancelled (user unlock or external change) and everything was rolled
+   * back. The caller uses this to clean up a freshly created empty target.
+   */
+  readonly aborted: boolean;
+
+  /**
+   * The source files skipped because their path is ignored in the plugin settings.
+   */
+  readonly ignoredSourceFiles: readonly TFile[];
+
+  /**
+   * The number of source notes actually merged into the target.
+   */
+  readonly mergedCount: number;
+}
+
+/**
+ * Merges every note in {@link MergeFilesIntoSingleFileParams.sourceFiles} into the single
+ * {@link MergeFilesIntoSingleFileParams.targetFile}, in order, inside ONE reversible resource-locked
+ * transaction (so the whole batch commits together or rolls back on cancel/error). Each source is run
+ * through the same {@link MergeComposer} as a single-file merge — the merge template, frontmatter merge
+ * strategy, footnote fixing, and backlink/link updating all apply — with the per-file notice and
+ * post-merge open suppressed (so the active tab does not flicker through every note, issue #106).
+ *
+ * Sources whose path is ignored in the plugin settings are skipped and reported afterwards (unless
+ * `Should always merge excluded items` is on). Backs both the "merge multiple selected files into one
+ * file" and "merge folder contents into a single file" features (issue #92).
+ *
+ * @param params - The sources, the target, and the shared app/lock/notice context.
+ * @returns A {@link Promise} resolving to the {@link MergeFilesIntoSingleFileResult}.
+ */
+export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileParams): Promise<MergeFilesIntoSingleFileResult> {
+  const {
+    app,
+    consoleDebugComponent,
+    isNewTargetFile,
+    pluginNoticeComponent,
+    pluginSettingsComponent,
+    progressLabel,
+    resourceLockComponent,
+    sourceFiles,
+    targetFile
+  } = params;
+
+  const { settings } = pluginSettingsComponent;
+  const sourcesToMerge = sourceFiles.filter((sourceFile) => sourceFile !== targetFile);
+  const ignoredSourceFiles: TFile[] = [];
+  let mergedCount = 0;
+
+  const notice = pluginNoticeComponent.showNotice(
+    await createFragmentAsync(async (f) => {
+      f.appendText(`Advanced Note Composer: ${progressLabel} into `);
+      f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile.path }));
+      f.createEl('br');
+      f.createEl('br');
+      f.createDiv('is-loading');
+    }),
+    {
+      isPermanent: true
+    }
+  );
+
+  const lockTargets: LockTarget[] = [{ mode: 'file', pathOrFile: targetFile }];
+  for (const sourceFile of sourcesToMerge) {
+    lockTargets.push({ mode: 'file', pathOrFile: sourceFile });
+  }
+
+  const abortController = new AbortController();
+  try {
+    await runLockedTransaction({
+      abortController,
+      app,
+      body: async (vaultTransaction) => {
+        let isFirstMergeIntoNewTarget = isNewTargetFile;
+        for (const sourceFile of sourcesToMerge) {
+          if (abortController.signal.aborted) {
+            throw new Error('Merge into single file aborted.');
+          }
+          if (isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path)) {
+            ignoredSourceFiles.push(sourceFile);
+            continue;
+          }
+          const composer = new MergeComposer({
+            app,
+            consoleDebugComponent,
+            isNewTargetFile: isFirstMergeIntoNewTarget,
+            pluginNoticeComponent,
+            pluginSettingsComponent,
+            resourceLockComponent,
+            // The whole batch shares ONE target: a per-file open would flicker the active tab through
+            // Every merged note (issue #106), and a per-file notice would spam. The batch reports once.
+            shouldMergeIgnoredTarget: settings.shouldAlwaysMergeExcludedItems,
+            shouldOpenAfterMerge: false,
+            shouldShowNotice: false,
+            sourceFile,
+            targetFile,
+            vaultTransaction
+          });
+          await composer.mergeFile();
+          isFirstMergeIntoNewTarget = false;
+          mergedCount++;
+        }
+      },
+      lockTargets,
+      operationName: progressLabel,
+      resourceLockComponent
+    });
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      // The operation was cancelled (user or external change); the transaction has rolled back.
+      return { aborted: true, ignoredSourceFiles, mergedCount: 0 };
+    }
+    throw error;
+  } finally {
+    notice.hide();
+  }
+
+  await showIgnoredFilesNotice(app, pluginNoticeComponent, ignoredSourceFiles);
+  warnIfTemplaterMissing(app, pluginNoticeComponent, settings.shouldRunTemplaterOnDestinationFile);
+
+  return { aborted: false, ignoredSourceFiles, mergedCount };
+}
+
+function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, sourcePath: string, targetPath: string): boolean {
+  const { settings } = pluginSettingsComponent;
+  // When the user opts in, excluded/ignored items are merged too (issue #150), so nothing is skipped.
+  if (settings.shouldAlwaysMergeExcludedItems) {
+    return false;
+  }
+  return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
+}
+
+async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNoticeComponent, ignoredSourceFiles: readonly TFile[]): Promise<void> {
+  if (ignoredSourceFiles.length === 0) {
+    return;
+  }
+  pluginNoticeComponent.showNotice(
+    await createFragmentAsync(async (f) => {
+      f.appendText(
+        `Advanced Note Composer: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
+      );
+      for (const ignoredSourceFile of ignoredSourceFiles) {
+        f.createEl('br');
+        f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: ignoredSourceFile.path }));
+      }
+    })
+  );
+}
+
+function warnIfTemplaterMissing(app: App, pluginNoticeComponent: PluginNoticeComponent, shouldRunTemplater: boolean): void {
+  if (!shouldRunTemplater) {
+    return;
+  }
+  if (app.plugins.plugins['templater-obsidian']) {
+    return;
+  }
+  pluginNoticeComponent.showNotice(createFragment((f) => {
+    f.appendText('Advanced Note Composer: You have enabled setting ');
+    appendCodeBlock(f, 'Should run templater on destination file');
+    f.appendText(', but Templater plugin is not installed.');
+  }));
+}
