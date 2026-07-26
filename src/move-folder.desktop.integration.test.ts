@@ -101,4 +101,96 @@ describe('move folder to... (issue #73)', () => {
     // The inbound link resolves to the folder's new location.
     expect(result.linkUpdated).toBe(true);
   });
+
+  it('front-loads the recently-opened folders in the picker, in recent order (issue #149)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        await trashIfExists('rf-src');
+        await trashIfExists('rf-recent');
+
+        // `rf-src` is the folder to move (its active note is the source); `rf-recent` holds a note we open
+        // So its folder becomes a recently-opened valid target.
+        await app.vault.createFolder('rf-src');
+        const noteInSrc = await app.vault.create('rf-src/note-in-src.md', 'src body');
+        await app.vault.createFolder('rf-recent');
+        const noteInRecent = await app.vault.create('rf-recent/note-in-recent.md', 'recent body');
+
+        await openFile(noteInRecent);
+        await openFile(noteInSrc);
+
+        app.commands.executeCommandById(`${pluginId}:move-folder`);
+        await waitUntil({
+          message: 'move-folder picker did not open',
+          predicate: () => document.querySelector('.suggestion-item') !== null
+        });
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        const suggestions = Array.from(document.querySelectorAll('.suggestion-item')).map((el) => el.textContent);
+        const suggestionSet = new Set(suggestions);
+
+        // Compute the recent-folder prefix the picker is expected to front-load: for each recent file, its
+        // Parent folder, kept only when that folder is an offered (valid) target, de-duplicated, in order.
+        const recentPaths = app.workspace.getRecentFiles({
+          showCanvas: true,
+          showImages: true,
+          showMarkdown: true,
+          showNonAttachments: true,
+          showNonImageAttachments: true
+        });
+        const expectedRecentPrefix: string[] = [];
+        const seen = new Set<string>();
+        for (const recentPath of recentPaths) {
+          const parent = app.vault.getFileByPath(recentPath)?.parent;
+          if (!parent) {
+            continue;
+          }
+          const parentText = parent.isRoot() ? '/' : parent.path;
+          if (!suggestionSet.has(parentText) || seen.has(parentText)) {
+            continue;
+          }
+          seen.add(parentText);
+          expectedRecentPrefix.push(parentText);
+        }
+
+        const actualPrefix = suggestions.slice(0, expectedRecentPrefix.length);
+
+        // Close the picker without moving anything (this test only checks ordering).
+        const input = document.querySelector('.prompt-input');
+        if (input instanceof HTMLInputElement) {
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+        }
+
+        return {
+          actualPrefix,
+          expectedRecentPrefix,
+          recentIncludesFolder: expectedRecentPrefix.includes('rf-recent')
+        };
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // Our recently-opened folder is among the recent targets, and the picker front-loads the recent
+    // Folders (parents of recent files that are valid targets) at the top, in recent order.
+    expect(result.recentIncludesFolder).toBe(true);
+    expect(result.expectedRecentPrefix.length).toBeGreaterThan(0);
+    expect(result.actualPrefix).toStrictEqual(result.expectedRecentPrefix);
+  });
 });

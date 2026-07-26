@@ -6,6 +6,10 @@ Move a whole folder into another folder chosen from a picker. Links are updated 
 name collision in the destination is de-duplicated. The picker never offers the folder's own subtree
 or its current parent, and it respects the plugin's ignored paths.
 
+Just like the merge-folder picker, when you open it with an empty query the **most recently opened
+folders** are listed first (the folders of the notes you have visited most recently, minus any the
+constraints above exclude), so a common destination is one keystroke away.
+
 ## Try it
 
 1. Open [[Movable note]] inside the `Move example` folder.

@@ -19,6 +19,7 @@ import {
   openMinimizableModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { reorderSuggestionsByRecentFolders } from '../recent-folder-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 interface BuildMergeConfirmContentParams {
@@ -101,36 +102,12 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   public override getSuggestions(query: string): FuzzyMatch<TFolder>[] {
-    const suggestions = super.getSuggestions(query);
-    if (query) {
-      return suggestions;
-    }
-    const recentFilePaths = this.app.workspace.getRecentFiles({
-      showCanvas: true,
-      showImages: true,
-      showMarkdown: true,
-      showNonAttachments: true,
-      showNonImageAttachments: true
+    return reorderSuggestionsByRecentFolders({
+      app: this.app,
+      isAllowedFolder: (folder) => this.isAllowedDestinationFolder(folder),
+      query,
+      suggestions: super.getSuggestions(query)
     });
-    const recentFolders: TFolder[] = [];
-    const recentFoldersSet = new Set<TFolder>();
-    for (const filePath of recentFilePaths) {
-      const file = this.app.vault.getFileByPath(filePath);
-      if (!file?.parent) {
-        continue;
-      }
-      if (!this.isAllowedDestinationFolder(file.parent)) {
-        continue;
-      }
-      if (recentFoldersSet.has(file.parent)) {
-        continue;
-      }
-      recentFoldersSet.add(file.parent);
-      recentFolders.push(file.parent);
-    }
-    const recentSuggestions = recentFolders.map((folder) => ({ item: folder, match: { matches: [], score: 0 } }));
-    const otherSuggestions = suggestions.filter((suggestion) => !recentFoldersSet.has(suggestion.item));
-    return [...recentSuggestions, ...otherSuggestions];
   }
 
   public override onChooseItem(item: TFolder): void {

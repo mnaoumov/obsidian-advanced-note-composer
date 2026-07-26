@@ -12,6 +12,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { openModal } from '../open-minimizable-modal.ts';
+import { reorderSuggestionsByRecentFolders } from '../recent-folder-suggestions.ts';
 
 interface IsAllowedMoveTargetParams {
   readonly app: App;
@@ -66,6 +67,21 @@ class MoveFolderModal extends FuzzySuggestModal<TFolder> {
 
   public override getItemText(item: TFolder): string {
     return item.isRoot() ? '/' : item.path;
+  }
+
+  public override getSuggestions(query: string): FuzzyMatch<TFolder>[] {
+    return reorderSuggestionsByRecentFolders({
+      app: this.app,
+      isAllowedFolder: (targetFolder) =>
+        isAllowedMoveTarget({
+          app: this.app,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          sourceFolder: this.sourceFolder,
+          targetFolder
+        }),
+      query,
+      suggestions: super.getSuggestions(query)
+    });
   }
 
   public override onChooseItem(item: TFolder): void {
