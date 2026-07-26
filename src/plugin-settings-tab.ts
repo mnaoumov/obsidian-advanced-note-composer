@@ -263,6 +263,16 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should always merge excluded items')
+          .setDesc(
+            'When merging a folder, also move and merge items whose path is excluded/ignored in the plugin settings, instead of skipping them. When off (the default), excluded items are skipped and reported in a notice.'
+          )
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldAlwaysMergeExcludedItems', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Merge template')
           .setDesc(createFragment((f) => {
             f.appendText('Template to use when merging notes.');

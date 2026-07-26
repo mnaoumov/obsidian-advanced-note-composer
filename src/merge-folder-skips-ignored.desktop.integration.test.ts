@@ -27,6 +27,8 @@ interface ComponentTreeNode {
 
 interface ExcludePathsSettings {
   excludePaths: string[];
+  shouldAlwaysMergeExcludedItems: boolean;
+  shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
@@ -210,5 +212,135 @@ describe('merge folder skips ignored files (issue #72)', () => {
     // The summary notice reported the skipped file by name.
     expect(result.noticeText).toContain('were not merged because they are ignored');
     expect(result.noticeText).toContain('ignored');
+  });
+
+  it('merges an excluded file too when Should always merge excluded items is on (issue #150)', async () => {
+    const result = await evalInObsidian({
+      args: { ignoredPath: 'am-src/ignored.md', pluginId: PLUGIN_ID },
+      async fn({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalAlways = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.excludePaths = [ignoredPath];
+            settings.shouldAlwaysMergeExcludedItems = true;
+            // Skip the confirmation dialog so the merge runs straight from the picker.
+            settings.shouldAskBeforeMerging = false;
+          });
+
+          await trashIfExists('am-src');
+          await trashIfExists('am-dst');
+
+          await app.vault.createFolder('am-src');
+          const normalNote = await app.vault.create('am-src/normal.md', 'normal body');
+          await app.vault.create('am-src/ignored.md', 'ignored body');
+          await app.vault.createFolder('am-dst');
+          await app.vault.create('am-dst/keep.md', 'keep body');
+
+          await openFile(normalNote);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder`);
+          await waitUntil({
+            message: 'merge-folder picker did not open',
+            predicate: () => document.querySelector('.prompt') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          await chooseFolderInPicker('am-dst');
+
+          // The excluded file IS merged into the target when the setting is on.
+          await waitUntil({
+            message: 'excluded file was not merged into the target',
+            predicate: () => app.vault.getAbstractFileByPath('am-dst/ignored.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const excludedMerged = app.vault.getAbstractFileByPath('am-dst/ignored.md') !== null;
+          const excludedSourceGone = app.vault.getAbstractFileByPath('am-src/ignored.md') === null;
+          const normalMerged = app.vault.getAbstractFileByPath('am-dst/normal.md') !== null;
+          const hasIgnoredNotice = summaryNoticeText() !== null;
+
+          return { excludedMerged, excludedSourceGone, hasIgnoredNotice, normalMerged };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.excludePaths = originalExcludePaths;
+            settings.shouldAlwaysMergeExcludedItems = originalAlways;
+            settings.shouldAskBeforeMerging = originalShouldAsk;
+          });
+        }
+
+        async function chooseFolderInPicker(folderPath: string): Promise<void> {
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new Error('No merge-folder picker input.');
+          }
+          input.value = folderPath;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'target folder suggestion did not appear',
+            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === folderPath)
+          });
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        function summaryNoticeText(): null | string {
+          for (const el of Array.from(document.querySelectorAll('.notice'))) {
+            if (el.textContent.includes('were not merged because they are ignored')) {
+              return el.textContent;
+            }
+          }
+          return null;
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The excluded file was merged into the target instead of being skipped.
+    expect(result.excludedMerged).toBe(true);
+    expect(result.excludedSourceGone).toBe(true);
+    // The normal file merged too, and no "ignored" summary notice was shown.
+    expect(result.normalMerged).toBe(true);
+    expect(result.hasIgnoredNotice).toBe(false);
   });
 });

@@ -19,3 +19,17 @@ and the footnote in Chapter 3 stay intact.
 The confirmation step lets you include child folders and parent folders. Toggle
 **Should include child folders when merging folders** and **Should include parent folders
 when merging folders** in **Settings → Advanced Note Composer** to change the defaults.
+
+## Excluded items
+
+By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and
+reports them in a notice, so no stray empty target is left behind. Turn on **Should always merge
+excluded items** to move and merge those items too (no "ignored" notice). Manual equivalent: toggle
+**Should always merge excluded items** in **Settings → Advanced Note Composer**.
+
+```code-button
+---
+caption: Always merge excluded items, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldAlwaysMergeExcludedItems: true });
+```

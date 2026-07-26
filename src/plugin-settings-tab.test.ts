@@ -180,6 +180,13 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
   });
 
+  it('should render the always-merge-excluded-items toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should always merge excluded items').getValue()).toBe(false);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

@@ -135,6 +135,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   private isMergeIgnored(sourcePath: string, targetPath: string): boolean {
     const { settings } = this.pluginSettingsComponent;
+    // When the user opts in, excluded/ignored items are merged too (issue #150), so nothing is skipped
+    // And no "ignored" notice is shown for them.
+    if (settings.shouldAlwaysMergeExcludedItems) {
+      return false;
+    }
     return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
   }
 
@@ -297,6 +302,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
         resourceLockComponent: this.resourceLockComponent,
+        shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems,
         shouldShowNotice: false,
         sourceFile: sourceMdFile,
         targetFile: targetMdFile,

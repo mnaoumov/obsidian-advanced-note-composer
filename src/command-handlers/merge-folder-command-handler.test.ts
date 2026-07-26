@@ -103,6 +103,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         isPathIgnored: () => false,
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
+        shouldAlwaysMergeExcludedItems: false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
         shouldOpenNoteAfterMerge: false,
@@ -209,6 +210,32 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('dst/sub/pic.png')).toBe(false);
     expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(true);
     expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
+  it('should merge excluded items instead of skipping them when shouldAlwaysMergeExcludedItems is on (issue #150)', async () => {
+    initApp({
+      'src/sub/keep.md': 'keep body',
+      'src/sub/pic.png': 'PIC',
+      'src/sub/secret.md': 'secret body'
+    });
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({
+      isPathIgnored: (path) => path.endsWith('secret.md') || path.endsWith('pic.png'),
+      shouldAlwaysMergeExcludedItems: true
+    });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The excluded markdown file was merged too (not skipped), and its source was trashed.
+    expect(await app.vault.adapter.read('dst/sub/secret.md')).toContain('secret body');
+    expect(await app.vault.adapter.exists('src/sub/secret.md')).toBe(false);
+    // The excluded non-markdown file was moved too.
+    expect(await app.vault.adapter.exists('dst/sub/pic.png')).toBe(true);
+    expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(false);
+    // The non-excluded file still merged, and no "ignored" notice was shown for the excluded ones.
+    expect(await app.vault.adapter.read('dst/sub/keep.md')).toContain('keep body');
+    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(false);
   });
 
   it('should do nothing when no target folder is selected', async () => {

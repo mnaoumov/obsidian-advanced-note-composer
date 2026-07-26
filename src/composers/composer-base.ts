@@ -84,6 +84,14 @@ export interface ComposerBaseConstructorParamsBase {
   readonly resourceLockComponent: ResourceLockComponent;
   readonly shouldFixFootnotes?: boolean;
   readonly shouldMergeHeadings?: boolean;
+
+  /**
+   * When `true`, the operation proceeds even if the target path is excluded/ignored in the plugin
+   * settings (the {@link ComposerBase.checkTargetFileIgnored} guard is skipped). Set by the folder-merge
+   * flow when the `Should always merge excluded items` setting is on, so an excluded item is fully merged
+   * rather than left as an empty moved file. Defaults to `false`.
+   */
+  readonly shouldMergeIgnoredTarget?: boolean;
   readonly shouldShowNotice?: boolean;
   readonly sourceFile: TFile;
   readonly targetFile: TFile;
@@ -230,6 +238,8 @@ export abstract class ComposerBase {
 
   private readonly shouldMergeHeadings: boolean;
 
+  private readonly shouldMergeIgnoredTarget: boolean;
+
   public constructor(params: ComposerBaseConstructorParams) {
     this.app = params.app;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -245,6 +255,7 @@ export abstract class ComposerBase {
     this.shouldMergeHeadings = params.shouldMergeHeadings ?? params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
     this.frontmatterMergeStrategy = params.frontmatterMergeStrategy ?? params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     this.shouldShowNotice = params.shouldShowNotice ?? true;
+    this.shouldMergeIgnoredTarget = params.shouldMergeIgnoredTarget ?? false;
     this.targetFile = params.targetFile;
     this.isNewTargetFile = params.isNewTargetFile;
   }
@@ -307,7 +318,7 @@ export abstract class ComposerBase {
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
-    if (this.isPathIgnored(this.targetFile.path)) {
+    if (!this.shouldMergeIgnoredTarget && this.isPathIgnored(this.targetFile.path)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText(`You cannot ${action} into `);
