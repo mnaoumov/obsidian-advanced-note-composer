@@ -196,6 +196,27 @@ describe('MergeComposer', () => {
       expect(openFile).toHaveBeenCalledWith(getTargetFile(), { active: true });
     });
 
+    it('should NOT open the target note when shouldOpenAfterMerge is false, even if the setting is on (folder merge, issue #106)', async () => {
+      // A folder merge passes shouldOpenAfterMerge: false so it does not open each merged note in turn
+      // (the "visual cycling" of issue #106). The per-instance override must win over the enabled setting.
+      const openFile = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile }));
+
+      await new MergeComposer({
+        app,
+        consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+        isNewTargetFile: false,
+        pluginNoticeComponent: createPluginNoticeComponentStub(),
+        pluginSettingsComponent: createPluginSettingsComponentStub({ shouldOpenNoteAfterMerge: true }),
+        resourceLockComponent,
+        shouldOpenAfterMerge: false,
+        sourceFile: getSourceFile(),
+        targetFile: getTargetFile()
+      }).mergeFile();
+
+      expect(openFile).not.toHaveBeenCalled();
+    });
+
     it('should rethrow when the merge fails for a reason other than cancellation', async () => {
       vi.spyOn(app.fileManager, 'processFrontMatter').mockRejectedValue(new Error('boom'));
 

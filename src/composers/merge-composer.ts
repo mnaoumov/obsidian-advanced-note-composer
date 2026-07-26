@@ -21,12 +21,21 @@ import { ComposerBase } from './composer-base.ts';
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  /**
+   * Whether to open the merged target note in the active leaf once the merge completes. Defaults to the
+   * `shouldOpenNoteAfterMerge` setting for a single-file merge. A folder merge passes `false` so it does
+   * NOT open each merged note in turn — opening dozens of target notes one after another is the "visual
+   * cycling" of issue #106 (the active tab flickers through every merged file).
+   */
+  readonly shouldOpenAfterMerge?: boolean;
 }
 
 export class MergeComposer extends ComposerBase {
   protected override readonly shouldKeepSourceTitleForNewTargetFile: boolean = true;
 
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly shouldOpenAfterMerge: boolean;
 
   public constructor(params: MergeComposerConstructorParams) {
     super({
@@ -35,6 +44,7 @@ export class MergeComposer extends ComposerBase {
     });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.shouldOpenAfterMerge = params.shouldOpenAfterMerge ?? params.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge;
   }
 
   public async mergeFile(): Promise<void> {
@@ -79,7 +89,7 @@ export class MergeComposer extends ComposerBase {
         return;
       }
 
-      if (this.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge) {
+      if (this.shouldOpenAfterMerge) {
         const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
         await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
         await this.app.workspace.getLeaf().openFile(this.targetFile, {

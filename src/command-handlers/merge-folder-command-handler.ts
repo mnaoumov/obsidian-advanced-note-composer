@@ -303,7 +303,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
         resourceLockComponent: this.resourceLockComponent,
+        // A folder merge must NOT open each merged note in turn — that per-file open is the "visual
+        // Cycling" of issue #106 (the active tab flickers through every target note). The single-file
+        // Merge keeps honoring the `shouldOpenNoteAfterMerge` setting; the batch suppresses it.
         shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems,
+        shouldOpenAfterMerge: false,
         shouldShowNotice: false,
         sourceFile: sourceMdFile,
         targetFile: targetMdFile,
