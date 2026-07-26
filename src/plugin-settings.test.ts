@@ -107,6 +107,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldShowMoveToBottomButton).toBe(true);
     expect(settings.shouldShowMoveToTopButton).toBe(true);
     expect(settings.shouldShowSmartCutNotice).toBe(true);
+    expect(settings.shouldSplitIntoFolder).toBe(false);
     expect(settings.shouldSwapEntireFolderStructureByDefault).toBe(true);
     expect(settings.shouldTreatTitleAsPathByDefault).toBe(true);
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);

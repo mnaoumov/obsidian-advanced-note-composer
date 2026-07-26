@@ -50,6 +50,7 @@ interface SettingsOverrides {
   replacement?: string;
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldReplaceInvalidTitleCharacters?: boolean;
+  shouldSplitIntoFolder?: boolean;
 }
 
 function createMockApp(): App {
@@ -64,18 +65,31 @@ function createMockApp(): App {
   return strictProxy<App>({
     fileManager: strictProxy({
       createNewMarkdownFileFromLinktext: vi.fn().mockResolvedValue(mockFile),
-      processFrontMatter
+      processFrontMatter,
+      renameFile: vi.fn(() => noopAsync())
     }),
     metadataCache: strictProxy({
       getFirstLinkpathDest: vi.fn().mockReturnValue(null)
+    }),
+    vault: strictProxy({
+      adapter: strictProxy({
+        exists: vi.fn().mockResolvedValue(false)
+      }),
+      createFolder: vi.fn().mockResolvedValue(null),
+      getAbstractFileByPath: vi.fn().mockReturnValue(null)
     })
   });
 }
 
-function createMockFile(basename: string, path?: string): TFile {
+function createMockFile(basename: string, path?: string, parentPath?: null | string): TFile {
+  const resolvedPath = path ?? `folder/${basename}.md`;
   return strictProxy<TFile>({
     basename,
-    path: path ?? `folder/${basename}.md`
+    name: `${basename}.md`,
+    parent: parentPath === null
+      ? null
+      : strictProxy({ path: parentPath ?? 'folder' }),
+    path: resolvedPath
   });
 }
 
@@ -87,6 +101,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       replacement: '_',
       shouldAddInvalidTitleToNoteAlias: true,
       shouldReplaceInvalidTitleCharacters: true,
+      shouldSplitIntoFolder: false,
       ...settingsOverrides
     })
   });
@@ -941,6 +956,116 @@ describe('SplitItemSelector', () => {
         'f___n.md',
         'source.md'
       );
+    });
+  });
+
+  describe('shouldSplitIntoFolder', () => {
+    it('should not move the new note into a folder when the setting is off', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: false
+      });
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).not.toHaveBeenCalled();
+      expect(app.vault.createFolder).not.toHaveBeenCalled();
+    });
+
+    it('should move the new note into a new folder named after it when the setting is on', async () => {
+      const newFile = createMockFile('new-file', 'folder/new-file.md');
+      const app = createMockApp();
+      vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: true
+      });
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-file',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('folder/new-file');
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
+    });
+
+    it('should de-duplicate the folder name when a folder with that name already exists', async () => {
+      const newFile = createMockFile('new-file', 'folder/new-file.md');
+      const app = createMockApp();
+      vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
+      const occupiedPaths = new Set(['folder/new-file', 'folder/new-file 1']);
+      vi.mocked(app.vault.getAbstractFileByPath).mockImplementation((path: string) => occupiedPaths.has(path) ? castTo<TFile>({}) : null);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: true
+      });
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-file',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('folder/new-file 2');
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file 2/new-file.md');
+    });
+
+    it('should place the folder at the vault root when the new note has no parent', async () => {
+      const newFile = createMockFile('new-file', 'new-file.md', null);
+      const app = createMockApp();
+      vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: true
+      });
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-file',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('new-file');
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'new-file/new-file.md');
     });
   });
 });

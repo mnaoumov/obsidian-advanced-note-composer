@@ -316,6 +316,22 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should split into folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('When a split or extract creates a new note, put it inside a brand-new folder named after the note, so the note lands at ');
+            appendCodeBlock(f, '<folder>/<note>/<note>.md');
+            f.appendText(' instead of ');
+            appendCodeBlock(f, '<folder>/<note>.md');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('The folder name is de-duplicated if one already exists. Splitting or extracting into an existing note is unaffected.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldSplitIntoFolder', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Text after extraction')
           .setDesc('What to show in place of the selected text after extracting it.')
           .addDropdown((dropdown) => {

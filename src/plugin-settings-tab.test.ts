@@ -202,6 +202,13 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should ask before swapping').getValue()).toBe(true);
   });
 
+  it('should render the split-into-folder toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should split into folder').getValue()).toBe(false);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

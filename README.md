@@ -151,6 +151,10 @@ Notes:
   moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
   setting to same-note moves anyway, or override it per move in the advanced command.
 
+## Split into folder
+
+Turn on **Should split into folder** (under `Split/extract` in the settings) to have every split or extract that creates a **new** note place it inside a brand-new folder named after the note. The note lands at `<folder>/<note>/<note>.md` instead of `<folder>/<note>.md`, keeping each extracted note tidily grouped with its own folder (handy when you later add attachments or child notes next to it). The folder name is de-duplicated if one already exists, links/footnotes are fixed exactly as for an ordinary split, and splitting/extracting into an **existing** note is unaffected. When the setting is off (the default), behavior is unchanged.
+
 ## Flatten folder
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves every direct child of the chosen folder — files **and** subfolders — up one level, so they become siblings of that folder. Subfolders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The emptied folder is left in place; delete it manually if you no longer need it.

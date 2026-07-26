@@ -59,6 +59,7 @@ export class PluginSettings {
   public shouldShowMoveToBottomButton = true;
   public shouldShowMoveToTopButton = true;
   public shouldShowSmartCutNotice = true;
+  public shouldSplitIntoFolder = false;
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;

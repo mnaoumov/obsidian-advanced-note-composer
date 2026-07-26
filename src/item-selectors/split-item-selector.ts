@@ -1,6 +1,8 @@
 import type { TFile } from 'obsidian';
 
+import { normalizePath } from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
+import { createFolderSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { Frontmatter } from '../composers/composer-base.ts';
@@ -77,6 +79,10 @@ export class SplitItemSelector extends ItemSelectorBase {
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
+    if (this.pluginSettingsComponent.settings.shouldSplitIntoFolder) {
+      await this.moveIntoOwnFolder(file);
+    }
+
     const isInvalidTitle = file.basename !== fileName;
 
     if (isInvalidTitle && this.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
@@ -138,5 +144,43 @@ export class SplitItemSelector extends ItemSelectorBase {
       return fixedPart;
     });
     return fixedParts.join('/');
+  }
+
+  /**
+   * Finds an available folder path for the "split into folder" feature, appending ` 1`, ` 2`, … until a
+   * name that no existing file or folder occupies is found (mirroring Obsidian's own de-duplication).
+   *
+   * @param desiredPath - The preferred folder path (named after the new note).
+   * @returns A folder path that does not collide with an existing file or folder.
+   */
+  private getAvailableFolderPath(desiredPath: string): string {
+    if (!this.app.vault.getAbstractFileByPath(desiredPath)) {
+      return desiredPath;
+    }
+
+    let index = 1;
+    for (;;) {
+      const candidatePath = `${desiredPath} ${index.toString()}`;
+      if (!this.app.vault.getAbstractFileByPath(candidatePath)) {
+        return candidatePath;
+      }
+      index++;
+    }
+  }
+
+  /**
+   * Relocates a freshly-created split/extract note into a brand-new folder named after it, so the note
+   * lives at `<dir>/<name>/<name>.md` instead of `<dir>/<name>.md` (issue #79). The folder name is
+   * de-duplicated against existing siblings; the note keeps its own base name inside the new folder. The
+   * note is brand-new and empty, so the move carries no links or backlinks to fix.
+   *
+   * @param file - The just-created note to move into its own folder (mutated in place by the rename).
+   */
+  private async moveIntoOwnFolder(file: TFile): Promise<void> {
+    const parentPath = file.parent?.path ?? '';
+    const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${file.basename}` : file.basename);
+    const folderPath = this.getAvailableFolderPath(desiredFolderPath);
+    await createFolderSafe(this.app, folderPath);
+    await this.app.fileManager.renameFile(file, normalizePath(`${folderPath}/${file.name}`));
   }
 }
