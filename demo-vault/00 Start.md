@@ -20,6 +20,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 - [[06 Split by headings]]
 - [[19 Reorder headings]]
+- [[22 Rename heading]]
 
 ## Swap
 

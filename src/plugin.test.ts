@@ -130,6 +130,10 @@ vi.mock('./command-handlers/move-folder-command-handler.ts', () => ({
   MoveFolderCommandHandler: vi.fn()
 }));
 
+vi.mock('./command-handlers/rename-heading-editor-command-handler.ts', () => ({
+  RenameHeadingEditorCommandHandler: vi.fn()
+}));
+
 vi.mock('./command-handlers/reorder-headings-editor-command-handler.ts', () => ({
   ReorderHeadingsEditorCommandHandler: vi.fn()
 }));
