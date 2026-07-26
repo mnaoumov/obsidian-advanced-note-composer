@@ -87,6 +87,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldApplyTextAfterExtractionToSameFile).toBe(false);
     expect(settings.shouldAskBeforeMerging).toBe(true);
     expect(settings.shouldAskBeforeSplitting).toBe(true);
+    expect(settings.shouldAskBeforeSwapping).toBe(true);
     expect(settings.shouldBlockCommandsOnExcludedPaths).toBe(false);
     expect(settings.shouldFixFootnotesByDefault).toBe(true);
     expect(settings.shouldIncludeChildFoldersWhenMergingByDefault).toBe(true);

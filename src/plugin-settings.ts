@@ -39,6 +39,7 @@ export class PluginSettings {
   public shouldApplyTextAfterExtractionToSameFile = false;
   public shouldAskBeforeMerging = true;
   public shouldAskBeforeSplitting = true;
+  public shouldAskBeforeSwapping = true;
   public shouldBlockCommandsOnExcludedPaths = false;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;

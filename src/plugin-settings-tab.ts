@@ -426,6 +426,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       });
 
     new SettingGroupEx(this.containerEl)
+      .setHeading('Swap')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should ask before swapping')
+          .setDesc('Whether to show a confirmation dialog before swapping files or folders.')
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldAskBeforeSwapping', valueComponent: toggle });
+          });
+      });
+
+    new SettingGroupEx(this.containerEl)
       .setHeading('Smart cut & paste')
       .addSettingEx((setting: SettingEx) => {
         setting

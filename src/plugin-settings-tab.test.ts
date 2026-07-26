@@ -144,6 +144,7 @@ describe('PluginSettingsTab', () => {
       'Title',
       'Merge',
       'Split/extract',
+      'Swap',
       'Smart cut & paste',
       'Include/exclude paths',
       'Merge folders',
@@ -192,6 +193,13 @@ describe('PluginSettingsTab', () => {
     tab.displayLegacy();
 
     expect(findToggle('Should block commands on excluded paths').getValue()).toBe(false);
+  });
+
+  it('should render the ask-before-swapping toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should ask before swapping').getValue()).toBe(true);
   });
 
   it('should re-render settings when display is called twice', async () => {

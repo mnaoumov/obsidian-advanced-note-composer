@@ -20,9 +20,21 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { selectFileForSwap } from './swap-file-modal.ts';
 
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
 vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
+
+interface MockPluginSettingsComponentOptions {
+  readonly shouldAskBeforeSwapping?: boolean;
+}
 
 function createMockApp(): App {
   return strictProxy<App>({
@@ -47,10 +59,12 @@ function createMockFile(path: string): TFile {
   });
 }
 
-function createMockPluginSettingsComponent(): PluginSettingsComponent {
+function createMockPluginSettingsComponent(options?: MockPluginSettingsComponentOptions): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
+    editAndSave: vi.fn().mockResolvedValue(undefined),
     settings: strictProxy({
-      isPathIgnored: vi.fn().mockReturnValue(false)
+      isPathIgnored: vi.fn().mockReturnValue(false),
+      shouldAskBeforeSwapping: options?.shouldAskBeforeSwapping ?? true
     })
   });
 }
@@ -75,15 +89,26 @@ describe('selectFileForSwap', () => {
     expect(result).toBeNull();
   });
 
-  it('should create modal and open it', async () => {
+  it('should return null when shouldAskBeforeSwapping is false and modal cancelled', async () => {
     const sourceFile = createMockFile('folder/source.md');
     const app = createMockApp();
-    const pluginSettingsComponent = createMockPluginSettingsComponent();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: false });
 
     const promise = selectFileForSwap({ app, pluginSettingsComponent, sourceFile });
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     // Modal auto-closes without selection → null (tests the onClose path)
+    expect(result).toBeNull();
+  });
+
+  it('should return null when shouldAskBeforeSwapping is true and modal cancelled', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: true });
+
+    const promise = selectFileForSwap({ app, pluginSettingsComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
     expect(result).toBeNull();
   });
 });

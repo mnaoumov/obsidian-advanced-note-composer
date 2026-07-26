@@ -127,8 +127,9 @@ Notes:
 - **Change target from a confirmation dialog.** Every confirmation dialog that follows a target picker shows a
   **Change target** button (or press `Alt+C`) that sends you back to the picker to pick a different target —
   without cancelling and re-triggering the whole operation. This applies to the split confirmation dialog
-  (when *Ask before splitting* is on) and to the merge-file and merge-folder confirmation dialogs (when *Ask
-  before merging* is on). For the split and merge-file pickers, the reopened picker is preselected with your
+  (when *Ask before splitting* is on), to the merge-file and merge-folder confirmation dialogs (when *Ask
+  before merging* is on), and to the swap-file and swap-folder confirmation dialogs (when *Ask before
+  swapping* is on). For the split and merge-file pickers, the reopened picker is preselected with your
   previous choice.
 
 - **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on

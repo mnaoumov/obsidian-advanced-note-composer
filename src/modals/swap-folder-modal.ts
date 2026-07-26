@@ -1,6 +1,7 @@
 import type {
   App,
-  FuzzyMatch
+  FuzzyMatch,
+  TAbstractFile
 } from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
@@ -8,12 +9,26 @@ import {
   FuzzySuggestModal,
   TFolder
 } from 'obsidian';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
-import { openModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
+import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
+
+interface BuildSwapConfirmContentParams {
+  readonly app: App;
+  readonly fragment: DocumentFragment;
+  readonly source: TAbstractFile;
+  readonly target: TAbstractFile;
+}
 
 interface SelectTargetFolderForSwapParams {
   readonly app: App;
@@ -170,12 +185,81 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   }
 }
 
+/* v8 ignore stop */
+
 export async function selectTargetFolderForSwap(params: SelectTargetFolderForSwapParams): Promise<null | SwapFolderModalResult> {
-  return new Promise<null | SwapFolderModalResult>((promiseResolve) => {
-    const modal = new SwapFolderModal({
-      ...params,
-      promiseResolve
+  // The confirmation dialog can send the flow back to the folder picker ("Change target"); loop until the
+  // User confirms the swap or cancels.
+  for (;;) {
+    const result = await new Promise<null | SwapFolderModalResult>((promiseResolve) => {
+      // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
+      // Chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the swap was
+      // Triggered on.
+      const modal = new SwapFolderModal({
+        ...params,
+        promiseResolve
+      });
+      openModal(modal);
     });
-    openModal(modal);
-  });
+
+    /* v8 ignore start -- requires SwapFolderModal / ConfirmDialogModal to resolve with a selection, which is untestable in unit tests. */
+    if (!result) {
+      return null;
+    }
+    if (!params.pluginSettingsComponent.settings.shouldAskBeforeSwapping) {
+      return result;
+    }
+    const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+      openMinimizableModal(
+        new ConfirmDialogModal({
+          app: params.app,
+          buildContent: (fragment): Promise<void> => buildSwapConfirmContent({ app: params.app, fragment, source: params.sourceFolder, target: result.targetFolder }),
+          canReselectTarget: true,
+          confirmButtonMobileText: 'Swap and don\'t ask again',
+          confirmButtonText: 'Swap',
+          promiseResolve,
+          title: 'Swap folders'
+        })
+      );
+    });
+    if (confirmDialogResult.shouldReselectTarget) {
+      // Go back to the folder picker to choose a different target.
+      continue;
+    }
+    if (!confirmDialogResult.isConfirmed) {
+      return null;
+    }
+    await params.pluginSettingsComponent.editAndSave((settings) => {
+      settings.shouldAskBeforeSwapping = confirmDialogResult.shouldAskAgain;
+    });
+    return result;
+    /* v8 ignore stop */
+  }
 }
+
+/* v8 ignore start -- builds the confirmation dialog DOM; exercised via desktop integration tests, not unit tests. */
+async function buildSwapConfirmContent(params: BuildSwapConfirmContentParams): Promise<void> {
+  const {
+    app,
+    fragment,
+    source,
+    target
+  } = params;
+  fragment.appendText('Are you sure you want to swap ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' with ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('?');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+}
+
+/* v8 ignore stop */
