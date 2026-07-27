@@ -1,0 +1,190 @@
+import type {
+  Editor,
+  TFile
+} from 'obsidian';
+
+import { evalInObsidian } from 'obsidian-integration-testing';
+import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import {
+  describe,
+  expect,
+  it
+} from 'vitest';
+
+import type { PluginSettingsTab } from './plugin-settings-tab.ts';
+
+const PLUGIN_ID = 'advanced-note-composer';
+
+describe('split into folder note name', () => {
+  it('should name the extracted note after the template and keep the folder name as an alias', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const SAVE_DELAY_IN_MILLISECONDS = 300;
+        const NEW_NOTE_NAME = 'Named split';
+        const NOTE_NAME_IN_FOLDER = 'Overview';
+        const NEW_NOTE_PATH = `${NEW_NOTE_NAME}/${NOTE_NAME_IN_FOLDER}.md`;
+        const SOURCE_PATH = 'split-into-folder-note-name-source.md';
+
+        const originalShouldAsk = await setToggle('Should ask before splitting', false);
+        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', true);
+        const originalNoteName = await setNoteName(NOTE_NAME_IN_FOLDER);
+        try {
+          // Clean up any leftover from a previous run so the folder name is not de-duplicated.
+          await removeIfExists(NEW_NOTE_PATH);
+          await removeIfExists(NEW_NOTE_NAME);
+
+          const sourceFile = await resetFile(SOURCE_PATH, 'keep this fragment here');
+          const editor = await openAndGetEditor(sourceFile);
+          // Select "fragment".
+          editor.setSelection(editor.offsetToPos(10), editor.offsetToPos(18));
+          app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
+          await waitUntil({ message: 'split picker did not open', predicate: () => document.querySelector('.prompt') !== null });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new Error('No split picker input.');
+          }
+          input.value = NEW_NOTE_NAME;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'create-new suggestion did not appear',
+            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent === NEW_NOTE_NAME)
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+
+          await waitUntil({
+            message: 'extracted note was not created under the configured note name',
+            predicate: () => app.vault.getAbstractFileByPath(NEW_NOTE_PATH) instanceof obsidianModule.TFile
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const newFile = app.vault.getAbstractFileByPath(NEW_NOTE_PATH);
+          const newFileContent = newFile instanceof obsidianModule.TFile ? await app.vault.read(newFile) : '';
+          // The note the template renamed away from is still recorded, so links by that name resolve.
+          const frontmatter = newFile instanceof obsidianModule.TFile
+            ? app.metadataCache.getFileCache(newFile)?.frontmatter ?? {}
+            : {};
+
+          // The note is named after the template, NOT after its folder.
+          const isNamedAfterFolder = app.vault.getAbstractFileByPath(`${NEW_NOTE_NAME}/${NEW_NOTE_NAME}.md`) !== null;
+          const isFolder = app.vault.getAbstractFileByPath(NEW_NOTE_NAME) instanceof obsidianModule.TFolder;
+
+          await waitUntil({
+            message: 'source link to the extracted note did not resolve',
+            predicate: () => Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH)
+          });
+          const linkResolves = Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH);
+
+          return { frontmatter, isFolder, isNamedAfterFolder, linkResolves, newFileContent };
+        } finally {
+          await setNoteName(originalNoteName);
+          await setToggle('Should ask before splitting', originalShouldAsk);
+          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
+        }
+
+        async function removeIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: 'markdown editor did not open',
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+
+        function openSettingsTab(): PluginSettingsTab {
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
+          if (!tab) {
+            throw new Error('Settings tab was not found.');
+          }
+          const pluginSettingsTab = tab as PluginSettingsTab;
+          pluginSettingsTab.displayLegacy();
+          return pluginSettingsTab;
+        }
+
+        function findSettingItem(tab: PluginSettingsTab, name: string): Element {
+          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          if (!item) {
+            throw new Error(`"${name}" setting was not found.`);
+          }
+          return item;
+        }
+
+        async function setNoteName(value: string): Promise<string> {
+          const tab = openSettingsTab();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const textAreaEl = findSettingItem(tab, 'Split into folder note name').querySelector('textarea');
+          if (!(textAreaEl instanceof HTMLTextAreaElement)) {
+            throw new Error('"Split into folder note name" input was not found.');
+          }
+
+          const previousValue = textAreaEl.value;
+          textAreaEl.value = value;
+          textAreaEl.dispatchEvent(new Event('input'));
+          textAreaEl.dispatchEvent(new Event('change'));
+          await sleep(SAVE_DELAY_IN_MILLISECONDS);
+
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return previousValue;
+        }
+
+        async function setToggle(name: string, value: boolean): Promise<boolean> {
+          const tab = openSettingsTab();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const toggle = findSettingItem(tab, name).querySelector('.checkbox-container');
+          if (!(toggle instanceof HTMLElement)) {
+            throw new Error(`"${name}" toggle was not found.`);
+          }
+          const wasEnabled = toggle.classList.contains('is-enabled');
+          if (wasEnabled !== value) {
+            toggle.click();
+            await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          }
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return wasEnabled;
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The extracted note is named after the configured note name, inside a folder named after the typed name.
+    expect(result.isFolder).toBe(true);
+    expect(result.isNamedAfterFolder).toBe(false);
+    expect(result.newFileContent).toContain('fragment');
+    // The name the note would have had is preserved, so links by that name still resolve.
+    expect(result.frontmatter['title']).toBe('Named split');
+    expect(result.frontmatter['aliases']).toContain('Named split');
+    // The residual link left in the source resolves to the renamed note inside its folder.
+    expect(result.linkResolves).toBe(true);
+  });
+});

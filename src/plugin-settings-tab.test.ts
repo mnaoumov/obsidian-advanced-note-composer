@@ -8,6 +8,7 @@ import type {
 import type { DebugController } from 'obsidian-dev-utils/debug-controller';
 import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
+import type { CodeHighlighterComponent } from 'obsidian-dev-utils/obsidian/setting-components/code-highlighter-component';
 
 import {
   App,
@@ -16,6 +17,7 @@ import {
 import { getDebugController } from 'obsidian-dev-utils/debug';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -51,6 +53,7 @@ const headings: string[] = [];
 const toggles: NamedComponent<ToggleComponent>[] = [];
 const texts: NamedComponent<TextComponent>[] = [];
 const dropdowns: NamedComponent<DropdownComponent>[] = [];
+const codeHighlighters: NamedComponent<CodeHighlighterComponent>[] = [];
 
 vi.mock('obsidian-dev-utils/debug', () => ({
   getDebugController: vi.fn().mockReturnValue({
@@ -83,6 +86,7 @@ afterEach(() => {
   toggles.length = 0;
   texts.length = 0;
   dropdowns.length = 0;
+  codeHighlighters.length = 0;
 });
 
 async function createSettingsComponent(): Promise<PluginSettingsComponent> {
@@ -108,6 +112,15 @@ async function createSettingsTab(pluginSettingsComponent?: PluginSettingsCompone
     pluginId: PLUGIN_ID,
     pluginSettingsComponent: settingsComponent
   });
+}
+
+function findCodeHighlighter(name: string): CodeHighlighterComponent {
+  const entry = codeHighlighters.find((codeHighlighter) => codeHighlighter.name === name);
+  if (!entry) {
+    throw new Error(`Code highlighter "${name}" was not rendered.`);
+  }
+
+  return entry.component;
 }
 
 function findText(name: string): TextComponent {
@@ -207,6 +220,13 @@ describe('PluginSettingsTab', () => {
     tab.displayLegacy();
 
     expect(findToggle('Should split into folder').getValue()).toBe(false);
+  });
+
+  it('should render the split-into-folder note name highlighter bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findCodeHighlighter('Split into folder note name').getValue()).toBe('');
   });
 
   it('should render the split-headings-automatically toggle bound to its setting', async () => {
@@ -319,6 +339,7 @@ function installSettingSpies(): void {
   spyOnAdd('addToggle', toggles);
   spyOnAdd('addText', texts);
   spyOnAdd('addDropdown', dropdowns);
+  spyOnAddCodeHighlighter();
 }
 
 function spyOnAdd<T extends BaseComponent>(
@@ -337,4 +358,17 @@ function spyOnAdd<T extends BaseComponent>(
       cb(component);
     });
   });
+}
+
+function spyOnAddCodeHighlighter(): void {
+  const original = SettingEx.prototype.addCodeHighlighter;
+  vi.spyOn(SettingEx.prototype, 'addCodeHighlighter').mockImplementation(
+    function addCodeHighlighterSpy(this: SettingEx, cb: (component: CodeHighlighterComponent) => void): SettingEx {
+      const name = this.nameEl.textContent;
+      return original.call(this, (component: CodeHighlighterComponent) => {
+        codeHighlighters.push({ component, name });
+        cb(component);
+      });
+    }
+  );
 }

@@ -8,6 +8,8 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 - [[01 Merge file]]
 - [[02 Merge folder]]
+- [[23 Merge folder into single file]]
+- [[24 Merge multiple files]]
 
 ## Extract
 
@@ -22,6 +24,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 - [[19 Reorder headings]]
 - [[22 Rename heading]]
 - [[25 Split into folder]]
+- [[26 Split headings automatically]]
 
 ## Swap
 

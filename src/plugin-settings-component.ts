@@ -9,6 +9,7 @@ import {
   FrontmatterTitleMode,
   PluginSettings
 } from './plugin-settings.ts';
+import { TEMPLATE_TOKEN_REG_EXP } from './template-tokens.ts';
 
 interface PluginSettingsComponentConstructorParams {
   readonly dataHandler: DataHandler;
@@ -70,6 +71,22 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('smartCutAndPasteTemplate', (value): MaybeReturn<string> => {
       if (value && !value.includes('{{content}}')) {
         return 'Smart cut & paste template should contain {{content}} token';
+      }
+    });
+
+    this.registerValidator('splitIntoFolderNoteNameTemplate', (value): MaybeReturn<string> => {
+      if (!value) {
+        return;
+      }
+
+      if (value.includes('{{content}}')) {
+        return 'Note name should not contain {{content}} token';
+      }
+
+      // Only the literal text is checked: what a token expands to is sanitized at split time.
+      const literal = value.replaceAll(TEMPLATE_TOKEN_REG_EXP, '');
+      if (literal.includes('/') || new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(literal)) {
+        return 'Invalid note name';
       }
     });
   }
