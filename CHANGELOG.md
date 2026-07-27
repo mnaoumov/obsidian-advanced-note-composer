@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 5.0.0
+
+- fix: skip vanished backlink sources when fixing backlinks
+- test: wait for the metadata cache before extracting between rules
+- test: expect the Swap with selection button in the smart-cut notice
+- chore: update libs
+- feat: split into folder (re #79)
+- feat: merge multiple selected files into one file (re #92)
+- feat: merge folder contents into a single file (re #92)
+- feat: add Rename heading command that updates nested-subpath links (re #111)
+- fix: don't cycle the active leaf on folder merge (re #106)
+- feat: add swap confirmation dialog (re #74)
+- feat: gate split-by-headings menu items on the selected heading level (re #94)
+- fix: move the cursor to the moved content for smart cut & paste (re #144)
+- feat: block commands on excluded paths (re #93)
+- feat: always-merge-excluded-items setting (re #150)
+- feat: recent folders in the move-folder picker (re #149)
+- feat: swap button in the smart cut & paste notice (re #148)
+- feat: reorder nested headings (re #147)
+- docs: demo folder commands, reorder and swap-selection in demo vault (re #105, #73, #103, #108)
+- test: integration tests for folder commands and extract-heading (re #105, #73, #72, #143)
+
 ## 4.0.0
 
 - chore: fix overexposed
