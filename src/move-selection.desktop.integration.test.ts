@@ -139,6 +139,7 @@ describe('move marked selection', () => {
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
     expect(result.markNoticeGoneAfterMoves).toBe(true);

@@ -146,24 +146,28 @@ describe('Smart cut & paste notice settings', () => {
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
     expect(result.topOff).toEqual([
       'Switch to split/extract',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
     expect(result.bottomOff).toEqual([
       'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection at cursor',
+      'Swap with selection',
       'Cancel move'
     ]);
     expect(result.atCursorOff).toEqual([
       'Switch to split/extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
+      'Swap with selection',
       'Cancel move'
     ]);
     // Notice disabled: no notice, hence no buttons at all.
