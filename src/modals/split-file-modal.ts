@@ -81,6 +81,27 @@ interface PrepareForSplitFileParams {
    * source note while the split/extract setup is open (and it also enables the switch-to-smart-cut action).
    */
   readonly selectionHighlightComponent?: SelectionHighlightComponent;
+
+  /**
+   * Creates the new note in the source note's own folder, whatever the `shouldAllowOnlyCurrentFolderByDefault`
+   * setting says. Only meaningful together with {@link PrepareForSplitFileParams.shouldSkipModal} (otherwise
+   * the picker owns the choice). Set by the recursive split, where each pass's new note must land beside its
+   * source for the folder tree to nest.
+   */
+  readonly shouldForceAllowOnlyCurrentFolder?: boolean;
+
+  /**
+   * Puts the new note into its own folder even when the `shouldSplitIntoFolder` setting is off. Set by the
+   * recursive split, whose folder tree IS the feature, so it cannot be at the mercy of that setting.
+   */
+  readonly shouldForceSplitIntoFolder?: boolean;
+
+  /**
+   * Skips the confirmation dialog for this split regardless of the `shouldAskBeforeSplitting` setting. Set by
+   * flows that have already confirmed the whole operation once up front (the recursive split), where
+   * confirming every one of the many splits it performs would be unusable.
+   */
+  readonly shouldSkipConfirmation?: boolean;
   readonly shouldSkipModal?: boolean;
   readonly sourceFile: TFile;
 }
@@ -100,6 +121,12 @@ interface PrepareForSplitFileResult {
 }
 
 /* v8 ignore stop */
+
+interface ShouldSkipSplitConfirmationParams {
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly shouldSkipConfirmation: boolean;
+  readonly shouldSkipModal: boolean;
+}
 
 interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {
   /**
@@ -473,7 +500,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         insertMode: InsertMode.Append,
         isMod: false,
         item: null,
-        shouldAllowOnlyCurrentFolder: params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
+        shouldAllowOnlyCurrentFolder: params.shouldForceAllowOnlyCurrentFolder ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
         shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
         shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
         shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
@@ -520,6 +547,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       item: splitFileModalResult.item,
       pluginSettingsComponent: params.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+      shouldForceSplitIntoFolder: params.shouldForceSplitIntoFolder ?? false,
       /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
       shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
       /* v8 ignore stop */
@@ -540,13 +568,13 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       targetFile: selectItemResult.targetFile
     };
 
-    // A heading-driven split (`shouldSkipModal`) derives its target from the heading, so with
-    // `shouldSplitHeadingsAutomatically` on it must run start-to-finish without prompting (issue #79) —
-    // Without touching the confirmation of ordinary, manually-targeted splits.
-    const shouldSkipConfirmation = !params.pluginSettingsComponent.settings.shouldAskBeforeSplitting
-      || (Boolean(params.shouldSkipModal) && params.pluginSettingsComponent.settings.shouldSplitHeadingsAutomatically);
-
-    if (shouldSkipConfirmation) {
+    if (
+      shouldSkipSplitConfirmation({
+        pluginSettingsComponent: params.pluginSettingsComponent,
+        shouldSkipConfirmation: Boolean(params.shouldSkipConfirmation),
+        shouldSkipModal: Boolean(params.shouldSkipModal)
+      })
+    ) {
       return prepareForSplitFileResult;
     }
 
@@ -661,4 +689,22 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
       params.abortController
     );
   });
+}
+
+/**
+ * Decides whether this split runs without the confirmation dialog.
+ *
+ * A heading-driven split (`shouldSkipModal`) derives its target from the heading, so with
+ * `shouldSplitHeadingsAutomatically` on it must run start-to-finish without prompting (issue #79) — without
+ * touching the confirmation of ordinary, manually-targeted splits. A caller that already confirmed the whole
+ * operation once up front (the recursive split) suppresses it outright.
+ *
+ * @param params - The parameters.
+ * @returns Whether to skip the confirmation dialog.
+ */
+function shouldSkipSplitConfirmation(params: ShouldSkipSplitConfirmationParams): boolean {
+  const settings = params.pluginSettingsComponent.settings;
+  return !settings.shouldAskBeforeSplitting
+    || params.shouldSkipConfirmation
+    || (params.shouldSkipModal && settings.shouldSplitHeadingsAutomatically);
 }

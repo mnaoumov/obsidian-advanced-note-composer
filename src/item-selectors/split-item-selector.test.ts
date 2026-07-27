@@ -1014,6 +1014,36 @@ describe('SplitItemSelector', () => {
       expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
     });
 
+    it('should move the new note into a folder when the caller forces it, even with the setting off', async () => {
+      // The recursive split (issue #79) builds a folder tree, which IS the feature, so it cannot be at the
+      // Mercy of `Should split into folder`.
+      const newFile = createMockFile('new-file', 'folder/new-file.md');
+      const app = createMockApp();
+      vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: false
+      });
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-file',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldForceSplitIntoFolder: true,
+        shouldTreatTitleAsPath: true,
+        sourceFile
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('folder/new-file');
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
+    });
+
     it('should de-duplicate the folder name when a folder with that name already exists', async () => {
       const newFile = createMockFile('new-file', 'folder/new-file.md');
       const app = createMockApp();

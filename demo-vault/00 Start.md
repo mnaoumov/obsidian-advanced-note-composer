@@ -25,6 +25,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 - [[22 Rename heading]]
 - [[25 Split into folder]]
 - [[26 Split headings automatically]]
+- [[27 Split headings recursively]]
 
 ## Swap
 

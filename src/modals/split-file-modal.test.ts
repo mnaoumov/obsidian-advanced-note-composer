@@ -187,8 +187,22 @@ const mockSelectItem = vi.fn(
   (): Promise<SelectItemResult> => Promise.resolve({ isNewTargetFile: false, targetFile: mockTargetFile })
 );
 
+/**
+ * The subset of the item selector's constructor params these tests assert are threaded through.
+ */
+interface CapturedSplitItemSelectorParams {
+  readonly shouldAllowOnlyCurrentFolder: boolean;
+  readonly shouldForceSplitIntoFolder: boolean;
+}
+
+let capturedSplitItemSelectorParams: CapturedSplitItemSelectorParams | null = null;
+
 vi.mock('../item-selectors/split-item-selector.ts', () => {
   class MockSplitItemSelector {
+    public constructor(params: CapturedSplitItemSelectorParams) {
+      capturedSplitItemSelectorParams = params;
+    }
+
     public selectItem(): Promise<SelectItemResult> {
       return mockSelectItem();
     }
@@ -303,6 +317,7 @@ function createMockSelectionHighlightComponent(): SelectionHighlightComponent {
 describe('prepareForSplitFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    capturedSplitItemSelectorParams = null;
     shouldAutoSelect = false;
     shouldAutoSwitchToSmartCut = false;
   });
@@ -413,6 +428,87 @@ describe('prepareForSplitFile', () => {
     expect(result?.shouldAllowSplitIntoUnresolvedPath).toBe(true);
     expect(result?.shouldMergeHeadings).toBe(false);
     expect(result?.shouldIncludeFrontmatter).toBe(false);
+  });
+
+  it('should create the new note in the source folder when the caller forces it', async () => {
+    // The recursive split (issue #79) needs each pass's new note to land beside its source, whatever the
+    // `Should allow only current folder by default` setting says — that is what makes the tree nest.
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
+
+    const result = await prepareForSplitFile({
+      app,
+      editor,
+      heading: 'Heading',
+      pluginSettingsComponent,
+      resourceLockComponent,
+      shouldForceAllowOnlyCurrentFolder: true,
+      shouldSkipModal: true,
+      sourceFile
+    });
+
+    expect(result?.shouldAllowOnlyCurrentFolder).toBe(true);
+    expect(capturedSplitItemSelectorParams?.shouldAllowOnlyCurrentFolder).toBe(true);
+  });
+
+  it('should pass the forced folder split through to the item selector', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
+
+    await prepareForSplitFile({
+      app,
+      editor,
+      heading: 'Heading',
+      pluginSettingsComponent,
+      resourceLockComponent,
+      shouldForceSplitIntoFolder: true,
+      shouldSkipModal: true,
+      sourceFile
+    });
+
+    expect(capturedSplitItemSelectorParams?.shouldForceSplitIntoFolder).toBe(true);
+  });
+
+  it('should not force the folder split for an ordinary heading-driven split', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
+
+    await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+    expect(capturedSplitItemSelectorParams?.shouldForceSplitIntoFolder).toBe(false);
+  });
+
+  it('should skip the confirmation when the caller already confirmed the whole operation', async () => {
+    // The recursive split confirms once up front and then runs many splits; confirming each would be
+    // Unusable. `shouldAskBeforeSplitting` stays on, so this proves the override and not the setting.
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
+
+    const result = await prepareForSplitFile({
+      app,
+      editor,
+      heading: 'Heading',
+      pluginSettingsComponent,
+      resourceLockComponent,
+      shouldSkipConfirmation: true,
+      shouldSkipModal: true,
+      sourceFile
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.targetFile).toBe(mockTargetFile);
   });
 
   it('should skip the confirmation for a heading-driven split when splitting headings automatically', async () => {

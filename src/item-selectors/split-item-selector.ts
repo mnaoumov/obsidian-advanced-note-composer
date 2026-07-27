@@ -21,16 +21,24 @@ import { ItemSelectorBase } from './item-selector-base.ts';
 
 interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
   readonly shouldAllowOnlyCurrentFolder: boolean;
+
+  /**
+   * Puts the new note into its own folder even when the `shouldSplitIntoFolder` setting is off. Set by the
+   * recursive split, whose folder tree IS the feature, so it cannot be at the mercy of that setting.
+   */
+  readonly shouldForceSplitIntoFolder?: boolean;
   readonly shouldTreatTitleAsPath: boolean;
 }
 
 export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
+  private readonly shouldForceSplitIntoFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
 
   public constructor(params: SplitItemSelectorConstructorParams) {
     super(params);
     this.shouldAllowOnlyCurrentFolder = params.shouldAllowOnlyCurrentFolder;
+    this.shouldForceSplitIntoFolder = params.shouldForceSplitIntoFolder ?? false;
     this.shouldTreatTitleAsPath = params.shouldTreatTitleAsPath;
   }
 
@@ -82,7 +90,7 @@ export class SplitItemSelector extends ItemSelectorBase {
 
     let overriddenBasename: null | string = null;
 
-    if (this.pluginSettingsComponent.settings.shouldSplitIntoFolder) {
+    if (this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder) {
       overriddenBasename = await this.moveIntoOwnFolder(file);
     }
 
