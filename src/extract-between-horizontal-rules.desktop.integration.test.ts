@@ -32,8 +32,15 @@ describe('extract between horizontal rules', () => {
           const editor = await openAndGetEditor(file);
           editor.setCursor({ ch: 0, line: MIDDLE_LINE });
 
+          // The command keys off the metadata cache's `thematicBreak` Sections, so it stays disabled until
+          // The cache has indexed the note just written. Executing before that silently does nothing.
+          await waitUntil({
+            message: 'metadata cache did not index the horizontal rules',
+            predicate: () => (app.metadataCache.getFileCache(file)?.sections ?? []).some((section) => section.type === 'thematicBreak')
+          });
+
           const canRun = app.commands.executeCommandById(`${pluginId}:extract-between-horizontal-rules`);
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ message: 'split picker did not open', predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Extract to the bottom of the same note (Enter on the source note in the picker).
@@ -44,11 +51,18 @@ describe('extract between horizontal rules', () => {
           input.value = file.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
+            message: 'target suggestion did not appear',
             predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(file.basename))
           });
+          // The suggester needs a beat to mark the matching suggestion active; dispatching Enter the
+          // Instant the element appears races that and selects nothing.
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 
-          await waitUntil({ predicate: () => editorValueFor('extract-hr.md')?.trimEnd().endsWith('middle') === true });
+          await waitUntil({
+            message: 'the block between the rules was not extracted to the bottom of the note',
+            predicate: () => editorValueFor('extract-hr.md')?.trimEnd().endsWith('middle') === true
+          });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           return { canRun, note: editorValueFor('extract-hr.md') ?? '' };
