@@ -342,6 +342,13 @@ export abstract class ComposerBase {
   protected async fixBacklinks(params: ComposerBaseFixBacklinksParams): Promise<void> {
     const { backlinksToFix, updatedFilePaths, updatedLinks } = params;
     for (const backlinkPath of backlinksToFix.keys()) {
+      // A folder merge relocates each merged note through the transaction staging folder, and the metadata
+      // Cache can still report such a note as a backlink source after it is gone. Editing links in a file
+      // That no longer exists throws and aborts (and rolls back) the whole merge, so skip vanished sources.
+      if (!this.app.vault.getFileByPath(backlinkPath)) {
+        continue;
+      }
+
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
       await editLinks({
