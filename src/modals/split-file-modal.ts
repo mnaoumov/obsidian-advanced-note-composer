@@ -540,7 +540,13 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       targetFile: selectItemResult.targetFile
     };
 
-    if (!params.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
+    // A heading-driven split (`shouldSkipModal`) derives its target from the heading, so with
+    // `shouldSplitHeadingsAutomatically` on it must run start-to-finish without prompting (issue #79) —
+    // Without touching the confirmation of ordinary, manually-targeted splits.
+    const shouldSkipConfirmation = !params.pluginSettingsComponent.settings.shouldAskBeforeSplitting
+      || (Boolean(params.shouldSkipModal) && params.pluginSettingsComponent.settings.shouldSplitHeadingsAutomatically);
+
+    if (shouldSkipConfirmation) {
       return prepareForSplitFileResult;
     }
 

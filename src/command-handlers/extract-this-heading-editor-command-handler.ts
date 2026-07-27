@@ -112,11 +112,16 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     const result = await prepareForSplitFile({
       app: this.app,
       editor,
+      // The enclosing heading names the new note. When splitting headings automatically, it also replaces
+      // The target picker entirely (issue #79); otherwise it merely seeds the picker input, exactly as
+      // `extractHeading` did before.
+      heading: this.headingInfo.heading,
       moveNoticeComponent: this.moveNoticeComponent,
       moveSelectionBuffer: this.moveSelectionBuffer,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
       selectionHighlightComponent: this.selectionHighlightComponent,
+      shouldSkipModal: this.pluginSettingsComponent.settings.shouldSplitHeadingsAutomatically,
       sourceFile: file
     });
     if (!result) {

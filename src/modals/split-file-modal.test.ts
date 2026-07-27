@@ -173,6 +173,7 @@ vi.mock('../headings.ts', () => ({
 
 interface MockPluginOptions {
   readonly shouldAskBeforeSplitting?: boolean;
+  readonly shouldSplitHeadingsAutomatically?: boolean;
 }
 
 interface SelectItemResult {
@@ -258,6 +259,7 @@ function createMockMoveNoticeComponent(): MoveNoticeComponent {
 
 function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginSettingsComponent {
   const shouldAskBeforeSplitting = options?.shouldAskBeforeSplitting ?? false;
+  const shouldSplitHeadingsAutomatically = options?.shouldSplitHeadingsAutomatically ?? false;
 
   return strictProxy<PluginSettingsComponent>({
     editAndSave: vi.fn().mockResolvedValue(undefined),
@@ -272,6 +274,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldLockAllNotesWhenMarkingSelection: false,
       shouldMergeHeadingsByDefault: false,
       shouldShowModalInstructions: true,
+      shouldSplitHeadingsAutomatically,
       shouldTreatTitleAsPathByDefault: true
     })
   });
@@ -410,6 +413,38 @@ describe('prepareForSplitFile', () => {
     expect(result?.shouldAllowSplitIntoUnresolvedPath).toBe(true);
     expect(result?.shouldMergeHeadings).toBe(false);
     expect(result?.shouldIncludeFrontmatter).toBe(false);
+  });
+
+  it('should skip the confirmation for a heading-driven split when splitting headings automatically', async () => {
+    // Issue #79: a heading-driven split must run start-to-finish without prompting when the setting is on,
+    // Even though `shouldAskBeforeSplitting` would otherwise open the confirmation dialog.
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true, shouldSplitHeadingsAutomatically: true });
+
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+    expect(result).not.toBeNull();
+    expect(result?.targetFile).toBe(mockTargetFile);
+  });
+
+  it('should still confirm a manually-targeted split when splitting headings automatically', async () => {
+    // The setting only covers heading-driven splits (`shouldSkipModal`); an ordinary split keeps asking.
+    shouldAutoSelect = true;
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true, shouldSplitHeadingsAutomatically: true });
+
+    const promise = prepareForSplitFile({ app, editor, pluginSettingsComponent, resourceLockComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+
+    // The confirmation dialog is never resolved in unit tests, so reaching it yields null.
+    expect(result).toBeNull();
   });
 
   it('should return null when confirm dialog is rejected', async () => {

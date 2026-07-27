@@ -209,6 +209,13 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should split into folder').getValue()).toBe(false);
   });
 
+  it('should render the split-headings-automatically toggle bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should split headings automatically').getValue()).toBe(false);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

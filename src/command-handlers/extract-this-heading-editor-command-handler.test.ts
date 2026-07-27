@@ -104,7 +104,12 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): HandlerParams {
+function createMockParams(
+  isPathIgnored = false,
+  shouldAddCommandsToSubmenu = true,
+  shouldBlockCommandOnPath = false,
+  shouldSplitHeadingsAutomatically = false
+): HandlerParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
@@ -117,7 +122,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
+        shouldSplitHeadingsAutomatically
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({}),
@@ -312,6 +318,50 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
 
     expect(MockSplitComposer).toHaveBeenCalled();
     expect(mockSplitFile).toHaveBeenCalled();
+  });
+
+  it('should skip the target picker and name the note after the heading when splitting headings automatically', async () => {
+    const params = createMockParams(false, true, false, true);
+    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
+    const editor = createMockEditor();
+    const ctx = createMockCtx(createMockFile());
+
+    mockGetSelectionUnderHeading.mockReturnValue({
+      end: { ch: 0, line: 5 },
+      heading: 'My Heading',
+      start: { ch: 0, line: 2 }
+    });
+    handler.canExecuteEditor(editor, ctx);
+    mockPrepareForSplitFile.mockResolvedValue(null);
+
+    await handler.executeEditor(editor, ctx);
+
+    expect(mockPrepareForSplitFile).toHaveBeenCalledWith(expect.objectContaining({
+      heading: 'My Heading',
+      shouldSkipModal: true
+    }));
+  });
+
+  it('should keep the target picker when splitting headings automatically is disabled', async () => {
+    const params = createMockParams(false, true, false, false);
+    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
+    const editor = createMockEditor();
+    const ctx = createMockCtx(createMockFile());
+
+    mockGetSelectionUnderHeading.mockReturnValue({
+      end: { ch: 0, line: 5 },
+      heading: 'My Heading',
+      start: { ch: 0, line: 2 }
+    });
+    handler.canExecuteEditor(editor, ctx);
+    mockPrepareForSplitFile.mockResolvedValue(null);
+
+    await handler.executeEditor(editor, ctx);
+
+    expect(mockPrepareForSplitFile).toHaveBeenCalledWith(expect.objectContaining({
+      heading: 'My Heading',
+      shouldSkipModal: false
+    }));
   });
 
   it('should return true from shouldAddToEditorMenu', () => {

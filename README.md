@@ -155,6 +155,10 @@ Notes:
 
 Turn on **Should split into folder** (under `Split/extract` in the settings) to have every split or extract that creates a **new** note place it inside a brand-new folder named after the note. The note lands at `<folder>/<note>/<note>.md` instead of `<folder>/<note>.md`, keeping each extracted note tidily grouped with its own folder (handy when you later add attachments or child notes next to it). The folder name is de-duplicated if one already exists, links/footnotes are fixed exactly as for an ordinary split, and splitting/extracting into an **existing** note is unaffected. When the setting is off (the default), behavior is unchanged.
 
+## Split headings automatically
+
+Turn on **Should split headings automatically** (under `Split/extract` in the settings) to make heading-driven splits run immediately, with no target picker and no confirmation dialog. It covers `Split note by headings - H1`…`H6`, their `content` variants, and `Extract this heading...`; each new note is named after the heading it came from. Combine it with **Should split into folder** to get exactly one folder per heading, named after that heading. When the setting is off (the default), these commands keep asking, as configured by **Should ask before splitting** — and that setting still governs ordinary, manually-targeted splits either way.
+
 ## Flatten folder
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves every direct child of the chosen folder — files **and** subfolders — up one level, so they become siblings of that folder. Subfolders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The emptied folder is left in place; delete it manually if you no longer need it.
