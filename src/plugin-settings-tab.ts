@@ -332,6 +332,39 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Split into folder note name')
+          .setDesc(createFragment((f) => {
+            f.appendText('The name to give the new note inside the folder created by ');
+            appendCodeBlock(f, 'Should split into folder');
+            f.appendText('. It has no effect while that setting is off.');
+            f.createEl('br');
+            f.appendText('Leave empty to name the note after its folder, e.g. ');
+            appendCodeBlock(f, '<folder>/<note>/<note>.md');
+            f.appendText('. Set it to ');
+            appendCodeBlock(f, 'Overview');
+            f.appendText(' to get ');
+            appendCodeBlock(f, '<folder>/<note>/Overview.md');
+            f.appendText(' for every split instead.');
+            f.createEl('br');
+            f.appendText('The name the note would have had is kept as an alias and/or a frontmatter title, as configured by ');
+            appendCodeBlock(f, 'Should add invalid title to note alias');
+            f.appendText(' and ');
+            appendCodeBlock(f, 'Frontmatter title mode');
+            f.appendText(', so links to it keep resolving.');
+            f.createEl('br');
+            f.appendText('Tokens are resolved against the new note before it is moved, so ');
+            appendCodeBlock(f, '{{newTitle}}');
+            f.appendText(' is the folder name.');
+            f.createEl('br');
+            addAvailableTokens(f, false);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'splitIntoFolderNoteNameTemplate', valueComponent: codeHighlighter });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Should split headings automatically')
           .setDesc(createFragment((f) => {
             f.appendText('Whether heading-driven splits run immediately, with no target picker and no confirmation.');
@@ -693,12 +726,14 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   }
 }
 
-function addAvailableTokens(f: DocumentFragment): void {
+function addAvailableTokens(f: DocumentFragment, shouldIncludeContentToken = true): void {
   f.appendText('Available tokens:');
   f.createEl('br');
-  f.appendText('- ');
-  appendCodeBlock(f, '{{content}}');
-  f.createEl('br');
+  if (shouldIncludeContentToken) {
+    f.appendText('- ');
+    appendCodeBlock(f, '{{content}}');
+    f.createEl('br');
+  }
   f.appendText('- ');
   appendCodeBlock(f, '{{fromTitle}}');
   f.createEl('br');

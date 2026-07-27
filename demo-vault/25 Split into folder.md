@@ -16,6 +16,24 @@ extracting into an **existing** note is unaffected.
 
 If a folder with that name already exists, the new folder name is de-duplicated (`My extract 1`, …).
 
+## Predefine the note name
+
+By default the note is named after its folder. **Split into folder note name** (right below the toggle)
+overrides that, so every folder split produces the same note name.
+
+1. With **Should split into folder** still on, set **Split into folder note name** to `Overview`.
+2. Extract another selection into a new note, e.g. `My second extract`.
+3. It now lands at `My second extract/Overview.md` — the folder still carries the name you typed, the
+   note inside it is always `Overview`.
+
+The name you typed is not lost: it is added as an alias and a frontmatter `title`, so `[[My second
+extract]]` still resolves.
+
+The field takes the same `{{...}}` tokens as the templates (except `{{content}}`), resolved against the
+new note before it moves — so `{{newTitle}}` is the folder name and `{{newTitle}} index` yields
+`My second extract/My second extract index.md`. Leave the field empty to go back to naming the note
+after its folder.
+
 ---
 
 Select me and extract me into a brand-new note. With **Should split into folder** on, a new folder is

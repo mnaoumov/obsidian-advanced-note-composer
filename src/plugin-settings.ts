@@ -65,6 +65,7 @@ export class PluginSettings {
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
   public smartCutAndPasteTemplate = '';
+  public splitIntoFolderNoteNameTemplate = '';
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;

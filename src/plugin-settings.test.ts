@@ -113,6 +113,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldTreatTitleAsPathByDefault).toBe(true);
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);
     expect(settings.smartCutAndPasteTemplate).toBe('');
+    expect(settings.splitIntoFolderNoteNameTemplate).toBe('');
     expect(settings.splitTemplate).toBe('');
     expect(settings.splitToExistingFileTemplate).toBe(Action.Split);
     expect(settings.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);

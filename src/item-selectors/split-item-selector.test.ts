@@ -51,6 +51,7 @@ interface SettingsOverrides {
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldReplaceInvalidTitleCharacters?: boolean;
   shouldSplitIntoFolder?: boolean;
+  splitIntoFolderNoteNameTemplate?: string;
 }
 
 function createMockApp(): App {
@@ -102,6 +103,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       shouldAddInvalidTitleToNoteAlias: true,
       shouldReplaceInvalidTitleCharacters: true,
       shouldSplitIntoFolder: false,
+      splitIntoFolderNoteNameTemplate: '',
       ...settingsOverrides
     })
   });
@@ -1066,6 +1068,156 @@ describe('SplitItemSelector', () => {
 
       expect(app.vault.createFolder).toHaveBeenCalledWith('new-file');
       expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'new-file/new-file.md');
+    });
+  });
+
+  describe('splitIntoFolderNoteNameTemplate', () => {
+    interface CreateSelectorOptions {
+      readonly inputValue?: string;
+      readonly settingsOverrides?: SettingsOverrides;
+    }
+
+    interface CreateSelectorResult {
+      readonly app: App;
+      readonly newFile: TFile;
+      readonly selector: SplitItemSelector;
+    }
+
+    function createSelector(options: CreateSelectorOptions = {}): CreateSelectorResult {
+      const newFile = createMockFile('new-file', 'folder/new-file.md');
+      const app = createMockApp();
+      vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        shouldSplitIntoFolder: true,
+        ...options.settingsOverrides
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: options.inputValue ?? 'new-file',
+        isMod: true,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'source.md')
+      });
+
+      return { app, newFile, selector };
+    }
+
+    it('should name the note after the template instead of the folder', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: 'Overview' } });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('folder/new-file');
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/Overview.md');
+    });
+
+    it('should keep the folder name when the template is empty', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
+    });
+
+    it('should resolve the newTitle token to the folder name', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '{{newTitle}} index' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file index.md');
+    });
+
+    it('should resolve the fromTitle token against the source note', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: 'From {{fromTitle}}' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/From source.md');
+    });
+
+    it('should trim a trailing markdown extension from the resolved name', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: 'Overview.md' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/Overview.md');
+    });
+
+    it('should fall back to the folder name when the template resolves to blank', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '  {{content}}  ' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
+    });
+
+    it('should replace invalid characters in the resolved name', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '{{newPath}}' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/folder_new-file.md');
+    });
+
+    it('should fall back to the folder name when sanitization is off and the resolved name spans folders', async () => {
+      const { app, newFile, selector } = createSelector({
+        settingsOverrides: {
+          shouldReplaceInvalidTitleCharacters: false,
+          splitIntoFolderNoteNameTemplate: '{{newPath}}'
+        }
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file.md');
+    });
+
+    it('should ignore the template when splitting into a folder is off', async () => {
+      const { app, selector } = createSelector({
+        settingsOverrides: {
+          shouldSplitIntoFolder: false,
+          splitIntoFolderNoteNameTemplate: 'Overview'
+        }
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).not.toHaveBeenCalled();
+    });
+
+    it('should record the note name it would have had as an alias and a frontmatter title', async () => {
+      mockAddAlias.mockClear();
+      const { app, newFile, selector } = createSelector({
+        settingsOverrides: {
+          shouldAddInvalidTitleToNoteAlias: true,
+          splitIntoFolderNoteNameTemplate: 'Overview'
+        }
+      });
+
+      await selector.selectItem();
+
+      expect(mockAddAlias).toHaveBeenCalledWith({ alias: 'new-file', app, pathOrFile: newFile, resourceLockComponent: null });
+      expect(app.fileManager.processFrontMatter).toHaveBeenCalledWith(newFile, expect.any(Function));
+    });
+
+    it('should record no alias when the template reproduces the folder name', async () => {
+      mockAddAlias.mockClear();
+      const { app, selector } = createSelector({
+        settingsOverrides: {
+          shouldAddInvalidTitleToNoteAlias: true,
+          splitIntoFolderNoteNameTemplate: '{{newTitle}}'
+        }
+      });
+
+      await selector.selectItem();
+
+      expect(mockAddAlias).not.toHaveBeenCalled();
+      expect(app.fileManager.processFrontMatter).not.toHaveBeenCalled();
     });
   });
 });
