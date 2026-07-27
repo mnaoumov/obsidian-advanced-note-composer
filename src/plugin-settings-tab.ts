@@ -332,6 +332,34 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should split headings automatically')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether heading-driven splits run immediately, with no target picker and no confirmation.');
+            f.createEl('br');
+            f.appendText('This covers ');
+            appendCodeBlock(f, 'Split note by headings - H1');
+            f.appendText('…');
+            appendCodeBlock(f, 'H6');
+            f.appendText(', their ');
+            appendCodeBlock(f, 'content');
+            f.appendText(' variants, and ');
+            appendCodeBlock(f, 'Extract this heading...');
+            f.appendText('. Each new note is named after its heading.');
+            f.createEl('br');
+            f.appendText('Combine with ');
+            appendCodeBlock(f, 'Should split into folder');
+            f.appendText(' to put every heading into its own folder named after it.');
+            f.createEl('br');
+            f.appendText('When disabled, these commands keep asking, as configured by ');
+            appendCodeBlock(f, 'Should ask before splitting');
+            f.appendText('.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldSplitHeadingsAutomatically', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Text after extraction')
           .setDesc('What to show in place of the selected text after extracting it.')
           .addDropdown((dropdown) => {
