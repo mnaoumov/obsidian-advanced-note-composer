@@ -10,6 +10,7 @@ import type { MockInstance } from 'vitest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -87,6 +88,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Keep,
         isPathIgnored: () => false,
         markdownAttachmentSubExtensions: ['excalidraw'],
         mergeFolderIntoFileNoteNameTemplate: '',
@@ -268,6 +270,63 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     const merged = await app.vault.adapter.read('src.md');
     expect(merged).toContain('intro body');
     expect(merged).not.toContain('# api');
+  });
+
+  it('should delete the folders the merge emptied', async () => {
+    initApp({
+      'src/api/v2/put.md': 'put body',
+      'src/note.md': 'note body'
+    });
+    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // Every note was merged away, so the whole tree is gone, deepest first.
+    expect(app.vault.getFolderByPath('src/api/v2')).toBeNull();
+    expect(app.vault.getFolderByPath('src/api')).toBeNull();
+    expect(app.vault.getFolderByPath('src')).toBeNull();
+    expect(await app.vault.adapter.read('src.md')).toContain('put body');
+  });
+
+  it('should keep a folder that still holds files', async () => {
+    initApp({
+      'src/api/img.png': 'PIC',
+      'src/note.md': 'note body'
+    });
+    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The image is unreferenced and not at any note's attachment path, so it stays - and so must its
+    // Folder, and therefore the merged folder above it.
+    expect(app.vault.getFolderByPath('src/api')).not.toBeNull();
+    expect(app.vault.getFolderByPath('src')).not.toBeNull();
+  });
+
+  it('should keep the folders when the behavior is Keep', async () => {
+    initApp({ 'src/note.md': 'note body' });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(app.vault.getFolderByPath('src')).not.toBeNull();
+  });
+
+  it('should not delete any folder when nothing was merged', async () => {
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler } = createHandler({
+      emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete,
+      isPathIgnored: (path) => path === 'src/a.md'
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(app.vault.getFolderByPath('src')).not.toBeNull();
+    expect(await app.vault.adapter.read('src/a.md')).toBe('alpha body');
   });
 
   it('should not merge a markdown-shaped attachment into the target', async () => {

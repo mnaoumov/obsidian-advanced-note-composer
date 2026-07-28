@@ -1,4 +1,5 @@
 import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
+import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 
 export enum Action {
   Merge = 'Merge',
@@ -27,6 +28,13 @@ export enum TextAfterExtractionMode {
 
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+
+  /**
+   * What happens to the folders a folder merge empties. Defaults to deleting them: once every note is
+   * merged away, the folder tree left behind is litter (issue #160).
+   */
+  public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehavior.Delete;
+
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 
   /**

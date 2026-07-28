@@ -8,6 +8,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { Vault } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
+  cleanupEmptyFolders,
   getAvailablePath,
   trashSafe
 } from 'obsidian-dev-utils/obsidian/vault';
@@ -119,6 +121,9 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
+    // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
+    const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder);
+
     const targetFile = await this.app.vault.create(targetPath, '');
 
     const result = await mergeFilesIntoSingleFile({
@@ -140,7 +145,19 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     if (result.aborted || result.mergedCount === 0) {
       // Cancelled or nothing merged (e.g. all notes ignored): remove the empty target we created.
       await trashSafe(this.app, targetFile);
+      return;
     }
+
+    /*
+     * Only after the transaction has committed: folder deletion is NOT part of the rollback, so running
+     * it on an aborted merge would delete folders whose notes were just restored. Deepest-first, so each
+     * folder is already empty by the time it is considered. `Keep` makes this a no-op.
+     */
+    await cleanupEmptyFolders({
+      app: this.app,
+      emptyFolderBehavior: settings.emptyFolderBehaviorAfterMergingFolder,
+      folderPaths: folderPathsToCleanUp
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
@@ -215,6 +232,25 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
  * @param folder - The folder to walk.
  * @returns The descendant notes, in merge order.
  */
+/**
+ * Collects the folder and every folder under it, deepest first, so an emptied tree can be removed from
+ * the leaves upward — a parent only becomes empty once its children are gone.
+ *
+ * @param folder - The folder being merged.
+ * @returns The folder paths, deepest first.
+ */
+function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
+  // Seeded with the folder itself and collected into a set, because whether `recurseChildren` yields the
+  // Folder it was given is not something to depend on.
+  const folderPaths = new Set<string>([folder.path]);
+  Vault.recurseChildren(folder, (child) => {
+    if (isFolder(child)) {
+      folderPaths.add(child.path);
+    }
+  });
+  return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || b.localeCompare(a));
+}
+
 function collectNotesDepthFirst(folder: TFolder): TFile[] {
   const notes = folder.children
     .filter(isFile)
@@ -224,4 +260,8 @@ function collectNotesDepthFirst(folder: TFolder): TFile[] {
     .filter(isFolder)
     .sort((a, b) => a.name.localeCompare(b.name));
   return [...notes, ...subFolders.flatMap((subFolder) => collectNotesDepthFirst(subFolder))];
+}
+
+function getDepth(folderPath: string): number {
+  return folderPath.split('/').length;
 }
