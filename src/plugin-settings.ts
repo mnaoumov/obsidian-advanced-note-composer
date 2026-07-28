@@ -49,6 +49,8 @@ export class PluginSettings {
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
   public shouldIncludeParentFoldersWhenMergingByDefault = true;
   public shouldIncludeParentFoldersWhenSwappingByDefault = true;
+  public shouldJumpToMovedContentToBottom = true;
+  public shouldJumpToMovedContentToTop = true;
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;

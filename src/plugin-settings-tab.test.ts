@@ -216,6 +216,14 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should ask before swapping').getValue()).toBe(true);
   });
 
+  it('should render the jump-to-moved-content toggles bound to their settings', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    expect(findToggle('Should jump to content moved to top of file').getValue()).toBe(true);
+    expect(findToggle('Should jump to content moved to bottom of file').getValue()).toBe(true);
+  });
+
   it('should render the split-into-folder toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
     tab.displayLegacy();

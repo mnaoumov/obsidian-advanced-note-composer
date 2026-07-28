@@ -38,6 +38,7 @@ interface CapturedComposerArgs {
   readonly insertToken: string;
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldJumpToMovedContent: boolean;
   readonly sourceFile: TFile;
   readonly targetCursorOffset: null | number;
   readonly targetFile: TFile;
@@ -48,6 +49,8 @@ interface CreateMockParamsOptions {
   readonly insertMode?: InsertMode;
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
   readonly shouldBlockCommandOnPath?: boolean;
+  readonly shouldJumpToMovedContentToBottom?: boolean;
+  readonly shouldJumpToMovedContentToTop?: boolean;
 }
 
 interface HandlerParams {
@@ -133,6 +136,8 @@ function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams 
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
         shouldFixFootnotesByDefault: true,
         shouldIncludeFrontmatterWhenSplittingByDefault: false,
+        shouldJumpToMovedContentToBottom: options.shouldJumpToMovedContentToBottom ?? true,
+        shouldJumpToMovedContentToTop: options.shouldJumpToMovedContentToTop ?? true,
         textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
       })
     }),
@@ -230,6 +235,41 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
       expect(args.shouldFixFootnotes).toBe(true);
       expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
+    });
+  });
+
+  // Each direction reads its OWN setting, so a test that only flipped one of them would pass against a
+  // Handler that read the wrong one — hence the cross cases (top off / bottom on, and the reverse).
+  describe('shouldJumpToMovedContent (issue #144)', () => {
+    async function captureJumpFlag(options: CreateMockParamsOptions): Promise<boolean> {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ ...options, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      return capturedComposerArgs().shouldJumpToMovedContent;
+    }
+
+    it('should jump for both directions by default', async () => {
+      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend })).toBe(true);
+    });
+
+    it('should not jump to the top when only the top setting is off', async () => {
+      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToTop: false })).toBe(false);
+    });
+
+    it('should still jump to the bottom when only the top setting is off', async () => {
+      expect(await captureJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToTop: false })).toBe(true);
+    });
+
+    it('should not jump to the bottom when only the bottom setting is off', async () => {
+      expect(await captureJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToBottom: false })).toBe(false);
+    });
+
+    it('should still jump to the top when only the bottom setting is off', async () => {
+      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToBottom: false })).toBe(true);
     });
   });
 });

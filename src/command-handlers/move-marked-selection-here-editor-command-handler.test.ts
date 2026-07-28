@@ -46,6 +46,7 @@ interface CapturedComposerArgs {
   readonly selectedText: string;
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldJumpToMovedContent: boolean;
   readonly sourceFile: TFile;
   readonly targetCursorEndOffset: number;
   readonly targetCursorOffset: number;
@@ -370,6 +371,9 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       expect(args.selectedText).toBe('marked text');
       expect(args.shouldFixFootnotes).toBe(true);
       expect(args.shouldIncludeFrontmatter).toBe(false);
+      // A move AT THE CURSOR always lands the cursor on the moved content — there is no setting for it
+      // (issue #144); only the top/bottom moves are configurable.
+      expect(args.shouldJumpToMovedContent).toBe(true);
       expect(args.sourceFile).toBe(resolvedSource);
       expect(args.targetCursorOffset).toBe(42);
       expect(args.targetCursorEndOffset).toBe(42);

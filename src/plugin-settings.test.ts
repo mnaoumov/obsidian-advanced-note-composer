@@ -97,6 +97,8 @@ describe('PluginSettings', () => {
     expect(settings.shouldIncludeFrontmatterWhenSplittingByDefault).toBe(false);
     expect(settings.shouldIncludeParentFoldersWhenMergingByDefault).toBe(true);
     expect(settings.shouldIncludeParentFoldersWhenSwappingByDefault).toBe(true);
+    expect(settings.shouldJumpToMovedContentToBottom).toBe(true);
+    expect(settings.shouldJumpToMovedContentToTop).toBe(true);
     expect(settings.shouldKeepHeadingsWhenSplittingContent).toBe(true);
     expect(settings.shouldLockAllNotesWhenMarkingSelection).toBe(false);
     expect(settings.shouldMergeHeadingsByDefault).toBe(false);
