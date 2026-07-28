@@ -208,7 +208,10 @@ export class SplitComposer extends ComposerBase {
         // On the moved content in the freshly opened target note, instead of leaving it wherever the
         // Opened note happened to place it (issue #144). Wait for the just-opened editor to settle
         // (load its content and apply its own default cursor) first, so the selection sticks.
-        if (this.isSmartCutAndPasteMove) {
+        // Gated on `shouldJumpToMovedContent` (default on): moving a selection out of the way is a
+        // Different intent from moving it to work on it, so the jump is opt-out. When off, the cursor
+        // Stays where the selection was cut from — `revealCursor` above already brought it into view.
+        if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.shouldJumpToMovedContent) {
           const DELAY_BEFORE_SELECT_IN_MILLISECONDS = 300;
           await sleep(DELAY_BEFORE_SELECT_IN_MILLISECONDS);
           this.selectMovedContentInTarget();

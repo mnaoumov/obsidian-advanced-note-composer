@@ -11,6 +11,8 @@ import {
   it
 } from 'vitest';
 
+import type { PluginSettingsTab } from './plugin-settings-tab.ts';
+
 // Desktop-only: an editor-selection behavior on a move flow, matching the plugin's established
 // Integration convention (no Android emulator wired). G99: pure editor-API behavior (`setSelection`)
 // With no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
@@ -124,5 +126,118 @@ describe('cursor follows the moved content (issue #144)', () => {
 
     expect(result.toBottom.activeFilePath).toBe('cursor-move-target.md');
     expect(result.toBottom.selection).toBe('MOVED');
+  });
+
+  // The off case. The test above is its positive control: it proves this harness DOES observe the jump
+  // When the setting is on, so an empty selection here is a real absence rather than a missed window.
+  it('leaves the cursor alone when "Should jump to moved content" is off', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const SETTLE_IN_MILLISECONDS = 400;
+        // Comfortably past the jump's own delays (200 ms before the target opens + 300 ms before the
+        // Selection is applied), so an empty selection cannot just mean "not yet".
+        const PAST_JUMP_DELAY_IN_MILLISECONDS = 2000;
+        const SETTING_NAME = 'Should jump to moved content';
+
+        await setToggle(SETTING_NAME, false);
+        try {
+          const source = await resetFile('cursor-no-jump-source.md', 'AAA MOVED CCC');
+          const target = await resetFile('cursor-no-jump-target.md', 'target end');
+
+          // Mark "MOVED" (offsets 4..9) in the source.
+          const sourceEditor = await openAndGetEditor(source);
+          sourceEditor.setSelection(sourceEditor.offsetToPos(4), sourceEditor.offsetToPos(9));
+          app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
+          await sleep(SETTLE_IN_MILLISECONDS);
+
+          // Move it to the bottom of the target — the reporter's "get it out of the way" case.
+          await openAndGetEditor(target);
+          app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-bottom-of-file`);
+
+          // Wait for the move to actually land in the target and the target to be the active note (the
+          // Source transiently shows the restored marked selection mid-operation).
+          await waitUntil({
+            message: 'moved text did not arrive in the active target note',
+            predicate: () => {
+              const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+              return view?.file?.path === target.path && view.editor.getValue().includes('MOVED');
+            },
+            timeoutInMilliseconds: 15_000
+          });
+          await sleep(PAST_JUMP_DELAY_IN_MILLISECONDS);
+
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          return {
+            activeFilePath: view?.file?.path ?? '',
+            content: view?.editor.getValue() ?? '',
+            selection: view?.editor.getSelection() ?? ''
+          };
+        } finally {
+          // Leave the shared instance on the defaults for the suites that follow.
+          await setToggle(SETTING_NAME, true);
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not become active`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: 15_000
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+
+        // Drives the REAL settings tab, so the toggle is exercised the way a user flips it.
+        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+          const RENDER_DELAY_IN_MILLISECONDS = 150;
+          const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
+
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const settingTab = app.setting.pluginTabs.find((tab) => tab.id === pluginId);
+          if (!settingTab) {
+            throw new Error('Settings tab was not found.');
+          }
+          (settingTab as PluginSettingsTab).displayLegacy();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const toggleEl = settingItem?.querySelector('.checkbox-container');
+          if (!(toggleEl instanceof HTMLElement)) {
+            throw new Error(`"${settingName}" toggle was not found.`);
+          }
+
+          if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {
+            toggleEl.click();
+            await sleep(EDIT_SAVE_DELAY_IN_MILLISECONDS);
+          }
+
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The move still happened — the moved text is in the target, which is the active note...
+    expect(result.activeFilePath).toBe('cursor-no-jump-target.md');
+    expect(result.content).toContain('MOVED');
+    // ...but nothing was selected, so the cursor stayed where the user left it.
+    expect(result.selection).toBe('');
   });
 });

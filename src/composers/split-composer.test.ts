@@ -198,6 +198,7 @@ function createPluginSettingsComponentStub(
       shouldApplyTextAfterExtractionToSameFile: false,
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
+      shouldJumpToMovedContent: true,
       shouldMergeHeadingsByDefault: false,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
@@ -706,6 +707,42 @@ describe('splitFile move mode', () => {
 
     expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
     expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
+  });
+
+  it('does not select the moved content when shouldJumpToMovedContent is off (issue #144 follow-up)', async () => {
+    // Identical to the test above except for the setting, so it isolates the gate: the move still runs
+    // (the target ends up holding the moved text), but the cursor is left where it was.
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor: targetEditor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      isSmartCutAndPasteMove: true,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        shouldJumpToMovedContent: false,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).not.toHaveBeenCalled();
+    expect(targetEditor.scrollIntoView).not.toHaveBeenCalled();
+    const content = await app.vault.adapter.read('target.md');
+    expect(content).toContain('MOVED');
   });
 
   it('does not select in the target when there is no active markdown view', async () => {

@@ -44,6 +44,23 @@ caption: Bind Alt+Shift+Up to "Move marked selection to top of file"
 require('/demoSetup.ts').bindHotkey(app, 'advanced-note-composer:move-marked-selection-to-top-of-file', { modifiers: ['Alt', 'Shift'], key: 'ArrowUp' });
 ```
 
+## Keep your place instead of following the moved text
+
+By default the cursor **follows** the moved selection and selects it where it lands - handy when you
+moved the text in order to keep working on it. When you move text to get it *out of the way*, you
+would rather stay put. The block below turns the jump off. Manual equivalent: toggle
+**Should jump to moved content** in **Settings → Advanced Note Composer**.
+
+Try a move both ways: with it on, the moved paragraph ends up selected at its destination; with it
+off, the moved text still lands there but your cursor stays where you cut it from.
+
+```code-button
+---
+caption: Stop the cursor following moved content, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldJumpToMovedContent: false });
+```
+
 ## Lock every note while marking
 
 By default only the source note is locked. The block below locks **all** notes while a mark

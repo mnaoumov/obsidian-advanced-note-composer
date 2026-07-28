@@ -102,6 +102,11 @@ The **Smart cut & paste** settings group lets you tailor this notice:
   **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
   tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
   hotkey you assigned to it keeps working.
+- **Should jump to moved content** (on by default) — whether the cursor follows the marked selection to
+  where it lands, selecting the moved text. Turn it off when you use a move to get text *out of the way*:
+  the cursor then stays where the selection was cut from, so you keep your place. It applies to every
+  smart cut & paste move alike (`Move marked selection here`, `at cursor`, `to top of file`, and `to
+  bottom of file`).
 - **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
   via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
   file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
