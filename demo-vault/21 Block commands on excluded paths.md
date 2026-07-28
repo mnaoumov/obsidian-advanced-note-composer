@@ -10,6 +10,16 @@ Turn on **Should block commands on excluded paths** to hide the commands entirel
 instead: they disappear from the command palette and from the editor, file, and folder context menus,
 so you cannot trigger them there at all.
 
+## Path forms
+
+Each line of **Include paths** / **Exclude paths** is either a path string or a `/regular expression/`,
+and they match differently:
+
+- A **path string** matches that note or folder **and everything inside it**. `Merge folder` covers
+  `Merge folder` itself and every note under it.
+- A **`/regular expression/`** is tested against the path exactly as written. That is how you match a
+  folder *without* its contents: `/^Merge folder$/` matches only the folder itself.
+
 ## Try it
 
 1. Open the plugin settings and, under **Include/exclude paths**, add a folder name (for example
@@ -21,5 +31,8 @@ so you cannot trigger them there at all.
 4. Right-click the same note again, or open the command palette on it: the Advanced Note Composer
    commands are gone.
 5. Open a note that is not in the excluded folder and confirm the commands are still available there.
+6. Now change the **Exclude paths** entry from `Merge folder` to `/^Merge folder$/`. Right-click a note
+   inside the folder: the commands are back, because the regex matches only the folder path itself.
+   Right-click the `Merge folder` folder: its commands are still hidden.
 
 The setting is off by default, so nothing changes until you opt in.
