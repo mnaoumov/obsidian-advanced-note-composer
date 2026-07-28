@@ -641,6 +641,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('You can use path string or ');
             appendCodeBlock(f, '/regular expression/');
             f.createEl('br');
+            appendPathFormsDesc(f);
+            f.createEl('br');
             f.appendText('If the setting is empty, all notes are included');
           }))
           .addMultipleText((multipleText) => {
@@ -657,6 +659,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.createEl('br');
             f.appendText('You can use path string or ');
             appendCodeBlock(f, '/regular expression/');
+            f.createEl('br');
+            appendPathFormsDesc(f);
             f.createEl('br');
             f.appendText('If the setting is empty, no notes are excluded');
           }))
@@ -813,4 +817,22 @@ function addAvailableTokens(f: DocumentFragment, shouldIncludeContentToken = tru
   appendCodeBlock(f, '{{date:FORMAT}}');
   f.appendText(', e.g. ');
   appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+}
+
+function appendPathFormsDesc(f: DocumentFragment): void {
+  f.appendText('A path string matches that note or folder and everything inside it, so ');
+  appendCodeBlock(f, 'Inbox');
+  f.appendText(' covers ');
+  appendCodeBlock(f, 'Inbox');
+  f.appendText(', ');
+  appendCodeBlock(f, 'Inbox/note.md');
+  f.appendText(' and ');
+  appendCodeBlock(f, 'Inbox/sub/deep.md');
+  f.appendText('.');
+  f.createEl('br');
+  f.appendText('A regular expression is tested against the path exactly as written, which is how you match a folder without its contents: ');
+  appendCodeBlock(f, '/^Inbox$/');
+  f.appendText(' matches only the ');
+  appendCodeBlock(f, 'Inbox');
+  f.appendText(' folder itself.');
 }

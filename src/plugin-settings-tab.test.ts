@@ -45,6 +45,11 @@ interface NamedComponent<T extends BaseComponent> {
   name: string;
 }
 
+interface NamedDesc {
+  name: string;
+  text: string;
+}
+
 interface TextBasedProbe {
   setPlaceholderValue?: unknown;
 }
@@ -54,6 +59,7 @@ const toggles: NamedComponent<ToggleComponent>[] = [];
 const texts: NamedComponent<TextComponent>[] = [];
 const dropdowns: NamedComponent<DropdownComponent>[] = [];
 const codeHighlighters: NamedComponent<CodeHighlighterComponent>[] = [];
+const descriptions: NamedDesc[] = [];
 
 vi.mock('obsidian-dev-utils/debug', () => ({
   getDebugController: vi.fn().mockReturnValue({
@@ -87,6 +93,7 @@ afterEach(() => {
   texts.length = 0;
   dropdowns.length = 0;
   codeHighlighters.length = 0;
+  descriptions.length = 0;
 });
 
 async function createSettingsComponent(): Promise<PluginSettingsComponent> {
@@ -121,6 +128,15 @@ function findCodeHighlighter(name: string): CodeHighlighterComponent {
   }
 
   return entry.component;
+}
+
+function findDesc(name: string): string {
+  const entry = descriptions.find((desc) => desc.name === name);
+  if (!entry) {
+    throw new Error(`Description for "${name}" was not rendered.`);
+  }
+
+  return entry.text;
 }
 
 function findText(name: string): TextComponent {
@@ -179,6 +195,17 @@ describe('PluginSettingsTab', () => {
     expect(allNames).toContain('Frontmatter merge strategy');
     expect(allNames).toContain('Should use source title when destination has none');
     expect(allNames).toContain('Should add commands to submenu');
+  });
+
+  it('should explain the path-string and regular-expression forms in the include/exclude path descriptions', async () => {
+    const tab = await createSettingsTab();
+    tab.displayLegacy();
+
+    for (const name of ['Include paths', 'Exclude paths']) {
+      const desc = findDesc(name);
+      expect(desc).toContain('A path string matches that note or folder and everything inside it');
+      expect(desc).toContain('/^Inbox$/');
+    }
   });
 
   it('should render the show-modal-instructions toggle bound to its setting', async () => {
@@ -349,6 +376,7 @@ function installSettingSpies(): void {
   spyOnAdd('addText', texts);
   spyOnAdd('addDropdown', dropdowns);
   spyOnAddCodeHighlighter();
+  spyOnSetDesc();
 }
 
 function spyOnAdd<T extends BaseComponent>(
@@ -380,4 +408,16 @@ function spyOnAddCodeHighlighter(): void {
       });
     }
   );
+}
+
+function spyOnSetDesc(): void {
+  const original = Setting.prototype.setDesc;
+  vi.spyOn(Setting.prototype, 'setDesc').mockImplementation(function setDescSpy(this: Setting, desc: DocumentFragment | string): Setting {
+    const result = original.call(this, desc);
+    descriptions.push({
+      name: this.nameEl.textContent,
+      text: this.descEl.textContent
+    });
+    return result;
+  });
 }

@@ -193,6 +193,19 @@ The `Merge current folder contents into a single file...` command (also on a fol
 
 Select two or more notes in the file explorer, right-click, and choose `Merge these files into one file...` to merge them all into a single target note at once (instead of merging one pair at a time). You pick the target from a suggester — your existing notes, with the selected notes excluded; to combine into a fresh note, create an empty note first and pick it. Each selected note is run through the same merge pipeline as a single-file merge (**Merge template**, **frontmatter merge strategy**, footnote fixing, link/backlink updates), the whole batch runs in one reversible, resource-locked transaction, the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on. The item appears only when two or more markdown notes are selected.
 
+## Include/exclude paths
+
+The **Include paths** and **Exclude paths** settings (under `Include/exclude paths`) decide which notes and folders this plugin works on. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`.
+
+The two forms match differently, and the difference is the thing worth knowing:
+
+- A **path string** matches that note or folder **and everything inside it**. So `Inbox` covers `Inbox`, `Inbox/note.md` and `Inbox/sub/deep.md` alike. This is what you want most of the time.
+- A **`/regular expression/`** is tested against the path exactly as written, with no subtree rule bolted on. That is how you match a folder *without* its contents: `/^Inbox$/` matches the `Inbox` folder itself and none of the notes in it. Likewise `/^Inbox\/[^/]+\.md$/` matches the notes directly inside `Inbox` but not the folder and not anything deeper.
+
+Ignored paths are skipped by the pickers, and the folder/file batch commands (`Merge current folder contents into a single file...`, `Merge these files into one file...`) skip and report ignored notes — unless **Should always merge excluded items** is on.
+
+By default the plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Turn **Should block commands on excluded paths** on to hide them entirely instead — they disappear from the command palette and from the editor, file, and folder context menus.
+
 ## Minimizing dialogs
 
 Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:

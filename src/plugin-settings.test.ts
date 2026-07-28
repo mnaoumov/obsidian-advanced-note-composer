@@ -157,6 +157,24 @@ describe('PluginSettings', () => {
     settings.includePaths = ['allowed'];
     expect(settings.isPathIgnored('not-allowed/file.md')).toBe(true);
   });
+
+  it('should treat a path string entry as the folder and its entire subtree', () => {
+    const settings = new PluginSettings();
+    settings.excludePaths = ['Inbox'];
+    expect(settings.isPathIgnored('Inbox')).toBe(true);
+    expect(settings.isPathIgnored('Inbox/note.md')).toBe(true);
+    expect(settings.isPathIgnored('Inbox/sub/deep.md')).toBe(true);
+    expect(settings.isPathIgnored('Other/note.md')).toBe(false);
+  });
+
+  it('should match only the folder itself for a regular expression entry anchored to it', () => {
+    const settings = new PluginSettings();
+    settings.excludePaths = ['/^Inbox$/'];
+    expect(settings.isPathIgnored('Inbox')).toBe(true);
+    expect(settings.isPathIgnored('Inbox/note.md')).toBe(false);
+    expect(settings.isPathIgnored('Inbox/sub/deep.md')).toBe(false);
+    expect(settings.isPathIgnored('Other/note.md')).toBe(false);
+  });
 });
 
 describe('PluginSettings.shouldBlockCommandOnPath', () => {
