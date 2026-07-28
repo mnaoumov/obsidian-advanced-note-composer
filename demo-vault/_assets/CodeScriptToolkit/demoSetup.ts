@@ -13,7 +13,8 @@ interface DemoSettingsPatch {
   mergeTemplate?: string;
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldAlwaysMergeExcludedItems?: boolean;
-  shouldJumpToMovedContent?: boolean;
+  shouldJumpToMovedContentToBottom?: boolean;
+  shouldJumpToMovedContentToTop?: boolean;
   shouldKeepHeadingsWhenSplittingContent?: boolean;
   shouldLockAllNotesWhenMarkingSelection?: boolean;
   shouldSwapEntireFolderStructureByDefault?: boolean;

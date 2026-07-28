@@ -55,6 +55,22 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
       targetCursorOffset: null
     };
   }
+
+  /**
+   * Unlike a move at the cursor, a move to an edge can be a "get it out of the way" move, where
+   * following the content costs the user their place — so each direction has its own setting
+   * (issue #144). Both default on, preserving the 5.0.0 behavior.
+   *
+   * @returns Whether to jump to the moved content.
+   */
+  protected override shouldJumpToMovedContent(): boolean {
+    const settings = this.pluginSettingsComponent.settings;
+    // No exhaustiveness check here: the constructor already rejected any other mode, so a `default`
+    // Branch would be unreachable.
+    return this.insertMode === InsertMode.Prepend
+      ? settings.shouldJumpToMovedContentToTop
+      : settings.shouldJumpToMovedContentToBottom;
+  }
 }
 
 function getCommandDefinition(insertMode: InsertMode): CommandDefinition {

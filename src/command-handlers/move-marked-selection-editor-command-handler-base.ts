@@ -57,10 +57,10 @@ interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
  * here.
  */
 export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
+  protected readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
-  private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams) {
@@ -195,6 +195,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
       selectedText: marked.selectedText,
       shouldFixFootnotes: options.shouldFixFootnotes,
       shouldIncludeFrontmatter: options.shouldIncludeFrontmatter,
+      shouldJumpToMovedContent: this.shouldJumpToMovedContent(),
       sourceFile,
       targetCursorEndOffset: insertion.targetCursorEndOffset,
       targetCursorOffset: insertion.targetCursorOffset,
@@ -228,6 +229,19 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
   }
 
   protected override shouldAddToEditorMenu(): boolean {
+    return true;
+  }
+
+  /**
+   * Whether the move should land the cursor on the moved content in the target note (issue #144).
+   *
+   * Unconditionally `true` here, which is what the cursor-targeted moves want: inserting text AT the
+   * cursor and then leaving the cursor somewhere else is incoherent. Only the top/bottom moves — where
+   * the point can be to get text out of the way and keep your place — override this with their settings.
+   *
+   * @returns Whether to jump to the moved content.
+   */
+  protected shouldJumpToMovedContent(): boolean {
     return true;
   }
 }

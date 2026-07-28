@@ -45,6 +45,12 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 
+  // Whether a smart cut & paste move lands the cursor on the moved content in the target (issue #144).
+  // Decided by the command handler, since only it knows which move this is: a move AT THE CURSOR always
+  // Jumps, while the top/bottom moves each read their own setting. Ignored unless
+  // `isSmartCutAndPasteMove` is set.
+  readonly shouldJumpToMovedContent?: boolean;
+
   // The end of the target range the move flow replaces with the token. When greater than
   // `targetCursorOffset`, the moved content replaces that range (paste-over-selection at the cursor);
   // `null`/omitted (or equal to `targetCursorOffset`) means a plain insertion at `targetCursorOffset`.
@@ -74,6 +80,7 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
   private readonly isSmartCutAndPasteMove: boolean;
   private readonly selectedText: string;
+  private readonly shouldJumpToMovedContent: boolean;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
   private readonly textAfterExtractionMode: TextAfterExtractionMode;
@@ -99,6 +106,7 @@ export class SplitComposer extends ComposerBase {
     this.isSmartCutAndPasteMove = params.isSmartCutAndPasteMove ?? false;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
+    this.shouldJumpToMovedContent = params.shouldJumpToMovedContent ?? true;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
     // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
@@ -208,10 +216,11 @@ export class SplitComposer extends ComposerBase {
         // On the moved content in the freshly opened target note, instead of leaving it wherever the
         // Opened note happened to place it (issue #144). Wait for the just-opened editor to settle
         // (load its content and apply its own default cursor) first, so the selection sticks.
-        // Gated on `shouldJumpToMovedContent` (default on): moving a selection out of the way is a
-        // Different intent from moving it to work on it, so the jump is opt-out. When off, the cursor
-        // Stays where the selection was cut from — `revealCursor` above already brought it into view.
-        if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.shouldJumpToMovedContent) {
+        // Whether to jump is decided by the command handler (a move at the cursor always does; the
+        // Top/bottom moves each read their own setting), because moving a selection out of the way is a
+        // Different intent from moving it to work on it. When off, the cursor stays where the selection
+        // Was cut from — `revealCursor` above already brought it into view.
+        if (this.isSmartCutAndPasteMove && this.shouldJumpToMovedContent) {
           const DELAY_BEFORE_SELECT_IN_MILLISECONDS = 300;
           await sleep(DELAY_BEFORE_SELECT_IN_MILLISECONDS);
           this.selectMovedContentInTarget();

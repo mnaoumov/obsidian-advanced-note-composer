@@ -128,9 +128,10 @@ describe('cursor follows the moved content (issue #144)', () => {
     expect(result.toBottom.selection).toBe('MOVED');
   });
 
-  // The off case. The test above is its positive control: it proves this harness DOES observe the jump
-  // When the setting is on, so an empty selection here is a real absence rather than a missed window.
-  it('leaves the cursor alone when "Should jump to moved content" is off', async () => {
+  // The off case, plus the proof that a move AT THE CURSOR ignores these settings entirely. The test
+  // Above is the positive control: it proves this harness DOES observe the jump when the settings are
+  // On, so an empty selection here is a real absence rather than a missed window.
+  it('leaves the cursor alone for edge moves when their jump settings are off, but still jumps at the cursor', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
@@ -138,10 +139,29 @@ describe('cursor follows the moved content (issue #144)', () => {
         // Comfortably past the jump's own delays (200 ms before the target opens + 300 ms before the
         // Selection is applied), so an empty selection cannot just mean "not yet".
         const PAST_JUMP_DELAY_IN_MILLISECONDS = 2000;
-        const SETTING_NAME = 'Should jump to moved content';
+        const SETTING_NAMES = [
+          'Should jump to content moved to top of file',
+          'Should jump to content moved to bottom of file'
+        ];
 
-        await setToggle(SETTING_NAME, false);
+        for (const settingName of SETTING_NAMES) {
+          await setToggle(settingName, false);
+        }
         try {
+          // Both edge moves stay put...
+          const toBottom = await markMoveAndReadSelection('move-marked-selection-to-bottom-of-file');
+          const toTop = await markMoveAndReadSelection('move-marked-selection-to-top-of-file');
+          // ...while a move at the cursor jumps anyway, with BOTH toggles still off.
+          const atCursor = await markMoveAndReadSelection('move-marked-selection-here', 7);
+          return { atCursor, toBottom, toTop };
+        } finally {
+          // Leave the shared instance on the defaults for the suites that follow.
+          for (const settingName of SETTING_NAMES) {
+            await setToggle(settingName, true);
+          }
+        }
+
+        async function markMoveAndReadSelection(command: string, targetCursorOffset?: number): Promise<MoveResult> {
           const source = await resetFile('cursor-no-jump-source.md', 'AAA MOVED CCC');
           const target = await resetFile('cursor-no-jump-target.md', 'target end');
 
@@ -151,14 +171,16 @@ describe('cursor follows the moved content (issue #144)', () => {
           app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
           await sleep(SETTLE_IN_MILLISECONDS);
 
-          // Move it to the bottom of the target — the reporter's "get it out of the way" case.
-          await openAndGetEditor(target);
-          app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-bottom-of-file`);
+          const targetEditor = await openAndGetEditor(target);
+          if (targetCursorOffset !== undefined) {
+            targetEditor.setCursor(targetEditor.offsetToPos(targetCursorOffset));
+          }
+          app.commands.executeCommandById(`${pluginId}:${command}`);
 
           // Wait for the move to actually land in the target and the target to be the active note (the
           // Source transiently shows the restored marked selection mid-operation).
           await waitUntil({
-            message: 'moved text did not arrive in the active target note',
+            message: `moved text did not arrive in the active target note for ${command}`,
             predicate: () => {
               const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
               return view?.file?.path === target.path && view.editor.getValue().includes('MOVED');
@@ -170,12 +192,8 @@ describe('cursor follows the moved content (issue #144)', () => {
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           return {
             activeFilePath: view?.file?.path ?? '',
-            content: view?.editor.getValue() ?? '',
             selection: view?.editor.getSelection() ?? ''
           };
-        } finally {
-          // Leave the shared instance on the defaults for the suites that follow.
-          await setToggle(SETTING_NAME, true);
         }
 
         async function resetFile(path: string, content: string): Promise<TFile> {
@@ -234,10 +252,16 @@ describe('cursor follows the moved content (issue #144)', () => {
       vaultPath: getTempVault().path
     });
 
-    // The move still happened — the moved text is in the target, which is the active note...
-    expect(result.activeFilePath).toBe('cursor-no-jump-target.md');
-    expect(result.content).toContain('MOVED');
-    // ...but nothing was selected, so the cursor stayed where the user left it.
-    expect(result.selection).toBe('');
+    // Each move still happened — the wait above only proceeds once the moved text is in the target and
+    // The target is the active note — but the edge moves left the cursor alone.
+    expect(result.toBottom.activeFilePath).toBe('cursor-no-jump-target.md');
+    expect(result.toBottom.selection).toBe('');
+
+    expect(result.toTop.activeFilePath).toBe('cursor-no-jump-target.md');
+    expect(result.toTop.selection).toBe('');
+
+    // A move at the cursor is not configurable and jumps regardless of those two toggles.
+    expect(result.atCursor.activeFilePath).toBe('cursor-no-jump-target.md');
+    expect(result.atCursor.selection).toBe('MOVED');
   });
 });

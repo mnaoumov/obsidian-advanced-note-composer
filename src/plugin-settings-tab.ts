@@ -574,24 +574,32 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
-          .setName('Should jump to moved content')
+          .setName('Should jump to content moved to top of file')
           .setDesc(createFragment((f) => {
-            f.appendText('Whether the cursor follows a marked selection to where it lands, selecting the moved text.');
+            f.appendText('Whether the cursor follows the marked selection after ');
+            appendCodeBlock(f, 'Move marked selection to top of file');
+            f.appendText(', selecting the moved text where it lands.');
+            f.createEl('br');
+            f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldJumpToMovedContentToTop', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should jump to content moved to bottom of file')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether the cursor follows the marked selection after ');
+            appendCodeBlock(f, 'Move marked selection to bottom of file');
+            f.appendText(', selecting the moved text where it lands.');
             f.createEl('br');
             f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
             f.createEl('br');
-            f.appendText('Applies to every smart cut & paste move (');
-            appendCodeBlock(f, 'Move marked selection here');
-            f.appendText(', ');
-            appendCodeBlock(f, 'at cursor');
-            f.appendText(', ');
-            appendCodeBlock(f, 'to top of file');
-            f.appendText(', and ');
-            appendCodeBlock(f, 'to bottom of file');
-            f.appendText(').');
+            f.appendText('There is no such setting for a move at the cursor: it always jumps, since inserting text at the cursor and then leaving the cursor elsewhere makes no sense.');
           }))
           .addToggle((toggle) => {
-            this.bind({ propertyName: 'shouldJumpToMovedContent', valueComponent: toggle });
+            this.bind({ propertyName: 'shouldJumpToMovedContentToBottom', valueComponent: toggle });
           });
       })
       .addSettingEx((setting: SettingEx) => {

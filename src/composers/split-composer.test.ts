@@ -60,6 +60,7 @@ interface CreateComposerOptions {
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly shouldJumpToMovedContent?: boolean;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
@@ -75,6 +76,7 @@ interface MockPosition {
 interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
+  readonly shouldJumpToMovedContent?: boolean;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
 }
@@ -198,7 +200,6 @@ function createPluginSettingsComponentStub(
       shouldApplyTextAfterExtractionToSameFile: false,
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
-      shouldJumpToMovedContent: true,
       shouldMergeHeadingsByDefault: false,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
@@ -227,6 +228,7 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
   return normalizeOptionalProperties<OptionalComposerParams>({
     insertToken: options?.insertToken,
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
+    shouldJumpToMovedContent: options?.shouldJumpToMovedContent,
     targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset
   });
@@ -710,7 +712,7 @@ describe('splitFile move mode', () => {
   });
 
   it('does not select the moved content when shouldJumpToMovedContent is off (issue #144 follow-up)', async () => {
-    // Identical to the test above except for the setting, so it isolates the gate: the move still runs
+    // Identical to the test above except for the flag, so it isolates the gate: the move still runs
     // (the target ends up holding the moved text), but the cursor is left where it was.
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
@@ -731,9 +733,9 @@ describe('splitFile move mode', () => {
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
-        shouldJumpToMovedContent: false,
         textAfterExtractionMode: TextAfterExtractionMode.None
       },
+      shouldJumpToMovedContent: false,
       targetCursorOffset: 7
     });
 
