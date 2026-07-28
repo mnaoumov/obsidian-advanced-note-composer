@@ -11,7 +11,10 @@ import type {
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import {
+  castTo,
+  normalizeOptionalProperties
+} from 'obsidian-dev-utils/object-utils';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
@@ -25,9 +28,11 @@ import {
   vi
 } from 'vitest';
 
+import type { SeedAttachmentPathSurfaceParams } from '../attachment-path.test-helpers.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { seedAttachmentPathSurface } from '../attachment-path.test-helpers.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeComposer } from './merge-composer.ts';
 
@@ -109,9 +114,11 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
     settings: strictProxy<PluginSettings>({
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
+      markdownAttachmentSubExtensions: ['excalidraw'],
       mergeTemplate: '{{content}}',
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,
+      shouldMoveAttachmentsWhenMergingFile: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
@@ -250,4 +257,89 @@ describe('MergeComposer', () => {
       expect(targetContent).toContain('[[other]]');
     });
   });
+
+  describe('attachment relocation (issue #161)', () => {
+    it('should move an attachment the source owns into the destination note\'s attachment folder', async () => {
+      initAttachmentApp();
+
+      await createAttachmentComposer().mergeFile();
+
+      // Attachments live beside their note, and the note now lives in `Other`.
+      expect(await app.vault.adapter.exists('Other/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('Docs/img.png')).toBe(false);
+      // The embed was rewritten by the vault's own rename before the content was merged.
+      expect(await app.vault.adapter.read('Other/target.md')).toContain('img.png');
+    });
+
+    it('should leave the attachment where it is when the setting is off', async () => {
+      initAttachmentApp();
+
+      await createAttachmentComposer({ shouldMoveAttachmentsWhenMergingFile: false }).mergeFile();
+
+      expect(await app.vault.adapter.exists('Docs/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('Other/img.png')).toBe(false);
+    });
+
+    it('should leave an attachment another note also references', async () => {
+      initAttachmentApp({ 'Docs/keeper.md': '![[img.png]]' });
+
+      await createAttachmentComposer().mergeFile();
+
+      expect(await app.vault.adapter.exists('Docs/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('Other/img.png')).toBe(false);
+    });
+
+    it('should honor an attachment-location plugin\'s destination', async () => {
+      // What issue #161 asked for: the destination comes from whatever patched Obsidian's attachment
+      // Resolution (e.g. Custom Attachment Location), without this plugin knowing that plugin exists.
+      initAttachmentApp({}, (notePath) => `Assets/${notePath.replace(/\.md$/, '')}`);
+
+      await createAttachmentComposer().mergeFile();
+
+      expect(await app.vault.adapter.exists('Assets/Other/target/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('Docs/img.png')).toBe(false);
+    });
+
+    it('should put the attachment back when the merge is cancelled', async () => {
+      initAttachmentApp();
+      const composer = createAttachmentComposer();
+      castTo<AbortableComposer>(composer).abortController.abort();
+
+      await composer.mergeFile();
+
+      expect(await app.vault.adapter.exists('Docs/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('Other/img.png')).toBe(false);
+      expect(await app.vault.adapter.exists('Docs/source.md')).toBe(true);
+    });
+  });
 });
+
+function createAttachmentComposer(settingsOverrides?: Partial<PluginSettings>): MergeComposer {
+  return new MergeComposer({
+    app,
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+    isNewTargetFile: false,
+    pluginNoticeComponent: createPluginNoticeComponentStub(),
+    pluginSettingsComponent: createPluginSettingsComponentStub({ shouldMoveAttachmentsWhenMergingFile: true, ...settingsOverrides }),
+    resourceLockComponent,
+    sourceFile: ensureNonNullable(app.vault.getFileByPath('Docs/source.md')),
+    targetFile: ensureNonNullable(app.vault.getFileByPath('Other/target.md'))
+  });
+}
+
+function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttachmentFolderPathForNote?: (notePath: string) => string): void {
+  resourceLockComponent.unload();
+  app = App.createConfigured__({
+    files: {
+      'Docs/img.png': 'PIC',
+      'Docs/source.md': '![[img.png]]',
+      'Other/target.md': 'target body',
+      ...extraFiles
+    }
+  }).asOriginalType__();
+  // Attachments live beside their note unless a plugin says otherwise, so the merge has to move the
+  // Image out of `Docs` and into `Other`.
+  seedAttachmentPathSurface(normalizeOptionalProperties<SeedAttachmentPathSurfaceParams>({ app, attachmentFolderPath: './', resolveAttachmentFolderPathForNote }));
+  resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
+  resourceLockComponent.load();
+}

@@ -11,11 +11,13 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { AttachmentToRelocate } from './attachments.ts';
 import type { FolderHeadingPlanEntry } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import {
+  collectAttachmentsOwnedByNote,
   collectAttachmentsToRelocate,
   relocateAttachments
 } from './attachments.ts';
@@ -63,6 +65,14 @@ export interface MergeFilesIntoSingleFileParams {
   readonly resourceLockComponent: ResourceLockComponent;
 
   /**
+   * Whether each source note's OWN attachments follow it into the target's attachment folder (issue
+   * #161) — the file-level rule, used by the multi-file merge, which has no folder to scope the
+   * attachments by. Ignored when {@link MergeFilesIntoSingleFileParams.attachmentSourceFolder} is
+   * given: a folder merge collects by folder instead.
+   */
+  readonly shouldRelocateOwnedAttachments?: boolean | undefined;
+
+  /**
    * The source notes to merge, in the order they should be concatenated into the target. The target
    * itself (if present) is skipped.
    */
@@ -91,6 +101,14 @@ export interface MergeFilesIntoSingleFileResult {
   readonly mergedCount: number;
 }
 
+interface CollectAttachmentsParams {
+  readonly app: App;
+  readonly folder: TFolder | undefined;
+  readonly markdownAttachmentSubExtensions: readonly string[];
+  readonly noteFiles: readonly TFile[];
+  readonly shouldRelocateOwnedAttachments: boolean;
+}
+
 /**
  * Merges every note in {@link MergeFilesIntoSingleFileParams.sourceFiles} into the single
  * {@link MergeFilesIntoSingleFileParams.targetFile}, in order, inside ONE reversible resource-locked
@@ -117,6 +135,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     pluginSettingsComponent,
     progressLabel,
     resourceLockComponent,
+    shouldRelocateOwnedAttachments,
     sourceFiles,
     targetFile
   } = params;
@@ -142,13 +161,14 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
 
   // Collected against the sources that will actually be merged, so an ignored note's attachments are
   // Left alone exactly as the note itself is.
-  const attachmentsToRelocate = attachmentSourceFolder
-    ? await collectAttachmentsToRelocate({
-      app,
-      folder: attachmentSourceFolder,
-      noteFiles: sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path))
-    })
-    : [];
+  const notesToCollectAttachmentsFor = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
+  const attachmentsToRelocate = await collectAttachments({
+    app,
+    folder: attachmentSourceFolder,
+    markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions,
+    noteFiles: notesToCollectAttachmentsFor,
+    shouldRelocateOwnedAttachments: shouldRelocateOwnedAttachments ?? false
+  });
 
   const lockTargets: LockTarget[] = [{ mode: 'file', pathOrFile: targetFile }];
   for (const sourceFile of sourcesToMerge) {
@@ -206,6 +226,9 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             // The whole batch shares ONE target: a per-file open would flicker the active tab through
             // Every merged note (issue #106), and a per-file notice would spam. The batch reports once.
             shouldMergeIgnoredTarget: settings.shouldAlwaysMergeExcludedItems,
+            // The batch relocates the attachments itself, once, before the first merge (see above), so
+            // The composer's own per-note relocation would move them a second time.
+            shouldMoveAttachments: false,
             shouldOpenAfterMerge: false,
             shouldShowNotice: false,
             sourceFile,
@@ -235,6 +258,41 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   warnIfTemplaterMissing(app, pluginNoticeComponent, settings.shouldRunTemplaterOnDestinationFile);
 
   return { aborted: false, ignoredSourceFiles, mergedCount };
+}
+
+/**
+ * Resolves which attachments this batch carries into the target, by the rule that fits the operation: a
+ * folder merge collects everything under the merged FOLDER (issue #160 item 3), while the multi-file
+ * merge — which has no folder — collects the attachments each source NOTE owns (issue #161). Neither
+ * applies when the corresponding setting is off, in which case nothing moves.
+ *
+ * @param params - The notes, the optional folder, and which rule to apply.
+ * @returns The attachments to relocate with their owning notes.
+ */
+async function collectAttachments(params: CollectAttachmentsParams): Promise<AttachmentToRelocate[]> {
+  const {
+    app,
+    folder,
+    markdownAttachmentSubExtensions,
+    noteFiles,
+    shouldRelocateOwnedAttachments
+  } = params;
+
+  if (folder) {
+    return await collectAttachmentsToRelocate({ app, folder, noteFiles });
+  }
+
+  if (!shouldRelocateOwnedAttachments) {
+    return [];
+  }
+
+  const attachments = new Map<string, AttachmentToRelocate>();
+  for (const noteFile of noteFiles) {
+    for (const attachment of collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions, noteFile })) {
+      attachments.set(attachment.file.path, attachment);
+    }
+  }
+  return [...attachments.values()];
 }
 
 function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, sourcePath: string, targetPath: string): boolean {

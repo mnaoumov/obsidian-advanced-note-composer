@@ -54,6 +54,26 @@ export interface AttachmentToRelocate {
 }
 
 /**
+ * Parameters for {@link collectAttachmentsOwnedByNote}.
+ */
+export interface CollectAttachmentsOwnedByNoteParams {
+  /**
+   * The Obsidian application instance.
+   */
+  readonly app: App;
+
+  /**
+   * The configured sub-extensions that make a markdown file an attachment, e.g. `['excalidraw']`.
+   */
+  readonly markdownAttachmentSubExtensions: readonly string[];
+
+  /**
+   * The note whose attachments are collected.
+   */
+  readonly noteFile: TFile;
+}
+
+/**
  * Parameters for {@link collectAttachmentsToRelocate}.
  */
 export interface CollectAttachmentsToRelocateParams {
@@ -132,6 +152,50 @@ export interface ResolveAttachmentDestinationParams {
    * The note the attachment used to belong to.
    */
   readonly oldNoteFile: TFile;
+}
+
+/**
+ * Collects the attachments a single note owns, so a file-level merge can carry them into the target
+ * note's attachment folder (issue #161). A note is "the owner" of an attachment when
+ *
+ * the note references it (the metadata cache's resolved links, which cover embeds) and NO other note
+ * does — a shared attachment belongs to no single note, so moving it with one of them would drag it away
+ * from the others.
+ *
+ * Links to ordinary notes are never collected; a markdown file that is really an attachment
+ * ({@link isMarkdownAttachment}) is.
+ *
+ * Deliberately narrower than {@link collectAttachmentsToRelocate}, which ALSO takes unreferenced files
+ * sitting at a proper attachment path: that rule is only safe because a folder merge is moving the whole
+ * folder anyway. A single note shares its folder with its neighbors, so the same rule would drag files
+ * that have nothing to do with it. An unreferenced stray in a per-note attachment folder is therefore
+ * left behind — the cost of never touching a file the merged note does not point at.
+ *
+ * @param params - The note, the app, and the markdown-attachment sub-extensions.
+ * @returns The attachments to relocate with their owning note, in path order.
+ */
+export function collectAttachmentsOwnedByNote(params: CollectAttachmentsOwnedByNoteParams): AttachmentToRelocate[] {
+  const { app, markdownAttachmentSubExtensions, noteFile } = params;
+
+  const candidates = new Map<string, TFile>();
+  /* v8 ignore next -- defensive ?? for a note the metadata cache has not indexed yet. */
+  for (const linkPath of Object.keys(app.metadataCache.resolvedLinks[noteFile.path] ?? {})) {
+    const linkedFile = app.vault.getFileByPath(linkPath);
+    if (linkedFile && isAttachmentFile(linkedFile, markdownAttachmentSubExtensions)) {
+      candidates.set(linkedFile.path, linkedFile);
+    }
+  }
+
+  const pathsReferencedByOtherNotes = collectPathsReferencedByOtherNotes(app, noteFile);
+  const attachments: AttachmentToRelocate[] = [];
+  for (const candidate of candidates.values()) {
+    if (pathsReferencedByOtherNotes.has(candidate.path)) {
+      continue;
+    }
+    attachments.push({ file: candidate, ownerNoteFile: noteFile });
+  }
+
+  return attachments.sort((a, b) => a.file.path.localeCompare(b.file.path));
 }
 
 /**
@@ -275,6 +339,24 @@ export async function resolveAttachmentDestination(params: ResolveAttachmentDest
   });
 }
 
+/*
+ * Read out of the metadata cache's resolved links rather than out of the backlink index: the resolved
+ * links are the same source the folder collector above reads, one pass answers it for every candidate at
+ * once, and it needs nothing the backlink index adds (link positions, subpaths).
+ */
+function collectPathsReferencedByOtherNotes(app: App, noteFile: TFile): Set<string> {
+  const paths = new Set<string>();
+  for (const [sourcePath, links] of Object.entries(app.metadataCache.resolvedLinks)) {
+    if (sourcePath === noteFile.path) {
+      continue;
+    }
+    for (const linkPath of Object.keys(links)) {
+      paths.add(linkPath);
+    }
+  }
+  return paths;
+}
+
 async function findNoteOwningAttachmentPath(app: App, attachment: TFile, noteFiles: readonly TFile[]): Promise<null | TFile> {
   const attachmentFolderPath = normalizeFolderPath(attachment.parent?.path);
   for (const noteFile of noteFiles) {
@@ -300,6 +382,10 @@ function isAncestorOrSelf(ancestorFolderPath: string, folderPath: string): boole
     return true;
   }
   return folderPath === ancestorFolderPath || folderPath.startsWith(`${ancestorFolderPath}/`);
+}
+
+function isAttachmentFile(file: TFile, markdownAttachmentSubExtensions: readonly string[]): boolean {
+  return !isMarkdownFile(file) || isMarkdownAttachment({ file, markdownAttachmentSubExtensions });
 }
 
 function normalizeFolderPath(folderPath: string | undefined): string {

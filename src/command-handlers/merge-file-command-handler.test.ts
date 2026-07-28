@@ -107,7 +107,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
+        shouldMoveAttachmentsWhenMergingFile: true
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -325,6 +326,7 @@ describe('MergeFileCommandHandler', () => {
       pluginSettingsComponent: params.pluginSettingsComponent,
       progressLabel: 'Merging files',
       resourceLockComponent: params.resourceLockComponent,
+      shouldRelocateOwnedAttachments: true,
       sourceFiles,
       targetFile
     });

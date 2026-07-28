@@ -198,7 +198,13 @@ Four settings under `Merge folders` shape the result:
 - **Should move attachments when merging a folder** (on by default) carries the merged notes' attachments into the merged note's attachment folder, so nothing is stranded in a folder that is about to disappear. The destination comes from your vault's own attachment settings, which means [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is honored when you have it installed. An attachment moves when one of the merged notes references it, or when it already sits where that note's attachments belong. Turn it off to leave attachments exactly where they are.
 - **Empty folders after merging a folder** decides what happens to the folders the merge empties: `Delete` (the default) removes the merged folder and every emptied sub-folder, `Delete with empty parents` also removes any parent left empty, and `Keep` leaves everything in place. A folder still holding files is always kept, and nothing is deleted if the merge is cancelled.
 
-Markdown files that are really attachments are never merged: **Markdown attachment sub-extensions** (default `excalidraw`) lists the sub-extensions that mark them, so an Excalidraw drawing — stored as `sketch.excalidraw.md` — keeps its raw payload out of the merged note and is relocated with the other attachments instead.
+Markdown files that are really attachments are never merged: **Markdown attachment sub-extensions** (default `excalidraw`) lists the sub-extensions that mark them, so an Excalidraw drawing — stored as `sketch.excalidraw.md` — keeps its raw payload out of the merged note and is relocated with the other attachments instead. The same applies to `Merge current folder with another folder...`: a drawing is moved into the destination folder like any other attachment (de-duplicated if one of the same name is already there) rather than merged into it.
+
+## Attachments when merging files
+
+**Should move attachments when merging a file** (under `Merge`, on by default) makes the attachments a note owns follow it when `Merge current file with another file...` merges that note away — otherwise they would be left behind in a folder the note no longer lives in. It applies to `Merge these files into one file...` too.
+
+An attachment moves when the merged note references it and **no other note does**; an attachment several notes share belongs to none of them and stays where it is. The destination comes from your vault's own attachment settings, which means [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is honored when you have it installed — this plugin never computes attachment paths itself. Attachments move inside the merge's own transaction, so cancelling the merge puts them back.
 
 ## Merge multiple selected files
 

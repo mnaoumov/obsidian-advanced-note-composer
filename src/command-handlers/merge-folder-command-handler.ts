@@ -34,6 +34,7 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isMarkdownAttachment } from '../attachments.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
@@ -189,6 +190,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   private async mergeFolderImpl(params: MergeFolderCommandHandlerMergeFolderImplParams): Promise<void> {
     const { abortController, sourceFolder, targetFolder, vaultTransaction } = params;
+    const { settings } = this.pluginSettingsComponent;
     const sourceSubfolders: TFolder[] = [];
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];
@@ -201,7 +203,10 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!isFile(child)) {
         return;
       }
-      if (isMarkdownFile(child)) {
+      // A markdown-shaped attachment (an Excalidraw drawing is a `.md` file) is moved like any other
+      // Attachment, never merged: merging it into a same-named drawing in the destination would
+      // Concatenate two raw payloads (issue #160 item 3, issue #161).
+      if (isMarkdownFile(child) && !isMarkdownAttachment({ file: child, markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions })) {
         sourceMdFiles.push(child);
         return;
       }
@@ -307,6 +312,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         // Cycling" of issue #106 (the active tab flickers through every target note). The single-file
         // Merge keeps honoring the `shouldOpenNoteAfterMerge` setting; the batch suppresses it.
         shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems,
+        // Every non-note file of the folder is moved structurally below, mirroring the source layout, so
+        // The per-note attachment relocation of a single-file merge would move them a second time.
+        shouldMoveAttachments: false,
         shouldOpenAfterMerge: false,
         shouldShowNotice: false,
         sourceFile: sourceMdFile,

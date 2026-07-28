@@ -1,4 +1,5 @@
 import type { App } from 'obsidian';
+import type { GetAvailablePathForAttachmentsExtendedFnParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { TFolder } from 'obsidian-test-mocks/obsidian';
@@ -17,6 +18,14 @@ export interface SeedAttachmentPathSurfaceParams {
    * means "same folder as the note", `./sub` a sub-folder of it, and anything else a fixed folder.
    */
   readonly attachmentFolderPath?: string;
+
+  /**
+   * When given, an attachment-location plugin (e.g. Custom Attachment Location) is simulated: the
+   * callback maps a note's path to the folder its attachments belong in, installed as the `extended`
+   * member `obsidian-dev-utils` dispatches to. This is the only way a note gets an attachment folder OF
+   * ITS OWN — every native Obsidian mode resolves the same folder for every note in a folder.
+   */
+  resolveAttachmentFolderPathForNote?(this: void, notePath: string): string;
 }
 
 interface AttachmentPathSurface {
@@ -25,8 +34,16 @@ interface AttachmentPathSurface {
   getConfig(key: string): unknown;
 }
 
+interface ExtendedProvider {
+  extended(params: GetAvailablePathForAttachmentsExtendedFnParams): Promise<string>;
+}
+
 interface ParentPrefixProvider {
   getParentPrefix(this: TFolder): string;
+}
+
+interface PathCarrier {
+  path: string;
 }
 
 /*
@@ -56,10 +73,23 @@ castTo<ParentPrefixProvider>(TFolder.prototype).getParentPrefix = function getPa
  * @param params - The app to seed and the attachment folder setting to report.
  */
 export function seedAttachmentPathSurface(params: SeedAttachmentPathSurfaceParams): void {
-  const { app, attachmentFolderPath = '/' } = params;
+  const { app, attachmentFolderPath = '/', resolveAttachmentFolderPathForNote } = params;
   const vault = castTo<AttachmentPathSurface>(app.vault);
 
-  vault.getConfig = (key: string): unknown => key === 'attachmentFolderPath' ? attachmentFolderPath : undefined;
+  vault.getConfig = (key: string): unknown => {
+    switch (key) {
+      case 'attachmentFolderPath':
+        return attachmentFolderPath;
+      // Read by the link rewriting that follows a moved attachment. Absolute wikilinks are the
+      // Deterministic choice: `shortest` would depend on the rest of the fixture vault.
+      case 'newLinkFormat':
+        return 'absolute';
+      case 'useMarkdownLinks':
+        return false;
+      default:
+        return undefined;
+    }
+  };
 
   vault.getAvailablePath = (basePath: string, extension: string): string => {
     if (!app.vault.getAbstractFileByPath(`${basePath}.${extension}`)) {
@@ -75,7 +105,26 @@ export function seedAttachmentPathSurface(params: SeedAttachmentPathSurfaceParam
     }
   };
 
-  vault.getAvailablePathForAttachments = (): never => {
+  function getAvailablePathForAttachments(): never {
     throw new Error('getAvailablePathForAttachments should not be called without an extended override.');
-  };
+  }
+
+  if (resolveAttachmentFolderPathForNote) {
+    castTo<ExtendedProvider>(getAvailablePathForAttachments).extended = (extendedParams: GetAvailablePathForAttachmentsExtendedFnParams): Promise<string> => {
+      const notePath = getNotePath(extendedParams.notePathOrFile);
+      const folderPath = resolveAttachmentFolderPathForNote(notePath);
+      const basePath = folderPath === '' ? extendedParams.attachmentFileBaseName : `${folderPath}/${extendedParams.attachmentFileBaseName}`;
+      return Promise.resolve(
+        extendedParams.shouldSkipDuplicateCheck
+          ? `${basePath}.${extendedParams.attachmentFileExtension}`
+          : vault.getAvailablePath(basePath, extendedParams.attachmentFileExtension)
+      );
+    };
+  }
+
+  vault.getAvailablePathForAttachments = getAvailablePathForAttachments;
+}
+
+function getNotePath(notePathOrFile: unknown): string {
+  return typeof notePathOrFile === 'string' ? notePathOrFile : castTo<PathCarrier>(notePathOrFile).path;
 }

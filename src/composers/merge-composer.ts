@@ -7,6 +7,7 @@ import {
   updateLink
 } from 'obsidian-dev-utils/obsidian/link';
 
+import type { LockTarget } from '../locked-transaction.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type {
   ComposerBaseConstructorParamsBase,
@@ -14,6 +15,10 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import {
+  collectAttachmentsOwnedByNote,
+  relocateAttachments
+} from '../attachments.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
@@ -21,6 +26,14 @@ import { ComposerBase } from './composer-base.ts';
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  /**
+   * Whether the source note's own attachments follow it into the target note's attachment folder (issue
+   * #161). Defaults to the `shouldMoveAttachmentsWhenMergingFile` setting. The batch merges pass
+   * `false`: the folder-into-file merge relocates the whole folder's attachments itself, and the
+   * folder-into-folder merge moves every non-note file structurally, so either would move them twice.
+   */
+  readonly shouldMoveAttachments?: boolean;
 
   /**
    * Whether to open the merged target note in the active leaf once the merge completes. Defaults to the
@@ -35,6 +48,7 @@ export class MergeComposer extends ComposerBase {
   protected override readonly shouldKeepSourceTitleForNewTargetFile: boolean = true;
 
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly shouldMoveAttachments: boolean;
   private readonly shouldOpenAfterMerge: boolean;
 
   public constructor(params: MergeComposerConstructorParams) {
@@ -45,12 +59,23 @@ export class MergeComposer extends ComposerBase {
 
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.shouldOpenAfterMerge = params.shouldOpenAfterMerge ?? params.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge;
+    this.shouldMoveAttachments = params.shouldMoveAttachments ?? params.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile;
   }
 
   public async mergeFile(): Promise<void> {
     if (!await this.checkTargetFileIgnored(Action.Merge)) {
       return;
     }
+
+    // Collected before the transaction so every attachment can be locked alongside the two notes: an
+    // External change to one of them must abort the merge just as a change to a note does.
+    const attachmentsToRelocate = this.shouldMoveAttachments
+      ? collectAttachmentsOwnedByNote({
+        app: this.app,
+        markdownAttachmentSubExtensions: this.pluginSettingsComponent.settings.markdownAttachmentSubExtensions,
+        noteFile: this.sourceFile
+      })
+      : [];
 
     const mtimes = this.captureFileMtimes();
     const progressNotice = this.shouldShowNotice
@@ -66,12 +91,28 @@ export class MergeComposer extends ComposerBase {
         app: this.app,
         body: async (vaultTransaction) => {
           this.consoleDebugComponent.consoleDebug(`Merging note ${this.sourceFile.path} into ${this.targetFile.path}`);
-          const sourceContent = await this.app.vault.read(this.sourceFile);
+          let sourceContent = await this.app.vault.read(this.sourceFile);
           if (!await this.checkFilesUnchanged(mtimes)) {
             // The pre-flight guard tripped (an external change): abort so nothing is committed and the
             // Post-merge open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
             this.abortController.abort();
             return;
+          }
+          if (attachmentsToRelocate.length > 0) {
+            // Moved while the source note still exists, so the vault's own rename updates the links to
+            // Them inside it — hence the re-read below, which picks up the new locations before the
+            // Content is merged. It has to happen after the mtime guard above, which the plugin's own
+            // Write to the source would otherwise trip.
+            await relocateAttachments({
+              app: this.app,
+              relocations: attachmentsToRelocate.map((attachment) => ({
+                attachment: attachment.file,
+                newNoteFile: this.targetFile,
+                oldNoteFile: attachment.ownerNoteFile
+              })),
+              vaultTransaction
+            });
+            sourceContent = await this.app.vault.read(this.sourceFile);
           }
           await this.insertIntoTargetFile(sourceContent, vaultTransaction);
           await vaultTransaction.trash(this.sourceFile);
@@ -79,7 +120,8 @@ export class MergeComposer extends ComposerBase {
         injectedVaultTransaction: this.injectedVaultTransaction,
         lockTargets: [
           { mode: 'file', pathOrFile: this.sourceFile },
-          { mode: 'file', pathOrFile: this.targetFile }
+          { mode: 'file', pathOrFile: this.targetFile },
+          ...attachmentsToRelocate.map((attachment): LockTarget => ({ mode: 'file', pathOrFile: attachment.file }))
         ],
         operationName: 'Merge notes',
         resourceLockComponent: this.resourceLockComponent

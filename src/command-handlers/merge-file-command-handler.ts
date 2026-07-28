@@ -127,6 +127,8 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent,
       progressLabel: 'Merging files',
       resourceLockComponent: this.resourceLockComponent,
+      // No folder scopes this merge, so each source note carries the attachments it owns (issue #161).
+      shouldRelocateOwnedAttachments: this.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile,
       sourceFiles,
       targetFile
     });
