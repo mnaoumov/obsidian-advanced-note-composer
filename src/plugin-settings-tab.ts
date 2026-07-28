@@ -274,6 +274,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should move attachments when merging a file')
+          .setDesc(createFragment((f) => {
+            f.appendText('When ');
+            appendCodeBlock(f, 'Merge current file with another file...');
+            f.appendText(' merges a note away, whether the attachments that note owns follow into the destination note\'s attachment folder.');
+            f.createEl('br');
+            f.appendText('The destination honors your vault\'s attachment settings, including ');
+            /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+            f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+            f.appendText(' when it is installed.');
+            f.createEl('br');
+            f.appendText(
+              'An attachment moves when the merged note references it and no other note does, or when it sits in an attachment folder belonging to that note alone. A shared attachment stays where it is.'
+            );
+            f.createEl('br');
+            f.appendText('Also applies to ');
+            appendCodeBlock(f, 'Merge these files into one file...');
+            f.appendText('.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFile', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Merge template')
           .setDesc(createFragment((f) => {
             f.appendText('Template to use when merging notes.');
@@ -753,7 +778,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         setting
           .setName('Markdown attachment sub-extensions')
           .setDesc(createFragment((f) => {
-            f.appendText('Markdown files whose name ends with one of these sub-extensions are treated as attachments, not notes, so a folder merge never inlines their contents.');
+            f.appendText('Markdown files whose name ends with one of these sub-extensions are treated as attachments, not notes, so a merge never inlines their contents.');
             f.createEl('br');
             f.appendText('Insert one sub-extension per line, without the leading dot. For example, ');
             appendCodeBlock(f, 'excalidraw');

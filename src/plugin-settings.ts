@@ -40,8 +40,9 @@ export class PluginSettings {
   /**
    * Sub-extensions that make a markdown file an attachment rather than a note, matched against the file's
    * base name (Obsidian reports `sketch.excalidraw.md` as base name `sketch.excalidraw`, extension `md`).
-   * Such a file is never merged into a folder-merge target — inlining an Excalidraw drawing's raw payload
-   * into a note is never what the user wanted (issue #160).
+   * Such a file is never merged — inlining an Excalidraw drawing's raw payload into a note is never what
+   * the user wanted (issue #160). It is moved like any other attachment instead: by the folder merges
+   * (into a single file, or into another folder) and by the file merge that owns it (issue #161).
    */
   public markdownAttachmentSubExtensions: string[] = ['excalidraw'];
 
@@ -73,6 +74,7 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
+  public shouldMoveAttachmentsWhenMergingFile = true;
   public shouldMoveAttachmentsWhenMergingFolder = true;
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
