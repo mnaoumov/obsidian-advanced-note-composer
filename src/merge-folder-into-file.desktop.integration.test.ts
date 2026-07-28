@@ -21,7 +21,12 @@ interface ComponentTreeNode {
 }
 
 interface MergeSettings {
+  emptyFolderBehaviorAfterMergingFolder: string;
+  markdownAttachmentSubExtensions: string[];
+  mergeFolderIntoFileNoteNameTemplate: string;
   shouldAskBeforeMerging: boolean;
+  shouldConvertFoldersToHeadingsWhenMergingFolder: boolean;
+  shouldMoveAttachmentsWhenMergingFolder: boolean;
 }
 
 interface SettingsCarrier {
@@ -127,5 +132,230 @@ describe('merge folder contents into a single file (issue #92)', () => {
     // The source notes were deleted.
     expect(result.alphaSourceGone).toBe(true);
     expect(result.bravoSourceGone).toBe(true);
+  });
+
+  it('names the merged note from the template and turns sub-folders into demoted headings (issue #160)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.mergeFolderIntoFileNoteNameTemplate = '{{folderName}} summary';
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = true;
+            settings.emptyFolderBehaviorAfterMergingFolder = 'Keep';
+          });
+
+          await trashIfExists('headings-src');
+          await trashIfExists('headings-src summary.md');
+
+          await app.vault.createFolder('headings-src');
+          await app.vault.createFolder('headings-src/api');
+          await app.vault.createFolder('headings-src/api/v2');
+          const intro = await app.vault.create('headings-src/intro.md', '# Intro\nintro body');
+          await app.vault.create('headings-src/api/get.md', '# Get\nget body');
+          await app.vault.create('headings-src/api/v2/put.md', '# Put\nput body');
+
+          await openFile(intro);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'the templated merged note was not created',
+            predicate: () => app.vault.getAbstractFileByPath('headings-src summary.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('headings-src summary.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          return {
+            defaultNameUnused: app.vault.getAbstractFileByPath('headings-src.md') === null,
+            hasDemotedGet: mergedContent.includes('## Get'),
+            hasDemotedPut: mergedContent.includes('### Put'),
+            hasFolderHeading: mergedContent.includes('# api'),
+            hasNestedFolderHeading: mergedContent.includes('## v2'),
+            hasUndemotedIntro: mergedContent.includes('# Intro')
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.mergeFolderIntoFileNoteNameTemplate = original.mergeFolderIntoFileNoteNameTemplate;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = original.shouldConvertFoldersToHeadingsWhenMergingFolder;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The template named the note, so the default `<Folder Name>.md` was never used.
+    expect(result.defaultNameUnused).toBe(true);
+    // A note directly in the merged folder keeps its own heading level; each sub-folder is headed at its
+    // Depth and the notes inside it are demoted to match.
+    expect(result.hasUndemotedIntro).toBe(true);
+    expect(result.hasFolderHeading).toBe(true);
+    expect(result.hasDemotedGet).toBe(true);
+    expect(result.hasNestedFolderHeading).toBe(true);
+    expect(result.hasDemotedPut).toBe(true);
+  });
+
+  it('excludes an Excalidraw drawing, moves attachments over, and deletes the emptied folders (issues #160, #161)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.shouldMoveAttachmentsWhenMergingFolder = true;
+            settings.markdownAttachmentSubExtensions = ['excalidraw'];
+            settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
+          });
+          // Obsidian's own default: attachments live at the vault root, which is where the merged note's
+          // Attachments belong once it is created beside the folder.
+          app.vault.setConfig('attachmentFolderPath', '/');
+
+          await trashIfExists('attach-src');
+          await trashIfExists('attach-src.md');
+          await trashIfExists('pic.png');
+          await trashIfExists('sketch.excalidraw.md');
+
+          await app.vault.createFolder('attach-src');
+          await app.vault.createFolder('attach-src/sub');
+          await app.vault.createBinary('attach-src/sub/pic.png', new ArrayBuffer(4));
+          await app.vault.create('attach-src/sketch.excalidraw.md', 'raw excalidraw payload');
+          // The note sits directly in the merged folder: the command resolves the folder from the ACTIVE
+          // File's parent, so opening a note in `sub` would merge `sub` instead.
+          const note = await app.vault.create('attach-src/note.md', '![[pic.png]]\nnote body');
+
+          await openFile(note);
+          await waitUntil({
+            message: 'embed cache not ready',
+            predicate: () => (app.metadataCache.getFileCache(note)?.embeds ?? []).length === 1
+          });
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'merged single file was not created',
+            predicate: () => app.vault.getAbstractFileByPath('attach-src.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('attach-src.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          return {
+            drawingKept: app.vault.getAbstractFileByPath('attach-src/sketch.excalidraw.md') !== null
+              || app.vault.getAbstractFileByPath('sketch.excalidraw.md') !== null,
+            drawingNotMerged: !mergedContent.includes('raw excalidraw payload'),
+            hasNoteBody: mergedContent.includes('note body'),
+            picMoved: app.vault.getAbstractFileByPath('pic.png') !== null,
+            subFolderGone: app.vault.getAbstractFileByPath('attach-src/sub') === null
+          };
+        } finally {
+          app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.shouldMoveAttachmentsWhenMergingFolder = original.shouldMoveAttachmentsWhenMergingFolder;
+            settings.markdownAttachmentSubExtensions = original.markdownAttachmentSubExtensions;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The ordinary note was merged; the Excalidraw drawing's raw payload was not, and the drawing lives on.
+    expect(result.hasNoteBody).toBe(true);
+    expect(result.drawingNotMerged).toBe(true);
+    expect(result.drawingKept).toBe(true);
+    // The referenced image followed the notes into the merged note's attachment folder (the vault root),
+    // Which is what lets the emptied sub-folder be deleted.
+    expect(result.picMoved).toBe(true);
+    expect(result.subFolderGone).toBe(true);
   });
 });
