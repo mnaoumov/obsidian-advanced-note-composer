@@ -12,7 +12,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { openModal } from '../open-minimizable-modal.ts';
-import { reorderSuggestionsByRecentFolders } from '../recent-folder-suggestions.ts';
+import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
 
 interface IsAllowedMoveTargetParams {
   readonly app: App;

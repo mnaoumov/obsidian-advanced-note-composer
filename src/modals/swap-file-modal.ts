@@ -20,6 +20,7 @@ import {
   openMinimizableModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { reorderSuggestionsByRecentFiles } from '../recent-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 interface BuildSwapConfirmContentParams {
@@ -71,36 +72,12 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
   }
 
   public override getSuggestions(query: string): FuzzyMatch<TFile>[] {
-    const suggestions = super.getSuggestions(query);
-    if (query) {
-      return suggestions;
-    }
-    const recentFilePaths = this.app.workspace.getRecentFiles({
-      showCanvas: true,
-      showImages: true,
-      showMarkdown: true,
-      showNonAttachments: true,
-      showNonImageAttachments: true
+    return reorderSuggestionsByRecentFiles({
+      app: this.app,
+      isAllowedFile: (file) => this.isAllowedTargetFile(file),
+      query,
+      suggestions: super.getSuggestions(query)
     });
-    const recentFiles: TFile[] = [];
-    const recentFilesSet = new Set<TFile>();
-    for (const filePath of recentFilePaths) {
-      const recentFile = this.app.vault.getFileByPath(filePath);
-      if (!recentFile) {
-        continue;
-      }
-      if (!this.isAllowedTargetFile(recentFile)) {
-        continue;
-      }
-      if (recentFilesSet.has(recentFile)) {
-        continue;
-      }
-      recentFilesSet.add(recentFile);
-      recentFiles.push(recentFile);
-    }
-    const recentSuggestions = recentFiles.map((recenTFile) => ({ item: recenTFile, match: { matches: [], score: 0 } }));
-    const otherSuggestions = suggestions.filter((suggestion) => !recentFilesSet.has(suggestion.item));
-    return [...recentSuggestions, ...otherSuggestions];
   }
 
   public override onChooseItem(item: TFile): void {
