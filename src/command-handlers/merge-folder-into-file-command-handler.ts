@@ -24,6 +24,7 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isMarkdownAttachment } from '../attachments.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
@@ -89,7 +90,10 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const sourceMdFiles = collectNotesDepthFirst(folder);
+    const { settings } = this.pluginSettingsComponent;
+    // Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are never merged: their raw
+    // Payload would land in the merged note. They are relocated with the other attachments instead.
+    const sourceMdFiles = collectNotesDepthFirst(folder).filter((file) => !isMarkdownAttachment({ file, markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions }));
 
     if (sourceMdFiles.length === 0) {
       this.pluginNoticeComponent.showNotice(
@@ -119,8 +123,9 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
     const result = await mergeFilesIntoSingleFile({
       app: this.app,
+      attachmentSourceFolder: settings.shouldMoveAttachmentsWhenMergingFolder ? folder : undefined,
       consoleDebugComponent: this.consoleDebugComponent,
-      folderHeadingPlan: this.pluginSettingsComponent.settings.shouldConvertFoldersToHeadingsWhenMergingFolder
+      folderHeadingPlan: settings.shouldConvertFoldersToHeadingsWhenMergingFolder
         ? buildFolderHeadingPlan({ filePaths: sourceMdFiles.map((sourceMdFile) => sourceMdFile.path), rootPath: folder.path })
         : undefined,
       isNewTargetFile: true,

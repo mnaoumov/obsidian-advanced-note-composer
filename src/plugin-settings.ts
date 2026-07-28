@@ -28,6 +28,15 @@ export enum TextAfterExtractionMode {
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
+
+  /**
+   * Sub-extensions that make a markdown file an attachment rather than a note, matched against the file's
+   * base name (Obsidian reports `sketch.excalidraw.md` as base name `sketch.excalidraw`, extension `md`).
+   * Such a file is never merged into a folder-merge target — inlining an Excalidraw drawing's raw payload
+   * into a note is never what the user wanted (issue #160).
+   */
+  public markdownAttachmentSubExtensions: string[] = ['excalidraw'];
+
   public mergeFolderIntoFileNoteNameTemplate = '';
   public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
@@ -56,6 +65,7 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
+  public shouldMoveAttachmentsWhenMergingFolder = true;
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;

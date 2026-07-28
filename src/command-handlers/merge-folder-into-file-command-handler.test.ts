@@ -24,6 +24,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { seedAttachmentPathSurface } from '../attachment-path.test-helpers.ts';
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
@@ -87,6 +88,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
+        markdownAttachmentSubExtensions: ['excalidraw'],
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
@@ -95,6 +97,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldConvertFoldersToHeadingsWhenMergingFolder: false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
+        shouldMoveAttachmentsWhenMergingFolder: false,
         shouldOpenNoteAfterMerge: false,
         shouldRunTemplaterOnDestinationFile: false,
         shouldUseSourceTitleWhenTargetHasNoTitle: false,
@@ -116,6 +119,9 @@ function getFolder(path: string): TFolder {
 function initApp(files: Record<string, string>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  // Obsidian's default attachment folder is the vault root, which is where a merged note's attachments
+  // Belong once the notes under the folder are gone.
+  seedAttachmentPathSurface({ app });
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
 }
@@ -262,6 +268,82 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     const merged = await app.vault.adapter.read('src.md');
     expect(merged).toContain('intro body');
     expect(merged).not.toContain('# api');
+  });
+
+  it('should not merge a markdown-shaped attachment into the target', async () => {
+    initApp({
+      'src/note.md': 'note body',
+      'src/sketch.excalidraw.md': 'raw excalidraw payload'
+    });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The drawing's raw payload must never land in the merged note, and the drawing survives.
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged).toContain('note body');
+    expect(merged).not.toContain('raw excalidraw payload');
+    expect(await app.vault.adapter.exists('src/sketch.excalidraw.md')).toBe(true);
+  });
+
+  it('should treat every markdown file as a note when no sub-extension is configured', async () => {
+    initApp({
+      'src/note.md': 'note body',
+      'src/sketch.excalidraw.md': 'raw excalidraw payload'
+    });
+    const { handler } = createHandler({ markdownAttachmentSubExtensions: [] });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.read('src.md')).toContain('raw excalidraw payload');
+  });
+
+  it('should move the merged notes\' attachments into the target\'s attachment folder', async () => {
+    initApp({
+      'src/img.png': 'PIC',
+      'src/note.md': '![[img.png]]'
+    });
+    const { handler } = createHandler({ shouldMoveAttachmentsWhenMergingFolder: true });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The vault's attachment folder is the root, which is where the merged note's attachments belong.
+    expect(await app.vault.adapter.exists('img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('src/img.png')).toBe(false);
+  });
+
+  it('should leave attachments alone when the setting is off', async () => {
+    initApp({
+      'src/img.png': 'PIC',
+      'src/note.md': '![[img.png]]'
+    });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.exists('src/img.png')).toBe(true);
+  });
+
+  it('should leave an ignored note\'s attachments alone', async () => {
+    initApp({
+      'src/img.png': 'PIC',
+      'src/keep.md': 'keep body',
+      'src/note.md': '![[img.png]]'
+    });
+    const { handler } = createHandler({
+      isPathIgnored: (path) => path === 'src/note.md',
+      shouldMoveAttachmentsWhenMergingFolder: true
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The only note referencing the image is skipped, so the image is not this merge's business.
+    expect(await app.vault.adapter.exists('src/img.png')).toBe(true);
   });
 
   it('should name the merged note after the template when one is set', async () => {

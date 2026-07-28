@@ -1,4 +1,7 @@
-import type { App } from 'obsidian';
+import type {
+  App,
+  TFolder
+} from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -12,6 +15,10 @@ import type { FolderHeadingPlanEntry } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
+import {
+  collectAttachmentsToRelocate,
+  relocateAttachments
+} from './attachments.ts';
 import { MergeComposer } from './composers/merge-composer.ts';
 import { runLockedTransaction } from './locked-transaction.ts';
 
@@ -20,6 +27,14 @@ import { runLockedTransaction } from './locked-transaction.ts';
  */
 export interface MergeFilesIntoSingleFileParams {
   readonly app: App;
+
+  /**
+   * The folder whose attachments follow the notes into the target's attachment folder (issue #160 item
+   * 3, issue #161). Omitted for a merge that should leave attachments where they are — the multi-file
+   * merge (which has no folder) and a folder merge with the setting off.
+   */
+  readonly attachmentSourceFolder?: TFolder | undefined;
+
   readonly consoleDebugComponent: ConsoleDebugComponent;
 
   /**
@@ -94,6 +109,7 @@ export interface MergeFilesIntoSingleFileResult {
 export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileParams): Promise<MergeFilesIntoSingleFileResult> {
   const {
     app,
+    attachmentSourceFolder,
     consoleDebugComponent,
     folderHeadingPlan,
     isNewTargetFile,
@@ -124,9 +140,22 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     }
   );
 
+  // Collected against the sources that will actually be merged, so an ignored note's attachments are
+  // Left alone exactly as the note itself is.
+  const attachmentsToRelocate = attachmentSourceFolder
+    ? await collectAttachmentsToRelocate({
+      app,
+      folder: attachmentSourceFolder,
+      noteFiles: sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path))
+    })
+    : [];
+
   const lockTargets: LockTarget[] = [{ mode: 'file', pathOrFile: targetFile }];
   for (const sourceFile of sourcesToMerge) {
     lockTargets.push({ mode: 'file', pathOrFile: sourceFile });
+  }
+  for (const attachment of attachmentsToRelocate) {
+    lockTargets.push({ mode: 'file', pathOrFile: attachment.file });
   }
 
   const abortController = new AbortController();
@@ -135,6 +164,18 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       abortController,
       app,
       body: async (vaultTransaction) => {
+        // Attachments move FIRST, while their notes still exist: the vault's own rename then fixes the
+        // Links in those notes, and each merge's link rewriting re-resolves them against the target.
+        await relocateAttachments({
+          app,
+          relocations: attachmentsToRelocate.map((attachment) => ({
+            attachment: attachment.file,
+            newNoteFile: targetFile,
+            oldNoteFile: attachment.ownerNoteFile
+          })),
+          vaultTransaction
+        });
+
         let isFirstMergeIntoNewTarget = isNewTargetFile;
         const pendingHeadings: string[] = [];
         for (const sourceFile of sourcesToMerge) {
