@@ -142,6 +142,33 @@ describe('PluginSettingsComponent', () => {
         expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', 'Over:view')).toBe('Invalid note name');
       });
     });
+
+    describe('mergeFolderIntoFileNoteNameTemplate validator', () => {
+      it('should accept empty note name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept a note name built from folder tokens', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '{{folderName}} summary')).toBeUndefined();
+      });
+
+      it('should reject the content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', 'Note {{content}}')).toBe('Note name should not contain {{content}} token');
+      });
+
+      it('should reject a note name spanning folders', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', 'Notes/Summary')).toBe('Invalid note name');
+      });
+
+      it('should reject a note name with characters invalid in a file name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', 'Sum:mary')).toBe('Invalid note name');
+      });
+    });
   });
 
   describe('legacy settings converters', () => {

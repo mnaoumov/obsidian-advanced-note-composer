@@ -20,12 +20,15 @@ import {
   getAvailablePath,
   trashSafe
 } from 'obsidian-dev-utils/obsidian/vault';
+import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
+import { fixFileName } from '../filename-validation.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { resolveFolderTemplateTokens } from '../template-tokens.ts';
 
 interface MergeFolderIntoFileCommandHandlerConstructorParams {
   readonly app: App;
@@ -104,9 +107,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    // A sibling note named after the folder (`docs/notes` -> `docs/notes.md`), deduped. Deriving it from
-    // `folder.path` (not `join(parent, name)`) keeps it correct when the folder sits at the vault root.
-    const targetPath = getAvailablePath(this.app, `${folder.path}.md`);
+    const targetPath = this.resolveTargetPath(folder);
 
     const isConfirmed = await confirmMergeFolderIntoFile({
       app: this.app,
@@ -147,5 +148,57 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;
+  }
+
+  /**
+   * Resolves the base name of the note the folder is merged into from the
+   * `mergeFolderIntoFileNoteNameTemplate` setting (issue #160), so a merge can always produce e.g.
+   * `Summary.md` instead of `<Folder Name>.md`. An empty setting, a template resolving to nothing, or a
+   * name that still spans folders after sanitization all fall back to the folder's own name (today's
+   * behavior). Mirrors `SplitItemSelector.resolveNoteBasenameInOwnFolder`.
+   *
+   * @param folder - The folder being merged.
+   * @returns The base name to give the merged note, without the `.md` extension.
+   */
+  private resolveTargetBasename(folder: TFolder): string {
+    const { settings } = this.pluginSettingsComponent;
+    const template = settings.mergeFolderIntoFileNoteNameTemplate;
+    if (!template) {
+      return folder.name;
+    }
+
+    const resolved = resolveFolderTemplateTokens({ sourceFolder: folder, template });
+    const noteName = trimEnd({ str: resolved.trim(), suffix: '.md' }).trim();
+    if (!noteName) {
+      return folder.name;
+    }
+
+    const fixedNoteName = fixFileName({
+      fileName: noteName,
+      replacement: settings.replacement,
+      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
+      shouldTreatTitleAsPath: false
+    });
+    // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
+    // Creating the note in the folder that separator implies would put it somewhere the user never asked.
+    if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {
+      return folder.name;
+    }
+
+    return fixedNoteName;
+  }
+
+  /**
+   * Resolves where the merged note is created: always beside the folder, named by
+   * {@link resolveTargetBasename}, de-duplicated against what is already there. The parent prefix is
+   * sliced off `folder.path` rather than rebuilt from the parent folder, which keeps it correct when the
+   * folder sits at the vault root.
+   *
+   * @param folder - The folder being merged.
+   * @returns The path of the note to create.
+   */
+  private resolveTargetPath(folder: TFolder): string {
+    const parentPrefix = folder.path.slice(0, folder.path.length - folder.name.length);
+    return getAvailablePath(this.app, `${parentPrefix}${this.resolveTargetBasename(folder)}.md`);
   }
 }

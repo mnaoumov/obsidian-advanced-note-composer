@@ -4,6 +4,8 @@ import {
   it
 } from 'vitest';
 
+import type { FixFileNameParams } from './filename-validation.ts';
+
 import {
   fixFileName,
   INVALID_CHARACTERS_REG_EXP,
@@ -91,13 +93,13 @@ describe('TRAILING_DOTS_OR_SPACES_REG_EXP', () => {
 });
 
 describe('fixFileName', () => {
-  function fix(fileName: string, overrides: Partial<Omit<Parameters<typeof fixFileName>[0], 'fileName'>> = {}): string {
+  function fix(fileName: string, overrides: Partial<FixFileNameParams> = {}): string {
     return fixFileName({
-      fileName,
       replacement: '_',
       shouldReplaceInvalidCharacters: true,
       shouldTreatTitleAsPath: true,
-      ...overrides
+      ...overrides,
+      fileName
     });
   }
 

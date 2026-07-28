@@ -698,6 +698,42 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldIncludeParentFoldersWhenMergingByDefault', valueComponent: toggle });
           });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Merge folder into file note name')
+          .setDesc(createFragment((f) => {
+            f.appendText('The name to give the note created by ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Leave empty to name it after the merged folder, e.g. ');
+            appendCodeBlock(f, 'Docs.md');
+            f.appendText(' for the folder ');
+            appendCodeBlock(f, 'Docs');
+            f.appendText('. The note is always created next to the folder, and a colliding name is de-duplicated.');
+            f.createEl('br');
+            f.appendText('Available tokens:');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{folderName}}');
+            f.appendText(' / ');
+            appendCodeBlock(f, '{{folderPath}}');
+            f.appendText(' - the merged folder\'s name / path.');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{parentFolder}}');
+            f.appendText(' - the merged folder\'s parent folder name.');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{date:FORMAT}}');
+            f.appendText(', e.g. ');
+            appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'mergeFolderIntoFileNoteNameTemplate', valueComponent: codeHighlighter });
+          });
       });
 
     new SettingGroupEx(this.containerEl)

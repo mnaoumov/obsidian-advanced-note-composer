@@ -28,6 +28,7 @@ export enum TextAfterExtractionMode {
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
+  public mergeFolderIntoFileNoteNameTemplate = '';
   public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';

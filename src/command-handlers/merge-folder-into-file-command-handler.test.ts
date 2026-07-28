@@ -87,6 +87,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
+        mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
@@ -189,6 +190,62 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     // The source notes were trashed.
     expect(await app.vault.adapter.exists('src/a.md')).toBe(false);
     expect(await app.vault.adapter.exists('src/sub/b.md')).toBe(false);
+  });
+
+  it('should name the merged note after the template when one is set', async () => {
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler } = createHandler({
+      mergeFolderIntoFileNoteNameTemplate: '{{folderName}} summary',
+      replacement: '_',
+      shouldReplaceInvalidTitleCharacters: true
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The note is still created beside the folder, but named by the template.
+    expect(await app.vault.adapter.read('src summary.md')).toContain('alpha body');
+    expect(await app.vault.adapter.exists('src.md')).toBe(false);
+  });
+
+  it('should sanitize the templated name and keep it in the folder\'s parent', async () => {
+    initApp({ 'top/src/a.md': 'alpha body' });
+    const { handler } = createHandler({
+      mergeFolderIntoFileNoteNameTemplate: 'x/y*z.md',
+      replacement: '_',
+      shouldReplaceInvalidTitleCharacters: true
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('top/src'));
+
+    // The trailing `.md` is trimmed, the separator collapses to one segment, and `*` is replaced.
+    expect(await app.vault.adapter.read('top/x_y_z.md')).toContain('alpha body');
+  });
+
+  it('should fall back to the folder name when the template resolves to nothing', async () => {
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: '   ' });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.read('src.md')).toContain('alpha body');
+  });
+
+  it('should fall back to the folder name when the sanitized name still spans folders', async () => {
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler } = createHandler({
+      mergeFolderIntoFileNoteNameTemplate: 'x/y',
+      replacement: '_',
+      shouldReplaceInvalidTitleCharacters: false
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // With invalid-character replacement off, the folded `\` survives, so the name is refused.
+    expect(await app.vault.adapter.read('src.md')).toContain('alpha body');
   });
 
   it('should not create a target when the user cancels the confirmation', async () => {
