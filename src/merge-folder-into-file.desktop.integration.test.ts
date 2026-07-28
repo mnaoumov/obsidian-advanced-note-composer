@@ -179,7 +179,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
             hasDemotedPut: mergedContent.includes('### Put'),
             hasFolderHeading: mergedContent.includes('# api'),
             hasNestedFolderHeading: mergedContent.includes('## v2'),
-            hasUndemotedIntro: mergedContent.includes('# Intro')
+            hasUntouchedIntro: mergedContent.includes('# Intro')
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
@@ -234,7 +234,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.defaultNameUnused).toBe(true);
     // A note directly in the merged folder keeps its own heading level; each sub-folder is headed at its
     // Depth and the notes inside it are demoted to match.
-    expect(result.hasUndemotedIntro).toBe(true);
+    expect(result.hasUntouchedIntro).toBe(true);
     expect(result.hasFolderHeading).toBe(true);
     expect(result.hasDemotedGet).toBe(true);
     expect(result.hasNestedFolderHeading).toBe(true);
