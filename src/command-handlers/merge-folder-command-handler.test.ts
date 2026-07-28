@@ -101,6 +101,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
+        markdownAttachmentSubExtensions: ['excalidraw'],
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
@@ -200,6 +201,51 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('src/sub/secret.md')).toBe('secret body');
     // A summary notice reported the skipped file.
     expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
+  it('should move a markdown-shaped attachment instead of merging it (issue #161)', async () => {
+    initApp({
+      'src/sub/note.md': 'note body',
+      'src/sub/sketch.excalidraw.md': 'DRAWING PAYLOAD'
+    });
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The drawing arrived byte-identical: no merge template, no frontmatter merge, no heading.
+    expect(await app.vault.adapter.read('dst/sub/sketch.excalidraw.md')).toBe('DRAWING PAYLOAD');
+    expect(await app.vault.adapter.exists('src/sub/sketch.excalidraw.md')).toBe(false);
+    // The ordinary note still merged.
+    expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('note body');
+  });
+
+  it('should de-duplicate a markdown-shaped attachment against one already in the target (issue #161)', async () => {
+    // Merging the two would concatenate two raw payloads and corrupt the destination drawing.
+    initApp({
+      'dst/sub/sketch.excalidraw.md': 'TARGET PAYLOAD',
+      'src/sub/sketch.excalidraw.md': 'SOURCE PAYLOAD'
+    });
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.read('dst/sub/sketch.excalidraw.md')).toBe('TARGET PAYLOAD');
+    expect(await app.vault.adapter.read('dst/sub/sketch.excalidraw 1.md')).toBe('SOURCE PAYLOAD');
+  });
+
+  it('should merge a markdown-shaped attachment when no sub-extension is configured', async () => {
+    initApp({ 'src/sub/sketch.excalidraw.md': 'DRAWING PAYLOAD' });
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler({ markdownAttachmentSubExtensions: [] });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The setting is what makes a markdown file an attachment; with it empty every `.md` is a note.
+    expect(await app.vault.adapter.read('dst/sub/sketch.excalidraw.md')).toContain('DRAWING PAYLOAD');
   });
 
   it('should skip an ignored non-markdown file without moving it and report it (issue #72)', async () => {

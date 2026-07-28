@@ -4,6 +4,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -14,8 +15,11 @@ import {
   it
 } from 'vitest';
 
+import type { SeedAttachmentPathSurfaceParams } from './attachment-path.test-helpers.ts';
+
 import { seedAttachmentPathSurface } from './attachment-path.test-helpers.ts';
 import {
+  collectAttachmentsOwnedByNote,
   collectAttachmentsToRelocate,
   isMarkdownAttachment,
   relocateAttachments,
@@ -32,9 +36,9 @@ function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
 }
 
-function initApp(files: Record<string, string>, attachmentFolderPath = '/'): void {
+function initApp(files: Record<string, string>, attachmentFolderPath = '/', resolveAttachmentFolderPathForNote?: (notePath: string) => string): void {
   app = App.createConfigured__({ files }).asOriginalType__();
-  seedAttachmentPathSurface({ app, attachmentFolderPath });
+  seedAttachmentPathSurface(normalizeOptionalProperties<SeedAttachmentPathSurfaceParams>({ app, attachmentFolderPath, resolveAttachmentFolderPathForNote }));
 }
 
 describe('isMarkdownAttachment', () => {
@@ -73,6 +77,80 @@ describe('isMarkdownAttachment', () => {
 
   it('should treat every markdown file as a note when no sub-extension is configured', () => {
     expect(isMarkdownAttachment({ file: getFile('Docs/sketch.excalidraw.md'), markdownAttachmentSubExtensions: [] })).toBe(false);
+  });
+});
+
+describe('collectAttachmentsOwnedByNote', () => {
+  it('should collect an attachment the note embeds', () => {
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': '![[img.png]]'
+    });
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+
+    expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/img.png']);
+    expect(attachments[0]?.ownerNoteFile.path).toBe('Docs/note.md');
+  });
+
+  it('should never collect a link to an ordinary note', () => {
+    initApp({
+      'Docs/other.md': 'body',
+      'Docs/zeta.md': '[[other]]'
+    });
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/zeta.md') });
+
+    expect(attachments).toEqual([]);
+  });
+
+  it('should collect a markdown-shaped attachment the note embeds', () => {
+    // The note sorts after the drawing on purpose: the mock resolves a link when the note is created.
+    initApp({
+      'Docs/sketch.excalidraw.md': 'drawing',
+      'Docs/zeta.md': '![[sketch.excalidraw]]'
+    });
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: ['excalidraw'], noteFile: getFile('Docs/zeta.md') });
+
+    expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/sketch.excalidraw.md']);
+  });
+
+  it('should leave an attachment another note also references', () => {
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/x.md': '![[img.png]]',
+      'Docs/y.md': '![[img.png]]'
+    });
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/x.md') });
+
+    expect(attachments).toEqual([]);
+  });
+
+  it('should leave an unreferenced neighbor alone', () => {
+    // A note shares its folder with its neighbors, so an unreferenced file beside it is nobody's
+    // Attachment — unlike a folder merge, which is moving the whole folder anyway.
+    initApp({
+      'Docs/note.md': 'body',
+      'Docs/stray.png': 'PIC'
+    }, './');
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+
+    expect(attachments).toEqual([]);
+  });
+
+  it('should return the attachments in path order', () => {
+    initApp({
+      'Docs/a.png': 'A',
+      'Docs/b.png': 'B',
+      'Docs/note.md': '![[b.png]]\n![[a.png]]'
+    });
+
+    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+
+    expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/a.png', 'Docs/b.png']);
   });
 });
 

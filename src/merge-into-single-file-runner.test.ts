@@ -23,6 +23,7 @@ import {
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { seedAttachmentPathSurface } from './attachment-path.test-helpers.ts';
 import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 import { FrontmatterMergeStrategy } from './plugin-settings.ts';
 
@@ -57,6 +58,7 @@ afterEach(() => {
 });
 
 interface InitAppOptions {
+  readonly attachmentFolderPath?: string;
   readonly plugins?: Record<string, unknown>;
 }
 
@@ -80,6 +82,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
     settings: strictProxy<PluginSettings>({
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
+      markdownAttachmentSubExtensions: ['excalidraw'],
       mergeTemplate: '{{content}}',
       shouldAlwaysMergeExcludedItems: false,
       shouldFixFootnotesByDefault: false,
@@ -105,6 +108,9 @@ function getFile(path: string): import('obsidian').TFile {
 function initApp(files: Record<string, string>, options: InitAppOptions = {}): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  if (options.attachmentFolderPath !== undefined) {
+    seedAttachmentPathSurface({ app, attachmentFolderPath: options.attachmentFolderPath });
+  }
   if (options.plugins) {
     castTo<GenericObject>(app)['plugins'] = { plugins: options.plugins };
   }
@@ -232,6 +238,58 @@ describe('mergeFilesIntoSingleFile', () => {
     expect(await app.vault.adapter.read('target.md')).toContain('secret body');
     expect(await app.vault.adapter.exists('secret.md')).toBe(false);
     expect(noticesContain(ctx.showNotice, 'were not merged because they are ignored')).toBe(false);
+  });
+
+  it('moves each source note\'s own attachments into the target\'s attachment folder (issue #161)', async () => {
+    // The note sorts after the image on purpose: the mock resolves a link when the note is created, so
+    // The image has to exist first for the embed to resolve.
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/zeta.md': '![[img.png]]',
+      'target.md': ''
+    }, { attachmentFolderPath: './' });
+    const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+    await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      shouldRelocateOwnedAttachments: true,
+      sourceFiles: [getFile('Docs/zeta.md')],
+      targetFile: getFile('target.md')
+    });
+
+    // The target lives at the vault root, so the attachment of the note merged into it does too.
+    expect(await app.vault.adapter.exists('img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('Docs/img.png')).toBe(false);
+  });
+
+  it('leaves attachments where they are when neither attachment rule is asked for', async () => {
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/zeta.md': '![[img.png]]',
+      'target.md': ''
+    }, { attachmentFolderPath: './' });
+    const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+    await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [getFile('Docs/zeta.md')],
+      targetFile: getFile('target.md')
+    });
+
+    expect(await app.vault.adapter.exists('Docs/img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('img.png')).toBe(false);
   });
 
   it('rolls everything back and reports aborted when unlocked mid-merge', async () => {
