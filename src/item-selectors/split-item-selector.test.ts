@@ -31,11 +31,6 @@ vi.mock('obsidian-dev-utils/obsidian/file-manager', () => ({
   addAlias: (...args: unknown[]): unknown => mockAddAlias(...args)
 }));
 
-vi.mock('../filename-validation.ts', () => ({
-  INVALID_CHARACTERS_REG_EXP: /[*\\<>:|?#^[\]"]+/g,
-  TRAILING_DOTS_OR_SPACES_REG_EXP: /[ .]+$/g
-}));
-
 vi.mock('../plugin-settings.ts', () => ({
   FrontmatterTitleMode: {
     None: 'None',
