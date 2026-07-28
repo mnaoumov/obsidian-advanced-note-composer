@@ -26,6 +26,7 @@ import { RenameHeadingEditorCommandHandler } from './command-handlers/rename-hea
 import { ReorderHeadingsEditorCommandHandler } from './command-handlers/reorder-headings-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
+import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './command-handlers/split-note-by-headings-recursively-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
 import { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
@@ -301,6 +302,13 @@ export class Plugin extends PluginBase {
         pluginId: this.manifest.id,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginVersion: this.manifest.version
+      }),
+      new SplitNoteByHeadingsRecursivelyEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
       }),
       ...HEADING_LEVELS.flatMap((headingLevel) => [
         new SplitNoteByHeadingsEditorCommandHandler({
