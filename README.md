@@ -171,9 +171,13 @@ Unlike `Split note by headings - H<n>`, this command is not tied to a level or t
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves every direct child of the chosen folder — files **and** subfolders — up one level, so they become siblings of that folder. Subfolders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The emptied folder is left in place; delete it manually if you no longer need it.
 
+Because the command has no picker to review, it asks for confirmation first and lists every item it is about to move — including the de-duplicated name a colliding item will end up with. Turn **Should ask before flattening a folder** (under `Move/flatten folders` in the settings) off, or tick `Don't ask again` in the dialog, to flatten straight away.
+
 ## Move folder to…
 
 The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.
+
+After you pick a destination, a confirmation dialog shows the folder and where it is going; `Change target` sends you back to the picker. Turn **Should ask before moving a folder** (under `Move/flatten folders` in the settings) off, or tick `Don't ask again` in the dialog, to move as soon as you pick a destination.
 
 ## Merge folder contents into a single file
 

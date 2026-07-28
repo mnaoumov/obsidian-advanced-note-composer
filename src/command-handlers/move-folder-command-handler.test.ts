@@ -22,15 +22,30 @@ import {
   vi
 } from 'vitest';
 
+import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { InsertMode } from '../insert-mode.ts';
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the move
 // Proceeds without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { MoveFolderCommandHandler } from './move-folder-command-handler.ts';
 
+/**
+ * The subset of the confirmation dialog's constructor params the tests drive: the body builder (so the
+ * dialog content can be rendered without a real modal) and the resolve callback the mocked opener fires.
+ */
+interface CapturedConfirmParams {
+  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
+  readonly canReselectTarget: boolean;
+  promiseResolve(this: void, result: ConfirmDialogModalResult): void;
+  readonly title: string;
+}
+
 interface HandlerContext {
+  editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
   handler: Testable;
   showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
@@ -52,33 +67,79 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   })
 }));
 
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
+}));
+
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
+// The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
+// One, and render its body directly to cover the content builder.
+vi.mock('../modals/confirm-dialog-modal.ts', () => ({
+  ConfirmDialogModal: class {
+    public readonly params: CapturedConfirmParams;
+
+    public constructor(params: CapturedConfirmParams) {
+      this.params = params;
+      capturedConfirmParams = params;
+    }
+  }
 }));
 
 vi.mock('../modals/move-folder-modal.ts', () => ({
   selectTargetFolderForMove: vi.fn()
 }));
 
+vi.mock('../open-minimizable-modal.ts', () => ({
+  openMinimizableModal: vi.fn(() => {
+    // The "Change target" loop can open the dialog more than once, so the results are a script; a round
+    // The test did not script falls back to a plain cancel.
+    capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
+  })
+}));
+
+const mockOpenMinimizableModal = vi.mocked(openMinimizableModal);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMove);
 
 let app: AppOriginal;
+let capturedConfirmParams: CapturedConfirmParams | null = null;
+let confirmResults: ConfirmDialogModalResult[] = [];
 let resourceLockComponent: ResourceLockComponent;
 
 afterEach(() => {
   resourceLockComponent.unload();
+  capturedConfirmParams = null;
+  confirmResults = [];
+  // The module mocks are created once for the whole file, so their call history has to be dropped between
+  // Tests; `restoreAllMocks` only undoes the per-test spies.
+  vi.clearAllMocks();
   vi.restoreAllMocks();
 });
 
+function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true, shouldReselectTarget = false): ConfirmDialogModalResult {
+  return {
+    insertMode: InsertMode.Append,
+    isConfirmed,
+    shouldAskAgain,
+    shouldReselectTarget,
+    shouldSwitchToSmartCut: false
+  };
+}
+
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
+  const editAndSave = vi.fn().mockResolvedValue(undefined);
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
   const handler = new MoveFolderCommandHandler({
     app,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
+      editAndSave,
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
+        shouldAskBeforeMovingFolder: false,
         shouldBlockCommandOnPath: () => false,
         ...settingsOverrides
       })
@@ -86,6 +147,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     resourceLockComponent
   });
   return {
+    editAndSave: castTo<MockInstance<PluginSettingsComponent['editAndSave']>>(editAndSave),
     handler: castTo<Testable>(handler),
     showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
@@ -109,6 +171,16 @@ function initApp(files: Record<string, string> = {}): void {
   });
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
+}
+
+/**
+ * Scripts the confirmation dialog's consecutive results, in the order the rounds of the "Change target"
+ * loop will consume them.
+ *
+ * @param results - The results to return, in open order.
+ */
+function scriptConfirmResults(...results: ConfirmDialogModalResult[]): void {
+  confirmResults = [...results];
 }
 
 describe('MoveFolderCommandHandler', () => {
@@ -193,6 +265,105 @@ describe('MoveFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('dst/a/existing.md')).toBe('existing');
     expect(await app.vault.adapter.read('dst/a 1/note.md')).toBe('note body');
     expect(await app.vault.adapter.exists('parent/a/note.md')).toBe(false);
+  });
+
+  it('should not move the folder when the confirmation is cancelled (issue #154)', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { editAndSave, handler } = createHandler({ shouldAskBeforeMovingFolder: true });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+    scriptConfirmResults(createConfirmResult(false));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(mockOpenMinimizableModal).toHaveBeenCalledTimes(1);
+    expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('dst/a/note.md')).toBe(false);
+    expect(editAndSave).not.toHaveBeenCalled();
+  });
+
+  it('should persist the "Don\'t ask again" choice and move once confirmed (issue #154)', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { editAndSave, handler } = createHandler({ shouldAskBeforeMovingFolder: true });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+    scriptConfirmResults(createConfirmResult(true, false));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(await app.vault.adapter.read('dst/a/note.md')).toBe('note body');
+    const settings = strictProxy<PluginSettings>({ shouldAskBeforeMovingFolder: true });
+    await editAndSave.mock.calls[0]?.[0](settings);
+    expect(settings.shouldAskBeforeMovingFolder).toBe(false);
+  });
+
+  it('should reopen the picker when the confirmation asks to change the target', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    await app.vault.createFolder('dst2');
+    const { handler } = createHandler({ shouldAskBeforeMovingFolder: true });
+    mockSelectTargetFolder
+      .mockResolvedValueOnce(getFolder('dst'))
+      .mockResolvedValueOnce(getFolder('dst2'));
+    // First round asks for a different target; the second confirms it.
+    scriptConfirmResults(createConfirmResult(false, true, true), createConfirmResult(true));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(mockSelectTargetFolder).toHaveBeenCalledTimes(2);
+    // The folder landed in the SECOND target, not the abandoned first one.
+    expect(await app.vault.adapter.read('dst2/a/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('dst/a/note.md')).toBe(false);
+  });
+
+  it('should not open the confirmation at all when the setting is off', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler({ shouldAskBeforeMovingFolder: false });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(mockOpenMinimizableModal).not.toHaveBeenCalled();
+    expect(await app.vault.adapter.read('dst/a/note.md')).toBe('note body');
+  });
+
+  it('should render the source and destination in the confirmation body', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { handler } = createHandler({ shouldAskBeforeMovingFolder: true });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+    scriptConfirmResults(createConfirmResult(false));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    const fragment = createFragment();
+    await capturedConfirmParams?.buildContent(fragment);
+
+    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    expect(renderedCodeBlocks).toContain('Source');
+    expect(renderedCodeBlocks).toContain('Destination');
+    expect(renderedCodeBlocks).toContain('dst');
+    // Unlike flatten, the move has a picked target, so it can be changed from the dialog.
+    expect(capturedConfirmParams?.canReselectTarget).toBe(true);
+    expect(capturedConfirmParams?.title).toBe('Move folder');
+  });
+
+  it('should render the vault root destination as a slash', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    const { handler } = createHandler({ shouldAskBeforeMovingFolder: true });
+    mockSelectTargetFolder.mockResolvedValue(app.vault.getRoot());
+    scriptConfirmResults(createConfirmResult(false));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    const fragment = createFragment();
+    await capturedConfirmParams?.buildContent(fragment);
+
+    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    expect(renderedCodeBlocks).toContain('/');
   });
 
   it('should swallow the cancellation and roll everything back when unlocked mid-move', async () => {

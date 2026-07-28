@@ -14,8 +14,13 @@ constraints above exclude), so a common destination is one keystroke away.
 
 1. Open [[Movable note]] inside the `Move example` folder.
 2. Run `Move folder to...`.
-3. In the picker, choose the `Move destination` folder and confirm.
-4. Watch `Move example` land inside `Move destination` (as `Move destination/Move example`), with
+3. In the picker, choose the `Move destination` folder.
+4. The confirmation dialog shows the folder and where it is going. Pick `Change target` to go back to
+   the picker, or `Move` to go ahead.
+5. Watch `Move example` land inside `Move destination` (as `Move destination/Move example`), with
    [[Movable note]] carried along.
 
 The link from [[Points here]] to [[Movable note]] keeps resolving after the folder moves.
+
+Tick `Don't ask again` in the dialog, or turn off **Should ask before moving a folder** under
+`Move/flatten folders` in the settings, to move as soon as you pick a destination.

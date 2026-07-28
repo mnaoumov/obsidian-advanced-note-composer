@@ -15,6 +15,21 @@ import {
 // Isolation: `npx vitest run --project integration-tests:desktop src/flatten-folder.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
+interface ComponentTreeNode {
+  _children?: ComponentTreeNode[];
+  editAndSave?: unknown;
+  settings?: FlattenSettings;
+}
+
+interface FlattenSettings {
+  shouldAskBeforeFlattening: boolean;
+}
+
+interface SettingsCarrier {
+  editAndSave(editor: (settings: FlattenSettings) => void): Promise<void>;
+  settings: FlattenSettings;
+}
+
 describe('flatten folder (issue #105)', () => {
   it('promotes a folder\'s direct children up one level (subfolders kept whole) and links still resolve', async () => {
     const result = await evalInObsidian({
@@ -22,46 +37,82 @@ describe('flatten folder (issue #105)', () => {
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        // A prior run may have left the flattened files at root; start from a clean slate.
-        await trashIfExists('parent-note.md');
-        await trashIfExists('child-note.md');
-        await trashIfExists('subfolder');
-        await trashIfExists('flat-src');
+        const settingsComponent = findSettingsComponent();
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        try {
+          // Skip the confirmation dialog (issue #154, on by default) so the flatten runs straight from the
+          // Command; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = false;
+          });
 
-        // Build `flat-src/` with two notes (one links to the other) plus a subfolder holding a note.
-        await app.vault.createFolder('flat-src');
-        await app.vault.createFolder('flat-src/subfolder');
-        const parentNote = await app.vault.create('flat-src/parent-note.md', 'See [[child-note]].');
-        await app.vault.create('flat-src/child-note.md', 'child body');
-        await app.vault.create('flat-src/subfolder/grandchild.md', 'grandchild body');
+          // A prior run may have left the flattened files at root; start from a clean slate.
+          await trashIfExists('parent-note.md');
+          await trashIfExists('child-note.md');
+          await trashIfExists('subfolder');
+          await trashIfExists('flat-src');
 
-        // Open a note inside `flat-src` so the folder command resolves the active file's parent folder.
-        await openFile(parentNote);
-        await waitUntil({
-          message: 'link cache not ready',
-          predicate: () => app.metadataCache.getFirstLinkpathDest('child-note', 'flat-src/parent-note.md')?.path === 'flat-src/child-note.md'
-        });
+          // Build `flat-src/` with two notes (one links to the other) plus a subfolder holding a note.
+          await app.vault.createFolder('flat-src');
+          await app.vault.createFolder('flat-src/subfolder');
+          const parentNote = await app.vault.create('flat-src/parent-note.md', 'See [[child-note]].');
+          await app.vault.create('flat-src/child-note.md', 'child body');
+          await app.vault.create('flat-src/subfolder/grandchild.md', 'grandchild body');
 
-        const canRun = app.commands.executeCommandById(`${pluginId}:flatten-folder`);
+          // Open a note inside `flat-src` so the folder command resolves the active file's parent folder.
+          await openFile(parentNote);
+          await waitUntil({
+            message: 'link cache not ready',
+            predicate: () => app.metadataCache.getFirstLinkpathDest('child-note', 'flat-src/parent-note.md')?.path === 'flat-src/child-note.md'
+          });
 
-        // The direct children move up one level, becoming siblings of `flat-src` (i.e. into the root).
-        await waitUntil({
-          message: 'children were not promoted to the root',
-          predicate: () =>
-            app.vault.getAbstractFileByPath('parent-note.md') !== null
-            && app.vault.getAbstractFileByPath('child-note.md') !== null
-            && app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const canRun = app.commands.executeCommandById(`${pluginId}:flatten-folder`);
 
-        const parentAtRoot = app.vault.getAbstractFileByPath('parent-note.md') !== null;
-        const childAtRoot = app.vault.getAbstractFileByPath('child-note.md') !== null;
-        const grandchildKeptStructure = app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null;
-        const sourceFolderRemains = app.vault.getAbstractFileByPath('flat-src') !== null;
-        // The link is link-aware after the move: it resolves from the promoted note to the promoted target.
-        const linkResolves = app.metadataCache.getFirstLinkpathDest('child-note', 'parent-note.md')?.path === 'child-note.md';
+          // The direct children move up one level, becoming siblings of `flat-src` (i.e. into the root).
+          await waitUntil({
+            message: 'children were not promoted to the root',
+            predicate: () =>
+              app.vault.getAbstractFileByPath('parent-note.md') !== null
+              && app.vault.getAbstractFileByPath('child-note.md') !== null
+              && app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-        return { canRun, childAtRoot, grandchildKeptStructure, linkResolves, parentAtRoot, sourceFolderRemains };
+          const parentAtRoot = app.vault.getAbstractFileByPath('parent-note.md') !== null;
+          const childAtRoot = app.vault.getAbstractFileByPath('child-note.md') !== null;
+          const grandchildKeptStructure = app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null;
+          const sourceFolderRemains = app.vault.getAbstractFileByPath('flat-src') !== null;
+          // The link is link-aware after the move: it resolves from the promoted note to the promoted target.
+          const linkResolves = app.metadataCache.getFirstLinkpathDest('child-note', 'parent-note.md')?.path === 'child-note.md';
+
+          return { canRun, childAtRoot, grandchildKeptStructure, linkResolves, parentAtRoot, sourceFolderRemains };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = originalShouldAsk;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeFlattening === 'boolean';
+        }
 
         async function trashIfExists(path: string): Promise<void> {
           const existing = app.vault.getAbstractFileByPath(path);

@@ -85,7 +85,9 @@ describe('PluginSettings', () => {
     expect(settings.shouldAllowOnlyCurrentFolderByDefault).toBe(false);
     expect(settings.shouldAllowSplitIntoUnresolvedPathByDefault).toBe(true);
     expect(settings.shouldApplyTextAfterExtractionToSameFile).toBe(false);
+    expect(settings.shouldAskBeforeFlattening).toBe(true);
     expect(settings.shouldAskBeforeMerging).toBe(true);
+    expect(settings.shouldAskBeforeMovingFolder).toBe(true);
     expect(settings.shouldAskBeforeSplitting).toBe(true);
     expect(settings.shouldAskBeforeSwapping).toBe(true);
     expect(settings.shouldBlockCommandsOnExcludedPaths).toBe(false);

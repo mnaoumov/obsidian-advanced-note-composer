@@ -23,12 +23,27 @@ import {
   vi
 } from 'vitest';
 
+import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { InsertMode } from '../insert-mode.ts';
+import { openModal } from '../open-minimizable-modal.ts';
 import { FlattenFolderCommandHandler } from './flatten-folder-command-handler.ts';
 
+/**
+ * The subset of the confirmation dialog's constructor params the tests drive: the body builder (so the
+ * dialog content can be rendered without a real modal) and the resolve callback the mocked opener fires.
+ */
+interface CapturedConfirmParams {
+  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
+  readonly canReselectTarget: boolean;
+  promiseResolve(this: void, result: ConfirmDialogModalResult): void;
+  readonly title: string;
+}
+
 interface HandlerContext {
+  editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
   handler: Testable;
   showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
@@ -52,27 +67,72 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   })
 }));
 
+vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+  appendCodeBlock: vi.fn()
+}));
+
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
+// The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
+// One, and render its body directly to cover the content builder.
+vi.mock('../modals/confirm-dialog-modal.ts', () => ({
+  ConfirmDialogModal: class {
+    public readonly params: CapturedConfirmParams;
+
+    public constructor(params: CapturedConfirmParams) {
+      this.params = params;
+      capturedConfirmParams = params;
+    }
+  }
+}));
+
+vi.mock('../open-minimizable-modal.ts', () => ({
+  openModal: vi.fn(() => {
+    capturedConfirmParams?.promiseResolve(confirmResult);
+  })
+}));
+
+const mockOpenModal = vi.mocked(openModal);
+
 let app: AppOriginal;
+let capturedConfirmParams: CapturedConfirmParams | null = null;
+let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
 let resourceLockComponent: ResourceLockComponent;
 
 afterEach(() => {
   resourceLockComponent.unload();
+  capturedConfirmParams = null;
+  confirmResult = createConfirmResult(false);
+  // The module mocks are created once for the whole file, so their call history has to be dropped between
+  // Tests; `restoreAllMocks` only undoes the per-test spies.
+  vi.clearAllMocks();
   vi.restoreAllMocks();
 });
 
+function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): ConfirmDialogModalResult {
+  return {
+    insertMode: InsertMode.Append,
+    isConfirmed,
+    shouldAskAgain,
+    shouldReselectTarget: false,
+    shouldSwitchToSmartCut: false
+  };
+}
+
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
+  const editAndSave = vi.fn().mockResolvedValue(undefined);
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
   const handler = new FlattenFolderCommandHandler({
     app,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
+      editAndSave,
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
+        shouldAskBeforeFlattening: false,
         shouldBlockCommandOnPath: () => false,
         ...settingsOverrides
       })
@@ -80,6 +140,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     resourceLockComponent
   });
   return {
+    editAndSave: castTo<MockInstance<PluginSettingsComponent['editAndSave']>>(editAndSave),
     handler: castTo<Testable>(handler),
     showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
@@ -171,7 +232,105 @@ describe('FlattenFolderCommandHandler', () => {
 
     // The pre-existing sibling is untouched and the moved file landed on an available (deduped) path.
     expect(await app.vault.adapter.read('parent/note.md')).toBe('existing body');
+    expect(await app.vault.adapter.read('parent/note 1.md')).toBe('inner body');
     expect(await app.vault.adapter.exists('parent/a/note.md')).toBe(false);
+  });
+
+  it('should de-duplicate each child against the names its siblings already took', async () => {
+    // The same fixture `flatten-preview.test.ts` previews: the first rename takes `note 1.md`, so the
+    // Second child is de-duplicated off its OWN name. Asserted here against the real renames, so the
+    // Dialog's preview and the flatten cannot disagree.
+    initApp({
+      'parent/a/note.md': 'inner body',
+      'parent/a/note 1.md': 'inner one body',
+      'parent/note.md': 'existing body'
+    });
+    const { handler } = createHandler();
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(await app.vault.adapter.read('parent/note.md')).toBe('existing body');
+    expect(await app.vault.adapter.read('parent/note 1.md')).toBe('inner body');
+    expect(await app.vault.adapter.read('parent/note 1 1.md')).toBe('inner one body');
+  });
+
+  it('should not move anything when the confirmation is cancelled (issue #154)', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    const { editAndSave, handler } = createHandler({ shouldAskBeforeFlattening: true });
+    confirmResult = createConfirmResult(false);
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(mockOpenModal).toHaveBeenCalledTimes(1);
+    // Nothing was promoted and the "Don't ask again" choice was not persisted.
+    expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('parent/note.md')).toBe(false);
+    expect(editAndSave).not.toHaveBeenCalled();
+  });
+
+  it('should persist the "Don\'t ask again" choice and flatten once confirmed (issue #154)', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    const { editAndSave, handler } = createHandler({ shouldAskBeforeFlattening: true });
+    confirmResult = createConfirmResult(true, false);
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(await app.vault.adapter.read('parent/note.md')).toBe('note body');
+    const settings = strictProxy<PluginSettings>({ shouldAskBeforeFlattening: true });
+    await editAndSave.mock.calls[0]?.[0](settings);
+    expect(settings.shouldAskBeforeFlattening).toBe(false);
+  });
+
+  it('should not open the confirmation at all when the setting is off', async () => {
+    initApp({ 'parent/a/note.md': 'note body' });
+    const { handler } = createHandler({ shouldAskBeforeFlattening: false });
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(mockOpenModal).not.toHaveBeenCalled();
+    expect(await app.vault.adapter.read('parent/note.md')).toBe('note body');
+  });
+
+  it('should list every item it will move in the confirmation body, flagging de-duplicated names', async () => {
+    initApp({
+      'parent/a/note.md': 'inner body',
+      'parent/a/sub/deep.md': 'deep body',
+      'parent/note.md': 'existing body'
+    });
+    const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+    confirmResult = createConfirmResult(false);
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    const fragment = createFragment();
+    await capturedConfirmParams?.buildContent(fragment);
+
+    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    // The colliding note is previewed with the de-duplicated name it will actually get.
+    expect(renderedCodeBlocks).toContain('note.md → note 1.md');
+    // A non-colliding item is shown as-is, with no arrow.
+    expect(renderedCodeBlocks).toContain('sub');
+    expect(renderedCodeBlocks).toContain('2');
+    expect(fragment.querySelector('h2')?.textContent).toBe('Items that will be moved');
+    // There is no target to reselect: the destination is always the folder's own parent.
+    expect(capturedConfirmParams?.canReselectTarget).toBe(false);
+    expect(capturedConfirmParams?.title).toBe('Flatten folder');
+  });
+
+  it('should render the vault root destination as a slash when flattening a top-level folder', async () => {
+    initApp({ 'a/note.md': 'note body' });
+    const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+    confirmResult = createConfirmResult(false);
+
+    await handler.executeFolder(getFolder('a'));
+
+    const fragment = createFragment();
+    await capturedConfirmParams?.buildContent(fragment);
+
+    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    expect(renderedCodeBlocks).toContain('/');
   });
 
   it('should swallow the cancellation and roll everything back when unlocked mid-flatten', async () => {

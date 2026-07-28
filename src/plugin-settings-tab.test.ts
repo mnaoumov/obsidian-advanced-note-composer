@@ -162,6 +162,7 @@ describe('PluginSettingsTab', () => {
       'Include/exclude paths',
       'Merge folders',
       'Swap folders',
+      'Move/flatten folders',
       'UI'
     ]);
   });
