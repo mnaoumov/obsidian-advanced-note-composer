@@ -44,6 +44,7 @@ export class PluginSettings {
   public shouldAskBeforeSplitting = true;
   public shouldAskBeforeSwapping = true;
   public shouldBlockCommandsOnExcludedPaths = false;
+  public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;

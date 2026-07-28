@@ -92,6 +92,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,
+        shouldConvertFoldersToHeadingsWhenMergingFolder: false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
         shouldOpenNoteAfterMerge: false,
@@ -190,6 +191,77 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     // The source notes were trashed.
     expect(await app.vault.adapter.exists('src/a.md')).toBe(false);
     expect(await app.vault.adapter.exists('src/sub/b.md')).toBe(false);
+  });
+
+  it('should merge notes in folder-grouped depth-first order, each level alphabetically', async () => {
+    initApp({
+      'src/alpha.md': 'alpha body',
+      'src/sub/b.md': 'bravo body',
+      'src/yankee/y.md': 'yankee body',
+      'src/zeta.md': 'zeta body'
+    });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The folder's own notes come first (alphabetically), then each sub-folder's subtree
+    // (alphabetically). A flat sort by path would put `src/sub/b.md` between `alpha` and `zeta`.
+    const merged = await app.vault.adapter.read('src.md');
+    const positions = ['alpha body', 'zeta body', 'bravo body', 'yankee body'].map((body) => merged.indexOf(body));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+  });
+
+  it('should turn sub-folders into headings and demote the merged notes when the setting is on', async () => {
+    initApp({
+      'src/api/get.md': '# Get\nget body',
+      'src/api/v2/put.md': '# Put\nput body',
+      'src/intro.md': '# Intro\nintro body'
+    });
+    const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    const merged = await app.vault.adapter.read('src.md');
+    // The root's own note keeps its heading level; each sub-folder is headed at its depth, and the notes
+    // Inside are demoted by that depth so the outline nests instead of competing.
+    expect(merged).toContain('# Intro');
+    expect(merged).toContain('# api');
+    expect(merged).toContain('## Get');
+    expect(merged).toContain('## v2');
+    expect(merged).toContain('### Put');
+  });
+
+  it('should not write folder headings when the setting is off', async () => {
+    initApp({ 'src/api/get.md': '# Get\nget body' });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged).not.toContain('# api');
+    expect(merged).toContain('# Get');
+  });
+
+  it('should not write a folder heading for a folder whose notes are all ignored', async () => {
+    initApp({
+      'src/api/get.md': 'get body',
+      'src/intro.md': 'intro body'
+    });
+    const { handler } = createHandler({
+      isPathIgnored: (path) => path === 'src/api/get.md',
+      shouldConvertFoldersToHeadingsWhenMergingFolder: true
+    });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged).toContain('intro body');
+    expect(merged).not.toContain('# api');
   });
 
   it('should name the merged note after the template when one is set', async () => {

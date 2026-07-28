@@ -701,6 +701,28 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should convert folders to headings when merging a folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('When ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText(' pulls in notes from sub-folders, whether each sub-folder becomes a heading in the merged note.');
+            f.createEl('br');
+            f.appendText('The heading level is the sub-folder\'s depth below the merged folder: a direct sub-folder becomes ');
+            appendCodeBlock(f, '# Name');
+            f.appendText(', its own child ');
+            appendCodeBlock(f, '## Name');
+            f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
+            f.createEl('br');
+            f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
+            appendCodeBlock(f, 'Split note by headings recursively...');
+            f.appendText(', which turns a heading hierarchy into a folder tree.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldConvertFoldersToHeadingsWhenMergingFolder', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Merge folder into file note name')
           .setDesc(createFragment((f) => {
             f.appendText('The name to give the note created by ');

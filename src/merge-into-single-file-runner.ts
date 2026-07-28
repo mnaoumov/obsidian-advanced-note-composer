@@ -8,6 +8,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { FolderHeadingPlanEntry } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
@@ -20,6 +21,13 @@ import { runLockedTransaction } from './locked-transaction.ts';
 export interface MergeFilesIntoSingleFileParams {
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  /**
+   * The folder-derived headings to weave into the target as the sources are merged (issue #160), one
+   * entry per source path. Omitted (or empty) for a plain merge, which writes no headings and demotes
+   * nothing.
+   */
+  readonly folderHeadingPlan?: readonly FolderHeadingPlanEntry[] | undefined;
 
   /**
    * Whether {@link MergeFilesIntoSingleFileParams.targetFile} was freshly created (empty) for this
@@ -87,6 +95,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const {
     app,
     consoleDebugComponent,
+    folderHeadingPlan,
     isNewTargetFile,
     pluginNoticeComponent,
     pluginSettingsComponent,
@@ -99,6 +108,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const { settings } = pluginSettingsComponent;
   const sourcesToMerge = sourceFiles.filter((sourceFile) => sourceFile !== targetFile);
   const ignoredSourceFiles: TFile[] = [];
+  const headingPlanByPath = new Map((folderHeadingPlan ?? []).map((entry) => [entry.filePath, entry]));
   let mergedCount = 0;
 
   const notice = pluginNoticeComponent.showNotice(
@@ -126,17 +136,28 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       app,
       body: async (vaultTransaction) => {
         let isFirstMergeIntoNewTarget = isNewTargetFile;
+        const pendingHeadings: string[] = [];
         for (const sourceFile of sourcesToMerge) {
           if (abortController.signal.aborted) {
             throw new Error('Merge into single file aborted.');
           }
+          const headingPlanEntry = headingPlanByPath.get(sourceFile.path);
+          pendingHeadings.push(...headingPlanEntry?.headings ?? []);
           if (isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path)) {
             ignoredSourceFiles.push(sourceFile);
             continue;
           }
+          // Headings are flushed only once a source actually reaches the merge, so a folder whose notes
+          // Are all skipped never leaves an empty heading behind in the target.
+          if (pendingHeadings.length > 0) {
+            const headingBlock = pendingHeadings.map((heading) => `\n\n${heading}`).join('');
+            pendingHeadings.length = 0;
+            await vaultTransaction.process(targetFile, (targetFileContent) => targetFileContent + headingBlock);
+          }
           const composer = new MergeComposer({
             app,
             consoleDebugComponent,
+            headingLevelShift: headingPlanEntry?.depth ?? 0,
             isNewTargetFile: isFirstMergeIntoNewTarget,
             pluginNoticeComponent,
             pluginSettingsComponent,

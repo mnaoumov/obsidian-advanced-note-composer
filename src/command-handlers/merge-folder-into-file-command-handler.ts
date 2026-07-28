@@ -8,11 +8,11 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { Vault } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
   isFile,
+  isFolder,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -26,6 +26,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { fixFileName } from '../filename-validation.ts';
+import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import { resolveFolderTemplateTokens } from '../template-tokens.ts';
@@ -88,13 +89,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const sourceMdFiles: TFile[] = [];
-    Vault.recurseChildren(folder, (child) => {
-      if (isFile(child) && isMarkdownFile(child)) {
-        sourceMdFiles.push(child);
-      }
-    });
-    sourceMdFiles.sort((a, b) => a.path.localeCompare(b.path));
+    const sourceMdFiles = collectNotesDepthFirst(folder);
 
     if (sourceMdFiles.length === 0) {
       this.pluginNoticeComponent.showNotice(
@@ -125,6 +120,9 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const result = await mergeFilesIntoSingleFile({
       app: this.app,
       consoleDebugComponent: this.consoleDebugComponent,
+      folderHeadingPlan: this.pluginSettingsComponent.settings.shouldConvertFoldersToHeadingsWhenMergingFolder
+        ? buildFolderHeadingPlan({ filePaths: sourceMdFiles.map((sourceMdFile) => sourceMdFile.path), rootPath: folder.path })
+        : undefined,
       isNewTargetFile: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
@@ -201,4 +199,24 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const parentPrefix = folder.path.slice(0, folder.path.length - folder.name.length);
     return getAvailablePath(this.app, `${parentPrefix}${this.resolveTargetBasename(folder)}.md`);
   }
+}
+
+/**
+ * Collects the folder's descendant notes in folder-grouped depth-first order: a folder's own notes
+ * (alphabetically) first, then each sub-folder's whole subtree. A flat sort by path would interleave a
+ * sub-folder's notes with the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a
+ * folder and make the folder-heading plan emit its heading more than once.
+ *
+ * @param folder - The folder to walk.
+ * @returns The descendant notes, in merge order.
+ */
+function collectNotesDepthFirst(folder: TFolder): TFile[] {
+  const notes = folder.children
+    .filter(isFile)
+    .filter((child) => isMarkdownFile(child))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const subFolders = folder.children
+    .filter(isFolder)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...notes, ...subFolders.flatMap((subFolder) => collectNotesDepthFirst(subFolder))];
 }

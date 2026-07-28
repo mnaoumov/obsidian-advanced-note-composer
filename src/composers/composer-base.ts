@@ -38,6 +38,7 @@ import { replaceAll } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { demoteHeadings } from '../folder-headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import {
@@ -71,6 +72,15 @@ const moment = extractDefaultExportInterop(moment_);
 export interface ComposerBaseConstructorParamsBase {
   readonly app: App;
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;
+
+  /**
+   * How many levels to demote the inserted note's own headings by, so they nest under whatever the
+   * caller wrote above them. Set by the folder merge to the note's folder depth, so a note pulled out of
+   * `Docs/api/v2` lands under the `## v2` heading that folder became (issue #160). Defaults to `0` (no
+   * demotion), which is every other flow.
+   */
+  readonly headingLevelShift?: number;
+
   readonly insertMode?: InsertMode;
 
   /**
@@ -218,6 +228,8 @@ export abstract class ComposerBase {
 
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
+  private readonly headingLevelShift: number;
+
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
 
@@ -232,6 +244,7 @@ export abstract class ComposerBase {
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.injectedVaultTransaction = params.vaultTransaction ?? null;
 
+    this.headingLevelShift = params.headingLevelShift ?? 0;
     this.insertMode = params.insertMode ?? InsertMode.Append;
     this.insertToken = params.insertToken ?? null;
     this.sourceFile = params.sourceFile;
@@ -374,7 +387,9 @@ export abstract class ComposerBase {
     }
 
     const { content: newContent, frontmatter: newFrontmatter } = this.extractFrontmatter(targetContentToInsert);
-    targetContentToInsert = this.applyTemplate(newContent);
+    // Demote BEFORE the template is applied, so only the note's own outline moves: any heading the
+    // Template itself contributes was written at the level the user wanted it at.
+    targetContentToInsert = this.applyTemplate(demoteHeadings(newContent, this.headingLevelShift));
     const { content: templateContent, frontmatter: templateFrontmatter } = this.extractFrontmatter(targetContentToInsert);
 
     await this.insertIntoTargetFileImpl(templateContent, vaultTransaction);
