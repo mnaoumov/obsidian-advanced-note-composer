@@ -11,10 +11,7 @@ import type {
   SelectItemResult
 } from './item-selector-base.ts';
 
-import {
-  INVALID_CHARACTERS_REG_EXP,
-  TRAILING_DOTS_OR_SPACES_REG_EXP
-} from '../filename-validation.ts';
+import { fixFileName } from '../filename-validation.ts';
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
@@ -131,35 +128,13 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   private fixFileName(fileName: string, shouldTreatTitleAsPath = this.shouldTreatTitleAsPath): string {
-    if (!fileName) {
-      return 'Untitled';
-    }
-
-    if (!shouldTreatTitleAsPath) {
-      fileName = fileName.replaceAll('/', '\\');
-    }
-
-    if (!this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters) {
-      return fileName;
-    }
-
-    const parts = fileName.split('/');
-    const fixedParts = parts.filter((part) => !!part).map((part) => {
-      let fixedPart = part;
-      fixedPart = fixedPart.replaceAll(
-        INVALID_CHARACTERS_REG_EXP,
-        (substring) => this.pluginSettingsComponent.settings.replacement.repeat(substring.length)
-      );
-      fixedPart = fixedPart.replaceAll(
-        TRAILING_DOTS_OR_SPACES_REG_EXP,
-        (substring) => this.pluginSettingsComponent.settings.replacement.repeat(substring.length)
-      );
-      if (fixedPart.startsWith('.') || fixedPart.startsWith(' ')) {
-        fixedPart = this.pluginSettingsComponent.settings.replacement + fixedPart.slice(1);
-      }
-      return fixedPart;
+    const { settings } = this.pluginSettingsComponent;
+    return fixFileName({
+      fileName,
+      replacement: settings.replacement,
+      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
+      shouldTreatTitleAsPath
     });
-    return fixedParts.join('/');
   }
 
   /**

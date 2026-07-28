@@ -1,4 +1,7 @@
-import type { App } from 'obsidian';
+import type {
+  App,
+  TFolder
+} from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -8,9 +11,14 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
+import type { FolderHeadingPlanEntry } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
+import {
+  collectAttachmentsToRelocate,
+  relocateAttachments
+} from './attachments.ts';
 import { MergeComposer } from './composers/merge-composer.ts';
 import { runLockedTransaction } from './locked-transaction.ts';
 
@@ -19,7 +27,22 @@ import { runLockedTransaction } from './locked-transaction.ts';
  */
 export interface MergeFilesIntoSingleFileParams {
   readonly app: App;
+
+  /**
+   * The folder whose attachments follow the notes into the target's attachment folder (issue #160 item
+   * 3, issue #161). Omitted for a merge that should leave attachments where they are — the multi-file
+   * merge (which has no folder) and a folder merge with the setting off.
+   */
+  readonly attachmentSourceFolder?: TFolder | undefined;
+
   readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  /**
+   * The folder-derived headings to weave into the target as the sources are merged (issue #160), one
+   * entry per source path. Omitted (or empty) for a plain merge, which writes no headings and demotes
+   * nothing.
+   */
+  readonly folderHeadingPlan?: readonly FolderHeadingPlanEntry[] | undefined;
 
   /**
    * Whether {@link MergeFilesIntoSingleFileParams.targetFile} was freshly created (empty) for this
@@ -86,7 +109,9 @@ export interface MergeFilesIntoSingleFileResult {
 export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileParams): Promise<MergeFilesIntoSingleFileResult> {
   const {
     app,
+    attachmentSourceFolder,
     consoleDebugComponent,
+    folderHeadingPlan,
     isNewTargetFile,
     pluginNoticeComponent,
     pluginSettingsComponent,
@@ -99,6 +124,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const { settings } = pluginSettingsComponent;
   const sourcesToMerge = sourceFiles.filter((sourceFile) => sourceFile !== targetFile);
   const ignoredSourceFiles: TFile[] = [];
+  const headingPlanByPath = new Map((folderHeadingPlan ?? []).map((entry) => [entry.filePath, entry]));
   let mergedCount = 0;
 
   const notice = pluginNoticeComponent.showNotice(
@@ -114,9 +140,22 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     }
   );
 
+  // Collected against the sources that will actually be merged, so an ignored note's attachments are
+  // Left alone exactly as the note itself is.
+  const attachmentsToRelocate = attachmentSourceFolder
+    ? await collectAttachmentsToRelocate({
+      app,
+      folder: attachmentSourceFolder,
+      noteFiles: sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path))
+    })
+    : [];
+
   const lockTargets: LockTarget[] = [{ mode: 'file', pathOrFile: targetFile }];
   for (const sourceFile of sourcesToMerge) {
     lockTargets.push({ mode: 'file', pathOrFile: sourceFile });
+  }
+  for (const attachment of attachmentsToRelocate) {
+    lockTargets.push({ mode: 'file', pathOrFile: attachment.file });
   }
 
   const abortController = new AbortController();
@@ -125,18 +164,41 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       abortController,
       app,
       body: async (vaultTransaction) => {
+        // Attachments move FIRST, while their notes still exist: the vault's own rename then fixes the
+        // Links in those notes, and each merge's link rewriting re-resolves them against the target.
+        await relocateAttachments({
+          app,
+          relocations: attachmentsToRelocate.map((attachment) => ({
+            attachment: attachment.file,
+            newNoteFile: targetFile,
+            oldNoteFile: attachment.ownerNoteFile
+          })),
+          vaultTransaction
+        });
+
         let isFirstMergeIntoNewTarget = isNewTargetFile;
+        const pendingHeadings: string[] = [];
         for (const sourceFile of sourcesToMerge) {
           if (abortController.signal.aborted) {
             throw new Error('Merge into single file aborted.');
           }
+          const headingPlanEntry = headingPlanByPath.get(sourceFile.path);
+          pendingHeadings.push(...headingPlanEntry?.headings ?? []);
           if (isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path)) {
             ignoredSourceFiles.push(sourceFile);
             continue;
           }
+          // Headings are flushed only once a source actually reaches the merge, so a folder whose notes
+          // Are all skipped never leaves an empty heading behind in the target.
+          if (pendingHeadings.length > 0) {
+            const headingBlock = pendingHeadings.map((heading) => `\n\n${heading}`).join('');
+            pendingHeadings.length = 0;
+            await vaultTransaction.process(targetFile, (targetFileContent) => targetFileContent + headingBlock);
+          }
           const composer = new MergeComposer({
             app,
             consoleDebugComponent,
+            headingLevelShift: headingPlanEntry?.depth ?? 0,
             isNewTargetFile: isFirstMergeIntoNewTarget,
             pluginNoticeComponent,
             pluginSettingsComponent,

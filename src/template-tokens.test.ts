@@ -11,7 +11,10 @@ import {
   it
 } from 'vitest';
 
-import { resolveTemplateTokens } from './template-tokens.ts';
+import {
+  resolveFolderTemplateTokens,
+  resolveTemplateTokens
+} from './template-tokens.ts';
 
 describe('resolveTemplateTokens', () => {
   function createFile(path: string, parentFolderName: null | string): TFile {
@@ -82,6 +85,59 @@ describe('resolveTemplateTokens', () => {
 
   it('should format the time token with the provided format', () => {
     expect(resolve('{{time:HH}}')).toMatch(/^\d{2}$/);
+  });
+
+  it('should throw for an unknown token key', () => {
+    expect(() => resolve('{{unknown}}')).toThrow('Invalid template key: unknown');
+  });
+});
+
+describe('resolveFolderTemplateTokens', () => {
+  function createFolder(path: string, parentFolderName: null | string): TFolder {
+    return strictProxy<TFolder>({
+      name: ensureNonNullable(path.split('/').pop()),
+      parent: parentFolderName === null ? null : strictProxy<TFolder>({ name: parentFolderName }),
+      path
+    });
+  }
+
+  const sourceFolder = createFolder('Projects/Alpha', 'Projects');
+
+  function resolve(template: string): string {
+    return resolveFolderTemplateTokens({ sourceFolder, template });
+  }
+
+  it('should substitute the folder name and path tokens', () => {
+    expect(resolve('{{folderName}} | {{folderPath}}')).toBe('Alpha | Projects/Alpha');
+  });
+
+  it('should substitute the parent folder token', () => {
+    expect(resolve('{{parentFolder}}')).toBe('Projects');
+  });
+
+  it('should be case-insensitive for token keys', () => {
+    expect(resolve('{{FolderName}}')).toBe('Alpha');
+  });
+
+  it('should return an empty string when the folder has no parent', () => {
+    const orphan = createFolder('Orphan', null);
+    expect(resolveFolderTemplateTokens({ sourceFolder: orphan, template: '{{parentFolder}}' })).toBe('');
+  });
+
+  it('should format the date token', () => {
+    expect(resolve('{{date:YYYY}}')).toMatch(/^\d{4}$/);
+  });
+
+  it('should format the time token', () => {
+    expect(resolve('{{time}}')).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it('should keep literal text around the tokens', () => {
+    expect(resolve('{{folderName}} summary')).toBe('Alpha summary');
+  });
+
+  it('should throw for a note-flavored token key, which has nothing to resolve against', () => {
+    expect(() => resolve('{{fromTitle}}')).toThrow('Invalid template key: fromTitle');
   });
 
   it('should throw for an unknown token key', () => {

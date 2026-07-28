@@ -13,19 +13,26 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
   isFile,
+  isFolder,
   isMarkdownFile
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
+  cleanupEmptyFolders,
   getAvailablePath,
   trashSafe
 } from 'obsidian-dev-utils/obsidian/vault';
+import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { isMarkdownAttachment } from '../attachments.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
+import { fixFileName } from '../filename-validation.ts';
+import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { resolveFolderTemplateTokens } from '../template-tokens.ts';
 
 interface MergeFolderIntoFileCommandHandlerConstructorParams {
   readonly app: App;
@@ -85,13 +92,10 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const sourceMdFiles: TFile[] = [];
-    Vault.recurseChildren(folder, (child) => {
-      if (isFile(child) && isMarkdownFile(child)) {
-        sourceMdFiles.push(child);
-      }
-    });
-    sourceMdFiles.sort((a, b) => a.path.localeCompare(b.path));
+    const { settings } = this.pluginSettingsComponent;
+    // Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are never merged: their raw
+    // Payload would land in the merged note. They are relocated with the other attachments instead.
+    const sourceMdFiles = collectNotesDepthFirst(folder).filter((file) => !isMarkdownAttachment({ file, markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions }));
 
     if (sourceMdFiles.length === 0) {
       this.pluginNoticeComponent.showNotice(
@@ -104,9 +108,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    // A sibling note named after the folder (`docs/notes` -> `docs/notes.md`), deduped. Deriving it from
-    // `folder.path` (not `join(parent, name)`) keeps it correct when the folder sits at the vault root.
-    const targetPath = getAvailablePath(this.app, `${folder.path}.md`);
+    const targetPath = this.resolveTargetPath(folder);
 
     const isConfirmed = await confirmMergeFolderIntoFile({
       app: this.app,
@@ -119,11 +121,18 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
+    // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
+    const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder);
+
     const targetFile = await this.app.vault.create(targetPath, '');
 
     const result = await mergeFilesIntoSingleFile({
       app: this.app,
+      attachmentSourceFolder: settings.shouldMoveAttachmentsWhenMergingFolder ? folder : undefined,
       consoleDebugComponent: this.consoleDebugComponent,
+      folderHeadingPlan: settings.shouldConvertFoldersToHeadingsWhenMergingFolder
+        ? buildFolderHeadingPlan({ filePaths: sourceMdFiles.map((sourceMdFile) => sourceMdFile.path), rootPath: folder.path })
+        : undefined,
       isNewTargetFile: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
@@ -136,7 +145,19 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     if (result.aborted || result.mergedCount === 0) {
       // Cancelled or nothing merged (e.g. all notes ignored): remove the empty target we created.
       await trashSafe(this.app, targetFile);
+      return;
     }
+
+    /*
+     * Only after the transaction has committed: folder deletion is NOT part of the rollback, so running
+     * it on an aborted merge would delete folders whose notes were just restored. Deepest-first, so each
+     * folder is already empty by the time it is considered. `Keep` makes this a no-op.
+     */
+    await cleanupEmptyFolders({
+      app: this.app,
+      emptyFolderBehavior: settings.emptyFolderBehaviorAfterMergingFolder,
+      folderPaths: folderPathsToCleanUp
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
@@ -148,4 +169,99 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     super.shouldAddToFolderMenu(params);
     return true;
   }
+
+  /**
+   * Resolves the base name of the note the folder is merged into from the
+   * `mergeFolderIntoFileNoteNameTemplate` setting (issue #160), so a merge can always produce e.g.
+   * `Summary.md` instead of `<Folder Name>.md`. An empty setting, a template resolving to nothing, or a
+   * name that still spans folders after sanitization all fall back to the folder's own name (today's
+   * behavior). Mirrors `SplitItemSelector.resolveNoteBasenameInOwnFolder`.
+   *
+   * @param folder - The folder being merged.
+   * @returns The base name to give the merged note, without the `.md` extension.
+   */
+  private resolveTargetBasename(folder: TFolder): string {
+    const { settings } = this.pluginSettingsComponent;
+    const template = settings.mergeFolderIntoFileNoteNameTemplate;
+    if (!template) {
+      return folder.name;
+    }
+
+    const resolved = resolveFolderTemplateTokens({ sourceFolder: folder, template });
+    const noteName = trimEnd({ str: resolved.trim(), suffix: '.md' }).trim();
+    if (!noteName) {
+      return folder.name;
+    }
+
+    const fixedNoteName = fixFileName({
+      fileName: noteName,
+      replacement: settings.replacement,
+      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
+      shouldTreatTitleAsPath: false
+    });
+    // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
+    // Creating the note in the folder that separator implies would put it somewhere the user never asked.
+    if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {
+      return folder.name;
+    }
+
+    return fixedNoteName;
+  }
+
+  /**
+   * Resolves where the merged note is created: always beside the folder, named by
+   * {@link resolveTargetBasename}, de-duplicated against what is already there. The parent prefix is
+   * sliced off `folder.path` rather than rebuilt from the parent folder, which keeps it correct when the
+   * folder sits at the vault root.
+   *
+   * @param folder - The folder being merged.
+   * @returns The path of the note to create.
+   */
+  private resolveTargetPath(folder: TFolder): string {
+    const parentPrefix = folder.path.slice(0, folder.path.length - folder.name.length);
+    return getAvailablePath(this.app, `${parentPrefix}${this.resolveTargetBasename(folder)}.md`);
+  }
+}
+
+/**
+ * Collects the folder's descendant notes in folder-grouped depth-first order: a folder's own notes
+ * (alphabetically) first, then each sub-folder's whole subtree. A flat sort by path would interleave a
+ * sub-folder's notes with the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a
+ * folder and make the folder-heading plan emit its heading more than once.
+ *
+ * @param folder - The folder to walk.
+ * @returns The descendant notes, in merge order.
+ */
+/**
+ * Collects the folder and every folder under it, deepest first, so an emptied tree can be removed from
+ * the leaves upward — a parent only becomes empty once its children are gone.
+ *
+ * @param folder - The folder being merged.
+ * @returns The folder paths, deepest first.
+ */
+function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
+  // Seeded with the folder itself and collected into a set, because whether `recurseChildren` yields the
+  // Folder it was given is not something to depend on.
+  const folderPaths = new Set<string>([folder.path]);
+  Vault.recurseChildren(folder, (child) => {
+    if (isFolder(child)) {
+      folderPaths.add(child.path);
+    }
+  });
+  return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || b.localeCompare(a));
+}
+
+function collectNotesDepthFirst(folder: TFolder): TFile[] {
+  const notes = folder.children
+    .filter(isFile)
+    .filter((child) => isMarkdownFile(child))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const subFolders = folder.children
+    .filter(isFolder)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...notes, ...subFolders.flatMap((subFolder) => collectNotesDepthFirst(subFolder))];
+}
+
+function getDepth(folderPath: string): number {
+  return folderPath.split('/').length;
 }

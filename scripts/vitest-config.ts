@@ -10,7 +10,10 @@ export const config = defineConfig({
   test: {
     coverage: {
       exclude: [
-        'src/**/*.test.ts'
+        'src/**/*.test.ts',
+        // Test-only fixtures shared by several suites. They are not plugin code, and holding them to the
+        // 100% gate would mean writing tests for the test scaffolding.
+        'src/**/*.test-helpers.ts'
       ],
       include: ['src/**/*.ts'],
       provider: 'v8',

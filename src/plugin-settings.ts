@@ -1,4 +1,5 @@
 import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
+import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 
 export enum Action {
   Merge = 'Merge',
@@ -27,7 +28,24 @@ export enum TextAfterExtractionMode {
 
 export class PluginSettings {
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+
+  /**
+   * What happens to the folders a folder merge empties. Defaults to deleting them: once every note is
+   * merged away, the folder tree left behind is litter (issue #160).
+   */
+  public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehavior.Delete;
+
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
+
+  /**
+   * Sub-extensions that make a markdown file an attachment rather than a note, matched against the file's
+   * base name (Obsidian reports `sketch.excalidraw.md` as base name `sketch.excalidraw`, extension `md`).
+   * Such a file is never merged into a folder-merge target — inlining an Excalidraw drawing's raw payload
+   * into a note is never what the user wanted (issue #160).
+   */
+  public markdownAttachmentSubExtensions: string[] = ['excalidraw'];
+
+  public mergeFolderIntoFileNoteNameTemplate = '';
   public mergeTemplate = '\n\n{{content}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
@@ -43,6 +61,7 @@ export class PluginSettings {
   public shouldAskBeforeSplitting = true;
   public shouldAskBeforeSwapping = true;
   public shouldBlockCommandsOnExcludedPaths = false;
+  public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
@@ -54,6 +73,7 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
+  public shouldMoveAttachmentsWhenMergingFolder = true;
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;

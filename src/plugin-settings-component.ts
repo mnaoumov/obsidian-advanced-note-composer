@@ -74,20 +74,32 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       }
     });
 
-    this.registerValidator('splitIntoFolderNoteNameTemplate', (value): MaybeReturn<string> => {
-      if (!value) {
-        return;
-      }
+    this.registerValidator('splitIntoFolderNoteNameTemplate', validateNoteNameTemplate);
+    this.registerValidator('mergeFolderIntoFileNoteNameTemplate', validateNoteNameTemplate);
+  }
+}
 
-      if (value.includes('{{content}}')) {
-        return 'Note name should not contain {{content}} token';
-      }
+/**
+ * Validates a template that names a NOTE (rather than formatting its content): it must not carry
+ * `{{content}}`, and its literal text must be usable as a single file-name segment. Shared by
+ * `splitIntoFolderNoteNameTemplate` (issue #153) and `mergeFolderIntoFileNoteNameTemplate` (issue #160),
+ * which have exactly the same constraints.
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateNoteNameTemplate(value: string): MaybeReturn<string> {
+  if (!value) {
+    return;
+  }
 
-      // Only the literal text is checked: what a token expands to is sanitized at split time.
-      const literal = value.replaceAll(TEMPLATE_TOKEN_REG_EXP, '');
-      if (literal.includes('/') || new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(literal)) {
-        return 'Invalid note name';
-      }
-    });
+  if (value.includes('{{content}}')) {
+    return 'Note name should not contain {{content}} token';
+  }
+
+  // Only the literal text is checked: what a token expands to is sanitized when the note is created.
+  const literal = value.replaceAll(TEMPLATE_TOKEN_REG_EXP, '');
+  if (literal.includes('/') || new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(literal)) {
+    return 'Invalid note name';
   }
 }

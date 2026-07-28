@@ -5,6 +5,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
+import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 import { EMPTY } from 'obsidian-dev-utils/string';
 
 import type { PluginSettings } from './plugin-settings.ts';
@@ -697,6 +698,131 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setDesc('Default setting for whether to include parent folders into the merge folder modal. Can be changed in the merge folders modal dialog.')
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldIncludeParentFoldersWhenMergingByDefault', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Empty folders after merging a folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('What happens to the folders left empty once ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText(' has merged their notes away.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Delete');
+            f.appendText(' - remove the merged folder and each sub-folder that ended up empty. A folder still holding files is always kept.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Delete with empty parents');
+            f.appendText(' - the same, and also remove any parent folder the deletion leaves empty.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Keep');
+            f.appendText(' - leave every folder in place.');
+            f.createEl('br');
+            f.appendText('Folders are removed after the merge is committed, so a cancelled merge never deletes anything.');
+          }))
+          .addDropdown((dropdown) => {
+            dropdown.addOptions({
+              [EmptyFolderBehavior.Delete]: 'Delete',
+              [EmptyFolderBehavior.DeleteWithEmptyParents]: 'Delete with empty parents',
+              [EmptyFolderBehavior.Keep]: 'Keep'
+            });
+            this.bind({ propertyName: 'emptyFolderBehaviorAfterMergingFolder', valueComponent: dropdown });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should move attachments when merging a folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('When ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText(' merges the folder\'s notes away, whether their attachments follow into the merged note\'s attachment folder.');
+            f.createEl('br');
+            f.appendText('The destination honors your vault\'s attachment settings, including ');
+            /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+            f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+            f.appendText(' when it is installed.');
+            f.createEl('br');
+            f.appendText('An attachment moves when one of the merged notes references it, or when it already sits where that note\'s attachments belong.');
+            f.createEl('br');
+            f.appendText('When disabled, attachments stay where they are, which also keeps their folders from being emptied.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFolder', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Markdown attachment sub-extensions')
+          .setDesc(createFragment((f) => {
+            f.appendText('Markdown files whose name ends with one of these sub-extensions are treated as attachments, not notes, so a folder merge never inlines their contents.');
+            f.createEl('br');
+            f.appendText('Insert one sub-extension per line, without the leading dot. For example, ');
+            appendCodeBlock(f, 'excalidraw');
+            f.appendText(' covers ');
+            appendCodeBlock(f, 'sketch.excalidraw.md');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Leave empty to treat every markdown file as a note.');
+          }))
+          .addMultipleText((multipleText) => {
+            this.bind({ propertyName: 'markdownAttachmentSubExtensions', valueComponent: multipleText });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should convert folders to headings when merging a folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('When ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText(' pulls in notes from sub-folders, whether each sub-folder becomes a heading in the merged note.');
+            f.createEl('br');
+            f.appendText('The heading level is the sub-folder\'s depth below the merged folder: a direct sub-folder becomes ');
+            appendCodeBlock(f, '# Name');
+            f.appendText(', its own child ');
+            appendCodeBlock(f, '## Name');
+            f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
+            f.createEl('br');
+            f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
+            appendCodeBlock(f, 'Split note by headings recursively...');
+            f.appendText(', which turns a heading hierarchy into a folder tree.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldConvertFoldersToHeadingsWhenMergingFolder', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Merge folder into file note name')
+          .setDesc(createFragment((f) => {
+            f.appendText('The name to give the note created by ');
+            appendCodeBlock(f, 'Merge folder contents into a single file...');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Leave empty to name it after the merged folder, e.g. ');
+            appendCodeBlock(f, 'Docs.md');
+            f.appendText(' for the folder ');
+            appendCodeBlock(f, 'Docs');
+            f.appendText('. The note is always created next to the folder, and a colliding name is de-duplicated.');
+            f.createEl('br');
+            f.appendText('Available tokens:');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{folderName}}');
+            f.appendText(' / ');
+            appendCodeBlock(f, '{{folderPath}}');
+            f.appendText(' - the merged folder\'s name / path.');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{parentFolder}}');
+            f.appendText(' - the merged folder\'s parent folder name.');
+            f.createEl('br');
+            f.appendText('- ');
+            appendCodeBlock(f, '{{date:FORMAT}}');
+            f.appendText(', e.g. ');
+            appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'mergeFolderIntoFileNoteNameTemplate', valueComponent: codeHighlighter });
           });
       });
 
