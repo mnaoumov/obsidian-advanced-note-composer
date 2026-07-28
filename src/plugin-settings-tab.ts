@@ -809,6 +809,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
             appendCodeBlock(f, 'Split note by headings recursively...');
             f.appendText(', which turns a heading hierarchy into a folder tree.');
+            f.createEl('br');
+            f.appendText('Markdown defines only six heading levels. A folder deeper than six still gets its full level, e.g. ');
+            appendCodeBlock(f, '####### Name');
+            f.appendText(', which Obsidian shows as plain text rather than a heading — the depth stays readable, whereas stopping at ');
+            appendCodeBlock(f, '######');
+            f.appendText(' made a folder and its own descendants indistinguishable.');
           }))
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldConvertFoldersToHeadingsWhenMergingFolder', valueComponent: toggle });

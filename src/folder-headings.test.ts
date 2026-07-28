@@ -60,12 +60,22 @@ describe('buildFolderHeadingPlan', () => {
     ]);
   });
 
-  it('should cap the heading level at the deepest markdown heading', () => {
+  it('should keep deepening past the deepest markdown heading', () => {
+    /*
+     * Issue #160: markdown stops at six, but clamping there made every folder from depth 6 downward
+     * share `######`, so an ancestor and its descendants read as siblings. The depth is encoded instead.
+     */
     const deepPath = 'Docs/a/b/c/d/e/f/g/note.md';
     const entry = buildFolderHeadingPlan({ filePaths: [deepPath], rootPath: 'Docs' })[0];
-    expect(entry?.headings.at(-1)).toBe('###### g');
-    expect(entry?.headings.at(-2)).toBe('###### f');
+    expect(entry?.headings).toEqual(['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g']);
     expect(entry?.depth).toBe(7);
+  });
+
+  it('should keep sibling folders distinguishable past six levels', () => {
+    expect(plan(['Docs/a/b/c/d/e/f/g/h/deep.md', 'Docs/a/b/c/d/e/f/i/other.md'])).toEqual([
+      { depth: 8, headings: ['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g', '######## h'] },
+      { depth: 7, headings: ['####### i'] }
+    ]);
   });
 
   it('should measure depth below a nested merged folder', () => {
@@ -99,8 +109,21 @@ describe('demoteHeadings', () => {
     expect(demoteHeadings('# A\nbody\n## B', 1)).toBe('## A\nbody\n### B');
   });
 
-  it('should cap the demoted level at the deepest markdown heading', () => {
-    expect(demoteHeadings('##### Deep', 3)).toBe('###### Deep');
+  it('should demote past the deepest markdown heading rather than clamping', () => {
+    /*
+     * Clamping put the note's own top heading at the level its folder heading already held, making the
+     * note's outline a sibling of its own folder — starting at depth six, inside markdown's own range.
+     */
+    expect(demoteHeadings('##### Deep', 3)).toBe('######## Deep');
+  });
+
+  it('should keep a note outline nested below its folder heading at depth six', () => {
+    expect(demoteHeadings('# Top\n## Sub', 6)).toBe('####### Top\n######## Sub');
+  });
+
+  it('should demote a heading deeper than six so a re-merge keeps the relative order', () => {
+    // `buildFolderHeadingPlan` emits these, so a merged note carries them into a second merge.
+    expect(demoteHeadings('####### Deep', 1)).toBe('######## Deep');
   });
 
   it('should keep non-heading lines as they are', () => {

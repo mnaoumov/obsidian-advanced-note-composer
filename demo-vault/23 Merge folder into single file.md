@@ -32,6 +32,10 @@ nested `Nested` folder becomes a `# Nested` heading in the merged note, and [[Pa
 are demoted one level so they nest under it instead of competing with it. A folder one level deeper
 would become `##`, and so on.
 
+Markdown only defines six heading levels, so a folder more than six deep gets a `#######`-or-longer
+line, which Obsidian renders as plain text rather than a heading. The full depth is still written out
+— stopping at `######` would make a folder and its own descendants look like siblings.
+
 This is the exact opposite of `Split note by headings recursively...` (see [[27 Split headings
 recursively]]): split a note into a folder tree and merge it back, and the heading levels agree.
 
