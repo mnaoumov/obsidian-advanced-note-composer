@@ -10,14 +10,34 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
 import { join } from 'obsidian-dev-utils/path';
 
+import type { FlattenPreviewRow } from '../flatten-preview.ts';
+import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
+import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
+import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
+import { openModal } from '../open-minimizable-modal.ts';
+
+interface BuildFlattenConfirmContentParams {
+  readonly app: App;
+  readonly folder: TFolder;
+  readonly fragment: DocumentFragment;
+  readonly parentFolder: TFolder;
+  readonly previewRows: readonly FlattenPreviewRow[];
+}
+
+interface FlattenFolderCommandHandlerConfirmFlattenParams {
+  readonly folder: TFolder;
+  readonly parentFolder: TFolder;
+  readonly previewRows: readonly FlattenPreviewRow[];
+}
 
 interface FlattenFolderCommandHandlerConstructorParams {
   readonly app: App;
@@ -93,6 +113,21 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     // Snapshot the children up front: renaming mutates `folder.children` mid-iteration.
     const children = [...folder.children];
 
+    if (this.pluginSettingsComponent.settings.shouldAskBeforeFlattening) {
+      /*
+       * Flatten has no target picker, so this dialog is the only chance to see what the command is about
+       * to do. It is asked before the lock and the transaction are taken, so cancelling costs nothing.
+       */
+      const previewRows = buildFlattenPreviewRows({ app: this.app, children, parentFolder });
+      const confirmResult = await this.confirmFlatten({ folder, parentFolder, previewRows });
+      if (!confirmResult.isConfirmed) {
+        return;
+      }
+      await this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.shouldAskBeforeFlattening = confirmResult.shouldAskAgain;
+      });
+    }
+
     const abortController = new AbortController();
     try {
       await runLockedTransaction({
@@ -127,6 +162,44 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     return true;
   }
 
+  /**
+   * Asks before promoting the folder's children, listing every one of them (issue #154). There is no
+   * target to reselect — the destination is always the folder's own parent — so the dialog's
+   * "Change target" action is disabled. Mirrors the other flows in mapping "Don't ask again" back onto
+   * the flow's own `shouldAskBefore*` setting.
+   *
+   * @param params - The parameters.
+   * @returns The dialog result.
+   */
+  private async confirmFlatten(params: FlattenFolderCommandHandlerConfirmFlattenParams): Promise<ConfirmDialogModalResult> {
+    const {
+      folder,
+      parentFolder,
+      previewRows
+    } = params;
+    const app = this.app;
+    return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+      openModal(
+        new ConfirmDialogModal({
+          app,
+          buildContent: (fragment): Promise<void> =>
+            buildFlattenConfirmContent({
+              app,
+              folder,
+              fragment,
+              parentFolder,
+              previewRows
+            }),
+          canReselectTarget: false,
+          confirmButtonMobileText: 'Flatten and don\'t ask again',
+          confirmButtonText: 'Flatten',
+          promiseResolve,
+          title: 'Flatten folder'
+        })
+      );
+    });
+  }
+
   private async flattenImpl(params: FlattenFolderCommandHandlerFlattenImplParams): Promise<void> {
     const { abortController, children, parentFolder, vaultTransaction } = params;
     for (const child of children) {
@@ -136,5 +209,44 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       const targetPath = getAvailablePath(this.app, join(parentFolder.path, child.name));
       await vaultTransaction.rename(child, targetPath);
     }
+  }
+}
+
+/**
+ * Builds the flatten confirmation body: what is being flattened, where its children land, and the full
+ * list of those children — the command has no preview otherwise.
+ *
+ * @param params - The parameters.
+ */
+async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentParams): Promise<void> {
+  const {
+    app,
+    folder,
+    fragment,
+    parentFolder,
+    previewRows
+  } = params;
+  fragment.appendText('Are you sure you want to flatten ');
+  appendCodeBlock(fragment, 'Folder');
+  fragment.appendText('? Its ');
+  appendCodeBlock(fragment, String(previewRows.length));
+  fragment.appendText(' direct children move up one level and the emptied folder is left in place.');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Folder');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: folder }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Destination');
+  fragment.appendText(': ');
+  appendCodeBlock(fragment, parentFolder.isRoot() ? '/' : parentFolder.path);
+  fragment.createEl('br');
+  fragment.createEl('br');
+  fragment.createEl('h2', { text: 'Items that will be moved' });
+  for (const row of previewRows) {
+    // A renamed item is shown as `old → new`, so a de-duplicated collision is visible before it happens.
+    appendCodeBlock(fragment, row.name === row.targetName ? row.name : `${row.name} → ${row.targetName}`);
+    fragment.createEl('br');
   }
 }

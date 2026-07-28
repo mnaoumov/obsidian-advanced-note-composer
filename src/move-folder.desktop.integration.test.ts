@@ -16,6 +16,21 @@ import {
 // Isolation: `npx vitest run --project integration-tests:desktop src/move-folder.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
+interface ComponentTreeNode {
+  _children?: ComponentTreeNode[];
+  editAndSave?: unknown;
+  settings?: MoveSettings;
+}
+
+interface MoveSettings {
+  shouldAskBeforeMovingFolder: boolean;
+}
+
+interface SettingsCarrier {
+  editAndSave(editor: (settings: MoveSettings) => void): Promise<void>;
+  settings: MoveSettings;
+}
+
 describe('move folder to... (issue #73)', () => {
   it('moves the chosen folder into a target picked from the suggester and updates links', async () => {
     const result = await evalInObsidian({
@@ -23,58 +38,94 @@ describe('move folder to... (issue #73)', () => {
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        // A prior run may have moved `mv-src` under `mv-dst`; reset both trees and the linking note.
-        await trashIfExists('mv-dst');
-        await trashIfExists('mv-src');
-        await trashIfExists('mv-link.md');
+        const settingsComponent = findSettingsComponent();
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMovingFolder;
+        try {
+          // Skip the confirmation dialog (issue #154, on by default) so the move runs straight from the
+          // Picker; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMovingFolder = false;
+          });
 
-        // `mv-src` is the folder to move; `mv-dst` is the destination; `mv-link.md` links into `mv-src`.
-        await app.vault.createFolder('mv-src');
-        const noteInSrc = await app.vault.create('mv-src/note-in-src.md', 'inner body');
-        await app.vault.createFolder('mv-dst');
-        await app.vault.create('mv-dst/keep.md', 'keep body');
-        await app.vault.create('mv-link.md', 'Go to [[note-in-src]].');
+          // A prior run may have moved `mv-src` under `mv-dst`; reset both trees and the linking note.
+          await trashIfExists('mv-dst');
+          await trashIfExists('mv-src');
+          await trashIfExists('mv-link.md');
 
-        // Open a note inside `mv-src` so the folder command resolves the active file's parent folder.
-        await openFile(noteInSrc);
-        await waitUntil({
-          message: 'link cache not ready',
-          predicate: () => app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-src/note-in-src.md'
-        });
+          // `mv-src` is the folder to move; `mv-dst` is the destination; `mv-link.md` links into `mv-src`.
+          await app.vault.createFolder('mv-src');
+          const noteInSrc = await app.vault.create('mv-src/note-in-src.md', 'inner body');
+          await app.vault.createFolder('mv-dst');
+          await app.vault.create('mv-dst/keep.md', 'keep body');
+          await app.vault.create('mv-link.md', 'Go to [[note-in-src]].');
 
-        app.commands.executeCommandById(`${pluginId}:move-folder`);
-        await waitUntil({
-          message: 'move-folder picker did not open',
-          predicate: () => document.querySelector('.prompt') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          // Open a note inside `mv-src` so the folder command resolves the active file's parent folder.
+          await openFile(noteInSrc);
+          await waitUntil({
+            message: 'link cache not ready',
+            predicate: () => app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-src/note-in-src.md'
+          });
 
-        // Pick the destination folder through the real fuzzy suggester DOM.
-        const input = document.querySelector('.prompt-input');
-        if (!(input instanceof HTMLInputElement)) {
-          throw new Error('No move-folder picker input.');
+          app.commands.executeCommandById(`${pluginId}:move-folder`);
+          await waitUntil({
+            message: 'move-folder picker did not open',
+            predicate: () => document.querySelector('.prompt') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          // Pick the destination folder through the real fuzzy suggester DOM.
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new Error('No move-folder picker input.');
+          }
+          input.value = 'mv-dst';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'target folder suggestion did not appear',
+            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === 'mv-dst')
+          });
+          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+
+          // The folder is moved into the destination: `mv-src` now lives under `mv-dst`.
+          await waitUntil({
+            message: 'folder was not moved into the destination',
+            predicate: () => app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const movedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null;
+          const oldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
+          // The inbound link now resolves to the folder's new location (links updated by the move).
+          const linkUpdated = app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-dst/mv-src/note-in-src.md';
+
+          return { linkUpdated, movedIntoTarget, oldLocationGone };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMovingFolder = originalShouldAsk;
+          });
         }
-        input.value = 'mv-dst';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        await waitUntil({
-          message: 'target folder suggestion did not appear',
-          predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === 'mv-dst')
-        });
-        input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 
-        // The folder is moved into the destination: `mv-src` now lives under `mv-dst`.
-        await waitUntil({
-          message: 'folder was not moved into the destination',
-          predicate: () => app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
 
-        const movedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null;
-        const oldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
-        // The inbound link now resolves to the folder's new location (links updated by the move).
-        const linkUpdated = app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-dst/mv-src/note-in-src.md';
-
-        return { linkUpdated, movedIntoTarget, oldLocationGone };
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMovingFolder === 'boolean';
+        }
 
         async function trashIfExists(path: string): Promise<void> {
           const existing = app.vault.getAbstractFileByPath(path);

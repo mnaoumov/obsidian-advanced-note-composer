@@ -8,15 +8,26 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
 import { join } from 'obsidian-dev-utils/path';
 
+import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
+import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
+
+interface BuildMoveConfirmContentParams {
+  readonly app: App;
+  readonly fragment: DocumentFragment;
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
+}
 
 interface MoveFolderCommandHandlerConstructorParams {
   readonly app: App;
@@ -68,11 +79,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const targetFolder = await selectTargetFolderForMove({
-      app: this.app,
-      pluginSettingsComponent: this.pluginSettingsComponent,
-      sourceFolder: folder
-    });
+    const targetFolder = await this.resolveTargetFolder(folder);
     if (!targetFolder) {
       return;
     }
@@ -112,4 +119,102 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
     super.shouldAddToFolderMenu(params);
     return true;
   }
+
+  /**
+   * Asks before moving the folder into the destination picked in the suggester (issue #154). Mirrors the
+   * other flows in mapping "Don't ask again" back onto the flow's own `shouldAskBefore*` setting.
+   *
+   * @param sourceFolder - The folder being moved.
+   * @param targetFolder - The destination chosen in the picker.
+   * @returns The dialog result.
+   */
+  private async confirmMove(sourceFolder: TFolder, targetFolder: TFolder): Promise<ConfirmDialogModalResult> {
+    const app = this.app;
+    return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
+      openMinimizableModal(
+        new ConfirmDialogModal({
+          app,
+          buildContent: (fragment): Promise<void> =>
+            buildMoveConfirmContent({
+              app,
+              fragment,
+              sourceFolder,
+              targetFolder
+            }),
+          canReselectTarget: true,
+          confirmButtonMobileText: 'Move and don\'t ask again',
+          confirmButtonText: 'Move',
+          promiseResolve,
+          title: 'Move folder'
+        })
+      );
+    });
+  }
+
+  /**
+   * Runs the picker and, unless the confirmation is turned off, the confirmation dialog. The dialog's
+   * "Change target" action sends the flow back to the picker, so this loops until the user confirms a
+   * destination or cancels — the same shape as the swap/merge target-choosing flows.
+   *
+   * @param folder - The folder being moved.
+   * @returns The confirmed destination, or `null` when the flow was cancelled.
+   */
+  private async resolveTargetFolder(folder: TFolder): Promise<null | TFolder> {
+    for (;;) {
+      const targetFolder = await selectTargetFolderForMove({
+        app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        sourceFolder: folder
+      });
+      if (!targetFolder) {
+        return null;
+      }
+      if (!this.pluginSettingsComponent.settings.shouldAskBeforeMovingFolder) {
+        return targetFolder;
+      }
+
+      const confirmResult = await this.confirmMove(folder, targetFolder);
+      if (confirmResult.shouldReselectTarget) {
+        // Go back to the folder picker to choose a different destination.
+        continue;
+      }
+      if (!confirmResult.isConfirmed) {
+        return null;
+      }
+      await this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.shouldAskBeforeMovingFolder = confirmResult.shouldAskAgain;
+      });
+      return targetFolder;
+    }
+  }
+}
+
+/**
+ * Builds the move confirmation body: the folder being moved and the destination it is going into.
+ *
+ * @param params - The parameters.
+ */
+async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): Promise<void> {
+  const {
+    app,
+    fragment,
+    sourceFolder,
+    targetFolder
+  } = params;
+  fragment.appendText('Are you sure you want to move ');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(' into ');
+  appendCodeBlock(fragment, 'Destination');
+  fragment.appendText('?');
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(': ');
+  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFolder }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Destination');
+  fragment.appendText(': ');
+  // The vault root has an empty path, so it is shown as `/` rather than as an empty code block.
+  appendCodeBlock(fragment, targetFolder.isRoot() ? '/' : targetFolder.path);
 }

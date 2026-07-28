@@ -700,6 +700,29 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       });
 
     new SettingGroupEx(this.containerEl)
+      .setHeading('Move/flatten folders')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should ask before flattening a folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether to show a confirmation dialog before flattening a folder.');
+            f.createEl('br');
+            f.appendText('The dialog lists every child that will be moved up one level, including the de-duplicated name any colliding child will get.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldAskBeforeFlattening', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Should ask before moving a folder')
+          .setDesc('Whether to show a confirmation dialog before moving a folder into the folder picked in the suggester.')
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldAskBeforeMovingFolder', valueComponent: toggle });
+          });
+      });
+
+    new SettingGroupEx(this.containerEl)
       .setHeading('UI')
       .addSettingEx((setting: SettingEx) => {
         setting

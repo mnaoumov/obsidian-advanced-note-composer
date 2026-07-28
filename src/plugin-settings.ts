@@ -37,7 +37,9 @@ export class PluginSettings {
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   public shouldAlwaysMergeExcludedItems = false;
   public shouldApplyTextAfterExtractionToSameFile = false;
+  public shouldAskBeforeFlattening = true;
   public shouldAskBeforeMerging = true;
+  public shouldAskBeforeMovingFolder = true;
   public shouldAskBeforeSplitting = true;
   public shouldAskBeforeSwapping = true;
   public shouldBlockCommandsOnExcludedPaths = false;
