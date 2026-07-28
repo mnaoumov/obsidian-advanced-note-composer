@@ -29,6 +29,8 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { getRecentFilePaths } from '../recent-suggestions.ts';
+
 export interface Item extends SearchResultContainer {
   alias?: string;
   bookmarkPath?: string;
@@ -313,11 +315,12 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   /* v8 ignore stop */
 
   private getRecentFiles(): Item[] {
-    const recentFilePaths = this.app.workspace.getRecentFiles({
-      showImages: this.shouldShowImages,
-      showMarkdown: this.shouldShowMarkdown,
-      showNonAttachments: this.shouldShowNonAttachments,
-      showNonImageAttachments: this.shouldShowNonImageAttachments
+    // The per-type flags are not passed to `getRecentFilePaths`: `shouldIncludeFile` below applies the
+    // Same ones, so the shared superset keeps every picker reading one recent list (issue #158).
+    const recentFilePaths = getRecentFilePaths({
+      app: this.app,
+      // The active file is this operation's own source, which `shouldIncludeFile` excludes anyway.
+      shouldIncludeActiveFile: false
     });
 
     const filePaths = new Set<string>();

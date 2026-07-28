@@ -19,7 +19,7 @@ import {
   openMinimizableModal,
   openModal
 } from '../open-minimizable-modal.ts';
-import { reorderSuggestionsByRecentFolders } from '../recent-folder-suggestions.ts';
+import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 interface BuildMergeConfirmContentParams {
