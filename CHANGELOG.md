@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 5.1.0
+
+- refactor: stop exporting the test-only trailing-dots regular expression
+- docs: fix the demo vault download instructions
+- fix(settings): report an invalid path regular expression instead of ignoring it (re #155)
+- feat(attachments)!: configure real extensions instead of markdown sub-extensions
+- test: drop the hand-seeded attachment-path surface now that the mocks model it
+- fix(merge-folder): stop clamping folder headings at six levels (re #160)
+- feat(merge): make attachments follow a merged note (re #161)
+- feat(merge-folder): enhance Merge folder contents into a single file (re #160, re #161)
+- docs: explain the path-string vs regular-expression forms of Include/Exclude paths (re #159)
+- fix: offer the folder you are on first in the folder pickers (re #158)
+- feat: per-direction jump-to-moved-content settings (re #144)
+- feat: ask before flattening and moving folders (re #154)
+- feat: split note by headings recursively (re #79)
+- feat: predefine the note name for folder splits (re #153)
+- feat: split headings automatically (re #79)
+
 ## 5.0.0
 
 - fix: skip vanished backlink sources when fixing backlinks
