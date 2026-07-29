@@ -8,8 +8,7 @@ import type { FixFileNameParams } from './filename-validation.ts';
 
 import {
   fixFileName,
-  INVALID_CHARACTERS_REG_EXP,
-  TRAILING_DOTS_OR_SPACES_REG_EXP
+  INVALID_CHARACTERS_REG_EXP
 } from './filename-validation.ts';
 
 describe('INVALID_CHARACTERS_REG_EXP', () => {
@@ -68,30 +67,6 @@ describe('INVALID_CHARACTERS_REG_EXP', () => {
   });
 });
 
-describe('TRAILING_DOTS_OR_SPACES_REG_EXP', () => {
-  it('should match trailing dots', () => {
-    expect('filename...').toMatch(TRAILING_DOTS_OR_SPACES_REG_EXP);
-  });
-
-  it('should match trailing spaces', () => {
-    expect('filename   ').toMatch(TRAILING_DOTS_OR_SPACES_REG_EXP);
-  });
-
-  it('should match trailing mix of dots and spaces', () => {
-    expect('filename. .').toMatch(TRAILING_DOTS_OR_SPACES_REG_EXP);
-  });
-
-  it('should not match valid filename without trailing dots or spaces', () => {
-    TRAILING_DOTS_OR_SPACES_REG_EXP.lastIndex = 0;
-    expect(TRAILING_DOTS_OR_SPACES_REG_EXP.test('filename')).toBe(false);
-  });
-
-  it('should not match dots in the middle', () => {
-    TRAILING_DOTS_OR_SPACES_REG_EXP.lastIndex = 0;
-    expect(TRAILING_DOTS_OR_SPACES_REG_EXP.test('file.name')).toBe(false);
-  });
-});
-
 describe('fixFileName', () => {
   function fix(fileName: string, overrides: Partial<FixFileNameParams> = {}): string {
     return fixFileName({
@@ -123,8 +98,20 @@ describe('fixFileName', () => {
     expect(fix('a*b', { replacement: '' })).toBe('ab');
   });
 
-  it('should replace trailing dots and spaces', () => {
+  it('should replace trailing dots', () => {
     expect(fix('name..')).toBe('name__');
+  });
+
+  it('should replace trailing spaces', () => {
+    expect(fix('name  ')).toBe('name__');
+  });
+
+  it('should replace a trailing mix of dots and spaces', () => {
+    expect(fix('name. ')).toBe('name__');
+  });
+
+  it('should keep dots in the middle of a name', () => {
+    expect(fix('file.name')).toBe('file.name');
   });
 
   it('should replace a leading dot', () => {
