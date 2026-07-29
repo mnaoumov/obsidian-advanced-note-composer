@@ -25,7 +25,6 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
-import { seedAttachmentPathSurface } from '../attachment-path.test-helpers.ts';
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
@@ -121,9 +120,8 @@ function getFolder(path: string): TFolder {
 function initApp(files: Record<string, string>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
-  // Obsidian's default attachment folder is the vault root, which is where a merged note's attachments
-  // Belong once the notes under the folder are gone.
-  seedAttachmentPathSurface({ app });
+  // No `attachmentFolderPath` is set: the mocks default it to the vault root exactly as Obsidian does, and
+  // That is where a merged note's attachments belong once the notes under the folder are gone.
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
 }

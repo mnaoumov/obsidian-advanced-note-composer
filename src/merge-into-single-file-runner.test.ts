@@ -23,7 +23,6 @@ import {
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
-import { seedAttachmentPathSurface } from './attachment-path.test-helpers.ts';
 import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 import { FrontmatterMergeStrategy } from './plugin-settings.ts';
 
@@ -109,7 +108,7 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   if (options.attachmentFolderPath !== undefined) {
-    seedAttachmentPathSurface({ app, attachmentFolderPath: options.attachmentFolderPath });
+    app.vault.setConfig('attachmentFolderPath', options.attachmentFolderPath);
   }
   if (options.plugins) {
     castTo<GenericObject>(app)['plugins'] = { plugins: options.plugins };
