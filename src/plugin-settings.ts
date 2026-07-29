@@ -1,9 +1,24 @@
 import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
-import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 
 export enum Action {
   Merge = 'Merge',
   Split = 'Split'
+}
+
+/**
+ * What a folder merge does with the folders it empties. A plugin-local **wrapper** around the
+ * `obsidian-dev-utils` `EmptyFolderBehavior`, not that enum itself, because of the fourth member: keeping the
+ * merged folder while deleting the folders under it (issue #167) is a change to WHICH paths are offered to
+ * `cleanupEmptyFolders`, not a new per-path behavior, so it cannot be expressed as a dev-utils value. The
+ * three original members deliberately reuse `EmptyFolderBehavior`'s exact string values, so every
+ * already-persisted setting stays valid and no legacy-settings converter is needed. Do not "simplify" this
+ * back to the dev-utils enum.
+ */
+export enum EmptyFolderBehaviorAfterMergingFolder {
+  Delete = 'Delete',
+  DeleteSubFoldersOnly = 'DeleteSubFoldersOnly',
+  DeleteWithEmptyParents = 'DeleteWithEmptyParents',
+  Keep = 'Keep'
 }
 
 export enum FrontmatterMergeStrategy {
@@ -41,9 +56,10 @@ export class PluginSettings {
 
   /**
    * What happens to the folders a folder merge empties. Defaults to deleting them: once every note is
-   * merged away, the folder tree left behind is litter (issue #160).
+   * merged away, the folder tree left behind is litter (issue #160). `DeleteSubFoldersOnly` is the
+   * in-between option (issue #167) for a folder whose own name matters but whose children's do not.
    */
-  public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehavior.Delete;
+  public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehaviorAfterMergingFolder.Delete;
 
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 

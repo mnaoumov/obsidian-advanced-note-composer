@@ -5,13 +5,13 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
-import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 import { EMPTY } from 'obsidian-dev-utils/string';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
 import {
   Action,
+  EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   TextAfterExtractionMode
@@ -736,8 +736,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             appendCodeBlock(f, 'Delete');
             f.appendText(' - remove the merged folder and each sub-folder that ended up empty. A folder still holding files is always kept.');
             f.createEl('br');
+            appendCodeBlock(f, 'Delete sub-folders only');
+            f.appendText(' - keep the merged folder itself, even once it is empty, and remove every emptied folder under it, however deep.');
+            f.createEl('br');
             appendCodeBlock(f, 'Delete with empty parents');
-            f.appendText(' - the same, and also remove any parent folder the deletion leaves empty.');
+            f.appendText(' - the same as ');
+            appendCodeBlock(f, 'Delete');
+            f.appendText(', and also remove any parent folder the deletion leaves empty.');
             f.createEl('br');
             appendCodeBlock(f, 'Keep');
             f.appendText(' - leave every folder in place.');
@@ -746,9 +751,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }))
           .addDropdown((dropdown) => {
             dropdown.addOptions({
-              [EmptyFolderBehavior.Delete]: 'Delete',
-              [EmptyFolderBehavior.DeleteWithEmptyParents]: 'Delete with empty parents',
-              [EmptyFolderBehavior.Keep]: 'Keep'
+              [EmptyFolderBehaviorAfterMergingFolder.Delete]: 'Delete',
+              [EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly]: 'Delete sub-folders only',
+              [EmptyFolderBehaviorAfterMergingFolder.DeleteWithEmptyParents]: 'Delete with empty parents',
+              [EmptyFolderBehaviorAfterMergingFolder.Keep]: 'Keep'
             });
             this.bind({ propertyName: 'emptyFolderBehaviorAfterMergingFolder', valueComponent: dropdown });
           });

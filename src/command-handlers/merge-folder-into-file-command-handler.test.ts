@@ -10,7 +10,6 @@ import type { MockInstance } from 'vitest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { EmptyFolderBehavior } from 'obsidian-dev-utils/obsidian/vault';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -28,7 +27,10 @@ import type { PluginSettings } from '../plugin-settings.ts';
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  EmptyFolderBehaviorAfterMergingFolder,
+  FrontmatterMergeStrategy
+} from '../plugin-settings.ts';
 import { MergeFolderIntoFileCommandHandler } from './merge-folder-into-file-command-handler.ts';
 
 interface HandlerContext {
@@ -88,7 +90,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         attachmentExtensions: ['.excalidraw.md'],
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
-        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Keep,
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Keep,
         isPathIgnored: () => false,
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
@@ -275,7 +277,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/api/v2/put.md': 'put body',
       'src/note.md': 'note body'
     });
-    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete });
+    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete });
     mockConfirm.mockResolvedValue(true);
 
     await handler.executeFolder(getFolder('src'));
@@ -287,12 +289,35 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(await app.vault.adapter.read('src.md')).toContain('put body');
   });
 
+  it('should keep the merged folder and delete only the folders under it when the behavior is DeleteSubFoldersOnly', async () => {
+    initApp({
+      'src/api/v2/put.md': 'put body',
+      'src/note.md': 'note body'
+    });
+    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    // Issue #167: the merged folder itself survives even though it is now empty, while every folder under
+    // It - however deep - is gone.
+    expect(app.vault.getFolderByPath('src/api/v2')).toBeNull();
+    expect(app.vault.getFolderByPath('src/api')).toBeNull();
+    expect(app.vault.getFolderByPath('src')).not.toBeNull();
+    // The kept folder really is empty: both notes were merged away, not left behind.
+    expect(await app.vault.adapter.exists('src/note.md')).toBe(false);
+    expect(await app.vault.adapter.exists('src/api/v2/put.md')).toBe(false);
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged).toContain('note body');
+    expect(merged).toContain('put body');
+  });
+
   it('should keep a folder that still holds files', async () => {
     initApp({
       'src/api/img.png': 'PIC',
       'src/note.md': 'note body'
     });
-    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete });
+    const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete });
     mockConfirm.mockResolvedValue(true);
 
     await handler.executeFolder(getFolder('src'));
@@ -316,7 +341,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should not delete any folder when nothing was merged', async () => {
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler({
-      emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Delete,
+      emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
       isPathIgnored: (path) => path === 'src/a.md'
     });
     mockConfirm.mockResolvedValue(true);

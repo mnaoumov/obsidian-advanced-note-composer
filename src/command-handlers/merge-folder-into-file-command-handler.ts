@@ -20,6 +20,7 @@ import {
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   cleanupEmptyFolders,
+  EmptyFolderBehavior,
   getAvailablePath,
   trashSafe
 } from 'obsidian-dev-utils/obsidian/vault';
@@ -32,7 +33,22 @@ import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { EmptyFolderBehaviorAfterMergingFolder } from '../plugin-settings.ts';
 import { resolveFolderTemplateTokens } from '../template-tokens.ts';
+
+/**
+ * The `obsidian-dev-utils` behavior each setting value cleans up with. `DeleteSubFoldersOnly` maps to plain
+ * `Delete` — never `DeleteWithEmptyParents` — because the merged folder itself is excluded from the paths
+ * offered to the cleanup, so no ancestor of it can end up empty and the parent half would be meaningless.
+ * A `Record` keyed by the enum rather than a `switch`, so adding a member is a compile error instead of an
+ * unreachable `default` branch.
+ */
+const ODU_EMPTY_FOLDER_BEHAVIORS: Record<EmptyFolderBehaviorAfterMergingFolder, EmptyFolderBehavior> = {
+  [EmptyFolderBehaviorAfterMergingFolder.Delete]: EmptyFolderBehavior.Delete,
+  [EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly]: EmptyFolderBehavior.Delete,
+  [EmptyFolderBehaviorAfterMergingFolder.DeleteWithEmptyParents]: EmptyFolderBehavior.DeleteWithEmptyParents,
+  [EmptyFolderBehaviorAfterMergingFolder.Keep]: EmptyFolderBehavior.Keep
+};
 
 interface MergeFolderIntoFileCommandHandlerConstructorParams {
   readonly app: App;
@@ -153,10 +169,15 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
      * it on an aborted merge would delete folders whose notes were just restored. Deepest-first, so each
      * folder is already empty by the time it is considered. `Keep` makes this a no-op.
      */
+    const emptyFolderBehaviorAfterMergingFolder = settings.emptyFolderBehaviorAfterMergingFolder;
     await cleanupEmptyFolders({
       app: this.app,
-      emptyFolderBehavior: settings.emptyFolderBehaviorAfterMergingFolder,
-      folderPaths: folderPathsToCleanUp
+      emptyFolderBehavior: ODU_EMPTY_FOLDER_BEHAVIORS[emptyFolderBehaviorAfterMergingFolder],
+      // `DeleteSubFoldersOnly` keeps the merged folder by simply never offering it to the cleanup (issue
+      // #167): the behavior is the same `Delete`, only the path set differs.
+      folderPaths: emptyFolderBehaviorAfterMergingFolder === EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly
+        ? folderPathsToCleanUp.filter((folderPath) => folderPath !== folder.path)
+        : folderPathsToCleanUp
     });
   }
 

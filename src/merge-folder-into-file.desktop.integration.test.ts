@@ -241,6 +241,108 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.hasDemotedPut).toBe(true);
   });
 
+  it('keeps the merged folder and deletes only the folders under it (issue #167)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.emptyFolderBehaviorAfterMergingFolder = 'DeleteSubFoldersOnly';
+          });
+
+          await trashIfExists('keep-src');
+          await trashIfExists('keep-src.md');
+
+          await app.vault.createFolder('keep-src');
+          await app.vault.createFolder('keep-src/sub');
+          const alpha = await app.vault.create('keep-src/alpha.md', 'alpha body');
+          await app.vault.create('keep-src/sub/bravo.md', 'bravo body');
+
+          await openFile(alpha);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'merged single file was not created',
+            predicate: () => app.vault.getAbstractFileByPath('keep-src.md') !== null
+          });
+          // The folder cleanup runs after the transaction commits, so the sub-folder goes away strictly
+          // After the merged note appears - wait for that rather than for the note alone.
+          await waitUntil({
+            message: 'the emptied sub-folder was not deleted',
+            predicate: () => app.vault.getAbstractFileByPath('keep-src/sub') === null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('keep-src.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          return {
+            hasAlpha: mergedContent.includes('alpha body'),
+            hasBravo: mergedContent.includes('bravo body'),
+            mergedFolderKept: app.vault.getAbstractFileByPath('keep-src') !== null,
+            subFolderGone: app.vault.getAbstractFileByPath('keep-src/sub') === null
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // Both notes were merged into the single new note beside the folder.
+    expect(result.hasAlpha).toBe(true);
+    expect(result.hasBravo).toBe(true);
+    // The merged folder itself survives even though it is now empty; the folder under it does not.
+    expect(result.mergedFolderKept).toBe(true);
+    expect(result.subFolderGone).toBe(true);
+  });
+
   it('excludes an Excalidraw drawing, moves attachments over, and deletes the emptied folders (issues #160, #161)', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
