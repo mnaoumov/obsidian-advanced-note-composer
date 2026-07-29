@@ -18,7 +18,8 @@ import {
   FileSystemType,
   isFile,
   isFolder,
-  isMarkdownFile
+  isMarkdownFile,
+  isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -34,7 +35,6 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { isMarkdownAttachment } from '../attachments.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
@@ -206,7 +206,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       // A markdown-shaped attachment (an Excalidraw drawing is a `.md` file) is moved like any other
       // Attachment, never merged: merging it into a same-named drawing in the destination would
       // Concatenate two raw payloads (issue #160 item 3, issue #161).
-      if (isMarkdownFile(child) && !isMarkdownAttachment({ file: child, markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions })) {
+      if (isMarkdownFile(child) && !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: child })) {
         sourceMdFiles.push(child);
         return;
       }

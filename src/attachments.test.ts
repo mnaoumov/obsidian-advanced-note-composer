@@ -8,7 +8,6 @@ import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction'
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
-  beforeEach,
   describe,
   expect,
   it
@@ -17,7 +16,6 @@ import {
 import {
   collectAttachmentsOwnedByNote,
   collectAttachmentsToRelocate,
-  isMarkdownAttachment,
   relocateAttachments,
   resolveAttachmentDestination
 } from './attachments.ts';
@@ -37,45 +35,6 @@ function initApp(files: Record<string, string>, attachmentFolderPath = '/'): voi
   app.vault.setConfig('attachmentFolderPath', attachmentFolderPath);
 }
 
-describe('isMarkdownAttachment', () => {
-  beforeEach(() => {
-    initApp({
-      'Docs/img.png': 'PIC',
-      'Docs/note.md': 'body',
-      'Docs/sketch.excalidraw.md': 'drawing'
-    });
-  });
-
-  it('should treat a markdown file with a configured sub-extension as an attachment', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/sketch.excalidraw.md'), markdownAttachmentSubExtensions: ['excalidraw'] })).toBe(true);
-  });
-
-  it('should treat an ordinary note as a note', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/note.md'), markdownAttachmentSubExtensions: ['excalidraw'] })).toBe(false);
-  });
-
-  it('should treat a non-markdown file as a note for this purpose', () => {
-    // A binary is excluded from the merge by other means; this predicate only answers the markdown case.
-    expect(isMarkdownAttachment({ file: getFile('Docs/img.png'), markdownAttachmentSubExtensions: ['png'] })).toBe(false);
-  });
-
-  it('should match case-insensitively', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/sketch.excalidraw.md'), markdownAttachmentSubExtensions: ['ExcaliDraw'] })).toBe(true);
-  });
-
-  it('should tolerate a leading dot and surrounding spaces in the configured sub-extension', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/sketch.excalidraw.md'), markdownAttachmentSubExtensions: ['  .excalidraw '] })).toBe(true);
-  });
-
-  it('should ignore a blank sub-extension', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/note.md'), markdownAttachmentSubExtensions: ['', '   '] })).toBe(false);
-  });
-
-  it('should treat every markdown file as a note when no sub-extension is configured', () => {
-    expect(isMarkdownAttachment({ file: getFile('Docs/sketch.excalidraw.md'), markdownAttachmentSubExtensions: [] })).toBe(false);
-  });
-});
-
 describe('collectAttachmentsOwnedByNote', () => {
   it('should collect an attachment the note embeds', () => {
     initApp({
@@ -83,7 +42,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/note.md': '![[img.png]]'
     });
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/note.md') });
 
     expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/img.png']);
     expect(attachments[0]?.ownerNoteFile.path).toBe('Docs/note.md');
@@ -95,7 +54,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/zeta.md': '[[other]]'
     });
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/zeta.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/zeta.md') });
 
     expect(attachments).toEqual([]);
   });
@@ -107,7 +66,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/zeta.md': '![[sketch.excalidraw]]'
     });
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: ['excalidraw'], noteFile: getFile('Docs/zeta.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: ['.excalidraw.md'], noteFile: getFile('Docs/zeta.md') });
 
     expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/sketch.excalidraw.md']);
   });
@@ -119,7 +78,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/y.md': '![[img.png]]'
     });
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/x.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/x.md') });
 
     expect(attachments).toEqual([]);
   });
@@ -132,7 +91,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/stray.png': 'PIC'
     }, './');
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/note.md') });
 
     expect(attachments).toEqual([]);
   });
@@ -144,7 +103,7 @@ describe('collectAttachmentsOwnedByNote', () => {
       'Docs/note.md': '![[b.png]]\n![[a.png]]'
     });
 
-    const attachments = collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions: [], noteFile: getFile('Docs/note.md') });
+    const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/note.md') });
 
     expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/a.png', 'Docs/b.png']);
   });

@@ -46,9 +46,9 @@ into the merged note's attachment folder, so nothing is stranded in a folder tha
 disappear. The destination comes from your vault's own attachment settings, so a custom attachment
 location is honored.
 
-Markdown files that are really attachments are never merged - **Markdown attachment sub-extensions**
-(default `excalidraw`) lists them, so an Excalidraw drawing stored as `sketch.excalidraw.md` keeps its
-raw payload out of the merged note.
+Markdown files that are really attachments are never merged - **Attachment extensions**
+(default `.excalidraw.md`) lists them, written out in full with the leading dot, so an Excalidraw
+drawing stored as `sketch.excalidraw.md` keeps its raw payload out of the merged note.
 
 ## Emptied folders
 

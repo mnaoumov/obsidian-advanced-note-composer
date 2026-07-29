@@ -776,12 +776,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
-          .setName('Markdown attachment sub-extensions')
+          .setName('Attachment extensions')
           .setDesc(createFragment((f) => {
-            f.appendText('Markdown files whose name ends with one of these sub-extensions are treated as attachments, not notes, so a merge never inlines their contents.');
+            f.appendText('Files whose name ends with one of these extensions are treated as attachments, not notes, so a merge never inlines their contents.');
             f.createEl('br');
-            f.appendText('Insert one sub-extension per line, without the leading dot. For example, ');
-            appendCodeBlock(f, 'excalidraw');
+            f.appendText('Insert one extension per line, written out in full including the leading dot. For example, ');
+            appendCodeBlock(f, '.excalidraw.md');
             f.appendText(' covers ');
             appendCodeBlock(f, 'sketch.excalidraw.md');
             f.appendText('.');
@@ -789,7 +789,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.appendText('Leave empty to treat every markdown file as a note.');
           }))
           .addMultipleText((multipleText) => {
-            this.bind({ propertyName: 'markdownAttachmentSubExtensions', valueComponent: multipleText });
+            this.bind({ propertyName: 'attachmentExtensions', valueComponent: multipleText });
           });
       })
       .addSettingEx((setting: SettingEx) => {

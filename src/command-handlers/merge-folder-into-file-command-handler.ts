@@ -14,7 +14,8 @@ import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handle
 import {
   isFile,
   isFolder,
-  isMarkdownFile
+  isMarkdownFile,
+  isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
@@ -26,7 +27,6 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { isMarkdownAttachment } from '../attachments.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
@@ -95,7 +95,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const { settings } = this.pluginSettingsComponent;
     // Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are never merged: their raw
     // Payload would land in the merged note. They are relocated with the other attachments instead.
-    const sourceMdFiles = collectNotesDepthFirst(folder).filter((file) => !isMarkdownAttachment({ file, markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions }));
+    const sourceMdFiles = collectNotesDepthFirst(folder).filter((file) => !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: file }));
 
     if (sourceMdFiles.length === 0) {
       this.pluginNoticeComponent.showNotice(

@@ -99,9 +99,9 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        attachmentExtensions: ['.excalidraw.md'],
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
-        markdownAttachmentSubExtensions: ['excalidraw'],
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
@@ -239,7 +239,7 @@ describe('MergeFolderCommandHandler', () => {
   it('should merge a markdown-shaped attachment when no sub-extension is configured', async () => {
     initApp({ 'src/sub/sketch.excalidraw.md': 'DRAWING PAYLOAD' });
     await app.vault.createFolder('dst');
-    const { handler } = createHandler({ markdownAttachmentSubExtensions: [] });
+    const { handler } = createHandler({ attachmentExtensions: [] });
     mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
     await handler.executeFolder(getFolder('src'));

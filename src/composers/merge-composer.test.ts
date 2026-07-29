@@ -109,9 +109,9 @@ function createPluginNoticeComponentStub(): PluginNoticeComponent {
 function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
     settings: strictProxy<PluginSettings>({
+      attachmentExtensions: ['.excalidraw.md'],
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
-      markdownAttachmentSubExtensions: ['excalidraw'],
       mergeTemplate: '{{content}}',
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,

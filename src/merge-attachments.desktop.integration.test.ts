@@ -21,7 +21,7 @@ interface ComponentTreeNode {
 }
 
 interface MergeAttachmentSettings {
-  markdownAttachmentSubExtensions: string[];
+  attachmentExtensions: string[];
   shouldAskBeforeMerging: boolean;
   shouldMoveAttachmentsWhenMergingFile: boolean;
 }
@@ -43,7 +43,7 @@ describe('attachments in a merge (issue #161)', () => {
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = false;
-            settings.markdownAttachmentSubExtensions = ['excalidraw'];
+            settings.attachmentExtensions = ['.excalidraw.md'];
           });
 
           await trashIfExists('md-attach-src');
@@ -86,7 +86,7 @@ describe('attachments in a merge (issue #161)', () => {
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
-            settings.markdownAttachmentSubExtensions = original.markdownAttachmentSubExtensions;
+            settings.attachmentExtensions = original.attachmentExtensions;
           });
         }
 

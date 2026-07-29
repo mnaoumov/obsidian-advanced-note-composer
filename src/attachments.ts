@@ -13,7 +13,8 @@ import {
 } from 'obsidian-dev-utils/obsidian/attachment-path';
 import {
   isFile,
-  isMarkdownFile
+  isMarkdownFile,
+  isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
 
 /**
@@ -63,9 +64,9 @@ export interface CollectAttachmentsOwnedByNoteParams {
   readonly app: App;
 
   /**
-   * The configured sub-extensions that make a markdown file an attachment, e.g. `['excalidraw']`.
+   * The configured extensions that make a file an attachment, e.g. `['.excalidraw.md']`.
    */
-  readonly markdownAttachmentSubExtensions: readonly string[];
+  readonly attachmentExtensions: readonly string[];
 
   /**
    * The note whose attachments are collected.
@@ -92,21 +93,6 @@ export interface CollectAttachmentsToRelocateParams {
    * The notes being merged/moved. Everything else under the folder is a candidate attachment.
    */
   readonly noteFiles: readonly TFile[];
-}
-
-/**
- * Parameters for {@link isMarkdownAttachment}.
- */
-export interface IsMarkdownAttachmentParams {
-  /**
-   * The file to classify.
-   */
-  readonly file: TFile;
-
-  /**
-   * The configured sub-extensions, e.g. `['excalidraw']`.
-   */
-  readonly markdownAttachmentSubExtensions: readonly string[];
 }
 
 /**
@@ -162,8 +148,8 @@ export interface ResolveAttachmentDestinationParams {
  * does — a shared attachment belongs to no single note, so moving it with one of them would drag it away
  * from the others.
  *
- * Links to ordinary notes are never collected; a markdown file that is really an attachment
- * ({@link isMarkdownAttachment}) is.
+ * Links to ordinary notes are never collected; a markdown file that is really an attachment (one whose
+ * extension is configured, per `obsidian-dev-utils` {@link isTreatedAsAttachment}) is.
  *
  * Deliberately narrower than {@link collectAttachmentsToRelocate}, which ALSO takes unreferenced files
  * sitting at a proper attachment path: that rule is only safe because a folder merge is moving the whole
@@ -171,17 +157,17 @@ export interface ResolveAttachmentDestinationParams {
  * that have nothing to do with it. An unreferenced stray in a per-note attachment folder is therefore
  * left behind — the cost of never touching a file the merged note does not point at.
  *
- * @param params - The note, the app, and the markdown-attachment sub-extensions.
+ * @param params - The note, the app, and the attachment extensions.
  * @returns The attachments to relocate with their owning note, in path order.
  */
 export function collectAttachmentsOwnedByNote(params: CollectAttachmentsOwnedByNoteParams): AttachmentToRelocate[] {
-  const { app, markdownAttachmentSubExtensions, noteFile } = params;
+  const { app, attachmentExtensions, noteFile } = params;
 
   const candidates = new Map<string, TFile>();
   /* v8 ignore next -- defensive ?? for a note the metadata cache has not indexed yet. */
   for (const linkPath of Object.keys(app.metadataCache.resolvedLinks[noteFile.path] ?? {})) {
     const linkedFile = app.vault.getFileByPath(linkPath);
-    if (linkedFile && isAttachmentFile(linkedFile, markdownAttachmentSubExtensions)) {
+    if (linkedFile && isAttachmentFile(linkedFile, attachmentExtensions)) {
       candidates.set(linkedFile.path, linkedFile);
     }
   }
@@ -251,33 +237,6 @@ export async function collectAttachmentsToRelocate(params: CollectAttachmentsToR
   }
 
   return attachments.sort((a, b) => a.file.path.localeCompare(b.file.path));
-}
-
-/**
- * Whether a markdown file is really an attachment rather than a note — an Excalidraw drawing
- * (`sketch.excalidraw.md`) is stored as markdown, so merging it would inline its raw payload into the
- * merged note (issue #160). Obsidian reports such a file's extension as `md` and its base name as
- * `sketch.excalidraw`, so the sub-extension is matched against the base name.
- *
- * TODO: this is the same "markdown file that is really an attachment" question that Consistent
- * Attachments and Links answers with its own `isTreatedAsAttachment` setting. It belongs in
- * `obsidian-dev-utils` so every plugin agrees — tracked separately; keep this local until the shared
- * predicate exists.
- *
- * @param params - The file and the configured sub-extensions.
- * @returns Whether the file is a markdown-shaped attachment.
- */
-export function isMarkdownAttachment(params: IsMarkdownAttachmentParams): boolean {
-  const { file, markdownAttachmentSubExtensions } = params;
-  if (!isMarkdownFile(file)) {
-    return false;
-  }
-
-  const lowerCaseBaseName = file.basename.toLowerCase();
-  return markdownAttachmentSubExtensions.some((subExtension) => {
-    const normalizedSubExtension = subExtension.trim().replace(/^\.+/, '').toLowerCase();
-    return normalizedSubExtension !== '' && lowerCaseBaseName.endsWith(`.${normalizedSubExtension}`);
-  });
 }
 
 /**
@@ -384,8 +343,10 @@ function isAncestorOrSelf(ancestorFolderPath: string, folderPath: string): boole
   return folderPath === ancestorFolderPath || folderPath.startsWith(`${ancestorFolderPath}/`);
 }
 
-function isAttachmentFile(file: TFile, markdownAttachmentSubExtensions: readonly string[]): boolean {
-  return !isMarkdownFile(file) || isMarkdownAttachment({ file, markdownAttachmentSubExtensions });
+function isAttachmentFile(file: TFile, attachmentExtensions: readonly string[]): boolean {
+  // The markdown gate stays: a non-markdown file is an attachment whatever the configured extensions
+  // Say, and only a markdown-shaped one has to prove itself against them.
+  return !isMarkdownFile(file) || isTreatedAsAttachment({ attachmentExtensions, pathOrFile: file });
 }
 
 function normalizeFolderPath(folderPath: string | undefined): string {

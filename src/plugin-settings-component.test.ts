@@ -213,5 +213,34 @@ describe('PluginSettingsComponent', () => {
       await component.runLegacyConverters(legacySettings);
       expect(legacySettings['frontmatterTitleMode']).toBeUndefined();
     });
+
+    it('should convert markdownAttachmentSubExtensions to attachmentExtensions', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { markdownAttachmentSubExtensions: ['excalidraw'] };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['attachmentExtensions']).toEqual(['.excalidraw.md']);
+      expect(legacySettings['markdownAttachmentSubExtensions']).toBeUndefined();
+    });
+
+    it('should normalize a leading dot and surrounding spaces when converting a sub-extension', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { markdownAttachmentSubExtensions: ['  .excalidraw ', 'drawio'] };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['attachmentExtensions']).toEqual(['.excalidraw.md', '.drawio.md']);
+    });
+
+    it('should drop a blank sub-extension when converting', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { markdownAttachmentSubExtensions: ['', '   ', '...'] };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['attachmentExtensions']).toEqual([]);
+    });
+
+    it('should not set attachmentExtensions when markdownAttachmentSubExtensions is undefined', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {};
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['attachmentExtensions']).toBeUndefined();
+    });
   });
 });

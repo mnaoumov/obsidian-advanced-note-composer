@@ -72,7 +72,7 @@ export class MergeComposer extends ComposerBase {
     const attachmentsToRelocate = this.shouldMoveAttachments
       ? collectAttachmentsOwnedByNote({
         app: this.app,
-        markdownAttachmentSubExtensions: this.pluginSettingsComponent.settings.markdownAttachmentSubExtensions,
+        attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
         noteFile: this.sourceFile
       })
       : [];

@@ -21,8 +21,8 @@ interface ComponentTreeNode {
 }
 
 interface MergeSettings {
+  attachmentExtensions: string[];
   emptyFolderBehaviorAfterMergingFolder: string;
-  markdownAttachmentSubExtensions: string[];
   mergeFolderIntoFileNoteNameTemplate: string;
   shouldAskBeforeMerging: boolean;
   shouldConvertFoldersToHeadingsWhenMergingFolder: boolean;
@@ -254,7 +254,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = false;
             settings.shouldMoveAttachmentsWhenMergingFolder = true;
-            settings.markdownAttachmentSubExtensions = ['excalidraw'];
+            settings.attachmentExtensions = ['.excalidraw.md'];
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
           });
           // Obsidian's own default: attachments live at the vault root, which is where the merged note's
@@ -304,7 +304,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
             settings.shouldMoveAttachmentsWhenMergingFolder = original.shouldMoveAttachmentsWhenMergingFolder;
-            settings.markdownAttachmentSubExtensions = original.markdownAttachmentSubExtensions;
+            settings.attachmentExtensions = original.attachmentExtensions;
             settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
           });
         }

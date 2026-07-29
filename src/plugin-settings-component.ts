@@ -18,6 +18,7 @@ interface PluginSettingsComponentConstructorParams {
 
 /* v8 ignore start -- LegacySettings is only instantiated during legacy settings migration. */
 class LegacySettings {
+  public markdownAttachmentSubExtensions: string[] = [];
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
 }
 /* v8 ignore stop */
@@ -44,6 +45,19 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
         legacySettings.frontmatterTitleMode = legacySettings.shouldAddInvalidTitleToFrontmatterTitleKey
           ? FrontmatterTitleMode.UseForInvalidTitleOnly
           : FrontmatterTitleMode.None;
+      }
+
+      // `markdownAttachmentSubExtensions` configured invented SUB-extensions matched against the base
+      // Name of a markdown file, so `excalidraw` meant exactly `*.excalidraw.md`. Its successor
+      // `attachmentExtensions` configures REAL extensions matched against the whole name, which is what
+      // `obsidian-dev-utils` `isTreatedAsAttachment` takes. Appending `.md` is therefore the faithful
+      // Conversion — and the migration is mandatory rather than cosmetic, because a bare `excalidraw`
+      // Survives the shared predicate's normalization only to match nothing at all.
+      if (legacySettings.markdownAttachmentSubExtensions !== undefined) {
+        legacySettings.attachmentExtensions = legacySettings.markdownAttachmentSubExtensions
+          .map((subExtension) => subExtension.trim().replace(/^\.+/, ''))
+          .filter((subExtension) => subExtension !== '')
+          .map((subExtension) => `.${subExtension}.md`);
       }
     });
   }

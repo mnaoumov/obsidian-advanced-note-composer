@@ -27,6 +27,16 @@ export enum TextAfterExtractionMode {
 }
 
 export class PluginSettings {
+  /**
+   * Extensions that make a file an attachment rather than a note, matched against the file's whole name
+   * by `obsidian-dev-utils` `isTreatedAsAttachment` — so a multi-part extension like `.excalidraw.md` is
+   * written out in full. Such a file is never merged — inlining an Excalidraw drawing's raw payload into
+   * a note is never what the user wanted (issue #160). It is moved like any other attachment instead: by
+   * the folder merges (into a single file, or into another folder) and by the file merge that owns it
+   * (issue #161).
+   */
+  public attachmentExtensions: string[] = ['.excalidraw.md'];
+
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
 
   /**
@@ -36,15 +46,6 @@ export class PluginSettings {
   public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehavior.Delete;
 
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
-
-  /**
-   * Sub-extensions that make a markdown file an attachment rather than a note, matched against the file's
-   * base name (Obsidian reports `sketch.excalidraw.md` as base name `sketch.excalidraw`, extension `md`).
-   * Such a file is never merged — inlining an Excalidraw drawing's raw payload into a note is never what
-   * the user wanted (issue #160). It is moved like any other attachment instead: by the folder merges
-   * (into a single file, or into another folder) and by the file merge that owns it (issue #161).
-   */
-  public markdownAttachmentSubExtensions: string[] = ['excalidraw'];
 
   public mergeFolderIntoFileNoteNameTemplate = '';
   public mergeTemplate = '\n\n{{content}}';
