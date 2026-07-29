@@ -234,7 +234,11 @@ Every picker and confirmation dialog this plugin opens — the `Merge …`, `Ext
 
 ## Demo vault
 
-A ready-made [demo vault](./demo-vault/README.md) showcases every feature with step-by-step notes. If you already have the plugin installed, run the `Advanced Note Composer: Open demo vault` command to download and open it. Otherwise download `demo-vault-<version>.zip` from the [releases](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases) and open the unzipped folder as a vault. See [demo-vault/README.md](./demo-vault/README.md).
+A demo vault with usage examples ships with every release. You can access it via any of the following:
+
+1. Running the **Advanced Note Composer: Open demo vault** command.
+2. Downloading `advanced-note-composer-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases).
+3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
 ## Installation
 
