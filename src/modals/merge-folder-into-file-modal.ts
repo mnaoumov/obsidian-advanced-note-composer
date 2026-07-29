@@ -94,6 +94,13 @@ async function buildConfirmContent(params: BuildConfirmContentParams): Promise<v
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetPath }));
+  /*
+   * A code block, NOT a `renderInternalLink` (issue #166): the merged note is created only AFTER this dialog
+   * is confirmed, so a link to it would be unresolved and clicking it would CREATE the note — colliding with
+   * the one the merge is about to create at this very (already de-duplicated) path. The settled rule is
+   * `link when the path already exists, code block when it does not`; do not "fix" this back to a link for
+   * consistency with the `Folder` row above, whose folder does exist.
+   */
+  appendCodeBlock(fragment, targetPath);
 }
 /* v8 ignore stop */
