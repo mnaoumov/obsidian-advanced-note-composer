@@ -53,9 +53,14 @@ drawing stored as `sketch.excalidraw.md` keeps its raw payload out of the merged
 ## Emptied folders
 
 **Empty folders after merging a folder** decides what happens to the folders the merge empties:
-`Delete` (the default) removes the merged folder and every emptied sub-folder, `Delete with empty
-parents` also removes any parent left empty, and `Keep` leaves everything in place. A folder still
-holding files is always kept.
+`Delete` (the default) removes the merged folder and every emptied sub-folder, `Delete sub-folders
+only` keeps the merged folder itself — even once it is empty — and removes every emptied folder under
+it however deep, `Delete with empty parents` is `Delete` plus any parent the deletion leaves empty,
+and `Keep` leaves everything in place. A folder still holding files is always kept.
+
+Set it to `Delete sub-folders only` and run the merge above: `Merge into single file` survives as an
+empty folder while its `Nested` sub-folder is gone. That is the setting for a folder whose own name
+matters — it is where you keep filing things — but whose inner structure does not.
 
 ## Notes
 
