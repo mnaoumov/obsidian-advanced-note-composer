@@ -240,7 +240,16 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
   fragment.appendText(': ');
-  appendCodeBlock(fragment, parentFolder.isRoot() ? '/' : parentFolder.path);
+  // The destination always exists (it is the folder's own parent), so it is a link like every other
+  // Confirmation dialog's paths (issue #165) — clicking a folder link reveals it in the file explorer,
+  // It never creates anything. The root is labelled `/`, matching the move picker's `getItemText`.
+  fragment.appendChild(
+    await renderInternalLink({
+      app,
+      displayText: parentFolder.isRoot() ? '/' : parentFolder.path,
+      pathOrAbstractFile: parentFolder
+    })
+  );
   fragment.createEl('br');
   fragment.createEl('br');
   fragment.createEl('h2', { text: 'Items that will be moved' });

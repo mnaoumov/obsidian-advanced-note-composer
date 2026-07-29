@@ -7,6 +7,7 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { MockInstance } from 'vitest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
@@ -71,8 +72,10 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
+// A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span
+// Would let a missing second link pass unnoticed.
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+  renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
 // The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
@@ -101,6 +104,7 @@ vi.mock('../open-minimizable-modal.ts', () => ({
 }));
 
 const mockOpenMinimizableModal = vi.mocked(openMinimizableModal);
+const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMove);
 
 let app: AppOriginal;
@@ -342,15 +346,19 @@ describe('MoveFolderCommandHandler', () => {
 
     const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
     const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    // Only the field LABELS are code blocks; both paths are links (issue #165).
     expect(renderedCodeBlocks).toContain('Source');
     expect(renderedCodeBlocks).toContain('Destination');
-    expect(renderedCodeBlocks).toContain('dst');
+    expect(renderedCodeBlocks).not.toContain('dst');
+    const renderedLinks = mockRenderInternalLink.mock.calls.map((call) => call[0].pathOrAbstractFile);
+    expect(renderedLinks).toContain(getFolder('parent/a'));
+    expect(renderedLinks).toContain(getFolder('dst'));
     // Unlike flatten, the move has a picked target, so it can be changed from the dialog.
     expect(capturedConfirmParams?.canReselectTarget).toBe(true);
     expect(capturedConfirmParams?.title).toBe('Move folder');
   });
 
-  it('should render the vault root destination as a slash', async () => {
+  it('should label the vault root destination link with a slash', async () => {
     initApp({ 'parent/a/note.md': 'note body' });
     const { handler } = createHandler({ shouldAskBeforeMovingFolder: true });
     mockSelectTargetFolder.mockResolvedValue(app.vault.getRoot());
@@ -361,9 +369,9 @@ describe('MoveFolderCommandHandler', () => {
     const fragment = createFragment();
     await capturedConfirmParams?.buildContent(fragment);
 
-    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
-    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
-    expect(renderedCodeBlocks).toContain('/');
+    // The root is labelled explicitly rather than by its raw path, matching the picker's `getItemText`.
+    const renderedDisplayTexts = mockRenderInternalLink.mock.calls.map((call) => call[0].displayText);
+    expect(renderedDisplayTexts).toContain('/');
   });
 
   it('should swallow the cancellation and roll everything back when unlocked mid-move', async () => {

@@ -8,6 +8,7 @@ import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
@@ -71,8 +72,10 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
+// A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span
+// Would let a missing second link pass unnoticed.
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+  renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
 // The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
@@ -95,6 +98,7 @@ vi.mock('../open-minimizable-modal.ts', () => ({
 }));
 
 const mockOpenModal = vi.mocked(openModal);
+const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 let app: AppOriginal;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
@@ -312,13 +316,17 @@ describe('FlattenFolderCommandHandler', () => {
     // A non-colliding item is shown as-is, with no arrow.
     expect(renderedCodeBlocks).toContain('sub');
     expect(renderedCodeBlocks).toContain('2');
+    // Both the folder and its destination are links, like every other confirmation dialog (issue #165).
+    const renderedLinks = mockRenderInternalLink.mock.calls.map((call) => call[0].pathOrAbstractFile);
+    expect(renderedLinks).toContain(getFolder('parent/a'));
+    expect(renderedLinks).toContain(getFolder('parent'));
     expect(fragment.querySelector('h2')?.textContent).toBe('Items that will be moved');
     // There is no target to reselect: the destination is always the folder's own parent.
     expect(capturedConfirmParams?.canReselectTarget).toBe(false);
     expect(capturedConfirmParams?.title).toBe('Flatten folder');
   });
 
-  it('should render the vault root destination as a slash when flattening a top-level folder', async () => {
+  it('should label the vault root destination link with a slash when flattening a top-level folder', async () => {
     initApp({ 'a/note.md': 'note body' });
     const { handler } = createHandler({ shouldAskBeforeFlattening: true });
     confirmResult = createConfirmResult(false);
@@ -328,9 +336,9 @@ describe('FlattenFolderCommandHandler', () => {
     const fragment = createFragment();
     await capturedConfirmParams?.buildContent(fragment);
 
-    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
-    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
-    expect(renderedCodeBlocks).toContain('/');
+    // The root is labelled explicitly rather than by its raw path, matching the picker's `getItemText`.
+    const renderedDisplayTexts = mockRenderInternalLink.mock.calls.map((call) => call[0].displayText);
+    expect(renderedDisplayTexts).toContain('/');
   });
 
   it('should swallow the cancellation and roll everything back when unlocked mid-flatten', async () => {

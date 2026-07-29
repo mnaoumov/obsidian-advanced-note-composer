@@ -215,6 +215,14 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
   fragment.appendText(': ');
-  // The vault root has an empty path, so it is shown as `/` rather than as an empty code block.
-  appendCodeBlock(fragment, targetFolder.isRoot() ? '/' : targetFolder.path);
+  // The destination always exists, so it is a link like every other confirmation dialog's paths
+  // (issue #165) — clicking a folder link reveals it in the file explorer, it never creates anything.
+  // The root is labelled `/`, matching the picker's own `getItemText`, so the two always agree.
+  fragment.appendChild(
+    await renderInternalLink({
+      app,
+      displayText: targetFolder.isRoot() ? '/' : targetFolder.path,
+      pathOrAbstractFile: targetFolder
+    })
+  );
 }

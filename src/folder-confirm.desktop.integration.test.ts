@@ -13,6 +13,8 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 // The flatten/move confirmation dialogs are v8-ignored modal UI (see flatten-folder-command-handler.ts /
 // Move-folder-command-handler.ts); this suite drives the REAL dialog DOM against a real Obsidian to prove
 // The wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
+// The confirm cases additionally assert that both paths render as real anchors (issue #165) — the unit
+// Tests mock `renderInternalLink`, so only a real Obsidian proves its folder branch produces an `<a>`.
 // G99: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
 // `.modal-button-container` DOM), not Obsidian-internals/version-sensitive, so one end would suffice —
 // But it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7, 4/4 on each. Pin the
@@ -47,6 +49,9 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           const listsTheItem = Array.from(document.querySelectorAll('.modal-content code')).some((el) => el.textContent === 'fc-note.md');
           // Flatten has no target to reselect, so "Change target" is rendered but disabled.
           const changeTargetDisabled = findButton('Change target')?.disabled ?? false;
+          // Issue #165: the folder AND its destination are both clickable links. `fc-flat` is top-level,
+          // So its destination is the vault root, which is labelled `/` (its own path is blank).
+          const linkTexts = Array.from(document.querySelectorAll('.modal-content a')).map((el) => el.textContent);
 
           findButton('Flatten')?.click();
 
@@ -59,7 +64,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           const promoted = app.vault.getAbstractFileByPath('fc-note.md') !== null
             && app.vault.getAbstractFileByPath('fc-flat/fc-note.md') === null;
 
-          return { changeTargetDisabled, confirmButtonPresent, listsTheItem, promoted };
+          return { changeTargetDisabled, confirmButtonPresent, linkTexts, listsTheItem, promoted };
         } finally {
           await setToggle('Should ask before flattening a folder', originalShouldAsk);
         }
@@ -122,6 +127,9 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
     expect(result.listsTheItem).toBe(true);
     expect(result.changeTargetDisabled).toBe(true);
     expect(result.promoted).toBe(true);
+    // Issue #165: both paths render as real anchors, the vault-root destination labelled `/`.
+    expect(result.linkTexts).toContain('fc-flat');
+    expect(result.linkTexts).toContain('/');
   });
 
   it('does not flatten the folder when the confirmation dialog is cancelled', async () => {
@@ -240,6 +248,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           const confirmButtonPresent = findButton('Move') !== null;
           // The move HAS a picked target, so it can be changed from the dialog.
           const changeTargetEnabled = !(findButton('Change target')?.disabled ?? true);
+          // Issue #165: the source AND the destination are both clickable links.
+          const linkTexts = Array.from(document.querySelectorAll('.modal-content a')).map((el) => el.textContent);
 
           findButton('Move')?.click();
 
@@ -252,7 +262,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           const moved = app.vault.getAbstractFileByPath('fc-mv-dst/fc-mv-src/inner.md') !== null
             && app.vault.getAbstractFileByPath('fc-mv-src') === null;
 
-          return { changeTargetEnabled, confirmButtonPresent, moved };
+          return { changeTargetEnabled, confirmButtonPresent, linkTexts, moved };
         } finally {
           await setToggle('Should ask before moving a folder', originalShouldAsk);
         }
@@ -324,6 +334,9 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
     expect(result.confirmButtonPresent).toBe(true);
     expect(result.changeTargetEnabled).toBe(true);
     expect(result.moved).toBe(true);
+    // Issue #165: the destination is an anchor, not a code block, just like the source.
+    expect(result.linkTexts).toContain('fc-mv-src');
+    expect(result.linkTexts).toContain('fc-mv-dst');
   });
 
   it('does not move the folder when the confirmation dialog is cancelled', async () => {
