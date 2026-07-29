@@ -5,6 +5,8 @@ import type {
 
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -55,7 +57,9 @@ interface ConfirmModalArgs {
   promiseResolve(result: ConfirmDialogModalResult): void;
 }
 
+const mockAppendCodeBlock = vi.mocked(appendCodeBlock);
 const mockConfirmDialogModal = vi.mocked(ConfirmDialogModal);
+const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -114,6 +118,21 @@ describe('confirmMergeFolderIntoFile', () => {
 
     expect(await promise).toBe(true);
     expect(editAndSave).toHaveBeenCalledOnce();
+  });
+
+  it('renders the not-yet-created target as a code block, never as a link (issue #166)', async () => {
+    const params = createParams(true);
+
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    await capturedModalParams().buildContent(createFragment());
+    capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
+    await promise;
+
+    // The folder exists, so it stays a link; the target note is created only after this dialog is confirmed,
+    // So linking it would let a click create it.
+    expect(mockRenderInternalLink).toHaveBeenCalledOnce();
+    expect(mockRenderInternalLink).toHaveBeenCalledWith(expect.objectContaining({ pathOrAbstractFile: 'src' }));
+    expect(mockAppendCodeBlock).toHaveBeenCalledWith(expect.anything(), 'src.md');
   });
 
   it('returns false when the dialog is cancelled', async () => {
