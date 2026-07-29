@@ -86,10 +86,10 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        attachmentExtensions: ['.excalidraw.md'],
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehavior.Keep,
         isPathIgnored: () => false,
-        markdownAttachmentSubExtensions: ['excalidraw'],
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
@@ -349,7 +349,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': 'note body',
       'src/sketch.excalidraw.md': 'raw excalidraw payload'
     });
-    const { handler } = createHandler({ markdownAttachmentSubExtensions: [] });
+    const { handler } = createHandler({ attachmentExtensions: [] });
     mockConfirm.mockResolvedValue(true);
 
     await handler.executeFolder(getFolder('src'));

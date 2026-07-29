@@ -79,9 +79,9 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
   const pluginNoticeComponent = strictProxy<PluginNoticeComponent>({ showNotice });
   const pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
     settings: strictProxy<PluginSettings>({
+      attachmentExtensions: ['.excalidraw.md'],
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
-      markdownAttachmentSubExtensions: ['excalidraw'],
       mergeTemplate: '{{content}}',
       shouldAlwaysMergeExcludedItems: false,
       shouldFixFootnotesByDefault: false,

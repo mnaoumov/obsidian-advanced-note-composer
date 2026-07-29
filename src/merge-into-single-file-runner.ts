@@ -103,8 +103,8 @@ export interface MergeFilesIntoSingleFileResult {
 
 interface CollectAttachmentsParams {
   readonly app: App;
+  readonly attachmentExtensions: readonly string[];
   readonly folder: TFolder | undefined;
-  readonly markdownAttachmentSubExtensions: readonly string[];
   readonly noteFiles: readonly TFile[];
   readonly shouldRelocateOwnedAttachments: boolean;
 }
@@ -164,8 +164,8 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const notesToCollectAttachmentsFor = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
   const attachmentsToRelocate = await collectAttachments({
     app,
+    attachmentExtensions: settings.attachmentExtensions,
     folder: attachmentSourceFolder,
-    markdownAttachmentSubExtensions: settings.markdownAttachmentSubExtensions,
     noteFiles: notesToCollectAttachmentsFor,
     shouldRelocateOwnedAttachments: shouldRelocateOwnedAttachments ?? false
   });
@@ -272,8 +272,8 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
 async function collectAttachments(params: CollectAttachmentsParams): Promise<AttachmentToRelocate[]> {
   const {
     app,
+    attachmentExtensions,
     folder,
-    markdownAttachmentSubExtensions,
     noteFiles,
     shouldRelocateOwnedAttachments
   } = params;
@@ -288,7 +288,7 @@ async function collectAttachments(params: CollectAttachmentsParams): Promise<Att
 
   const attachments = new Map<string, AttachmentToRelocate>();
   for (const noteFile of noteFiles) {
-    for (const attachment of collectAttachmentsOwnedByNote({ app, markdownAttachmentSubExtensions, noteFile })) {
+    for (const attachment of collectAttachmentsOwnedByNote({ app, attachmentExtensions, noteFile })) {
       attachments.set(attachment.file.path, attachment);
     }
   }
