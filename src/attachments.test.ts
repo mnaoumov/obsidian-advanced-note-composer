@@ -4,7 +4,6 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -15,9 +14,6 @@ import {
   it
 } from 'vitest';
 
-import type { SeedAttachmentPathSurfaceParams } from './attachment-path.test-helpers.ts';
-
-import { seedAttachmentPathSurface } from './attachment-path.test-helpers.ts';
 import {
   collectAttachmentsOwnedByNote,
   collectAttachmentsToRelocate,
@@ -36,9 +32,9 @@ function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
 }
 
-function initApp(files: Record<string, string>, attachmentFolderPath = '/', resolveAttachmentFolderPathForNote?: (notePath: string) => string): void {
+function initApp(files: Record<string, string>, attachmentFolderPath = '/'): void {
   app = App.createConfigured__({ files }).asOriginalType__();
-  seedAttachmentPathSurface(normalizeOptionalProperties<SeedAttachmentPathSurfaceParams>({ app, attachmentFolderPath, resolveAttachmentFolderPathForNote }));
+  app.vault.setConfig('attachmentFolderPath', attachmentFolderPath);
 }
 
 describe('isMarkdownAttachment', () => {

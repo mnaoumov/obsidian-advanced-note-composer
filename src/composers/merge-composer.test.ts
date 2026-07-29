@@ -3,6 +3,7 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
+import type { GetAvailablePathForAttachmentsExtendedFnParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type {
   PluginNoticeComponent,
@@ -11,10 +12,8 @@ import type {
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import {
-  castTo,
-  normalizeOptionalProperties
-} from 'obsidian-dev-utils/object-utils';
+import { castTo } from 'obsidian-dev-utils/object-utils';
+import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
@@ -28,11 +27,9 @@ import {
   vi
 } from 'vitest';
 
-import type { SeedAttachmentPathSurfaceParams } from '../attachment-path.test-helpers.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
-import { seedAttachmentPathSurface } from '../attachment-path.test-helpers.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeComposer } from './merge-composer.ts';
 
@@ -339,7 +336,39 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
   }).asOriginalType__();
   // Attachments live beside their note unless a plugin says otherwise, so the merge has to move the
   // Image out of `Docs` and into `Other`.
-  seedAttachmentPathSurface(normalizeOptionalProperties<SeedAttachmentPathSurfaceParams>({ app, attachmentFolderPath: './', resolveAttachmentFolderPathForNote }));
+  app.vault.setConfig('attachmentFolderPath', './');
+  // The link settings the rewriting behind a moved attachment reads carry no modeled default; absolute
+  // Wikilinks are the deterministic choice, since `shortest` would depend on the rest of the fixture vault.
+  app.vault.setConfig('newLinkFormat', 'absolute');
+  app.vault.setConfig('useMarkdownLinks', false);
+  if (resolveAttachmentFolderPathForNote) {
+    stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote);
+  }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
+}
+
+/**
+ * Models an attachment-location plugin (e.g. Custom Attachment Location): the `extended` member it installs
+ * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
+ * native resolution. This is the only way a note gets an attachment folder OF ITS OWN — every native mode
+ * resolves the same folder for every note in a folder.
+ *
+ * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
+ */
+function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (notePath: string) => string): void {
+  function extended(params: GetAvailablePathForAttachmentsExtendedFnParams): Promise<string> {
+    // A real attachment-location plugin also handles a note-less resolution; these tests never ask for one,
+    // So fail loudly rather than invent a fallback folder.
+    const notePath = getPath(app, ensureNonNullable(params.notePathOrFile));
+    const folderPath = resolveAttachmentFolderPathForNote(notePath);
+    const basePath = folderPath === '' ? params.attachmentFileBaseName : `${folderPath}/${params.attachmentFileBaseName}`;
+    return Promise.resolve(
+      params.shouldSkipDuplicateCheck
+        ? `${basePath}.${params.attachmentFileExtension}`
+        : app.vault.getAvailablePath(basePath, params.attachmentFileExtension)
+    );
+  }
+
+  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
 }
