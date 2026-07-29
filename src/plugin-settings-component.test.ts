@@ -169,6 +169,35 @@ describe('PluginSettingsComponent', () => {
         expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', 'Sum:mary')).toBe('Invalid note name');
       });
     });
+
+    // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
+    // Wording change fails here instead of silently degrading the setting's feedback.
+    describe.each(['excludePaths', 'includePaths'] as const)('%s validator', (propertyName) => {
+      it('should accept an empty list', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, propertyName, [])).toBeUndefined();
+      });
+
+      it('should accept a plain path', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, propertyName, ['Inbox'])).toBeUndefined();
+      });
+
+      it('should accept a valid regular expression literal', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, propertyName, ['/^Inbox\\/[^\\/]*$/'])).toBeUndefined();
+      });
+
+      it('should reject an un-parseable regular expression literal', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, propertyName, ['/^Inbox\\/'])).toBe('Invalid regular expression: /^Inbox\\/');
+      });
+
+      it('should report the first invalid entry of a mixed list', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, propertyName, ['Inbox', '/^Archive[/', '/^Drafts(/'])).toBe('Invalid regular expression: /^Archive[/');
+      });
+    });
   });
 
   describe('legacy settings converters', () => {

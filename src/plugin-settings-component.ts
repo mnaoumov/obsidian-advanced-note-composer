@@ -3,6 +3,7 @@ import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugi
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
+import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import {
@@ -90,6 +91,13 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 
     this.registerValidator('splitIntoFolderNoteNameTemplate', validateNoteNameTemplate);
     this.registerValidator('mergeFolderIntoFileNoteNameTemplate', validateNoteNameTemplate);
+
+    // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
+    // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
+    // Validator that fallback is invisible, so a single broken entry would silently stop the other
+    // Entries from matching. The validator is the ODU export, not a local copy.
+    this.registerValidator('includePaths', pathsValidator);
+    this.registerValidator('excludePaths', pathsValidator);
   }
 }
 

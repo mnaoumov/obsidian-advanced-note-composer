@@ -219,6 +219,8 @@ The two forms match differently, and the difference is the thing worth knowing:
 - A **path string** matches that note or folder **and everything inside it**. So `Inbox` covers `Inbox`, `Inbox/note.md` and `Inbox/sub/deep.md` alike. This is what you want most of the time.
 - A **`/regular expression/`** is tested against the path exactly as written, with no subtree rule bolted on. That is how you match a folder *without* its contents: `/^Inbox$/` matches the `Inbox` folder itself and none of the notes in it. Likewise `/^Inbox\/[^/]+\.md$/` matches the notes directly inside `Inbox` but not the folder and not anything deeper.
 
+A `/regular expression/` that does not parse is reported under the setting as `Invalid regular expression: …`, and while it is there **the whole list is ignored** — so a single broken entry stops the other entries in that box from matching until you fix it. Half-typed values are fine: nothing happens while you type, the message only tells you the entry as it stands is not usable yet.
+
 Ignored paths are skipped by the pickers, and the folder/file batch commands (`Merge current folder contents into a single file...`, `Merge these files into one file...`) skip and report ignored notes — unless **Should always merge excluded items** is on.
 
 By default the plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Turn **Should block commands on excluded paths** on to hide them entirely instead — they disappear from the command palette and from the editor, file, and folder context menus.
