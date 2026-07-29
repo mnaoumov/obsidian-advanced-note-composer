@@ -20,6 +20,9 @@ and they match differently:
 - A **`/regular expression/`** is tested against the path exactly as written. That is how you match a
   folder *without* its contents: `/^Merge folder$/` matches only the folder itself.
 
+If a line is not a valid regular expression, the setting says `Invalid regular expression: …` and the
+**whole list** is ignored until you fix it — so one broken entry disables the others in that box.
+
 ## Try it
 
 1. Open the plugin settings and, under **Include/exclude paths**, add a folder name (for example

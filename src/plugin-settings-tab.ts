@@ -992,4 +992,6 @@ function appendPathFormsDesc(f: DocumentFragment): void {
   f.appendText(' matches only the ');
   appendCodeBlock(f, 'Inbox');
   f.appendText(' folder itself.');
+  f.createEl('br');
+  f.appendText('If any line is not a valid regular expression, the whole list is ignored until you fix it.');
 }
