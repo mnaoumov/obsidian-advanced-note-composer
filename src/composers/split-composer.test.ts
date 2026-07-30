@@ -37,10 +37,12 @@ import { InsertMode } from '../insert-mode.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
+  SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
 import {
   getSelections,
+  resolveSmartCutAndPasteTemplate,
   resolveSplitTemplateForNewTargetFile,
   SplitComposer
 } from './split-composer.ts';
@@ -56,12 +58,12 @@ interface CreateComposerOptions {
   readonly insertToken?: string;
   readonly isMultipleSplit?: boolean;
   readonly isNewTargetFile?: boolean;
-  readonly isSmartCutAndPasteMove?: boolean;
   readonly pluginNoticeComponent?: PluginNoticeComponent;
   readonly selectedText?: string;
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
   readonly shouldJumpToMovedContent?: boolean;
+  readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
   readonly templateOverride?: string;
@@ -79,6 +81,7 @@ interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
   readonly shouldJumpToMovedContent?: boolean;
+  readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
   readonly templateOverride?: string;
@@ -152,7 +155,6 @@ function createComposer(options?: CreateComposerOptions): SplitComposer {
     editor,
     isMultipleSplit: options?.isMultipleSplit ?? false,
     isNewTargetFile: options?.isNewTargetFile ?? true,
-    isSmartCutAndPasteMove: options?.isSmartCutAndPasteMove ?? false,
     pluginNoticeComponent: options?.pluginNoticeComponent ?? createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(options?.settingsOverrides),
     resourceLockComponent,
@@ -208,6 +210,8 @@ function createPluginSettingsComponentStub(
       shouldRunTemplaterOnDestinationFile: false,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
       smartCutAndPasteTemplate: '',
+      smartCutAndPasteToBottomTemplate: '',
+      smartCutAndPasteToTopTemplate: '',
       splitTemplate: '',
       splitToExistingFileTemplate: Action.Split,
       textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile,
@@ -232,6 +236,7 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
     insertToken: options?.insertToken,
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
     shouldJumpToMovedContent: options?.shouldJumpToMovedContent,
+    smartCutAndPasteMoveKind: options?.smartCutAndPasteMoveKind,
     targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset,
     templateOverride: options?.templateOverride
@@ -700,12 +705,12 @@ describe('splitFile move mode', () => {
       editor: createEditorDouble(),
       insertToken: 'TK',
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         textAfterExtractionMode: TextAfterExtractionMode.None
       },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       targetCursorOffset: 7
     });
 
@@ -733,13 +738,13 @@ describe('splitFile move mode', () => {
       editor: createEditorDouble(),
       insertToken: 'TK',
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         textAfterExtractionMode: TextAfterExtractionMode.None
       },
       shouldJumpToMovedContent: false,
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       targetCursorOffset: 7
     });
 
@@ -760,12 +765,12 @@ describe('splitFile move mode', () => {
       editor,
       insertToken: 'TK',
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         textAfterExtractionMode: TextAfterExtractionMode.None
       },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       targetCursorOffset: 7
     });
 
@@ -790,12 +795,12 @@ describe('splitFile move mode', () => {
       editor: createEditorDouble(),
       insertToken: 'TK',
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         textAfterExtractionMode: TextAfterExtractionMode.None
       },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       targetCursorOffset: 7
     });
 
@@ -950,12 +955,12 @@ describe('SplitComposer getTemplate', () => {
   it('should use the smart cut & paste template for a smart-cut move when it is set', async () => {
     const composer = createComposer({
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       settingsOverrides: {
         mergeTemplate: 'merge: {{content}}',
         smartCutAndPasteTemplate: 'smart: {{content}}',
         splitTemplate: 'split: {{content}}'
-      }
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor
     });
 
     await composer.splitFile();
@@ -963,16 +968,116 @@ describe('SplitComposer getTemplate', () => {
     expect(await app.vault.adapter.read('target.md')).toContain('smart:');
   });
 
+  it('should prefer the to-top override for a move to the top of the file (issue #174)', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        smartCutAndPasteToBottomTemplate: 'bottom: {{content}}',
+        smartCutAndPasteToTopTemplate: 'top: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.ToTop
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('top:');
+    expect(targetContent).not.toContain('smart:');
+  });
+
+  it('should prefer the to-bottom override for a move to the bottom of the file (issue #174)', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        smartCutAndPasteToBottomTemplate: 'bottom: {{content}}',
+        smartCutAndPasteToTopTemplate: 'top: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.ToBottom
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('bottom:');
+    expect(targetContent).not.toContain('smart:');
+  });
+
+  it('should fall back to the shared smart cut & paste template when the direction override is empty (issue #174)', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        smartCutAndPasteToBottomTemplate: 'bottom: {{content}}',
+        smartCutAndPasteToTopTemplate: '',
+        splitTemplate: 'split: {{content}}'
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.ToTop
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('smart:');
+    expect(targetContent).not.toContain('bottom:');
+  });
+
+  it('should use the shared smart cut & paste template for a move at the cursor even when both overrides are set (issue #174)', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        smartCutAndPasteToBottomTemplate: 'bottom: {{content}}',
+        smartCutAndPasteToTopTemplate: 'top: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('smart:');
+    expect(targetContent).not.toContain('top:');
+    expect(targetContent).not.toContain('bottom:');
+  });
+
   it('should fall back to the split template for a smart-cut move when the smart cut & paste template is empty', async () => {
     const composer = createComposer({
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       settingsOverrides: {
         mergeTemplate: 'merge: {{content}}',
         smartCutAndPasteTemplate: '',
         splitTemplate: 'split: {{content}}',
         splitToExistingFileTemplate: Action.Split
-      }
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toContain('split:');
+  });
+
+  it('should fall through to the split chain for an edge move when every smart cut & paste template is empty (issue #174)', async () => {
+    const composer = createComposer({
+      isNewTargetFile: false,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: '',
+        smartCutAndPasteToBottomTemplate: '',
+        smartCutAndPasteToTopTemplate: '',
+        splitTemplate: 'split: {{content}}',
+        splitToExistingFileTemplate: Action.Split
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.ToBottom
     });
 
     await composer.splitFile();
@@ -1000,12 +1105,12 @@ describe('SplitComposer getTemplate', () => {
 
   it('should prefer an explicit template override over every setting (issue #172)', async () => {
     const composer = createComposer({
-      isSmartCutAndPasteMove: true,
       settingsOverrides: {
         mergeTemplate: 'merge: {{content}}',
         smartCutAndPasteTemplate: 'smart: {{content}}',
         splitTemplate: 'split: {{content}}'
       },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       // The recursive split hands over the identity template so nothing is added until its deferred
       // Template pass runs.
       templateOverride: '{{content}}'
@@ -1017,6 +1122,39 @@ describe('SplitComposer getTemplate', () => {
     expect(targetContent).not.toContain('merge:');
     expect(targetContent).not.toContain('smart:');
     expect(targetContent).not.toContain('split:');
+  });
+});
+
+describe('resolveSmartCutAndPasteTemplate', () => {
+  const SETTINGS = {
+    smartCutAndPasteTemplate: 'smart: {{content}}',
+    smartCutAndPasteToBottomTemplate: 'bottom: {{content}}',
+    smartCutAndPasteToTopTemplate: 'top: {{content}}'
+  };
+
+  it('should return the to-top override for a move to the top of the file', () => {
+    expect(resolveSmartCutAndPasteTemplate(SETTINGS, SmartCutAndPasteMoveKind.ToTop)).toBe('top: {{content}}');
+  });
+
+  it('should return the to-bottom override for a move to the bottom of the file', () => {
+    expect(resolveSmartCutAndPasteTemplate(SETTINGS, SmartCutAndPasteMoveKind.ToBottom)).toBe('bottom: {{content}}');
+  });
+
+  it('should return the shared template for a move at the cursor, which has no override of its own', () => {
+    expect(resolveSmartCutAndPasteTemplate(SETTINGS, SmartCutAndPasteMoveKind.AtCursor)).toBe('smart: {{content}}');
+  });
+
+  it('should fall back to the shared template when the direction override is empty', () => {
+    expect(resolveSmartCutAndPasteTemplate({ ...SETTINGS, smartCutAndPasteToTopTemplate: '' }, SmartCutAndPasteMoveKind.ToTop)).toBe('smart: {{content}}');
+  });
+
+  it('should return an empty string when nothing is configured, so the split chain takes over', () => {
+    const emptySettings = {
+      smartCutAndPasteTemplate: '',
+      smartCutAndPasteToBottomTemplate: '',
+      smartCutAndPasteToTopTemplate: ''
+    };
+    expect(resolveSmartCutAndPasteTemplate(emptySettings, SmartCutAndPasteMoveKind.ToBottom)).toBe('');
   });
 });
 

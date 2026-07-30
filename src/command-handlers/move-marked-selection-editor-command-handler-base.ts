@@ -14,6 +14,7 @@ import type { InsertMode } from '../insert-mode.ts';
 import type { MoveOptions } from '../modals/paste-options-modal.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { SmartCutAndPasteMoveKind } from '../plugin-settings.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { resolveInsertOffset } from '../composers/composer-base.ts';
@@ -188,7 +189,6 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
       insertToken,
       isMultipleSplit: false,
       isNewTargetFile: false,
-      isSmartCutAndPasteMove: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
@@ -196,6 +196,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
       shouldFixFootnotes: options.shouldFixFootnotes,
       shouldIncludeFrontmatter: options.shouldIncludeFrontmatter,
       shouldJumpToMovedContent: this.shouldJumpToMovedContent(),
+      smartCutAndPasteMoveKind: this.getSmartCutAndPasteMoveKind(),
       sourceFile,
       targetCursorEndOffset: insertion.targetCursorEndOffset,
       targetCursorOffset: insertion.targetCursorOffset,
@@ -204,6 +205,16 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
     });
     await composer.splitFile();
   }
+
+  /**
+   * Which smart cut & paste move this handler performs (issue #174). Decided by the handler, since only it
+   * knows which move this is — the same reasoning as {@link shouldJumpToMovedContent} — and passed to the
+   * composer, where its presence both marks the split as a smart cut & paste move and selects the
+   * per-direction template override.
+   *
+   * @returns The move kind.
+   */
+  protected abstract getSmartCutAndPasteMoveKind(): SmartCutAndPasteMoveKind;
 
   /**
    * Resolves the insert point of the move in the target note.

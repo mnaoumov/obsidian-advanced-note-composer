@@ -10,6 +10,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { Insertion } from './move-marked-selection-editor-command-handler-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
+import { SmartCutAndPasteMoveKind } from '../plugin-settings.ts';
 import { MoveMarkedSelectionEditorCommandHandlerBase } from './move-marked-selection-editor-command-handler-base.ts';
 
 interface CommandDefinition {
@@ -46,6 +47,20 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
       ...getCommandDefinition(params.insertMode)
     });
     this.insertMode = params.insertMode;
+  }
+
+  /**
+   * Each direction is its own move for templating, so each can carry its own template override
+   * (issue #174).
+   *
+   * @returns The move kind.
+   */
+  protected override getSmartCutAndPasteMoveKind(): SmartCutAndPasteMoveKind {
+    // No exhaustiveness check here: the constructor already rejected any other mode, so a `default`
+    // Branch would be unreachable.
+    return this.insertMode === InsertMode.Prepend
+      ? SmartCutAndPasteMoveKind.ToTop
+      : SmartCutAndPasteMoveKind.ToBottom;
   }
 
   protected override resolveInsertion(): Insertion {

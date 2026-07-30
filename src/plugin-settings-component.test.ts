@@ -106,6 +106,42 @@ describe('PluginSettingsComponent', () => {
       });
     });
 
+    describe('smartCutAndPasteToTopTemplate validator', () => {
+      it('should reject non-empty template without content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', 'no token here'))
+          .toBe('Smart cut & paste (to top of file) template should contain {{content}} token');
+      });
+
+      it('should accept template with content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '{{content}}')).toBeUndefined();
+      });
+
+      it('should accept empty template, which means "use the shared template"', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '')).toBeUndefined();
+      });
+    });
+
+    describe('smartCutAndPasteToBottomTemplate validator', () => {
+      it('should reject non-empty template without content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', 'no token here'))
+          .toBe('Smart cut & paste (to bottom of file) template should contain {{content}} token');
+      });
+
+      it('should accept template with content token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '{{content}}')).toBeUndefined();
+      });
+
+      it('should accept empty template, which means "use the shared template"', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '')).toBeUndefined();
+      });
+    });
+
     describe('splitIntoFolderNoteNameTemplate validator', () => {
       it('should accept empty note name', async () => {
         const component = createComponent();

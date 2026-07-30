@@ -34,6 +34,7 @@ import { openPasteOptionsModal } from '../modals/paste-options-modal.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import {
   FrontmatterMergeStrategy,
+  SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './move-marked-selection-here-editor-command-handler.ts';
@@ -47,6 +48,7 @@ interface CapturedComposerArgs {
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
   readonly shouldJumpToMovedContent: boolean;
+  readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind;
   readonly sourceFile: TFile;
   readonly targetCursorEndOffset: number;
   readonly targetCursorOffset: number;
@@ -374,6 +376,9 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       // A move AT THE CURSOR always lands the cursor on the moved content — there is no setting for it
       // (issue #144); only the top/bottom moves are configurable.
       expect(args.shouldJumpToMovedContent).toBe(true);
+      // The kind both marks this as a smart cut & paste move and selects its template: the at-cursor move
+      // Has no override of its own, so it always takes the shared template (issue #174).
+      expect(args.smartCutAndPasteMoveKind).toBe(SmartCutAndPasteMoveKind.AtCursor);
       expect(args.sourceFile).toBe(resolvedSource);
       expect(args.targetCursorOffset).toBe(42);
       expect(args.targetCursorEndOffset).toBe(42);

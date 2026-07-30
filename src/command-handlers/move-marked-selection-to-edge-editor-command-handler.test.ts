@@ -29,6 +29,7 @@ import { InsertMode } from '../insert-mode.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import {
   FrontmatterMergeStrategy,
+  SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './move-marked-selection-to-edge-editor-command-handler.ts';
@@ -39,6 +40,7 @@ interface CapturedComposerArgs {
   readonly shouldFixFootnotes: boolean;
   readonly shouldIncludeFrontmatter: boolean;
   readonly shouldJumpToMovedContent: boolean;
+  readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind;
   readonly sourceFile: TFile;
   readonly targetCursorOffset: null | number;
   readonly targetFile: TFile;
@@ -235,6 +237,29 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
       expect(args.shouldFixFootnotes).toBe(true);
       expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
+    });
+  });
+
+  // Each direction is its own template kind, so a handler that reported the wrong one would silently apply
+  // The other direction's template override (issue #174).
+  describe('getSmartCutAndPasteMoveKind (issue #174)', () => {
+    async function captureMoveKind(insertMode: InsertMode): Promise<SmartCutAndPasteMoveKind> {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ insertMode, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      return capturedComposerArgs().smartCutAndPasteMoveKind;
+    }
+
+    it('should report ToTop for a prepend', async () => {
+      expect(await captureMoveKind(InsertMode.Prepend)).toBe(SmartCutAndPasteMoveKind.ToTop);
+    });
+
+    it('should report ToBottom for an append', async () => {
+      expect(await captureMoveKind(InsertMode.Append)).toBe(SmartCutAndPasteMoveKind.ToBottom);
     });
   });
 

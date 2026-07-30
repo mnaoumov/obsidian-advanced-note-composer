@@ -19,12 +19,22 @@ import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
 import {
   Action,
+  SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
 import {
   ComposerBase,
   resolveInsertOffset
 } from './composer-base.ts';
+
+/**
+ * The template settings {@link resolveSmartCutAndPasteTemplate} reads.
+ */
+export interface SmartCutAndPasteTemplateSettings {
+  readonly smartCutAndPasteTemplate: string;
+  readonly smartCutAndPasteToBottomTemplate: string;
+  readonly smartCutAndPasteToTopTemplate: string;
+}
 
 /**
  * The template settings {@link resolveSplitTemplateForNewTargetFile} reads.
@@ -45,19 +55,21 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   readonly editor: Editor;
   readonly heading?: string;
   readonly isMultipleSplit: boolean;
-
-  // When `true`, this split is a smart cut & paste move (mark → move here / at cursor / to top /
-  // Bottom), so `getTemplate` prefers the `Smart cut & paste template` setting (falling back to the
-  // Split → merge chain when it is empty). Ordinary split-to-new-file extracts leave this `false`.
-  readonly isSmartCutAndPasteMove?: boolean;
   readonly selectedText: string;
   readonly shouldIncludeFrontmatter?: boolean;
 
   // Whether a smart cut & paste move lands the cursor on the moved content in the target (issue #144).
   // Decided by the command handler, since only it knows which move this is: a move AT THE CURSOR always
   // Jumps, while the top/bottom moves each read their own setting. Ignored unless
-  // `isSmartCutAndPasteMove` is set.
+  // `smartCutAndPasteMoveKind` is set.
   readonly shouldJumpToMovedContent?: boolean;
+
+  // Which smart cut & paste move this split is (mark → move here / at cursor / to top / bottom). Its
+  // PRESENCE marks the split as a smart cut & paste move at all, so `getTemplate` prefers the smart cut &
+  // Paste templates (the per-direction override, then the shared one, then the split → merge chain when
+  // Both are empty — issue #174). Ordinary split-to-new-file extracts leave it unset. Supplied by the
+  // Command handler, since only it knows which move this is.
+  readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
 
   // The end of the target range the move flow replaces with the token. When greater than
   // `targetCursorOffset`, the moved content replaces that range (paste-over-selection at the cursor);
@@ -92,9 +104,9 @@ export class SplitComposer extends ComposerBase {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private editor: Editor;
   private readonly isMultipleSplit: boolean;
-  private readonly isSmartCutAndPasteMove: boolean;
   private readonly selectedText: string;
   private readonly shouldJumpToMovedContent: boolean;
+  private readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind | undefined;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
   private readonly templateOverride: string | undefined;
@@ -118,7 +130,7 @@ export class SplitComposer extends ComposerBase {
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.editor = params.editor;
     this.isMultipleSplit = params.isMultipleSplit;
-    this.isSmartCutAndPasteMove = params.isSmartCutAndPasteMove ?? false;
+    this.smartCutAndPasteMoveKind = params.smartCutAndPasteMoveKind;
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.shouldJumpToMovedContent = params.shouldJumpToMovedContent ?? true;
@@ -236,7 +248,7 @@ export class SplitComposer extends ComposerBase {
         // Top/bottom moves each read their own setting), because moving a selection out of the way is a
         // Different intent from moving it to work on it. When off, the cursor stays where the selection
         // Was cut from — `revealCursor` above already brought it into view.
-        if (this.isSmartCutAndPasteMove && this.shouldJumpToMovedContent) {
+        if (this.smartCutAndPasteMoveKind && this.shouldJumpToMovedContent) {
           const DELAY_BEFORE_SELECT_IN_MILLISECONDS = 300;
           await sleep(DELAY_BEFORE_SELECT_IN_MILLISECONDS);
           this.selectMovedContentInTarget();
@@ -265,10 +277,14 @@ export class SplitComposer extends ComposerBase {
       return this.templateOverride;
     }
 
-    // A smart cut & paste move prefers its own template; when it is empty, fall through to the ordinary
-    // Split → merge resolution below (the documented fallback chain).
-    if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.smartCutAndPasteTemplate) {
-      return this.pluginSettingsComponent.settings.smartCutAndPasteTemplate;
+    // A smart cut & paste move prefers its own template — the override for its direction, then the shared
+    // One. When both are empty, fall through to the ordinary split → merge resolution below (the documented
+    // Fallback chain).
+    if (this.smartCutAndPasteMoveKind) {
+      const smartCutAndPasteTemplate = resolveSmartCutAndPasteTemplate(this.pluginSettingsComponent.settings, this.smartCutAndPasteMoveKind);
+      if (smartCutAndPasteTemplate) {
+        return smartCutAndPasteTemplate;
+      }
     }
 
     if (this.isNewTargetFile) {
@@ -502,6 +518,31 @@ export function getSelections(editor: Editor): Selection[] {
   });
 
   return selections.sort((a, b) => a.startOffset - b.startOffset);
+}
+
+/**
+ * Resolves the template a smart cut & paste move applies: the override configured for its direction,
+ * falling back to the shared `Smart cut & paste template` setting (issue #174). An empty result means
+ * nothing is configured for this move, and {@link SplitComposer.getTemplate} falls through to the ordinary
+ * split → merge chain. Exported so the resolution can be asserted directly.
+ *
+ * @param settings - The three template settings the chain reads (structural, so the deep-readonly settings
+ * object a `PluginSettingsComponent` exposes is accepted as-is).
+ * @param kind - Which move this is.
+ * @returns The template to apply, or an empty string when none is configured.
+ */
+export function resolveSmartCutAndPasteTemplate(settings: SmartCutAndPasteTemplateSettings, kind: SmartCutAndPasteMoveKind): string {
+  // A `Record` keyed by the enum rather than a `switch`, so a new member becomes a compile error instead of
+  // An unreachable `default` branch the 100 % coverage gate could never reach. `AtCursor` has no override BY
+  // CONSTRUCTION — the shared template IS its template — so it maps to the empty string and `||` falls
+  // Straight through, keeping this a single expression with no special-case branch.
+  const overrides: Record<SmartCutAndPasteMoveKind, string> = {
+    [SmartCutAndPasteMoveKind.AtCursor]: '',
+    [SmartCutAndPasteMoveKind.ToBottom]: settings.smartCutAndPasteToBottomTemplate,
+    [SmartCutAndPasteMoveKind.ToTop]: settings.smartCutAndPasteToTopTemplate
+  };
+
+  return overrides[kind] || settings.smartCutAndPasteTemplate;
 }
 
 /**

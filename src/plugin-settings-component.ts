@@ -89,6 +89,18 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       }
     });
 
+    this.registerValidator('smartCutAndPasteToTopTemplate', (value): MaybeReturn<string> => {
+      if (value && !value.includes('{{content}}')) {
+        return 'Smart cut & paste (to top of file) template should contain {{content}} token';
+      }
+    });
+
+    this.registerValidator('smartCutAndPasteToBottomTemplate', (value): MaybeReturn<string> => {
+      if (value && !value.includes('{{content}}')) {
+        return 'Smart cut & paste (to bottom of file) template should contain {{content}} token';
+      }
+    });
+
     this.registerValidator('splitIntoFolderNoteNameTemplate', validateNoteNameTemplate);
     this.registerValidator('mergeFolderIntoFileNoteNameTemplate', validateNoteNameTemplate);
 
