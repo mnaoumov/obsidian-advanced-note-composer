@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 5.2.0
+
+- feat: re #174
+- feat: re #173
+- feat: re #172
+- feat: re #170 re #171
+- fix: re #168
+- feat: re #167
+- fix: re #166
+- feat: re #165
+
 ## 5.1.0
 
 - refactor: stop exporting the test-only trailing-dots regular expression
