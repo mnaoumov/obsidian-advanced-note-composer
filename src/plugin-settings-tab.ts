@@ -420,6 +420,36 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       })
       .addSettingEx((setting: SettingEx) => {
         setting
+          .setName('Should split recursively into the default new note folder')
+          .setDesc(createFragment((f) => {
+            f.appendText('Whether ');
+            appendCodeBlock(f, 'Split note by headings recursively...');
+            f.appendText(' creates its notes in Obsidian\'s ');
+            appendCodeBlock(f, 'Default location for new notes');
+            f.appendText(' instead of beside the note being split. It affects no other command.');
+            f.createEl('br');
+            f.appendText('Only the top of the produced tree moves there: a sub-heading\'s note still lands inside its parent\'s folder, so ');
+            appendCodeBlock(f, '# A');
+            f.appendText(' / ');
+            appendCodeBlock(f, '## B');
+            f.appendText(' yields ');
+            appendCodeBlock(f, '<default folder>/A/A.md');
+            f.appendText(' and ');
+            appendCodeBlock(f, '<default folder>/A/B/B.md');
+            f.appendText('. The folder tree is kept — redirecting every note would flatten it away.');
+            f.createEl('br');
+            f.appendText('The note being split is not moved; it stays where it is and links down into the new tree.');
+            f.createEl('br');
+            f.appendText('This has no effect while Obsidian\'s own setting is ');
+            appendCodeBlock(f, 'Same folder as current file');
+            f.appendText(', which resolves to the behavior this setting replaces.');
+          }))
+          .addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldSplitRecursivelyIntoDefaultNewNoteFolder', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
           .setName('Text after extraction')
           .setDesc('What to show in place of the selected text after extracting it.')
           .addDropdown((dropdown) => {

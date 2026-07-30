@@ -36,6 +36,20 @@ Two things this command does *not* care about:
 
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
 
+## Build the tree somewhere else
+
+By default the tree lands next to the note you split. Turn on `Should split recursively into the
+default new note folder` (in the plugin settings, under `Split/extract`) and it is built in Obsidian's
+own `Default location for new notes` instead — set that under `Settings -> Files and links -> Default
+location for new notes`.
+
+Only the *top* of the tree moves there. `Trip` would land in that folder, while `Packing`,
+`Electronics` and `Itinerary` still nest inside it exactly as above — the hierarchy is kept, not
+flattened. This note itself is never moved; it stays put and links down into the new tree.
+
+Nothing changes while Obsidian's own setting is `Same folder as current file`, because that is already
+where the tree would have been built.
+
 ## Trip
 
 Everything about the trip lives here.

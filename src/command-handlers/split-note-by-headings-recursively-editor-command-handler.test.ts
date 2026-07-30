@@ -55,6 +55,7 @@ interface MockParamsOptions {
   readonly shouldAddCommandsToSubmenu?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldBlockCommandOnPath?: boolean;
+  readonly shouldSplitRecursivelyIntoDefaultNewNoteFolder?: boolean;
 }
 
 type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
@@ -223,7 +224,8 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
         isPathIgnored: vi.fn().mockReturnValue(options?.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: options?.shouldAddCommandsToSubmenu ?? true,
         shouldAskBeforeSplitting: options?.shouldAskBeforeSplitting ?? false,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options?.shouldBlockCommandOnPath ?? false)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options?.shouldBlockCommandOnPath ?? false),
+        shouldSplitRecursivelyIntoDefaultNewNoteFolder: options?.shouldSplitRecursivelyIntoDefaultNewNoteFolder ?? false
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -468,7 +470,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(prepareParams?.heading).toBe('My Heading');
     // The three overrides are what make the folder tree nest: the new note goes beside its source, into a
     // Folder of its own, without asking again (the whole operation was confirmed once up front).
-    expect(prepareParams?.shouldForceAllowOnlyCurrentFolder).toBe(true);
+    expect(prepareParams?.shouldAllowOnlyCurrentFolderOverride).toBe(true);
     expect(prepareParams?.shouldForceSplitIntoFolder).toBe(true);
     expect(prepareParams?.shouldSkipConfirmation).toBe(true);
     expect(prepareParams?.shouldSkipModal).toBe(true);
@@ -476,6 +478,38 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const composerParams = MockSplitComposer.mock.calls[0]?.[0];
     expect(composerParams?.sourceFile).toBe(file);
     expect(composerParams?.isMultipleSplit).toBe(true);
+  });
+
+  it('should root the tree in the default new note folder only on the first pass (issue #173)', async () => {
+    const params = createMockParams({ shouldSplitRecursivelyIntoDefaultNewNoteFolder: true });
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+    const file = createMockFile();
+    const childFile = createMockFile('Inbox/A/A.md');
+    const grandChildFile = createMockFile('Inbox/A/B/B.md');
+
+    // The source yields one H1; the note it produced still holds the H2 that was nested under it.
+    scriptCaches(
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B')]),
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B')]),
+      createCache([]),
+      createCache([createHeading(2, 2, 'B')]),
+      createCache([])
+    );
+    mockPrepareForSplitFile
+      .mockResolvedValueOnce(createSplitResult(childFile))
+      .mockResolvedValueOnce(createSplitResult(grandChildFile));
+    setActiveEditor(params.app, createMockEditor());
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+
+    // An explicit `false` is what forces Obsidian's own new-file location for the root pass, whatever the
+    // `shouldAllowOnlyCurrentFolderByDefault` setting says.
+    expect(mockPrepareForSplitFile.mock.calls[0]?.[0].shouldAllowOnlyCurrentFolderOverride).toBe(false);
+    // Every deeper pass keeps creating its note beside its source, which is what keeps the tree nesting
+    // Instead of collapsing into one flat folder.
+    expect(mockPrepareForSplitFile.mock.calls[1]?.[0].shouldAllowOnlyCurrentFolderOverride).toBe(true);
+    // The folder tree itself is unaffected by the redirection.
+    expect(mockPrepareForSplitFile.mock.calls[0]?.[0].shouldForceSplitIntoFolder).toBe(true);
   });
 
   it('should recurse into each produced note, one heading level deeper each time', async () => {

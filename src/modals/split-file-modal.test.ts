@@ -172,6 +172,7 @@ vi.mock('../headings.ts', () => ({
 }));
 
 interface MockPluginOptions {
+  readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
 }
@@ -280,7 +281,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
     settings: strictProxy({
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: vi.fn().mockReturnValue(false),
-      shouldAllowOnlyCurrentFolderByDefault: false,
+      shouldAllowOnlyCurrentFolderByDefault: options?.shouldAllowOnlyCurrentFolderByDefault ?? false,
       shouldAllowSplitIntoUnresolvedPathByDefault: true,
       shouldAskBeforeSplitting,
       shouldFixFootnotesByDefault: true,
@@ -445,13 +446,50 @@ describe('prepareForSplitFile', () => {
       heading: 'Heading',
       pluginSettingsComponent,
       resourceLockComponent,
-      shouldForceAllowOnlyCurrentFolder: true,
+      shouldAllowOnlyCurrentFolderOverride: true,
       shouldSkipModal: true,
       sourceFile
     });
 
     expect(result?.shouldAllowOnlyCurrentFolder).toBe(true);
     expect(capturedSplitItemSelectorParams?.shouldAllowOnlyCurrentFolder).toBe(true);
+  });
+
+  it('should let an explicit false override win over the setting (issue #173)', async () => {
+    // The override is a TRI-state resolved with `??`, so `false` is not "do not override" — it forces
+    // Obsidian's own new-file location even with the setting on. That is the lever the recursive split's
+    // Root pass pulls to root its tree in the `Default location for new notes`.
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAllowOnlyCurrentFolderByDefault: true, shouldAskBeforeSplitting: false });
+
+    const result = await prepareForSplitFile({
+      app,
+      editor,
+      heading: 'Heading',
+      pluginSettingsComponent,
+      resourceLockComponent,
+      shouldAllowOnlyCurrentFolderOverride: false,
+      shouldSkipModal: true,
+      sourceFile
+    });
+
+    expect(result?.shouldAllowOnlyCurrentFolder).toBe(false);
+    expect(capturedSplitItemSelectorParams?.shouldAllowOnlyCurrentFolder).toBe(false);
+  });
+
+  it('should fall back to the setting when no override is given', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAllowOnlyCurrentFolderByDefault: true, shouldAskBeforeSplitting: false });
+
+    const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+    expect(result?.shouldAllowOnlyCurrentFolder).toBe(true);
   });
 
   it('should pass the forced folder split through to the item selector', async () => {

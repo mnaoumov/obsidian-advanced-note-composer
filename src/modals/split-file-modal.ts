@@ -83,12 +83,21 @@ interface PrepareForSplitFileParams {
   readonly selectionHighlightComponent?: SelectionHighlightComponent;
 
   /**
-   * Creates the new note in the source note's own folder, whatever the `shouldAllowOnlyCurrentFolderByDefault`
-   * setting says. Only meaningful together with {@link PrepareForSplitFileParams.shouldSkipModal} (otherwise
-   * the picker owns the choice). Set by the recursive split, where each pass's new note must land beside its
-   * source for the folder tree to nest.
+   * Overrides where a new note is created, whatever the `shouldAllowOnlyCurrentFolderByDefault` setting says.
+   * A **tri-state**, because it is resolved with `??`:
+   *
+   * - `true` — create the note in the source note's own folder.
+   * - `false` — resolve through Obsidian's own new-file location (`fileManager.getNewFileParent`), i.e. its
+   *   `Default location for new notes`. NOT "do not override" — an explicit `false` wins over the setting.
+   * - `undefined` — use the `shouldAllowOnlyCurrentFolderByDefault` setting.
+   *
+   * Only meaningful together with {@link PrepareForSplitFileParams.shouldSkipModal} (otherwise the picker
+   * owns the choice). Set by the recursive split: every pass but the first passes `true`, because its new
+   * note must land beside its source for the folder tree to nest, while the first pass passes `false` when
+   * `shouldSplitRecursivelyIntoDefaultNewNoteFolder` is on, which roots the whole produced tree in
+   * Obsidian's default new-note folder (issue #173).
    */
-  readonly shouldForceAllowOnlyCurrentFolder?: boolean;
+  readonly shouldAllowOnlyCurrentFolderOverride?: boolean;
 
   /**
    * Puts the new note into its own folder even when the `shouldSplitIntoFolder` setting is off. Set by the
@@ -500,7 +509,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         insertMode: InsertMode.Append,
         isMod: false,
         item: null,
-        shouldAllowOnlyCurrentFolder: params.shouldForceAllowOnlyCurrentFolder ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
+        shouldAllowOnlyCurrentFolder: params.shouldAllowOnlyCurrentFolderOverride ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
         shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
         shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
         shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,

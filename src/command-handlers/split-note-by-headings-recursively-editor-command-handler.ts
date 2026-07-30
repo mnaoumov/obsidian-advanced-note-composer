@@ -68,6 +68,16 @@ interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerSplitBranchParams {
   readonly file: TFile;
 
   /**
+   * Whether this pass is splitting the note the command was invoked on, rather than a note the split itself
+   * produced. Only the root pass may be redirected into Obsidian's default new-note folder (issue #173) —
+   * every deeper pass must stay beside its source for the folder tree to nest.
+   *
+   * Passed explicitly rather than derived from `minLevel === 1`, which happens to be equivalent today but
+   * makes the coupling invisible at the call site.
+   */
+  readonly isRootPass: boolean;
+
+  /**
    * The shallowest heading level this pass may extract. `1` for the note the command was invoked on;
    * the parent heading's level plus one for every note the split itself produced.
    */
@@ -154,7 +164,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
 
     let createdNotes: readonly SplitTemplateNote[];
     try {
-      createdNotes = await this.splitBranch({ editor, file, minLevel: 1 });
+      createdNotes = await this.splitBranch({ editor, file, isRootPass: true, minLevel: 1 });
     } finally {
       /*
        * The recursion walks the leaf down through every note it creates, so it ends up parked on the
@@ -238,6 +248,10 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
    * a folder of its own. So a child of `<dir>/A/A.md` lands at `<dir>/A/B/B.md`, and the nesting comes out
    * of the existing split machinery rather than from any path arithmetic here.
    *
+   * The one exception is the ROOT pass with `shouldSplitRecursivelyIntoDefaultNewNoteFolder` on (issue
+   * #173): it resolves through Obsidian's own new-file location instead, which moves the whole produced
+   * tree into the `Default location for new notes` while every deeper pass still nests under its parent.
+   *
    * @param params - The parameters.
    * @returns The notes created, including those created by the recursive passes, each paired with the note
    * it was split out of. A pass that gives up part-way returns what it created up to that point, so those
@@ -247,6 +261,15 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
     const { editor, file, minLevel } = params;
     const children: RecursiveSplitChild[] = [];
     const createdNotes: SplitTemplateNote[] = [];
+
+    /*
+     * Beside its source for every pass but the root one — that composition with `shouldForceSplitIntoFolder`
+     * IS the folder tree. The root pass gives it up only when the user asked for the tree to be rooted in
+     * Obsidian's default new-note folder (issue #173); an explicit `false` is what forces that resolution,
+     * overriding the `shouldAllowOnlyCurrentFolderByDefault` setting.
+     */
+    const shouldAllowOnlyCurrentFolderOverride = !params.isRootPass
+      || !this.pluginSettingsComponent.settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder;
 
     for (;;) {
       const cache = await getCacheSafe(this.app, file);
@@ -269,7 +292,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
         heading: headingInfo.heading,
         pluginSettingsComponent: this.pluginSettingsComponent,
         resourceLockComponent: this.resourceLockComponent,
-        shouldForceAllowOnlyCurrentFolder: true,
+        shouldAllowOnlyCurrentFolderOverride,
         shouldForceSplitIntoFolder: true,
         shouldSkipConfirmation: true,
         shouldSkipModal: true,
@@ -309,7 +332,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       if (!childEditor) {
         continue;
       }
-      createdNotes.push(...await this.splitBranch({ editor: childEditor, file: child.file, minLevel: child.level + 1 }));
+      createdNotes.push(...await this.splitBranch({ editor: childEditor, file: child.file, isRootPass: false, minLevel: child.level + 1 }));
     }
 
     return createdNotes;

@@ -130,6 +130,8 @@ describe('PluginSettings', () => {
     expect(settings.shouldShowSmartCutNotice).toBe(true);
     expect(settings.shouldSplitHeadingsAutomatically).toBe(false);
     expect(settings.shouldSplitIntoFolder).toBe(false);
+    // The default IS the pre-#173 behavior, which is what makes the new setting need no legacy converter.
+    expect(settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder).toBe(false);
     expect(settings.shouldSwapEntireFolderStructureByDefault).toBe(true);
     expect(settings.shouldTreatTitleAsPathByDefault).toBe(true);
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);
