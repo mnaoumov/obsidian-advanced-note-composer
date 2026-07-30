@@ -5,7 +5,7 @@ import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
 import { createFolderSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { trimEnd } from 'obsidian-dev-utils/string';
 
-import type { Frontmatter } from '../composers/composer-base.ts';
+import type { Frontmatter } from '../frontmatter-merge.ts';
 import type {
   ItemSelectorBaseConstructorParams,
   SelectItemResult

@@ -13,7 +13,7 @@ import {
   vi
 } from 'vitest';
 
-import type { Frontmatter } from '../composers/composer-base.ts';
+import type { Frontmatter } from '../frontmatter-merge.ts';
 import type { Item } from '../modals/suggest-modal-base.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
