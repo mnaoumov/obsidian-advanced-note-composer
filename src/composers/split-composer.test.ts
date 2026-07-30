@@ -41,6 +41,7 @@ import {
 } from '../plugin-settings.ts';
 import {
   getSelections,
+  resolveSplitTemplateForNewTargetFile,
   SplitComposer
 } from './split-composer.ts';
 
@@ -63,6 +64,7 @@ interface CreateComposerOptions {
   readonly shouldJumpToMovedContent?: boolean;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
+  readonly templateOverride?: string;
 }
 
 interface EditorDoubleOptions {
@@ -79,6 +81,7 @@ interface OptionalComposerParams {
   readonly shouldJumpToMovedContent?: boolean;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
+  readonly templateOverride?: string;
 }
 
 interface SameNoteComposerParams {
@@ -230,7 +233,8 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
     shouldJumpToMovedContent: options?.shouldJumpToMovedContent,
     targetCursorEndOffset: options?.targetCursorEndOffset,
-    targetCursorOffset: options?.targetCursorOffset
+    targetCursorOffset: options?.targetCursorOffset,
+    templateOverride: options?.templateOverride
   });
 }
 
@@ -992,6 +996,37 @@ describe('SplitComposer getTemplate', () => {
     const targetContent = await app.vault.adapter.read('target.md');
     expect(targetContent).toContain('split:');
     expect(targetContent).not.toContain('smart:');
+  });
+
+  it('should prefer an explicit template override over every setting (issue #172)', async () => {
+    const composer = createComposer({
+      isSmartCutAndPasteMove: true,
+      settingsOverrides: {
+        mergeTemplate: 'merge: {{content}}',
+        smartCutAndPasteTemplate: 'smart: {{content}}',
+        splitTemplate: 'split: {{content}}'
+      },
+      // The recursive split hands over the identity template so nothing is added until its deferred
+      // Template pass runs.
+      templateOverride: '{{content}}'
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).not.toContain('merge:');
+    expect(targetContent).not.toContain('smart:');
+    expect(targetContent).not.toContain('split:');
+  });
+});
+
+describe('resolveSplitTemplateForNewTargetFile', () => {
+  it('should return the split template when it is set', () => {
+    expect(resolveSplitTemplateForNewTargetFile({ mergeTemplate: 'merge: {{content}}', splitTemplate: 'split: {{content}}' })).toBe('split: {{content}}');
+  });
+
+  it('should fall back to the merge template when the split template is empty', () => {
+    expect(resolveSplitTemplateForNewTargetFile({ mergeTemplate: 'merge: {{content}}', splitTemplate: '' })).toBe('merge: {{content}}');
   });
 });
 

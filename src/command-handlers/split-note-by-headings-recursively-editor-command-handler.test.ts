@@ -31,8 +31,12 @@ import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { applySplitTemplateToNotes } from '../apply-split-template.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
-import { SplitComposer } from '../composers/split-composer.ts';
+import {
+  resolveSplitTemplateForNewTargetFile,
+  SplitComposer
+} from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
@@ -96,11 +100,19 @@ vi.mock('../composers/composer-base.ts', () => ({
   getSelectionUnderHeading: vi.fn()
 }));
 
+vi.mock('../apply-split-template.ts', () => ({
+  applySplitTemplateToNotes: vi.fn().mockResolvedValue(undefined),
+  CONTENT_ONLY_TEMPLATE: '{{content}}'
+}));
+
 vi.mock('../composers/split-composer.ts', () => {
   const MockSplitComposer = vi.fn();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- vi.fn() prototype is untyped in mock factories.
   MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
-  return { SplitComposer: MockSplitComposer };
+  return {
+    resolveSplitTemplateForNewTargetFile: vi.fn(),
+    SplitComposer: MockSplitComposer
+  };
 });
 
 vi.mock('../modals/confirm-dialog-modal.ts', () => ({
@@ -124,8 +136,16 @@ vi.mock('../open-minimizable-modal.ts', () => ({
   })
 }));
 
+/**
+ * What the (mocked) settings resolution hands the deferred template pass, so the wiring can be asserted
+ * without depending on the real fallback chain (covered by `split-composer.test.ts`).
+ */
+const RESOLVED_TEMPLATE = '# {{newTitle}}\n\n{{content}}\n\nFrom: {{fromTitle}}';
+
+const mockApplySplitTemplateToNotes = vi.mocked(applySplitTemplateToNotes);
 const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockGetCacheSafe = vi.mocked(getCacheSafe);
+const mockResolveSplitTemplateForNewTargetFile = vi.mocked(resolveSplitTemplateForNewTargetFile);
 const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 const mockOpenModal = vi.mocked(openModal);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
@@ -251,6 +271,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     vi.clearAllMocks();
     capturedConfirmParams = null;
     confirmResult = createConfirmResult(false);
+    mockResolveSplitTemplateForNewTargetFile.mockReturnValue(RESOLVED_TEMPLATE);
     MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
     mockGetSelectionUnderHeading.mockReturnValue({
       end: { ch: 0, line: 5 },
@@ -484,6 +505,73 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(MockSplitComposer.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     expect(mockPrepareForSplitFile.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Split into 2 note(s).');
+  });
+
+  it('should defer the split template to every produced note, paired with the note it came out of (issue #172)', async () => {
+    const params = createMockParams();
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+    const file = createMockFile();
+    const childFile = createMockFile('A/A.md');
+    const grandChildFile = createMockFile('A/B/B.md');
+
+    scriptCaches(
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B')]),
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B')]),
+      createCache([]),
+      createCache([createHeading(2, 2, 'B')]),
+      createCache([])
+    );
+    mockPrepareForSplitFile
+      .mockResolvedValueOnce(createSplitResult(childFile))
+      .mockResolvedValueOnce(createSplitResult(grandChildFile));
+    setActiveEditor(params.app, createMockEditor());
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+
+    // Every structural pass writes the extracted content untouched, so nothing the template adds can be
+    // Dragged into the next note down.
+    for (const call of MockSplitComposer.mock.calls) {
+      expect(call[0]).toEqual(expect.objectContaining({ templateOverride: '{{content}}' }));
+    }
+
+    // The real template is applied afterwards, once, per produced note — each resolved against the note it
+    // Was split OUT of, so `{{fromTitle}}` names its recursion parent rather than the run's root.
+    expect(mockApplySplitTemplateToNotes).toHaveBeenCalledTimes(1);
+    const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
+    // Compared as paths: the mock files are strict proxies, which a failure diff cannot serialize.
+    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([
+      [childFile.path, file.path],
+      [grandChildFile.path, childFile.path]
+    ]);
+    expect(applyParams?.template).toBe(RESOLVED_TEMPLATE);
+    expect(applyParams?.app).toBe(params.app);
+    expect(applyParams?.resourceLockComponent).toBe(params.resourceLockComponent);
+  });
+
+  it('should still template the notes a part-way failure already created (issue #172)', async () => {
+    const params = createMockParams();
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+    const file = createMockFile();
+    const childFile = createMockFile('A/A.md');
+
+    // Two H1s to extract, but the setup flow is cancelled on the second.
+    scriptCaches(
+      createCache([createHeading(1, 0, 'A'), createHeading(1, 4, 'B')]),
+      createCache([createHeading(1, 0, 'A'), createHeading(1, 4, 'B')]),
+      createCache([createHeading(1, 4, 'B')]),
+      createCache([])
+    );
+    mockPrepareForSplitFile
+      .mockResolvedValueOnce(createSplitResult(childFile))
+      .mockResolvedValueOnce(null);
+    setActiveEditor(params.app, createMockEditor());
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+
+    expect(MockSplitComposer).toHaveBeenCalledTimes(1);
+    const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
+    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([[childFile.path, file.path]]);
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Split into 1 note(s).');
   });
 
   it('should reopen the note the command was invoked on once the recursion finishes', async () => {

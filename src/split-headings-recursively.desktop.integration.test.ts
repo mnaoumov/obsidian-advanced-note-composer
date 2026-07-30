@@ -15,6 +15,37 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 const PLUGIN_ID = 'advanced-note-composer';
 
+/*
+ * A deliberately non-trivial split template: a header ABOVE `{{content}}` and a trailer BELOW it. The
+ * trailer is the load-bearing half — anything the template writes after `{{content}}` sits under the note's
+ * last heading, so it is what an unfixed recursion drags out of a parent and into its last child (issue
+ * #172).
+ */
+const TEMPLATE_SPLIT_TEMPLATE = '# {{newTitle}}\n\n{{content}}\n\n---\nFrom: [[{{fromTitle}}]]';
+const TEMPLATE_SOURCE_PATH = 'split-headings-recursively-template-source.md';
+
+// Minimal shape of the plugin's settings component reached at runtime, used to set `Split template` (which
+// Renders as a CodeMirror code highlighter, so driving it from the DOM is not practical) — the same walker
+// `exclude-paths-typing.desktop.integration.test.ts` and `merge-folder-skips-ignored…` use.
+interface ComponentTreeNode {
+  _children?: ComponentTreeNode[];
+  editAndSave?: unknown;
+  settings?: TemplateSettings;
+}
+
+interface SettingsCarrier {
+  editAndSave(editor: (settings: TemplateSettings) => void): Promise<void>;
+  settings: TemplateSettings;
+}
+
+interface TemplateSettings {
+  excludePaths: string[];
+  shouldAskBeforeSplitting: boolean;
+  shouldSplitHeadingsAutomatically: boolean;
+  shouldSplitIntoFolder: boolean;
+  splitTemplate: string;
+}
+
 describe('split headings recursively', () => {
   it('should mirror the heading hierarchy as a folder tree', async () => {
     const result = await evalInObsidian({
@@ -209,4 +240,184 @@ describe('split headings recursively', () => {
     // The run walks the leaf through every note it creates, then hands it back to the source note.
     expect(result.activePath).toBe('split-headings-recursively-source.md');
   });
+
+  it('should apply the split template to every note it creates, exactly once (issue #172)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID, sourcePath: TEMPLATE_SOURCE_PATH, splitTemplate: TEMPLATE_SPLIT_TEMPLATE },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId, sourcePath, splitTemplate }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const ROOT_FOLDER = 'TplA';
+        const SOURCE_CONTENT = [
+          'Intro text',
+          '',
+          '# TplA',
+          '',
+          'body of TplA',
+          '',
+          '## TplB',
+          '',
+          'body of TplB',
+          '',
+          '### TplC',
+          '',
+          'body of TplC',
+          '',
+          '## TplD',
+          '',
+          'body of TplD',
+          ''
+        ].join('\n');
+
+        const settingsComponent = findSettingsComponent();
+        const originalSplitTemplate = settingsComponent.settings.splitTemplate;
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeSplitting;
+        const originalShouldSplitIntoFolder = settingsComponent.settings.shouldSplitIntoFolder;
+        const originalShouldSplitHeadingsAutomatically = settingsComponent.settings.shouldSplitHeadingsAutomatically;
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.splitTemplate = splitTemplate;
+            // The confirmation dialog is already covered by the first case; skip it so this one only
+            // Exercises the templating.
+            settings.shouldAskBeforeSplitting = false;
+            // `Should split into folder` stays OFF: the recursive split builds the folder tree itself.
+            settings.shouldSplitIntoFolder = false;
+            settings.shouldSplitHeadingsAutomatically = false;
+          });
+
+          // Clean up any leftover from a previous run so no folder name is de-duplicated.
+          await removeIfExists(ROOT_FOLDER);
+
+          const sourceFile = await resetFile(sourcePath, SOURCE_CONTENT);
+          const editor = await openAndGetEditor(sourceFile);
+          editor.setCursor({ ch: 0, line: 0 });
+
+          await waitUntil({
+            message: 'metadata cache did not index the source headings',
+            predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).length === 4
+          });
+
+          app.commands.executeCommandById(`${pluginId}:split-note-by-headings-recursively`);
+
+          const expectedPaths = [
+            'TplA/TplA.md',
+            'TplA/TplB/TplB.md',
+            'TplA/TplB/TplC/TplC.md',
+            'TplA/TplD/TplD.md'
+          ];
+
+          await waitUntil({
+            message: 'the heading hierarchy was not mirrored as a folder tree',
+            predicate: () => expectedPaths.every((path) => app.vault.getAbstractFileByPath(path) instanceof obsidianModule.TFile)
+          });
+          // The deferred template pass runs after the whole tree is built, so give it time to land.
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const contents: Record<string, string> = {};
+          for (const path of expectedPaths) {
+            const file = app.vault.getAbstractFileByPath(path);
+            contents[path] = file instanceof obsidianModule.TFile ? await app.vault.read(file) : '';
+          }
+
+          return { contents };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.splitTemplate = originalSplitTemplate;
+            settings.shouldAskBeforeSplitting = originalShouldAsk;
+            settings.shouldSplitIntoFolder = originalShouldSplitIntoFolder;
+            settings.shouldSplitHeadingsAutomatically = originalShouldSplitHeadingsAutomatically;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: 'markdown editor did not open',
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+
+        async function removeIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // Every produced note OPENS with the template's header, naming itself.
+    expect(result.contents['TplA/TplA.md']?.startsWith('# TplA\n')).toBe(true);
+    expect(result.contents['TplA/TplB/TplB.md']?.startsWith('# TplB\n')).toBe(true);
+    expect(result.contents['TplA/TplB/TplC/TplC.md']?.startsWith('# TplC\n')).toBe(true);
+    expect(result.contents['TplA/TplD/TplD.md']?.startsWith('# TplD\n')).toBe(true);
+
+    // And the template's trailer EXACTLY ONCE, naming the note it was split out of. Before the fix the
+    // Trailer was dragged out of a parent into its last child, so a parent had none and that child had two.
+    expect(countTrailers(result.contents['TplA/TplA.md'])).toBe(1);
+    expect(countTrailers(result.contents['TplA/TplB/TplB.md'])).toBe(1);
+    expect(countTrailers(result.contents['TplA/TplB/TplC/TplC.md'])).toBe(1);
+    expect(countTrailers(result.contents['TplA/TplD/TplD.md'])).toBe(1);
+
+    expect(result.contents['TplA/TplA.md']).toContain(`From: [[${TEMPLATE_SOURCE_PATH.replace('.md', '')}]]`);
+    expect(result.contents['TplA/TplB/TplB.md']).toContain('From: [[TplA]]');
+    expect(result.contents['TplA/TplB/TplC/TplC.md']).toContain('From: [[TplB]]');
+    expect(result.contents['TplA/TplD/TplD.md']).toContain('From: [[TplA]]');
+
+    // The last child must not inherit its parent's trailer.
+    expect(result.contents['TplA/TplD/TplD.md']).not.toContain(TEMPLATE_SOURCE_PATH.replace('.md', ''));
+    expect(result.contents['TplA/TplB/TplC/TplC.md']).not.toContain('From: [[TplA]]');
+
+    // Each note still owns only its own body.
+    expect(result.contents['TplA/TplA.md']).toContain('body of TplA');
+    expect(result.contents['TplA/TplA.md']).not.toContain('body of TplB');
+    expect(result.contents['TplA/TplB/TplB.md']).not.toContain('body of TplC');
+  });
 });
+
+/**
+ * Counts how many times the split template's trailer appears in a produced note, which is what tells a
+ * correctly templated note (exactly one) from one that also swallowed its parent's trailer (two).
+ *
+ * @param content - The produced note's content.
+ * @returns The number of trailers.
+ */
+function countTrailers(content: string | undefined): number {
+  return (content ?? '').split('From: [[').length - 1;
+}

@@ -15,13 +15,21 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
+import type { SplitTemplateNote } from '../apply-split-template.ts';
 import type { RecursiveSplitPreviewRow } from '../heading-split-recursion.ts';
 import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import {
+  applySplitTemplateToNotes,
+  CONTENT_ONLY_TEMPLATE
+} from '../apply-split-template.ts';
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
-import { SplitComposer } from '../composers/split-composer.ts';
+import {
+  resolveSplitTemplateForNewTargetFile,
+  SplitComposer
+} from '../composers/split-composer.ts';
 import {
   buildRecursiveSplitPreviewRows,
   findNextHeadingToSplit,
@@ -144,9 +152,9 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       });
     }
 
+    let createdNotes: readonly SplitTemplateNote[];
     try {
-      const createdCount = await this.splitBranch({ editor, file, minLevel: 1 });
-      this.pluginNoticeComponent.showNotice(`Split into ${String(createdCount)} note(s).`);
+      createdNotes = await this.splitBranch({ editor, file, minLevel: 1 });
     } finally {
       /*
        * The recursion walks the leaf down through every note it creates, so it ends up parked on the
@@ -155,6 +163,19 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
        */
       await this.app.workspace.getLeaf(false).openFile(file, { active: true });
     }
+
+    /*
+     * Only now, with the tree built and no produced note left open in the leaf, wrap each of them in the
+     * split template — see `applySplitTemplateToNotes` for why it cannot happen as each note is created.
+     */
+    await applySplitTemplateToNotes({
+      app: this.app,
+      notes: createdNotes,
+      resourceLockComponent: this.resourceLockComponent,
+      template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
+    });
+
+    this.pluginNoticeComponent.showNotice(`Split into ${String(createdNotes.length)} note(s).`);
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
@@ -218,12 +239,14 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
    * of the existing split machinery rather than from any path arithmetic here.
    *
    * @param params - The parameters.
-   * @returns How many notes were created, including those created by the recursive passes.
+   * @returns The notes created, including those created by the recursive passes, each paired with the note
+   * it was split out of. A pass that gives up part-way returns what it created up to that point, so those
+   * notes still get templated.
    */
-  private async splitBranch(params: SplitNoteByHeadingsRecursivelyEditorCommandHandlerSplitBranchParams): Promise<number> {
+  private async splitBranch(params: SplitNoteByHeadingsRecursivelyEditorCommandHandlerSplitBranchParams): Promise<readonly SplitTemplateNote[]> {
     const { editor, file, minLevel } = params;
     const children: RecursiveSplitChild[] = [];
-    let createdCount = 0;
+    const createdNotes: SplitTemplateNote[] = [];
 
     for (;;) {
       const cache = await getCacheSafe(this.app, file);
@@ -237,7 +260,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
       if (!headingInfo) {
         this.pluginNoticeComponent.showNotice('Failed to find heading');
-        return createdCount;
+        return createdNotes;
       }
       editor.setSelection(headingInfo.start, headingInfo.end);
       const result = await prepareForSplitFile({
@@ -253,7 +276,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
         sourceFile: file
       });
       if (!result) {
-        return createdCount;
+        return createdNotes;
       }
       const composer = new SplitComposer({
         app: this.app,
@@ -268,10 +291,13 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
         resourceLockComponent: this.resourceLockComponent,
         selectedText: result.selectedText,
         sourceFile: file,
-        targetFile: result.targetFile
+        targetFile: result.targetFile,
+        // Write the extracted content untouched: the split template is applied to every produced note
+        // Afterwards, once its own children have been split out of it (issue #172).
+        templateOverride: CONTENT_ONLY_TEMPLATE
       });
       await composer.splitFile();
-      createdCount++;
+      createdNotes.push({ file: result.targetFile, sourceFile: file });
       children.push({ file: result.targetFile, level: heading.level });
     }
 
@@ -283,10 +309,10 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       if (!childEditor) {
         continue;
       }
-      createdCount += await this.splitBranch({ editor: childEditor, file: child.file, minLevel: child.level + 1 });
+      createdNotes.push(...await this.splitBranch({ editor: childEditor, file: child.file, minLevel: child.level + 1 }));
     }
 
-    return createdCount;
+    return createdNotes;
   }
 }
 

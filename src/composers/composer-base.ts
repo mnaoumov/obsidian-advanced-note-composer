@@ -1,12 +1,10 @@
 import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest';
 import type {
   CachedMetadata,
-  FrontMatterInfo,
   Pos
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
   App,
@@ -14,7 +12,6 @@ import {
   getFrontMatterInfo,
   moment as moment_,
   parseLinktext,
-  parseYaml,
   stringifyYaml,
   TFile
 } from 'obsidian';
@@ -36,9 +33,17 @@ import {
 import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { replaceAll } from 'obsidian-dev-utils/string';
 
+import type {
+  ExtractFrontmatterResult,
+  Frontmatter
+} from '../frontmatter-merge.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { demoteHeadings } from '../folder-headings.ts';
+import {
+  extractFrontmatter,
+  mergeRecursively
+} from '../frontmatter-merge.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import {
@@ -130,10 +135,6 @@ export interface ComposerBaseUpdateEditorSelectionsParams {
   readonly sourceFootnoteIdsToRestore: Set<string>;
 }
 
-export interface Frontmatter extends GenericObject {
-  title?: string;
-}
-
 export interface Selection {
   endOffset: number;
   startOffset: number;
@@ -153,20 +154,10 @@ interface ComposerBaseMergeFrontmatterParams {
   readonly originalFrontmatter: Frontmatter;
 }
 
-interface ComposerBaseMergeRecursivelyParams {
-  readonly newObj: GenericObject;
-  readonly oldObj: GenericObject;
-}
-
 interface ComposerBaseUpdateTargetFootnoteIdRenameMapParams {
   readonly existingTargetIds: Set<string>;
   readonly sourceFootnoteId: string;
   readonly targetFootnoteIdRenameMap: Map<string, string>;
-}
-
-interface ExtractFrontmatterResult {
-  readonly content: string;
-  readonly frontmatter: Frontmatter;
 }
 
 interface FileMtimes {
@@ -495,13 +486,7 @@ export abstract class ComposerBase {
       };
     }
 
-    const frontmatterInfo = getFrontMatterInfo(str);
-    const frontmatter = this.safeParseFrontmatter(frontmatterInfo);
-
-    return {
-      content: str.slice(frontmatterInfo.contentStart),
-      frontmatter
-    };
+    return extractFrontmatter(str);
   }
 
   /* v8 ignore stop */
@@ -656,9 +641,9 @@ export abstract class ComposerBase {
         return originalFrontmatter;
       /* v8 ignore stop */
       case FrontmatterMergeStrategy.MergeAndPreferNewValues:
-        return this.mergeRecursively({ newObj: newFrontmatter, oldObj: originalFrontmatter });
+        return mergeRecursively({ newObj: newFrontmatter, oldObj: originalFrontmatter });
       case FrontmatterMergeStrategy.MergeAndPreferOriginalValues:
-        return this.mergeRecursively({ newObj: originalFrontmatter, oldObj: newFrontmatter });
+        return mergeRecursively({ newObj: originalFrontmatter, oldObj: newFrontmatter });
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
         let suffix = 0;
         let mergeKey: string;
@@ -690,28 +675,6 @@ export abstract class ComposerBase {
         throw new Error(`Invalid frontmatter merge strategy: ${this.frontmatterMergeStrategy as string}`);
         /* v8 ignore stop */
     }
-  }
-
-  private mergeRecursively(params: ComposerBaseMergeRecursivelyParams): GenericObject {
-    const { newObj, oldObj } = params;
-    const oldKeys = Object.keys(oldObj);
-    for (const [newKey, newValue] of Object.entries(newObj)) {
-      if (oldKeys.includes(newKey)) {
-        const oldValue = oldObj[newKey];
-        if (oldValue === undefined || oldValue === null) {
-          oldObj[newKey] = newValue;
-        } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
-          oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
-        } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
-          oldObj[newKey] = this.mergeRecursively({ newObj: newValue as GenericObject, oldObj: oldObj[newKey] as GenericObject });
-        } else {
-          oldObj[newKey] = newValue;
-        }
-      } else {
-        oldObj[newKey] = newValue;
-      }
-    }
-    return oldObj;
   }
 
   /* v8 ignore start -- prepareBacklinksToFix contains defensive ?? on Map.get() and cache properties. */
@@ -762,15 +725,6 @@ export abstract class ComposerBase {
   }
 
   /* v8 ignore stop */
-
-  private safeParseFrontmatter(frontmatterInfo: FrontMatterInfo): Frontmatter {
-    try {
-      return (parseYaml(frontmatterInfo.frontmatter) as Frontmatter | null) ?? {};
-    } catch {
-      frontmatterInfo.contentStart = 0;
-      return {};
-    }
-  }
 
   private updateTargetFootnoteIdRenameMap(params: ComposerBaseUpdateTargetFootnoteIdRenameMapParams): void {
     const { existingTargetIds, sourceFootnoteId, targetFootnoteIdRenameMap } = params;

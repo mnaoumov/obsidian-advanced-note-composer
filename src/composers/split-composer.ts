@@ -26,6 +26,14 @@ import {
   resolveInsertOffset
 } from './composer-base.ts';
 
+/**
+ * The template settings {@link resolveSplitTemplateForNewTargetFile} reads.
+ */
+export interface SplitTemplateSettings {
+  readonly mergeTemplate: string;
+  readonly splitTemplate: string;
+}
+
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   // The source selection offsets and selected text, captured BEFORE any modal opened, while `editor`
   // Still showed the source note. They must NOT be re-read from `editor` inside the operation: the
@@ -62,6 +70,12 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // Specific offset (the paste cursor of `Move marked selection here`). Ignored without an `insertToken`.
   readonly targetCursorOffset?: null | number;
 
+  // Overrides the template resolution entirely for this operation, whatever the settings say. Set by the
+  // Recursive split, which passes the identity template so its structural passes write the extracted
+  // Content untouched and the real template is applied to each produced note afterwards, once its own
+  // Children are gone (issue #172 — see `applySplitTemplateToNotes`).
+  readonly templateOverride?: string;
+
   // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
   // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
   readonly textAfterExtractionMode?: TextAfterExtractionMode;
@@ -83,6 +97,7 @@ export class SplitComposer extends ComposerBase {
   private readonly shouldJumpToMovedContent: boolean;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
+  private readonly templateOverride: string | undefined;
   private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
   public constructor(params: SplitComposerConstructorParams) {
@@ -109,6 +124,7 @@ export class SplitComposer extends ComposerBase {
     this.shouldJumpToMovedContent = params.shouldJumpToMovedContent ?? true;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
+    this.templateOverride = params.templateOverride;
     // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
     // Opted in — mirroring the `Move marked selection here` handler.
     this.textAfterExtractionMode = params.textAfterExtractionMode
@@ -243,18 +259,24 @@ export class SplitComposer extends ComposerBase {
   }
 
   protected override getTemplate(): string {
+    // An explicit override wins over every setting: the caller is taking templating over entirely (the
+    // Recursive split defers it — see `applySplitTemplateToNotes`).
+    if (this.templateOverride !== undefined) {
+      return this.templateOverride;
+    }
+
     // A smart cut & paste move prefers its own template; when it is empty, fall through to the ordinary
     // Split → merge resolution below (the documented fallback chain).
     if (this.isSmartCutAndPasteMove && this.pluginSettingsComponent.settings.smartCutAndPasteTemplate) {
       return this.pluginSettingsComponent.settings.smartCutAndPasteTemplate;
     }
 
-    if (!this.pluginSettingsComponent.settings.splitTemplate) {
-      return this.pluginSettingsComponent.settings.mergeTemplate;
+    if (this.isNewTargetFile) {
+      return resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings);
     }
 
-    if (this.isNewTargetFile) {
-      return this.pluginSettingsComponent.settings.splitTemplate;
+    if (!this.pluginSettingsComponent.settings.splitTemplate) {
+      return this.pluginSettingsComponent.settings.mergeTemplate;
     }
 
     if (this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
@@ -480,4 +502,23 @@ export function getSelections(editor: Editor): Selection[] {
   });
 
   return selections.sort((a, b) => a.startOffset - b.startOffset);
+}
+
+/**
+ * Resolves the template a split into a BRAND-NEW target file uses: the `Split template` setting, falling
+ * back to `Merge template` when it is empty. This is the `isNewTargetFile` branch of
+ * {@link SplitComposer.getTemplate}, which calls it — exported so the recursive split's deferred
+ * templating (`applySplitTemplateToNotes`) applies exactly what the composer would have applied inline,
+ * instead of a second copy of the fallback chain that could drift from it.
+ *
+ * @param settings - The two template settings the chain reads (structural, so the deep-readonly settings
+ * object a `PluginSettingsComponent` exposes is accepted as-is).
+ * @returns The template to apply.
+ */
+export function resolveSplitTemplateForNewTargetFile(settings: SplitTemplateSettings): string {
+  if (!settings.splitTemplate) {
+    return settings.mergeTemplate;
+  }
+
+  return settings.splitTemplate;
 }
