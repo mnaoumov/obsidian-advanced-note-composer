@@ -516,6 +516,18 @@ describe('merge folder contents into a single file (issue #92)', () => {
             subFolderGone: app.vault.getAbstractFileByPath('attach-src/sub') === null
           };
         } finally {
+          /*
+           * This case deliberately lands `pic.png` at the VAULT ROOT, and the whole aggregate shares one
+           * vault - so leaving it there makes a plain `![[pic.png]]` written by any later suite ambiguous
+           * between its own local copy and this one, and which side Obsidian resolves depends on indexing
+           * order. That is what intermittently broke `merge-attachments`, whose merged note then owned the
+           * wrong file and moved nothing. The return value above is already captured, so cleaning up here
+           * costs the assertions nothing.
+           */
+          await trashIfExists('pic.png');
+          await trashIfExists('sketch.excalidraw.md');
+          await trashIfExists('attach-src.md');
+          await trashIfExists('attach-src');
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
