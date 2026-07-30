@@ -109,12 +109,28 @@ The **Smart cut & paste** settings group lets you tailor this notice:
   `Move marked selection here` / `at cursor` — inserting text at the cursor and then leaving the cursor
   somewhere else makes no sense, so that move always jumps.
 - **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
-  via smart cut & paste (`Move marked selection here`, `at cursor`, `to top of file`, or `to bottom of
-  file`), so a smart-cut paste can be formatted differently from an ordinary split into a new note. Supports
-  the same tokens as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`,
-  `{{newPath}}`, `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`).
-  Leave it empty to reuse the **Split template** (which itself falls back
-  to the **Merge template**), preserving the previous behavior.
+  at the cursor (`Move marked selection here` / `at cursor`), so a smart-cut paste can be formatted
+  differently from an ordinary split into a new note. It is *also* the template `to top of file` and
+  `to bottom of file` use, unless you give that direction its own template below. Supports the same tokens
+  as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`, `{{newPath}}`,
+  `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`). Leave it empty to
+  reuse the **Split template** (which itself falls back to the **Merge template**), preserving the previous
+  behavior.
+- **Smart cut & paste template (to top of file)** / **Smart cut & paste template (to bottom of file)**
+  (both empty by default) — per-direction overrides, so a move to the top can be formatted differently from
+  a move to the bottom or at the cursor. This is what makes something like "always leave a blank line after
+  the frontmatter, but only when moving to the top" expressible. Leave one empty to keep using
+  **Smart cut & paste template** for that direction — which is exactly the behavior before these settings
+  existed, so an existing configuration is unaffected. The full resolution order is:
+
+  ```text
+  at cursor  →  Smart cut & paste template                                              →  Split → Merge
+  to top     →  Smart cut & paste template (to top of file)    → Smart cut & paste template → Split → Merge
+  to bottom  →  Smart cut & paste template (to bottom of file) → Smart cut & paste template → Split → Merge
+  ```
+
+  There is deliberately no separate template for `at cursor`: **Smart cut & paste template** *is* its
+  template, and simultaneously the fallback for the other two.
 
 The captured selection is also **persistently highlighted in the source note** so you always see exactly
 what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /

@@ -54,6 +54,22 @@ export enum FrontmatterTitleMode {
   UseForInvalidTitleOnly = 'UseForInvalidTitleOnly'
 }
 
+/**
+ * Which smart cut & paste move a split is: the move at the cursor (`Move marked selection here`, plain or
+ * advanced, including the `Move marked selection at cursor` notice button), or a move to the top/bottom of
+ * the target note. Supplied by the command handler — only it knows which move this is — and its presence on
+ * a `SplitComposer` is what marks the split as a smart cut & paste move at all (issue #174).
+ *
+ * `AtCursor` deliberately has NO template setting of its own: `smartCutAndPasteTemplate` IS its template,
+ * and simultaneously the fallback for the other two. That asymmetry is what keeps the per-direction
+ * overrides migration-free — see {@link PluginSettings.smartCutAndPasteToTopTemplate}.
+ */
+export enum SmartCutAndPasteMoveKind {
+  AtCursor = 'AtCursor',
+  ToBottom = 'ToBottom',
+  ToTop = 'ToTop'
+}
+
 export enum TextAfterExtractionMode {
   EmbedNewFile = 'embed',
   LinkToNewFile = 'link',
@@ -149,7 +165,36 @@ export class PluginSettings {
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
+  /**
+   * The template a smart cut & paste move applies, and the base of the per-direction chain (issue #174):
+   *
+   * ```text
+   * at cursor  →  smartCutAndPasteTemplate                                   →  split → merge chain
+   * to top     →  smartCutAndPasteToTopTemplate    → smartCutAndPasteTemplate →  split → merge chain
+   * to bottom  →  smartCutAndPasteToBottomTemplate → smartCutAndPasteTemplate →  split → merge chain
+   * ```
+   *
+   * So this is BOTH the at-cursor template and the default for the two edge moves. Resolved by
+   * `resolveSmartCutAndPasteTemplate`; empty everywhere falls through to the ordinary split → merge chain.
+   */
   public smartCutAndPasteTemplate = '';
+
+  /**
+   * Optional override of {@link smartCutAndPasteTemplate} for `Move marked selection to bottom of file`.
+   * Empty (the default) means "use {@link smartCutAndPasteTemplate}".
+   */
+  public smartCutAndPasteToBottomTemplate = '';
+
+  /**
+   * Optional override of {@link smartCutAndPasteTemplate} for `Move marked selection to top of file` — the
+   * direction issue #162 wanted its own formatting for (a blank line after the frontmatter), which one
+   * template shared by all three moves could not express.
+   *
+   * Empty (the default) means "use {@link smartCutAndPasteTemplate}", which is exactly the pre-#174
+   * behavior — an existing `data.json` has no such key, gets `''`, and keeps applying its shared template
+   * to all three moves. That is why these overrides need no `registerLegacySettingsConverter`.
+   */
+  public smartCutAndPasteToTopTemplate = '';
   public splitIntoFolderNoteNameTemplate = '';
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;

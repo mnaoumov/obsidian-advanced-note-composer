@@ -663,15 +663,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         setting
           .setName('Smart cut & paste template')
           .setDesc(createFragment((f) => {
-            f.appendText('Template to use when pasting a marked selection via smart cut & paste (');
+            f.appendText('Template to use when pasting a marked selection at the cursor (');
             appendCodeBlock(f, 'Move marked selection here');
-            f.appendText(', ');
+            f.appendText(' and ');
             appendCodeBlock(f, 'at cursor');
-            f.appendText(', ');
-            appendCodeBlock(f, 'to top of file');
-            f.appendText(', or ');
-            appendCodeBlock(f, 'to bottom of file');
             f.appendText(').');
+            f.createEl('br');
+            f.appendText('It is also used by ');
+            appendCodeBlock(f, 'to top of file');
+            f.appendText(' and ');
+            appendCodeBlock(f, 'to bottom of file');
+            f.appendText(', unless the direction has its own template below.');
             f.createEl('br');
             f.appendText('Leave empty to reuse ');
             appendCodeBlock(f, 'Split template');
@@ -682,6 +684,44 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .addCodeHighlighter((codeHighlighter) => {
             codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
             this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste template (to top of file)')
+          .setDesc(createFragment((f) => {
+            f.appendText('Template to use when pasting a marked selection via ');
+            appendCodeBlock(f, 'Move marked selection to top of file');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Leave empty to reuse ');
+            appendCodeBlock(f, 'Smart cut & paste template');
+            f.appendText(' setting.');
+            f.createEl('br');
+            addAvailableTokens(f);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'smartCutAndPasteToTopTemplate', valueComponent: codeHighlighter });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste template (to bottom of file)')
+          .setDesc(createFragment((f) => {
+            f.appendText('Template to use when pasting a marked selection via ');
+            appendCodeBlock(f, 'Move marked selection to bottom of file');
+            f.appendText('.');
+            f.createEl('br');
+            f.appendText('Leave empty to reuse ');
+            appendCodeBlock(f, 'Smart cut & paste template');
+            f.appendText(' setting.');
+            f.createEl('br');
+            addAvailableTokens(f);
+          }))
+          .addCodeHighlighter((codeHighlighter) => {
+            codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+            this.bind({ propertyName: 'smartCutAndPasteToBottomTemplate', valueComponent: codeHighlighter });
           });
       });
 

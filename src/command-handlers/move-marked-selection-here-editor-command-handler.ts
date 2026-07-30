@@ -14,6 +14,7 @@ import type { Insertion } from './move-marked-selection-editor-command-handler-b
 
 import { InsertMode } from '../insert-mode.ts';
 import { openPasteOptionsModal } from '../modals/paste-options-modal.ts';
+import { SmartCutAndPasteMoveKind } from '../plugin-settings.ts';
 import { MoveMarkedSelectionEditorCommandHandlerBase } from './move-marked-selection-editor-command-handler-base.ts';
 
 interface MoveMarkedSelectionHereEditorCommandHandlerConstructorParams {
@@ -44,6 +45,16 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends MoveMarkedSelec
       name: params.isAdvanced ? 'Smart cut & paste: Move marked selection here (advanced)...' : 'Smart cut & paste: Move marked selection here'
     });
     this.isAdvanced = params.isAdvanced;
+  }
+
+  /**
+   * Both registrations (plain and advanced) and the notice's `Move marked selection at cursor` button all
+   * land here, and they are all the same move as far as templating goes.
+   *
+   * @returns The move kind.
+   */
+  protected override getSmartCutAndPasteMoveKind(): SmartCutAndPasteMoveKind {
+    return SmartCutAndPasteMoveKind.AtCursor;
   }
 
   protected override resolveInsertion(editor: Editor): Insertion {

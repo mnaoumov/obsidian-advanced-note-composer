@@ -10,6 +10,7 @@ import {
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   PluginSettings,
+  SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
 
@@ -70,6 +71,20 @@ describe('FrontmatterTitleMode enum', () => {
 
   it('should have UseForInvalidTitleOnly value', () => {
     expect(FrontmatterTitleMode.UseForInvalidTitleOnly).toBe('UseForInvalidTitleOnly');
+  });
+});
+
+describe('SmartCutAndPasteMoveKind enum', () => {
+  it('should have AtCursor value', () => {
+    expect(SmartCutAndPasteMoveKind.AtCursor).toBe('AtCursor');
+  });
+
+  it('should have ToBottom value', () => {
+    expect(SmartCutAndPasteMoveKind.ToBottom).toBe('ToBottom');
+  });
+
+  it('should have ToTop value', () => {
+    expect(SmartCutAndPasteMoveKind.ToTop).toBe('ToTop');
   });
 });
 
@@ -136,6 +151,10 @@ describe('PluginSettings', () => {
     expect(settings.shouldTreatTitleAsPathByDefault).toBe(true);
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);
     expect(settings.smartCutAndPasteTemplate).toBe('');
+    // Both overrides default to empty, which reproduces the pre-#174 behavior exactly (the shared template
+    // Applies to every direction) — that is what makes them need no legacy converter.
+    expect(settings.smartCutAndPasteToBottomTemplate).toBe('');
+    expect(settings.smartCutAndPasteToTopTemplate).toBe('');
     expect(settings.splitIntoFolderNoteNameTemplate).toBe('');
     expect(settings.splitTemplate).toBe('');
     expect(settings.splitToExistingFileTemplate).toBe(Action.Split);

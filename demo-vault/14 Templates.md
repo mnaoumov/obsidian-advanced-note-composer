@@ -15,9 +15,12 @@ filled in at merge/split time.
 - `{{date:FORMAT}}` / `{{time:FORMAT}}` - the current date / time, formatted with a
   [moment.js](https://momentjs.com/docs/#/displaying/format/) format string.
 
-There are three template settings: **Merge template**, **Split template**, and
+There are three base template settings: **Merge template**, **Split template**, and
 **Smart cut & paste template**. Empty templates fall back up the chain:
 smart cut and paste falls back to split, which falls back to merge.
+
+Smart cut and paste can also be templated **per direction** - see
+[[09 Smart cut and paste]].
 
 ## Try it
 

@@ -20,6 +20,8 @@ interface DemoSettingsPatch {
   shouldSwapEntireFolderStructureByDefault?: boolean;
   shouldTreatTitleAsPathByDefault?: boolean;
   smartCutAndPasteTemplate?: string;
+  smartCutAndPasteToBottomTemplate?: string;
+  smartCutAndPasteToTopTemplate?: string;
   splitTemplate?: string;
   textAfterExtractionMode?: string;
 }

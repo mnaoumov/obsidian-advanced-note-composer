@@ -64,6 +64,33 @@ caption: Stop the cursor following content moved to the top/bottom, then reload
 await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldJumpToMovedContentToBottom: false, shouldJumpToMovedContentToTop: false });
 ```
 
+## A different template per direction
+
+**Smart cut & paste template** is the template for a move *at the cursor*, and the default for the
+top/bottom moves. Each edge move can override it, so "always leave a blank line after the frontmatter"
+can apply to the top move alone. The block below sets a distinct template for each of the three
+directions. Manual equivalent: paste the templates into **Smart cut & paste template**,
+**Smart cut & paste template (to top of file)** and **... (to bottom of file)** in
+**Settings → Advanced Note Composer**.
+
+Mark a paragraph and run all three moves in turn: each one arrives with its own marker line.
+
+```code-button
+---
+caption: Set a distinct template per move direction, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteTemplate: '\n\n> pasted at cursor\n\n{{content}}', smartCutAndPasteToBottomTemplate: '\n\n> pasted at the bottom\n\n{{content}}', smartCutAndPasteToTopTemplate: '\n\n> pasted at the top\n\n{{content}}\n' });
+```
+
+Clear one override and that direction goes back to using **Smart cut & paste template**.
+
+```code-button
+---
+caption: Clear the per-direction overrides, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteToBottomTemplate: '', smartCutAndPasteToTopTemplate: '' });
+```
+
 ## Lock every note while marking
 
 By default only the source note is locked. The block below locks **all** notes while a mark
