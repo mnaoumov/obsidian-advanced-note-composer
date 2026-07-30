@@ -812,6 +812,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             appendCodeBlock(f, '## Name');
             f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
             f.createEl('br');
+            f.appendText(
+              'Every sub-folder is headed, including one that holds no notes at all, so the merged outline mirrors the whole tree. A folder whose notes are all excluded is different: nothing of it was merged, so it gets no heading.'
+            );
+            f.createEl('br');
             f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
             appendCodeBlock(f, 'Split note by headings recursively...');
             f.appendText(', which turns a heading hierarchy into a folder tree.');

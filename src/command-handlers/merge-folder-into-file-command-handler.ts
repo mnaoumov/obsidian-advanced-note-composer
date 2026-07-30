@@ -111,7 +111,11 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const { settings } = this.pluginSettingsComponent;
     // Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are never merged: their raw
     // Payload would land in the merged note. They are relocated with the other attachments instead.
-    const sourceMdFiles = collectNotesDepthFirst(folder).filter((file) => !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: file }));
+    const mergeItems = collectMergeItemsDepthFirst(
+      folder,
+      (file) => isMarkdownFile(file) && !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: file })
+    );
+    const sourceMdFiles = mergeItems.filter(isFile);
 
     if (sourceMdFiles.length === 0) {
       this.pluginNoticeComponent.showNotice(
@@ -147,7 +151,10 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       attachmentSourceFolder: settings.shouldMoveAttachmentsWhenMergingFolder ? folder : undefined,
       consoleDebugComponent: this.consoleDebugComponent,
       folderHeadingPlan: settings.shouldConvertFoldersToHeadingsWhenMergingFolder
-        ? buildFolderHeadingPlan({ filePaths: sourceMdFiles.map((sourceMdFile) => sourceMdFile.path), rootPath: folder.path })
+        ? buildFolderHeadingPlan({
+          items: mergeItems.map((mergeItem) => ({ isFolder: isFolder(mergeItem), path: mergeItem.path })),
+          rootPath: folder.path
+        })
         : undefined,
       isNewTargetFile: true,
       pluginNoticeComponent: this.pluginNoticeComponent,
@@ -245,15 +252,6 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 }
 
 /**
- * Collects the folder's descendant notes in folder-grouped depth-first order: a folder's own notes
- * (alphabetically) first, then each sub-folder's whole subtree. A flat sort by path would interleave a
- * sub-folder's notes with the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a
- * folder and make the folder-heading plan emit its heading more than once.
- *
- * @param folder - The folder to walk.
- * @returns The descendant notes, in merge order.
- */
-/**
  * Collects the folder and every folder under it, deepest first, so an emptied tree can be removed from
  * the leaves upward — a parent only becomes empty once its children are gone.
  *
@@ -272,15 +270,29 @@ function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
   return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || b.localeCompare(a));
 }
 
-function collectNotesDepthFirst(folder: TFolder): TFile[] {
+/**
+ * Walks the folder in folder-grouped depth-first order — a folder's own mergeable notes (alphabetically)
+ * first, then each sub-folder followed by its whole subtree. A flat sort by path would interleave a
+ * sub-folder's notes with the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a
+ * folder and make the folder-heading plan emit its heading more than once.
+ *
+ * The sub-folders themselves are part of the result, not just their notes: the heading plan needs them to
+ * head a folder that holds no notes at all, which no note path can reveal (issue #168). The notes to merge
+ * are the walk's files, in the same order.
+ *
+ * @param folder - The folder to walk.
+ * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @returns The descendant folders and mergeable notes, in merge order.
+ */
+function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TFile) => boolean): (TFile | TFolder)[] {
   const notes = folder.children
     .filter(isFile)
-    .filter((child) => isMarkdownFile(child))
+    .filter((child) => isMergeableNote(child))
     .sort((a, b) => a.name.localeCompare(b.name));
   const subFolders = folder.children
     .filter(isFolder)
     .sort((a, b) => a.name.localeCompare(b.name));
-  return [...notes, ...subFolders.flatMap((subFolder) => collectNotesDepthFirst(subFolder))];
+  return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, isMergeableNote)])];
 }
 
 function getDepth(folderPath: string): number {

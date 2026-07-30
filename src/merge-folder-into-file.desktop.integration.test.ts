@@ -241,6 +241,120 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.hasDemotedPut).toBe(true);
   });
 
+  it('heads a sub-folder that holds no notes at all (issue #168)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = true;
+            settings.mergeFolderIntoFileNoteNameTemplate = '';
+            // The reporter's own setting - and the folder cleanup it triggers is this test's completion
+            // Signal, since the merged note EXISTS (empty) before the merge writes anything into it.
+            settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
+          });
+
+          await trashIfExists('empty-headings-src');
+          await trashIfExists('empty-headings-src.md');
+
+          // The reporter's own tree: sibling `3` holds nothing at all, so no note path mentions it and
+          // Its heading has no source note to be written in front of.
+          await app.vault.createFolder('empty-headings-src');
+          await app.vault.createFolder('empty-headings-src/1');
+          await app.vault.createFolder('empty-headings-src/1/1 1');
+          await app.vault.createFolder('empty-headings-src/1/1 1/1 1 1');
+          await app.vault.createFolder('empty-headings-src/2');
+          await app.vault.createFolder('empty-headings-src/3');
+          const root = await app.vault.create('empty-headings-src/Note.md', 'root body');
+          await app.vault.create('empty-headings-src/1/Note.md', 'one body');
+          await app.vault.create('empty-headings-src/1/1 1/Note.md', 'one-one body');
+          await app.vault.create('empty-headings-src/1/1 1/1 1 1/Note.md', 'one-one-one body');
+          await app.vault.create('empty-headings-src/2/Note.md', 'two body');
+
+          await openFile(root);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'merged single file was not created',
+            predicate: () => app.vault.getAbstractFileByPath('empty-headings-src.md') !== null
+          });
+          /*
+           * The target note is created EMPTY before the merge and filled inside the transaction, so its
+           * mere existence says nothing about the content - and the trailing heading for the empty folder
+           * is the very last thing written. The folder cleanup runs only after the transaction commits,
+           * so the merged folder disappearing is the signal that everything has been written.
+           */
+          await waitUntil({
+            message: 'the emptied folder tree was not deleted, so the merge had not committed',
+            predicate: () => app.vault.getAbstractFileByPath('empty-headings-src') === null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('empty-headings-src.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          // No source note carries a heading of its own, so every `#` line in the result is a folder
+          // Heading. Compared as whole lines: `# 1` is also a substring of `## 1 1`.
+          return { headingLines: mergedContent.split('\n').filter((line) => line.startsWith('#')) };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = original.shouldConvertFoldersToHeadingsWhenMergingFolder;
+            settings.mergeFolderIntoFileNoteNameTemplate = original.mergeFolderIntoFileNoteNameTemplate;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The whole folder tree is mirrored, in walk order - including `3`, which the reporter saw dropped.
+    expect(result.headingLines).toEqual(['# 1', '## 1 1', '### 1 1 1', '# 2', '# 3']);
+  });
+
   it('keeps the merged folder and deletes only the folders under it (issue #167)', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },
