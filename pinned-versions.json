@@ -1,0 +1,38 @@
+{
+  "comment": [
+    "Release conditions for every exact-pinned version in package.json (dependencies, devDependencies and overrides),",
+    "plus any override added to clear an npm audit advisory. An exact pin is invisible to update-npm-deps.ps1 — that",
+    "script upgrades caret ranges and skips exact versions — so nothing would ever remind you a pin is stale. This file",
+    "is what makes that check happen: on every run the script executes each `check` and compares its trimmed stdout to",
+    "`expect`. Equal means the pin is still required; different means the condition that justified the pin has changed",
+    "and the pin should be re-examined. `check: null` means no mechanical test exists — it is reported for manual review",
+    "on every run instead of going quiet. Every exact pin must have an entry here, and every entry must name a package",
+    "that is actually present in the declared section; the script reports either mismatch. See rule G100."
+  ],
+  "pins": {
+    "@codemirror/state": {
+      "section": "devDependencies",
+      "why": "obsidian's peerDependencies names this exact version. A second copy in the tree means two CodeMirror state instances at runtime, and the editor extensions this plugin registers would attach to the wrong one.",
+      "check": "node -e \"process.stdout.write(require('obsidian/package.json').peerDependencies['@codemirror/state'])\"",
+      "expect": "6.5.0"
+    },
+    "@codemirror/view": {
+      "section": "devDependencies",
+      "why": "Same as @codemirror/state — obsidian peer-pins it exactly. SelectionHighlightComponent's StateField/decorations must run against Obsidian's own CodeMirror instance.",
+      "check": "node -e \"process.stdout.write(require('obsidian/package.json').peerDependencies['@codemirror/view'])\"",
+      "expect": "6.38.6"
+    },
+    "typescript": {
+      "section": "devDependencies",
+      "why": "TypeScript 7 (tsgo) breaks this toolchain: build:compile fails in obsidian-dev-utils' check-project-types (`sys`) and type-aware lint fails in @typescript-eslint (`ModuleKind`). @typescript-eslint peer-requires >=4.8.4 <6.1.0, so 6.x is the last usable major. Hold until obsidian-dev-utils migrates.",
+      "check": "node -e \"process.stdout.write(require('typescript-eslint/package.json').peerDependencies.typescript)\"",
+      "expect": ">=4.8.4 <6.1.0"
+    },
+    "brace-expansion": {
+      "section": "overrides",
+      "why": "GHSA-mh99-v99m-4gvg (high, DoS via unbounded expansion) covers brace-expansion <=5.0.7, and 18 vulnerable copies reach the tree transitively through old minimatch majors — eslint-plugin-import and eslint-plugin-react on minimatch ^3.1.2, readdir-glob on ^5.1.0, eslint-plugin-json-schema-validator on ^8.0.0, eslint-plugin-n and glob on ^9.x. Nothing we depend on directly can be bumped to fix it, so the patched version is forced tree-wide instead. 5.0.8 is dual-published (exports.require -> dist/commonjs), so the old CJS minimatch copies still resolve it; verified with a clean lint run and the full unit suite.",
+      "check": "node -e \"process.stdout.write(require('eslint-plugin-import/package.json').dependencies.minimatch)\"",
+      "expect": "^3.1.2"
+    }
+  }
+}
