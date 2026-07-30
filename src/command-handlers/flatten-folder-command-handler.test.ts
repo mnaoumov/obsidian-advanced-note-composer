@@ -30,6 +30,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { openModal } from '../open-minimizable-modal.ts';
+import { FlattenMode } from '../plugin-settings.ts';
 import { FlattenFolderCommandHandler } from './flatten-folder-command-handler.ts';
 
 /**
@@ -134,6 +135,8 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave,
       settings: strictProxy<PluginSettings>({
+        attachmentExtensions: ['.excalidraw.md'],
+        flattenMode: FlattenMode.AllChildren,
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeFlattening: false,
@@ -154,8 +157,9 @@ function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
 }
 
-function initApp(files: Record<string, string>): void {
+function initApp(files: Record<string, string>, attachmentFolderPath = './'): void {
   app = App.createConfigured__({ files }).asOriginalType__();
+  app.vault.setConfig('attachmentFolderPath', attachmentFolderPath);
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
@@ -377,6 +381,111 @@ describe('FlattenFolderCommandHandler', () => {
 
     // The transaction rolled back: the source note is intact.
     expect(await app.vault.adapter.read('parent/a/a.md')).toBe('a body');
+  });
+
+  describe('flatten modes (issues #170, #171)', () => {
+    it('should refuse a folder with no child folder at all in a folder-only mode', () => {
+      initApp({ 'parent/a/note.md': 'note' });
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+    });
+
+    it('should allow a folder with a child folder in a folder-only mode', () => {
+      initApp({ 'parent/a/sub/deep.md': 'deep' });
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should promote only the child folders, leaving the folder\'s files and attachment folder behind (issue #170)', async () => {
+      initApp({
+        'parent/a/attachments/pic.png': 'PIC',
+        'parent/a/note.md': 'note body',
+        'parent/a/sub/deep.md': 'deep body'
+      }, './attachments');
+      const { handler } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      // The sub-folder was promoted, whole.
+      expect(await app.vault.adapter.read('parent/sub/deep.md')).toBe('deep body');
+      // The folder itself survives, with its own note and the attachment folder holding that note's files.
+      expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
+      expect(await app.vault.adapter.exists('parent/a/attachments/pic.png')).toBe(true);
+      expect(await app.vault.adapter.exists('parent/attachments')).toBe(false);
+    });
+
+    it('should promote every descendant folder up to the folder\'s own level (issue #171)', async () => {
+      initApp({
+        'parent/a/b/c/deepest.md': 'deepest body',
+        'parent/a/b/deep.md': 'deep body',
+        'parent/a/note.md': 'note body'
+      });
+      const { handler } = createHandler({ flattenMode: FlattenMode.AllFoldersRecursively });
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      // Both folders became siblings of the flattened folder, each keeping its own files.
+      expect(await app.vault.adapter.read('parent/b/deep.md')).toBe('deep body');
+      expect(await app.vault.adapter.read('parent/c/deepest.md')).toBe('deepest body');
+      expect(await app.vault.adapter.exists('parent/b/c')).toBe(false);
+      // The flattened folder keeps its own note.
+      expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
+    });
+
+    it('should show a notice and move nothing when the only child folder is the attachment folder', async () => {
+      initApp({
+        'parent/a/attachments/pic.png': 'PIC',
+        'parent/a/note.md': 'note body'
+      }, './attachments');
+      const { handler, showNotice } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
+
+      // `canExecuteFolder` cannot run the async attachment resolution, so it offers the command and this
+      // Is where the user finds out nothing would move.
+      expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      await handler.executeFolder(getFolder('parent/a'));
+
+      expect(showNotice).toHaveBeenCalledOnce();
+      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(await app.vault.adapter.exists('parent/a/attachments/pic.png')).toBe(true);
+    });
+
+    it('should word the confirmation for the mode it is about to run', async () => {
+      initApp({
+        'parent/a/b/c/deepest.md': 'deepest',
+        'parent/a/note.md': 'note'
+      });
+      confirmResult = createConfirmResult(false);
+
+      const summaries: string[] = [];
+      for (const flattenMode of [FlattenMode.AllChildren, FlattenMode.ChildFoldersOnly, FlattenMode.AllFoldersRecursively]) {
+        const { handler } = createHandler({ flattenMode, shouldAskBeforeFlattening: true });
+        await handler.executeFolder(getFolder('parent/a'));
+        const fragment = createFragment();
+        await capturedConfirmParams?.buildContent(fragment);
+        summaries.push(fragment.textContent);
+      }
+
+      expect(summaries[0]).toContain('direct children move up one level and the emptied folder is left in place.');
+      expect(summaries[1]).toContain('child folders move up one level. The folder itself is left in place');
+      expect(summaries[2]).toContain('folders, from any depth under it, move up to become its siblings.');
+    });
+
+    it('should list a nested item by its path relative to the flattened folder', async () => {
+      initApp({ 'parent/a/b/c/deepest.md': 'deepest' });
+      const { handler } = createHandler({ flattenMode: FlattenMode.AllFoldersRecursively, shouldAskBeforeFlattening: true });
+      confirmResult = createConfirmResult(false);
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      const fragment = createFragment();
+      await capturedConfirmParams?.buildContent(fragment);
+
+      const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+      const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+      expect(renderedCodeBlocks).toContain('b');
+      // `c` alone would be ambiguous the moment two promoted folders share a base name.
+      expect(renderedCodeBlocks).toContain('b/c');
+    });
   });
 
   it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {

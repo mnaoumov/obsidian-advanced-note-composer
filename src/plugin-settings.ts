@@ -21,6 +21,25 @@ export enum EmptyFolderBehaviorAfterMergingFolder {
   Keep = 'Keep'
 }
 
+/**
+ * What `Flatten folder...` promotes out of the chosen folder.
+ *
+ * `AllChildren` is the original behavior and stays the default, so nothing changes for an existing vault
+ * and no `registerLegacySettingsConverter` is needed. The two folder-only members answer issues #170 and
+ * #171: promote the folder's sub-folders while the folder itself keeps its own files (and its attachment
+ * folder), either one level down (`ChildFoldersOnly`) or at any depth (`AllFoldersRecursively`).
+ *
+ * The two axes a flatten could have — WHAT moves and HOW DEEP it looks — are deliberately collapsed into
+ * one dropdown rather than a scope enum plus a "recursive" toggle: the only combination anyone asked for
+ * is folders-at-any-depth, and a recursive variant of `AllChildren` (dissolving every descendant file into
+ * the parent) is a different operation nobody requested. The enum is the extension point if they do.
+ */
+export enum FlattenMode {
+  AllChildren = 'AllChildren',
+  AllFoldersRecursively = 'AllFoldersRecursively',
+  ChildFoldersOnly = 'ChildFoldersOnly'
+}
+
 export enum FrontmatterMergeStrategy {
   KeepOriginalFrontmatter = 'KeepOriginalFrontmatter',
   MergeAndPreferNewValues = 'MergeAndPreferNewValues',
@@ -60,6 +79,12 @@ export class PluginSettings {
    * in-between option (issue #167) for a folder whose own name matters but whose children's do not.
    */
   public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehaviorAfterMergingFolder.Delete;
+
+  /**
+   * What `Flatten folder...` promotes. Defaults to the original "every direct child" behavior, so the
+   * folder-only modes (issues #170/#171) are strictly opt-in.
+   */
+  public flattenMode = FlattenMode.AllChildren;
 
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 

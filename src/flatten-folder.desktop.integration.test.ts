@@ -22,6 +22,7 @@ interface ComponentTreeNode {
 }
 
 interface FlattenSettings {
+  flattenMode: string;
   shouldAskBeforeFlattening: boolean;
 }
 
@@ -246,5 +247,235 @@ describe('flatten folder (issue #105)', () => {
     // The attachment sub-folder moved wholesale, so the nested embed resolves at its new path.
     expect(result.nestedKeptStructure).toBe(true);
     expect(result.nestedResolves).toBe(true);
+  });
+
+  /*
+   * Issue #170: the reporter wants the folder itself to survive a flatten — only its child folders move up,
+   * and the attachment folder holding the staying notes' attachments is not one of them. The two cases
+   * above are the regression control: with the default `All children` mode nothing about them changes.
+   */
+  it('promotes only the child folders in `Child folders only` mode, keeping the folder and its attachment folder intact', async () => {
+    const result = await evalInObsidian({
+      args: { flattenMode: 'ChildFoldersOnly', pluginId: PLUGIN_ID },
+      async fn({
+        app,
+        flattenMode,
+        lib: { waitUntil },
+        obsidianModule,
+        pluginId
+      }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const originalFlattenMode = settingsComponent.settings.flattenMode;
+        const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = false;
+            settings.flattenMode = flattenMode;
+          });
+          // A per-folder attachment sub-folder is the configuration the issue is written against.
+          app.vault.setConfig('attachmentFolderPath', './att-assets');
+
+          await trashIfExists('only-src');
+          await trashIfExists('only-sub');
+          await trashIfExists('att-assets');
+
+          await app.vault.createFolder('only-src');
+          await app.vault.createFolder('only-src/att-assets');
+          await app.vault.createFolder('only-src/only-sub');
+          await app.vault.createBinary('only-src/att-assets/only-pic.png', new ArrayBuffer(4));
+          await app.vault.create('only-src/only-sub/only-deep.md', 'deep body');
+          const note = await app.vault.create('only-src/only-note.md', 'See ![[only-pic.png]].');
+
+          await openFile(note);
+          await waitUntil({
+            message: 'embed cache not ready',
+            predicate: () => (app.metadataCache.getFileCache(note)?.embeds ?? []).length === 1
+          });
+
+          app.commands.executeCommandById(`${pluginId}:flatten-folder`);
+
+          await waitUntil({
+            message: 'the child folder was not promoted to the root',
+            predicate: () => app.vault.getAbstractFileByPath('only-sub/only-deep.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          return {
+            attachmentFolderNotPromoted: app.vault.getAbstractFileByPath('att-assets') === null,
+            attachmentFolderStayed: app.vault.getAbstractFileByPath('only-src/att-assets/only-pic.png') !== null,
+            embedStillResolves: app.metadataCache.getFirstLinkpathDest('only-pic.png', 'only-src/only-note.md')?.path
+              === 'only-src/att-assets/only-pic.png',
+            noteStayed: app.vault.getAbstractFileByPath('only-src/only-note.md') !== null,
+            subFolderPromoted: app.vault.getAbstractFileByPath('only-sub/only-deep.md') !== null
+          };
+        } finally {
+          app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.flattenMode = originalFlattenMode;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeFlattening === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The child folder was promoted, whole.
+    expect(result.subFolderPromoted).toBe(true);
+    // The folder itself survives with its own note — the whole point of issue #170.
+    expect(result.noteStayed).toBe(true);
+    // The attachment folder stayed with the note it belongs to, and was not promoted alongside the others.
+    expect(result.attachmentFolderStayed).toBe(true);
+    expect(result.attachmentFolderNotPromoted).toBe(true);
+    expect(result.embedStillResolves).toBe(true);
+  });
+
+  /*
+   * Issue #171: the same folder-only promotion, applied at every depth — a whole sub-tree of folders lands
+   * as siblings of the folder the command was run on.
+   */
+  it('promotes every descendant folder up to the folder\'s own level in `All folders recursively` mode', async () => {
+    const result = await evalInObsidian({
+      args: { flattenMode: 'AllFoldersRecursively', pluginId: PLUGIN_ID },
+      async fn({
+        app,
+        flattenMode,
+        lib: { waitUntil },
+        obsidianModule,
+        pluginId
+      }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const originalFlattenMode = settingsComponent.settings.flattenMode;
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = false;
+            settings.flattenMode = flattenMode;
+          });
+
+          await trashIfExists('rec-src');
+          await trashIfExists('rec-mid');
+          await trashIfExists('rec-leaf');
+
+          await app.vault.createFolder('rec-src');
+          await app.vault.createFolder('rec-src/rec-mid');
+          await app.vault.createFolder('rec-src/rec-mid/rec-leaf');
+          await app.vault.create('rec-src/rec-mid/rec-mid-note.md', 'mid body');
+          await app.vault.create('rec-src/rec-mid/rec-leaf/rec-leaf-note.md', 'leaf body');
+          const note = await app.vault.create('rec-src/rec-note.md', 'root body');
+
+          await openFile(note);
+
+          app.commands.executeCommandById(`${pluginId}:flatten-folder`);
+
+          await waitUntil({
+            message: 'the nested folders were not promoted to the root',
+            predicate: () =>
+              app.vault.getAbstractFileByPath('rec-mid/rec-mid-note.md') !== null
+              && app.vault.getAbstractFileByPath('rec-leaf/rec-leaf-note.md') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          return {
+            leafNoLongerNested: app.vault.getAbstractFileByPath('rec-mid/rec-leaf') === null,
+            leafPromoted: app.vault.getAbstractFileByPath('rec-leaf/rec-leaf-note.md') !== null,
+            midPromoted: app.vault.getAbstractFileByPath('rec-mid/rec-mid-note.md') !== null,
+            sourceKeptItsOwnNote: app.vault.getAbstractFileByPath('rec-src/rec-note.md') !== null
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.flattenMode = originalFlattenMode;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeFlattening === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // Both folders became siblings of the flattened folder, each keeping its own files.
+    expect(result.midPromoted).toBe(true);
+    expect(result.leafPromoted).toBe(true);
+    // The leaf really left its old parent rather than moving inside it.
+    expect(result.leafNoLongerNested).toBe(true);
+    // The folder the command ran on survives, with its own note.
+    expect(result.sourceKeptItsOwnNote).toBe(true);
   });
 });

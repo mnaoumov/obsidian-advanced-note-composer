@@ -11,6 +11,7 @@ import type {
   SelectItemResult
 } from './item-selector-base.ts';
 
+import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { fixFileName } from '../filename-validation.ts';
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
@@ -138,28 +139,6 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   /**
-   * Finds an available folder path for the "split into folder" feature, appending ` 1`, ` 2`, … until a
-   * name that no existing file or folder occupies is found (mirroring Obsidian's own de-duplication).
-   *
-   * @param desiredPath - The preferred folder path (named after the new note).
-   * @returns A folder path that does not collide with an existing file or folder.
-   */
-  private getAvailableFolderPath(desiredPath: string): string {
-    if (!this.app.vault.getAbstractFileByPath(desiredPath)) {
-      return desiredPath;
-    }
-
-    let index = 1;
-    for (;;) {
-      const candidatePath = `${desiredPath} ${index.toString()}`;
-      if (!this.app.vault.getAbstractFileByPath(candidatePath)) {
-        return candidatePath;
-      }
-      index++;
-    }
-  }
-
-  /**
    * Relocates a freshly-created split/extract note into a brand-new folder named after it, so the note
    * lives at `<dir>/<name>/<name>.md` instead of `<dir>/<name>.md` (issue #79). The folder name is
    * de-duplicated against existing siblings. The note keeps its own base name inside the new folder
@@ -174,7 +153,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     const parentPath = file.parent?.path ?? '';
     const originalBasename = file.basename;
     const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${originalBasename}` : originalBasename);
-    const folderPath = this.getAvailableFolderPath(desiredFolderPath);
+    const folderPath = getAvailableFolderPath(this.app, desiredFolderPath);
     await createFolderSafe(this.app, folderPath);
     const noteBasename = this.resolveNoteBasenameInOwnFolder(file);
     // The folder was just created and is therefore empty, so the note can never collide inside it.
