@@ -12,6 +12,7 @@ import type { PluginSettings } from './plugin-settings.ts';
 import {
   Action,
   EmptyFolderBehaviorAfterMergingFolder,
+  FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   TextAfterExtractionMode
@@ -902,6 +903,36 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
 
     new SettingGroupEx(this.containerEl)
       .setHeading('Move/flatten folders')
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Flatten mode')
+          .setDesc(createFragment((f) => {
+            f.appendText('What ');
+            appendCodeBlock(f, 'Flatten folder...');
+            f.appendText(' promotes out of the chosen folder.');
+            f.createEl('br');
+            appendCodeBlock(f, 'All children');
+            f.appendText(' - every direct child (notes, attachments and sub-folders) moves up one level, leaving the folder empty.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Child folders only');
+            f.appendText(' - only the direct child folders move up. The folder keeps its own files and the attachment folder holding their attachments.');
+            f.createEl('br');
+            appendCodeBlock(f, 'All folders recursively');
+            f.appendText(' - every folder at any depth moves up to the chosen folder\'s own level. Each moved folder keeps its own files, and attachment folders stay with the notes they belong to.');
+            f.createEl('br');
+            f.appendText('A folder counts as an attachment folder when it holds the attachments of a note that is not moving with it, as resolved by Obsidian\'s own attachment-folder setting.');
+          }))
+          .addDropdown((dropdown) => {
+            dropdown.addOptions({
+              /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+              [FlattenMode.AllChildren]: 'All children',
+              [FlattenMode.ChildFoldersOnly]: 'Child folders only',
+              [FlattenMode.AllFoldersRecursively]: 'All folders recursively'
+              /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+            });
+            this.bind({ propertyName: 'flattenMode', valueComponent: dropdown });
+          });
+      })
       .addSettingEx((setting: SettingEx) => {
         setting
           .setName('Should ask before flattening a folder')

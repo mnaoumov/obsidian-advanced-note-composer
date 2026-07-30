@@ -6,6 +6,7 @@ import {
 
 import {
   Action,
+  FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   PluginSettings,
@@ -19,6 +20,20 @@ describe('Action enum', () => {
 
   it('should have Split value', () => {
     expect(Action.Split).toBe('Split');
+  });
+});
+
+describe('FlattenMode enum', () => {
+  it('should have AllChildren value', () => {
+    expect(FlattenMode.AllChildren).toBe('AllChildren');
+  });
+
+  it('should have AllFoldersRecursively value', () => {
+    expect(FlattenMode.AllFoldersRecursively).toBe('AllFoldersRecursively');
+  });
+
+  it('should have ChildFoldersOnly value', () => {
+    expect(FlattenMode.ChildFoldersOnly).toBe('ChildFoldersOnly');
   });
 });
 
@@ -76,6 +91,8 @@ describe('PluginSettings', () => {
   it('should have correct default values', () => {
     const settings = new PluginSettings();
     expect(settings.defaultFrontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
+    // The default IS the pre-#170 behavior, which is what makes the new setting need no legacy converter.
+    expect(settings.flattenMode).toBe(FlattenMode.AllChildren);
     expect(settings.frontmatterTitleMode).toBe(FrontmatterTitleMode.UseForInvalidTitleOnly);
     expect(settings.mergeTemplate).toBe('\n\n{{content}}');
     expect(settings.releaseNotesShown).toEqual([]);

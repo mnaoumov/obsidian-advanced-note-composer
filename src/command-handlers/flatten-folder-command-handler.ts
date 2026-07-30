@@ -10,31 +10,36 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
 import { join } from 'obsidian-dev-utils/path';
 
 import type { FlattenPreviewRow } from '../flatten-preview.ts';
 import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { getAvailablePathForAbstractFile } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
+import { collectFlattenItems } from '../flatten-items.ts';
 import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
+import { FlattenMode } from '../plugin-settings.ts';
 
 interface BuildFlattenConfirmContentParams {
   readonly app: App;
   readonly folder: TFolder;
   readonly fragment: DocumentFragment;
+  readonly mode: FlattenMode;
   readonly parentFolder: TFolder;
   readonly previewRows: readonly FlattenPreviewRow[];
 }
 
 interface FlattenFolderCommandHandlerConfirmFlattenParams {
   readonly folder: TFolder;
+  readonly mode: FlattenMode;
   readonly parentFolder: TFolder;
   readonly previewRows: readonly FlattenPreviewRow[];
 }
@@ -48,17 +53,33 @@ interface FlattenFolderCommandHandlerConstructorParams {
 
 interface FlattenFolderCommandHandlerFlattenImplParams {
   readonly abortController: AbortController;
-  readonly children: TAbstractFile[];
+  readonly itemsToMove: readonly TAbstractFile[];
   readonly parentFolder: TFolder;
   readonly vaultTransaction: VaultTransaction;
 }
 
 /**
- * `Flatten folder` command (issue #105): moves every direct child (files and subfolders) of the chosen
- * folder up one level, so they become siblings of that folder. Subfolders keep their internal structure
- * (they are moved wholesale, not collapsed). Links are updated by the underlying rename. Name collisions
- * with existing siblings are de-duplicated. The emptied source folder is left in place (delete it
- * manually if desired) — matching the manual "select all and drag up" workflow the issue describes.
+ * The rest of the confirmation dialog's opening sentence, which follows the count of items about to move.
+ * A `Record` keyed by the enum, so a new {@link FlattenMode} member is a compile error rather than a
+ * dialog silently left without wording.
+ */
+const FLATTEN_CONFIRM_SUMMARIES: Record<FlattenMode, string> = {
+  [FlattenMode.AllChildren]: ' direct children move up one level and the emptied folder is left in place.',
+  [FlattenMode.AllFoldersRecursively]: ' folders, from any depth under it, move up to become its siblings. Each keeps its own files, and the folder itself is left in place with its own files and its attachment folder.',
+  [FlattenMode.ChildFoldersOnly]: ' child folders move up one level. The folder itself is left in place with its own files and its attachment folder.'
+};
+
+/**
+ * `Flatten folder` command (issue #105): moves children of the chosen folder up one level, so they become
+ * siblings of that folder. Folders keep their internal structure (they are moved wholesale, not
+ * collapsed). Links are updated by the underlying rename. Name collisions with existing siblings are
+ * de-duplicated. The source folder is left in place (delete it manually if desired) — matching the manual
+ * "select all and drag up" workflow the issue describes.
+ *
+ * WHAT moves is the `flattenMode` setting's call (issues #170/#171), resolved by `flatten-items.ts`:
+ * every direct child (the default, and the original behavior), only the direct child folders, or every
+ * folder at any depth. The folder-only modes leave the folder's own files — and the attachment folder
+ * belonging to them — exactly where they are.
  */
 export class FlattenFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
@@ -88,7 +109,17 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
       return false;
     }
-    return folder.children.length > 0;
+    if (this.pluginSettingsComponent.settings.flattenMode === FlattenMode.AllChildren) {
+      return folder.children.length > 0;
+    }
+    /*
+     * A folder-only mode needs at least one child folder — and a descendant folder implies one, so the same
+     * check covers the recursive mode. The attachment-folder exclusion is deliberately NOT applied here:
+     * resolving it is async (it goes through the attachment-location machinery) and `canExecuteFolder` is
+     * not. In the corner case where the only child folder IS the attachment folder, the command is offered
+     * and `executeFolder` says so with a notice rather than silently doing nothing.
+     */
+    return folder.children.some((child) => isFolder(child));
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
@@ -110,16 +141,44 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     }
     /* v8 ignore stop */
 
-    // Snapshot the children up front: renaming mutates `folder.children` mid-iteration.
-    const children = [...folder.children];
+    const mode = this.pluginSettingsComponent.settings.flattenMode;
+    const itemsToMove = await collectFlattenItems({
+      app: this.app,
+      attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
+      folder,
+      mode
+    });
+
+    if (itemsToMove.length === 0) {
+      // Only reachable in a folder-only mode: `canExecuteFolder` saw a child folder, and it turned out to
+      // Be the attachment folder of a note staying behind.
+      this.pluginNoticeComponent.showNotice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('There is nothing to flatten in ');
+          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.appendText(': its only child folders hold attachments of the notes that stay in it.');
+        })
+      );
+      return;
+    }
 
     if (this.pluginSettingsComponent.settings.shouldAskBeforeFlattening) {
       /*
        * Flatten has no target picker, so this dialog is the only chance to see what the command is about
        * to do. It is asked before the lock and the transaction are taken, so cancelling costs nothing.
        */
-      const previewRows = buildFlattenPreviewRows({ app: this.app, children, parentFolder });
-      const confirmResult = await this.confirmFlatten({ folder, parentFolder, previewRows });
+      const previewRows = buildFlattenPreviewRows({
+        app: this.app,
+        children: itemsToMove,
+        folder,
+        parentFolder
+      });
+      const confirmResult = await this.confirmFlatten({
+        folder,
+        mode,
+        parentFolder,
+        previewRows
+      });
       if (!confirmResult.isConfirmed) {
         return;
       }
@@ -134,7 +193,12 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
         abortController,
         app: this.app,
         body: async (vaultTransaction) => {
-          await this.flattenImpl({ abortController, children, parentFolder, vaultTransaction });
+          await this.flattenImpl({
+            abortController,
+            itemsToMove,
+            parentFolder,
+            vaultTransaction
+          });
         },
         lockTargets: [
           { mode: 'subtree', pathOrFile: folder.path },
@@ -174,6 +238,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   private async confirmFlatten(params: FlattenFolderCommandHandlerConfirmFlattenParams): Promise<ConfirmDialogModalResult> {
     const {
       folder,
+      mode,
       parentFolder,
       previewRows
     } = params;
@@ -187,6 +252,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
               app,
               folder,
               fragment,
+              mode,
               parentFolder,
               previewRows
             }),
@@ -201,13 +267,18 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   }
 
   private async flattenImpl(params: FlattenFolderCommandHandlerFlattenImplParams): Promise<void> {
-    const { abortController, children, parentFolder, vaultTransaction } = params;
-    for (const child of children) {
+    const { abortController, itemsToMove, parentFolder, vaultTransaction } = params;
+    for (const item of itemsToMove) {
       if (abortController.signal.aborted) {
         throw new Error('Flatten folder aborted.');
       }
-      const targetPath = getAvailablePath(this.app, join(parentFolder.path, child.name));
-      await vaultTransaction.rename(child, targetPath);
+      /*
+       * `item.name` and `item.path` are read AFTER the earlier renames have run: the recursive mode moves a
+       * folder before its own sub-folders, and Obsidian's rename cascades to descendants, so a nested item
+       * is already at its promoted parent's new path by the time its turn comes.
+       */
+      const targetPath = getAvailablePathForAbstractFile(this.app, item, join(parentFolder.path, item.name));
+      await vaultTransaction.rename(item, targetPath);
     }
   }
 }
@@ -223,6 +294,7 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
     app,
     folder,
     fragment,
+    mode,
     parentFolder,
     previewRows
   } = params;
@@ -230,7 +302,7 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   appendCodeBlock(fragment, 'Folder');
   fragment.appendText('? Its ');
   appendCodeBlock(fragment, String(previewRows.length));
-  fragment.appendText(' direct children move up one level and the emptied folder is left in place.');
+  fragment.appendText(FLATTEN_CONFIRM_SUMMARIES[mode]);
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Folder');
@@ -255,7 +327,9 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   fragment.createEl('h2', { text: 'Items that will be moved' });
   for (const row of previewRows) {
     // A renamed item is shown as `old → new`, so a de-duplicated collision is visible before it happens.
-    appendCodeBlock(fragment, row.name === row.targetName ? row.name : `${row.name} → ${row.targetName}`);
+    // A nested item's name is its path under the flattened folder, which is why the arrow is driven by
+    // `isRenamed` rather than by comparing the two fields.
+    appendCodeBlock(fragment, row.isRenamed ? `${row.name} → ${row.targetName}` : row.name);
     fragment.createEl('br');
   }
 }

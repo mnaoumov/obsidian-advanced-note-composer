@@ -175,11 +175,21 @@ Unlike `Split note by headings - H<n>`, this command is not tied to a level or t
 
 ## Flatten folder
 
-The `Flatten folder...` command (also on a folder's right-click menu) moves every direct child of the chosen folder — files **and** subfolders — up one level, so they become siblings of that folder. Subfolders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The emptied folder is left in place; delete it manually if you no longer need it.
+The `Flatten folder...` command (also on a folder's right-click menu) moves children of the chosen folder up one level, so they become siblings of that folder. Folders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The source folder is left in place; delete it manually if you no longer need it.
 
-Because the command has no picker to review, it asks for confirmation first and lists every item it is about to move — including the de-duplicated name a colliding item will end up with. Both the folder and its destination are clickable links that reveal that folder in the file explorer (the destination is always the folder's own parent, shown as `/` when that is the vault root). Turn **Should ask before flattening a folder** (under `Move/flatten folders` in the settings) off, or tick `Don't ask again` in the dialog, to flatten straight away.
+*What* moves is up to the **Flatten mode** setting (under `Move/flatten folders`):
 
-Attachments need no special handling here: because every direct child moves, an attachment sitting beside a note travels with it and an attachment sub-folder moves as a whole, so embeds keep resolving. Attachments kept in a central attachment folder live outside the flattened folder and correctly stay where they are.
+| Mode | What it promotes |
+| --- | --- |
+| `All children` (default) | Every direct child — notes, attachments **and** sub-folders — moves up one level, leaving the folder empty. |
+| `Child folders only` | Only the direct child folders move up. The folder keeps its own files and the attachment folder holding their attachments, so the folder itself stays intact. |
+| `All folders recursively` | Every folder at any depth under the chosen folder moves up to that folder's own level, so a whole sub-tree lands as one row of siblings. Each moved folder keeps its own files, and attachment folders stay with the notes they belong to. |
+
+Because the command has no picker to review, it asks for confirmation first and lists every item it is about to move — including the de-duplicated name a colliding item will end up with. A nested item is listed by its path under the flattened folder, so two promoted folders that share a name are still told apart. Both the folder and its destination are clickable links that reveal that folder in the file explorer (the destination is always the folder's own parent, shown as `/` when that is the vault root). Turn **Should ask before flattening a folder** off, or tick `Don't ask again` in the dialog, to flatten straight away.
+
+Attachments need no special handling in the default mode: because every direct child moves, an attachment sitting beside a note travels with it and an attachment sub-folder moves as a whole, so embeds keep resolving. Attachments kept in a central attachment folder live outside the flattened folder and correctly stay where they are.
+
+The two folder-only modes do have to be careful, because notes are staying behind. A child folder is left where it is when it holds the attachments of a note that is *not* moving with it, as resolved by Obsidian's own attachment-folder setting — which means an attachment-location plugin such as Custom Attachment Location is honoured too. Note the flip side: when your attachments live in the vault root or in one fixed folder, a folder you merely *named* `attachments` is not any note's attachment folder, so it is promoted like any other.
 
 ## Move folder to…
 
