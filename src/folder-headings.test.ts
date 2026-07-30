@@ -4,60 +4,112 @@ import {
   it
 } from 'vitest';
 
+import type { FolderHeadingPlanItem } from './folder-headings.ts';
+
 import {
   buildFolderHeadingPlan,
   demoteHeadings
 } from './folder-headings.ts';
 
-interface PlanSummary {
+interface EntrySummary {
   depth: number;
   headings: string[];
 }
 
+interface PlanSummary {
+  entries: EntrySummary[];
+  trailingHeadings: string[];
+}
+
 describe('buildFolderHeadingPlan', () => {
-  function plan(filePaths: string[], rootPath = 'Docs'): PlanSummary[] {
-    return buildFolderHeadingPlan({ filePaths, rootPath })
-      .map((entry) => ({ depth: entry.depth, headings: [...entry.headings] }));
+  function folder(path: string): FolderHeadingPlanItem {
+    return { isFolder: true, path };
+  }
+
+  // Every folder down to (and including) the last segment, outermost first — what the walk visits before
+  // Reaching a note that deep.
+  function folderChain(rootPath: string, ...names: string[]): FolderHeadingPlanItem[] {
+    return names.map((_name, index) => folder([rootPath, ...names.slice(0, index + 1)].join('/')));
+  }
+
+  function note(path: string): FolderHeadingPlanItem {
+    return { isFolder: false, path };
+  }
+
+  function plan(items: FolderHeadingPlanItem[], rootPath = 'Docs'): PlanSummary {
+    const folderHeadingPlan = buildFolderHeadingPlan({ items, rootPath });
+    return {
+      entries: folderHeadingPlan.entries.map((entry) => ({ depth: entry.depth, headings: [...entry.headings] })),
+      trailingHeadings: [...folderHeadingPlan.trailingHeadings]
+    };
   }
 
   it('should give a note directly inside the merged folder no heading', () => {
-    expect(plan(['Docs/intro.md'])).toEqual([{ depth: 0, headings: [] }]);
+    expect(plan([note('Docs/intro.md')])).toEqual({
+      entries: [{ depth: 0, headings: [] }],
+      trailingHeadings: []
+    });
   });
 
   it('should head a direct sub-folder at level one', () => {
-    expect(plan(['Docs/api/get.md'])).toEqual([{ depth: 1, headings: ['# api'] }]);
+    expect(plan([folder('Docs/api'), note('Docs/api/get.md')])).toEqual({
+      entries: [{ depth: 1, headings: ['# api'] }],
+      trailingHeadings: []
+    });
   });
 
   it('should deepen the heading level with the folder depth', () => {
-    expect(plan(['Docs/api/v2/put.md'])).toEqual([{ depth: 2, headings: ['# api', '## v2'] }]);
+    expect(plan([...folderChain('Docs', 'api', 'v2'), note('Docs/api/v2/put.md')])).toEqual({
+      entries: [{ depth: 2, headings: ['# api', '## v2'] }],
+      trailingHeadings: []
+    });
   });
 
   it('should head a folder once for all its notes', () => {
-    expect(plan(['Docs/api/get.md', 'Docs/api/post.md'])).toEqual([
-      { depth: 1, headings: ['# api'] },
-      { depth: 1, headings: [] }
-    ]);
+    expect(plan([folder('Docs/api'), note('Docs/api/get.md'), note('Docs/api/post.md')])).toEqual({
+      entries: [
+        { depth: 1, headings: ['# api'] },
+        { depth: 1, headings: [] }
+      ],
+      trailingHeadings: []
+    });
   });
 
   it('should emit only the newly entered folders when descending', () => {
-    expect(plan(['Docs/api/get.md', 'Docs/api/v2/put.md'])).toEqual([
-      { depth: 1, headings: ['# api'] },
-      { depth: 2, headings: ['## v2'] }
-    ]);
+    expect(plan([folder('Docs/api'), note('Docs/api/get.md'), folder('Docs/api/v2'), note('Docs/api/v2/put.md')])).toEqual({
+      entries: [
+        { depth: 1, headings: ['# api'] },
+        { depth: 2, headings: ['## v2'] }
+      ],
+      trailingHeadings: []
+    });
   });
 
   it('should re-head a sibling folder after leaving the previous one', () => {
-    expect(plan(['Docs/api/v2/put.md', 'Docs/guides/start.md'])).toEqual([
-      { depth: 2, headings: ['# api', '## v2'] },
-      { depth: 1, headings: ['# guides'] }
-    ]);
+    expect(plan([
+      ...folderChain('Docs', 'api', 'v2'),
+      note('Docs/api/v2/put.md'),
+      folder('Docs/guides'),
+      note('Docs/guides/start.md')
+    ])).toEqual({
+      entries: [
+        { depth: 2, headings: ['# api', '## v2'] },
+        { depth: 1, headings: ['# guides'] }
+      ],
+      trailingHeadings: []
+    });
   });
 
   it('should emit nothing extra when climbing back to an already-open folder', () => {
-    expect(plan(['Docs/api/v2/put.md', 'Docs/api/get.md'])).toEqual([
-      { depth: 2, headings: ['# api', '## v2'] },
-      { depth: 1, headings: [] }
-    ]);
+    // The real walk takes a folder's own notes before its sub-folders, so it never climbs back; this
+    // Guards the plan against an input that does.
+    expect(plan([...folderChain('Docs', 'api', 'v2'), note('Docs/api/v2/put.md'), note('Docs/api/get.md')])).toEqual({
+      entries: [
+        { depth: 2, headings: ['# api', '## v2'] },
+        { depth: 1, headings: [] }
+      ],
+      trailingHeadings: []
+    });
   });
 
   it('should keep deepening past the deepest markdown heading', () => {
@@ -65,30 +117,70 @@ describe('buildFolderHeadingPlan', () => {
      * Issue #160: markdown stops at six, but clamping there made every folder from depth 6 downward
      * share `######`, so an ancestor and its descendants read as siblings. The depth is encoded instead.
      */
-    const deepPath = 'Docs/a/b/c/d/e/f/g/note.md';
-    const entry = buildFolderHeadingPlan({ filePaths: [deepPath], rootPath: 'Docs' })[0];
-    expect(entry?.headings).toEqual(['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g']);
-    expect(entry?.depth).toBe(7);
+    expect(plan([...folderChain('Docs', 'a', 'b', 'c', 'd', 'e', 'f', 'g'), note('Docs/a/b/c/d/e/f/g/note.md')])).toEqual({
+      entries: [{ depth: 7, headings: ['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g'] }],
+      trailingHeadings: []
+    });
   });
 
   it('should keep sibling folders distinguishable past six levels', () => {
-    expect(plan(['Docs/a/b/c/d/e/f/g/h/deep.md', 'Docs/a/b/c/d/e/f/i/other.md'])).toEqual([
-      { depth: 8, headings: ['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g', '######## h'] },
-      { depth: 7, headings: ['####### i'] }
-    ]);
+    expect(plan([
+      ...folderChain('Docs', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'),
+      note('Docs/a/b/c/d/e/f/g/h/deep.md'),
+      folder('Docs/a/b/c/d/e/f/i'),
+      note('Docs/a/b/c/d/e/f/i/other.md')
+    ])).toEqual({
+      entries: [
+        { depth: 8, headings: ['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g', '######## h'] },
+        { depth: 7, headings: ['####### i'] }
+      ],
+      trailingHeadings: []
+    });
   });
 
   it('should measure depth below a nested merged folder', () => {
-    expect(plan(['top/Docs/api/get.md'], 'top/Docs')).toEqual([{ depth: 1, headings: ['# api'] }]);
+    expect(plan([folder('top/Docs/api'), note('top/Docs/api/get.md')], 'top/Docs')).toEqual({
+      entries: [{ depth: 1, headings: ['# api'] }],
+      trailingHeadings: []
+    });
   });
 
   it('should treat a path outside the merged folder as relative to the vault root', () => {
     // Defensive: the caller always passes descendants, so this only guards against a stray path.
-    expect(plan(['Other/note.md'])).toEqual([{ depth: 1, headings: ['# Other'] }]);
+    expect(plan([note('Other/note.md')])).toEqual({
+      entries: [{ depth: 1, headings: ['# Other'] }],
+      trailingHeadings: []
+    });
   });
 
-  it('should return an empty plan for no files', () => {
-    expect(plan([])).toEqual([]);
+  it('should return an empty plan for no items', () => {
+    expect(plan([])).toEqual({ entries: [], trailingHeadings: [] });
+  });
+
+  it('should head a folder that holds no notes at all, after the last note (issue #168)', () => {
+    // The reporter's vault: the merged folder's last sub-folder is empty, so no note path mentions it.
+    expect(plan([folder('Docs/api'), note('Docs/api/get.md'), folder('Docs/empty')])).toEqual({
+      entries: [{ depth: 1, headings: ['# api'] }],
+      trailingHeadings: ['# empty']
+    });
+  });
+
+  it('should head an empty folder in place when notes follow it', () => {
+    expect(plan([folder('Docs/empty'), folder('Docs/guides'), note('Docs/guides/start.md')])).toEqual({
+      entries: [{ depth: 1, headings: ['# empty', '# guides'] }],
+      trailingHeadings: []
+    });
+  });
+
+  it('should head a whole note-less subtree', () => {
+    expect(plan([note('Docs/intro.md'), ...folderChain('Docs', 'empty', 'deeper')])).toEqual({
+      entries: [{ depth: 0, headings: [] }],
+      trailingHeadings: ['# empty', '## deeper']
+    });
+  });
+
+  it('should head an empty folder with no notes anywhere in the merged folder', () => {
+    expect(plan([folder('Docs/empty')])).toEqual({ entries: [], trailingHeadings: ['# empty'] });
   });
 });
 

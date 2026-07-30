@@ -3,16 +3,33 @@
  */
 export interface BuildFolderHeadingPlanParams {
   /**
-   * The paths of the notes about to be merged, in the order they will be merged. They must already be in
-   * folder-grouped depth-first order (a folder's own notes contiguous, then each sub-folder's subtree) —
-   * otherwise a folder would be re-entered and its heading emitted more than once.
+   * The depth-first walk of the folder being merged — every descendant folder and every note about to be
+   * merged, in the order the merge visits them (a folder's own notes contiguous, then each sub-folder
+   * followed by its whole subtree). Otherwise a folder would be re-entered and its heading emitted more
+   * than once.
    */
-  readonly filePaths: readonly string[];
+  readonly items: readonly FolderHeadingPlanItem[];
 
   /**
    * The path of the folder being merged. Depth is measured below this.
    */
   readonly rootPath: string;
+}
+
+/**
+ * The headings a folder merge weaves into the merged note.
+ */
+export interface FolderHeadingPlan {
+  /**
+   * One entry per note in {@link BuildFolderHeadingPlanParams.items}, in the same order.
+   */
+  readonly entries: readonly FolderHeadingPlanEntry[];
+
+  /**
+   * The headings of the folders visited after the LAST note — an empty folder at the tail of the walk has
+   * no note to be emitted in front of (issue #168), so they are appended once at the end instead.
+   */
+  readonly trailingHeadings: readonly string[];
 }
 
 /**
@@ -36,6 +53,23 @@ export interface FolderHeadingPlanEntry {
    * outer-to-inner order. Empty when the note lives in the same folder as the previous one.
    */
   readonly headings: readonly string[];
+}
+
+/**
+ * One step of the depth-first walk {@link buildFolderHeadingPlan} plans over: a folder, which becomes a
+ * heading, or a note, which the headings collected since the previous note are emitted before.
+ */
+export interface FolderHeadingPlanItem {
+  /**
+   * Whether {@link FolderHeadingPlanItem.path} is a folder. The paths alone cannot say — `Docs/api` and
+   * `Docs/api/get.md` are both just strings — and an EMPTY folder is only visible as its own item.
+   */
+  readonly isFolder: boolean;
+
+  /**
+   * The folder's or note's path.
+   */
+  readonly path: string;
 }
 
 /**
@@ -72,8 +106,15 @@ const FENCE_REG_EXP = /^ {0,3}(?<Fence>`{3,}|~{3,})/;
  * This is the exact inverse of the recursive split (issue #156), where `# A` produces the folder `A` and
  * `## B` inside it produces `A/B` — so a note split into a tree and merged back agrees on the levels.
  *
- * A heading is emitted only for a folder that was not already open at the previous note, so a folder
+ * A heading is emitted only for a folder that was not already open at the previous item, so a folder
  * holding several notes is headed once.
+ *
+ * **Every folder in the walk is headed, including one that holds no notes at all** (issue #168): the
+ * merged note's outline mirrors the folder tree, so an empty folder is part of that tree even though it
+ * contributes no content. That is why the input is the whole walk rather than the note paths alone — a
+ * note-less folder leaves no trace in any note path. A folder whose notes exist but are ALL excluded in
+ * the settings is a different case and still gets no heading: the plan emits its heading, but
+ * `mergeFilesIntoSingleFile` drops headings that never reach a merged note.
  *
  * **Past six levels the level keeps growing** — a folder seven deep gets `#######`, which markdown does
  * not define and Obsidian renders as literal text rather than a heading. That is the deliberate choice
@@ -84,36 +125,30 @@ const FENCE_REG_EXP = /^ {0,3}(?<Fence>`{3,}|~{3,})/;
  * entry for those folders but never loses the hierarchy. Nothing else in the plugin caps to
  * `MAX_HEADING_LEVEL` in this direction; the recursive split still does, since it *reads* real headings.
  *
- * @param params - The notes to be merged and the folder they are merged from.
- * @returns One entry per input path, in the same order.
+ * @param params - The depth-first walk to be merged and the folder it is merged from.
+ * @returns One entry per note in the walk, in the same order, plus the headings left over after the last
+ * one.
  */
-export function buildFolderHeadingPlan(params: BuildFolderHeadingPlanParams): FolderHeadingPlanEntry[] {
-  const { filePaths, rootPath } = params;
+export function buildFolderHeadingPlan(params: BuildFolderHeadingPlanParams): FolderHeadingPlan {
+  const { items, rootPath } = params;
   const entries: FolderHeadingPlanEntry[] = [];
+  const pendingHeadings: string[] = [];
   let previousSegments: string[] = [];
 
-  for (const filePath of filePaths) {
-    const segments = getFolderSegmentsBelowRoot(filePath, rootPath);
-    const headings: string[] = [];
-    let commonCount = 0;
-    while (
-      commonCount < segments.length
-      && commonCount < previousSegments.length
-      && segments[commonCount] === previousSegments[commonCount]
-    ) {
-      commonCount++;
-    }
-
-    for (let index = commonCount; index < segments.length; index++) {
-      /* v8 ignore next -- defensive ?? on an index the loop bounds keep inside the array. */
-      headings.push(`${'#'.repeat(index + 1)} ${segments[index] ?? ''}`);
-    }
-
+  for (const item of items) {
+    const segments = getSegmentsBelowRoot(item, rootPath);
+    pendingHeadings.push(...buildHeadingsForNewlyEnteredFolders(segments, previousSegments));
     previousSegments = segments;
-    entries.push({ depth: segments.length, filePath, headings });
+
+    if (item.isFolder) {
+      continue;
+    }
+
+    // `splice` both hands the headings to the note and clears them, so the next note starts fresh.
+    entries.push({ depth: segments.length, filePath: item.path, headings: pendingHeadings.splice(0) });
   }
 
-  return entries;
+  return { entries, trailingHeadings: pendingHeadings };
 }
 
 /**
@@ -168,8 +203,27 @@ export function demoteHeadings(content: string, shift: number): string {
   }).join('\n');
 }
 
-function getFolderSegmentsBelowRoot(filePath: string, rootPath: string): string[] {
-  const relativePath = filePath.startsWith(`${rootPath}/`) ? filePath.slice(rootPath.length + 1) : filePath;
-  // Drop the file name: only the folders between the merged folder and the note become headings.
-  return relativePath.split('/').slice(0, -1);
+function buildHeadingsForNewlyEnteredFolders(segments: readonly string[], previousSegments: readonly string[]): string[] {
+  let commonCount = 0;
+  while (
+    commonCount < segments.length
+    && commonCount < previousSegments.length
+    && segments[commonCount] === previousSegments[commonCount]
+  ) {
+    commonCount++;
+  }
+
+  const headings: string[] = [];
+  for (let index = commonCount; index < segments.length; index++) {
+    /* v8 ignore next -- defensive ?? on an index the loop bounds keep inside the array. */
+    headings.push(`${'#'.repeat(index + 1)} ${segments[index] ?? ''}`);
+  }
+  return headings;
+}
+
+function getSegmentsBelowRoot(item: FolderHeadingPlanItem, rootPath: string): string[] {
+  const relativePath = item.path.startsWith(`${rootPath}/`) ? item.path.slice(rootPath.length + 1) : item.path;
+  const segments = relativePath.split('/');
+  // A folder IS one of the headings, so its own name stays; a note only contributes the folders above it.
+  return item.isFolder ? segments : segments.slice(0, -1);
 }

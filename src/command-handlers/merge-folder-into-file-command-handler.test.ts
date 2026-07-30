@@ -272,6 +272,39 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(merged).not.toContain('# api');
   });
 
+  it('should head a sub-folder that holds no notes at all (issue #168)', async () => {
+    // The reporter's vault shape: the last sub-folder is empty, so no note path mentions it and its
+    // Heading has no source note to be written in front of.
+    initApp({
+      'src/1/note.md': 'one body',
+      'src/note.md': 'root body'
+    });
+    await app.vault.createFolder('src/2');
+    const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged).toContain('# 1');
+    expect(merged).toContain('# 2');
+    expect(merged.indexOf('# 2')).toBeGreaterThan(merged.indexOf('# 1'));
+  });
+
+  it('should head an empty sub-folder in place when notes follow it', async () => {
+    initApp({ 'src/b/note.md': 'b body' });
+    await app.vault.createFolder('src/a');
+    const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
+    mockConfirm.mockResolvedValue(true);
+
+    await handler.executeFolder(getFolder('src'));
+
+    const merged = await app.vault.adapter.read('src.md');
+    expect(merged.indexOf('# a')).toBeGreaterThanOrEqual(0);
+    expect(merged.indexOf('# b')).toBeGreaterThan(merged.indexOf('# a'));
+    expect(merged.indexOf('b body')).toBeGreaterThan(merged.indexOf('# b'));
+  });
+
   it('should delete the folders the merge emptied', async () => {
     initApp({
       'src/api/v2/put.md': 'put body',

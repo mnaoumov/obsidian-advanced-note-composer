@@ -12,7 +12,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { AttachmentToRelocate } from './attachments.ts';
-import type { FolderHeadingPlanEntry } from './folder-headings.ts';
+import type { FolderHeadingPlan } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
@@ -41,10 +41,10 @@ export interface MergeFilesIntoSingleFileParams {
 
   /**
    * The folder-derived headings to weave into the target as the sources are merged (issue #160), one
-   * entry per source path. Omitted (or empty) for a plain merge, which writes no headings and demotes
-   * nothing.
+   * entry per source path plus the headings left over after the last of them. Omitted for a plain merge,
+   * which writes no headings and demotes nothing.
    */
-  readonly folderHeadingPlan?: readonly FolderHeadingPlanEntry[] | undefined;
+  readonly folderHeadingPlan?: FolderHeadingPlan | undefined;
 
   /**
    * Whether {@link MergeFilesIntoSingleFileParams.targetFile} was freshly created (empty) for this
@@ -143,7 +143,8 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const { settings } = pluginSettingsComponent;
   const sourcesToMerge = sourceFiles.filter((sourceFile) => sourceFile !== targetFile);
   const ignoredSourceFiles: TFile[] = [];
-  const headingPlanByPath = new Map((folderHeadingPlan ?? []).map((entry) => [entry.filePath, entry]));
+  const headingPlanByPath = new Map((folderHeadingPlan?.entries ?? []).map((entry) => [entry.filePath, entry]));
+  const trailingHeadings = folderHeadingPlan?.trailingHeadings ?? [];
   let mergedCount = 0;
 
   const notice = pluginNoticeComponent.showNotice(
@@ -211,7 +212,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           // Headings are flushed only once a source actually reaches the merge, so a folder whose notes
           // Are all skipped never leaves an empty heading behind in the target.
           if (pendingHeadings.length > 0) {
-            const headingBlock = pendingHeadings.map((heading) => `\n\n${heading}`).join('');
+            const headingBlock = buildHeadingBlock(pendingHeadings);
             pendingHeadings.length = 0;
             await vaultTransaction.process(targetFile, (targetFileContent) => targetFileContent + headingBlock);
           }
@@ -239,6 +240,16 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           isFirstMergeIntoNewTarget = false;
           mergedCount++;
         }
+
+        /*
+         * The folders visited after the LAST note have no source left to be flushed in front of, so they
+         * are appended once here (issue #168 — an empty folder at the tail of the walk). Whatever is still
+         * in `pendingHeadings` is deliberately NOT: those belong to a folder whose notes were all skipped,
+         * which must leave no heading behind. The plan separates the two so this does not have to guess.
+         */
+        if (trailingHeadings.length > 0) {
+          await vaultTransaction.process(targetFile, (targetFileContent) => targetFileContent + buildHeadingBlock(trailingHeadings));
+        }
       },
       lockTargets,
       operationName: progressLabel,
@@ -258,6 +269,10 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   warnIfTemplaterMissing(app, pluginNoticeComponent, settings.shouldRunTemplaterOnDestinationFile);
 
   return { aborted: false, ignoredSourceFiles, mergedCount };
+}
+
+function buildHeadingBlock(headings: readonly string[]): string {
+  return headings.map((heading) => `\n\n${heading}`).join('');
 }
 
 /**
