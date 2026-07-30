@@ -409,6 +409,175 @@ describe('split headings recursively', () => {
     expect(result.contents['TplA/TplA.md']).not.toContain('body of TplB');
     expect(result.contents['TplA/TplB/TplB.md']).not.toContain('body of TplC');
   });
+
+  it('should root the tree in Obsidian\'s default new note folder, keeping it nested (issue #173)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        /*
+         * The source lives in its OWN folder, which is what makes the assertion discriminating: without the
+         * setting the tree would be built under `SOURCE_FOLDER`, and with `newFileLocation` left at its
+         * `root` default a redirect would be indistinguishable from the vault root. Both wrong answers are
+         * therefore distinct paths from the right one.
+         */
+        const SOURCE_FOLDER = 'RecDefaultSource';
+        const DEFAULT_NEW_NOTE_FOLDER = 'RecDefaultTarget';
+        const SOURCE_PATH = `${SOURCE_FOLDER}/split-headings-recursively-default-folder-source.md`;
+        const SOURCE_CONTENT = [
+          'Intro text',
+          '',
+          '# DefA',
+          '',
+          'body of DefA',
+          '',
+          '## DefB',
+          '',
+          'body of DefB',
+          '',
+          '### DefC',
+          '',
+          'body of DefC',
+          '',
+          '## DefD',
+          '',
+          'body of DefD',
+          ''
+        ].join('\n');
+
+        const originalNewFileLocation = app.vault.getConfig('newFileLocation');
+        const originalNewFileFolderPath = app.vault.getConfig('newFileFolderPath');
+        // `Should split into folder` stays OFF here too: the recursive split builds the folder tree itself,
+        // And the redirect must not quietly depend on that setting. The up-front dialog is covered by the
+        // First case, so it is skipped here.
+        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', false);
+        const originalShouldAsk = await setToggle('Should ask before splitting', false);
+        const originalShouldSplitRecursivelyIntoDefaultNewNoteFolder = await setToggle('Should split recursively into the default new note folder', true);
+        try {
+          // Clean up any leftover from a previous run so no folder name is de-duplicated.
+          await removeIfExists(DEFAULT_NEW_NOTE_FOLDER);
+          await removeIfExists(SOURCE_FOLDER);
+          await app.vault.createFolder(DEFAULT_NEW_NOTE_FOLDER);
+          await app.vault.createFolder(SOURCE_FOLDER);
+
+          app.vault.setConfig('newFileLocation', 'folder');
+          app.vault.setConfig('newFileFolderPath', DEFAULT_NEW_NOTE_FOLDER);
+
+          const sourceFile = await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
+          const editor = await openAndGetEditor(sourceFile);
+          editor.setCursor({ ch: 0, line: 0 });
+
+          await waitUntil({
+            message: 'metadata cache did not index the source headings',
+            predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).length === 4
+          });
+
+          app.commands.executeCommandById(`${pluginId}:split-note-by-headings-recursively`);
+
+          const expectedPaths = [
+            `${DEFAULT_NEW_NOTE_FOLDER}/DefA/DefA.md`,
+            `${DEFAULT_NEW_NOTE_FOLDER}/DefA/DefB/DefB.md`,
+            `${DEFAULT_NEW_NOTE_FOLDER}/DefA/DefB/DefC/DefC.md`,
+            `${DEFAULT_NEW_NOTE_FOLDER}/DefA/DefD/DefD.md`
+          ];
+
+          await waitUntil({
+            message: 'the tree was not rooted in the default new note folder',
+            predicate: () => expectedPaths.every((path) => app.vault.getAbstractFileByPath(path) instanceof obsidianModule.TFile)
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const contents: Record<string, string> = {};
+          for (const path of expectedPaths) {
+            const file = app.vault.getAbstractFileByPath(path);
+            contents[path] = file instanceof obsidianModule.TFile ? await app.vault.read(file) : '';
+          }
+
+          return {
+            contents,
+            // The negative half: nothing was created beside the source, and the source itself did not move.
+            hasNoteBesideSource: app.vault.getAbstractFileByPath(`${SOURCE_FOLDER}/DefA`) !== null,
+            hasNoteInVaultRoot: app.vault.getAbstractFileByPath('DefA') !== null,
+            sourceContent: await app.vault.read(sourceFile),
+            sourceStillInPlace: app.vault.getAbstractFileByPath(SOURCE_PATH) instanceof obsidianModule.TFile
+          };
+        } finally {
+          app.vault.setConfig('newFileLocation', originalNewFileLocation);
+          app.vault.setConfig('newFileFolderPath', originalNewFileFolderPath);
+          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
+          await setToggle('Should ask before splitting', originalShouldAsk);
+          await setToggle('Should split recursively into the default new note folder', originalShouldSplitRecursivelyIntoDefaultNewNoteFolder);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: 'markdown editor did not open',
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+
+        async function removeIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+
+        async function setToggle(name: string, value: boolean): Promise<boolean> {
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
+          if (!tab) {
+            throw new Error('Settings tab was not found.');
+          }
+          (tab as PluginSettingsTab).displayLegacy();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          const toggle = item?.querySelector('.checkbox-container');
+          if (!(toggle instanceof HTMLElement)) {
+            throw new Error(`"${name}" toggle was not found.`);
+          }
+          const wasEnabled = toggle.classList.contains('is-enabled');
+          if (wasEnabled !== value) {
+            toggle.click();
+            await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          }
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return wasEnabled;
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // The whole tree is rooted in Obsidian's `Default location for new notes`...
+    expect(result.contents['RecDefaultTarget/DefA/DefA.md']).toContain('body of DefA');
+    // ...and it is still a TREE: the sub-headings nest under their parent instead of flattening into it.
+    expect(result.contents['RecDefaultTarget/DefA/DefB/DefB.md']).toContain('body of DefB');
+    expect(result.contents['RecDefaultTarget/DefA/DefB/DefC/DefC.md']).toContain('body of DefC');
+    expect(result.contents['RecDefaultTarget/DefA/DefD/DefD.md']).toContain('body of DefD');
+
+    // Each note still owns only its own body.
+    expect(result.contents['RecDefaultTarget/DefA/DefA.md']).not.toContain('body of DefB');
+    expect(result.contents['RecDefaultTarget/DefA/DefB/DefB.md']).not.toContain('body of DefC');
+
+    // Nothing was left beside the source (the pre-#173 location) or dropped in the vault root.
+    expect(result.hasNoteBesideSource).toBe(false);
+    expect(result.hasNoteInVaultRoot).toBe(false);
+
+    // The source note itself is not moved — it stays put and links down into the redirected tree.
+    expect(result.sourceStillInPlace).toBe(true);
+    expect(result.sourceContent).toContain('Intro text');
+    expect(result.sourceContent).toContain('DefA');
+  });
 });
 
 /**

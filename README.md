@@ -175,6 +175,21 @@ Every note it creates is wrapped in the **Split template** (which falls back to 
 
 Unlike `Split note by headings - H<n>`, this command is not tied to a level or to where your cursor is: it starts at the shallowest heading the note actually has and works its way down, so a note that jumps straight from `#` to `###` still nests correctly. It also builds the folder tree regardless of the **Should split into folder** setting — a recursive split without folders could not express a hierarchy — while that setting keeps governing ordinary splits as before. Because this restructures the whole note at once, it asks for confirmation once, up front, listing every note it is about to create (as configured by **Should ask before splitting**); the individual splits then run without further prompting.
 
+By default the tree is built next to the note you split. Turn on **Should split recursively into the default new note folder** (under `Split/extract` in the settings) to have it built in Obsidian's own `Default location for new notes` instead — the same place `Extract selection` puts its note. Only the *top* of the tree moves there; everything below it still nests under its parent, so the hierarchy is preserved rather than flattened:
+
+```text
+Obsidian: Default location for new notes = Inbox
+Source: Notes/Source.md   (# A / ## B / ### C / ## D)
+
+setting off (the default)      setting on
+  Notes/A/A.md                   Inbox/A/A.md
+  Notes/A/B/B.md                 Inbox/A/B/B.md
+  Notes/A/B/C/C.md               Inbox/A/B/C/C.md
+  Notes/A/D/D.md                 Inbox/A/D/D.md
+```
+
+The note you split is never moved — it stays where it is and links down into the new tree. The setting affects no other command, and it has no visible effect while Obsidian's own setting is `Same folder as current file`, since that resolves to the very location the setting replaces.
+
 ## Flatten folder
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves children of the chosen folder up one level, so they become siblings of that folder. Folders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The source folder is left in place; delete it manually if you no longer need it.

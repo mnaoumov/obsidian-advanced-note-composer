@@ -129,6 +129,23 @@ export class PluginSettings {
   public shouldShowSmartCutNotice = true;
   public shouldSplitHeadingsAutomatically = false;
   public shouldSplitIntoFolder = false;
+
+  /**
+   * Whether `Split note by headings recursively...` roots the tree it produces in Obsidian's own
+   * `Default location for new notes` instead of beside the source note (issue #173).
+   *
+   * **Root-only, deliberately.** Only the FIRST pass — the note the command was invoked on — resolves
+   * against that folder; every deeper pass keeps creating its note beside its source, which is what makes
+   * each pass nest one level deeper. Redirecting every pass would put every produced note in one flat
+   * folder and destroy the hierarchy the command exists to build, so it is not offered.
+   *
+   * Off by default, which reproduces the pre-#173 behavior exactly — which is what makes this setting need
+   * no `registerLegacySettingsConverter`: an existing `data.json` simply has no such key and gets `false`.
+   *
+   * With Obsidian set to `Same folder as current file` the setting changes nothing, because that resolution
+   * IS the beside-the-source behavior.
+   */
+  public shouldSplitRecursivelyIntoDefaultNewNoteFolder = false;
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
