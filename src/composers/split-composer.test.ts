@@ -720,6 +720,28 @@ describe('splitFile move mode', () => {
     expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
   });
 
+  it('inserts a `$&` in the moved text literally instead of expanding it as a replacement pattern', async () => {
+    // The token is swapped for the moved content via `String.replace`, whose string replacement treats
+    // `$&`/`$'`/`` $` `` as back-references — so moving text containing them used to write the matched
+    // Token back instead of the text.
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 2, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: '$&',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toBe('target $&body');
+  });
+
   it('does not select the moved content when shouldJumpToMovedContent is off (issue #144 follow-up)', async () => {
     // Identical to the test above except for the flag, so it isolates the gate: the move still runs
     // (the target ends up holding the moved text), but the cursor is left where it was.

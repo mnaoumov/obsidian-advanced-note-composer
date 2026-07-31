@@ -590,9 +590,11 @@ export abstract class ComposerBase {
     const { contentToInsert, existingContent } = params;
     if (this.insertToken !== null) {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
-      // Remember the inserted string so the move flow can select the moved region afterwards.
+      // Remember the inserted string so the move flow can select the moved region afterwards. The
+      // Replacement is a function so a `$&`/`$'` sequence inside the moved text is inserted literally
+      // Instead of being expanded as a replacement pattern.
       this.movedContent = contentToInsert;
-      return existingContent.replace(this.insertToken, contentToInsert);
+      return existingContent.replace(this.insertToken, () => contentToInsert);
     }
     const offset = resolveInsertOffset(existingContent, this.insertMode);
     return `${existingContent.slice(0, offset)}${contentToInsert}${existingContent.slice(offset)}`;
