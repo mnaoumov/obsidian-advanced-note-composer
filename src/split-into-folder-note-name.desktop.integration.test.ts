@@ -123,7 +123,6 @@ describe('split into folder note name', () => {
             throw new Error('Settings tab was not found.');
           }
           const pluginSettingsTab = tab as PluginSettingsTab;
-          pluginSettingsTab.displayLegacy();
           return pluginSettingsTab;
         }
 

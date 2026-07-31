@@ -8,8 +8,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('merge folder preserves a child note title (issue #114)', () => {
@@ -89,7 +87,6 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))

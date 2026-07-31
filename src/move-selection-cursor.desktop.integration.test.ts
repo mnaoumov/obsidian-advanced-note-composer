@@ -11,8 +11,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // Desktop-only: an editor-selection behavior on a move flow, matching the plugin's established
 // Integration convention (no Android emulator wired). G99: pure editor-API behavior (`setSelection`)
 // With no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
@@ -311,7 +309,6 @@ describe('cursor follows the moved content (issue #144)', () => {
           if (!settingTab) {
             throw new Error('Settings tab was not found.');
           }
-          (settingTab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
@@ -447,7 +444,6 @@ describe('cursor follows the moved content (issue #144)', () => {
           if (!settingTab) {
             throw new Error('Settings tab was not found.');
           }
-          (settingTab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));

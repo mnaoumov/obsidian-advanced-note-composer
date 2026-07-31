@@ -174,7 +174,6 @@ describe('better split detection on right click (issue #94)', () => {
           if (!settingTab) {
             throw new Error('Settings tab was not found.');
           }
-          (settingTab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return settingTab as PluginSettingsTab;
         }

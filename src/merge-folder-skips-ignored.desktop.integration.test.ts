@@ -8,8 +8,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // Desktop-only: this is a folder-merge (file-move) flow. It runs desktop-only, matching the plugin's
 // Established integration convention (no Android emulator wired for it). File-move suites can hit the
 // Documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run in one
@@ -166,7 +164,6 @@ describe('merge folder skips ignored files (issue #72)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
