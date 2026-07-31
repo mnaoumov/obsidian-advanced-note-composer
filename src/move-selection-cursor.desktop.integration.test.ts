@@ -25,6 +25,14 @@ interface MoveResult {
   readonly selection: string;
 }
 
+interface OccurrenceResult {
+  readonly activeFilePath: string;
+  readonly firstOccurrenceOffset: number;
+  readonly lastOccurrenceOffset: number;
+  readonly selection: string;
+  readonly selectionStartOffset: number;
+}
+
 describe('cursor follows the moved content (issue #144)', () => {
   it('selects the moved text in the target for move-here, move-to-top, and move-to-bottom', async () => {
     const result = await evalInObsidian({
@@ -61,12 +69,9 @@ describe('cursor follows the moved content (issue #144)', () => {
             predicate: () => activeEditorValue()?.includes('MOVED') === true
           });
 
-          // Then wait for the cursor to land on the moved content (the composer selects it after a
-          // Settle delay once the target editor is ready). Capture the state at the moment the wait
-          // Succeeds — the selection is the observable effect under test, so the wait IS the assertion.
-          // Then wait for the cursor to land on the moved content (the composer selects it after a
-          // Settle delay once the target editor is ready). Capture the state at the moment the wait
-          // Succeeds — the selection is the observable effect under test, so the wait IS the assertion.
+          // Then wait for the cursor to land on the moved content (the composer selects it once the
+          // Target editor is ready). Capture the state at the moment the wait succeeds — the selection
+          // Is the observable effect under test, so the wait IS the assertion.
           let activeFilePath = '';
           let selection = '';
           await waitUntil({
@@ -128,6 +133,91 @@ describe('cursor follows the moved content (issue #144)', () => {
     expect(result.toBottom.selection).toBe('MOVED');
   });
 
+  it('lands on the moved text at the bottom, not on an identical copy earlier in the target (issue #175)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<OccurrenceResult> {
+        const SETTLE_IN_MILLISECONDS = 400;
+        // The target already contains the moved text — with the same blank-line prefix the default
+        // Template adds — BEFORE the paste cursor, which sits at the very end of the note. That is the
+        // Reporter's note shape: moving to the top looked right only because the moved copy happened to
+        // Be the first match.
+        const TARGET_CONTENT = 'top\n\nMOVED here\n\nend';
+
+        const source = await resetFile('cursor-occurrence-source.md', 'AAA MOVED CCC');
+        const target = await resetFile('cursor-occurrence-target.md', TARGET_CONTENT);
+
+        const sourceEditor = await openAndGetEditor(source);
+        sourceEditor.setSelection(sourceEditor.offsetToPos(4), sourceEditor.offsetToPos(9));
+        app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
+        await sleep(SETTLE_IN_MILLISECONDS);
+
+        // Paste cursor at the very END of the target — the case that failed.
+        const targetEditor = await openAndGetEditor(target);
+        targetEditor.setCursor(targetEditor.offsetToPos(TARGET_CONTENT.length));
+        app.commands.executeCommandById(`${pluginId}:move-marked-selection-here`);
+
+        // Capture the observations as the wait succeeds and assert on them OUTSIDE, so a timeout does
+        // Not throw away what was already seen.
+        let activeFilePath = '';
+        let firstOccurrenceOffset = -1;
+        let lastOccurrenceOffset = -1;
+        let selection = '';
+        let selectionStartOffset = -1;
+        await waitUntil({
+          message: 'cursor did not select the moved text in the target',
+          predicate: () => {
+            const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+            activeFilePath = view?.file?.path ?? '';
+            selection = view?.editor.getSelection() ?? '';
+            if (!view || activeFilePath !== target.path || selection !== 'MOVED') {
+              return false;
+            }
+            const value = view.editor.getValue();
+            firstOccurrenceOffset = value.indexOf('MOVED');
+            lastOccurrenceOffset = value.lastIndexOf('MOVED');
+            selectionStartOffset = view.editor.posToOffset(view.editor.getCursor('from'));
+            return true;
+          },
+          timeoutInMilliseconds: 15_000
+        });
+
+        return { activeFilePath, firstOccurrenceOffset, lastOccurrenceOffset, selection, selectionStartOffset };
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not become active`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: 15_000
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    expect(result.activeFilePath).toBe('cursor-occurrence-target.md');
+    expect(result.selection).toBe('MOVED');
+    // There really are two copies, so the assertion below is not vacuous.
+    expect(result.firstOccurrenceOffset).toBeLessThan(result.lastOccurrenceOffset);
+    // The cursor is on the copy that was just moved (the last one), not on the pre-existing one.
+    expect(result.selectionStartOffset).toBe(result.lastOccurrenceOffset);
+  });
+
   // The off case, plus the proof that a move AT THE CURSOR ignores these settings entirely. The test
   // Above is the positive control: it proves this harness DOES observe the jump when the settings are
   // On, so an empty selection here is a real absence rather than a missed window.
@@ -136,9 +226,9 @@ describe('cursor follows the moved content (issue #144)', () => {
       args: { pluginId: PLUGIN_ID },
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
-        // Comfortably past the jump's own delays (200 ms before the target opens + 300 ms before the
-        // Selection is applied), so an empty selection cannot just mean "not yet".
-        const PAST_JUMP_DELAY_IN_MILLISECONDS = 2000;
+        // Comfortably past the jump's own timings (200 ms before the target opens, then a poll for the
+        // Moved content that gives up after 2 s), so an empty selection cannot just mean "not yet".
+        const PAST_JUMP_DELAY_IN_MILLISECONDS = 3000;
         const SETTING_NAMES = [
           'Should jump to content moved to top of file',
           'Should jump to content moved to bottom of file'

@@ -178,6 +178,7 @@ function createEditorDouble(options?: EditorDoubleOptions): Editor {
     posToOffset: vi.fn((pos: MockPosition) => pos.ch),
     replaceSelection: vi.fn(),
     scrollIntoView: vi.fn(),
+    setCursor: vi.fn(),
     setSelection: vi.fn(),
     setSelections: vi.fn()
   });
@@ -694,8 +695,12 @@ describe('splitFile move mode', () => {
     const setEphemeralStateMock = vi.fn();
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
       strictProxy<MarkdownView>({
+        // A real `file` is what makes the view resolve as the TARGET note; the resource lock's
+        // Status-bar reconcile then reads `containerEl.ownerDocument` (there is no status bar in
+        // Jsdom, so it early-returns).
+        containerEl: createDiv(),
         editor: targetEditor,
-        file: null,
+        file: getTargetFile(),
         setEphemeralState: setEphemeralStateMock
       })
     );
@@ -718,6 +723,148 @@ describe('splitFile move mode', () => {
 
     expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
     expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
+  });
+
+  it('selects the moved content itself, not an earlier identical occurrence (issue #175)', async () => {
+    // The reporter moved the word `test` to the BOTTOM of a note that already said 'This is a test'
+    // Earlier, so a first-occurrence search landed the cursor on THAT copy instead of on the moved
+    // Text — which is why the same move to the TOP looked fine (there the moved copy IS the first
+    // Occurrence). Here the target already opens with 'MOVED' and 'MOVED' is moved to the very end, so
+    // The moved copy is the SECOND occurrence, at offset 10.
+    await app.vault.modify(getTargetFile(), 'MOVED here');
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('MOVED hereMOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 10
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 10, line: 0 }, { ch: 15, line: 0 });
+  });
+
+  it('falls back to searching for the moved content when the pinned offset no longer matches', async () => {
+    // A write that lands after the move (the frontmatter merge) can shift the body out from under the
+    // Recorded offset, so the search fallback still has to find it.
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('PREFIX target MOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    // Pinned at 7, but the shifted body puts it at 14.
+    expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 14, line: 0 }, { ch: 19, line: 0 });
+  });
+
+  it('falls back to the trimmed moved text when the template whitespace did not survive', async () => {
+    // The reporter's own template shape: `{{content}}\n`. If the trailing newline is normalized away in
+    // The target, the exact templated string is gone but the text itself is still there.
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('PREFIX target MOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        mergeTemplate: '{{content}}\n',
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 14, line: 0 }, { ch: 19, line: 0 });
+  });
+
+  it('gives up rather than jumping to the top when whitespace-only moved content cannot be located', async () => {
+    // `indexOf('')` answers 0, which would send the cursor to the top of the note — a wrong jump is
+    // Worse than no jump.
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('no-whitespace-here');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+    const consoleDebugMock = vi.fn();
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: consoleDebugMock }),
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      selectedText: ' ',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).not.toHaveBeenCalled();
+    expect(targetEditor.setCursor).not.toHaveBeenCalled();
+    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the moved content'));
   });
 
   it('inserts a `$&` in the moved text literally instead of expanding it as a replacement pattern', async () => {
@@ -801,19 +948,24 @@ describe('splitFile move mode', () => {
     expect(editor.setSelection).not.toHaveBeenCalled();
   });
 
-  it('does not select in the target when the moved content is not found there', async () => {
+  it('gives up with a debug log when the moved content never shows up in the target', async () => {
+    // The give-up path must be observable: a silent return here is exactly what a user reports as
+    // "the cursor did not jump", with nothing in the console to explain it (issue #175).
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('unrelated content');
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
       strictProxy<MarkdownView>({
+        containerEl: createDiv(),
         editor: targetEditor,
-        file: null,
+        file: getTargetFile(),
         setEphemeralState: vi.fn()
       })
     );
+    const consoleDebugMock = vi.fn();
 
     const composer = createComposer({
       capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: consoleDebugMock }),
       editor: createEditorDouble(),
       insertToken: 'TK',
       isNewTargetFile: false,
@@ -829,6 +981,7 @@ describe('splitFile move mode', () => {
     await composer.splitFile();
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
+    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the moved content'));
   });
 });
 
