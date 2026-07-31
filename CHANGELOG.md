@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 5.3.0
+
+- refactor(settings): move the settings tab onto the declarative settings API
+- feat: re #175 re #176
+- chore: update libs and clear the npm audit
+
 ## 5.2.0
 
 - feat: re #174
