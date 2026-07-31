@@ -46,8 +46,9 @@ require('/demoSetup.ts').bindHotkey(app, 'advanced-note-composer:move-marked-sel
 
 ## Keep your place instead of following the moved text
 
-By default the cursor **follows** the moved selection and selects it where it lands - handy when you
-moved the text in order to keep working on it. When you move text to the top or bottom to get it *out
+By default the cursor **follows** the moved selection and selects it where it lands (see **A notice
+instead of a highlight** below to change how that landing is shown) - handy when you moved the text in
+order to keep working on it. When you move text to the top or bottom to get it *out
 of the way*, you would rather stay put. The block below turns the jump off for both edge moves. Manual
 equivalent: toggle **Should jump to content moved to top of file** and **... to bottom of file** in
 **Settings → Advanced Note Composer**.
@@ -62,6 +63,32 @@ cursor and then leaving the cursor elsewhere would make no sense.
 caption: Stop the cursor following content moved to the top/bottom, then reload
 ---
 await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldJumpToMovedContentToBottom: false, shouldJumpToMovedContentToTop: false });
+```
+
+## A notice instead of a highlight
+
+A selection in the target note looks exactly like the highlight on a selection that is still marked and
+waiting to be moved, so "still marked" and "move finished" are hard to tell apart - most confusingly
+while the notes are locked. **Smart cut & paste completion feedback** decides which one you get:
+`Select moved content` (the default) selects the moved text, `Notice` puts the cursor on it *without*
+selecting it and shows a notice instead, and `Select moved content and notice` does both. The cursor
+travels either way. Manual equivalent: pick the mode in **Settings → Advanced Note Composer**.
+
+Mark a paragraph, move it, and compare: with `Notice` the moved text is not highlighted at all, and a
+notice tells you the move is done.
+
+```code-button
+---
+caption: Report finished moves with a notice instead of a selection, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteCompletionFeedback: 'Notice' });
+```
+
+```code-button
+---
+caption: Go back to selecting the moved content, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteCompletionFeedback: 'SelectMovedContent' });
 ```
 
 ## A different template per direction

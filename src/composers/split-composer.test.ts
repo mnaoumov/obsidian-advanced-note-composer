@@ -37,6 +37,7 @@ import { InsertMode } from '../insert-mode.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
+  SmartCutAndPasteCompletionFeedback,
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
@@ -210,6 +211,7 @@ function createPluginSettingsComponentStub(
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
+      smartCutAndPasteCompletionFeedback: SmartCutAndPasteCompletionFeedback.SelectMovedContent,
       smartCutAndPasteTemplate: '',
       smartCutAndPasteToBottomTemplate: '',
       smartCutAndPasteToTopTemplate: '',
@@ -705,11 +707,16 @@ describe('splitFile move mode', () => {
       })
     );
 
+    const showNoticeMock = vi.fn();
     const composer = createComposer({
       capturedSelections: [{ endOffset: 11, startOffset: 0 }],
       editor: createEditorDouble(),
       insertToken: 'TK',
       isNewTargetFile: false,
+      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({
+        showNotice: showNoticeMock,
+        showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: vi.fn() })
+      }),
       selectedText: 'MOVED',
       settingsOverrides: {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
@@ -723,6 +730,8 @@ describe('splitFile move mode', () => {
 
     expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
     expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
+    // The default feedback mode selects and says nothing more — no completion notice.
+    expect(showNoticeMock).not.toHaveBeenCalled();
   });
 
   it('selects the moved content itself, not an earlier identical occurrence (issue #175)', async () => {
@@ -865,6 +874,87 @@ describe('splitFile move mode', () => {
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(targetEditor.setCursor).not.toHaveBeenCalled();
     expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the moved content'));
+  });
+
+  it('places a collapsed cursor and shows a notice instead of selecting, in Notice feedback mode (issue #176)', async () => {
+    // A selection in the target is indistinguishable from the highlight on a still-marked selection,
+    // So this mode moves the cursor onto the moved text without selecting it and says so in a notice.
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+    const showNoticeMock = vi.fn();
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({
+        showNotice: showNoticeMock,
+        showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: vi.fn() })
+      }),
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        smartCutAndPasteCompletionFeedback: SmartCutAndPasteCompletionFeedback.Notice,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setCursor).toHaveBeenCalledWith({ ch: 7, line: 0 });
+    expect(targetEditor.setSelection).not.toHaveBeenCalled();
+    expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
+    expect(showNoticeMock).toHaveBeenCalled();
+  });
+
+  it('both selects and notifies in SelectMovedContentAndNotice feedback mode (issue #176)', async () => {
+    const targetEditor = createEditorDouble();
+    vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        containerEl: createDiv(),
+        editor: targetEditor,
+        file: getTargetFile(),
+        setEphemeralState: vi.fn()
+      })
+    );
+    const showNoticeMock = vi.fn();
+
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 11, startOffset: 0 }],
+      editor: createEditorDouble(),
+      insertToken: 'TK',
+      isNewTargetFile: false,
+      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({
+        showNotice: showNoticeMock,
+        showNoticeAfterDelay: vi.fn().mockReturnValue({ setContent: vi.fn(), [Symbol.dispose]: vi.fn() })
+      }),
+      selectedText: 'MOVED',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        smartCutAndPasteCompletionFeedback: SmartCutAndPasteCompletionFeedback.SelectMovedContentAndNotice,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      },
+      smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
+      targetCursorOffset: 7
+    });
+
+    await composer.splitFile();
+
+    expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
+    expect(targetEditor.setCursor).not.toHaveBeenCalled();
+    expect(showNoticeMock).toHaveBeenCalled();
   });
 
   it('inserts a `$&` in the moved text literally instead of expanding it as a replacement pattern', async () => {

@@ -15,6 +15,7 @@ import {
   FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
+  SmartCutAndPasteCompletionFeedback,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
@@ -635,7 +636,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setDesc(createFragment((f) => {
             f.appendText('Whether the cursor follows the marked selection after ');
             appendCodeBlock(f, 'Move marked selection to top of file');
-            f.appendText(', selecting the moved text where it lands.');
+            f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
+            appendCodeBlock(f, 'Smart cut & paste completion feedback');
+            f.appendText(' below.');
             f.createEl('br');
             f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
           }))
@@ -649,7 +652,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           .setDesc(createFragment((f) => {
             f.appendText('Whether the cursor follows the marked selection after ');
             appendCodeBlock(f, 'Move marked selection to bottom of file');
-            f.appendText(', selecting the moved text where it lands.');
+            f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
+            appendCodeBlock(f, 'Smart cut & paste completion feedback');
+            f.appendText(' below.');
             f.createEl('br');
             f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
             f.createEl('br');
@@ -657,6 +662,36 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }))
           .addToggle((toggle) => {
             this.bind({ propertyName: 'shouldJumpToMovedContentToBottom', valueComponent: toggle });
+          });
+      })
+      .addSettingEx((setting: SettingEx) => {
+        setting
+          .setName('Smart cut & paste completion feedback')
+          .setDesc(createFragment((f) => {
+            f.appendText('How a finished smart cut & paste move tells you where the marked selection landed.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Select moved content');
+            f.appendText(' - select the moved text in the target note.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Notice');
+            f.appendText(' - put the cursor on the moved text without selecting it, and show a notice instead.');
+            f.createEl('br');
+            appendCodeBlock(f, 'Select moved content and notice');
+            f.appendText(' - do both.');
+            f.createEl('br');
+            f.appendText('A selection in the target note looks exactly like the highlight on a selection that is still marked and waiting to be moved, so the two states are hard to tell apart — especially while the notes are locked. The notice modes remove that ambiguity; the cursor still travels to the moved text either way.');
+            f.createEl('br');
+            f.appendText('This applies only when the move jumps at all: with the jump turned off for the direction, neither the cursor nor a notice moves.');
+          }))
+          .addDropdown((dropdown) => {
+            dropdown.addOptions({
+              /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+              [SmartCutAndPasteCompletionFeedback.SelectMovedContent]: 'Select moved content',
+              [SmartCutAndPasteCompletionFeedback.Notice]: 'Notice',
+              [SmartCutAndPasteCompletionFeedback.SelectMovedContentAndNotice]: 'Select moved content and notice'
+              /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+            });
+            this.bind({ propertyName: 'smartCutAndPasteCompletionFeedback', valueComponent: dropdown });
           });
       })
       .addSettingEx((setting: SettingEx) => {

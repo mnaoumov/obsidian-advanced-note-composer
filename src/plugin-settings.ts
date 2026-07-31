@@ -55,6 +55,30 @@ export enum FrontmatterTitleMode {
 }
 
 /**
+ * How a finished smart cut & paste move announces itself in the target note (issue #176).
+ *
+ * Selecting the moved text is the original behavior and stays the default, so nothing changes for an
+ * existing vault and no `registerLegacySettingsConverter` is needed — a `data.json` without the key
+ * simply gets {@link SmartCutAndPasteCompletionFeedback.SelectMovedContent}.
+ *
+ * The reason the other two exist: a selection in the target looks exactly like the plugin's own
+ * marked-selection highlight in the source, so "this text is still marked, waiting to be moved" and
+ * "the move finished, here is where it landed" are indistinguishable — most confusingly while the notes
+ * are locked. {@link SmartCutAndPasteCompletionFeedback.Notice} therefore still moves the cursor onto
+ * the moved text (leaving text at the cursor and the cursor elsewhere is incoherent — the same
+ * reasoning that makes the at-cursor move always jump) but leaves it collapsed, and says so in a
+ * notice instead of by highlighting.
+ *
+ * All three are gated by the same jump settings: with the move's jump turned off, nothing happens at
+ * all — no cursor move, no notice.
+ */
+export enum SmartCutAndPasteCompletionFeedback {
+  Notice = 'Notice',
+  SelectMovedContent = 'SelectMovedContent',
+  SelectMovedContentAndNotice = 'SelectMovedContentAndNotice'
+}
+
+/**
  * Which smart cut & paste move a split is: the move at the cursor (`Move marked selection here`, plain or
  * advanced, including the `Move marked selection at cursor` notice button), or a move to the top/bottom of
  * the target note. Supplied by the command handler — only it knows which move this is — and its presence on
@@ -165,6 +189,13 @@ export class PluginSettings {
   public shouldSwapEntireFolderStructureByDefault = true;
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
+
+  /**
+   * How a finished smart cut & paste move announces itself in the target note (issue #176). Defaults to
+   * the original select-the-moved-text behavior, so the notice modes are strictly opt-in.
+   */
+  public smartCutAndPasteCompletionFeedback = SmartCutAndPasteCompletionFeedback.SelectMovedContent;
+
   /**
    * The template a smart cut & paste move applies, and the base of the per-direction chain (issue #174):
    *

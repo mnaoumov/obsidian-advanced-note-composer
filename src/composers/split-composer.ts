@@ -8,6 +8,8 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import { MarkdownView } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
@@ -20,6 +22,7 @@ import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
 import {
   Action,
+  SmartCutAndPasteCompletionFeedback,
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
@@ -336,6 +339,43 @@ export class SplitComposer extends ComposerBase {
     this.editor.setSelections(editorSelections);
   }
 
+  /**
+   * Reports the finished move on the located range, the way
+   * the `smartCutAndPasteCompletionFeedback` setting asks for (issue #176). Every mode scrolls
+   * the moved content into view — the cursor follows the move regardless; what differs is whether the
+   * moved text is left selected, and whether a notice says the move is done.
+   *
+   * @param editor - The target note's editor.
+   * @param range - Where the moved content sits in that editor.
+   */
+  private async applyMovedContentFeedback(editor: Editor, range: SplitComposerMovedContentRange): Promise<void> {
+    const feedback = this.pluginSettingsComponent.settings.smartCutAndPasteCompletionFeedback;
+    const shouldSelect = feedback !== SmartCutAndPasteCompletionFeedback.Notice;
+
+    if (shouldSelect) {
+      // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
+      // Collapses the selection.
+      editor.setSelection(range.startPos, range.endPos);
+    } else {
+      // Collapsed caret: the cursor still travels to the moved text, but nothing is highlighted, so it
+      // Cannot be mistaken for the still-pending marked selection.
+      editor.setCursor(range.startPos);
+    }
+    editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
+
+    if (feedback === SmartCutAndPasteCompletionFeedback.SelectMovedContent) {
+      return;
+    }
+
+    this.pluginNoticeComponent.showNotice(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Moved the marked selection into ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.appendText('.');
+      })
+    );
+  }
+
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
     const insertToken = ensureNonNullable(this.insertToken);
     // A pinned `targetCursorOffset` (the paste cursor) is used as-is; otherwise the offset is derived
@@ -539,8 +579,10 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
-   * Selects the just-moved content in the (freshly re-opened) target note so the cursor follows the move
-   * (issue #144), with any template-added leading/trailing whitespace trimmed off.
+   * Lands the cursor on the just-moved content in the (freshly re-opened) target note so the cursor
+   * follows the move (issue #144), with any template-added leading/trailing whitespace trimmed off, and
+   * reports the move the way {@link PluginSettings.smartCutAndPasteCompletionFeedback} asks for
+   * (issue #176).
    *
    * The re-opened editor needs a moment to load its content and apply its own default cursor, so this
    * polls for the moved content rather than guessing a fixed delay. A no-op when the target view never
@@ -560,10 +602,7 @@ export class SplitComposer extends ComposerBase {
       if (view?.file?.path === this.targetFile.path) {
         const range = this.resolveMovedContentRange(view.editor, movedContent);
         if (range) {
-          // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
-          // Collapses the selection.
-          view.editor.setSelection(range.startPos, range.endPos);
-          view.editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
+          await this.applyMovedContentFeedback(view.editor, range);
           return;
         }
       }

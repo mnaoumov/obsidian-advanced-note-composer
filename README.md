@@ -103,11 +103,18 @@ The **Smart cut & paste** settings group lets you tailor this notice:
   tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
   hotkey you assigned to it keeps working.
 - **Should jump to content moved to top of file** / **Should jump to content moved to bottom of file**
-  (both on by default) — whether the cursor follows the marked selection to where it lands, selecting the
-  moved text. Turn one off when you use that move to get text *out of the way*: the cursor then stays
-  where the selection was cut from, so you keep your place. There is deliberately no such setting for
-  `Move marked selection here` / `at cursor` — inserting text at the cursor and then leaving the cursor
-  somewhere else makes no sense, so that move always jumps.
+  (both on by default) — whether the cursor follows the marked selection to where it lands. Turn one off
+  when you use that move to get text *out of the way*: the cursor then stays where the selection was cut
+  from, so you keep your place. There is deliberately no such setting for `Move marked selection here` /
+  `at cursor` — inserting text at the cursor and then leaving the cursor somewhere else makes no sense,
+  so that move always jumps.
+- **Smart cut & paste completion feedback** (`Select moved content` by default) — how a finished move
+  shows you where the marked selection landed. `Select moved content` selects the moved text (the
+  original behavior). `Notice` puts the cursor on the moved text *without* selecting it and shows a
+  notice instead — useful because a selection in the target looks exactly like the highlight on a
+  selection that is still marked and waiting to be moved, which is hard to tell apart, especially while
+  the notes are locked. `Select moved content and notice` does both. The cursor travels either way; this
+  only changes how the landing is shown, and none of it happens when the move's jump is turned off above.
 - **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
   at the cursor (`Move marked selection here` / `at cursor`), so a smart-cut paste can be formatted
   differently from an ordinary split into a new note. It is *also* the template `to top of file` and
