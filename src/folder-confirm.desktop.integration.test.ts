@@ -8,8 +8,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // The flatten/move confirmation dialogs are v8-ignored modal UI (see flatten-folder-command-handler.ts /
 // Move-folder-command-handler.ts); this suite drives the REAL dialog DOM against a real Obsidian to prove
 // The wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
@@ -93,7 +91,6 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
@@ -188,7 +185,6 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
@@ -302,7 +298,6 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
@@ -411,7 +406,6 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))

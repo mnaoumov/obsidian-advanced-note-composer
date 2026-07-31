@@ -11,8 +11,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // Desktop-only: `Extract this heading...` is a cross-platform editor command, but this plugin's
 // Behavioral integration suites all run desktop-only (there is no Android emulator wired for this
 // Feature and the plugin follows the established desktop-only integration convention). The command
@@ -102,7 +100,6 @@ describe('extract this heading from the body (issue #143)', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))

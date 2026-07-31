@@ -2,6 +2,8 @@ import type {
   BaseComponent,
   DropdownComponent,
   Plugin,
+  SettingDefinition,
+  SettingGroup,
   TextComponent,
   ToggleComponent
 } from 'obsidian';
@@ -18,7 +20,6 @@ import { getDebugController } from 'obsidian-dev-utils/debug';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
-import { SettingGroupEx } from 'obsidian-dev-utils/obsidian/setting-group-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -39,6 +40,10 @@ const PLUGIN_ID = 'test-plugin-id';
 
 interface AppStatics {
   createConfigured__(): App;
+}
+
+interface DisabledPredicateRow {
+  disabled?: (() => boolean) | boolean;
 }
 
 interface NamedComponent<T extends BaseComponent> {
@@ -140,15 +145,6 @@ function findDesc(name: string): string {
   return entry.text;
 }
 
-function findText(name: string): TextComponent {
-  const entry = texts.find((text) => text.name === name);
-  if (!entry) {
-    throw new Error(`Text "${name}" was not rendered.`);
-  }
-
-  return entry.component;
-}
-
 function findToggle(name: string): ToggleComponent {
   const entry = toggles.find((toggle) => toggle.name === name);
   if (!entry) {
@@ -166,7 +162,7 @@ describe('PluginSettingsTab', () => {
 
   it('should render all setting group headings in order', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(headings).toEqual([
       'Common',
@@ -186,7 +182,7 @@ describe('PluginSettingsTab', () => {
 
   it('should render the expected named settings', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     const allNames = [...toggles, ...texts, ...dropdowns].map((entry) => entry.name);
     expect(allNames).toContain('Should allow only current folder');
@@ -201,7 +197,7 @@ describe('PluginSettingsTab', () => {
 
   it('should offer the three flatten modes, defaulting to the pre-#170 behavior', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     const flattenMode = dropdowns.find((dropdown) => dropdown.name === 'Flatten mode');
     const options = [...(flattenMode?.component.selectEl.options ?? [])].map((option) => option.value);
@@ -215,7 +211,7 @@ describe('PluginSettingsTab', () => {
 
   it('should explain the path-string and regular-expression forms in the include/exclude path descriptions', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     for (const name of ['Include paths', 'Exclude paths']) {
       const desc = findDesc(name);
@@ -226,42 +222,42 @@ describe('PluginSettingsTab', () => {
 
   it('should render the show-modal-instructions toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should show modal instructions').getValue()).toBe(true);
   });
 
   it('should render the lock-all-notes toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
   });
 
   it('should render the always-merge-excluded-items toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should always merge excluded items').getValue()).toBe(false);
   });
 
   it('should render the block-commands-on-excluded-paths toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should block commands on excluded paths').getValue()).toBe(false);
   });
 
   it('should render the ask-before-swapping toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should ask before swapping').getValue()).toBe(true);
   });
 
   it('should render the jump-to-moved-content toggles bound to their settings', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should jump to content moved to top of file').getValue()).toBe(true);
     expect(findToggle('Should jump to content moved to bottom of file').getValue()).toBe(true);
@@ -269,30 +265,30 @@ describe('PluginSettingsTab', () => {
 
   it('should render the split-into-folder toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should split into folder').getValue()).toBe(false);
   });
 
   it('should render the split-into-folder note name highlighter bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findCodeHighlighter('Split into folder note name').getValue()).toBe('');
   });
 
   it('should render the split-headings-automatically toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should split headings automatically').getValue()).toBe(false);
   });
 
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
     const firstRenderHeadings = headings.length;
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(headings.length).toBe(firstRenderHeadings * 2);
   });
@@ -307,7 +303,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     expect(findToggle('Should show console debug messages').getValue()).toBe(true);
   });
@@ -322,7 +318,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     findToggle('Should show console debug messages').setValue(true);
     expect(enableMock).toHaveBeenCalledWith(PLUGIN_ID);
@@ -338,7 +334,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
     findToggle('Should show console debug messages').setValue(false);
     expect(disableMock).toHaveBeenCalledWith(PLUGIN_ID);
@@ -348,9 +344,9 @@ describe('debug controller toggle', () => {
 describe('shouldReplaceInvalidTitleCharacters', () => {
   it('should enable the replacement text input when replacing invalid characters is on', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
-    expect(findText('Replacement string').disabled).toBe(false);
+    expect(isRowDisabled(tab, 'Replacement string')).toBe(false);
   });
 
   it('should disable the replacement text input when replacing invalid characters is off', async () => {
@@ -358,22 +354,25 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     castTo<PluginSettings>(settingsComponent.settings).shouldReplaceInvalidTitleCharacters = false;
 
     const tab = await createSettingsTab(settingsComponent);
-    tab.displayLegacy();
+    renderRows(tab);
 
-    expect(findText('Replacement string').disabled).toBe(true);
+    // The predicate is what the tab owns; Obsidian applies it — and propagates it to the row's
+    // Components — on every render and on every `refreshDomState()`.
+    expect(isRowDisabled(tab, 'Replacement string')).toBe(true);
   });
 
-  it('should re-render the tab when the replace-invalid-characters toggle changes', async () => {
+  it('should re-evaluate the predicates when the replace-invalid-characters toggle changes', async () => {
     const tab = await createSettingsTab();
-    tab.displayLegacy();
+    renderRows(tab);
 
-    const displaySpy = vi.spyOn(tab, 'displayLegacy');
-    // The toggle is bound with an `onChanged` handler that re-invokes `displayLegacy`.
-    // `bind` wires an async onChange, so the re-render happens after the microtask flush.
+    const refreshDomStateSpy = vi.fn();
+    tab.refreshDomState = refreshDomStateSpy;
+    // The toggle is bound with an `onChanged` handler that asks Obsidian to re-evaluate the predicates.
+    // `bind` wires an async onChange, so it happens after the microtask flush.
     findToggle('Should replace invalid characters').setValue(false);
 
     await vi.waitFor(() => {
-      expect(displaySpy).toHaveBeenCalled();
+      expect(refreshDomStateSpy).toHaveBeenCalled();
     });
   });
 });
@@ -381,18 +380,79 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 type AddComponentFn = (cb: (component: BaseComponent) => void) => Setting;
 type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
 
-function installSettingSpies(): void {
-  const originalSetHeading = SettingGroupEx.prototype.setHeading;
-  vi.spyOn(SettingGroupEx.prototype, 'setHeading').mockImplementation(function setHeadingSpy(this: SettingGroupEx, heading: DocumentFragment | string): SettingGroupEx {
-    headings.push(castTo<string>(heading));
-    return originalSetHeading.call(this, heading);
-  });
+/**
+ * Flattens the declared items into the rows they contain, recording the group headings on the way.
+ *
+ * @param tab - The settings tab.
+ * @param shouldRecordHeadings - Whether to record the headings.
+ * @returns The declared rows.
+ */
+function collectRows(tab: PluginSettingsTab, shouldRecordHeadings = false): SettingDefinition[] {
+  const rows: SettingDefinition[] = [];
+  for (const item of tab.getSettingDefinitions()) {
+    if ('items' in item) {
+      if (shouldRecordHeadings && 'heading' in item) {
+        headings.push(castTo<string>(item.heading));
+      }
 
+      rows.push(...castTo<SettingDefinition[]>(item.items ?? []));
+    } else {
+      rows.push(castTo<SettingDefinition>(item));
+    }
+  }
+
+  return rows;
+}
+
+function installSettingSpies(): void {
   spyOnAdd('addToggle', toggles);
   spyOnAdd('addText', texts);
   spyOnAdd('addDropdown', dropdowns);
   spyOnAddCodeHighlighter();
   spyOnSetDesc();
+}
+
+/**
+ * Evaluates a declared row's `disabled` predicate.
+ *
+ * @param tab - The settings tab.
+ * @param name - The row name.
+ * @returns Whether the row is disabled.
+ */
+function isRowDisabled(tab: PluginSettingsTab, name: string): boolean {
+  const row = collectRows(tab).find((candidate) => 'name' in candidate && candidate.name === name);
+  if (!row) {
+    throw new Error(`Row "${name}" was not declared.`);
+  }
+
+  const disabled = castTo<DisabledPredicateRow>(row).disabled;
+  if (typeof disabled === 'function') {
+    return disabled();
+  }
+
+  return disabled ?? false;
+}
+
+/**
+ * Renders the declared rows the way Obsidian does when the tab is opened: it applies the name and the
+ * description, then runs the row's `render` callback.
+ *
+ * @param tab - The settings tab.
+ */
+function renderRows(tab: PluginSettingsTab): void {
+  for (const row of collectRows(tab, true)) {
+    if (!('render' in row)) {
+      continue;
+    }
+
+    const setting = new SettingEx(tab.containerEl);
+    setting.setName(row.name);
+    if (row.desc) {
+      setting.setDesc(row.desc);
+    }
+
+    row.render(setting, castTo<SettingGroup>(null));
+  }
 }
 
 function spyOnAdd<T extends BaseComponent>(

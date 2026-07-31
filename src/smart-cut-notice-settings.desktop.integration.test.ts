@@ -11,8 +11,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('Smart cut & paste notice settings', () => {
@@ -116,7 +114,6 @@ describe('Smart cut & paste notice settings', () => {
           if (!settingTab) {
             throw new Error('Settings tab was not found.');
           }
-          (settingTab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));

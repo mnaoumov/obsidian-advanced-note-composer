@@ -8,8 +8,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // The swap confirmation dialog is v8-ignored modal UI (see swap-file-modal.ts / swap-folder-modal.ts);
 // This suite drives the REAL dialog DOM against a real Obsidian to prove the wiring (issue #74).
 // G99: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
@@ -89,7 +87,6 @@ describe('swap confirmation dialog', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
@@ -193,7 +190,6 @@ describe('swap confirmation dialog', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
@@ -292,7 +288,6 @@ describe('swap confirmation dialog', () => {
           if (!tab) {
             throw new Error('Settings tab was not found.');
           }
-          (tab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))

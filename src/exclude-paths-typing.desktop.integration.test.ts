@@ -6,8 +6,6 @@ import {
   it
 } from 'vitest';
 
-import type { PluginSettingsTab } from './plugin-settings-tab.ts';
-
 // Desktop-only: this drives the plugin settings tab, which is where the report came from (matching the
 // Plugin's established integration convention; no Android emulator is wired for it). G99: it uses only
 // The stable settings-tab DOM (`.setting-item` / `textarea`) and public APIs, with no dependence on
@@ -154,7 +152,6 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           if (!settingTab) {
             throw new Error('Settings tab was not found.');
           }
-          (settingTab as PluginSettingsTab).displayLegacy();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const settingItem = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'))
