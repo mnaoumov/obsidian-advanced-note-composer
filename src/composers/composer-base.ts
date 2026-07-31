@@ -202,6 +202,18 @@ export abstract class ComposerBase {
    */
   protected movedContent: null | string = null;
 
+  /**
+   * Where {@link movedContent} starts in the target note's content, captured by {@link insertContent}
+   * from the position of the {@link insertToken} it replaced.
+   *
+   * Searching the target for `movedContent` finds its FIRST occurrence, which is the moved text only
+   * when nothing identical precedes it — so moving `test` to the BOTTOM of a note that already said
+   * `This is a test` landed the cursor on that earlier copy, while the same move to the top looked
+   * correct (issue #175). The token is unique, so the offset it occupied pins the moved region exactly.
+   * Stays `null` for the append/prepend flow (no token).
+   */
+  protected movedContentOffset: null | number = null;
+
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly resourceLockComponent: ResourceLockComponent;
@@ -590,9 +602,13 @@ export abstract class ComposerBase {
     const { contentToInsert, existingContent } = params;
     if (this.insertToken !== null) {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
-      // Remember the inserted string so the move flow can select the moved region afterwards.
+      // Remember the inserted string AND the offset it lands at, so the move flow can select exactly
+      // The moved region afterwards rather than the first string that happens to look like it
+      // (issue #175). The replacement is a function so a `$&`/`$'` sequence inside the moved text is
+      // Inserted literally instead of being expanded as a replacement pattern.
       this.movedContent = contentToInsert;
-      return existingContent.replace(this.insertToken, contentToInsert);
+      this.movedContentOffset = existingContent.indexOf(this.insertToken);
+      return existingContent.replace(this.insertToken, () => contentToInsert);
     }
     const offset = resolveInsertOffset(existingContent, this.insertMode);
     return `${existingContent.slice(0, offset)}${contentToInsert}${existingContent.slice(offset)}`;

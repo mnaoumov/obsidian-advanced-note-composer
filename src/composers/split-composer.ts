@@ -1,5 +1,6 @@
 import type {
   Editor,
+  EditorPosition,
   EditorSelection,
   Pos
 } from 'obsidian';
@@ -7,6 +8,8 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import { MarkdownView } from 'obsidian';
+import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
@@ -19,6 +22,7 @@ import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
 import {
   Action,
+  SmartCutAndPasteCompletionFeedback,
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
@@ -96,6 +100,15 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 interface SplitComposerIsRangeOverlappingCapturedSelectionParams {
   readonly endOffset: number;
   readonly startOffset: number;
+}
+
+/**
+ * The editor positions the moved content occupies in the target note, with the template's own
+ * leading/trailing whitespace already trimmed off.
+ */
+interface SplitComposerMovedContentRange {
+  readonly endPos: EditorPosition;
+  readonly startPos: EditorPosition;
 }
 
 export class SplitComposer extends ComposerBase {
@@ -242,16 +255,13 @@ export class SplitComposer extends ComposerBase {
 
         // For a smart cut & paste move (mark → move here / at cursor / to top / bottom), land the cursor
         // On the moved content in the freshly opened target note, instead of leaving it wherever the
-        // Opened note happened to place it (issue #144). Wait for the just-opened editor to settle
-        // (load its content and apply its own default cursor) first, so the selection sticks.
+        // Opened note happened to place it (issue #144).
         // Whether to jump is decided by the command handler (a move at the cursor always does; the
         // Top/bottom moves each read their own setting), because moving a selection out of the way is a
         // Different intent from moving it to work on it. When off, the cursor stays where the selection
         // Was cut from — `revealCursor` above already brought it into view.
         if (this.smartCutAndPasteMoveKind && this.shouldJumpToMovedContent) {
-          const DELAY_BEFORE_SELECT_IN_MILLISECONDS = 300;
-          await sleep(DELAY_BEFORE_SELECT_IN_MILLISECONDS);
-          this.selectMovedContentInTarget();
+          await this.revealMovedContentInTarget();
         }
       }
     } catch (error) {
@@ -327,6 +337,43 @@ export class SplitComposer extends ComposerBase {
     }
 
     this.editor.setSelections(editorSelections);
+  }
+
+  /**
+   * Reports the finished move on the located range, the way
+   * the `smartCutAndPasteCompletionFeedback` setting asks for (issue #176). Every mode scrolls
+   * the moved content into view — the cursor follows the move regardless; what differs is whether the
+   * moved text is left selected, and whether a notice says the move is done.
+   *
+   * @param editor - The target note's editor.
+   * @param range - Where the moved content sits in that editor.
+   */
+  private async applyMovedContentFeedback(editor: Editor, range: SplitComposerMovedContentRange): Promise<void> {
+    const feedback = this.pluginSettingsComponent.settings.smartCutAndPasteCompletionFeedback;
+    const shouldSelect = feedback !== SmartCutAndPasteCompletionFeedback.Notice;
+
+    if (shouldSelect) {
+      // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
+      // Collapses the selection.
+      editor.setSelection(range.startPos, range.endPos);
+    } else {
+      // Collapsed caret: the cursor still travels to the moved text, but nothing is highlighted, so it
+      // Cannot be mistaken for the still-pending marked selection.
+      editor.setCursor(range.startPos);
+    }
+    editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
+
+    if (feedback === SmartCutAndPasteCompletionFeedback.SelectMovedContent) {
+      return;
+    }
+
+    this.pluginNoticeComponent.showNotice(
+      await createFragmentAsync(async (f) => {
+        f.appendText('Moved the marked selection into ');
+        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.appendText('.');
+      })
+    );
   }
 
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
@@ -457,6 +504,65 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
+   * Resolves the {@link SplitComposerMovedContentRange} the moved content occupies in `editor`, or
+   * `null` when it cannot be located there (yet).
+   *
+   * @param editor - The target note's editor.
+   * @param movedContent - The exact string that replaced the insert token.
+   * @returns The range, or `null`.
+   */
+  private resolveMovedContentRange(editor: Editor, movedContent: string): null | SplitComposerMovedContentRange {
+    const editorValue = editor.getValue();
+    const startOffset = this.resolveMovedTextStartOffset(editorValue, movedContent);
+    if (startOffset === null) {
+      return null;
+    }
+
+    // Clamp to the document, mirroring `computeHighlightRangesForFile`: the editor is read live, so it
+    // Can be a revision behind the content the offsets were computed against.
+    const endOffset = Math.min(startOffset + movedContent.trim().length, editorValue.length);
+    return {
+      endPos: editor.offsetToPos(endOffset),
+      startPos: editor.offsetToPos(startOffset)
+    };
+  }
+
+  /**
+   * Resolves where the moved TEXT starts in `editorValue` — the template's own leading whitespace
+   * already skipped, so the cursor lands on the text rather than on the blank lines wrapping it.
+   *
+   * @param editorValue - The target editor's current content.
+   * @param movedContent - The exact string that replaced the insert token.
+   * @returns The offset, or `null` when the moved content cannot be located.
+   */
+  private resolveMovedTextStartOffset(editorValue: string, movedContent: string): null | number {
+    const leadingWhitespaceLength = movedContent.length - movedContent.trimStart().length;
+
+    // The offset the unique insert token occupied pins the moved region exactly, so it is the only
+    // Candidate that cannot pick the wrong copy (issue #175). Trusted only when the editor really does
+    // Hold the moved content there — a later write (the frontmatter merge) can shift the body under it.
+    if (this.movedContentOffset !== null && editorValue.startsWith(movedContent, this.movedContentOffset)) {
+      return this.movedContentOffset + leadingWhitespaceLength;
+    }
+
+    // Fallbacks for a shifted body. Both take the FIRST occurrence, so on a note that already contains
+    // The same text they can land on the earlier copy — a last resort, never the primary path.
+    const index = editorValue.indexOf(movedContent);
+    if (index !== -1) {
+      return index + leadingWhitespaceLength;
+    }
+
+    const trimmedContent = movedContent.trim();
+    if (trimmedContent === '') {
+      // Whitespace-only move: `indexOf('')` would answer 0 and send the cursor to the top of the note.
+      return null;
+    }
+
+    const trimmedIndex = editorValue.indexOf(trimmedContent);
+    return trimmedIndex === -1 ? null : trimmedIndex;
+  }
+
+  /**
    * Scrolls the active source view to the current cursor line (preserving the cursor), so that after
    * the source note is reopened the user lands where the extraction happened instead of at the top.
    * A no-op for multiple-split (no reopen happens) or when there is no active markdown view.
@@ -473,33 +579,40 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
-   * Selects the just-moved content in the (freshly re-opened) target note so the cursor follows the move
-   * (issue #144). Locates the exact string {@link ComposerBase.movedContent} that replaced the insert
-   * token in the target's current content, and selects it with any template-added leading/trailing
-   * whitespace trimmed off. A no-op when there is no active markdown view or the content cannot be found.
+   * Lands the cursor on the just-moved content in the (freshly re-opened) target note so the cursor
+   * follows the move (issue #144), with any template-added leading/trailing whitespace trimmed off, and
+   * reports the move the way {@link PluginSettings.smartCutAndPasteCompletionFeedback} asks for
+   * (issue #176).
+   *
+   * The re-opened editor needs a moment to load its content and apply its own default cursor, so this
+   * polls for the moved content rather than guessing a fixed delay. A no-op when the target view never
+   * shows up or the content cannot be located — logged rather than passed over in silence, since that
+   * is exactly the failure a user reports as "the cursor did not jump" (issue #175).
    */
-  private selectMovedContentInTarget(): void {
+  private async revealMovedContentInTarget(): Promise<void> {
+    const POLL_INTERVAL_IN_MILLISECONDS = 50;
+    const POLL_TIMEOUT_IN_MILLISECONDS = 2000;
     const movedContent = ensureNonNullable(this.movedContent);
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view) {
-      return;
+
+    for (let elapsed = 0; elapsed <= POLL_TIMEOUT_IN_MILLISECONDS; elapsed += POLL_INTERVAL_IN_MILLISECONDS) {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      // The active view must be the TARGET note: the open above is asynchronous, and applying an offset
+      // To whatever note happens to be showing would select arbitrary text in the wrong file. A view
+      // Still loading (no file yet) simply fails the check and is retried on the next poll.
+      if (view?.file?.path === this.targetFile.path) {
+        const range = this.resolveMovedContentRange(view.editor, movedContent);
+        if (range) {
+          await this.applyMovedContentFeedback(view.editor, range);
+          return;
+        }
+      }
+
+      await sleep(POLL_INTERVAL_IN_MILLISECONDS);
     }
 
-    const editor = view.editor;
-    const index = editor.getValue().indexOf(movedContent);
-    if (index === -1) {
-      return;
-    }
-
-    const leadingWhitespaceLength = movedContent.length - movedContent.trimStart().length;
-    const startOffset = index + leadingWhitespaceLength;
-    const endOffset = startOffset + movedContent.trim().length;
-    const startPos = editor.offsetToPos(startOffset);
-    const endPos = editor.offsetToPos(endOffset);
-    // Select the moved region and scroll it into view. NOTE: do NOT follow this with
-    // `setEphemeralState({ line })` — that repositions the caret and collapses the selection.
-    editor.setSelection(startPos, endPos);
-    editor.scrollIntoView({ from: startPos, to: endPos }, true);
+    this.consoleDebugComponent.consoleDebug(
+      `Could not locate the moved content in ${this.targetFile.path} to jump to it: ${JSON.stringify(movedContent)} at offset ${String(this.movedContentOffset)}`
+    );
   }
 }
 
