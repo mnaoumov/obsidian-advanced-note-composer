@@ -14,6 +14,7 @@ import {
   FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
+  MergeFolderIntoFileLocation,
   SmartCutAndPasteCompletionFeedback,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
@@ -1045,6 +1046,48 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
                 this.bind({ propertyName: 'mergeFolderIntoFileNoteNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Where the merged note is created.');
+              f.createEl('br');
+              f.appendText('- ');
+              appendCodeBlock(f, 'Beside the folder');
+              f.appendText(' - in the merged folder\'s own parent, next to the folder itself.');
+              f.createEl('br');
+              f.appendText('- ');
+              appendCodeBlock(f, 'Inside the folder');
+              f.appendText(' - in the merged folder itself, so the folder is left holding only the merged note.');
+              f.createEl('br');
+              f.appendText('- ');
+              appendCodeBlock(f, 'Default location for new notes');
+              f.appendText(' - wherever Obsidian would put a new note, per its own setting.');
+              f.createEl('br');
+              f.appendText('A colliding name is de-duplicated in every case.');
+              f.createEl('br');
+              f.appendText(
+                'Note that with '
+              );
+              appendCodeBlock(f, 'Inside the folder');
+              f.appendText(
+                ' the merged folder is no longer empty afterwards, so it is not removed even when '
+              );
+              appendCodeBlock(f, 'Empty folder behavior after merging a folder');
+              f.appendText(' would otherwise delete it. Its emptied sub-folders are still cleaned up.');
+            }),
+            name: 'Merge folder into file location',
+            render: (setting) => {
+              setting.addDropdown((dropdown) => {
+                dropdown.addOptions({
+                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                  [MergeFolderIntoFileLocation.BesideFolder]: 'Beside the folder',
+                  [MergeFolderIntoFileLocation.InsideFolder]: 'Inside the folder',
+                  [MergeFolderIntoFileLocation.DefaultNewNoteLocation]: 'Default location for new notes'
+                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+                });
+                this.bind({ propertyName: 'mergeFolderIntoFileLocation', valueComponent: dropdown });
               });
             }
           })
