@@ -29,7 +29,8 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
-  FrontmatterMergeStrategy
+  FrontmatterMergeStrategy,
+  MergeFolderIntoFileLocation
 } from '../plugin-settings.ts';
 import { MergeFolderIntoFileCommandHandler } from './merge-folder-into-file-command-handler.ts';
 
@@ -92,6 +93,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Keep,
         isPathIgnored: () => false,
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.BesideFolder,
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
         shouldAddCommandsToSubmenu: true,
@@ -180,6 +182,84 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     expect(noticesContain(showNotice, 'has no markdown notes to merge')).toBe(true);
     expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  // Issue #178. The report is ambiguous — it says the note "is moved to default folder right away" AND
+  // Asks to keep it in the parent folder, which is what already happened — so all three positions are
+  // Offered rather than one of the two readings being guessed at.
+  describe('merged note location (issue #178)', () => {
+    it('should create the note beside the folder by default, which is the existing behavior', async () => {
+      initApp({ 'parent/src/a.md': 'alpha body' });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.exists('parent/src.md')).toBe(true);
+      expect(await app.vault.adapter.read('parent/src.md')).toContain('alpha body');
+    });
+
+    it('should create the note beside a root-level folder without a leading separator', async () => {
+      initApp({ 'src/a.md': 'alpha body' });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('src.md')).toBe(true);
+    });
+
+    it('should create the note inside the folder when configured to', async () => {
+      initApp({ 'parent/src/a.md': 'alpha body' });
+      const { handler } = createHandler({ mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder });
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.exists('parent/src/src.md')).toBe(true);
+      expect(await app.vault.adapter.read('parent/src/src.md')).toContain('alpha body');
+      expect(await app.vault.adapter.exists('parent/src.md')).toBe(false);
+    });
+
+    // The interaction the setting's description warns about: the merged folder is no longer empty, so
+    // `cleanupEmptyFolders` skips it. Its emptied SUB-folders are still cleaned up.
+    it('should leave the merged folder in place when the note is created inside it, even when set to delete', async () => {
+      initApp({
+        'parent/src/a.md': 'alpha body',
+        'parent/src/sub/b.md': 'bravo body'
+      });
+      const { handler } = createHandler({
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder
+      });
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.exists('parent/src/src.md')).toBe(true);
+      expect(await app.vault.adapter.exists('parent/src/sub')).toBe(false);
+    });
+
+    it('should resolve the note through Obsidian\'s new-note location when configured to', async () => {
+      initApp({ 'parent/src/a.md': 'alpha body' });
+      await app.vault.createFolder('Inbox');
+      const { handler } = createHandler({
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.DefaultNewNoteLocation
+      });
+      // `newFileLocation` / `newFileFolderPath` are modeled by neither obsidian-typings nor
+      // Obsidian-test-mocks, so the RESOLUTION itself can only be exercised in an integration test.
+      // What is asserted here is that this mode routes through Obsidian's own resolver at all, with the
+      // Folder path and the note's file name, rather than computing a path of its own.
+      const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent')
+        .mockReturnValue(getFolder('Inbox'));
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(getNewFileParent).toHaveBeenCalledWith('parent/src', 'src.md');
+      expect(await app.vault.adapter.exists('Inbox/src.md')).toBe(true);
+      expect(await app.vault.adapter.read('Inbox/src.md')).toContain('alpha body');
+    });
   });
 
   it('should merge all descendant notes into a single new file named after the folder', async () => {

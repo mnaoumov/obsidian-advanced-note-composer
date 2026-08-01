@@ -55,6 +55,27 @@ export enum FrontmatterTitleMode {
 }
 
 /**
+ * Where `Merge folder contents into a single file...` creates the merged note (issue #178).
+ *
+ * The report is ambiguous — it says the file "is moved to default folder right away" AND asks to be able
+ * to "keep this new file in the parent folder", which is what already happens. `resolveTargetPath` creates
+ * the note beside the folder with `vault.create`; nothing is ever moved, and Obsidian's
+ * `Default location for new notes` is not consulted at any point. Rather than guess which of the two
+ * readings was meant, all three positions are offered — the dropdown costs little more than either one
+ * alone, and `BesideFolder` keeps today's behavior as the default.
+ */
+export enum MergeFolderIntoFileLocation {
+  /** Today's behavior, and the default: beside the merged folder, in the folder's own parent. */
+  BesideFolder = 'BesideFolder',
+
+  /** Obsidian's own `Default location for new notes`, resolved through `fileManager.getNewFileParent`. */
+  DefaultNewNoteLocation = 'DefaultNewNoteLocation',
+
+  /** Inside the merged folder itself. */
+  InsideFolder = 'InsideFolder'
+}
+
+/**
  * How a finished smart cut & paste move announces itself in the target note (issue #176).
  *
  * Selecting the moved text is the original behavior and stays the default, so nothing changes for an
@@ -127,6 +148,13 @@ export class PluginSettings {
   public flattenMode = FlattenMode.AllChildren;
 
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
+
+  /**
+   * Where a folder merge creates the merged note (issue #178). Defaults to `BesideFolder`, which is the
+   * existing behavior, so no `registerLegacySettingsConverter` is needed — the same reasoning as
+   * `flattenMode` and `shouldSplitRecursivelyIntoDefaultNewNoteFolder`.
+   */
+  public mergeFolderIntoFileLocation = MergeFolderIntoFileLocation.BesideFolder;
 
   public mergeFolderIntoFileNoteNameTemplate = '';
   public mergeTemplate = '\n\n{{content}}';

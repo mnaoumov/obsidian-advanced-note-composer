@@ -24,6 +24,7 @@ import {
   getAvailablePath,
   trashSafe
 } from 'obsidian-dev-utils/obsidian/vault';
+import { join } from 'obsidian-dev-utils/path';
 import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -33,7 +34,10 @@ import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
-import { EmptyFolderBehaviorAfterMergingFolder } from '../plugin-settings.ts';
+import {
+  EmptyFolderBehaviorAfterMergingFolder,
+  MergeFolderIntoFileLocation
+} from '../plugin-settings.ts';
 import { resolveFolderTemplateTokens } from '../template-tokens.ts';
 
 /**
@@ -237,17 +241,39 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   }
 
   /**
-   * Resolves where the merged note is created: always beside the folder, named by
-   * {@link resolveTargetBasename}, de-duplicated against what is already there. The parent prefix is
-   * sliced off `folder.path` rather than rebuilt from the parent folder, which keeps it correct when the
-   * folder sits at the vault root.
+   * Resolves the folder the merged note is created in, per the `Merge folder into file location` setting.
+   *
+   * @param folder - The folder being merged.
+   * @param fileName - The note's file name, which Obsidian's new-file resolution takes into account.
+   * @returns The parent folder's path, or an empty string for the vault root.
+   */
+  private resolveTargetParentPath(folder: TFolder, fileName: string): string {
+    switch (this.pluginSettingsComponent.settings.mergeFolderIntoFileLocation) {
+      case MergeFolderIntoFileLocation.DefaultNewNoteLocation:
+        return this.app.fileManager.getNewFileParent(folder.path, fileName).path;
+      case MergeFolderIntoFileLocation.InsideFolder:
+        return folder.path;
+      default:
+        return folder.path.slice(0, Math.max(0, folder.path.length - folder.name.length - 1));
+    }
+  }
+
+  /**
+   * Resolves where the merged note is created, named by {@link resolveTargetBasename} and de-duplicated
+   * against what is already there (issue #178).
+   *
+   * The `BesideFolder` prefix is sliced off `folder.path` rather than rebuilt from the parent folder,
+   * which keeps it correct when the folder sits at the vault root. `DefaultNewNoteLocation` goes through
+   * `fileManager.getNewFileParent`, so it honours Obsidian's own `Default location for new notes`
+   * including its `Same folder as current file` mode — the same resolution
+   * `shouldSplitRecursivelyIntoDefaultNewNoteFolder` uses.
    *
    * @param folder - The folder being merged.
    * @returns The path of the note to create.
    */
   private resolveTargetPath(folder: TFolder): string {
-    const parentPrefix = folder.path.slice(0, folder.path.length - folder.name.length);
-    return getAvailablePath(this.app, `${parentPrefix}${this.resolveTargetBasename(folder)}.md`);
+    const fileName = `${this.resolveTargetBasename(folder)}.md`;
+    return getAvailablePath(this.app, join(this.resolveTargetParentPath(folder, fileName), fileName));
   }
 }
 
