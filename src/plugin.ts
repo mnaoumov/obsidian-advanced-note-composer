@@ -36,11 +36,23 @@ import { MoveNoticeComponent } from './move-notice-component.ts';
 import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
+import { FlattenMode } from './plugin-settings.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
 import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
+
+/**
+ * Every flatten variant, each of which is registered as its own command (issue #177). Spelled out rather
+ * than derived from `Object.values`, so adding a {@link FlattenMode} member is a compile error here as well
+ * as in the command definitions, instead of silently registering a command with no identity.
+ */
+const FLATTEN_MODES: readonly FlattenMode[] = [
+  FlattenMode.AllChildren,
+  FlattenMode.ChildFoldersOnly,
+  FlattenMode.AllFoldersRecursively
+];
 
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
@@ -273,12 +285,18 @@ export class Plugin extends PluginBase {
         resourceLockComponent,
         swapSelectionBuffer
       }),
-      new FlattenFolderCommandHandler({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent,
-        resourceLockComponent
-      }),
+      // One command per flatten variant, so the variant is chosen at invocation time from the folder menu
+      // Rather than pre-committed in settings (issue #177). `AllChildren` keeps the original
+      // `flatten-folder` id so existing hotkeys survive.
+      ...FLATTEN_MODES.map((flattenMode) =>
+        new FlattenFolderCommandHandler({
+          app: this.app,
+          flattenMode,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent,
+          resourceLockComponent
+        })
+      ),
       new MoveFolderCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,

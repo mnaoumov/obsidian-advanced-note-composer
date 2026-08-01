@@ -46,9 +46,45 @@ interface FlattenFolderCommandHandlerConfirmFlattenParams {
 
 interface FlattenFolderCommandHandlerConstructorParams {
   readonly app: App;
+
+  /** Which flatten this handler is. Registered once per {@link FlattenMode}. */
+  readonly flattenMode: FlattenMode;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+}
+
+/**
+ * The command identity of each flatten (issue #177).
+ *
+ * `AllChildren` keeps the ORIGINAL `flatten-folder` id, because a hotkey is bound to an id and hotkeys
+ * cannot be migrated by a settings converter. Keeping the id on the default mode preserves the binding for
+ * everyone who never changed the old `Flatten mode` dropdown; the two new ids start unbound.
+ *
+ * A `Record` keyed by the enum rather than a `switch`, so a new member is a compile error instead of a
+ * command silently left unregistered.
+ */
+const FLATTEN_COMMAND_DEFINITIONS: Record<FlattenMode, FlattenCommandDefinition> = {
+  [FlattenMode.AllChildren]: {
+    id: 'flatten-folder',
+    name: 'Flatten folder...'
+  },
+  [FlattenMode.AllFoldersRecursively]: {
+    id: 'flatten-folder-all-folders-recursively',
+    name: 'Flatten folder recursively (all folders at any depth)...'
+  },
+  [FlattenMode.ChildFoldersOnly]: {
+    id: 'flatten-folder-child-folders-only',
+    name: 'Flatten folder (child folders only)...'
+  }
+};
+
+/**
+ * The id and name a flatten command is registered under.
+ */
+interface FlattenCommandDefinition {
+  readonly id: string;
+  readonly name: string;
 }
 
 interface FlattenFolderCommandHandlerFlattenImplParams {
@@ -76,13 +112,21 @@ const FLATTEN_CONFIRM_SUMMARIES: Record<FlattenMode, string> = {
  * de-duplicated. The source folder is left in place (delete it manually if desired) — matching the manual
  * "select all and drag up" workflow the issue describes.
  *
- * WHAT moves is the `flattenMode` setting's call (issues #170/#171), resolved by `flatten-items.ts`:
- * every direct child (the default, and the original behavior), only the direct child folders, or every
- * folder at any depth. The folder-only modes leave the folder's own files — and the attachment folder
- * belonging to them — exactly where they are.
+ * WHAT moves is fixed per command (issues #170/#171/#177), resolved by `flatten-items.ts`: every direct
+ * child (the original behavior), only the direct child folders, or every folder at any depth. The
+ * folder-only modes leave the folder's own files — and the attachment folder belonging to them — exactly
+ * where they are.
+ *
+ * Registered once per {@link FlattenMode}, so the variant is chosen at INVOCATION time from the folder
+ * menu (issue #177) rather than pre-committed in settings. That is the faithful translation of the
+ * reporter's ask: they modelled it as *flatten* + *flatten recursively* plus a `child folders only`
+ * toggle, but {@link FlattenMode} deliberately is NOT that cross product — issues #170/#171 collapsed
+ * WHAT-moves × HOW-DEEP into three cells and rejected the fourth (dissolving every descendant FILE into
+ * the parent), which nobody asked for. One command per existing member keeps that call.
  */
 export class FlattenFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly flattenMode: FlattenMode;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -91,11 +135,11 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     super({
       fileMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-list-tree',
-      id: 'flatten-folder',
-      name: 'Flatten folder...'
+      ...FLATTEN_COMMAND_DEFINITIONS[params.flattenMode]
     });
 
     this.app = params.app;
+    this.flattenMode = params.flattenMode;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -109,7 +153,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
       return false;
     }
-    if (this.pluginSettingsComponent.settings.flattenMode === FlattenMode.AllChildren) {
+    if (this.flattenMode === FlattenMode.AllChildren) {
       return folder.children.length > 0;
     }
     /*
@@ -141,7 +185,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     }
     /* v8 ignore stop */
 
-    const mode = this.pluginSettingsComponent.settings.flattenMode;
+    const mode = this.flattenMode;
     const itemsToMove = await collectFlattenItems({
       app: this.app,
       attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,

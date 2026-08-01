@@ -34,7 +34,7 @@ import type { PluginSettings } from './plugin-settings.ts';
 
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
-import { FlattenMode } from './plugin-settings.ts';
+import { MergeFolderIntoFileLocation } from './plugin-settings.ts';
 
 const PLUGIN_ID = 'test-plugin-id';
 
@@ -192,20 +192,20 @@ describe('PluginSettingsTab', () => {
     expect(allNames).toContain('Frontmatter merge strategy');
     expect(allNames).toContain('Should use source title when destination has none');
     expect(allNames).toContain('Should add commands to submenu');
-    expect(allNames).toContain('Flatten mode');
+    expect(allNames).toContain('Merge folder into file location');
   });
 
-  it('should offer the three flatten modes, defaulting to the pre-#170 behavior', async () => {
+  it('should offer the three merged-note locations, defaulting to the pre-#178 behavior', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    const flattenMode = dropdowns.find((dropdown) => dropdown.name === 'Flatten mode');
-    const options = [...(flattenMode?.component.selectEl.options ?? [])].map((option) => option.value);
-    // In offered order: the original behavior first, then the two folder-only modes (issues #170/#171).
+    const location = dropdowns.find((dropdown) => dropdown.name === 'Merge folder into file location');
+    const options = [...(location?.component.selectEl.options ?? [])].map((option) => option.value);
+    // In offered order: today's behavior first, then the two new positions (issue #178).
     expect(options).toStrictEqual([
-      FlattenMode.AllChildren,
-      FlattenMode.ChildFoldersOnly,
-      FlattenMode.AllFoldersRecursively
+      MergeFolderIntoFileLocation.BesideFolder,
+      MergeFolderIntoFileLocation.InsideFolder,
+      MergeFolderIntoFileLocation.DefaultNewNoteLocation
     ]);
   });
 

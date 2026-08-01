@@ -22,17 +22,21 @@ export enum EmptyFolderBehaviorAfterMergingFolder {
 }
 
 /**
- * What `Flatten folder...` promotes out of the chosen folder.
+ * What a flatten promotes out of the chosen folder.
  *
- * `AllChildren` is the original behavior and stays the default, so nothing changes for an existing vault
- * and no `registerLegacySettingsConverter` is needed. The two folder-only members answer issues #170 and
- * #171: promote the folder's sub-folders while the folder itself keeps its own files (and its attachment
+ * `AllChildren` is the original behavior. The two folder-only members answer issues #170 and #171:
+ * promote the folder's sub-folders while the folder itself keeps its own files (and its attachment
  * folder), either one level down (`ChildFoldersOnly`) or at any depth (`AllFoldersRecursively`).
  *
  * The two axes a flatten could have — WHAT moves and HOW DEEP it looks — are deliberately collapsed into
- * one dropdown rather than a scope enum plus a "recursive" toggle: the only combination anyone asked for
+ * three cells rather than a scope enum plus a "recursive" toggle: the only combination anyone asked for
  * is folders-at-any-depth, and a recursive variant of `AllChildren` (dissolving every descendant file into
  * the parent) is a different operation nobody requested. The enum is the extension point if they do.
+ *
+ * **No longer a setting** (issue #177): each member is registered as its own folder-menu command, so the
+ * variant is chosen when the command is invoked instead of being pre-committed in the settings tab. The
+ * `Flatten mode` dropdown that used to select it is gone, and a `flattenMode` key left in an existing
+ * `data.json` is simply ignored — nothing to migrate, because there is no longer a setting to migrate to.
  */
 export enum FlattenMode {
   AllChildren = 'AllChildren',
@@ -140,12 +144,6 @@ export class PluginSettings {
    * in-between option (issue #167) for a folder whose own name matters but whose children's do not.
    */
   public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehaviorAfterMergingFolder.Delete;
-
-  /**
-   * What `Flatten folder...` promotes. Defaults to the original "every direct child" behavior, so the
-   * folder-only modes (issues #170/#171) are strictly opt-in.
-   */
-  public flattenMode = FlattenMode.AllChildren;
 
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 
