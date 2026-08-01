@@ -282,34 +282,15 @@ export class SplitComposer extends ComposerBase {
 
   protected override getTemplate(): string {
     // An explicit override wins over every setting: the caller is taking templating over entirely (the
-    // Recursive split defers it — see `applySplitTemplateToNotes`).
+    // Recursive split defers it — see `applySplitTemplateToNotes`), so it is not padded either.
     if (this.templateOverride !== undefined) {
       return this.templateOverride;
     }
 
-    // A smart cut & paste move prefers its own template — the override for its direction, then the shared
-    // One. When both are empty, fall through to the ordinary split → merge resolution below (the documented
-    // Fallback chain).
-    if (this.smartCutAndPasteMoveKind) {
-      const smartCutAndPasteTemplate = resolveSmartCutAndPasteTemplate(this.pluginSettingsComponent.settings, this.smartCutAndPasteMoveKind);
-      if (smartCutAndPasteTemplate) {
-        return smartCutAndPasteTemplate;
-      }
-    }
-
-    if (this.isNewTargetFile) {
-      return resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings);
-    }
-
-    if (!this.pluginSettingsComponent.settings.splitTemplate) {
-      return this.pluginSettingsComponent.settings.mergeTemplate;
-    }
-
-    if (this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
-      return this.pluginSettingsComponent.settings.mergeTemplate;
-    }
-
-    return this.pluginSettingsComponent.settings.splitTemplate;
+    // Padding is applied to whatever the chain resolves, NOT only to the smart cut & paste branch: the
+    // Reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
+    // The chain falls all the way through to `mergeTemplate`. See `padEdgeMoveTemplate`.
+    return padEdgeMoveTemplate(this.resolveConfiguredTemplate(), this.smartCutAndPasteMoveKind);
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {
@@ -511,6 +492,40 @@ export class SplitComposer extends ComposerBase {
    * @param movedContent - The exact string that replaced the insert token.
    * @returns The range, or `null`.
    */
+  /**
+   * Resolves the configured template, before any padding — the documented fallback chain, unchanged.
+   *
+   * Split out of {@link SplitComposer.getTemplate} only so the chain stays one readable cascade of early
+   * returns while the edge-move padding wraps its result in one place.
+   *
+   * @returns The template the settings resolve to.
+   */
+  private resolveConfiguredTemplate(): string {
+    // A smart cut & paste move prefers its own template — the override for its direction, then the shared
+    // One. When both are empty, fall through to the ordinary split → merge resolution below (the documented
+    // Fallback chain).
+    if (this.smartCutAndPasteMoveKind) {
+      const smartCutAndPasteTemplate = resolveSmartCutAndPasteTemplate(this.pluginSettingsComponent.settings, this.smartCutAndPasteMoveKind);
+      if (smartCutAndPasteTemplate) {
+        return smartCutAndPasteTemplate;
+      }
+    }
+
+    if (this.isNewTargetFile) {
+      return resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings);
+    }
+
+    if (!this.pluginSettingsComponent.settings.splitTemplate) {
+      return this.pluginSettingsComponent.settings.mergeTemplate;
+    }
+
+    if (this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
+      return this.pluginSettingsComponent.settings.mergeTemplate;
+    }
+
+    return this.pluginSettingsComponent.settings.splitTemplate;
+  }
+
   private resolveMovedContentRange(editor: Editor, movedContent: string): null | SplitComposerMovedContentRange {
     const editorValue = editor.getValue();
     const startOffset = this.resolveMovedTextStartOffset(editorValue, movedContent);
@@ -631,6 +646,51 @@ export function getSelections(editor: Editor): Selection[] {
   });
 
   return selections.sort((a, b) => a.startOffset - b.startOffset);
+}
+
+/**
+ * Pads an edge move's template so the moved block lands on lines of its own (issue #179).
+ *
+ * `resolveInsertOffset` returns a bare offset — `contentStart` for a top move, `content.length` for a
+ * bottom one — with no awareness of what sits on the other side of it. A template is ONE string, so it can
+ * only pad one side per direction, and whichever side it does not pad is the side the moved block glues
+ * itself onto:
+ *
+ * - With the shipped defaults (`smartCutAndPasteTemplate: ''` → `mergeTemplate: '\n\n{{content}}'`, a
+ *   LEADING separator only) the **top** move lands the block right after the frontmatter, abutting the
+ *   note's existing first line. So this is not merely a misconfiguration.
+ * - With the reporter's own template (`'{{content}}\n'`) it is the mirror image: the **bottom** move
+ *   produces `last lineCONTENT`.
+ *
+ * A missing trailing line break is therefore not the whole story, and padding only that half would leave
+ * the reporter's configuration broken in the direction they filed about. Both ends are ensured.
+ *
+ * **Scoped to the two EDGE moves on purpose.** An at-cursor paste is inserted at a token the user placed
+ * mid-line, and forcing a line break onto either end of it would break exactly the case that move exists
+ * for. The ordinary merge and split flows are left alone for the same reason — their output is not what
+ * was reported, and silently reformatting it would be a far wider change than the defect.
+ *
+ * Idempotent: a template that already ends (or starts) with a line break is returned with that end
+ * untouched, so the shipped default keeps producing exactly the blank line it produces today.
+ *
+ * @param template - The resolved template.
+ * @param kind - Which move this is, or `undefined` when the flow is not a smart cut & paste move.
+ * @returns The template, padded when this is an edge move.
+ */
+export function padEdgeMoveTemplate(template: string, kind: SmartCutAndPasteMoveKind | undefined): string {
+  if (kind !== SmartCutAndPasteMoveKind.ToBottom && kind !== SmartCutAndPasteMoveKind.ToTop) {
+    return template;
+  }
+
+  let padded = template;
+  if (!padded.startsWith('\n')) {
+    padded = `\n${padded}`;
+  }
+  if (!padded.endsWith('\n')) {
+    padded = `${padded}\n`;
+  }
+
+  return padded;
 }
 
 /**

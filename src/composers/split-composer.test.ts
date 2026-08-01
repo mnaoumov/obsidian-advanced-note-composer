@@ -43,6 +43,7 @@ import {
 } from '../plugin-settings.ts';
 import {
   getSelections,
+  padEdgeMoveTemplate,
   resolveSmartCutAndPasteTemplate,
   resolveSplitTemplateForNewTargetFile,
   SplitComposer
@@ -1387,6 +1388,38 @@ describe('SplitComposer getTemplate', () => {
     expect(targetContent).not.toContain('merge:');
     expect(targetContent).not.toContain('smart:');
     expect(targetContent).not.toContain('split:');
+  });
+});
+
+describe('padEdgeMoveTemplate', () => {
+  // Issue #179. The shipped default is `mergeTemplate: '\n\n{{content}}'` — a LEADING separator only —
+  // So a top move glued the block onto the note's existing first line. The reporter's own
+  // `'{{content}}\n'` is the mirror image and merged at the bottom instead. Both must be padded, or the
+  // Half that is not padded stays broken.
+  it('should add the missing trailing break to the shipped default, which merged at the top', () => {
+    expect(padEdgeMoveTemplate('\n\n{{content}}', SmartCutAndPasteMoveKind.ToTop)).toBe('\n\n{{content}}\n');
+  });
+
+  it('should add the missing leading break to the reporter\'s template, which merged at the bottom', () => {
+    expect(padEdgeMoveTemplate('{{content}}\n', SmartCutAndPasteMoveKind.ToBottom)).toBe('\n{{content}}\n');
+  });
+
+  it('should pad both ends of a template that has neither', () => {
+    expect(padEdgeMoveTemplate('{{content}}', SmartCutAndPasteMoveKind.ToTop)).toBe('\n{{content}}\n');
+  });
+
+  it('should leave a template that already has both ends untouched', () => {
+    expect(padEdgeMoveTemplate('\n\n{{content}}\n\n', SmartCutAndPasteMoveKind.ToBottom)).toBe('\n\n{{content}}\n\n');
+  });
+
+  // An at-cursor paste is inserted at a token the user placed mid-line. Forcing a break onto either end
+  // Would break the case that move exists for, so it is deliberately out of scope.
+  it('should leave an at-cursor move without padding', () => {
+    expect(padEdgeMoveTemplate('{{content}}', SmartCutAndPasteMoveKind.AtCursor)).toBe('{{content}}');
+  });
+
+  it('should leave a flow that is not a smart cut & paste move without padding', () => {
+    expect(padEdgeMoveTemplate('{{content}}', undefined)).toBe('{{content}}');
   });
 });
 
