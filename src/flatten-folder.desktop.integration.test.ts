@@ -22,7 +22,6 @@ interface ComponentTreeNode {
 }
 
 interface FlattenSettings {
-  flattenMode: string;
   shouldAskBeforeFlattening: boolean;
 }
 
@@ -256,10 +255,10 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes only the child folders in `Child folders only` mode, keeping the folder and its attachment folder intact', async () => {
     const result = await evalInObsidian({
-      args: { flattenMode: 'ChildFoldersOnly', pluginId: PLUGIN_ID },
+      args: { commandId: 'flatten-folder-child-folders-only', pluginId: PLUGIN_ID },
       async fn({
         app,
-        flattenMode,
+        commandId,
         lib: { waitUntil },
         obsidianModule,
         pluginId
@@ -268,12 +267,10 @@ describe('flatten folder (issue #105)', () => {
 
         const settingsComponent = findSettingsComponent();
         const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
-        const originalFlattenMode = settingsComponent.settings.flattenMode;
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = false;
-            settings.flattenMode = flattenMode;
           });
           // A per-folder attachment sub-folder is the configuration the issue is written against.
           app.vault.setConfig('attachmentFolderPath', './att-assets');
@@ -295,7 +292,7 @@ describe('flatten folder (issue #105)', () => {
             predicate: () => (app.metadataCache.getFileCache(note)?.embeds ?? []).length === 1
           });
 
-          app.commands.executeCommandById(`${pluginId}:flatten-folder`);
+          app.commands.executeCommandById(`${pluginId}:${commandId}`);
 
           await waitUntil({
             message: 'the child folder was not promoted to the root',
@@ -315,7 +312,6 @@ describe('flatten folder (issue #105)', () => {
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = originalShouldAsk;
-            settings.flattenMode = originalFlattenMode;
           });
         }
 
@@ -375,10 +371,10 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes every descendant folder up to the folder\'s own level in `All folders recursively` mode', async () => {
     const result = await evalInObsidian({
-      args: { flattenMode: 'AllFoldersRecursively', pluginId: PLUGIN_ID },
+      args: { commandId: 'flatten-folder-all-folders-recursively', pluginId: PLUGIN_ID },
       async fn({
         app,
-        flattenMode,
+        commandId,
         lib: { waitUntil },
         obsidianModule,
         pluginId
@@ -387,11 +383,9 @@ describe('flatten folder (issue #105)', () => {
 
         const settingsComponent = findSettingsComponent();
         const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
-        const originalFlattenMode = settingsComponent.settings.flattenMode;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = false;
-            settings.flattenMode = flattenMode;
           });
 
           await trashIfExists('rec-src');
@@ -407,7 +401,7 @@ describe('flatten folder (issue #105)', () => {
 
           await openFile(note);
 
-          app.commands.executeCommandById(`${pluginId}:flatten-folder`);
+          app.commands.executeCommandById(`${pluginId}:${commandId}`);
 
           await waitUntil({
             message: 'the nested folders were not promoted to the root',
@@ -426,7 +420,6 @@ describe('flatten folder (issue #105)', () => {
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = originalShouldAsk;
-            settings.flattenMode = originalFlattenMode;
           });
         }
 

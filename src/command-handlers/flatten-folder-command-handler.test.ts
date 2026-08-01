@@ -44,6 +44,14 @@ interface CapturedConfirmParams {
   readonly title: string;
 }
 
+/**
+ * Settings overrides plus the mode, which is a CONSTRUCTOR parameter rather than a setting since each
+ * flatten variant became its own command (issue #177).
+ */
+interface CreateHandlerOverrides extends Partial<PluginSettings> {
+  flattenMode?: FlattenMode;
+}
+
 interface HandlerContext {
   editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
   handler: Testable;
@@ -126,17 +134,18 @@ function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): Confi
   };
 }
 
-function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
+function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
+  const { flattenMode = FlattenMode.AllChildren, ...settingsOverrides } = overrides ?? {};
   const editAndSave = vi.fn().mockResolvedValue(undefined);
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
   const handler = new FlattenFolderCommandHandler({
     app,
+    flattenMode,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave,
       settings: strictProxy<PluginSettings>({
         attachmentExtensions: ['.excalidraw.md'],
-        flattenMode: FlattenMode.AllChildren,
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeFlattening: false,
@@ -166,12 +175,38 @@ function initApp(files: Record<string, string>, attachmentFolderPath = './'): vo
 }
 
 describe('FlattenFolderCommandHandler', () => {
-  it('should expose its command identity', () => {
+  // Issue #177: one command per mode. The `AllChildren` id is deliberately the ORIGINAL `flatten-folder`,
+  // Because a hotkey is bound to an id and hotkeys cannot be migrated — keeping the id on the default mode
+  // Is the only thing that preserves any existing binding. Changing it would silently unbind users.
+  it('should expose its command identity, keeping the original id for the default mode', () => {
     initApp({});
     const { handler } = createHandler();
     expect(handler.id).toBe('flatten-folder');
     expect(handler.name).toBe('Flatten folder...');
     expect(handler.icon).toBe('lucide-list-tree');
+  });
+
+  it('should give the child-folders-only mode its own command identity', () => {
+    initApp({});
+    const { handler } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
+    expect(handler.id).toBe('flatten-folder-child-folders-only');
+    expect(handler.name).toBe('Flatten folder (child folders only)...');
+    expect(handler.icon).toBe('lucide-list-tree');
+  });
+
+  it('should give the recursive mode its own command identity', () => {
+    initApp({});
+    const { handler } = createHandler({ flattenMode: FlattenMode.AllFoldersRecursively });
+    expect(handler.id).toBe('flatten-folder-all-folders-recursively');
+    expect(handler.name).toBe('Flatten folder recursively (all folders at any depth)...');
+    expect(handler.icon).toBe('lucide-list-tree');
+  });
+
+  it('should give every mode a distinct id, so none silently shadows another', () => {
+    initApp({});
+    const ids = [FlattenMode.AllChildren, FlattenMode.ChildFoldersOnly, FlattenMode.AllFoldersRecursively]
+      .map((flattenMode) => createHandler({ flattenMode }).handler.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('should refuse the vault root in canExecuteFolder', () => {

@@ -9,6 +9,7 @@ import {
   FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
+  MergeFolderIntoFileLocation,
   PluginSettings,
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
@@ -106,9 +107,9 @@ describe('PluginSettings', () => {
   it('should have correct default values', () => {
     const settings = new PluginSettings();
     expect(settings.defaultFrontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
-    // The default IS the pre-#170 behavior, which is what makes the new setting need no legacy converter.
-    expect(settings.flattenMode).toBe(FlattenMode.AllChildren);
     expect(settings.frontmatterTitleMode).toBe(FrontmatterTitleMode.UseForInvalidTitleOnly);
+    // `BesideFolder` IS the pre-#178 behavior, which is what makes the new setting need no legacy converter.
+    expect(settings.mergeFolderIntoFileLocation).toBe(MergeFolderIntoFileLocation.BesideFolder);
     expect(settings.mergeTemplate).toBe('\n\n{{content}}');
     expect(settings.releaseNotesShown).toEqual([]);
     expect(settings.replacement).toBe('_');
