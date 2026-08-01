@@ -23,10 +23,10 @@ import type { PluginSettings } from './plugin-settings.ts';
 import { MoveNoticeComponent } from './move-notice-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
-import { PrismComponent } from './prism-component.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
+import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
@@ -157,8 +157,8 @@ vi.mock('./plugin-settings-tab.ts', () => ({
   PluginSettingsTab: vi.fn()
 }));
 
-vi.mock('./prism-component.ts', () => ({
-  PrismComponent: vi.fn()
+vi.mock('./tokenized-string-language-component.ts', () => ({
+  TokenizedStringLanguageComponent: vi.fn()
 }));
 
 vi.mock('./release-notes-component.ts', () => ({
@@ -205,7 +205,7 @@ describe('Plugin', () => {
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
-    expect(PrismComponent).toHaveBeenCalledOnce();
+    expect(TokenizedStringLanguageComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(RenderLinkHandlersWarmupComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();

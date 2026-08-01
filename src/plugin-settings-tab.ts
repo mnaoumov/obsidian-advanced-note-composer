@@ -17,7 +17,7 @@ import {
   SmartCutAndPasteCompletionFeedback,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
-import { TOKENIZED_STRING_LANGUAGE } from './prism-component.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language-component.ts';
 
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
