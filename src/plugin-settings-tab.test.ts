@@ -84,7 +84,7 @@ vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
   )
 }));
 
-vi.mock('./prism-component.ts', () => ({
+vi.mock('./tokenized-string-language-component.ts', () => ({
   TOKENIZED_STRING_LANGUAGE: 'mock-language'
 }));
 

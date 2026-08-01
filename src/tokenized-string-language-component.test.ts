@@ -5,10 +5,7 @@ import type {
 } from '@obsidian-typings/obsidian-public-latest';
 
 import { loadPrism } from '@obsidian-typings/obsidian-public-latest/implementations';
-import {
-  bypassStrictProxy,
-  strictProxy
-} from 'obsidian-dev-utils/strict-proxy';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   describe,
   expect,
@@ -17,9 +14,9 @@ import {
 } from 'vitest';
 
 import {
-  PrismComponent,
-  TOKENIZED_STRING_LANGUAGE
-} from './prism-component.ts';
+  TOKENIZED_STRING_LANGUAGE,
+  TokenizedStringLanguageComponent
+} from './tokenized-string-language-component.ts';
 
 interface PrismExpression {
   pattern: RegExp;
@@ -41,16 +38,30 @@ vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
 
 const mockLoadPrism = vi.mocked(loadPrism);
 
-describe('PrismComponent', () => {
+/**
+ * Creates the language map the mocked Prism module exposes.
+ *
+ * Deliberately a plain object rather than a `strictProxy`: `SyntaxHighlightingComponent` READS
+ * `prism.languages[language]` before writing it (it restores the previous grammar on unload), and a strict
+ * proxy throws on an absent key — so proxying it would fail the registration it is meant to observe. This
+ * mirrors how `obsidian-dev-utils` mocks Prism in its own suite.
+ *
+ * @returns An empty language map.
+ */
+function createMockLanguages(): Languages {
+  return castTo<Languages>({});
+}
+
+describe('TokenizedStringLanguageComponent', () => {
   it('should export TOKENIZED_STRING_LANGUAGE constant', () => {
     expect(TOKENIZED_STRING_LANGUAGE).toBe('advanced-note-composer-template');
   });
 
   it('should register language on load', async () => {
-    const languages = strictProxy<Languages>({});
-    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
+    const languages = createMockLanguages();
+    mockLoadPrism.mockResolvedValue(castTo<PrismModule>({ languages }));
 
-    const component = new PrismComponent();
+    const component = new TokenizedStringLanguageComponent();
     component.load();
 
     await vi.waitFor(() => {
@@ -59,10 +70,10 @@ describe('PrismComponent', () => {
   });
 
   it('should define expression pattern in language', async () => {
-    const languages = strictProxy<Languages>({});
-    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
+    const languages = createMockLanguages();
+    mockLoadPrism.mockResolvedValue(castTo<PrismModule>({ languages }));
 
-    const component = new PrismComponent();
+    const component = new TokenizedStringLanguageComponent();
     component.load();
 
     await vi.waitFor(() => {
@@ -73,10 +84,10 @@ describe('PrismComponent', () => {
   });
 
   it('should define inside tokens for expression', async () => {
-    const languages = strictProxy<Languages>({});
-    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
+    const languages = createMockLanguages();
+    mockLoadPrism.mockResolvedValue(castTo<PrismModule>({ languages }));
 
-    const component = new PrismComponent();
+    const component = new TokenizedStringLanguageComponent();
     component.load();
 
     await vi.waitFor(() => {
@@ -91,10 +102,10 @@ describe('PrismComponent', () => {
   });
 
   it('should unregister language on unload', async () => {
-    const languages = strictProxy<Languages>({});
-    mockLoadPrism.mockResolvedValue(strictProxy<PrismModule>({ languages }));
+    const languages = createMockLanguages();
+    mockLoadPrism.mockResolvedValue(castTo<PrismModule>({ languages }));
 
-    const component = new PrismComponent();
+    const component = new TokenizedStringLanguageComponent();
     component.load();
 
     await vi.waitFor(() => {
@@ -102,6 +113,6 @@ describe('PrismComponent', () => {
     });
 
     component.unload();
-    expect(bypassStrictProxy(languages)[TOKENIZED_STRING_LANGUAGE]).toBeUndefined();
+    expect(TOKENIZED_STRING_LANGUAGE in languages).toBe(false);
   });
 });
