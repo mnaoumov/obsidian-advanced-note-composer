@@ -121,6 +121,12 @@ function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
 }
 
+// Whole lines, not substrings: `# 1` is also a substring of `## 1 1`. The notes these cases merge carry no
+// Headings of their own, so every `#` line in the result is a folder heading.
+function getHeadingLines(mergedContent: string): string[] {
+  return mergedContent.split('\n').filter((line) => line.startsWith('#'));
+}
+
 function initApp(files: Record<string, string>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
@@ -383,6 +389,110 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(merged.indexOf('# a')).toBeGreaterThanOrEqual(0);
     expect(merged.indexOf('# b')).toBeGreaterThan(merged.indexOf('# a'));
     expect(merged.indexOf('b body')).toBeGreaterThan(merged.indexOf('# b'));
+  });
+
+  describe('note-less sub-folder headings (issue #181)', () => {
+    // `mergeTemplate` is the production default rather than the suite's bare `'{{content}}'`: a heading
+    // Block ends without a newline of its own, so the bare template would glue the next note's body onto
+    // The heading line - an artifact of the stub, not of the merge, and it would hide the heading lines.
+    const HEADING_SETTINGS: Partial<PluginSettings> = {
+      mergeTemplate: '\n\n{{content}}',
+      shouldConvertFoldersToHeadingsWhenMergingFolder: true
+    };
+
+    it('should not head a sub-folder that holds only attachments', async () => {
+      // The reporter's shape: an attachment folder contributes nothing to the merged note, so heading it
+      // Puts a folder in the outline whose entire content was never merged.
+      initApp({
+        'src/api/get.md': 'get body',
+        'src/attachments/img.png': 'PIC',
+        'src/note.md': 'root body'
+      });
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getHeadingLines(await app.vault.adapter.read('src.md'))).toEqual(['# api']);
+    });
+
+    it('should not head an attachment-only sub-folder at the tail of the walk', async () => {
+      // A folder visited after the LAST note goes through `trailingHeadings`, a different branch from one
+      // Flushed in front of a following note.
+      initApp({
+        'src/note.md': 'root body',
+        'src/zz-attachments/img.png': 'PIC'
+      });
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getHeadingLines(await app.vault.adapter.read('src.md'))).toEqual([]);
+    });
+
+    it('should still head a completely empty sub-folder beside an attachment-only one', async () => {
+      // Pins issue #168 against the #181 fix: "holds nothing" and "holds only attachments" are the two
+      // Sides of the same predicate and must not collapse into one answer.
+      initApp({
+        'src/attachments/img.png': 'PIC',
+        'src/note.md': 'root body'
+      });
+      await app.vault.createFolder('src/empty');
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getHeadingLines(await app.vault.adapter.read('src.md'))).toEqual(['# empty']);
+    });
+
+    it('should still head a sub-folder holding a note alongside its attachments', async () => {
+      initApp({
+        'src/api/get.md': 'get body',
+        'src/api/img.png': 'PIC',
+        'src/note.md': 'root body'
+      });
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getHeadingLines(await app.vault.adapter.read('src.md'))).toEqual(['# api']);
+    });
+
+    it('should drop an empty folder nested inside an attachment-only one along with its parent', async () => {
+      // Classified as a subtree rather than folder by folder: `## nested` under no `# attachments` at all
+      // Would be worse than losing it.
+      initApp({
+        'src/attachments/img.png': 'PIC',
+        'src/note.md': 'root body'
+      });
+      await app.vault.createFolder('src/attachments/nested');
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getHeadingLines(await app.vault.adapter.read('src.md'))).toEqual([]);
+    });
+
+    it('should not head a sub-folder holding only a markdown-shaped attachment', async () => {
+      // The predicate has to ask the same "is this a note to merge" question the walk's files go through,
+      // Not merely whether the file is markdown.
+      initApp({
+        'src/drawings/sketch.excalidraw.md': 'raw excalidraw payload',
+        'src/note.md': 'root body'
+      });
+      const { handler } = createHandler(HEADING_SETTINGS);
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('src'));
+
+      const merged = await app.vault.adapter.read('src.md');
+      expect(getHeadingLines(merged)).toEqual([]);
+      expect(merged).not.toContain('raw excalidraw payload');
+    });
   });
 
   it('should delete the folders the merge emptied', async () => {

@@ -991,7 +991,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
               f.createEl('br');
               f.appendText(
-                'Every sub-folder is headed, including one that holds no notes at all, so the merged outline mirrors the whole tree. A folder whose notes are all excluded is different: nothing of it was merged, so it gets no heading.'
+                'Every sub-folder is headed, including a completely empty one, so the merged outline mirrors the whole tree. Two note-less cases are left out instead: a folder holding only attachments, and a folder whose notes are all excluded - nothing of either was merged, so neither gets a heading.'
               );
               f.createEl('br');
               f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');

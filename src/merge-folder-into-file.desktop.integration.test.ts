@@ -355,6 +355,125 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.headingLines).toEqual(['# 1', '## 1 1', '### 1 1 1', '# 2', '# 3']);
   });
 
+  it('does not head a sub-folder that holds only attachments (issue #181)', async () => {
+    const result = await evalInObsidian({
+      args: { pluginId: PLUGIN_ID },
+      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = true;
+            settings.mergeFolderIntoFileNoteNameTemplate = '';
+            // Left where they are, so the case stays about CLASSIFYING the folder rather than about the
+            // Relocation emptying it. `Delete` is what makes the emptied note folder the commit signal.
+            settings.shouldMoveAttachmentsWhenMergingFolder = false;
+            settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
+            settings.attachmentExtensions = ['.excalidraw.md'];
+          });
+
+          await trashIfExists('attachment-headings-src');
+          await trashIfExists('attachment-headings-src.md');
+
+          // The reporter's shape, plus the #168 case beside it: `attachments` holds a file but no note,
+          // While `empty` holds nothing at all - the two must not get the same answer.
+          await app.vault.createFolder('attachment-headings-src');
+          await app.vault.createFolder('attachment-headings-src/1');
+          await app.vault.createFolder('attachment-headings-src/attachments');
+          await app.vault.createFolder('attachment-headings-src/empty');
+          const root = await app.vault.create('attachment-headings-src/Note.md', 'root body');
+          await app.vault.create('attachment-headings-src/1/Note.md', 'one body');
+          await app.vault.create('attachment-headings-src/attachments/img.png', 'PIC');
+
+          await openFile(root);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'merged single file was not created',
+            predicate: () => app.vault.getAbstractFileByPath('attachment-headings-src.md') !== null
+          });
+          /*
+           * Same reasoning as the #168 case: the target note is created EMPTY and filled inside the
+           * transaction, with the trailing heading written last, so only the post-commit folder cleanup
+           * proves everything has been written. The merged folder itself survives here - it still holds
+           * `attachments/img.png` - so the emptied note folder is what is waited on.
+           */
+          await waitUntil({
+            message: 'the emptied note folder was not deleted, so the merge had not committed',
+            predicate: () => app.vault.getAbstractFileByPath('attachment-headings-src/1') === null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('attachment-headings-src.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          // No source note carries a heading of its own, so every `#` line is a folder heading. Compared
+          // As whole lines, like the #168 case.
+          return {
+            attachmentKept: app.vault.getAbstractFileByPath('attachment-headings-src/attachments/img.png') !== null,
+            headingLines: mergedContent.split('\n').filter((line) => line.startsWith('#'))
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = original.shouldConvertFoldersToHeadingsWhenMergingFolder;
+            settings.mergeFolderIntoFileNoteNameTemplate = original.mergeFolderIntoFileNoteNameTemplate;
+            settings.shouldMoveAttachmentsWhenMergingFolder = original.shouldMoveAttachmentsWhenMergingFolder;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+            settings.attachmentExtensions = original.attachmentExtensions;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      vaultPath: getTempVault().path
+    });
+
+    // `attachments` contributed nothing to the merged note, so it leaves no heading - while `empty`, which
+    // Issue #168 asked for, still gets one.
+    expect(result.headingLines).toEqual(['# 1', '# empty']);
+    expect(result.attachmentKept).toBe(true);
+  });
+
   it('keeps the merged folder and deletes only the folders under it (issue #167)', async () => {
     const result = await evalInObsidian({
       args: { pluginId: PLUGIN_ID },

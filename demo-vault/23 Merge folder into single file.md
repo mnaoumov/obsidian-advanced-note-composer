@@ -32,9 +32,10 @@ nested `Nested` folder becomes a `# Nested` heading in the merged note, and [[Pa
 are demoted one level so they nest under it instead of competing with it. A folder one level deeper
 would become `##`, and so on.
 
-Every sub-folder is headed, including one holding no notes at all: the merged outline mirrors the whole
-tree, so an empty folder is still part of it. A folder whose notes exist but are all excluded is the
-other way round — nothing of it was merged, so it leaves no heading behind.
+Every sub-folder is headed, including a completely empty one: the merged outline mirrors the whole
+tree, so an empty folder is still part of it. Two note-less cases go the other way round — a folder
+holding only attachments (with everything under it), and a folder whose notes exist but are all
+excluded. Nothing of either was merged, so neither leaves a heading behind.
 
 Markdown only defines six heading levels, so a folder more than six deep gets a `#######`-or-longer
 line, which Obsidian renders as plain text rather than a heading. The full depth is still written out
