@@ -38,6 +38,11 @@ import {
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 
 interface BuildRecursiveSplitConfirmContentParams {
   readonly app: App;
@@ -162,10 +167,27 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       });
     }
 
+    /*
+     * No `abortController`: the recursion has no cancellation path, so the notice offers no Cancel button
+     * rather than one that would do nothing.
+     */
+    const progressNotice = showOperationProgressNotice({
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          sourcePathOrAbstractFile: file,
+          verb: 'Splitting note recursively'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+
     let createdNotes: readonly SplitTemplateNote[];
     try {
       createdNotes = await this.splitBranch({ editor, file, isRootPass: true, minLevel: 1 });
     } finally {
+      progressNotice?.[Symbol.dispose]();
       /*
        * The recursion walks the leaf down through every note it creates, so it ends up parked on the
        * deepest one. Bring the user back to the note they invoked the command on, whether the run
@@ -185,7 +207,16 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
     });
 
-    this.pluginNoticeComponent.showNotice(`Split into ${String(createdNotes.length)} note(s).`);
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        sourcePathOrAbstractFile: file,
+        suffix: ` into ${String(createdNotes.length)} note(s)`,
+        verb: 'Split note'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

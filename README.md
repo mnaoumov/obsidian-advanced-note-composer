@@ -275,6 +275,16 @@ Ignored paths are skipped by the pickers, and the folder/file batch commands (`M
 
 By default the plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Turn **Should block commands on excluded paths** on to hide them entirely instead — they disappear from the command palette and from the editor, file, and folder context menus.
 
+## Operation notices
+
+Every operation this plugin runs reports itself: a notice while it is running — so you know when not to touch Obsidian — and a notice naming what it did once it finished. It covers merging, splitting and extracting, swapping, moving and flattening folders, renaming a heading, and reordering headings alike. The running notice appears only once an operation has been going for half a second, so quick ones never flash one up.
+
+Turn **Should show operation notices** off (under `UI`) to silence both. Refusals and errors — "this path is ignored in the plugin settings" and the like — are always shown whatever this is set to.
+
+One thing to know before turning it off: the running notice is what carries the operation's `Cancel` button, so hiding it hides that too. A long operation can still be cancelled by right-clicking the note's lock indicator and unlocking it.
+
+Two related settings are deliberately separate and unaffected by this one: **Should show smart cut & paste notice**, which controls the *interactive* marked-selection notice (turning it off removes its buttons, not just information), and **Smart cut & paste completion feedback**, which already decides how a finished move announces itself.
+
 ## Minimizing dialogs
 
 Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:

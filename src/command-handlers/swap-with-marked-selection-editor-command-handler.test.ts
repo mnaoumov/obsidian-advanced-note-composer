@@ -117,7 +117,8 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: true,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
+        shouldShowOperationNotices: true
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({}),
@@ -319,7 +320,7 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       expect(mockModify).toHaveBeenCalledWith(sourceFile, 'src [PICK] end');
       expect(mockModify).toHaveBeenCalledWith(targetFile, 'tgt [MARK] fin');
       expect(params.swapSelectionBuffer.hasMark()).toBe(false);
-      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.');
+      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { isReusable: false });
     });
 
     it('should swap two selections within the same note, writing it once', async () => {
@@ -333,7 +334,7 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       expect(mockRunLockedTransaction).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledWith(sourceFile, 'three and one');
-      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.');
+      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { isReusable: false });
     });
   });
 

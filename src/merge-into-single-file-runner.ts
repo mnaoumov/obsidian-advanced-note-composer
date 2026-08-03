@@ -23,6 +23,11 @@ import {
 } from './attachments.ts';
 import { MergeComposer } from './composers/merge-composer.ts';
 import { runLockedTransaction } from './locked-transaction.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationPermanentProgressNotice
+} from './operation-notices.ts';
 
 /**
  * Parameters for {@link mergeFilesIntoSingleFile}.
@@ -147,18 +152,17 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const trailingHeadings = folderHeadingPlan?.trailingHeadings ?? [];
   let mergedCount = 0;
 
-  const notice = pluginNoticeComponent.showNotice(
-    await createFragmentAsync(async (f) => {
+  const notice = showOperationPermanentProgressNotice({
+    content: await createFragmentAsync(async (f) => {
       f.appendText(`Advanced Note Composer: ${progressLabel} into `);
       f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile.path }));
       f.createEl('br');
       f.createEl('br');
       f.createDiv('is-loading');
     }),
-    {
-      isPermanent: true
-    }
-  );
+    pluginNoticeComponent,
+    pluginSettingsComponent
+  });
 
   // Collected against the sources that will actually be merged, so an ignored note's attachments are
   // Left alone exactly as the note itself is.
@@ -262,7 +266,21 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     }
     throw error;
   } finally {
-    notice.hide();
+    notice?.hide();
+  }
+
+  if (mergedCount > 0) {
+    // The batch reports once for the whole run — every `MergeComposer` in it was constructed with
+    // `shouldShowNotice: false` precisely so it does not report per note.
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app,
+        sourcePathOrAbstractFile: targetFile.path,
+        verb: `Merged ${String(mergedCount)} note(s) into`
+      }),
+      pluginNoticeComponent,
+      pluginSettingsComponent
+    });
   }
 
   await showIgnoredFilesNotice(app, pluginNoticeComponent, ignoredSourceFiles);

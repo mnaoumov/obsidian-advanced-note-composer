@@ -57,3 +57,4 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 ## UI
 
 - [[15 Minimizing dialogs]]
+- [[28 Operation notices]]

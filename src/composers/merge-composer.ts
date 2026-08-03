@@ -20,6 +20,10 @@ import {
   relocateAttachments
 } from '../attachments.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
+import {
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 import { Action } from '../plugin-settings.ts';
 import { ComposerBase } from './composer-base.ts';
 
@@ -79,9 +83,11 @@ export class MergeComposer extends ComposerBase {
 
     const mtimes = this.captureFileMtimes();
     const progressNotice = this.shouldShowNotice
-      ? this.pluginNoticeComponent.showNoticeAfterDelay({
+      ? showOperationProgressNotice({
         abortController: this.abortController,
-        content: () => this.buildProgressContent('Merging')
+        content: () => this.buildProgressContent('Merging'),
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent: this.pluginSettingsComponent
       })
       : null;
 
@@ -129,6 +135,16 @@ export class MergeComposer extends ComposerBase {
 
       if (this.abortController.signal.aborted) {
         return;
+      }
+
+      if (this.shouldShowNotice) {
+        // The source note is gone by now, so it is named as plain text — an unresolved link to it would
+        // Create it back when clicked.
+        showOperationCompletionNotice({
+          content: await this.buildCompletionContent('Merged', false),
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
       }
 
       if (this.shouldOpenAfterMerge) {

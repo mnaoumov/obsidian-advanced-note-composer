@@ -16,6 +16,11 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 import { updateHeadingBacklinks } from '../rename-heading.ts';
 
 interface RenameHeadingEditorCommandHandlerConstructorParams {
@@ -120,29 +125,61 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
 
     const abortController = new AbortController();
     let updatedLinkCount = 0;
-    await runLockedTransaction({
+    const progressNotice = showOperationProgressNotice({
       abortController,
-      app: this.app,
-      body: async (vaultTransaction) => {
-        await vaultTransaction.modify(file, newContent);
-        updatedLinkCount = await updateHeadingBacklinks({
-          abortSignal: abortController.signal,
+      content: () =>
+        buildOperationNoticeContent({
           app: this.app,
-          newHeading,
-          notePathOrFile: file,
-          oldHeading,
-          pluginNoticeComponent: this.pluginNoticeComponent,
-          resourceLockComponent: this.resourceLockComponent
-        });
-      },
-      lockTargets: [{ mode: 'file', pathOrFile: file }],
-      operationName: 'Rename heading',
-      resourceLockComponent: this.resourceLockComponent
+          isLoading: true,
+          sourcePathOrAbstractFile: file,
+          verb: 'Renaming heading in note'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
     });
-
-    if (updatedLinkCount > 0) {
-      this.pluginNoticeComponent.showNotice(`Updated ${String(updatedLinkCount)} links.`);
+    try {
+      await runLockedTransaction({
+        abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          await vaultTransaction.modify(file, newContent);
+          updatedLinkCount = await updateHeadingBacklinks({
+            abortSignal: abortController.signal,
+            app: this.app,
+            newHeading,
+            notePathOrFile: file,
+            oldHeading,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            resourceLockComponent: this.resourceLockComponent
+          });
+        },
+        lockTargets: [{ mode: 'file', pathOrFile: file }],
+        operationName: 'Rename heading',
+        resourceLockComponent: this.resourceLockComponent
+      });
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        // The operation was cancelled (user or external change); the transaction has rolled back. The
+        // Progress notice's Cancel button is what makes this reachable at all.
+        return;
+      }
+      throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
     }
+
+    // One notice rather than two: the updated-link count is a detail OF the rename, not a separate
+    // Operation, and it is omitted entirely when nothing linked to the heading.
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        sourcePathOrAbstractFile: file,
+        suffix: updatedLinkCount > 0 ? ` and updated ${String(updatedLinkCount)} link(s)` : '',
+        verb: `Renamed heading "${oldHeading}" to "${newHeading}" in note`
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

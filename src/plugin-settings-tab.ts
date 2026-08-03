@@ -1171,6 +1171,25 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('Whether every operation reports itself: a notice while it runs, and a notice naming what it did once it finished.');
+              f.createEl('br');
+              f.appendText('Covers merging, splitting/extracting, swapping, moving, flattening, renaming a heading and reordering headings.');
+              f.createEl('br');
+              f.appendText('Refusals and errors are always shown, whatever this is set to.');
+              f.createEl('br');
+              f.appendText('The running notice is what carries the ');
+              appendCodeBlock(f, 'Cancel');
+              f.appendText(' button, so turning this off also hides it. An operation can still be cancelled by right-clicking the lock indicator and unlocking the note.');
+            }),
+            name: 'Should show operation notices',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldShowOperationNotices', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Whether to show the instruction bar at the bottom of the merge/split/swap modal dialogs.');
               f.createEl('br');
               f.appendText('The instruction bar contains the checkboxes, dropdowns, and keyboard hints for toggling per-operation options.');

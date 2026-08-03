@@ -39,6 +39,11 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationPermanentProgressNotice
+} from '../operation-notices.ts';
 
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
@@ -147,8 +152,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   private async mergeFolder(params: MergeFolderCommandHandlerMergeFolderParams): Promise<void> {
     const { sourceFolder, targetFolder } = params;
-    const notice = this.pluginNoticeComponent.showNotice(
-      await createFragmentAsync(async (f) => {
+    const notice = showOperationPermanentProgressNotice({
+      content: await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
         f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
         f.appendText(' with ');
@@ -157,10 +162,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         f.createEl('br');
         f.createDiv('is-loading');
       }),
-      {
-        isPermanent: true
-      }
-    );
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
 
     const abortController = new AbortController();
     try {
@@ -184,8 +188,23 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      notice.hide();
+      notice?.hide();
     }
+
+    // The source folder is gone by now (its emptied sub-folders are trashed), so it is named as plain
+    // Text — an unresolved link to it would create a note at that path when clicked.
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        preposition: 'with',
+        shouldLinkSource: false,
+        sourcePathOrAbstractFile: sourceFolder.path,
+        targetPathOrAbstractFile: targetFolder.path,
+        verb: 'Merged folder'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   private async mergeFolderImpl(params: MergeFolderCommandHandlerMergeFolderImplParams): Promise<void> {

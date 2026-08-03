@@ -21,6 +21,11 @@ import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 
 interface BuildMoveConfirmContentParams {
   readonly app: App;
@@ -86,7 +91,24 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
 
     const targetPath = getAvailablePath(this.app, join(targetFolder.path, folder.name));
 
+    // Captured as a string BEFORE the move: the rename mutates `folder.path` to its destination, so the
+    // Completion notice would otherwise name the same folder on both sides.
+    const sourcePath = folder.path;
+
     const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          sourcePathOrAbstractFile: sourcePath,
+          targetPathOrAbstractFile: targetFolder,
+          verb: 'Moving folder'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
     try {
       await runLockedTransaction({
         abortController,
@@ -107,7 +129,21 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
         return;
       }
       throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
     }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        shouldLinkSource: false,
+        sourcePathOrAbstractFile: sourcePath,
+        targetPathOrAbstractFile: targetPath,
+        verb: 'Moved folder'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

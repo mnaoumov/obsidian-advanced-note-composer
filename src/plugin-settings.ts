@@ -192,6 +192,28 @@ export class PluginSettings {
   public shouldShowMoveAtCursorButton = true;
   public shouldShowMoveToBottomButton = true;
   public shouldShowMoveToTopButton = true;
+
+  /**
+   * Whether every operation reports itself — a progress notice while it runs, and a notice naming what it
+   * did once it finishes (issue #182). Covers merge, split/extract, swap, move, flatten, rename heading and
+   * reorder headings alike; refusals ("this path is ignored in the plugin settings") and errors are always
+   * shown and are NOT gated by this.
+   *
+   * Deliberately NOT folded into `shouldShowSmartCutNotice`, which gates an *interactive* notice — turning
+   * that one off removes buttons, not just information — nor into
+   * `smartCutAndPasteCompletionFeedback`, which already owns how a finished smart cut & paste announces
+   * itself (so a move is never reported twice).
+   *
+   * The progress notice is what carries the operation's Cancel button, so turning this off also removes
+   * that affordance; cancelling then goes through the lock indicator's right-click unlock, which aborts the
+   * operation just the same.
+   *
+   * Needs no `registerLegacySettingsConverter` — an existing `data.json` simply has no such key and gets
+   * `true`. Unlike the plugin's other migration-free settings, that default deliberately CHANGES behavior
+   * for an existing vault: reporting every operation IS the feature the issue asks for. Do not "fix" this
+   * later by flipping the default.
+   */
+  public shouldShowOperationNotices = true;
   public shouldShowSmartCutNotice = true;
   public shouldSplitHeadingsAutomatically = false;
   public shouldSplitIntoFolder = false;
