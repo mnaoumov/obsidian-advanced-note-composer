@@ -150,6 +150,21 @@ interface ComposerBaseInsertContentParams {
   readonly existingContent: string;
 }
 
+interface ComposerBaseInsertIntoTargetFileParams {
+  readonly contentToInsert: string;
+
+  /**
+   * Whether the content is a frontmatter block and nothing else — a selection taken entirely from the
+   * source note's own frontmatter (issue #183). Then there is no body to write: the template is not applied
+   * (`{{content}}` would resolve to nothing, leaving only the template's own padding behind) and
+   * {@link ComposerBase.insertIntoTargetFileImpl} is skipped, so only the frontmatter merge runs.
+   *
+   * @default `false`
+   */
+  readonly isFrontmatterOnlyExtract?: boolean;
+  readonly vaultTransaction: VaultTransaction;
+}
+
 interface ComposerBaseMergeFrontmatterParams {
   readonly newFrontmatter: Frontmatter;
   readonly originalFrontmatter: Frontmatter;
@@ -397,8 +412,10 @@ export abstract class ComposerBase {
 
   protected abstract getTemplate(): string;
 
-  protected async insertIntoTargetFile(targetContentToInsert: string, vaultTransaction: VaultTransaction): Promise<void> {
-    targetContentToInsert = await this.includeFrontmatter(targetContentToInsert);
+  protected async insertIntoTargetFile(params: ComposerBaseInsertIntoTargetFileParams): Promise<void> {
+    const { vaultTransaction } = params;
+    const isFrontmatterOnlyExtract = params.isFrontmatterOnlyExtract ?? false;
+    let targetContentToInsert = await this.includeFrontmatter(params.contentToInsert);
     targetContentToInsert = await this.fixFootnotes(targetContentToInsert);
     targetContentToInsert = await this.fixLinks(targetContentToInsert);
     const backlinksToFix = await this.prepareBacklinksToFix();
@@ -410,12 +427,17 @@ export abstract class ComposerBase {
     }
 
     const { content: newContent, frontmatter: newFrontmatter } = this.extractFrontmatter(targetContentToInsert);
-    // Demote BEFORE the template is applied, so only the note's own outline moves: any heading the
-    // Template itself contributes was written at the level the user wanted it at.
-    targetContentToInsert = this.applyTemplate(demoteHeadings(newContent, this.headingLevelShift));
-    const { content: templateContent, frontmatter: templateFrontmatter } = this.extractFrontmatter(targetContentToInsert);
+    let templateFrontmatter: Frontmatter = {};
 
-    await this.insertIntoTargetFileImpl(templateContent, vaultTransaction);
+    if (!isFrontmatterOnlyExtract) {
+      // Demote BEFORE the template is applied, so only the note's own outline moves: any heading the
+      // Template itself contributes was written at the level the user wanted it at.
+      targetContentToInsert = this.applyTemplate(demoteHeadings(newContent, this.headingLevelShift));
+      const templateExtraction = this.extractFrontmatter(targetContentToInsert);
+      templateFrontmatter = templateExtraction.frontmatter;
+
+      await this.insertIntoTargetFileImpl(templateExtraction.content, vaultTransaction);
+    }
 
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
@@ -427,9 +449,12 @@ export abstract class ComposerBase {
         // The source title; a split's new-file title is governed by `frontmatterTitleMode` instead). For
         // An existing target that has no title, the `shouldUseSourceTitleWhenTargetHasNoTitle` governs.
         // Otherwise the merged-in source title is discarded.
-        const shouldKeepSourceTitle = this.isNewTargetFile
+        // A frontmatter-only extract always keeps it: the rule above exists because a merge/split carries
+        // The whole source frontmatter INCIDENTALLY, while here the user pointed at that very property, so
+        // Dropping it would silently lose exactly what was asked for.
+        const shouldKeepSourceTitle = isFrontmatterOnlyExtract || (this.isNewTargetFile
           ? this.shouldKeepSourceTitleForNewTargetFile
-          : this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle;
+          : this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle);
         if (!shouldKeepSourceTitle) {
           delete mergedFrontmatter.title;
         }

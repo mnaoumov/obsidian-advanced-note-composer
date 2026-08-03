@@ -541,6 +541,29 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('When the extracted selection lies entirely inside the note\'s properties, extract it as ');
+              f.appendText('properties: they are merged into the destination note\'s own properties through the ');
+              appendCodeBlock(f, 'Frontmatter merge strategy');
+              f.appendText(', instead of being pasted into its body as raw text.');
+              f.createEl('br');
+              f.appendText('Every property line the selection touches is taken in full, together with the property it belongs to, ');
+              f.appendText('so selecting two ');
+              appendCodeBlock(f, 'aliases');
+              f.appendText(' values moves them across as ');
+              appendCodeBlock(f, 'aliases');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Smart cut & paste moves are unaffected: they insert at the cursor you place in the note\'s body.');
+            }),
+            name: 'Should extract a properties selection as properties',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldExtractFrontmatterSelectionAsProperties', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Default setting for whether to allow split into unresolved path. Can be changed in the split modal dialog.');
               f.createEl('br');
               f.appendText('Unresolved path comes from links like ');

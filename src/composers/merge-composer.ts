@@ -120,7 +120,7 @@ export class MergeComposer extends ComposerBase {
             });
             sourceContent = await this.app.vault.read(this.sourceFile);
           }
-          await this.insertIntoTargetFile(sourceContent, vaultTransaction);
+          await this.insertIntoTargetFile({ contentToInsert: sourceContent, vaultTransaction });
           await vaultTransaction.trash(this.sourceFile);
         },
         injectedVaultTransaction: this.injectedVaultTransaction,
