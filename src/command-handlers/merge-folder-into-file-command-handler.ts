@@ -304,7 +304,8 @@ function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
  *
  * The sub-folders themselves are part of the result, not just their notes: the heading plan needs them to
  * head a folder that holds no notes at all, which no note path can reveal (issue #168). The notes to merge
- * are the walk's files, in the same order.
+ * are the walk's files, in the same order. Which sub-folders make it in is decided by
+ * {@link shouldHeadSubFolder} — being in the walk IS getting a heading.
  *
  * @param folder - The folder to walk.
  * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
@@ -317,10 +318,49 @@ function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TF
     .sort((a, b) => a.name.localeCompare(b.name));
   const subFolders = folder.children
     .filter(isFolder)
+    // A rejected folder takes its whole subtree with it: the `flatMap` below never recurses into it.
+    .filter((subFolder) => shouldHeadSubFolder(subFolder, isMergeableNote))
     .sort((a, b) => a.name.localeCompare(b.name));
   return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, isMergeableNote)])];
 }
 
 function getDepth(folderPath: string): number {
   return folderPath.split('/').length;
+}
+
+/**
+ * Whether a sub-folder belongs in the walk at all — which, since {@link buildFolderHeadingPlan} heads every
+ * folder it is given, is the same question as whether it earns a heading. A folder that holds no mergeable
+ * note anywhere beneath it is one of two very different things, and issues #168 and #181 are the two sides
+ * of the distinction:
+ *
+ * - **completely empty** (no files anywhere in the subtree) → kept, so the merged outline still mirrors the
+ *   whole folder tree (issue #168);
+ * - **holds files but no mergeable note** — an attachment folder — → dropped, together with its whole
+ *   subtree (issue #181): heading a folder whose entire content was never merged is noise, and it is
+ *   usually about to be deleted anyway, since `shouldMoveAttachmentsWhenMergingFolder` relocates those
+ *   attachments and `cleanupEmptyFolders` then removes the emptied folder. The subtree goes with it rather
+ *   than being classified on its own — an empty folder inside an attachment folder would otherwise be
+ *   headed at its own depth with no parent heading above it, which is worse than losing it.
+ *
+ * A third case is deliberately NOT decided here: a folder whose notes exist but are ALL excluded in the
+ * settings is planned normally and dropped later by `mergeFilesIntoSingleFile`, which flushes a pending
+ * heading only once a source actually reaches the merge.
+ *
+ * Dropping a folder cannot drop a note: a rejected subtree holds no mergeable note by definition, so
+ * `sourceMdFiles` — the walk's files — is the same either way. With the heading setting off the plan is
+ * never built, so this only ever affects the headings.
+ *
+ * @param folder - The sub-folder to classify.
+ * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @returns Whether the folder (and its subtree) stays in the walk.
+ */
+function shouldHeadSubFolder(folder: TFolder, isMergeableNote: (file: TFile) => boolean): boolean {
+  const files: TFile[] = [];
+  Vault.recurseChildren(folder, (child) => {
+    if (isFile(child)) {
+      files.push(child);
+    }
+  });
+  return files.length === 0 || files.some((file) => isMergeableNote(file));
 }

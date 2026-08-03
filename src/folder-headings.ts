@@ -112,9 +112,14 @@ const FENCE_REG_EXP = /^ {0,3}(?<Fence>`{3,}|~{3,})/;
  * **Every folder in the walk is headed, including one that holds no notes at all** (issue #168): the
  * merged note's outline mirrors the folder tree, so an empty folder is part of that tree even though it
  * contributes no content. That is why the input is the whole walk rather than the note paths alone — a
- * note-less folder leaves no trace in any note path. A folder whose notes exist but are ALL excluded in
- * the settings is a different case and still gets no heading: the plan emits its heading, but
- * `mergeFilesIntoSingleFile` drops headings that never reach a merged note.
+ * note-less folder leaves no trace in any note path. The other two note-less cases are settled elsewhere,
+ * so this stays a plain "head what you are given":
+ *
+ * - a folder holding files but no mergeable note — an attachment folder — never reaches the walk at all
+ *   (issue #181), because `MergeFolderIntoFileCommandHandler`'s `shouldHeadSubFolder` leaves it out;
+ * - a folder whose notes exist but are ALL excluded in the settings is planned normally and still gets no
+ *   heading: the plan emits it, but `mergeFilesIntoSingleFile` drops headings that never reach a merged
+ *   note.
  *
  * **Past six levels the level keeps growing** — a folder seven deep gets `#######`, which markdown does
  * not define and Obsidian renders as literal text rather than a heading. That is the deliberate choice
