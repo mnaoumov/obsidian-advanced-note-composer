@@ -15,6 +15,11 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForSwap } from '../modals/swap-folder-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 import { swap } from '../swapper.ts';
 
 interface SwapFolderCommandHandlerConstructorParams {
@@ -69,7 +74,26 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       return;
     }
 
+    // Captured as strings BEFORE the swap: it renames both folders, which mutates `path` on the two
+    // `TFolder` objects, so reading them afterwards would report the two paths the other way round.
+    const sourcePath = folder.path;
+    const targetPath = result.targetFolder.path;
+
     const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          preposition: 'with',
+          sourcePathOrAbstractFile: sourcePath,
+          targetPathOrAbstractFile: targetPath,
+          verb: 'Swapping folder'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
     try {
       await runLockedTransaction({
         abortController,
@@ -96,7 +120,21 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
         return;
       }
       throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
     }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        preposition: 'with',
+        sourcePathOrAbstractFile: sourcePath,
+        targetPathOrAbstractFile: targetPath,
+        verb: 'Swapped folder'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

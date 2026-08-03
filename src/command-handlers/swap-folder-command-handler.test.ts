@@ -3,9 +3,13 @@ import type {
   TFolder
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { MockInstance } from 'vitest';
 
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   requestResourceUnlockForPath,
@@ -76,12 +80,13 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
   const handler = new SwapFolderCommandHandler({
     app,
-    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: () => false,
+        shouldShowOperationNotices: true,
         ...settingsOverrides
       })
     }),
@@ -291,3 +296,19 @@ describe('SwapFolderCommandHandler', () => {
     expect(handler.shouldAddToFolderMenu({ folder: getFolder('some/folder'), source: 'source' })).toBe(true);
   });
 });
+
+/**
+ * Builds a `showNoticeAfterDelay` stub that invokes the lazy content builder, so the progress-notice
+ * content is exercised — the real component only runs it once the delay elapses. Fire-and-forget: its
+ * result is not under test.
+ *
+ * @returns The stub.
+ */
+function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfterDelay'] {
+  return vi.fn().mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+    invokeAsyncSafely(async () => {
+      await castTo<() => Promise<unknown>>(delayedNoticeParams.content)();
+    });
+    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+  });
+}

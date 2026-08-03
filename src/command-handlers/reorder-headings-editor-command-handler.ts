@@ -22,6 +22,11 @@ import {
 } from '../heading-sections.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { openReorderHeadingsModal } from '../modals/reorder-headings-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 
 interface ReorderHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -95,15 +100,50 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
     }
 
     const newContent = joinReorderedSections(split, order);
-    await runLockedTransaction({
-      abortController: new AbortController(),
-      app: this.app,
-      body: async (vaultTransaction) => {
-        await vaultTransaction.modify(file, newContent);
-      },
-      lockTargets: [{ mode: 'file', pathOrFile: file }],
-      operationName: 'Reorder headings',
-      resourceLockComponent: this.resourceLockComponent
+    // Hoisted out of the `runLockedTransaction` call so the progress notice's Cancel button has a
+    // Controller to abort.
+    const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          sourcePathOrAbstractFile: file,
+          verb: 'Reordering headings in note'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+    try {
+      await runLockedTransaction({
+        abortController,
+        app: this.app,
+        body: async (vaultTransaction) => {
+          await vaultTransaction.modify(file, newContent);
+        },
+        lockTargets: [{ mode: 'file', pathOrFile: file }],
+        operationName: 'Reorder headings',
+        resourceLockComponent: this.resourceLockComponent
+      });
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        // The operation was cancelled (user or external change); the transaction has rolled back.
+        return;
+      }
+      throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
+    }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        sourcePathOrAbstractFile: file,
+        verb: 'Reordered headings in note'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 

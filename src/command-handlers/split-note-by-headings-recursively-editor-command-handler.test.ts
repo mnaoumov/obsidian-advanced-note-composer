@@ -10,10 +10,14 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -217,7 +221,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
-    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy<PluginSettings>({
@@ -225,6 +229,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
         shouldAddCommandsToSubmenu: options?.shouldAddCommandsToSubmenu ?? true,
         shouldAskBeforeSplitting: options?.shouldAskBeforeSplitting ?? false,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options?.shouldBlockCommandOnPath ?? false),
+        shouldShowOperationNotices: true,
         shouldSplitRecursivelyIntoDefaultNewNoteFolder: options?.shouldSplitRecursivelyIntoDefaultNewNoteFolder ?? false
       })
     }),
@@ -239,6 +244,11 @@ function createSplitResult(targetFile: TFile): PrepareForSplitFileResult {
     selectedText: '',
     targetFile
   });
+}
+
+function getShownNoticeText(pluginNoticeComponent: PluginNoticeComponent): string {
+  const [content] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
+  return castTo<DocumentFragment>(content).textContent;
 }
 
 /**
@@ -268,9 +278,26 @@ function toTestable(handler: SplitNoteByHeadingsRecursivelyEditorCommandHandler)
   return castTo<TestableHandler>(handler);
 }
 
+/**
+ * Lets the mocked `createFragmentAsync` build a real fragment, so a notice's rendered text can be
+ * asserted instead of just the fact that one was shown.
+ */
+function useRealFragments(): void {
+  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+    const fragment = createFragment();
+    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    return fragment;
+  });
+  mockRenderInternalLink.mockImplementation((linkParams) => {
+    const path = typeof linkParams.pathOrAbstractFile === 'string' ? linkParams.pathOrAbstractFile : linkParams.pathOrAbstractFile.path;
+    return Promise.resolve(createEl('a', { text: `[${path}]` }));
+  });
+}
+
 describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRealFragments();
     capturedConfirmParams = null;
     confirmResult = createConfirmResult(false);
     mockResolveSplitTemplateForNewTargetFile.mockReturnValue(RESOLVED_TEMPLATE);
@@ -531,6 +558,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createSplitResult(childFile))
       .mockResolvedValueOnce(createSplitResult(grandChildFile));
     setActiveEditor(params.app, createMockEditor());
+    useRealFragments();
 
     await handler.executeEditor(createMockEditor(), createMockCtx(file));
 
@@ -538,7 +566,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     // The second pass splits the note the first pass produced, not the original note.
     expect(MockSplitComposer.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     expect(mockPrepareForSplitFile.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Split into 2 note(s).');
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 2 note(s).');
   });
 
   it('should defer the split template to every produced note, paired with the note it came out of (issue #172)', async () => {
@@ -599,13 +627,14 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createSplitResult(childFile))
       .mockResolvedValueOnce(null);
     setActiveEditor(params.app, createMockEditor());
+    useRealFragments();
 
     await handler.executeEditor(createMockEditor(), createMockCtx(file));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
     expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([[childFile.path, file.path]]);
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Split into 1 note(s).');
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s).');
   });
 
   it('should reopen the note the command was invoked on once the recursion finishes', async () => {
@@ -692,3 +721,19 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
   });
 });
+
+/**
+ * Builds a `showNoticeAfterDelay` stub that invokes the lazy content builder, so the progress-notice
+ * content is exercised — the real component only runs it once the delay elapses. Fire-and-forget: its
+ * result is not under test.
+ *
+ * @returns The stub.
+ */
+function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfterDelay'] {
+  return vi.fn().mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+    invokeAsyncSafely(async () => {
+      await castTo<() => Promise<unknown>>(delayedNoticeParams.content)();
+    });
+    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+  });
+}

@@ -14,6 +14,7 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { SwapRegion } from './swap-selections.ts';
 
 import { runLockedTransaction } from './locked-transaction.ts';
+import { showOperationCompletionNotice } from './operation-notices.ts';
 import {
   doRegionsOverlap,
   swapContents,
@@ -202,7 +203,11 @@ export async function swapWithSelection(params: SwapWithSelectionParams): Promis
     resourceLockComponent
   });
 
-  pluginNoticeComponent.showNotice('Selections swapped.');
+  showOperationCompletionNotice({
+    content: 'Selections swapped.',
+    pluginNoticeComponent,
+    pluginSettingsComponent
+  });
 }
 
 function getEditorRegion(editor: Editor): SwapRegion {

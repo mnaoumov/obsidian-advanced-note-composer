@@ -7,10 +7,14 @@ import type {
   TFile,
   Vault
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -39,6 +43,7 @@ interface CreateParamsOptions {
   readonly headings?: readonly HeadingCache[];
   readonly isPathIgnored?: boolean;
   readonly shouldBlockCommandOnPath?: boolean;
+  readonly shouldShowOperationNotices?: boolean;
 }
 
 interface HandlerParams {
@@ -112,25 +117,48 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
         read: vi.fn().mockResolvedValue(options.content ?? HEADING_CONTENT)
       })
     }),
-    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: true,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
+        shouldShowOperationNotices: options.shouldShowOperationNotices ?? true
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
 }
 
+function getShownNoticeText(pluginNoticeComponent: PluginNoticeComponent): string {
+  const [content] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
+  return castTo<DocumentFragment>(content).textContent;
+}
+
 function toTestable(handler: RenameHeadingEditorCommandHandler): TestableHandler {
   return castTo<TestableHandler>(handler);
+}
+
+/**
+ * Lets the mocked `createFragmentAsync` build a real fragment, so a notice's rendered text can be
+ * asserted instead of just the fact that one was shown.
+ */
+function useRealFragments(): void {
+  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+    const fragment = createFragment();
+    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    return fragment;
+  });
+  mockRenderInternalLink.mockImplementation((linkParams) => {
+    const path = typeof linkParams.pathOrAbstractFile === 'string' ? linkParams.pathOrAbstractFile : linkParams.pathOrAbstractFile.path;
+    return Promise.resolve(createEl('a', { text: `[${path}]` }));
+  });
 }
 
 describe('RenameHeadingEditorCommandHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRealFragments();
     mockRunLockedTransaction.mockImplementation(async (params: RunLockedTransactionParams) => {
       await params.body(strictProxy<VaultTransaction>({ modify: mockModify }));
     });
@@ -235,6 +263,7 @@ describe('RenameHeadingEditorCommandHandler', () => {
       handler.canExecuteEditor(createMockEditor(0), createMockCtx(FILE));
       mockPrompt.mockResolvedValue('New Heading');
       mockUpdateHeadingBacklinks.mockResolvedValue(2);
+      useRealFragments();
 
       await handler.executeEditor(createMockEditor(0), createMockCtx(FILE));
 
@@ -245,15 +274,56 @@ describe('RenameHeadingEditorCommandHandler', () => {
         notePathOrFile: FILE,
         oldHeading: 'Old Heading'
       }));
-      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Updated 2 links.');
+      expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Renamed heading "Old Heading" to "New Heading" in note [note.md] and updated 2 link(s).');
     });
 
-    it('should not show a notice when no links were updated', async () => {
+    it('should report the rename without a link count when no links were updated', async () => {
       const params = createMockParams();
       const handler = toTestable(new RenameHeadingEditorCommandHandler(params));
       handler.canExecuteEditor(createMockEditor(0), createMockCtx(FILE));
       mockPrompt.mockResolvedValue('New Heading');
       mockUpdateHeadingBacklinks.mockResolvedValue(0);
+      useRealFragments();
+
+      await handler.executeEditor(createMockEditor(0), createMockCtx(FILE));
+
+      expect(mockModify).toHaveBeenCalledWith(FILE, '## New Heading\nbody\n');
+      expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Renamed heading "Old Heading" to "New Heading" in note [note.md].');
+    });
+
+    it('should report nothing when the operation is cancelled', async () => {
+      const params = createMockParams();
+      const handler = toTestable(new RenameHeadingEditorCommandHandler(params));
+      handler.canExecuteEditor(createMockEditor(0), createMockCtx(FILE));
+      mockPrompt.mockResolvedValue('New Heading');
+      mockRunLockedTransaction.mockImplementation((transactionParams: RunLockedTransactionParams) => {
+        transactionParams.abortController.abort();
+        return Promise.reject(new Error('cancelled'));
+      });
+
+      await handler.executeEditor(createMockEditor(0), createMockCtx(FILE));
+
+      expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
+    });
+
+    it('should rethrow a failure that is not a cancellation', async () => {
+      const params = createMockParams();
+      const handler = toTestable(new RenameHeadingEditorCommandHandler(params));
+      handler.canExecuteEditor(createMockEditor(0), createMockCtx(FILE));
+      mockPrompt.mockResolvedValue('New Heading');
+      mockRunLockedTransaction.mockRejectedValue(new Error('disk on fire'));
+
+      await expect(handler.executeEditor(createMockEditor(0), createMockCtx(FILE))).rejects.toThrow('disk on fire');
+      expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
+    });
+
+    it('should show no notice when operation notices are turned off', async () => {
+      const params = createMockParams({ shouldShowOperationNotices: false });
+      const handler = toTestable(new RenameHeadingEditorCommandHandler(params));
+      handler.canExecuteEditor(createMockEditor(0), createMockCtx(FILE));
+      mockPrompt.mockResolvedValue('New Heading');
+      mockUpdateHeadingBacklinks.mockResolvedValue(2);
+      useRealFragments();
 
       await handler.executeEditor(createMockEditor(0), createMockCtx(FILE));
 
@@ -268,3 +338,19 @@ describe('RenameHeadingEditorCommandHandler', () => {
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
   });
 });
+
+/**
+ * Builds a `showNoticeAfterDelay` stub that invokes the lazy content builder, so the progress-notice
+ * content is exercised — the real component only runs it once the delay elapses. Fire-and-forget: its
+ * result is not under test.
+ *
+ * @returns The stub.
+ */
+function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfterDelay'] {
+  return vi.fn().mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+    invokeAsyncSafely(async () => {
+      await castTo<() => Promise<unknown>>(delayedNoticeParams.content)();
+    });
+    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+  });
+}

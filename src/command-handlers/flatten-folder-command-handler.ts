@@ -26,6 +26,11 @@ import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 import { FlattenMode } from '../plugin-settings.ts';
 
 interface BuildFlattenConfirmContentParams {
@@ -232,6 +237,19 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     }
 
     const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          sourcePathOrAbstractFile: folder,
+          targetPathOrAbstractFile: parentFolder,
+          verb: 'Flattening folder'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
     try {
       await runLockedTransaction({
         abortController,
@@ -257,7 +275,21 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
         return;
       }
       throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
     }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        sourcePathOrAbstractFile: folder,
+        suffix: `, promoting ${String(itemsToMove.length)} item(s)`,
+        targetPathOrAbstractFile: parentFolder,
+        verb: 'Flattened folder'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

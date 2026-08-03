@@ -211,6 +211,7 @@ function createPluginSettingsComponentStub(
       shouldMergeHeadingsByDefault: false,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldShowOperationNotices: true,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
       smartCutAndPasteCompletionFeedback: SmartCutAndPasteCompletionFeedback.SelectMovedContent,
       smartCutAndPasteTemplate: '',
@@ -222,6 +223,11 @@ function createPluginSettingsComponentStub(
       ...overrides
     })
   });
+}
+
+function getLastNoticeText(pluginNoticeComponent: PluginNoticeComponent): string {
+  const [content] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
+  return castTo<DocumentFragment>(content).textContent;
 }
 
 function getSourceFile(): TFile {
@@ -647,6 +653,47 @@ describe('splitFile move mode', () => {
     const content = await app.vault.adapter.read('source.md');
     expect(content.indexOf('MOVED')).toBe(0);
     expect(content).not.toContain('TK');
+  });
+
+  it('should report a cross-note split naming both notes, and a same-note extract naming only one (issue #182)', async () => {
+    const crossNoteNotice = createPluginNoticeComponentStub();
+    await createComposer({ pluginNoticeComponent: crossNoteNotice }).splitFile();
+
+    const sameNoteNotice = createPluginNoticeComponentStub();
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({
+        editor,
+        file: null,
+        setEphemeralState: vi.fn()
+      })
+    );
+    const sourceFile = getSourceFile();
+    await new SplitComposer({
+      app,
+      capturedSelections: [{ endOffset: 11, startOffset: 7 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: sameNoteNotice,
+      pluginSettingsComponent: createPluginSettingsComponentStub({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }),
+      resourceLockComponent,
+      selectedText: 'MOVED',
+      sourceFile,
+      targetCursorOffset: 0,
+      targetFile: sourceFile
+    }).splitFile();
+
+    // The link text itself is stubbed away here; what matters is the prose the two cases pick.
+    expect(getLastNoticeText(crossNoteNotice)).toContain('Split note');
+    expect(getLastNoticeText(crossNoteNotice)).toContain(' into ');
+    // Naming both sides of a same-note extract would read `Split note A into A`.
+    expect(getLastNoticeText(sameNoteNotice)).toContain('Moved the extracted content within note');
+    expect(getLastNoticeText(sameNoteNotice)).not.toContain(' into ');
   });
 
   it('should not shift the captured selection offsets for a same-note move after the cursor', async () => {

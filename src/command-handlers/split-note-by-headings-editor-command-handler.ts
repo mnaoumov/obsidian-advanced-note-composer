@@ -20,6 +20,11 @@ import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { doesSelectionIntersectHeadingOfLevel } from '../headings.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 
 interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -93,50 +98,88 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
-    while (true) {
-      const cache = await getCacheSafe(this.app, file);
-      if (!cache) {
-        break;
+    // The individual splits are silent (`isMultipleSplit`), so the batch reports itself once — a progress
+    // Notice for the whole run and one completion notice naming how many notes it produced (issue #182).
+    const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          sourcePathOrAbstractFile: file,
+          verb: `Splitting note by H${String(this.headingLevel)} headings in`
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+    let splitCount = 0;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
+      while (true) {
+        if (abortController.signal.aborted) {
+          break;
+        }
+        const cache = await getCacheSafe(this.app, file);
+        if (!cache) {
+          break;
+        }
+        const heading = (cache.headings ?? []).find((h) => h.level === this.headingLevel);
+        if (!heading) {
+          break;
+        }
+        const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
+        if (!headingInfo) {
+          this.pluginNoticeComponent.showNotice('Failed to find heading');
+          return;
+        }
+        editor.setSelection(headingInfo.start, headingInfo.end);
+        const result = await prepareForSplitFile({
+          app: this.app,
+          editor,
+          heading: headingInfo.heading,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          resourceLockComponent: this.resourceLockComponent,
+          shouldSkipModal: true,
+          sourceFile: file
+        });
+        if (!result) {
+          return;
+        }
+        const composer = new SplitComposer({
+          app: this.app,
+          capturedSelections: result.capturedSelections,
+          consoleDebugComponent: this.consoleDebugComponent,
+          editor,
+          heading: headingInfo.heading,
+          isMultipleSplit: true,
+          isNewTargetFile: result.isNewTargetFile,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          resourceLockComponent: this.resourceLockComponent,
+          selectedText: result.selectedText,
+          sourceFile: file,
+          targetFile: result.targetFile
+        });
+        await composer.splitFile();
+        splitCount++;
       }
-      const heading = (cache.headings ?? []).find((h) => h.level === this.headingLevel);
-      if (!heading) {
-        break;
-      }
-      const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
-      if (!headingInfo) {
-        this.pluginNoticeComponent.showNotice('Failed to find heading');
-        return;
-      }
-      editor.setSelection(headingInfo.start, headingInfo.end);
-      const result = await prepareForSplitFile({
-        app: this.app,
-        editor,
-        heading: headingInfo.heading,
-        pluginSettingsComponent: this.pluginSettingsComponent,
-        resourceLockComponent: this.resourceLockComponent,
-        shouldSkipModal: true,
-        sourceFile: file
-      });
-      if (!result) {
-        return;
-      }
-      const composer = new SplitComposer({
-        app: this.app,
-        capturedSelections: result.capturedSelections,
-        consoleDebugComponent: this.consoleDebugComponent,
-        editor,
-        heading: headingInfo.heading,
-        isMultipleSplit: true,
-        isNewTargetFile: result.isNewTargetFile,
+    } finally {
+      progressNotice?.[Symbol.dispose]();
+    }
+
+    if (splitCount > 0) {
+      showOperationCompletionNotice({
+        content: await buildOperationNoticeContent({
+          app: this.app,
+          sourcePathOrAbstractFile: file,
+          suffix: ` into ${String(splitCount)} note(s)`,
+          verb: 'Split note'
+        }),
         pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent: this.pluginSettingsComponent,
-        resourceLockComponent: this.resourceLockComponent,
-        selectedText: result.selectedText,
-        sourceFile: file,
-        targetFile: result.targetFile
+        pluginSettingsComponent: this.pluginSettingsComponent
       });
-      await composer.splitFile();
     }
   }
 

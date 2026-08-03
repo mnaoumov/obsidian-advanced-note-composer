@@ -46,6 +46,7 @@ import {
 } from '../frontmatter-merge.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
+import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
   Action,
   FrontmatterMergeStrategy
@@ -262,6 +263,25 @@ export abstract class ComposerBase {
   }
 
   /**
+   * Builds the content of the notice reporting the finished operation (issue #182) — the same shape as
+   * {@link buildProgressContent} in the past tense, closed by a period instead of the loading indicator.
+   *
+   * @param verb - The past-tense verb describing the operation, e.g. `Split` or `Merged`.
+   * @param shouldLinkSource - Whether the source note still exists and can be linked. A merge trashes it,
+   * and an unresolved note link CREATES the note when clicked.
+   * @returns A {@link Promise} resolving to the notice content fragment.
+   */
+  protected buildCompletionContent(verb: string, shouldLinkSource: boolean): Promise<DocumentFragment> {
+    return buildOperationNoticeContent({
+      app: this.app,
+      shouldLinkSource,
+      sourcePathOrAbstractFile: this.sourceFile.path,
+      targetPathOrAbstractFile: this.targetFile.path,
+      verb: `${verb} note`
+    });
+  }
+
+  /**
    * Builds the progress notice content describing the operation from the source note to the target
    * note, with clickable links to both and a loading indicator. Passed to
    * {@link PluginNoticeComponent.showNoticeAfterDelay}, which keeps the links clickable without
@@ -271,12 +291,12 @@ export abstract class ComposerBase {
    * @returns A {@link Promise} resolving to the notice content fragment.
    */
   protected buildProgressContent(verb: string): Promise<DocumentFragment> {
-    return createFragmentAsync(async (fragmentEl) => {
-      fragmentEl.appendText(`${verb} note `);
-      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
-      fragmentEl.appendText(' into ');
-      fragmentEl.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
-      fragmentEl.createDiv('is-loading');
+    return buildOperationNoticeContent({
+      app: this.app,
+      isLoading: true,
+      sourcePathOrAbstractFile: this.sourceFile.path,
+      targetPathOrAbstractFile: this.targetFile.path,
+      verb: `${verb} note`
     });
   }
 

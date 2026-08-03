@@ -21,6 +21,11 @@ import type {
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
 import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
+import {
   Action,
   SmartCutAndPasteCompletionFeedback,
   SmartCutAndPasteMoveKind,
@@ -166,9 +171,11 @@ export class SplitComposer extends ComposerBase {
     const mtimes = this.captureFileMtimes();
     const progressNotice = this.isMultipleSplit
       ? null
-      : this.pluginNoticeComponent.showNoticeAfterDelay({
+      : showOperationProgressNotice({
         abortController: this.abortController,
-        content: () => this.buildProgressContent('Splitting')
+        content: () => this.buildProgressContent('Splitting'),
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent: this.pluginSettingsComponent
       });
     try {
       await runLockedTransaction({
@@ -244,6 +251,24 @@ export class SplitComposer extends ComposerBase {
 
       if (this.abortController.signal.aborted) {
         return;
+      }
+
+      // A batch split reports once for the whole run (the command handler does it), and a smart cut &
+      // Paste move is reported by `applyMovedContentFeedback` through its own
+      // `smartCutAndPasteCompletionFeedback` setting — reporting either here would say it twice.
+      if (!this.isMultipleSplit && !this.smartCutAndPasteMoveKind) {
+        showOperationCompletionNotice({
+          // A same-note extract has one side, so naming both would read `Split note A into A`.
+          content: this.isSameNoteMove()
+            ? await buildOperationNoticeContent({
+              app: this.app,
+              sourcePathOrAbstractFile: this.sourceFile.path,
+              verb: 'Moved the extracted content within note'
+            })
+            : await this.buildCompletionContent('Split', true),
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
       }
 
       if (!this.isMultipleSplit && (this.insertToken !== null || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit)) {

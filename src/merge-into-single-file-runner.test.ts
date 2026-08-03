@@ -88,6 +88,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
       shouldMergeHeadingsByDefault: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldShowOperationNotices: true,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
       ...settingsOverrides
     })

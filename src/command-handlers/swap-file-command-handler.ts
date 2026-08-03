@@ -15,6 +15,11 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../operation-notices.ts';
 import { swap } from '../swapper.ts';
 
 interface SwapFileCommandHandlerConstructorParams {
@@ -68,7 +73,26 @@ export class SwapFileCommandHandler extends FileCommandHandler {
       return;
     }
 
+    // Captured as strings BEFORE the swap: the swap renames both notes, which mutates `path` on the two
+    // `TFile` objects, so reading them afterwards would report the two paths the other way round.
+    const sourcePath = file.path;
+    const targetPath = targetFile.path;
+
     const abortController = new AbortController();
+    const progressNotice = showOperationProgressNotice({
+      abortController,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          preposition: 'with',
+          sourcePathOrAbstractFile: sourcePath,
+          targetPathOrAbstractFile: targetPath,
+          verb: 'Swapping file'
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
     try {
       await runLockedTransaction({
         abortController,
@@ -95,7 +119,21 @@ export class SwapFileCommandHandler extends FileCommandHandler {
         return;
       }
       throw error;
+    } finally {
+      progressNotice?.[Symbol.dispose]();
     }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        preposition: 'with',
+        sourcePathOrAbstractFile: sourcePath,
+        targetPathOrAbstractFile: targetPath,
+        verb: 'Swapped file'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

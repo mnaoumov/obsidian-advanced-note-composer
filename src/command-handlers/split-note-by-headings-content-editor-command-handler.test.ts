@@ -7,10 +7,14 @@ import type {
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -88,6 +92,19 @@ interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly resourceLockComponent: ResourceLockComponent;
 }
 
+/**
+ * Makes the progress notice abort the run's controller the moment it is shown, standing in for the user
+ * clicking its Cancel button.
+ *
+ * @param pluginNoticeComponent - The notice component stub to rewire.
+ */
+function cancelOnProgressNotice(pluginNoticeComponent: PluginNoticeComponent): void {
+  vi.mocked(pluginNoticeComponent.showNoticeAfterDelay).mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+    delayedNoticeParams.abortController?.abort();
+    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+  });
+}
+
 function createHeading(level: number, startLine: number, endLine?: number): HeadingCache {
   return strictProxy<HeadingCache>({
     heading: `Heading ${String(startLine)}`,
@@ -132,17 +149,23 @@ function createMockParams(
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     headingLevel,
-    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
-        shouldKeepHeadingsWhenSplittingContent
+        shouldKeepHeadingsWhenSplittingContent,
+        shouldShowOperationNotices: true
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
   };
+}
+
+function getShownNoticeText(pluginNoticeComponent: PluginNoticeComponent): string {
+  const [content] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
+  return castTo<DocumentFragment>(content).textContent;
 }
 
 function toTestable(handler: SplitNoteByHeadingsContentEditorCommandHandler): TestableHandler {
@@ -152,6 +175,7 @@ function toTestable(handler: SplitNoteByHeadingsContentEditorCommandHandler): Te
 describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRealFragments();
   });
 
   it('should construct with correct params for H3', () => {
@@ -460,6 +484,21 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
       { ch: 0, line: 3 },
       { ch: 0, line: 4 }
     );
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s).');
+  });
+
+  it('should split nothing and report nothing once the progress notice is cancelled', async () => {
+    const params = createMockParams(2, false);
+    const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
+    // The Cancel button on the progress notice aborts the run's controller; the loop checks it before
+    // Every heading, so an abort taken as the notice appears stops it before the first split.
+    cancelOnProgressNotice(params.pluginNoticeComponent);
+    mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 3, 3)] }));
+
+    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+
+    expect(MockSplitComposer).not.toHaveBeenCalled();
+    expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {
@@ -482,3 +521,34 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     expect(handler.shouldAddToEditorMenu(editor, ctx)).toBe(true);
   });
 });
+
+/**
+ * Builds a `showNoticeAfterDelay` stub that invokes the lazy content builder, so the progress-notice
+ * content is exercised — the real component only runs it once the delay elapses. Fire-and-forget: its
+ * result is not under test.
+ *
+ * @returns The stub.
+ */
+function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfterDelay'] {
+  return vi.fn().mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
+    invokeAsyncSafely(async () => {
+      await castTo<() => Promise<unknown>>(delayedNoticeParams.content)();
+    });
+    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
+  });
+}
+/**
+ * Lets the mocked `createFragmentAsync` build a real fragment, so a notice's rendered text can be
+ * asserted instead of just the fact that one was shown.
+ */
+function useRealFragments(): void {
+  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+    const fragment = createFragment();
+    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    return fragment;
+  });
+  mockRenderInternalLink.mockImplementation((linkParams) => {
+    const path = typeof linkParams.pathOrAbstractFile === 'string' ? linkParams.pathOrAbstractFile : linkParams.pathOrAbstractFile.path;
+    return Promise.resolve(createEl('a', { text: `[${path}]` }));
+  });
+}

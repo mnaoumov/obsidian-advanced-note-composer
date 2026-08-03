@@ -118,6 +118,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       shouldMoveAttachmentsWhenMergingFile: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
+      shouldShowOperationNotices: true,
       shouldUseSourceTitleWhenTargetHasNoTitle: false,
       ...overrides
     })
