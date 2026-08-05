@@ -2,6 +2,7 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
+import type { CommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler';
 import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -205,6 +206,18 @@ describe('Plugin', () => {
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
+
+    // `registerCommandHandlers` takes a FACTORY, so the handler list is only built when the component
+    // Calls it. Build it here, or the array never executes and every handler construction — including the
+    // Two spread-generated batches — goes unverified. The handler classes are mocked in this suite, so
+    // The assertion is on the shape of the list, not on command identities; those are pinned by each
+    // Handler's own suite.
+    const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
+    const commandHandlers = buildCommandHandlers();
+    // 24 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
+    const EXPECTED_COMMAND_HANDLER_COUNT = 39;
+    expect(commandHandlers).toHaveLength(EXPECTED_COMMAND_HANDLER_COUNT);
+    expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TokenizedStringLanguageComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(RenderLinkHandlersWarmupComponent).toHaveBeenCalledOnce();

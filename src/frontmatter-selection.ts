@@ -175,12 +175,12 @@ class FrontmatterSelectionExtractor {
       return false;
     }
 
-    const hadChildren = [...this.parentIndexes.values()].includes(index);
-    if (!hadChildren) {
+    const hasChildren = [...this.parentIndexes.values()].includes(index);
+    if (!hasChildren) {
       return false;
     }
 
-    return ![...this.parentIndexes.entries()].some(([childIndex, parentIndex]) => parentIndex === index && remainingIndexes.has(childIndex));
+    return [...this.parentIndexes].every(([childIndex, parentIndex]) => !(parentIndex === index && remainingIndexes.has(childIndex)));
   }
 
   /**

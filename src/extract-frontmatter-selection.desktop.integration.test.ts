@@ -34,7 +34,9 @@ interface SettingsCarrier {
 describe('extracting a properties selection (issue #183)', () => {
   it('should merge the selected values into the destination note\'s properties instead of its body', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'fm-extract-source.md';
@@ -84,7 +86,10 @@ describe('extracting a properties selection (issue #183)', () => {
 
           await waitUntil({
             message: 'the extracted aliases did not reach the destination note',
-            predicate: async () => (await app.vault.read(targetFile)).includes('bravo')
+            predicate: async () => {
+              const currentTargetContent = await app.vault.read(targetFile);
+              return currentTargetContent.includes('bravo');
+            }
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -113,13 +118,13 @@ describe('extracting a properties selection (issue #183)', () => {
         async function chooseTargetInPicker(query: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = query;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'the destination note suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(query))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
