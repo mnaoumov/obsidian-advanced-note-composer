@@ -376,7 +376,7 @@ export class SplitComposer extends ComposerBase {
     this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Moved the marked selection into ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
         f.appendText('.');
       })
     );
@@ -446,17 +446,17 @@ export class SplitComposer extends ComposerBase {
       if (selectionEnd < rangeStart || selectionStart > rangeEnd) {
         result.push(selection);
       } else {
-        const beforeRange = selectionStart < rangeStart;
-        const afterRange = selectionEnd > rangeEnd;
+        const isBeforeRange = selectionStart < rangeStart;
+        const isAfterRange = selectionEnd > rangeEnd;
 
-        if (beforeRange) {
+        if (isBeforeRange) {
           result.push({
             anchor: this.editor.offsetToPos(selectionStart),
             head: this.editor.offsetToPos(rangeStart)
           });
         }
 
-        if (afterRange) {
+        if (isAfterRange) {
           result.push({
             anchor: this.editor.offsetToPos(rangeEnd),
             head: this.editor.offsetToPos(selectionEnd)
@@ -495,17 +495,21 @@ export class SplitComposer extends ComposerBase {
     const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
 
     switch (this.textAfterExtractionMode) {
-      case TextAfterExtractionMode.EmbedNewFile:
+      case TextAfterExtractionMode.EmbedNewFile: {
         this.editor.replaceSelection(`!${markdownLink}`);
         break;
-      case TextAfterExtractionMode.LinkToNewFile:
+      }
+      case TextAfterExtractionMode.LinkToNewFile: {
         this.editor.replaceSelection(markdownLink);
         break;
-      case TextAfterExtractionMode.None:
+      }
+      case TextAfterExtractionMode.None: {
         this.editor.replaceSelection('');
         break;
-      default:
+      }
+      default: {
         throw new Error(`Invalid text after extraction mode: ${this.textAfterExtractionMode as string}`);
+      }
     }
   }
 
@@ -712,7 +716,7 @@ export function padEdgeMoveTemplate(template: string, kind: SmartCutAndPasteMove
     padded = `\n${padded}`;
   }
   if (!padded.endsWith('\n')) {
-    padded = `${padded}\n`;
+    padded += '\n';
   }
 
   return padded;

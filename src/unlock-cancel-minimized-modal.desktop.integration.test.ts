@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('cancel a pending extract from the minimized modal bar', () => {
   it('should cancel the extract and release the source lock when the minimized bar Cancel button is clicked', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
 
@@ -31,34 +33,34 @@ describe('cancel a pending extract from the minimized modal bar', () => {
 
         // The split picker opened (it is minimizable) and the source note is locked.
         const minimizeButtonEl = activeDocument.querySelector<HTMLElement>('.minimize-button');
-        const pickerMinimizable = minimizeButtonEl !== null;
-        const lockedWhilePickerOpen = countLockIndicators() > 0;
+        const isPickerMinimizable = minimizeButtonEl !== null;
+        const isLockedWhilePickerOpen = countLockIndicators() > 0;
 
         // Minimize the picker → a floating bar appears with a Cancel button (the #130 ask).
         minimizeButtonEl?.click();
         await sleep(SETTLE_IN_MILLISECONDS);
 
         const barEl = activeDocument.querySelector('.minimized-modal-bar');
-        const barPresentAfterMinimize = barEl !== null;
+        const isBarPresentAfterMinimize = barEl !== null;
         const cancelButtonEl = barEl?.querySelector<HTMLElement>('button.cancel-button') ?? null;
-        const cancelButtonPresentOnBar = cancelButtonEl !== null;
+        const isCancelButtonPresentOnBar = cancelButtonEl !== null;
 
         // Click the bar's Cancel button → the modal closes, cancelling the extract and releasing the lock.
         cancelButtonEl?.click();
         await sleep(SETTLE_IN_MILLISECONDS);
 
-        const barGoneAfterCancel = activeDocument.querySelector('.minimized-modal-bar') === null;
-        const minimizeButtonGoneAfterCancel = activeDocument.querySelector('.minimize-button') === null;
-        const unlockedAfterCancel = countLockIndicators() === 0;
+        const isBarGoneAfterCancel = activeDocument.querySelector('.minimized-modal-bar') === null;
+        const isMinimizeButtonGoneAfterCancel = activeDocument.querySelector('.minimize-button') === null;
+        const isUnlockedAfterCancel = countLockIndicators() === 0;
 
         return {
-          barGoneAfterCancel,
-          barPresentAfterMinimize,
-          cancelButtonPresentOnBar,
-          lockedWhilePickerOpen,
-          minimizeButtonGoneAfterCancel,
-          pickerMinimizable,
-          unlockedAfterCancel
+          barGoneAfterCancel: isBarGoneAfterCancel,
+          barPresentAfterMinimize: isBarPresentAfterMinimize,
+          cancelButtonPresentOnBar: isCancelButtonPresentOnBar,
+          lockedWhilePickerOpen: isLockedWhilePickerOpen,
+          minimizeButtonGoneAfterCancel: isMinimizeButtonGoneAfterCancel,
+          pickerMinimizable: isPickerMinimizable,
+          unlockedAfterCancel: isUnlockedAfterCancel
         };
 
         function countLockIndicators(): number {

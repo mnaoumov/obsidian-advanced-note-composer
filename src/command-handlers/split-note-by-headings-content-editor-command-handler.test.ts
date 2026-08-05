@@ -40,13 +40,13 @@ import { SplitNoteByHeadingsContentEditorCommandHandler } from './split-note-by-
 type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -116,7 +116,7 @@ function createHeading(level: number, startLine: number, endLine?: number): Head
   });
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -190,9 +190,9 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const params = createMockParams(2);
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(null);
+    const context = createMockContext(null);
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when cache is null', () => {
@@ -200,11 +200,11 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(null);
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when no headings match level', () => {
@@ -212,13 +212,13 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0)] })
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when headings is undefined', () => {
@@ -226,13 +226,13 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       {}
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return true from canExecuteEditor when matching headings exist', () => {
@@ -240,13 +240,13 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+    expect(handler.canExecuteEditor(editor, context)).toBe(true);
   });
 
   it('should return false from canExecuteEditor when the command is blocked on the path', () => {
@@ -254,13 +254,13 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return true from canExecuteEditor when the cursor is inside a section of the level', () => {
@@ -268,13 +268,13 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor(3);
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0), createHeading(2, 2)] })
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+    expect(handler.canExecuteEditor(editor, context)).toBe(true);
   });
 
   it('should return false from canExecuteEditor when the cursor does not intersect any section of the level', () => {
@@ -282,22 +282,22 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor(1);
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0), createHeading(2, 5)] })
     );
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
-  it('should return early when ctx.file is null in executeEditor', async () => {
+  it('should return early when context.file is null in executeEditor', async () => {
     const params = createMockParams(2);
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(null);
+    const context = createMockContext(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
   });
@@ -307,19 +307,20 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
@@ -330,11 +331,11 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetCacheSafe.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -344,11 +345,11 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(1, 0)] }));
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -358,14 +359,14 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetCacheSafe.mockResolvedValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
     );
     mockGetSelectionUnderHeading.mockReturnValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Failed to find heading');
   });
@@ -375,7 +376,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetCacheSafe.mockResolvedValue(
       strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })
@@ -387,7 +388,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     });
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -397,7 +398,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
     const targetFile = createMockFile();
 
     const heading = createHeading(2, 3, 3);
@@ -431,7 +432,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     // Second iteration: no heading at index 1
     mockGetCacheSafe.mockResolvedValueOnce(strictProxy<CachedMetadataEx>({ headings: [heading] }));
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(
       { ch: 0, line: 4 },
@@ -446,7 +447,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
     const targetFile = createMockFile();
 
     const heading = createHeading(2, 3, 3);
@@ -477,7 +478,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.replaceRange)).toHaveBeenCalledWith(
       '',
@@ -495,7 +496,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     cancelOnProgressNotice(params.pluginNoticeComponent);
     mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 3, 3)] }));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
     expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
@@ -517,8 +518,8 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     const params = createMockParams(2);
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
-    expect(handler.shouldAddToEditorMenu(editor, ctx)).toBe(true);
+    const context = createMockContext(createMockFile());
+    expect(handler.shouldAddToEditorMenu(editor, context)).toBe(true);
   });
 });
 
@@ -542,9 +543,9 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
  * asserted instead of just the fact that one was shown.
  */
 function useRealFragments(): void {
-  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+  mockCreateFragmentAsync.mockImplementation(async (callback) => {
     const fragment = createFragment();
-    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    await (callback as (f: DocumentFragment) => Promise<void>)(fragment);
     return fragment;
   });
   mockRenderInternalLink.mockImplementation((linkParams) => {

@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('Smart cut & paste template', () => {
   it('uses the smart cut & paste template for a marked-selection move, falling back to the split template when empty', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
@@ -69,11 +71,11 @@ describe('Smart cut & paste template', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error(`"${settingName}" template input was not found.`);
+            throw new TypeError(`"${settingName}" template input was not found.`);
           }
 
           textAreaEl.value = value;
@@ -130,7 +132,9 @@ describe('Smart cut & paste template', () => {
 
   it('applies each direction\'s own template, falling back to the shared one when the override is empty (issue #174)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
@@ -188,11 +192,11 @@ describe('Smart cut & paste template', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error(`"${settingName}" template input was not found.`);
+            throw new TypeError(`"${settingName}" template input was not found.`);
           }
 
           textAreaEl.value = value;

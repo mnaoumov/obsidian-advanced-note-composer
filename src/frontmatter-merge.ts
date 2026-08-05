@@ -37,12 +37,12 @@ export interface MergeRecursivelyParams {
   /**
    * The object whose values win.
    */
-  readonly newObj: GenericObject;
+  readonly newObject: GenericObject;
 
   /**
    * The object merged into, IN PLACE, and returned.
    */
-  readonly oldObj: GenericObject;
+  readonly oldObject: GenericObject;
 }
 
 /**
@@ -50,49 +50,49 @@ export interface MergeRecursivelyParams {
  * is not frontmatter at all: it is left as part of the content, so a broken block is never silently
  * swallowed.
  *
- * @param str - The note content.
+ * @param $string - The note content.
  * @returns The frontmatter and the content below it.
  */
-export function extractFrontmatter(str: string): ExtractFrontmatterResult {
-  const frontmatterInfo = getFrontMatterInfo(str);
+export function extractFrontmatter($string: string): ExtractFrontmatterResult {
+  const frontmatterInfo = getFrontMatterInfo($string);
   // NOTE: on a parse failure this resets `frontmatterInfo.contentStart` to 0, which is what keeps the
   // Broken block in the content below.
   const frontmatter = safeParseFrontmatter(frontmatterInfo);
 
   return {
-    content: str.slice(frontmatterInfo.contentStart),
+    content: $string.slice(frontmatterInfo.contentStart),
     frontmatter
   };
 }
 
 /**
- * Deep-merges {@link MergeRecursivelyParams.newObj} into {@link MergeRecursivelyParams.oldObj}, with the new
+ * Deep-merges {@link MergeRecursivelyParams.newObject} into {@link MergeRecursivelyParams.oldObject}, with the new
  * values winning: nested objects merge recursively, arrays union with duplicates removed, and a
  * `null`/`undefined` old value is simply replaced.
  *
  * @param params - The objects to merge.
- * @returns `oldObj`, mutated in place.
+ * @returns `oldObject`, mutated in place.
  */
 export function mergeRecursively(params: MergeRecursivelyParams): GenericObject {
-  const { newObj, oldObj } = params;
-  const oldKeys = Object.keys(oldObj);
-  for (const [newKey, newValue] of Object.entries(newObj)) {
+  const { newObject, oldObject } = params;
+  const oldKeys = Object.keys(oldObject);
+  for (const [newKey, newValue] of Object.entries(newObject)) {
     if (oldKeys.includes(newKey)) {
-      const oldValue = oldObj[newKey];
+      const oldValue = oldObject[newKey];
       if (oldValue === undefined || oldValue === null) {
-        oldObj[newKey] = newValue;
-      } else if (Array.isArray(oldObj[newKey]) && Array.isArray(newValue)) {
-        oldObj[newKey] = [...oldObj[newKey], ...newValue].unique();
-      } else if (typeof oldObj[newKey] === 'object' && typeof newValue === 'object') {
-        oldObj[newKey] = mergeRecursively({ newObj: newValue as GenericObject, oldObj: oldObj[newKey] as GenericObject });
+        oldObject[newKey] = newValue;
+      } else if (Array.isArray(oldObject[newKey]) && Array.isArray(newValue)) {
+        oldObject[newKey] = [...oldObject[newKey], ...newValue].unique();
+      } else if (typeof oldObject[newKey] === 'object' && typeof newValue === 'object') {
+        oldObject[newKey] = mergeRecursively({ newObject: newValue as GenericObject, oldObject: oldObject[newKey] as GenericObject });
       } else {
-        oldObj[newKey] = newValue;
+        oldObject[newKey] = newValue;
       }
     } else {
-      oldObj[newKey] = newValue;
+      oldObject[newKey] = newValue;
     }
   }
-  return oldObj;
+  return oldObject;
 }
 
 /**

@@ -45,9 +45,9 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -84,7 +84,7 @@ let shouldAutoSelect = false;
 let shouldAutoSwitchToSmartCut = false;
 
 interface AsyncModule {
-  invokeAsyncSafely(fn: () => Promise<void>): void;
+  invokeAsyncSafely($function: () => Promise<void>): void;
 }
 
 interface SwitchToSmartCutResult {
@@ -92,7 +92,7 @@ interface SwitchToSmartCutResult {
 }
 
 interface WithChooseAsync {
-  onChooseSuggestionAsync(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
+  onChooseSuggestionAsync(item: unknown, $event: KeyboardEvent | MouseEvent): Promise<void>;
 }
 
 interface WithSwitchToSmartCut {
@@ -129,8 +129,8 @@ vi.mock('./suggest-modal-base.ts', async () => {
       return [];
     }
 
-    public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
-      asyncModule.invokeAsyncSafely(() => (castTo<WithChooseAsync>(this)).onChooseSuggestionAsync(item, evt));
+    public onChooseSuggestion(item: unknown, $event: KeyboardEvent | MouseEvent): void {
+      asyncModule.invokeAsyncSafely(() => (castTo<WithChooseAsync>(this)).onChooseSuggestionAsync(item, $event));
     }
 
     public override onOpen(): void {
@@ -152,7 +152,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
       noop();
     }
 
-    public override selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {
+    public override selectActiveSuggestion(_event: KeyboardEvent | MouseEvent): void {
       noop();
     }
 
@@ -230,12 +230,7 @@ function createMockApp(): App {
     viewRegistry: strictProxy<ViewRegistry>({
       isExtensionRegistered: vi.fn().mockReturnValue(true)
     }),
-    workspace: strictProxy<Workspace>({
-      getLeaf: castTo<Workspace['getLeaf']>(
-        vi.fn().mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile: vi.fn().mockResolvedValue(undefined) }))
-      ),
-      getRecentFiles: vi.fn().mockReturnValue([])
-    })
+    workspace: createMockWorkspace()
   });
 }
 
@@ -263,6 +258,10 @@ function createMockFile(path: string): TFile {
     path,
     stat: strictProxy({ mtime: 0 })
   });
+}
+
+function createMockLeaf(): WorkspaceLeaf {
+  return strictProxy<WorkspaceLeaf>({ openFile: vi.fn().mockResolvedValue(undefined) });
 }
 
 function createMockMoveNoticeComponent(): MoveNoticeComponent {
@@ -312,6 +311,13 @@ function createMockResourceLockComponent(): ResourceLockComponent {
 function createMockSelectionHighlightComponent(): SelectionHighlightComponent {
   return strictProxy<SelectionHighlightComponent>({
     addHighlight: vi.fn().mockReturnValue({ [Symbol.dispose]: vi.fn() })
+  });
+}
+
+function createMockWorkspace(): Workspace {
+  return strictProxy<Workspace>({
+    getLeaf: castTo<Workspace['getLeaf']>(vi.fn().mockReturnValue(createMockLeaf())),
+    getRecentFiles: vi.fn().mockReturnValue([])
   });
 }
 

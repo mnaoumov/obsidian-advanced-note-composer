@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split headings automatically', () => {
   it('should extract the enclosing heading into its own folder with no picker and no confirmation', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADING = 'Auto Heading';
@@ -26,9 +28,9 @@ describe('split headings automatically', () => {
 
         // `Should ask before splitting` stays ON: the whole point is that the new setting bypasses both
         // The target picker AND the confirmation dialog for a heading-driven split.
-        const originalShouldAsk = await setToggle('Should ask before splitting', true);
-        const originalShouldSplitHeadingsAutomatically = await setToggle('Should split headings automatically', true);
-        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', true);
+        const isOriginalShouldSplitHeadingsAutomatically = await didSetToggle('Should split headings automatically', true);
+        const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
         try {
           // Clean up any leftover from a previous run so the folder name is not de-duplicated.
           await removeIfExists(NEW_NOTE_PATH);
@@ -54,7 +56,7 @@ describe('split headings automatically', () => {
             message: 'the heading was not extracted into its own folder',
             predicate: () => {
               wasPickerShown ||= document.querySelector('.prompt') !== null;
-              wasConfirmationShown ||= Array.from(document.querySelectorAll('.modal-title')).some((el) => el.textContent === 'Split file');
+              wasConfirmationShown ||= [...document.querySelectorAll('.modal-title')].some((el) => el.textContent === 'Split file');
               return app.vault.getAbstractFileByPath(NEW_NOTE_PATH) instanceof obsidianModule.TFile;
             }
           });
@@ -69,19 +71,19 @@ describe('split headings automatically', () => {
             message: 'source link to the extracted note did not resolve',
             predicate: () => Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH)
           });
-          const linkResolves = Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH);
+          const isLinkResolves = Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH);
 
           return {
             isFolder,
-            linkResolves,
+            linkResolves: isLinkResolves,
             newFileContent,
             wasConfirmationShown,
             wasPickerShown
           };
         } finally {
-          await setToggle('Should ask before splitting', originalShouldAsk);
-          await setToggle('Should split headings automatically', originalShouldSplitHeadingsAutomatically);
-          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
+          await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
+          await didSetToggle('Should split headings automatically', isOriginalShouldSplitHeadingsAutomatically);
+          await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
         }
 
         async function removeIfExists(path: string): Promise<void> {
@@ -113,7 +115,7 @@ describe('split headings automatically', () => {
           return view.editor;
         }
 
-        async function setToggle(name: string, value: boolean): Promise<boolean> {
+        async function didSetToggle(name: string, shouldEnable: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -122,14 +124,14 @@ describe('split headings automatically', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${name}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
-          if (wasEnabled !== value) {
+          if (wasEnabled !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }
@@ -152,7 +154,9 @@ describe('split headings automatically', () => {
 
   it('should split every heading into its own folder in one go with no confirmation', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADINGS = ['Sec One', 'Sec Two', 'Sec Three'];
@@ -161,9 +165,9 @@ describe('split headings automatically', () => {
 
         // Same as above: `Should ask before splitting` stays ON, so a surviving confirmation dialog would
         // Stall the batch after the first heading.
-        const originalShouldAsk = await setToggle('Should ask before splitting', true);
-        const originalShouldSplitHeadingsAutomatically = await setToggle('Should split headings automatically', true);
-        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', true);
+        const isOriginalShouldSplitHeadingsAutomatically = await didSetToggle('Should split headings automatically', true);
+        const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
         try {
           for (const heading of HEADINGS) {
             await removeIfExists(`${heading}/${heading}.md`);
@@ -188,7 +192,7 @@ describe('split headings automatically', () => {
             message: 'not every heading was split into its own folder',
             predicate: () => {
               wasPickerShown ||= document.querySelector('.prompt') !== null;
-              wasConfirmationShown ||= Array.from(document.querySelectorAll('.modal-title')).some((el) => el.textContent === 'Split file');
+              wasConfirmationShown ||= [...document.querySelectorAll('.modal-title')].some((el) => el.textContent === 'Split file');
               return HEADINGS.every((heading) => app.vault.getAbstractFileByPath(`${heading}/${heading}.md`) instanceof obsidianModule.TFile);
             }
           });
@@ -198,9 +202,9 @@ describe('split headings automatically', () => {
 
           return { areAllInOwnFolders, wasConfirmationShown, wasPickerShown };
         } finally {
-          await setToggle('Should ask before splitting', originalShouldAsk);
-          await setToggle('Should split headings automatically', originalShouldSplitHeadingsAutomatically);
-          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
+          await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
+          await didSetToggle('Should split headings automatically', isOriginalShouldSplitHeadingsAutomatically);
+          await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
         }
 
         async function removeIfExists(path: string): Promise<void> {
@@ -232,7 +236,7 @@ describe('split headings automatically', () => {
           return view.editor;
         }
 
-        async function setToggle(name: string, value: boolean): Promise<boolean> {
+        async function didSetToggle(name: string, shouldEnable: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -241,14 +245,14 @@ describe('split headings automatically', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${name}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
-          if (wasEnabled !== value) {
+          if (wasEnabled !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }

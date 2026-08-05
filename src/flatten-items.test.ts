@@ -2,7 +2,7 @@ import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsExtendedFnParams } from 'obsidian-dev-utils/obsidian/attachment-path';
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
@@ -53,7 +53,7 @@ function initApp(files: Record<string, string>, attachmentFolderPath = './'): vo
  * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
  */
 function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (notePath: string) => string): void {
-  function extended(params: GetAvailablePathForAttachmentsExtendedFnParams): Promise<string> {
+  function extended(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
     const notePath = getPath(app, ensureNonNullable(params.notePathOrFile));
     const folderPath = resolveAttachmentFolderPathForNote(notePath);
     const basePath = folderPath === '' ? params.attachmentFileBaseName : `${folderPath}/${params.attachmentFileBaseName}`;
@@ -74,7 +74,8 @@ describe('collectFlattenItems', () => {
 
       // The original behavior is untouched by the attachment rule: an emptied folder has nothing to keep
       // Its attachments beside, so the attachment folder is promoted like any other child.
-      expect((await collectPaths('parent/a', FlattenMode.AllChildren)).sort()).toStrictEqual([
+      const paths = await collectPaths('parent/a', FlattenMode.AllChildren);
+      expect(paths.sort()).toStrictEqual([
         'parent/a/attachments',
         'parent/a/note.md',
         'parent/a/sub'

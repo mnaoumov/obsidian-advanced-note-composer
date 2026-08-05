@@ -28,7 +28,7 @@ function mockItem(partial: Record<string, unknown>): Item {
 const mockAddAlias = vi.fn();
 
 vi.mock('obsidian-dev-utils/obsidian/file-manager', () => ({
-  addAlias: (...args: unknown[]): unknown => mockAddAlias(...args)
+  addAlias: (...$arguments: unknown[]): unknown => mockAddAlias(...$arguments)
 }));
 
 vi.mock('../plugin-settings.ts', () => ({
@@ -65,6 +65,7 @@ function createMockApp(): App {
       renameFile: vi.fn(() => noopAsync())
     }),
     metadataCache: strictProxy({
+      // eslint-disable-next-line unicorn/name-replacements -- `getFirstLinkpathDest` is an Obsidian `MetadataCache` method name.
       getFirstLinkpathDest: vi.fn().mockReturnValue(null)
     }),
     vault: strictProxy({
@@ -106,7 +107,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
 
 describe('SplitItemSelector', () => {
   describe('selectItem', () => {
-    it('should create new file when isMod is true', async () => {
+    it('should create new file when isModifier is true', async () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source', 'source.md');
@@ -114,7 +115,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new note',
-        isMod: true,
+        isModifier: true,
         item: strictProxy<Item>({ type: 'file' }),
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -135,7 +136,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new note',
-        isMod: false,
+        isModifier: false,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -161,7 +162,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'existing',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -187,7 +188,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'ignored',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -209,7 +210,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'ignored',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -235,7 +236,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -262,7 +263,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -285,7 +286,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -305,7 +306,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -327,7 +328,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new note',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -352,7 +353,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'test.md',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -380,7 +381,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'invalid*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -406,7 +407,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'valid-name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -432,7 +433,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'invalid*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -458,7 +459,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'invalid*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -484,7 +485,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'valid-name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -510,7 +511,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'invalid*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -536,7 +537,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'valid-name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -562,7 +563,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'invalid*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -589,7 +590,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-note',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: true,
@@ -619,7 +620,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-note',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: true,
@@ -655,7 +656,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'valid-name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -680,7 +681,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -697,7 +698,7 @@ describe('SplitItemSelector', () => {
     });
 
     it('should replace forward slashes with backslashes when shouldTreatTitleAsPath is false', async () => {
-      const fixedFile = createMockFile('a\\b', 'folder/a\\b.md');
+      const fixedFile = createMockFile(String.raw`a\b`, String.raw`folder/a\b.md`);
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
         shouldAddInvalidTitleToNoteAlias: false,
@@ -709,7 +710,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'a/b',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -720,7 +721,7 @@ describe('SplitItemSelector', () => {
       await selector.selectItem();
 
       expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
-        'a\\b.md',
+        String.raw`a\b.md`,
         'source.md'
       );
     });
@@ -736,7 +737,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'my-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -765,7 +766,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'file*name',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -794,7 +795,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'file..',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -823,7 +824,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: '.hidden',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -852,7 +853,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: ' spaced',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -881,7 +882,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'a/b/file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -910,7 +911,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'a//file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -939,7 +940,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'f***n',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -968,7 +969,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-note',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -995,7 +996,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -1024,7 +1025,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -1054,7 +1055,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -1081,7 +1082,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
@@ -1121,7 +1122,7 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: options.inputValue ?? 'new-file',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,

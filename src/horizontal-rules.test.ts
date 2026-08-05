@@ -40,12 +40,16 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-/** A one-line `thematicBreak` (horizontal rule) section at `line`. */
+/**
+A one-line `thematicBreak` (horizontal rule) section at `line`.
+*/
 function rule(line: number): SectionCache {
   return section('thematicBreak', line);
 }
 
-/** A one-line section of the given type at `line`. */
+/**
+A one-line section of the given type at `line`.
+*/
 function section(type: string, line: number): SectionCache {
   return strictProxy<SectionCache>({
     position: {

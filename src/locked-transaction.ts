@@ -85,16 +85,14 @@ export async function runLockedTransaction(params: RunLockedTransactionParams): 
   }
 
   const lockedPathsOrFiles = params.lockTargets.map((lockTarget) => lockTarget.pathOrFile);
-  const lockDisposables: Disposable[] = [];
-  for (const lockTarget of params.lockTargets) {
-    lockDisposables.push(params.resourceLockComponent.lockForPath({
+  const lockDisposables: Disposable[] = Array.from(params.lockTargets, (lockTarget) =>
+    params.resourceLockComponent.lockForPath({
       abortController: params.abortController,
       mode: lockTarget.mode,
       operationName: params.operationName,
       pathOrFile: lockTarget.pathOrFile,
       shouldBlockMutations: true
     }));
-  }
 
   const vaultTransaction = new VaultTransaction({
     app: params.app,

@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract between horizontal rules', () => {
   it('extracts the block between the rules closest to the cursor, leaving the rules in place', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Two different rule spellings (`---` and `***`) prove Obsidian's parser tags both as thematicBreak
@@ -24,7 +26,7 @@ describe('extract between horizontal rules', () => {
         const SOURCE = 'intro\n\n---\n\nmiddle\n\n***\n\nouter';
         const MIDDLE_LINE = 4;
 
-        const originalShouldAsk = await setAskBeforeSplitting(false);
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
           const file = await resetFile('extract-hr.md', SOURCE);
           const editor = await openAndGetEditor(file);
@@ -44,13 +46,13 @@ describe('extract between horizontal rules', () => {
           // Extract to the bottom of the same note (Enter on the source note in the picker).
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = file.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(file.basename))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename))
           });
           // The suggester needs a beat to mark the matching suggestion active; dispatching Enter the
           // Instant the element appears races that and selects nothing.
@@ -65,10 +67,10 @@ describe('extract between horizontal rules', () => {
 
           return { canRun, note: editorValueFor('extract-hr.md') ?? '' };
         } finally {
-          await setAskBeforeSplitting(originalShouldAsk);
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
 
-        async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -77,11 +79,11 @@ describe('extract between horizontal rules', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before splitting" toggle was not found.');
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

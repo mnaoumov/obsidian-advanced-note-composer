@@ -5,7 +5,7 @@ import {
 } from 'vitest';
 
 import {
-  doRegionsOverlap,
+  areRegionsOverlapping,
   swapContents,
   swapSameFileContent
 } from './swap-selections.ts';
@@ -62,14 +62,14 @@ describe('swap-selections', () => {
     });
   });
 
-  describe('doRegionsOverlap', () => {
+  describe('areRegionsOverlapping', () => {
     it('should return true when the regions share characters', () => {
-      expect(doRegionsOverlap({ endOffset: 5, startOffset: 0 }, { endOffset: 8, startOffset: 3 })).toBe(true);
+      expect(areRegionsOverlapping({ endOffset: 5, startOffset: 0 }, { endOffset: 8, startOffset: 3 })).toBe(true);
     });
 
     it('should return false for disjoint or merely adjacent regions', () => {
-      expect(doRegionsOverlap({ endOffset: 3, startOffset: 0 }, { endOffset: 8, startOffset: 5 })).toBe(false);
-      expect(doRegionsOverlap({ endOffset: 3, startOffset: 0 }, { endOffset: 6, startOffset: 3 })).toBe(false);
+      expect(areRegionsOverlapping({ endOffset: 3, startOffset: 0 }, { endOffset: 8, startOffset: 5 })).toBe(false);
+      expect(areRegionsOverlapping({ endOffset: 3, startOffset: 0 }, { endOffset: 6, startOffset: 3 })).toBe(false);
     });
   });
 });

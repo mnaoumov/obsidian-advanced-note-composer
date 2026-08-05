@@ -16,7 +16,7 @@ import type { SwapRegion } from './swap-selections.ts';
 import { runLockedTransaction } from './locked-transaction.ts';
 import { showOperationCompletionNotice } from './operation-notices.ts';
 import {
-  doRegionsOverlap,
+  areRegionsOverlapping,
   swapContents,
   swapSameFileContent
 } from './swap-selections.ts';
@@ -112,7 +112,7 @@ export function canSwapWithSelection(params: CanSwapWithSelectionParams): boolea
   if (targetFile.path !== marked.sourceFile.path) {
     return true;
   }
-  return !doRegionsOverlap(getEditorRegion(editor), markedRegion(marked));
+  return !areRegionsOverlapping(getEditorRegion(editor), markedRegion(marked));
 }
 
 /**
@@ -144,7 +144,7 @@ export async function swapWithSelection(params: SwapWithSelectionParams): Promis
     pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('You cannot swap a selection into file ');
-        f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
+        f.append(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
         f.appendText(' because it is ignored in the plugin settings.');
       })
     );
@@ -159,7 +159,7 @@ export async function swapWithSelection(params: SwapWithSelectionParams): Promis
   const isSameFile = sourceFile.path === targetFile.path;
   const targetRegion = getEditorRegion(editor);
   const sourceRegion = markedRegion(marked);
-  if (isSameFile && doRegionsOverlap(targetRegion, sourceRegion)) {
+  if (isSameFile && areRegionsOverlapping(targetRegion, sourceRegion)) {
     pluginNoticeComponent.showNotice('You cannot swap a selection with one that overlaps it.');
     return;
   }

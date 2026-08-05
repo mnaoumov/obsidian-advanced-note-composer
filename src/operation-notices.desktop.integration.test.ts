@@ -37,15 +37,17 @@ interface SettingsCarrier {
 describe('operation notices (issue #182)', () => {
   it('reports a finished operation, and stays silent when the setting is off', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         // Doubles as the silence window for the setting-off run: long enough that a notice would have
         // Rendered had one been shown, so timing out there means none was.
         const NOTICE_TIMEOUT_IN_MILLISECONDS = 5000;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
-        const originalShouldShow = settingsComponent.settings.shouldShowOperationNotices;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const isOriginalShouldShow = settingsComponent.settings.shouldShowOperationNotices;
         try {
           await settingsComponent.editAndSave((settings) => {
             // The confirmation dialog is covered elsewhere; skipping it lets the flatten run straight
@@ -65,8 +67,8 @@ describe('operation notices (issue #182)', () => {
           return { noticeText, silentText };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeFlattening = originalShouldAsk;
-            settings.shouldShowOperationNotices = originalShouldShow;
+            settings.shouldAskBeforeFlattening = isOriginalShouldAsk;
+            settings.shouldShowOperationNotices = isOriginalShouldShow;
           });
         }
 
@@ -98,7 +100,7 @@ describe('operation notices (issue #182)', () => {
          * @returns The notice text, or `null` when this run has shown none.
          */
         function findOperationNoticeText(prefix: string): null | string {
-          for (const noticeEl of Array.from(activeDocument.querySelectorAll('.notice'))) {
+          for (const noticeEl of activeDocument.querySelectorAll('.notice')) {
             const text = noticeEl.textContent;
             if (text.includes(`Flattened folder ${prefix}-src`)) {
               return text;

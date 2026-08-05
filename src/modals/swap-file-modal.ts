@@ -92,9 +92,9 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     }
   }
 
-  public override selectSuggestion(value: FuzzyMatch<TFile>, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: FuzzyMatch<TFile>, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 
   private isAllowedTargetFile(file: TFile): boolean {
@@ -177,12 +177,12 @@ async function buildSwapConfirmContent(params: BuildSwapConfirmContentParams): P
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: source }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: target }));
 }
 
 /* v8 ignore stop */

@@ -13,11 +13,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('merge folder preserves a child note title (issue #114)', () => {
   it('keeps the title frontmatter of a moved child note merged into a folder with no colliding note', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeMerging(true);
+        const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
         try {
           // Source folder holds a child note carrying a `title`; the target folder exists but has no
           // Note of the same name, so the merge creates a brand-new target file (isNewTargetFile === true).
@@ -45,16 +47,16 @@ describe('merge folder preserves a child note title (issue #114)', () => {
 
           const movedFile = app.vault.getAbstractFileByPath('mt-dst/note.md');
           const movedContent = movedFile instanceof obsidianModule.TFile ? await app.vault.read(movedFile) : '';
-          const sourceFolderExists = app.vault.getAbstractFileByPath('mt-src') !== null;
-          const targetSiblingIntact = app.vault.getAbstractFileByPath('mt-dst/other.md') !== null;
+          const isSourceFolderExists = app.vault.getAbstractFileByPath('mt-src') !== null;
+          const isTargetSiblingIntact = app.vault.getAbstractFileByPath('mt-dst/other.md') !== null;
 
-          return { movedContent, sourceFolderExists, targetSiblingIntact };
+          return { movedContent, sourceFolderExists: isSourceFolderExists, targetSiblingIntact: isTargetSiblingIntact };
         } finally {
-          await setAskBeforeMerging(originalShouldAsk);
+          await didSetAskBeforeMerging(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -65,11 +67,11 @@ describe('merge folder preserves a child note title (issue #114)', () => {
         async function chooseFolderInPicker(folderPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-folder picker input.');
+            throw new TypeError('No merge-folder picker input.');
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
@@ -80,7 +82,7 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           }
         }
 
-        async function setAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -89,11 +91,11 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before merging');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before merging" toggle was not found.');
+            throw new TypeError('"Should ask before merging" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

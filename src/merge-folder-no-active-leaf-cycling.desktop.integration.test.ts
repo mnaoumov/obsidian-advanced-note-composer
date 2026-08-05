@@ -31,7 +31,9 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
 describe('folder merge does not cycle the active leaf (issue #106)', () => {
   it('opens no merged target note even when "Should open note after merge" is on', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, noteCount: NOTE_COUNT, pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, mergeTimeoutInMilliseconds, noteCount, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
         const SOURCE_FOLDER = 'cyc-src';
@@ -54,12 +56,12 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         await app.vault.createFolder(TARGET_FOLDER);
 
         // A folder of cross-referencing notes: each links to two siblings, so the merge rewrites links.
-        for (let i = 0; i < noteCount; i++) {
-          const next = (i + 1) % noteCount;
-          const prev = (i + noteCount - 1) % noteCount;
+        for (let index = 0; index < noteCount; index++) {
+          const next = (index + 1) % noteCount;
+          const previous = (index + noteCount - 1) % noteCount;
           await app.vault.create(
-            `${SOURCE_FOLDER}/note-${String(i)}.md`,
-            `# Note ${String(i)}\n\nLinks: [[note-${String(next)}]] and [[note-${String(prev)}]].\n`
+            `${SOURCE_FOLDER}/note-${String(index)}.md`,
+            `# Note ${String(index)}\n\nLinks: [[note-${String(next)}]] and [[note-${String(previous)}]].\n`
           );
         }
         // A target note that backlinks into the source folder, so backlink rewriting runs too.
@@ -69,7 +71,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         // Inside the source folder (the real user flow: trigger merge-folder from a note in the folder).
         const activeSourceNote = app.vault.getAbstractFileByPath(`${SOURCE_FOLDER}/note-0.md`);
         if (!(activeSourceNote instanceof obsidianModule.TFile)) {
-          throw new Error('Active source note missing.');
+          throw new TypeError('Active source note missing.');
         }
         await app.workspace.getLeaf(false).openFile(activeSourceNote);
         await waitUntil({ message: 'source note active', predicate: () => app.workspace.getActiveFile()?.path === `${SOURCE_FOLDER}/note-0.md` });
@@ -98,8 +100,8 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         }
 
         let mergedCount = 0;
-        for (let i = 0; i < noteCount; i++) {
-          if (app.vault.getAbstractFileByPath(`${TARGET_FOLDER}/note-${String(i)}.md`)) {
+        for (let index = 0; index < noteCount; index++) {
+          if (app.vault.getAbstractFileByPath(`${TARGET_FOLDER}/note-${String(index)}.md`)) {
             mergedCount++;
           }
         }
@@ -113,15 +115,15 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         async function chooseFolderInPicker(folderPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-folder picker input.');
+            throw new TypeError('No merge-folder picker input.');
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ message: 'suggestion', predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ message: 'suggestion', predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setToggle(settingName: string, desired: boolean): Promise<void> {
+        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -129,13 +131,13 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
             throw new Error('Settings tab was not found.');
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
-          if (toggle.classList.contains('is-enabled') !== desired) {
+          if (toggle.classList.contains('is-enabled') !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }

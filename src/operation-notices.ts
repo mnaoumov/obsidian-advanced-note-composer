@@ -136,7 +136,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
   return createFragmentAsync(async (fragmentEl) => {
     fragmentEl.appendText(`${verb} `);
     if (shouldLinkSource ?? true) {
-      fragmentEl.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile }));
+      fragmentEl.append(await renderInternalLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile }));
     } else {
       // Deliberately NOT `getPath()`: that resolves the path against the vault, and the whole reason this
       // Branch exists is that the source is already gone from it.
@@ -144,7 +144,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     }
     if (targetPathOrAbstractFile !== undefined) {
       fragmentEl.appendText(` ${preposition ?? 'into'} `);
-      fragmentEl.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetPathOrAbstractFile }));
+      fragmentEl.append(await renderInternalLink({ app, pathOrAbstractFile: targetPathOrAbstractFile }));
     }
     if (suffix !== undefined) {
       fragmentEl.appendText(suffix);

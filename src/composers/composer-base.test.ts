@@ -80,9 +80,9 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
 // Reach into unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -173,11 +173,11 @@ function createComposer(options: CreateComposerOptions = {}): TestComposer {
     resourceLockComponent,
     sourceFile: getSourceFile(),
     targetFile: getTargetFile(),
-    ...(options.frontmatterMergeStrategy === undefined ? {} : { frontmatterMergeStrategy: options.frontmatterMergeStrategy }),
-    ...(options.insertMode === undefined ? {} : { insertMode: options.insertMode }),
-    ...(options.shouldIncludeFrontmatter === undefined ? {} : { shouldIncludeFrontmatter: options.shouldIncludeFrontmatter }),
-    ...(options.shouldMergeHeadings === undefined ? {} : { shouldMergeHeadings: options.shouldMergeHeadings }),
-    ...(options.shouldShowNotice === undefined ? {} : { shouldShowNotice: options.shouldShowNotice })
+    ...(options.frontmatterMergeStrategy !== undefined && { frontmatterMergeStrategy: options.frontmatterMergeStrategy }),
+    ...(options.insertMode !== undefined && { insertMode: options.insertMode }),
+    ...(options.shouldIncludeFrontmatter !== undefined && { shouldIncludeFrontmatter: options.shouldIncludeFrontmatter }),
+    ...(options.shouldMergeHeadings !== undefined && { shouldMergeHeadings: options.shouldMergeHeadings }),
+    ...(options.shouldShowNotice !== undefined && { shouldShowNotice: options.shouldShowNotice })
   });
   return composer;
 }
@@ -219,8 +219,8 @@ function readTarget(): Promise<string> {
 }
 
 function stubProcessFrontMatter(seeded: GenericObject): void {
-  vi.spyOn(app.fileManager, 'processFrontMatter').mockImplementation((_file, fn) => {
-    fn(seeded);
+  vi.spyOn(app.fileManager, 'processFrontMatter').mockImplementation((_file, $function) => {
+    $function(seeded);
     return noopAsync();
   });
 }

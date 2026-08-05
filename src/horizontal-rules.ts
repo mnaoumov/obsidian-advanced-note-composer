@@ -60,26 +60,25 @@ export function getSelectionBetweenHorizontalRules(
   const lastLine = editor.lineCount() - 1;
 
   let startLine: number;
-  let endLine: number;
+  let nextRule = null;
 
   const onRule = rules.find((rule) => lineNumber >= rule.position.start.line && lineNumber <= rule.position.end.line);
   if (onRule) {
     startLine = onRule.position.end.line + 1;
-    const nextRule = rules.find((rule) => rule.position.start.line > onRule.position.end.line);
-    endLine = nextRule ? nextRule.position.start.line - 1 : lastLine;
+    nextRule = rules.find((rule) => rule.position.start.line > onRule.position.end.line) ?? null;
   } else {
-    let prevRule = null;
-    let nextRule = null;
+    let previousRule = null;
     for (const rule of rules) {
       if (rule.position.end.line < lineNumber) {
-        prevRule = rule;
+        previousRule = rule;
       } else if (!nextRule && rule.position.start.line > lineNumber) {
         nextRule = rule;
       }
     }
-    startLine = prevRule ? prevRule.position.end.line + 1 : 0;
-    endLine = nextRule ? nextRule.position.start.line - 1 : lastLine;
+    startLine = previousRule ? previousRule.position.end.line + 1 : 0;
   }
+
+  let endLine = nextRule ? nextRule.position.start.line - 1 : lastLine;
 
   // Trim leading and trailing blank lines so the extracted block and the residual source stay clean.
   while (startLine < endLine && !editor.getLine(startLine).trim()) {

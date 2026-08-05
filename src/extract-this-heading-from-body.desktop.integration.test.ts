@@ -20,12 +20,14 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract this heading from the body (issue #143)', () => {
   it('extracts the whole heading section when the cursor sits in the heading BODY, not on the # line', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const TARGET_BASENAME = 'extracted-section';
 
-        const originalShouldAsk = await setAskBeforeSplitting(false);
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
           // A note with two same-level sections. The cursor will be placed on a BODY line of the
           // Second section (never on its `## Extract me` heading line) to prove issue #143's fix.
@@ -55,13 +57,13 @@ describe('extract this heading from the body (issue #143)', () => {
           // Type a brand-new target name and confirm (Enter) to extract the section into a new note.
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = TARGET_BASENAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'create-new suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(TARGET_BASENAME))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(TARGET_BASENAME))
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 
@@ -83,7 +85,7 @@ describe('extract this heading from the body (issue #143)', () => {
 
           return { cursorLineText, extractedContent, sourceContent };
         } finally {
-          await setAskBeforeSplitting(originalShouldAsk);
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
 
         async function deleteIfExists(path: string): Promise<void> {
@@ -93,7 +95,7 @@ describe('extract this heading from the body (issue #143)', () => {
           }
         }
 
-        async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -102,11 +104,11 @@ describe('extract this heading from the body (issue #143)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before splitting" toggle was not found.');
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

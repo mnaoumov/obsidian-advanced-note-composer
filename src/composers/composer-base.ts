@@ -53,8 +53,8 @@ import {
 } from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 
-export function getInsertModeFromEvent(evt: KeyboardEvent | MouseEvent): InsertMode {
-  return evt.shiftKey ? InsertMode.Prepend : InsertMode.Append;
+export function getInsertModeFromEvent($event: KeyboardEvent | MouseEvent): InsertMode {
+  return $event.shiftKey ? InsertMode.Prepend : InsertMode.Append;
 }
 
 /**
@@ -329,9 +329,9 @@ export abstract class ComposerBase {
     this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Aborted because ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
+        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.sourceFile.path }));
         f.appendText(' or ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
         f.appendText(' was modified during the operation.');
       })
     );
@@ -343,7 +343,7 @@ export abstract class ComposerBase {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText(`You cannot ${action} into `);
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
           f.appendText(' because this path is not allowed in the plugin settings.');
         })
       );
@@ -510,15 +510,15 @@ export abstract class ComposerBase {
     return true;
   }
 
-  private extractFrontmatter(str: string): ExtractFrontmatterResult {
+  private extractFrontmatter($string: string): ExtractFrontmatterResult {
     if (this.frontmatterMergeStrategy === FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       return {
-        content: str,
+        content: $string,
         frontmatter: {}
       };
     }
 
-    return extractFrontmatter(str);
+    return extractFrontmatter($string);
   }
 
   /* v8 ignore stop */
@@ -534,7 +534,7 @@ export abstract class ComposerBase {
     const targetContent = await this.app.vault.cachedRead(this.targetFile);
 
     const FOOTNOTE_ID_REG_EXP = /\[\^(?<FootnoteId>[^\s\]]+?)\]/g;
-    const existingTargetIds = new Set<string>(Array.from(targetContent.matchAll(FOOTNOTE_ID_REG_EXP)).map((match) => match.groups?.['FootnoteId'] ?? ''));
+    const existingTargetIds = new Set<string>([...targetContent.matchAll(FOOTNOTE_ID_REG_EXP)].map((match) => match.groups?.['FootnoteId'] ?? ''));
 
     const selections = await this.getSelections();
 
@@ -571,12 +571,12 @@ export abstract class ComposerBase {
     }
 
     targetContentToInsert = replaceAll({
+      $string: targetContentToInsert,
       replacer: ({ groups }) => {
         const footnoteId = groups?.['FootnoteId'] ?? '';
         return `[^${targetFootnoteIdRenameMap.get(footnoteId) ?? footnoteId}]`;
       },
-      searchValue: FOOTNOTE_ID_REG_EXP,
-      str: targetContentToInsert
+      searchValue: FOOTNOTE_ID_REG_EXP
     });
 
     this.updateEditorSelections({ sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore });
@@ -673,13 +673,16 @@ export abstract class ComposerBase {
     const { newFrontmatter, originalFrontmatter } = params;
     /* v8 ignore start -- KeepOriginalFrontmatter and default cases are unreachable from insertIntoTargetFile. */
     switch (this.frontmatterMergeStrategy) {
-      case FrontmatterMergeStrategy.KeepOriginalFrontmatter:
+      case FrontmatterMergeStrategy.KeepOriginalFrontmatter: {
         return originalFrontmatter;
+      }
       /* v8 ignore stop */
-      case FrontmatterMergeStrategy.MergeAndPreferNewValues:
-        return mergeRecursively({ newObj: newFrontmatter, oldObj: originalFrontmatter });
-      case FrontmatterMergeStrategy.MergeAndPreferOriginalValues:
-        return mergeRecursively({ newObj: originalFrontmatter, oldObj: newFrontmatter });
+      case FrontmatterMergeStrategy.MergeAndPreferNewValues: {
+        return mergeRecursively({ newObject: newFrontmatter, oldObject: originalFrontmatter });
+      }
+      case FrontmatterMergeStrategy.MergeAndPreferOriginalValues: {
+        return mergeRecursively({ newObject: originalFrontmatter, oldObject: newFrontmatter });
+      }
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
         let suffix = 0;
         let mergeKey: string;
@@ -688,10 +691,10 @@ export abstract class ComposerBase {
         const oldKeys = Object.keys(originalFrontmatter);
         const newKeys = Object.keys(newFrontmatter);
         do {
-          const suffixStr = suffix > 0 ? String(suffix) : '';
-          mergeKey = `__merged${suffixStr}`;
-          fromKey = `__from${suffixStr}`;
-          mergeDateKey = `__mergeDate${suffixStr}`;
+          const suffixString = suffix > 0 ? String(suffix) : '';
+          mergeKey = `__merged${suffixString}`;
+          fromKey = `__from${suffixString}`;
+          mergeDateKey = `__mergeDate${suffixString}`;
           suffix++;
         } while (oldKeys.includes(mergeKey) || newKeys.includes(fromKey) || newKeys.includes(mergeDateKey));
 
@@ -704,11 +707,13 @@ export abstract class ComposerBase {
           }
         };
       }
-      case FrontmatterMergeStrategy.ReplaceWithNewFrontmatter:
+      case FrontmatterMergeStrategy.ReplaceWithNewFrontmatter: {
         return newFrontmatter;
+      }
       /* v8 ignore start -- all valid enum values are handled above. */
-      default:
+      default: {
         throw new Error(`Invalid frontmatter merge strategy: ${this.frontmatterMergeStrategy as string}`);
+      }
         /* v8 ignore stop */
     }
   }
@@ -773,11 +778,11 @@ export abstract class ComposerBase {
       return;
     }
 
-    let suffixNum = 1;
+    let suffixNumber = 1;
     let newTargetFootnoteId = sourceFootnoteId;
     while (existingTargetIds.has(newTargetFootnoteId)) {
-      newTargetFootnoteId = `${sourceFootnoteId}-${String(suffixNum)}`;
-      suffixNum++;
+      newTargetFootnoteId = `${sourceFootnoteId}-${String(suffixNumber)}`;
+      suffixNumber++;
     }
 
     targetFootnoteIdRenameMap.set(sourceFootnoteId, newTargetFootnoteId);

@@ -143,7 +143,7 @@ async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams):
 
       const originalTitle = originalFrontmatter.title;
       await app.fileManager.processFrontMatter(note.file, (frontmatter: Frontmatter) => {
-        mergeRecursively({ newObj: templateFrontmatter, oldObj: frontmatter });
+        mergeRecursively({ newObject: templateFrontmatter, oldObject: frontmatter });
         // A split's new-file title is governed by `frontmatterTitleMode`, not by what is merged in, so the
         // Note's own title wins and a note that had none stays without one — mirroring the title rule in
         // `insertIntoTargetFile` for a split into a brand-new target file.

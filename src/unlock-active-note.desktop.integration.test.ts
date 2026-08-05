@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('unlock active note', () => {
   it('should cancel a pending mark: release the source-note lock, drop the mark, and hide the notice', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
@@ -29,36 +31,36 @@ describe('unlock active note', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
 
-        const markNoticePresentWhileMarked = findMarkNotice() !== null;
-        const highlightPresentWhileMarked = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length > 0;
+        const isMarkNoticePresentWhileMarked = findMarkNotice() !== null;
+        const isHighlightPresentWhileMarked = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length > 0;
 
         // While marked, the source note's mutations are blocked: a direct vault write throws.
-        const mutationBlockedWhileMarked = await isVaultModifyBlocked(source, 'blocked while marked');
+        const isMutationBlockedWhileMarked = await isVaultModifyBlocked(source, 'blocked while marked');
 
         // Run the built-in "Unlock active note" command against the (active, locked) source note.
-        const unlockCommandRan = app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
+        const isUnlockCommandRan = app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
         await sleep(SETTLE_IN_MILLISECONDS);
         await sleep(NOTICE_REMOVAL_IN_MILLISECONDS);
 
         // The unlock cancels the whole pending move: the mark notice and highlight are gone...
-        const markNoticeGoneAfterUnlock = findMarkNotice() === null;
-        const highlightGoneAfterUnlock = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
+        const isMarkNoticeGoneAfterUnlock = findMarkNotice() === null;
+        const isHighlightGoneAfterUnlock = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
 
         // ...and the lock is genuinely released — the previously-blocked vault write now succeeds.
-        const mutationAllowedAfterUnlock = !(await isVaultModifyBlocked(source, 'unlocked'));
+        const isMutationAllowedAfterUnlock = !(await isVaultModifyBlocked(source, 'unlocked'));
 
         return {
-          highlightGoneAfterUnlock,
-          highlightPresentWhileMarked,
-          markNoticeGoneAfterUnlock,
-          markNoticePresentWhileMarked,
-          mutationAllowedAfterUnlock,
-          mutationBlockedWhileMarked,
-          unlockCommandRan
+          highlightGoneAfterUnlock: isHighlightGoneAfterUnlock,
+          highlightPresentWhileMarked: isHighlightPresentWhileMarked,
+          markNoticeGoneAfterUnlock: isMarkNoticeGoneAfterUnlock,
+          markNoticePresentWhileMarked: isMarkNoticePresentWhileMarked,
+          mutationAllowedAfterUnlock: isMutationAllowedAfterUnlock,
+          mutationBlockedWhileMarked: isMutationBlockedWhileMarked,
+          unlockCommandRan: isUnlockCommandRan
         };
 
         function findMarkNotice(): Element | null {
-          for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
+          for (const el of activeDocument.querySelectorAll('.notice')) {
             if (el.textContent.includes('Smart cut & paste')) {
               return el;
             }

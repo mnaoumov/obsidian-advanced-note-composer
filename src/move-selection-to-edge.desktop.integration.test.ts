@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('move marked selection to top/bottom of file', () => {
   it('should move a marked selection to the top and bottom of the same note and another note', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
 

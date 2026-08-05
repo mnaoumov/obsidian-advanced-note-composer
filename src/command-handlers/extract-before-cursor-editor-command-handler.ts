@@ -59,12 +59,12 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
     this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
-  protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
-    return !isEditorCommandBlocked(this.pluginSettingsComponent, ctx);
+  protected override canExecuteEditor(_editor: Editor, context: MarkdownFileInfo): boolean {
+    return !isEditorCommandBlocked(this.pluginSettingsComponent, context);
   }
 
-  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const file = ctx.file;
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const file = context.file;
     if (!file) {
       return;
     }
@@ -72,7 +72,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );

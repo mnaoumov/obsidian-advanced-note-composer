@@ -26,6 +26,7 @@ function createMockApp(): App {
       getNewFileParent: vi.fn().mockReturnValue(strictProxy<TFolder>({ path: 'folder' }))
     }),
     metadataCache: strictProxy({
+      // eslint-disable-next-line unicorn/name-replacements -- `getFirstLinkpathDest` is an Obsidian `MetadataCache` method name.
       getFirstLinkpathDest: vi.fn().mockReturnValue(null)
     }),
     vault: strictProxy({
@@ -55,7 +56,7 @@ function mockItem(partial: Record<string, unknown>): Item {
 
 describe('MergeItemSelector', () => {
   describe('selectItem', () => {
-    it('should create new file when isMod is true', async () => {
+    it('should create new file when isModifier is true', async () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source.md');
@@ -63,7 +64,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: 'new note',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         sourceFile
@@ -87,7 +88,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: 'ignored',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -109,7 +110,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: 'ignored',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -121,7 +122,7 @@ describe('MergeItemSelector', () => {
       expect(app.fileManager.getNewFileParent).toHaveBeenCalledWith('source.md', '');
     });
 
-    it('should return existing file when isMod and path is ignored', async () => {
+    it('should return existing file when isModifier and path is ignored', async () => {
       const existingFile = createMockFile('folder/existing.md');
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
@@ -133,7 +134,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: 'existing',
-        isMod: true,
+        isModifier: true,
         item: null,
         pluginSettingsComponent,
         sourceFile
@@ -159,7 +160,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -184,7 +185,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -206,7 +207,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -227,7 +228,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -247,7 +248,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item,
         pluginSettingsComponent,
         sourceFile
@@ -259,7 +260,7 @@ describe('MergeItemSelector', () => {
       expect(result.targetFile).toBe(bookmarkFile);
     });
 
-    it('should throw when item is null and isMod is false', async () => {
+    it('should throw when item is null and isModifier is false', async () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source.md');
@@ -267,7 +268,7 @@ describe('MergeItemSelector', () => {
       const selector = new MergeItemSelector({
         app,
         inputValue: '',
-        isMod: false,
+        isModifier: false,
         item: null,
         pluginSettingsComponent,
         sourceFile

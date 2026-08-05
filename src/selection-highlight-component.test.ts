@@ -28,9 +28,9 @@ import {
   buildSelectionHighlightDecorations,
   computeHighlightRangesForFile,
   mergeHighlightRanges,
+  replaceSelectionHighlightsEffect,
   SelectionHighlightComponent,
-  selectionHighlightField,
-  setSelectionHighlightsEffect
+  selectionHighlightField
 } from './selection-highlight-component.ts';
 
 interface Highlight {
@@ -105,7 +105,7 @@ describe('selectionHighlightField', () => {
     expect(state.field(selectionHighlightField).size).toBe(0);
 
     const ranges: HighlightRange[] = [{ from: 0, to: 5 }];
-    const withHighlight = state.update({ effects: setSelectionHighlightsEffect.of(buildSelectionHighlightDecorations(ranges)) }).state;
+    const withHighlight = state.update({ effects: replaceSelectionHighlightsEffect.of(buildSelectionHighlightDecorations(ranges)) }).state;
     expect(withHighlight.field(selectionHighlightField).size).toBe(1);
 
     const afterEdit = withHighlight.update({ changes: { from: 0, insert: 'X' } }).state;
@@ -115,7 +115,7 @@ describe('selectionHighlightField', () => {
   it('ignores unrelated effects', () => {
     const unrelatedEffect = StateEffect.define();
     const state = EditorState.create({ doc: 'hello world', extensions: [selectionHighlightField] });
-    const withHighlight = state.update({ effects: setSelectionHighlightsEffect.of(buildSelectionHighlightDecorations([{ from: 0, to: 5 }])) }).state;
+    const withHighlight = state.update({ effects: replaceSelectionHighlightsEffect.of(buildSelectionHighlightDecorations([{ from: 0, to: 5 }])) }).state;
 
     const afterUnrelated = withHighlight.update({ effects: unrelatedEffect.of(null) }).state;
     expect(afterUnrelated.field(selectionHighlightField).size).toBe(1);

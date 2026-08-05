@@ -53,7 +53,7 @@ interface MergeFileModalResult {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly inputValue: string;
   readonly insertMode: InsertMode;
-  readonly isMod: boolean;
+  readonly isModifier: boolean;
   readonly item: Item | null;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -122,8 +122,8 @@ class MergeFileModal extends SuggestModalBase {
     builder.addKeyboardCommand({
       key: 'Enter',
       modifiers: ['Mod'],
-      onKey: (evt) => {
-        this.selectActiveSuggestion(evt);
+      onKey: ($event) => {
+        this.selectActiveSuggestion($event);
         return false;
       },
       purpose: 'to create new'
@@ -132,8 +132,8 @@ class MergeFileModal extends SuggestModalBase {
     builder.addKeyboardCommand({
       key: 'Enter',
       modifiers: ['Shift'],
-      onKey: (evt) => {
-        this.selectActiveSuggestion(evt);
+      onKey: ($event) => {
+        this.selectActiveSuggestion($event);
         return false;
       },
       purpose: 'to merge at top'
@@ -151,8 +151,8 @@ class MergeFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '1',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldFixFootnotes = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldFixFootnotes = isChecked;
       },
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldFixFootnotes;
@@ -163,8 +163,8 @@ class MergeFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '2',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldAllowOnlyCurrentFolder = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldAllowOnlyCurrentFolder = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -176,8 +176,8 @@ class MergeFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '3',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldMergeHeadings = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldMergeHeadings = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -189,9 +189,9 @@ class MergeFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '4',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldAllowSplitIntoUnresolvedPath = value;
-        this.shouldShowUnresolved = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldAllowSplitIntoUnresolvedPath = isChecked;
+        this.shouldShowUnresolved = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -231,18 +231,18 @@ class MergeFileModal extends SuggestModalBase {
     }
   }
 
-  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: Item | null, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
-  protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
+  protected override async onChooseSuggestionAsync(item: Item | null, $event: KeyboardEvent | MouseEvent): Promise<void> {
     this.promiseResolve({
       frontmatterMergeStrategy: this.frontmatterMergeStrategy,
       inputValue: this.inputEl.value,
-      insertMode: getInsertModeFromEvent(evt),
-      isMod: Keymap.isModifier(evt, 'Mod'),
+      insertMode: getInsertModeFromEvent($event),
+      isModifier: Keymap.isModifier($event, 'Mod'),
       item,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
@@ -291,7 +291,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
     const selectItemResult = await new MergeItemSelector({
       app: params.app,
       inputValue: result.inputValue,
-      isMod: result.isMod,
+      isModifier: result.isModifier,
       item: result.item,
       pluginSettingsComponent: params.pluginSettingsComponent,
       sourceFile: params.sourceFile
@@ -368,12 +368,12 @@ async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams):
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: source }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: target }));
 }
 
 async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogModalResult> {

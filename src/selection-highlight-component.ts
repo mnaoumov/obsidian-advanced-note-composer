@@ -56,12 +56,12 @@ interface Highlight {
 /**
  * The effect that replaces the pending-selection highlights of a single editor.
  */
-export const setSelectionHighlightsEffect = StateEffect.define<DecorationSet>();
+export const replaceSelectionHighlightsEffect = StateEffect.define<DecorationSet>();
 
 /**
  * The editor extension that stores and renders the pending-selection highlights. Register once via
  * `plugin.registerEditorExtension`; {@link SelectionHighlightComponent.refresh} dispatches
- * {@link setSelectionHighlightsEffect} to update each editor.
+ * {@link replaceSelectionHighlightsEffect} to update each editor.
  */
 export const selectionHighlightField = StateField.define<DecorationSet>({
   create() {
@@ -73,7 +73,7 @@ export const selectionHighlightField = StateField.define<DecorationSet>({
   update(highlights, tr) {
     highlights = highlights.map(tr.changes);
     for (const effect of tr.effects) {
-      if (effect.is(setSelectionHighlightsEffect)) {
+      if (effect.is(replaceSelectionHighlightsEffect)) {
         highlights = effect.value;
       }
     }
@@ -150,7 +150,7 @@ export class SelectionHighlightComponent extends ComponentEx {
     }
     const editorView = view.editor.cm;
     const ranges = computeHighlightRangesForFile({ docLength: editorView.state.doc.length, file: view.file, highlights: this.highlights.values() });
-    editorView.dispatch({ effects: setSelectionHighlightsEffect.of(buildSelectionHighlightDecorations(ranges)) });
+    editorView.dispatch({ effects: replaceSelectionHighlightsEffect.of(buildSelectionHighlightDecorations(ranges)) });
   }
   /* v8 ignore stop */
 }
@@ -204,7 +204,7 @@ export function mergeHighlightRanges(ranges: HighlightRange[]): HighlightRange[]
   const sorted = [...ranges].sort((a, b) => a.from - b.from);
   const merged: HighlightRange[] = [];
   for (const range of sorted) {
-    const last = merged[merged.length - 1];
+    const last = merged.at(-1);
     if (last && range.from <= last.to) {
       merged[merged.length - 1] = { from: last.from, to: Math.max(last.to, range.to) };
     } else {

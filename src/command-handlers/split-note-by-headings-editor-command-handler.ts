@@ -59,12 +59,12 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
-  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    super.canExecuteEditor(editor, ctx);
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.canExecuteEditor(editor, context);
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
       return false;
     }
-    const file = ctx.file;
+    const file = context.file;
     if (!file) {
       return false;
     }
@@ -82,8 +82,8 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     });
   }
 
-  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const file = ctx.file;
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const file = context.file;
     if (!file) {
       return;
     }
@@ -91,7 +91,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -187,8 +187,8 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    super.shouldAddToEditorMenu(editor, ctx);
+  protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, context);
     return true;
   }
 }

@@ -53,14 +53,14 @@ export interface SuggestModalBaseConstructorParams {
   readonly sourceFile: TFile;
 }
 
-type SearchFn = (text: string) => null | SearchResult;
+type SearchFunction = (text: string) => null | SearchResult;
 
 interface SuggestModalBaseAddAliasMatchesParams {
   readonly file: TFile;
   readonly isUserIgnored: boolean;
   readonly items: Item[];
   readonly scoreStep: number;
-  readonly searchFn: SearchFn;
+  readonly searchFunction: SearchFunction;
 }
 
 interface TraverseBookmarksParams {
@@ -85,8 +85,8 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowNonImageAttachments: boolean;
   protected shouldShowUnresolved: boolean;
   protected readonly sourceFile: TFile;
-  private readonly createButtonEl: HTMLElement;
   private readonly initialInputValue: string;
+  private readonly newFileButtonEl: HTMLElement;
   private readonly shouldShowAlias: boolean;
   private readonly shouldShowAllTypes: boolean;
 
@@ -122,7 +122,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     this.limit = DEFAULT_LIMIT;
 
     this.scope.register([], 'Tab', this.handleTabKey.bind(this));
-    this.createButtonEl = createEl(
+    this.newFileButtonEl = createEl(
       'button',
       'clickable-icon',
       (button): void => {
@@ -142,20 +142,21 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     const FUZZY_LENGTH_THRESHOLD = 10_000;
     const files = this.app.vault.getFiles().filter(this.shouldIncludeFile.bind(this));
     /* v8 ignore start -- prepareSimpleSearch branch is only taken for very large vaults (>10000 files). */
-    const searchFn: SearchFn = files.length < FUZZY_LENGTH_THRESHOLD ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
+    const searchFunction: SearchFunction = files.length < FUZZY_LENGTH_THRESHOLD ? prepareFuzzySearch(query) : prepareSimpleSearch(query);
     /* v8 ignore stop */
 
-    const items: Item[] = [];
-    items.push(...this.searchFiles(query, searchFn));
-    items.push(...this.searchUnresolvedLinks(searchFn));
-    items.push(...this.searchBookmarks(searchFn));
+    const items: Item[] = [
+      ...this.searchFiles(query, searchFunction),
+      ...this.searchUnresolvedLinks(searchFunction),
+      ...this.searchBookmarks(searchFunction)
+    ];
 
     sortSearchResults(items);
     return items;
   }
 
-  public override onChooseSuggestion(item: Item | null, evt: KeyboardEvent | MouseEvent): void {
-    invokeAsyncSafely(() => this.onChooseSuggestionAsync(item, evt));
+  public override onChooseSuggestion(item: Item | null, $event: KeyboardEvent | MouseEvent): void {
+    invokeAsyncSafely(() => this.onChooseSuggestionAsync(item, $event));
   }
 
   /* v8 ignore start -- onInput mobile branch has defensive ?? and ?. on chooser.suggestions[0]?.getText(). */
@@ -164,14 +165,14 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     if (Platform.isMobile && this.allowCreateNewFile) {
       const inputValue = this.inputEl.value.trim();
       if (inputValue === '') {
-        this.createButtonEl.detach();
+        this.newFileButtonEl.detach();
         return;
       }
-      if (!this.createButtonEl.parentElement) {
-        this.ctaEl.appendChild(this.createButtonEl);
+      if (!this.newFileButtonEl.parentElement) {
+        this.ctaEl.append(this.newFileButtonEl);
 
         const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
-        this.createButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
+        this.newFileButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
       }
     }
   }
@@ -214,64 +215,95 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     if (item.downranked) {
       el.addClass('mod-downranked');
     }
-    if (item.type === 'file') {
-      renderResults(suggestionContent.createDiv('suggestion-title'), this.getSuggestionText(item.file?.path ?? ''), item.match);
-      suggestionAux.createSpan({ cls: 'suggestion-flair' });
-    } else if (item.type === 'alias') {
-      renderResults(suggestionContent.createDiv('suggestion-title'), item.alias ?? '', item.match);
-      suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getSuggestionText(item.file?.path ?? '') });
-      suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
-        setIcon(suggestionFlair, 'lucide-forward');
-        suggestionFlair.title = 'Alias';
-      });
-    } else if (item.type === 'unresolved') {
-      const suggestionTitle = suggestionContent.createDiv('suggestion-title suggestion-unresolved');
-      renderResults(suggestionTitle.createSpan(), item.linktext ?? '', item.match);
-      suggestionTitle.createSpan({ cls: 'suggestion-unresolved-description', text: '(unresolved)' });
-      suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
-        setIcon(suggestionFlair, 'lucide-file-plus');
-        setTooltip(suggestionFlair, 'Not created yet, select to create');
-      });
-    } else if (item.type === 'bookmark') {
-      const suggestionTitle = suggestionContent.createDiv('suggestion-title');
-      const suggestionNote = suggestionContent.createDiv('suggestion-note');
-      renderResults(suggestionTitle, this.getSuggestionText(item.bookmarkPath ?? ''), item.match);
-      suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
-        if (item.item?.type === 'file') {
-          setIcon(suggestionFlair, 'lucide-bookmark');
-          suggestionNote.setText(
-            this.getSuggestionText(item.item.path ?? '') + (item.item.subpath ?? '')
-          );
-        } else if (item.item?.type === 'folder') {
-          setIcon(suggestionFlair, 'lucide-bookmark');
-          suggestionNote.setText(this.getSuggestionText(item.item.path ?? ''));
-        } else if (item.item?.type === 'search') {
-          setIcon(suggestionFlair, 'lucide-search');
-          suggestionNote.setText(item.item.query ?? '');
-        } else if (item.item?.type === 'graph') {
-          setIcon(suggestionFlair, 'lucide-git-fork');
-          suggestionNote.detach();
-        } else if (item.item?.type === 'url') {
-          const webViewerPlugin = this.app.internalPlugins.getEnabledPluginById('webviewer');
-          if (webViewerPlugin) {
-            suggestionFlair.addClass('webviewer-favicon-container');
-            invokeAsyncSafely(() => webViewerPlugin.db.setIcon(suggestionFlair, item.item?.url ?? ''));
-          } else {
-            setIcon(suggestionFlair, 'globe-2');
+    switch (item.type) {
+      case 'alias': {
+        renderResults(suggestionContent.createDiv('suggestion-title'), item.alias ?? '', item.match);
+        suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getSuggestionText(item.file?.path ?? '') });
+        suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
+          setIcon(suggestionFlair, 'lucide-forward');
+          suggestionFlair.title = 'Alias';
+        });
+
+        break;
+      }
+      case 'bookmark': {
+        const suggestionTitle = suggestionContent.createDiv('suggestion-title');
+        const suggestionNote = suggestionContent.createDiv('suggestion-note');
+        renderResults(suggestionTitle, this.getSuggestionText(item.bookmarkPath ?? ''), item.match);
+        suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
+          switch (item.item?.type) {
+            case 'file': {
+              setIcon(suggestionFlair, 'lucide-bookmark');
+              suggestionNote.setText(
+                this.getSuggestionText(item.item.path ?? '') + (item.item.subpath ?? '')
+              );
+
+              break;
+            }
+            case 'folder': {
+              setIcon(suggestionFlair, 'lucide-bookmark');
+              suggestionNote.setText(this.getSuggestionText(item.item.path ?? ''));
+
+              break;
+            }
+            case 'graph': {
+              setIcon(suggestionFlair, 'lucide-git-fork');
+              suggestionNote.detach();
+
+              break;
+            }
+            case 'search': {
+              setIcon(suggestionFlair, 'lucide-search');
+              suggestionNote.setText(item.item.query ?? '');
+
+              break;
+            }
+            case 'url': {
+              const webViewerPlugin = this.app.internalPlugins.getEnabledPluginById('webviewer');
+              if (webViewerPlugin) {
+                suggestionFlair.addClass('webviewer-favicon-container');
+                invokeAsyncSafely(() => webViewerPlugin.db.setIcon(suggestionFlair, item.item?.url ?? ''));
+              } else {
+                setIcon(suggestionFlair, 'globe-2');
+              }
+              suggestionNote.setText(item.item.url ?? '');
+
+              break;
+            }
+              // No default
           }
-          suggestionNote.setText(item.item.url ?? '');
-        }
-      });
+        });
+
+        break;
+      }
+      case 'file': {
+        renderResults(suggestionContent.createDiv('suggestion-title'), this.getSuggestionText(item.file?.path ?? ''), item.match);
+        suggestionAux.createSpan({ cls: 'suggestion-flair' });
+
+        break;
+      }
+      case 'unresolved': {
+        const suggestionTitle = suggestionContent.createDiv('suggestion-title suggestion-unresolved');
+        renderResults(suggestionTitle.createSpan(), item.linktext ?? '', item.match);
+        suggestionTitle.createSpan({ cls: 'suggestion-unresolved-description', text: '(unresolved)' });
+        suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
+          setIcon(suggestionFlair, 'lucide-file-plus');
+          setTooltip(suggestionFlair, 'Not created yet, select to create');
+        });
+
+        break;
+      }
+        // No default
     }
   }
 
   /* v8 ignore stop */
 
-  protected abstract onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void>;
+  protected abstract onChooseSuggestionAsync(item: Item | null, $event: KeyboardEvent | MouseEvent): Promise<void>;
 
   /* v8 ignore start -- addAliasMatches contains defensive ?? and ?. fallbacks that never take the null path. */
   private addAliasMatches(params: SuggestModalBaseAddAliasMatchesParams): void {
-    const { file, isUserIgnored, items, scoreStep, searchFn } = params;
+    const { file, isUserIgnored, items, scoreStep, searchFunction } = params;
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) {
       return;
@@ -279,7 +311,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     const aliases = parseFrontMatterAliases(cache.frontmatter) ?? [];
     for (const alias of aliases) {
-      const match = searchFn(alias);
+      const match = searchFunction(alias);
       if (match) {
         if (isUserIgnored) {
           match.score -= scoreStep;
@@ -301,14 +333,18 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   private getDisplayText(selectedItem: Item): string {
     switch (selectedItem.type) {
       case 'alias':
-      case 'file':
+      case 'file': {
         return trimMarkdownExtension(selectedItem.file?.path ?? '');
-      case 'bookmark':
+      }
+      case 'bookmark': {
         return selectedItem.bookmarkPath ?? '';
-      case 'unresolved':
+      }
+      case 'unresolved': {
         return selectedItem.linktext ?? '';
-      default:
+      }
+      default: {
         return '';
+      }
     }
   }
 
@@ -345,18 +381,18 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       return suggestionText;
     }
 
-    suggestionText = trimStart({ prefix: this.sourceFile.parent?.getParentPrefix() ?? '', str: suggestionText });
+    suggestionText = trimStart({ $string: suggestionText, prefix: this.sourceFile.parent?.getParentPrefix() ?? '' });
     return suggestionText;
   }
   /* v8 ignore stop */
 
-  private handleCreateButtonClick(evt: MouseEvent): void {
-    this.onChooseSuggestion(null, evt);
+  private handleCreateButtonClick($event: MouseEvent): void {
+    this.onChooseSuggestion(null, $event);
     this.close();
   }
 
-  private handleTabKey(evt: KeyboardEvent): MaybeReturn<false> {
-    if (evt.isComposing) {
+  private handleTabKey($event: KeyboardEvent): MaybeReturn<false> {
+    if ($event.isComposing) {
       return;
     }
     const selectedItem = this.chooser.values?.[this.chooser.selectedItem];
@@ -373,7 +409,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   /* v8 ignore start -- searchBookmarks contains defensive ?? and conditional branches for null bookmarks plugin. */
-  private searchBookmarks(searchFn: SearchFn): Item[] {
+  private searchBookmarks(searchFunction: SearchFunction): Item[] {
     const bookmarksPlugin = this.app.internalPlugins.getEnabledPluginById('bookmarks');
     if (!bookmarksPlugin) {
       return [];
@@ -386,7 +422,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         return;
       }
       const bookmarkPath = parentPath + bookmarksPlugin.getItemTitle(bookmarkItem);
-      const match = searchFn(bookmarkPath);
+      const match = searchFunction(bookmarkPath);
       if (match) {
         items.push({
           bookmarkPath,
@@ -418,14 +454,14 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   /* v8 ignore stop */
 
-  private searchFiles(_query: string, searchFn: SearchFn): Item[] {
+  private searchFiles(_query: string, searchFunction: SearchFunction): Item[] {
     const SCORE_STEP = 10;
     const files = this.app.vault.getMarkdownFiles().filter(this.shouldIncludeFile.bind(this));
     const items: Item[] = [];
 
     for (const file of files) {
       const isUserIgnored = this.app.metadataCache.isUserIgnored(file.path);
-      const match = searchFilePath(searchFn, trimMarkdownExtension(file.path));
+      const match = searchFilePath(searchFunction, trimMarkdownExtension(file.path));
       if (match) {
         if (isUserIgnored) {
           match.score -= SCORE_STEP;
@@ -434,7 +470,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
       }
 
       if (this.shouldShowAlias) {
-        this.addAliasMatches({ file, isUserIgnored, items, scoreStep: SCORE_STEP, searchFn });
+        this.addAliasMatches({ file, isUserIgnored, items, scoreStep: SCORE_STEP, searchFunction });
       }
     }
 
@@ -442,14 +478,14 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   }
 
   /* v8 ignore start -- searchUnresolvedLinks contains defensive ?? on parent?.getParentPrefix(). */
-  private searchUnresolvedLinks(searchFn: SearchFn): Item[] {
+  private searchUnresolvedLinks(searchFunction: SearchFunction): Item[] {
     if (!this.shouldShowUnresolved) {
       return [];
     }
 
     const unresolvedLinks = new Set<string>();
-    for (const unresolvedLinkObj of Object.values(this.app.metadataCache.unresolvedLinks)) {
-      for (const unresolvedLink of Object.keys(unresolvedLinkObj)) {
+    for (const unresolvedLinkObject of Object.values(this.app.metadataCache.unresolvedLinks)) {
+      for (const unresolvedLink of Object.keys(unresolvedLinkObject)) {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
@@ -462,7 +498,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     const items: Item[] = [];
     for (const unresolvedLink of unresolvedLinks) {
-      const match = searchFn(unresolvedLink);
+      const match = searchFunction(unresolvedLink);
       if (match) {
         items.push({ linktext: unresolvedLink, match, type: 'unresolved' });
       }
@@ -493,7 +529,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     if (file.extension === 'canvas' || file.extension === 'base') {
       return this.shouldShowNonAttachments;
     }
-    if (IMAGE_EXTENSIONS.includes(file.extension)) {
+    if (IMAGE_EXTENSIONS.has(file.extension)) {
       return this.shouldShowImages;
     }
 
@@ -511,13 +547,13 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 }
 
 function trimMarkdownExtension(path: string): string {
-  return trimEnd({ str: path, suffix: '.md' });
+  return trimEnd({ $string: path, suffix: '.md' });
 }
 
 /* v8 ignore start -- truncatePathToLastMatch contains defensive ?. and branches for edge cases. */
 function truncatePathToLastMatch(path: string, matches?: SearchMatches): string {
   if (matches && matches.length > 0) {
-    const lastMatch = matches[matches.length - 1];
+    const lastMatch = matches.at(-1);
     const lastMatchEnd = lastMatch?.[1];
     if (!lastMatchEnd) {
       return path;
@@ -533,7 +569,7 @@ function truncatePathToLastMatch(path: string, matches?: SearchMatches): string 
 
 /* v8 ignore stop */
 
-const IMAGE_EXTENSIONS = ['bmp', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif'];
+const IMAGE_EXTENSIONS = new Set(['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp']);
 
 /* v8 ignore start -- adjustMatchPositions and searchFilePath contain defensive ?? branches. */
 function adjustMatchPositions(matches: SearchMatches | undefined, pathPrefixLength: number): void {
@@ -543,15 +579,15 @@ function adjustMatchPositions(matches: SearchMatches | undefined, pathPrefixLeng
   }
 }
 
-function searchFilePath(searchFn: SearchFn, filePath: string): null | SearchResult {
+function searchFilePath(searchFunction: SearchFunction, filePath: string): null | SearchResult {
   const fileName = basename(filePath);
-  let match = searchFn(fileName);
+  let match = searchFunction(fileName);
 
   if (match) {
     adjustMatchPositions(match.matches, filePath.length - fileName.length);
     return match;
   }
-  match = searchFn(filePath);
+  match = searchFunction(filePath);
   if (match) {
     match.score--;
   }

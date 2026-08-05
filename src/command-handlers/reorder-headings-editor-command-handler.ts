@@ -61,19 +61,19 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
     this.resourceLockComponent = params.resourceLockComponent;
   }
 
-  protected override canExecuteEditor(_editor: Editor, ctx: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+  protected override canExecuteEditor(_editor: Editor, context: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
       return false;
     }
-    const file = ctx.file;
+    const file = context.file;
     if (!file) {
       return false;
     }
     return hasReorderableSiblings(this.getHeadings(file));
   }
 
-  protected override async executeEditor(_editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const file = ctx.file;
+  protected override async executeEditor(_editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const file = context.file;
     if (!file) {
       return;
     }
@@ -81,7 +81,7 @@ export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot reorder headings in file ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );

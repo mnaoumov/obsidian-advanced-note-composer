@@ -89,7 +89,8 @@ interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerSplitBranchParams {
   readonly minLevel: number;
 }
 
-const PREVIEW_INDENT = '    ';
+const PREVIEW_INDENT_WIDTH = 4;
+const PREVIEW_INDENT = ' '.repeat(PREVIEW_INDENT_WIDTH);
 
 export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
@@ -113,12 +114,12 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
     this.resourceLockComponent = params.resourceLockComponent;
   }
 
-  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    super.canExecuteEditor(editor, ctx);
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.canExecuteEditor(editor, context);
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
       return false;
     }
-    const file = ctx.file;
+    const file = context.file;
     if (!file) {
       return false;
     }
@@ -131,8 +132,8 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
     return (cache.headings ?? []).length > 0;
   }
 
-  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const file = ctx.file;
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const file = context.file;
     if (!file) {
       return;
     }
@@ -140,7 +141,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -223,8 +224,8 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    super.shouldAddToEditorMenu(editor, ctx);
+  protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, context);
     return true;
   }
 
@@ -386,7 +387,7 @@ async function buildRecursiveSplitConfirmContent(params: BuildRecursiveSplitConf
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
   fragment.createEl('br');
   fragment.createEl('br');
   fragment.createEl('h2', { text: 'Notes that will be created' });

@@ -15,8 +15,8 @@ const PLUGIN_ID = 'advanced-note-composer';
 
 // The value from issue #155, typed by hand. Its prefixes `/^Inbox\/` and `/^Inbox\/[^\/` both start AND
 // End with `/`, so they read as finished regular expression literals whose inner source does not parse.
-const REPORTED_EXCLUDE_PATH = '/^Inbox\\/[^\\/]*$/';
-const INCOMPLETE_EXCLUDE_PATH = '/^Inbox\\/';
+const REPORTED_EXCLUDE_PATH = String.raw`/^Inbox\/[^\/]*$/`;
+const INCOMPLETE_EXCLUDE_PATH = String.raw`/^Inbox\/`;
 
 // Minimal shape of the plugin's settings component reached at runtime, used only to restore the original
 // Exclude paths afterwards (the same walker `merge-folder-skips-ignored.desktop.integration.test.ts` uses).
@@ -45,11 +45,13 @@ interface TypingResult {
 describe('typing a regular expression into Exclude paths (issue #155)', () => {
   it('shows no error notice, still saves the completed value, and reports an incomplete one', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         completeValue: REPORTED_EXCLUDE_PATH,
         incompleteValue: INCOMPLETE_EXCLUDE_PATH,
         pluginId: PLUGIN_ID
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, completeValue, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const KEYSTROKE_DELAY_IN_MILLISECONDS = 60;
@@ -81,7 +83,10 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           // Only observation that covers that second failure surface. Every wait from here on gives up
           // Instead of throwing (`waitOrGiveUp`) — what it waits for IS the thing under test, and a
           // Thrown timeout would abort the closure and hide the notices collected above.
-          await waitOrGiveUp(async () => (await readSavedExcludePaths()).includes(completeValue));
+          await waitOrGiveUp(async () => {
+            const excludePaths = await readSavedExcludePaths();
+            return excludePaths.includes(completeValue);
+          });
           const savedExcludePaths = await readSavedExcludePaths();
           await waitOrGiveUp(() => textAreaEl.validationMessage === '');
           const validationMessageForCompleteValue = textAreaEl.validationMessage;
@@ -130,7 +135,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
         function noticeTexts(): string[] {
           const texts: string[] = [];
           for (const doc of new Set([activeDocument, document])) {
-            for (const el of Array.from(doc.querySelectorAll('.notice'))) {
+            for (const el of doc.querySelectorAll('.notice')) {
               texts.push(el.textContent);
             }
           }
@@ -154,11 +159,11 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItem = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'))
+          const settingItem = [...settingTab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Exclude paths');
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error('"Exclude paths" text area was not found.');
+            throw new TypeError('"Exclude paths" text area was not found.');
           }
           return textAreaEl;
         }

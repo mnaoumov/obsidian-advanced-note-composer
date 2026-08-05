@@ -82,10 +82,10 @@ async function swapFile(params: SwapFileParams): Promise<void> {
   const { app, sourceFile, targetFile, vaultTransaction } = params;
   const sourceFilePath = sourceFile.path;
   const targetFilePath = targetFile.path;
-  const targetFileTempPath = getAvailablePath(app, targetFilePath);
-  await vaultTransaction.rename(sourceFilePath, targetFileTempPath);
+  const targetFileTemporaryPath = getAvailablePath(app, targetFilePath);
+  await vaultTransaction.rename(sourceFilePath, targetFileTemporaryPath);
   await vaultTransaction.rename(targetFile, sourceFilePath);
-  await vaultTransaction.rename(targetFileTempPath, targetFilePath);
+  await vaultTransaction.rename(targetFileTemporaryPath, targetFilePath);
 }
 
 async function swapFolder(params: SwapFolderParams): Promise<void> {
@@ -113,10 +113,10 @@ async function swapFolder(params: SwapFolderParams): Promise<void> {
     }
   }
 
-  const tempFolderPath = getAvailablePath(app, '__temp');
-  await vaultTransaction.createFolder(tempFolderPath);
+  const temporaryFolderPath = getAvailablePath(app, '__temp');
+  await vaultTransaction.createFolder(temporaryFolderPath);
 
-  let sourceChildren = Array.from(sourceFolder.children);
+  let sourceChildren = [...sourceFolder.children];
   if (!shouldSwapEntireFolderStructure) {
     sourceChildren = sourceChildren.filter(isFile);
   }
@@ -124,10 +124,10 @@ async function swapFolder(params: SwapFolderParams): Promise<void> {
   const targetFolderPath = targetFolder.path;
 
   for (const sourceChild of sourceChildren) {
-    await vaultTransaction.rename(sourceChild, join(tempFolderPath, sourceChild.name));
+    await vaultTransaction.rename(sourceChild, join(temporaryFolderPath, sourceChild.name));
   }
 
-  let targetChildren = Array.from(targetFolder.children);
+  let targetChildren = [...targetFolder.children];
   if (!shouldSwapEntireFolderStructure) {
     targetChildren = targetChildren.filter(isFile);
   }
@@ -144,11 +144,11 @@ async function swapFolder(params: SwapFolderParams): Promise<void> {
   }
 
   for (const sourceChild of sourceChildren) {
-    if (!isChild({ app, childPathOrFile: sourceChild, parentPathOrFile: tempFolderPath })) {
+    if (!isChild({ app, childPathOrFile: sourceChild, parentPathOrFile: temporaryFolderPath })) {
       continue;
     }
     await vaultTransaction.rename(sourceChild, join(targetFolder.path, sourceChild.name));
   }
 
-  await vaultTransaction.trash(tempFolderPath);
+  await vaultTransaction.trash(temporaryFolderPath);
 }

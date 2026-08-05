@@ -13,9 +13,11 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('swap marked selection from the smart cut & paste notice', () => {
   it('should swap the marked selection with the active editor selection when the Swap button is clicked', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
-        const BIG_TIMEOUT_IN_MILLISECONDS = 30000;
+        const BIG_TIMEOUT_IN_MILLISECONDS = 30_000;
 
         const sourceFile = await resetFile('swap-source.md', 'AAA BBB CCC\n');
         const targetFile = await resetFile('swap-target.md', 'XXX YYY ZZZ\n');
@@ -60,7 +62,7 @@ describe('swap marked selection from the smart cut & paste notice', () => {
         };
 
         function findSwapButton(): HTMLButtonElement | null {
-          return Array.from(document.querySelectorAll('button'))
+          return [...document.querySelectorAll('button')]
             .find((el) => el.textContent === 'Swap with selection')
             ?? null;
         }

@@ -33,12 +33,14 @@ interface SettingsCarrier {
 describe('flatten folder (issue #105)', () => {
   it('promotes a folder\'s direct children up one level (subfolders kept whole) and links still resolve', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
         try {
           // Skip the confirmation dialog (issue #154, on by default) so the flatten runs straight from the
           // Command; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
@@ -78,17 +80,17 @@ describe('flatten folder (issue #105)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const parentAtRoot = app.vault.getAbstractFileByPath('parent-note.md') !== null;
-          const childAtRoot = app.vault.getAbstractFileByPath('child-note.md') !== null;
-          const grandchildKeptStructure = app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null;
-          const sourceFolderRemains = app.vault.getAbstractFileByPath('flat-src') !== null;
+          const isParentAtRoot = app.vault.getAbstractFileByPath('parent-note.md') !== null;
+          const isChildAtRoot = app.vault.getAbstractFileByPath('child-note.md') !== null;
+          const isGrandchildKeptStructure = app.vault.getAbstractFileByPath('subfolder/grandchild.md') !== null;
+          const isSourceFolderRemains = app.vault.getAbstractFileByPath('flat-src') !== null;
           // The link is link-aware after the move: it resolves from the promoted note to the promoted target.
-          const linkResolves = app.metadataCache.getFirstLinkpathDest('child-note', 'parent-note.md')?.path === 'child-note.md';
+          const isLinkResolves = app.metadataCache.getFirstLinkpathDest('child-note', 'parent-note.md')?.path === 'child-note.md';
 
-          return { canRun, childAtRoot, grandchildKeptStructure, linkResolves, parentAtRoot, sourceFolderRemains };
+          return { canRun, childAtRoot: isChildAtRoot, grandchildKeptStructure: isGrandchildKeptStructure, linkResolves: isLinkResolves, parentAtRoot: isParentAtRoot, sourceFolderRemains: isSourceFolderRemains };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.shouldAskBeforeFlattening = isOriginalShouldAsk;
           });
         }
 
@@ -152,12 +154,14 @@ describe('flatten folder (issue #105)', () => {
    */
   it('carries a note\'s attachments along, whether they sit beside it or in an attachment sub-folder', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = false;
@@ -196,7 +200,7 @@ describe('flatten folder (issue #105)', () => {
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.shouldAskBeforeFlattening = isOriginalShouldAsk;
           });
         }
 
@@ -255,7 +259,9 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes only the child folders in `Child folders only` mode, keeping the folder and its attachment folder intact', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { commandId: 'flatten-folder-child-folders-only', pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         commandId,
@@ -266,7 +272,7 @@ describe('flatten folder (issue #105)', () => {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
         try {
           await settingsComponent.editAndSave((settings) => {
@@ -311,7 +317,7 @@ describe('flatten folder (issue #105)', () => {
         } finally {
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.shouldAskBeforeFlattening = isOriginalShouldAsk;
           });
         }
 
@@ -371,7 +377,9 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes every descendant folder up to the folder\'s own level in `All folders recursively` mode', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { commandId: 'flatten-folder-all-folders-recursively', pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         commandId,
@@ -382,7 +390,7 @@ describe('flatten folder (issue #105)', () => {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = false;
@@ -419,7 +427,7 @@ describe('flatten folder (issue #105)', () => {
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeFlattening = originalShouldAsk;
+            settings.shouldAskBeforeFlattening = isOriginalShouldAsk;
           });
         }
 

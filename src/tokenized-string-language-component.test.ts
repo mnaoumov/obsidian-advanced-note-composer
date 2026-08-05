@@ -113,6 +113,6 @@ describe('TokenizedStringLanguageComponent', () => {
     });
 
     component.unload();
-    expect(TOKENIZED_STRING_LANGUAGE in languages).toBe(false);
+    expect(Object.hasOwn(languages, TOKENIZED_STRING_LANGUAGE)).toBe(false);
   });
 });

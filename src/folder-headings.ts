@@ -149,8 +149,10 @@ export function buildFolderHeadingPlan(params: BuildFolderHeadingPlanParams): Fo
       continue;
     }
 
-    // `splice` both hands the headings to the note and clears them, so the next note starts fresh.
-    entries.push({ depth: segments.length, filePath: item.path, headings: pendingHeadings.splice(0) });
+    // The headings are handed to the note and then cleared, so the next note starts fresh.
+    const headings = [...pendingHeadings];
+    pendingHeadings.length = 0;
+    entries.push({ depth: segments.length, filePath: item.path, headings });
   }
 
   return { entries, trailingHeadings: pendingHeadings };

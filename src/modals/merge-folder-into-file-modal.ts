@@ -20,7 +20,7 @@ interface BuildConfirmContentParams {
   readonly targetPath: string;
 }
 
-interface ConfirmMergeFolderIntoFileParams {
+interface ShouldMergeFolderIntoFileParams {
   readonly app: App;
   readonly noteCount: number;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -36,7 +36,7 @@ interface ConfirmMergeFolderIntoFileParams {
  * @param params - The source folder, the target path, the note count, and the shared app/settings.
  * @returns A {@link Promise} resolving to `true` when the merge should proceed, `false` when cancelled.
  */
-export async function confirmMergeFolderIntoFile(params: ConfirmMergeFolderIntoFileParams): Promise<boolean> {
+export async function shouldMergeFolderIntoFile(params: ShouldMergeFolderIntoFileParams): Promise<boolean> {
   if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
     return true;
   }
@@ -89,7 +89,7 @@ async function buildConfirmContent(params: BuildConfirmContentParams): Promise<v
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Folder');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFolder.path }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: sourceFolder.path }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');

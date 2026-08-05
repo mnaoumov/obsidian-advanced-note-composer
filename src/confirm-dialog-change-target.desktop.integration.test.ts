@@ -16,11 +16,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('change target from the split confirmation dialog', () => {
   it('reopens the picker and splits into the newly chosen target', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSplitting(true);
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(true);
         try {
           const source = await resetFile('change-target-source.md', 'alpha bravo charlie');
           const targetA = await resetFile('change-target-a.md', 'target a body');
@@ -39,7 +41,7 @@ describe('change target from the split confirmation dialog', () => {
           // The confirmation dialog appears (for target A) with the "Change target" button.
           await waitUntil({ predicate: () => findButton('Change target') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const changeTargetButtonPresent = findButton('Change target') !== null;
+          const isChangeTargetButtonPresent = findButton('Change target') !== null;
 
           // Click "Change target": the picker reopens.
           findButton('Change target')?.click();
@@ -65,13 +67,13 @@ describe('change target from the split confirmation dialog', () => {
           const targetAContent = await app.vault.read(targetA);
           const targetBContent = await app.vault.read(targetB);
 
-          return { changeTargetButtonPresent, sourceContent, targetAContent, targetBContent };
+          return { changeTargetButtonPresent: isChangeTargetButtonPresent, sourceContent, targetAContent, targetBContent };
         } finally {
-          await setAskBeforeSplitting(originalShouldAsk);
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -82,15 +84,15 @@ describe('change target from the split confirmation dialog', () => {
         async function chooseInPicker(basename: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(basename)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -99,11 +101,11 @@ describe('change target from the split confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before splitting" toggle was not found.');
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

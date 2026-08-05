@@ -377,7 +377,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
   });
 });
 
-type AddComponentFn = (cb: (component: BaseComponent) => void) => Setting;
+type AddComponentFunction = (callback: (component: BaseComponent) => void) => Setting;
 type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
 
 /**
@@ -459,16 +459,16 @@ function spyOnAdd<T extends BaseComponent>(
   method: AddComponentMethod,
   registry: NamedComponent<T>[]
 ): void {
-  const prototype = castTo<Record<AddComponentMethod, AddComponentFn>>(Setting.prototype);
+  const prototype = castTo<Record<AddComponentMethod, AddComponentFunction>>(Setting.prototype);
   const original = prototype[method];
-  vi.spyOn(prototype, method).mockImplementation(function addComponentSpy(this: Setting, cb: (component: BaseComponent) => void): Setting {
+  vi.spyOn(prototype, method).mockImplementation(function addComponentSpy(this: Setting, callback: (component: BaseComponent) => void): Setting {
     const name = this.nameEl.textContent;
     return original.call(this, (component: BaseComponent) => {
       // Mock value components lack the dev-utils text-based-component probe (`setPlaceholderValue`).
       // Assigning it stops the strict proxy from throwing and makes `bind` correctly treat them as non-text-based.
       castTo<TextBasedProbe>(component).setPlaceholderValue = undefined;
       registry.push({ component: castTo<T>(component), name });
-      cb(component);
+      callback(component);
     });
   });
 }
@@ -476,11 +476,11 @@ function spyOnAdd<T extends BaseComponent>(
 function spyOnAddCodeHighlighter(): void {
   const original = SettingEx.prototype.addCodeHighlighter;
   vi.spyOn(SettingEx.prototype, 'addCodeHighlighter').mockImplementation(
-    function addCodeHighlighterSpy(this: SettingEx, cb: (component: CodeHighlighterComponent) => void): SettingEx {
+    function addCodeHighlighterSpy(this: SettingEx, callback: (component: CodeHighlighterComponent) => void): SettingEx {
       const name = this.nameEl.textContent;
       return original.call(this, (component: CodeHighlighterComponent) => {
         codeHighlighters.push({ component, name });
-        cb(component);
+        callback(component);
       });
     }
   );

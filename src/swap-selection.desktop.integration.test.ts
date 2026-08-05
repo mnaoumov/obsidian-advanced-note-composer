@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('swap selections', () => {
   it('should swap two selections across notes and within a single note', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         // --- Cross-note swap: "alpha" in A <-> "one" in B. ---
         const fileA = await resetFile('swap-a.md', 'AAA alpha BBB');

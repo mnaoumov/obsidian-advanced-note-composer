@@ -324,7 +324,7 @@ describe('MarkdownHeadingDocument.wrapText', () => {
     const app = createMockApp();
     const doc = await parseMarkdownHeadingDocument(app, content);
 
-    await doc.wrapText(async (text) => Promise.resolve(`wrapped(${text})`));
+    await doc.wrapText((text) => Promise.resolve(`wrapped(${text})`));
     expect(doc.toString()).toBe('wrapped(Simple text)');
   });
 });

@@ -9,9 +9,9 @@ import {
 import type { SplitReorderableSectionsResult } from '../heading-sections.ts';
 
 import {
+  didMoveSibling,
   flattenHeadingTree,
-  flattenTreeToOrder,
-  moveSibling
+  flattenTreeToOrder
 } from '../heading-sections.ts';
 
 /**
@@ -84,7 +84,7 @@ class ReorderHeadingsModal extends Modal {
   }
 
   private move(index: number, delta: number): void {
-    if (moveSibling(this.split.roots, index, delta)) {
+    if (didMoveSibling(this.split.roots, index, delta)) {
       this.renderList();
     }
   }

@@ -37,7 +37,9 @@ interface ProbeResult {
 describe('block commands on excluded paths (issue #93)', () => {
   it('hides Advanced Note Composer commands on an excluded path only when the setting is on', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
@@ -88,10 +90,10 @@ describe('block commands on excluded paths (issue #93)', () => {
 
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('editor-menu', menu, editor, view);
-          const inMenu = menuItemTitles(menu).some((title) => title.includes(ANC_COMMAND_TITLE));
+          const isInMenu = menuItemTitles(menu).some((title) => title.includes(ANC_COMMAND_TITLE));
           menu.hide();
 
-          return { inMenu, isAvailable };
+          return { inMenu: isInMenu, isAvailable };
         }
 
         function menuItemTitles(menu: MenuLike): string[] {
@@ -119,11 +121,11 @@ describe('block commands on excluded paths (issue #93)', () => {
 
         async function setExcludePaths(value: string): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === 'Exclude paths');
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error('"Exclude paths" text area was not found.');
+            throw new TypeError('"Exclude paths" text area was not found.');
           }
           textAreaEl.value = value;
           textAreaEl.dispatchEvent(new Event('input'));
@@ -134,11 +136,11 @@ describe('block commands on excluded paths (issue #93)', () => {
 
         async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
           const isEnabled = toggleEl.classList.contains('is-enabled');
           if (isEnabled !== shouldEnable) {

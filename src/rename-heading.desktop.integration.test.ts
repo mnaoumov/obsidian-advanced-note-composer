@@ -13,7 +13,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('rename heading', () => {
   it('should rewrite single-segment AND nested backlinks when a heading is renamed', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const target = await resetFile('rename-target.md', '# Parent\n\nparent text\n\n## Child\n\nchild text\n');
         const note = await resetFile(
@@ -47,20 +49,23 @@ describe('rename heading', () => {
 
         const inputEl = document.querySelector('.prompt-modal input.text-box');
         if (!(inputEl instanceof HTMLInputElement)) {
-          throw new Error('No prompt input.');
+          throw new TypeError('No prompt input.');
         }
         inputEl.value = 'New';
         inputEl.dispatchEvent(new Event('input'));
 
         const okButton = document.querySelector('.prompt-modal .ok-button');
         if (!(okButton instanceof HTMLElement)) {
-          throw new Error('No OK button.');
+          throw new TypeError('No OK button.');
         }
         okButton.click();
 
         await waitUntil({
           message: 'nested backlink was not rewritten',
-          predicate: async () => (await app.vault.read(note)).includes('[[rename-target#New#Child]]')
+          predicate: async () => {
+            const content = await app.vault.read(note);
+            return content.includes('[[rename-target#New#Child]]');
+          }
         });
 
         return {

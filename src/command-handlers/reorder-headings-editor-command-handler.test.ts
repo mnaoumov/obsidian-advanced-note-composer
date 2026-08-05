@@ -51,8 +51,8 @@ interface HandlerParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
@@ -91,7 +91,7 @@ function heading(level: number, text: string, offset: number): HeadingCache {
 const TWO_SECTION_CONTENT = '# A\naaa\n# B\nbbb\n';
 const TWO_SECTION_HEADINGS: HeadingCache[] = [heading(1, 'A', 0), heading(1, 'B', 8)];
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -148,42 +148,42 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
   });
 
   describe('canExecuteEditor', () => {
-    it('should be unavailable when ctx.file is null', () => {
+    it('should be unavailable when context.file is null', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams()));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(null))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
     });
 
     it('should be unavailable without a reorderable sibling group', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: [heading(1, 'A', 0)] })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(false);
     });
 
     it('should be unavailable when the file has no metadata cache', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ cacheIsNull: true })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(false);
     });
 
     it('should be available with two or more top-level headings', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: TWO_SECTION_HEADINGS })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(true);
     });
 
     it('should be available with two or more nested siblings under one parent', () => {
       const headings = [heading(1, 'A', 0), heading(2, 'A.1', 4), heading(2, 'A.2', 12)];
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(true);
     });
 
     it('should be unavailable when the command is blocked on the path', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: TWO_SECTION_HEADINGS, shouldBlockCommandOnPath: true })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(FILE))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(false);
     });
   });
 
   describe('executeEditor', () => {
-    it('should return early when ctx.file is null', async () => {
+    it('should return early when context.file is null', async () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams()));
-      await handler.executeEditor(createMockEditor(), createMockCtx(null));
+      await handler.executeEditor(createMockEditor(), createMockContext(null));
       expect(mockOpenModal).not.toHaveBeenCalled();
     });
 
@@ -191,14 +191,14 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       const params = createMockParams({ headings: TWO_SECTION_HEADINGS, isPathIgnored: true });
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
 
-      const mockFragment = strictProxy<DocumentFragment>({ appendChild: vi.fn(), appendText: vi.fn() });
-      mockCreateFragmentAsync.mockImplementation(async (cb) => {
-        await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+      const mockFragment = strictProxy<DocumentFragment>({ append: vi.fn(), appendChild: vi.fn(), appendText: vi.fn() });
+      mockCreateFragmentAsync.mockImplementation(async (callback) => {
+        await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
         return mockFragment;
       });
       mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(FILE));
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
       expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
       expect(mockOpenModal).not.toHaveBeenCalled();
     });
@@ -208,7 +208,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
       mockOpenModal.mockResolvedValue(null);
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(FILE));
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
       expect(mockRunLockedTransaction).not.toHaveBeenCalled();
     });
 
@@ -217,7 +217,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
       mockOpenModal.mockResolvedValue([0, 1]);
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(FILE));
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
       expect(mockRunLockedTransaction).not.toHaveBeenCalled();
     });
 
@@ -226,7 +226,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
       mockOpenModal.mockResolvedValue([1, 0]);
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(FILE));
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
 
       expect(mockRunLockedTransaction).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledWith(FILE, '# B\nbbb\n\n# A\naaa\n');
@@ -242,7 +242,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
         return Promise.reject(new Error('cancelled'));
       });
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(FILE));
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
 
       expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
     });
@@ -253,7 +253,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       mockOpenModal.mockResolvedValue([1, 0]);
       mockRunLockedTransaction.mockRejectedValue(new Error('disk on fire'));
 
-      await expect(handler.executeEditor(createMockEditor(), createMockCtx(FILE))).rejects.toThrow('disk on fire');
+      await expect(handler.executeEditor(createMockEditor(), createMockContext(FILE))).rejects.toThrow('disk on fire');
       expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
     });
   });
@@ -285,9 +285,9 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
  * asserted instead of just the fact that one was shown.
  */
 function useRealFragments(): void {
-  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+  mockCreateFragmentAsync.mockImplementation(async (callback) => {
     const fragment = createFragment();
-    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    await (callback as (f: DocumentFragment) => Promise<void>)(fragment);
     return fragment;
   });
   mockRenderInternalLink.mockImplementation((linkParams) => {

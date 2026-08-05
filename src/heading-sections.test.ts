@@ -10,11 +10,11 @@ import {
 import type { SplitReorderableSectionsResult } from './heading-sections.ts';
 
 import {
+  didMoveSibling,
   flattenHeadingTree,
   flattenTreeToOrder,
   hasReorderableSiblings,
   joinReorderedSections,
-  moveSibling,
   splitIntoReorderableSections
 } from './heading-sections.ts';
 
@@ -141,33 +141,33 @@ describe('heading-sections', () => {
     });
   });
 
-  describe('moveSibling', () => {
+  describe('didMoveSibling', () => {
     it('should swap a top-level section down with its next sibling', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(moveSibling(split.roots, 0, 1)).toBe(true);
+      expect(didMoveSibling(split.roots, 0, 1)).toBe(true);
       expect(flattenTreeToOrder(split.roots)).toStrictEqual([3, 0, 1, 2]);
     });
 
     it('should swap a nested section without affecting other branches', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(moveSibling(split.roots, 1, 1)).toBe(true);
+      expect(didMoveSibling(split.roots, 1, 1)).toBe(true);
       expect(flattenTreeToOrder(split.roots)).toStrictEqual([0, 2, 1, 3]);
     });
 
     it('should not move above the first sibling', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(moveSibling(split.roots, 0, -1)).toBe(false);
+      expect(didMoveSibling(split.roots, 0, -1)).toBe(false);
       expect(flattenTreeToOrder(split.roots)).toStrictEqual([0, 1, 2, 3]);
     });
 
     it('should not move below the last sibling', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(moveSibling(split.roots, 3, 1)).toBe(false);
+      expect(didMoveSibling(split.roots, 3, 1)).toBe(false);
     });
 
     it('should return false when the index is not in the tree', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(moveSibling(split.roots, 999, 1)).toBe(false);
+      expect(didMoveSibling(split.roots, 999, 1)).toBe(false);
     });
   });
 

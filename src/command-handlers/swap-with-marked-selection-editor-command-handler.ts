@@ -52,15 +52,15 @@ export class SwapWithMarkedSelectionEditorCommandHandler extends EditorCommandHa
     this.swapSelectionBuffer = params.swapSelectionBuffer;
   }
 
-  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, ctx)) {
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
       return false;
     }
     const marked = this.swapSelectionBuffer.get();
     if (!marked) {
       return false;
     }
-    const targetFile = ctx.file;
+    const targetFile = context.file;
     if (!targetFile) {
       return false;
     }
@@ -72,8 +72,8 @@ export class SwapWithMarkedSelectionEditorCommandHandler extends EditorCommandHa
     });
   }
 
-  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const targetFile = ctx.file;
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const targetFile = context.file;
     if (!targetFile) {
       return;
     }

@@ -39,9 +39,9 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -60,15 +60,15 @@ vi.mock('../composers/composer-base.ts', () => ({
 let shouldAutoSelect = false;
 
 interface AsyncModule {
-  invokeAsyncSafely(fn: () => Promise<void>): void;
+  invokeAsyncSafely($function: () => Promise<void>): void;
 }
 
 interface WithChooseAsync {
-  onChooseSuggestionAsync(item: unknown, evt: KeyboardEvent | MouseEvent): Promise<void>;
+  onChooseSuggestionAsync(item: unknown, $event: KeyboardEvent | MouseEvent): Promise<void>;
 }
 
 interface WithSelectSuggestion {
-  selectSuggestion(value: unknown, evt: KeyboardEvent | MouseEvent): void;
+  selectSuggestion(value: unknown, $event: KeyboardEvent | MouseEvent): void;
 }
 
 vi.mock('./suggest-modal-base.ts', async () => {
@@ -101,8 +101,8 @@ vi.mock('./suggest-modal-base.ts', async () => {
       return [];
     }
 
-    public onChooseSuggestion(item: unknown, evt: KeyboardEvent | MouseEvent): void {
-      asyncModule.invokeAsyncSafely(() => castTo<WithChooseAsync>(this).onChooseSuggestionAsync(item, evt));
+    public onChooseSuggestion(item: unknown, $event: KeyboardEvent | MouseEvent): void {
+      asyncModule.invokeAsyncSafely(() => castTo<WithChooseAsync>(this).onChooseSuggestionAsync(item, $event));
     }
 
     public override onOpen(): void {
@@ -116,7 +116,7 @@ vi.mock('./suggest-modal-base.ts', async () => {
       noop();
     }
 
-    public override selectActiveSuggestion(_evt: KeyboardEvent | MouseEvent): void {
+    public override selectActiveSuggestion(_event: KeyboardEvent | MouseEvent): void {
       noop();
     }
 

@@ -9,14 +9,14 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
  * Whether an editor command must be blocked (hidden) on the active note's path because command-blocking
  * is on and the path is excluded/ignored in the settings (issue #93). Editor command handlers call this
  * from `canExecuteEditor` so the command disappears from the command palette and the editor menu on an
- * excluded note. A missing `ctx.file` is never blocked.
+ * excluded note. A missing `context.file` is never blocked.
  *
  * @param pluginSettingsComponent - The plugin settings component.
- * @param ctx - The editor's markdown file context.
+ * @param context - The editor's markdown file context.
  * @returns Whether the command must be blocked.
  */
-export function isEditorCommandBlocked(pluginSettingsComponent: PluginSettingsComponent, ctx: MarkdownFileInfo): boolean {
-  const file = ctx.file;
+export function isEditorCommandBlocked(pluginSettingsComponent: PluginSettingsComponent, context: MarkdownFileInfo): boolean {
+  const file = context.file;
   return !!file && pluginSettingsComponent.settings.shouldBlockCommandOnPath(file.path);
 }
 

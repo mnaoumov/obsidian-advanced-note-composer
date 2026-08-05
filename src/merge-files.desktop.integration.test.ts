@@ -40,13 +40,15 @@ interface SettingsCarrier {
 describe('merge multiple selected files into one file (issue #92)', () => {
   it('merges every file selected in the explorer into the picked target via the files menu', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
-        const originalSubmenu = settingsComponent.settings.shouldAddCommandsToSubmenu;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        const isOriginalSubmenu = settingsComponent.settings.shouldAddCommandsToSubmenu;
         try {
           await settingsComponent.editAndSave((settings) => {
             // Skip the confirmation dialog and keep the item flat in `menu.items`.
@@ -101,8 +103,8 @@ describe('merge multiple selected files into one file (issue #92)', () => {
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeMerging = originalShouldAsk;
-            settings.shouldAddCommandsToSubmenu = originalSubmenu;
+            settings.shouldAskBeforeMerging = isOriginalShouldAsk;
+            settings.shouldAddCommandsToSubmenu = isOriginalSubmenu;
           });
         }
 
@@ -113,13 +115,13 @@ describe('merge multiple selected files into one file (issue #92)', () => {
         async function chooseFileInPicker(filePath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-files picker input.');
+            throw new TypeError('No merge-files picker input.');
           }
           input.value = filePath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target file suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(filePath))
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(filePath))
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }

@@ -34,12 +34,14 @@ interface SettingsCarrier {
 describe('move folder to... (issue #73)', () => {
   it('moves the chosen folder into a target picked from the suggester and updates links', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMovingFolder;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMovingFolder;
         try {
           // Skip the confirmation dialog (issue #154, on by default) so the move runs straight from the
           // Picker; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
@@ -76,13 +78,13 @@ describe('move folder to... (issue #73)', () => {
           // Pick the destination folder through the real fuzzy suggester DOM.
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No move-folder picker input.');
+            throw new TypeError('No move-folder picker input.');
           }
           input.value = 'mv-dst';
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target folder suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === 'mv-dst')
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'mv-dst')
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 
@@ -93,15 +95,15 @@ describe('move folder to... (issue #73)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const movedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null;
-          const oldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
+          const isMovedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null;
+          const isOldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
           // The inbound link now resolves to the folder's new location (links updated by the move).
-          const linkUpdated = app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-dst/mv-src/note-in-src.md';
+          const isLinkUpdated = app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-dst/mv-src/note-in-src.md';
 
-          return { linkUpdated, movedIntoTarget, oldLocationGone };
+          return { linkUpdated: isLinkUpdated, movedIntoTarget: isMovedIntoTarget, oldLocationGone: isOldLocationGone };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeMovingFolder = originalShouldAsk;
+            settings.shouldAskBeforeMovingFolder = isOriginalShouldAsk;
           });
         }
 
@@ -155,7 +157,9 @@ describe('move folder to... (issue #73)', () => {
 
   it('front-loads the recently-opened folders in the picker, in recent order (issue #149)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -184,7 +188,7 @@ describe('move folder to... (issue #73)', () => {
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-        const suggestions = Array.from(document.querySelectorAll('.suggestion-item')).map((el) => el.textContent);
+        const suggestions = [...document.querySelectorAll('.suggestion-item')].map((el) => el.textContent);
 
         // Close the picker without moving anything (this test only checks ordering).
         const input = document.querySelector('.prompt-input');

@@ -37,13 +37,15 @@ interface SettingsCarrier {
 describe('merge folder skips ignored files (issue #72)', () => {
   it('does not create a stray empty target for an ignored file and reports it in a summary notice', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { ignoredPath: 'ign-src/ignored.md', pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
         const originalExcludePaths = [...settingsComponent.settings.excludePaths];
-        const originalShouldAsk = await setAskBeforeMerging(true);
+        const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.excludePaths = [ignoredPath];
@@ -90,21 +92,21 @@ describe('merge folder skips ignored files (issue #72)', () => {
             predicate: () => summaryNoticeText() !== null
           });
 
-          const normalMerged = app.vault.getAbstractFileByPath('ign-dst/normal.md') !== null;
-          const noStrayEmptyTarget = app.vault.getAbstractFileByPath('ign-dst/ignored.md') === null;
-          const ignoredFileRemainsInSource = app.vault.getAbstractFileByPath('ign-src/ignored.md') !== null;
+          const isNormalMerged = app.vault.getAbstractFileByPath('ign-dst/normal.md') !== null;
+          const isNoStrayEmptyTarget = app.vault.getAbstractFileByPath('ign-dst/ignored.md') === null;
+          const isIgnoredFileRemainsInSource = app.vault.getAbstractFileByPath('ign-src/ignored.md') !== null;
           const noticeText = summaryNoticeText() ?? '';
 
-          return { ignoredFileRemainsInSource, normalMerged, noStrayEmptyTarget, noticeText };
+          return { ignoredFileRemainsInSource: isIgnoredFileRemainsInSource, normalMerged: isNormalMerged, noStrayEmptyTarget: isNoStrayEmptyTarget, noticeText };
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.excludePaths = originalExcludePaths;
           });
-          await setAskBeforeMerging(originalShouldAsk);
+          await didSetAskBeforeMerging(isOriginalShouldAsk);
         }
 
         function summaryNoticeText(): null | string {
-          for (const el of Array.from(document.querySelectorAll('.notice'))) {
+          for (const el of document.querySelectorAll('.notice')) {
             if (el.textContent.includes('were not merged because they are ignored')) {
               return el.textContent;
             }
@@ -113,7 +115,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -146,18 +148,18 @@ describe('merge folder skips ignored files (issue #72)', () => {
         async function chooseFolderInPicker(folderPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-folder picker input.');
+            throw new TypeError('No merge-folder picker input.');
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target folder suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === folderPath)
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -166,11 +168,11 @@ describe('merge folder skips ignored files (issue #72)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before merging');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before merging" toggle was not found.');
+            throw new TypeError('"Should ask before merging" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {
@@ -213,14 +215,16 @@ describe('merge folder skips ignored files (issue #72)', () => {
 
   it('merges an excluded file too when Should always merge excluded items is on (issue #150)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { ignoredPath: 'am-src/ignored.md', pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
         const originalExcludePaths = [...settingsComponent.settings.excludePaths];
-        const originalAlways = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        const isOriginalAlways = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.excludePaths = [ignoredPath];
@@ -256,30 +260,30 @@ describe('merge folder skips ignored files (issue #72)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const excludedMerged = app.vault.getAbstractFileByPath('am-dst/ignored.md') !== null;
-          const excludedSourceGone = app.vault.getAbstractFileByPath('am-src/ignored.md') === null;
-          const normalMerged = app.vault.getAbstractFileByPath('am-dst/normal.md') !== null;
+          const isExcludedMerged = app.vault.getAbstractFileByPath('am-dst/ignored.md') !== null;
+          const isExcludedSourceGone = app.vault.getAbstractFileByPath('am-src/ignored.md') === null;
+          const isNormalMerged = app.vault.getAbstractFileByPath('am-dst/normal.md') !== null;
           const hasIgnoredNotice = summaryNoticeText() !== null;
 
-          return { excludedMerged, excludedSourceGone, hasIgnoredNotice, normalMerged };
+          return { excludedMerged: isExcludedMerged, excludedSourceGone: isExcludedSourceGone, hasIgnoredNotice, normalMerged: isNormalMerged };
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.excludePaths = originalExcludePaths;
-            settings.shouldAlwaysMergeExcludedItems = originalAlways;
-            settings.shouldAskBeforeMerging = originalShouldAsk;
+            settings.shouldAlwaysMergeExcludedItems = isOriginalAlways;
+            settings.shouldAskBeforeMerging = isOriginalShouldAsk;
           });
         }
 
         async function chooseFolderInPicker(folderPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-folder picker input.');
+            throw new TypeError('No merge-folder picker input.');
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target folder suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === folderPath)
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
@@ -315,7 +319,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
         }
 
         function summaryNoticeText(): null | string {
-          for (const el of Array.from(document.querySelectorAll('.notice'))) {
+          for (const el of document.querySelectorAll('.notice')) {
             if (el.textContent.includes('were not merged because they are ignored')) {
               return el.textContent;
             }

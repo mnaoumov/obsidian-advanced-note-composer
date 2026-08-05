@@ -53,9 +53,9 @@ interface Testable {
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does
 // Not reach into unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 

@@ -300,7 +300,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText(' merges a note away, whether the attachments that note owns follow into the destination note\'s attachment folder.');
               f.createEl('br');
               f.appendText('The destination honors your vault\'s attachment settings, including ');
-              /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+              /**
+              HACK: see the TSDoc for {@link EMPTY} for motivation.
+              */
               f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
               f.appendText(' when it is installed.');
               f.createEl('br');
@@ -670,7 +672,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
             }),
-            /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+            /**
+            HACK: see the TSDoc for {@link EMPTY} for motivation.
+            */
             name: `${EMPTY}Should show move at cursor button`,
             render: (setting) => {
               setting.addToggle((toggle) => {
@@ -944,7 +948,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText(' merges the folder\'s notes away, whether their attachments follow into the merged note\'s attachment folder.');
               f.createEl('br');
               f.appendText('The destination honors your vault\'s attachment settings, including ');
-              /** HACK: see the TSDoc for {@link EMPTY} for motivation. */
+              /**
+              HACK: see the TSDoc for {@link EMPTY} for motivation.
+              */
               f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
               f.appendText(' when it is installed.');
               f.createEl('br');

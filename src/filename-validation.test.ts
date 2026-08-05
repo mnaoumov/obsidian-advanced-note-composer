@@ -17,7 +17,7 @@ describe('INVALID_CHARACTERS_REG_EXP', () => {
   });
 
   it('should match backslash', () => {
-    expect('file\\name').toMatch(INVALID_CHARACTERS_REG_EXP);
+    expect(String.raw`file\name`).toMatch(INVALID_CHARACTERS_REG_EXP);
   });
 
   it('should match less-than', () => {
@@ -139,6 +139,6 @@ describe('fixFileName', () => {
   });
 
   it('should still collapse a path-shaped name when invalid characters are not replaced', () => {
-    expect(fix('foo/bar', { shouldReplaceInvalidCharacters: false, shouldTreatTitleAsPath: false })).toBe('foo\\bar');
+    expect(fix('foo/bar', { shouldReplaceInvalidCharacters: false, shouldTreatTitleAsPath: false })).toBe(String.raw`foo\bar`);
   });
 });

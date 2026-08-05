@@ -37,12 +37,14 @@ interface SettingsCarrier {
 describe('merge folder contents into a single file (issue #92)', () => {
   it('concatenates every descendant note into one new file named after the folder and deletes the sources', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         try {
           // Skip the confirmation dialog so the merge runs straight from the command.
           await settingsComponent.editAndSave((settings) => {
@@ -76,13 +78,13 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
           const hasAlpha = mergedContent.includes('alpha body');
           const hasBravo = mergedContent.includes('bravo body');
-          const alphaSourceGone = app.vault.getAbstractFileByPath('combine-src/alpha.md') === null;
-          const bravoSourceGone = app.vault.getAbstractFileByPath('combine-src/sub/bravo.md') === null;
+          const isAlphaSourceGone = app.vault.getAbstractFileByPath('combine-src/alpha.md') === null;
+          const isBravoSourceGone = app.vault.getAbstractFileByPath('combine-src/sub/bravo.md') === null;
 
-          return { alphaSourceGone, bravoSourceGone, hasAlpha, hasBravo };
+          return { alphaSourceGone: isAlphaSourceGone, bravoSourceGone: isBravoSourceGone, hasAlpha, hasBravo };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeMerging = originalShouldAsk;
+            settings.shouldAskBeforeMerging = isOriginalShouldAsk;
           });
         }
 
@@ -136,7 +138,9 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
   it('names the merged note from the template and turns sub-folders into demoted headings (issue #160)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -243,7 +247,9 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
   it('heads a sub-folder that holds no notes at all (issue #168)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -357,7 +363,9 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
   it('does not head a sub-folder that holds only attachments (issue #181)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -476,7 +484,9 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
   it('keeps the merged folder and deletes only the folders under it (issue #167)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -578,7 +588,9 @@ describe('merge folder contents into a single file (issue #92)', () => {
 
   it('excludes an Excalidraw drawing, moves attachments over, and deletes the emptied folders (issues #160, #161)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 

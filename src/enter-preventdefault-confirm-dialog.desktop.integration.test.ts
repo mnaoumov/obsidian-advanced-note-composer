@@ -13,11 +13,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #142)', () => {
   it('preventDefaults the Enter keydown so it does not leak into the locked editor (no system beep)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeMerging(true);
+        const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
         try {
           // Source folder holds the active file; one sibling target folder.
           const sourceNote = await resetFile('mf142-src/note.md', 'source note body');
@@ -53,16 +55,16 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf142-src') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const mergeCompleted = app.vault.getAbstractFileByPath('mf142-src') === null
+          const isMergeCompleted = app.vault.getAbstractFileByPath('mf142-src') === null
             && app.vault.getAbstractFileByPath('mf142-tgt/note.md') !== null;
 
-          return { mergeCompleted, wasDefaultPrevented };
+          return { mergeCompleted: isMergeCompleted, wasDefaultPrevented };
         } finally {
-          await setAskBeforeMerging(originalShouldAsk);
+          await didSetAskBeforeMerging(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -73,15 +75,15 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
         async function chooseFolderInPicker(folderPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No merge-folder picker input.');
+            throw new TypeError('No merge-folder picker input.');
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -90,11 +92,11 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before merging');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before merging" toggle was not found.');
+            throw new TypeError('"Should ask before merging" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {
