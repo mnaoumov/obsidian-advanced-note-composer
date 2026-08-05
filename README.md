@@ -59,6 +59,42 @@ fixing, footnotes, frontmatter, templating, and the *Text after extraction* resi
 detected via Obsidian's own parser, so `---` inside a code block and the frontmatter delimiters are never
 mistaken for a rule.
 
+## Extract properties as properties
+
+Selecting a couple of values inside a note's properties (its frontmatter) and running
+`Extract current selection...` used to paste those raw YAML lines into the destination note's **body**,
+where they are just text. With **`Should extract a properties selection as properties`** (on by default),
+a selection that lies entirely inside the properties block is instead merged into the destination note's
+own properties, through the same `Frontmatter merge strategy` every other merge uses.
+
+The selection is a set of **values**, not whole properties, so the property each value belongs to is carried
+across with it: selecting two `aliases` values
+
+```yaml
+---
+aliases:
+  - alpha
+  - bravo
+  - charlie
+tags:
+  - keep
+---
+```
+
+adds `alpha` and `bravo` to the destination's own `aliases`, and leaves the source with `charlie` and its
+`tags` intact.
+
+- Every property line the selection touches is taken **in full**, so a selection that starts halfway through
+  a value still moves that whole value.
+- A property left with no values of its own is removed from the source too, rather than being left dangling.
+- Everything the selection did not touch is kept byte for byte — comments, key order, quoting and
+  indentation style all survive.
+- `Text after extraction` is not applied: a link or an embed is not valid YAML.
+- Anything else falls back to the previous behavior — a selection that reaches out of the properties block,
+  or lines that do not parse into properties, is extracted as raw text.
+- Smart cut & paste moves are unaffected: they insert at the cursor you place in the note's body.
+- Extracting a note's properties into that same note is refused — they are already there.
+
 ## Move selection to another note (smart cut & paste)
 
 The core `Extract current selection...` command moves a selection into another note in one step, always

@@ -12,12 +12,14 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import type { FrontmatterSelectionExtraction } from '../frontmatter-selection.ts';
 import type {
   ComposerBaseConstructorParamsBase,
   ComposerBaseUpdateEditorSelectionsParams,
   Selection
 } from './composer-base.ts';
 
+import { extractFrontmatterSelection } from '../frontmatter-selection.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
 import {
@@ -191,6 +193,18 @@ export class SplitComposer extends ComposerBase {
             return;
           }
 
+          // A selection taken entirely from the source note's own frontmatter is merged into the TARGET's
+          // Frontmatter instead of being pasted as raw YAML into its body (issue #183). Resolved before the
+          // Token is placed, so the same-note case is refused before anything is written.
+          const frontmatterExtraction = await this.resolveFrontmatterExtraction();
+          if (frontmatterExtraction && this.sourceFile === this.targetFile) {
+            // Moving properties from a note into that same note has nowhere to go: they are already there,
+            // And the only insert points a same-note extract offers are in the body.
+            this.pluginNoticeComponent.showNotice('Cannot extract a note\'s properties into that same note.');
+            this.abortController.abort();
+            return;
+          }
+
           // Move flow: place the token at the insert point in the target note FIRST, inside the
           // Transaction (so rollback captures the pre-token content). The processed content later
           // Replaces the token by string match, so the insert point survives the source-selection
@@ -219,20 +233,30 @@ export class SplitComposer extends ComposerBase {
           // Confirmation modal was minimized).
           await this.reopenSourceFileAndRestoreSelections();
 
-          if (this.isSameNoteMove()) {
+          if (frontmatterExtraction) {
+            // Frontmatter-only extract: hand the selected properties over as a frontmatter block so the
+            // Target's own merge strategy applies to them, then rewrite the source's YAML region with what
+            // Is left. `textAfterExtractionMode` is not consulted — a link or an embed is not valid YAML.
+            await this.insertIntoTargetFile({
+              contentToInsert: `---\n${frontmatterExtraction.extractedYaml}\n---\n`,
+              isFrontmatterOnlyExtract: true,
+              vaultTransaction
+            });
+            this.replaceSourceFrontmatter(frontmatterExtraction);
+          } else if (this.isSameNoteMove()) {
             // Same-note move: the target write is on the note the editor shows, and it collapses the
             // Editor selection — so a later `replaceSelection` would be a no-op (leaving the source text
             // In place, turning the move into a copy). Remove the source FIRST; the write reads the
             // Post-removal buffer, so the removal survives. Footnote definitions need no cleanup here:
             // Refs and defs both remain in the same note, so they stay resolved.
             this.replaceSourceSelection();
-            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+            await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
           } else {
             // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
             // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
             // Then removes from the source along with the extracted text. The target write is a different
             // File, so it does not disturb the source editor selection.
-            await this.insertIntoTargetFile(this.selectedText, vaultTransaction);
+            await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
             this.replaceSourceSelection();
           }
 
@@ -488,6 +512,24 @@ export class SplitComposer extends ComposerBase {
   /* v8 ignore stop */
 
   /**
+   * Rewrites the source note's frontmatter YAML with what the extraction left behind, through the same
+   * editor-write path {@link replaceSourceSelection} uses (so the reopened editor's buffer, and therefore
+   * the transaction's rollback, behave exactly as they do for an ordinary extract).
+   *
+   * The whole YAML region is replaced rather than the selection itself: deleting only the selected values
+   * would leave a dangling `aliases:` behind, and the remainder already accounts for that.
+   *
+   * @param frontmatterExtraction - The resolved frontmatter extraction.
+   */
+  private replaceSourceFrontmatter(frontmatterExtraction: FrontmatterSelectionExtraction): void {
+    this.editor.setSelection(
+      this.editor.offsetToPos(frontmatterExtraction.frontmatterStartOffset),
+      this.editor.offsetToPos(frontmatterExtraction.frontmatterEndOffset)
+    );
+    this.editor.replaceSelection(frontmatterExtraction.remainingYaml);
+  }
+
+  /**
    * Replaces the extracted source selection (in the reopened source editor) with the residual dictated
    * by {@link textAfterExtractionMode}: an embed, a link to the target note, or nothing.
    */
@@ -553,6 +595,30 @@ export class SplitComposer extends ComposerBase {
     }
 
     return this.pluginSettingsComponent.settings.splitTemplate;
+  }
+
+  /**
+   * Resolves the frontmatter-only extract this operation is, or `null` when it is an ordinary one.
+   *
+   * A smart cut & paste move never qualifies: it inserts at a token the user placed in the target note's
+   * BODY, and honoring the paste cursor and merging into the frontmatter are mutually exclusive — so those
+   * moves keep extracting the raw text.
+   *
+   * @returns The extraction, or `null`.
+   */
+  private async resolveFrontmatterExtraction(): Promise<FrontmatterSelectionExtraction | null> {
+    if (!this.pluginSettingsComponent.settings.shouldExtractFrontmatterSelectionAsProperties) {
+      return null;
+    }
+
+    if (this.smartCutAndPasteMoveKind) {
+      return null;
+    }
+
+    return extractFrontmatterSelection({
+      content: await this.app.vault.read(this.sourceFile),
+      selections: this.capturedSelections
+    });
   }
 
   private resolveMovedContentRange(editor: Editor, movedContent: string): null | SplitComposerMovedContentRange {

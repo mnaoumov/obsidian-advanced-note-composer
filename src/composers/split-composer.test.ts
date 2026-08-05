@@ -19,7 +19,10 @@ import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { resolveValue } from 'obsidian-dev-utils/value-provider';
-import { App } from 'obsidian-test-mocks/obsidian';
+import {
+  App,
+  getFrontMatterInfo
+} from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   beforeEach,
@@ -206,6 +209,7 @@ function createPluginSettingsComponentStub(
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
       shouldApplyTextAfterExtractionToSameFile: false,
+      shouldExtractFrontmatterSelectionAsProperties: true,
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldMergeHeadingsByDefault: false,
@@ -1651,5 +1655,91 @@ describe('SplitComposer updateEditorSelections', () => {
     await composer.splitFile();
 
     expect(setSelectionsMock).toHaveBeenCalled();
+  });
+});
+
+describe('splitFile frontmatter-only extract', () => {
+  const SOURCE_WITH_FRONTMATTER = '---\naliases:\n  - alpha\n  - bravo\n---\n\nsource body\n';
+
+  function createFrontmatterSourceComposer(options?: CreateComposerOptions): SplitComposer {
+    return createComposer({
+      capturedSelections: [{
+        endOffset: SOURCE_WITH_FRONTMATTER.indexOf('alpha') + 'alpha'.length,
+        startOffset: SOURCE_WITH_FRONTMATTER.indexOf('alpha')
+      }],
+      isNewTargetFile: false,
+      selectedText: '  - alpha',
+      ...options
+    });
+  }
+
+  beforeEach(async () => {
+    await app.vault.modify(getSourceFile(), SOURCE_WITH_FRONTMATTER);
+  });
+
+  it('should merge the selected properties into the target frontmatter instead of its body', async () => {
+    const editor = createEditorDouble();
+    await createFrontmatterSourceComposer({ editor }).splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    const targetBody = targetContent.slice(getFrontMatterInfo(targetContent).contentStart);
+    expect(targetContent).toContain('alpha');
+    expect(targetBody).not.toContain('alpha');
+    expect(targetBody).toContain('target body');
+  });
+
+  it('should rewrite the source frontmatter with what is left', async () => {
+    const editor = createEditorDouble();
+    await createFrontmatterSourceComposer({ editor }).splitFile();
+
+    // The whole YAML region is replaced, so the key line survives with only the value that stayed.
+    expect(editor.replaceSelection).toHaveBeenCalledWith('aliases:\n  - bravo');
+  });
+
+  it('should extract the raw text when the setting is off', async () => {
+    const editor = createEditorDouble();
+    await createFrontmatterSourceComposer({
+      editor,
+      settingsOverrides: {
+        shouldExtractFrontmatterSelectionAsProperties: false,
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }
+    }).splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    const targetBody = targetContent.slice(getFrontMatterInfo(targetContent).contentStart);
+    // The raw YAML lines land in the BODY, and the source keeps the ordinary `Text after extraction`
+    // Residual instead of a rewritten frontmatter block.
+    expect(targetBody).toContain('  - alpha');
+    expect(editor.replaceSelection).toHaveBeenCalledWith('');
+  });
+
+  it('should refuse to extract properties into the same note', async () => {
+    const editor = createEditorDouble();
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+    const sourceFile = getSourceFile();
+    const composer = new SplitComposer({
+      app,
+      capturedSelections: [{
+        endOffset: SOURCE_WITH_FRONTMATTER.indexOf('alpha') + 'alpha'.length,
+        startOffset: SOURCE_WITH_FRONTMATTER.indexOf('alpha')
+      }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent,
+      pluginSettingsComponent: createPluginSettingsComponentStub(),
+      resourceLockComponent,
+      selectedText: '  - alpha',
+      sourceFile,
+      targetFile: sourceFile
+    });
+
+    await composer.splitFile();
+
+    expect(vi.mocked(pluginNoticeComponent.showNotice)).toHaveBeenCalledWith('Cannot extract a note\'s properties into that same note.');
+    expect(await app.vault.adapter.read('source.md')).toBe(SOURCE_WITH_FRONTMATTER);
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
   });
 });

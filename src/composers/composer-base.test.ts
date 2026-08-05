@@ -117,9 +117,9 @@ class TestComposer extends ComposerBase {
     return this.checkTargetFileIgnored(Action.Merge);
   }
 
-  public async callInsertIntoTargetFile(content: string): Promise<void> {
+  public async callInsertIntoTargetFile(content: string, isFrontmatterOnlyExtract = false): Promise<void> {
     const vaultTransaction = new VaultTransaction({ app: this.app });
-    await this.insertIntoTargetFile(content, vaultTransaction);
+    await this.insertIntoTargetFile({ contentToInsert: content, isFrontmatterOnlyExtract, vaultTransaction });
     await vaultTransaction.commit();
   }
 

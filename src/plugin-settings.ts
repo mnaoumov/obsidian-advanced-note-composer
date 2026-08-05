@@ -177,6 +177,18 @@ export class PluginSettings {
   public shouldAskBeforeSwapping = true;
   public shouldBlockCommandsOnExcludedPaths = false;
   public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
+
+  /**
+   * Whether a selection taken entirely from the source note's frontmatter is extracted as PROPERTIES —
+   * merged into the target note's own frontmatter through the frontmatter merge strategy — instead of being
+   * pasted into its body as raw YAML text (issue #183).
+   *
+   * Every frontmatter line the selection touches is taken in full, together with the key lines it sits
+   * under, so selecting two `aliases` values moves them across as `aliases`. Anything else — a selection
+   * reaching outside the block, or lines that do not parse into properties — extracts the raw text exactly
+   * as before, and so do the smart cut & paste moves, which insert at a token placed in the body.
+   */
+  public shouldExtractFrontmatterSelectionAsProperties = true;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
