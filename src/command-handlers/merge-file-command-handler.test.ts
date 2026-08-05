@@ -168,11 +168,12 @@ describe('MergeFileCommandHandler', () => {
     const file = createMockFile();
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));

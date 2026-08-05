@@ -72,7 +72,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge file ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );

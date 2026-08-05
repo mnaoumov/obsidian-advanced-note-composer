@@ -86,8 +86,8 @@ export class ConfirmDialogModal extends Modal {
     this.switchToSmartCut = params.switchToSmartCut ?? null;
     this.title = params.title;
 
-    this.scope.register([], 'Enter', (evt) => {
-      this.confirm(evt);
+    this.scope.register([], 'Enter', ($event) => {
+      this.confirm($event);
       return false;
     });
 
@@ -130,10 +130,10 @@ export class ConfirmDialogModal extends Modal {
     invokeAsyncSafely(this.onOpenAsync.bind(this));
   }
 
-  private confirm(evt: KeyboardEvent | MouseEvent): void {
+  private confirm($event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
     this.promiseResolve({
-      insertMode: getInsertModeFromEvent(evt),
+      insertMode: getInsertModeFromEvent($event),
       isConfirmed: true,
       shouldAskAgain: this.shouldAskAgain,
       shouldReselectTarget: false,
@@ -159,9 +159,9 @@ export class ConfirmDialogModal extends Modal {
         cls: 'mod-warning',
         text: this.confirmButtonMobileText
       }, (button) => {
-        button.addEventListener('click', (evt) => {
+        button.addEventListener('click', ($event) => {
           this.shouldAskAgain = false;
-          this.confirm(evt);
+          this.confirm($event);
         });
       });
     } else {
@@ -171,11 +171,11 @@ export class ConfirmDialogModal extends Modal {
             attr: { tabindex: -1 },
             type: 'checkbox'
           }, (checkbox) => {
-            checkbox.addEventListener('change', (evt) => {
-              if (!(evt.target instanceof HTMLInputElement)) {
+            checkbox.addEventListener('change', ($event) => {
+              if (!($event.target instanceof HTMLInputElement)) {
                 return;
               }
-              this.shouldAskAgain = !evt.target.checked;
+              this.shouldAskAgain = !$event.target.checked;
             });
           });
         label.appendText('Don\'t ask again');
@@ -204,8 +204,8 @@ export class ConfirmDialogModal extends Modal {
       cls: 'mod-warning',
       text: this.confirmButtonText
     }, (button) => {
-      button.addEventListener('click', (evt) => {
-        this.confirm(evt);
+      button.addEventListener('click', ($event) => {
+        this.confirm($event);
       });
     });
 

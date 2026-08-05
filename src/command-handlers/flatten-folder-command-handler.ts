@@ -52,7 +52,9 @@ interface FlattenFolderCommandHandlerConfirmFlattenParams {
 interface FlattenFolderCommandHandlerConstructorParams {
   readonly app: App;
 
-  /** Which flatten this handler is. Registered once per {@link FlattenMode}. */
+  /**
+  Which flatten this handler is. Registered once per {@link FlattenMode}.
+  */
   readonly flattenMode: FlattenMode;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -176,7 +178,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot flatten folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -204,7 +206,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('There is nothing to flatten in ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(': its only child folders hold attachments of the notes that stay in it.');
         })
       );
@@ -383,7 +385,7 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Folder');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: folder }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: folder }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
@@ -391,7 +393,7 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   // The destination always exists (it is the folder's own parent), so it is a link like every other
   // Confirmation dialog's paths (issue #165) — clicking a folder link reveals it in the file explorer,
   // It never creates anything. The root is labelled `/`, matching the move picker's `getItemText`.
-  fragment.appendChild(
+  fragment.append(
     await renderInternalLink({
       app,
       displayText: parentFolder.isRoot() ? '/' : parentFolder.path,

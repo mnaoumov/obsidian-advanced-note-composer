@@ -37,10 +37,12 @@ function buildRowsFor(folderPath: string, children: readonly TAbstractFile[]): F
 
 function collectFoldersRecursively(folder: TFolder, folders: TFolder[] = []): TFolder[] {
   for (const child of folder.children) {
-    if (isFolder(child)) {
-      folders.push(child);
-      collectFoldersRecursively(child, folders);
+    if (!isFolder(child)) {
+      continue;
     }
+
+    folders.push(child);
+    collectFoldersRecursively(child, folders);
   }
   return folders;
 }

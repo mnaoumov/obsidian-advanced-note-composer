@@ -33,7 +33,9 @@ interface EdgeBoundaryProbe {
 describe('a marked selection moved to an edge lands on its own line', () => {
   it('should not glue the moved block onto the adjacent line, under either template (issue #179)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
@@ -89,11 +91,11 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error(`"${settingName}" template input was not found.`);
+            throw new TypeError(`"${settingName}" template input was not found.`);
           }
 
           textAreaEl.value = value;

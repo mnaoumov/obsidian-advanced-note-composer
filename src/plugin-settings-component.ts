@@ -35,10 +35,12 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
   protected override registerLegacySettingsConverters(): void {
     super.registerLegacySettingsConverters();
     this.registerLegacySettingsConverter(PluginSettings, (legacySettings) => {
-      if (!legacySettings.mergeTemplate?.includes('{{content}}')) {
-        legacySettings.mergeTemplate ??= '';
-        legacySettings.mergeTemplate += '\n\n{{content}}';
+      if (legacySettings.mergeTemplate?.includes('{{content}}')) {
+        return;
       }
+
+      legacySettings.mergeTemplate ??= '';
+      legacySettings.mergeTemplate += '\n\n{{content}}';
     });
 
     this.registerLegacySettingsConverter(LegacySettings, (legacySettings) => {

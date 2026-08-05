@@ -74,9 +74,9 @@ class MergeFilesModal extends FuzzySuggestModal<TFile> {
     }
   }
 
-  public override selectSuggestion(value: FuzzyMatch<TFile>, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: FuzzyMatch<TFile>, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 
   private isAllowedTargetFile(file: TFile): boolean {
@@ -158,6 +158,6 @@ async function buildConfirmContent(params: BuildConfirmContentParams): Promise<v
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target.path }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: target.path }));
 }
 /* v8 ignore stop */

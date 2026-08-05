@@ -182,7 +182,7 @@ export class Plugin extends PluginBase {
     });
     moveNoticeComponent.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
 
-    this.commandHandlerComponent.registerCommandHandlers([
+    this.commandHandlerComponent.registerCommandHandlers(() => [
       new MergeFileCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,

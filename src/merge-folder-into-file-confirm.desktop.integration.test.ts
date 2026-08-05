@@ -40,12 +40,14 @@ interface SettingsCarrier {
 describe('merge folder into file confirmation dialog (issue #166)', () => {
   it('renders the not-yet-created target as a code block, so the dialog cannot create it', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = true;
@@ -65,25 +67,25 @@ describe('merge folder into file confirmation dialog (issue #166)', () => {
 
           // The folder exists, so it is the ONE anchor in the body; the target note does not exist yet, so it
           // Must be a code block among the field labels.
-          const linkTexts = Array.from(document.querySelectorAll('.modal-content a')).map((el) => el.textContent);
-          const codeTexts = Array.from(document.querySelectorAll('.modal-content code')).map((el) => el.textContent);
+          const linkTexts = [...document.querySelectorAll('.modal-content a')].map((el) => el.textContent);
+          const codeTexts = [...document.querySelectorAll('.modal-content code')].map((el) => el.textContent);
 
           findButton('Cancel')?.click();
           await waitUntil({ message: 'dialog did not close', predicate: () => document.querySelector('.modal-button-container') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const targetNotCreated = app.vault.getAbstractFileByPath('merge-confirm.md') === null;
-          const sourceUntouched = app.vault.getAbstractFileByPath('merge-confirm/note.md') !== null;
+          const isTargetNotCreated = app.vault.getAbstractFileByPath('merge-confirm.md') === null;
+          const isSourceUntouched = app.vault.getAbstractFileByPath('merge-confirm/note.md') !== null;
 
-          return { codeTexts, linkTexts, sourceUntouched, targetNotCreated };
+          return { codeTexts, linkTexts, sourceUntouched: isSourceUntouched, targetNotCreated: isTargetNotCreated };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeMerging = originalShouldAsk;
+            settings.shouldAskBeforeMerging = isOriginalShouldAsk;
           });
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }

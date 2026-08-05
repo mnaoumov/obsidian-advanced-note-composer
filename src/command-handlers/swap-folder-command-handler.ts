@@ -59,7 +59,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );

@@ -33,7 +33,7 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
-import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { shouldMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
@@ -105,7 +105,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -125,7 +125,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('Folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' has no markdown notes to merge.');
         })
       );
@@ -134,7 +134,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
     const targetPath = this.resolveTargetPath(folder);
 
-    const isConfirmed = await confirmMergeFolderIntoFile({
+    const isConfirmed = await shouldMergeFolderIntoFile({
       app: this.app,
       noteCount: sourceMdFiles.length,
       pluginSettingsComponent: this.pluginSettingsComponent,
@@ -220,7 +220,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     }
 
     const resolved = resolveFolderTemplateTokens({ sourceFolder: folder, template });
-    const noteName = trimEnd({ str: resolved.trim(), suffix: '.md' }).trim();
+    const noteName = trimEnd({ $string: resolved.trim(), suffix: '.md' }).trim();
     if (!noteName) {
       return folder.name;
     }
@@ -249,12 +249,15 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
    */
   private resolveTargetParentPath(folder: TFolder, fileName: string): string {
     switch (this.pluginSettingsComponent.settings.mergeFolderIntoFileLocation) {
-      case MergeFolderIntoFileLocation.DefaultNewNoteLocation:
+      case MergeFolderIntoFileLocation.DefaultNewNoteLocation: {
         return this.app.fileManager.getNewFileParent(folder.path, fileName).path;
-      case MergeFolderIntoFileLocation.InsideFolder:
+      }
+      case MergeFolderIntoFileLocation.InsideFolder: {
         return folder.path;
-      default:
+      }
+      default: {
         return folder.path.slice(0, Math.max(0, folder.path.length - folder.name.length - 1));
+      }
     }
   }
 

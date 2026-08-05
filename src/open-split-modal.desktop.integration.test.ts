@@ -16,11 +16,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('switch to split/extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSplitting(false);
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
           const source = await resetFile('open-split-source.md', 'alpha bravo charlie');
           const target = await resetFile('open-split-target.md', 'target body');
@@ -31,7 +33,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
           await waitUntil({ predicate: () => findSwitchButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const switchButtonPresent = findSwitchButton() !== null;
+          const isSwitchButtonPresent = findSwitchButton() !== null;
 
           // Navigate away to prove the switch re-opens the SOURCE (not whatever is active).
           await app.workspace.getLeaf(false).openFile(target);
@@ -45,35 +47,45 @@ describe('switch to split/extract from the smart-cut notice', () => {
 
           const activePathWhenPickerOpen = app.workspace.getActiveFile()?.path ?? '';
           const restoredSelection = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '';
-          const markNoticeGone = findSwitchButton() === null;
+          const isMarkNoticeGone = findSwitchButton() === null;
 
           // Choose the target in the picker (Enter = move to bottom); "ask before splitting" is off so it
           // Completes immediately.
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = target.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(target.basename)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 
           // The moved text lands in the target and is removed from the source; the source edit reaches
           // The open editor buffer first, so wait for the vault file to reflect both sides.
-          await waitUntil({ predicate: async () => (await app.vault.read(target)).includes('bravo') });
-          await waitUntil({ predicate: async () => !(await app.vault.read(source)).includes('bravo') });
+          await waitUntil({
+            predicate: async () => {
+              const content = await app.vault.read(target);
+              return content.includes('bravo');
+            }
+          });
+          await waitUntil({
+            predicate: async () => {
+              const content = await app.vault.read(source);
+              return !content.includes('bravo');
+            }
+          });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const sourceContent = await app.vault.read(source);
           const targetContent = await app.vault.read(target);
 
-          return { activePathWhenPickerOpen, markNoticeGone, restoredSelection, sourceContent, switchButtonPresent, targetContent };
+          return { activePathWhenPickerOpen, markNoticeGone: isMarkNoticeGone, restoredSelection, sourceContent, switchButtonPresent: isSwitchButtonPresent, targetContent };
         } finally {
-          await setAskBeforeSplitting(originalShouldAsk);
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
 
         function findSwitchButton(): HTMLButtonElement | null {
-          for (const el of Array.from(activeDocument.querySelectorAll('.notice button'))) {
+          for (const el of activeDocument.querySelectorAll(':scope .notice button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to split/extract') {
               return el;
             }
@@ -81,7 +93,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           return null;
         }
 
-        async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -90,11 +102,11 @@ describe('switch to split/extract from the smart-cut notice', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before splitting" toggle was not found.');
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

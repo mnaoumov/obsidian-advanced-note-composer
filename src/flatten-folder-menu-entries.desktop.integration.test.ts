@@ -45,7 +45,9 @@ interface MenuProbe {
 describe('flatten folder menu entries (issue #177)', () => {
   it('offers one entry per flatten variant, with the submenu setting on and off', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME, submenuSettingName: SUBMENU_SETTING_NAME },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, obsidianModule, pluginId, pluginName, submenuSettingName }): Promise<MenuProbe> {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
 
@@ -96,7 +98,7 @@ describe('flatten folder menu entries (issue #177)', () => {
           ].filter((title) => sectionText.includes(title));
         }
 
-        async function setSubmenu(value: boolean): Promise<void> {
+        async function setSubmenu(shouldEnable: boolean): Promise<void> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const settingTab = app.setting.pluginTabs.find((tab) => tab.id === pluginId);
@@ -105,14 +107,14 @@ describe('flatten folder menu entries (issue #177)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === submenuSettingName);
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new Error(`"${submenuSettingName}" toggle was not found.`);
+            throw new TypeError(`"${submenuSettingName}" toggle was not found.`);
           }
 
-          if (toggleEl.classList.contains('is-enabled') !== value) {
+          if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {
             toggleEl.click();
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);

@@ -77,7 +77,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot move folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -246,7 +246,7 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFolder }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: sourceFolder }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
@@ -254,7 +254,7 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
   // The destination always exists, so it is a link like every other confirmation dialog's paths
   // (issue #165) — clicking a folder link reveals it in the file explorer, it never creates anything.
   // The root is labelled `/`, matching the picker's own `getItemText`, so the two always agree.
-  fragment.appendChild(
+  fragment.append(
     await renderInternalLink({
       app,
       displayText: targetFolder.isRoot() ? '/' : targetFolder.path,

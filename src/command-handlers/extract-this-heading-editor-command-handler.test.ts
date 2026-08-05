@@ -37,13 +37,13 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './extract-this-heading-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -88,7 +88,7 @@ interface HandlerParams {
   readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -149,13 +149,13 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     expect(handler.icon).toBe('lucide-scissors');
   });
 
-  it('should return false from canExecuteEditor when ctx.file is null', () => {
+  it('should return false from canExecuteEditor when context.file is null', () => {
     const params = createMockParams();
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(null);
+    const context = createMockContext(null);
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when cursor is not under any heading', () => {
@@ -163,11 +163,11 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetEnclosingHeadingLine.mockReturnValue(null);
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return false from canExecuteEditor when getSelectionUnderHeading returns null', () => {
@@ -175,12 +175,12 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockGetEnclosingHeadingLine.mockReturnValue(0);
     mockGetSelectionUnderHeading.mockReturnValue(null);
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
   it('should return true from canExecuteEditor when cursor is inside a heading body', () => {
@@ -188,7 +188,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     // Cursor is on line 2, but the enclosing heading starts on line 0 (the body case).
     mockGetEnclosingHeadingLine.mockReturnValue(0);
@@ -198,7 +198,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
       start: { ch: 0, line: 0 }
     });
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(true);
+    expect(handler.canExecuteEditor(editor, context)).toBe(true);
     expect(mockGetSelectionUnderHeading).toHaveBeenCalledWith(expect.objectContaining({ lineNumber: 0 }));
   });
 
@@ -206,18 +206,18 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const params = createMockParams(false, true, true);
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
+    const context = createMockContext(createMockFile());
 
-    expect(handler.canExecuteEditor(editor, ctx)).toBe(false);
+    expect(handler.canExecuteEditor(editor, context)).toBe(false);
   });
 
-  it('should return early when ctx.file is null in executeEditor', async () => {
+  it('should return early when context.file is null in executeEditor', async () => {
     const params = createMockParams();
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(null);
+    const context = createMockContext(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
@@ -227,19 +227,20 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
@@ -250,9 +251,9 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
@@ -262,7 +263,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     const headingInfo = {
       end: { ch: 0, line: 5 },
@@ -270,11 +271,11 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
       start: { ch: 0, line: 2 }
     };
     mockGetSelectionUnderHeading.mockReturnValue(headingInfo);
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
 
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(headingInfo.start, headingInfo.end);
     expect(MockSplitComposer).not.toHaveBeenCalled();
@@ -285,7 +286,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
     const targetFile = createMockFile();
 
     const headingInfo = {
@@ -294,7 +295,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
       start: { ch: 0, line: 2 }
     };
     mockGetSelectionUnderHeading.mockReturnValue(headingInfo);
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
 
     const splitResult = {
       capturedSelections: [{ endOffset: 5, startOffset: 0 }],
@@ -314,7 +315,7 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(MockSplitComposer).toHaveBeenCalled();
     expect(mockSplitFile).toHaveBeenCalled();
@@ -324,17 +325,17 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const params = createMockParams(false, true, false, true);
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
+    const context = createMockContext(createMockFile());
 
     mockGetSelectionUnderHeading.mockReturnValue({
       end: { ch: 0, line: 5 },
       heading: 'My Heading',
       start: { ch: 0, line: 2 }
     });
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockPrepareForSplitFile).toHaveBeenCalledWith(expect.objectContaining({
       heading: 'My Heading',
@@ -346,17 +347,17 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const params = createMockParams(false, true, false, false);
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
+    const context = createMockContext(createMockFile());
 
     mockGetSelectionUnderHeading.mockReturnValue({
       end: { ch: 0, line: 5 },
       heading: 'My Heading',
       start: { ch: 0, line: 2 }
     });
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockPrepareForSplitFile).toHaveBeenCalledWith(expect.objectContaining({
       heading: 'My Heading',
@@ -368,8 +369,8 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     const params = createMockParams();
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
-    expect(handler.shouldAddToEditorMenu(editor, ctx)).toBe(true);
+    const context = createMockContext(createMockFile());
+    expect(handler.shouldAddToEditorMenu(editor, context)).toBe(true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {

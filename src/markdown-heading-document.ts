@@ -9,6 +9,7 @@ import {
   trimEnd,
   trimStart
 } from 'obsidian-dev-utils/string';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { InsertMode } from './insert-mode.ts';
 
@@ -82,13 +83,7 @@ class MarkdownHeadingNode {
 
     const keyIndexMap = new Map<string, number>();
 
-    for (let index = 0; index < children.length; index++) {
-      const child = children[index];
-      /* v8 ignore start -- children is spread from this.children, elements are never undefined. */
-      if (!child) {
-        continue;
-      }
-      /* v8 ignore stop */
+    for (const [index, child] of children.entries()) {
       /* v8 ignore start -- childrenKeys always has entries for all children. */
       const key = childrenKeys.get(child) ?? '';
       /* v8 ignore stop */
@@ -104,16 +99,12 @@ class MarkdownHeadingNode {
         children.push(child);
         continue;
       }
-      /* v8 ignore start -- index is from keyIndexMap which was built from valid indices. */
-      if (!children[index]) {
-        continue;
-      }
-      /* v8 ignore stop */
-      children[index] = children[index].append(child);
+      // `index` comes from `keyIndexMap`, which was built from this same array's indices.
+      children[index] = ensureNonNullable(children[index]).append(child);
     }
 
-    const trimText = trimEnd({ str: this.text, suffix: '\n' });
-    const trimDocText = trimStart({ prefix: '\n', str: doc.text });
+    const trimText = trimEnd({ $string: this.text, suffix: '\n' });
+    const trimDocText = trimStart({ $string: doc.text, prefix: '\n' });
 
     const mergedText = trimText && trimDocText ? `${trimText}\n${trimDocText}` : trimText || trimDocText || '';
 
@@ -127,26 +118,26 @@ class MarkdownHeadingNode {
   }
 
   public toString(): string {
-    let str = '';
+    let $string = '';
     if (!this.isFake) {
-      str += '#'.repeat(this.level);
+      $string += '#'.repeat(this.level);
       /* v8 ignore start -- heading is always set for non-fake nodes. */
       if (this.heading) {
         /* v8 ignore stop */
-        str += ` ${this.heading}`;
+        $string += ` ${this.heading}`;
       }
     }
-    str += this.text;
+    $string += this.text;
     for (const child of this.children) {
-      str += child.toString();
+      $string += child.toString();
     }
-    return str;
+    return $string;
   }
 
-  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
-    this.text = await textFn(this.text);
+  public async wrapText(textFunction: (text: string) => Promisable<string>): Promise<void> {
+    this.text = await textFunction(this.text);
     for (const child of this.children) {
-      await child.wrapText(textFn);
+      await child.wrapText(textFunction);
     }
   }
 
@@ -191,8 +182,8 @@ class MarkdownHeadingDocument {
     return this.frontmatter + this.node.toString();
   }
 
-  public async wrapText(textFn: (text: string) => Promisable<string>): Promise<void> {
-    await this.node.wrapText(textFn);
+  public async wrapText(textFunction: (text: string) => Promisable<string>): Promise<void> {
+    await this.node.wrapText(textFunction);
   }
 }
 
@@ -230,9 +221,9 @@ function parseHeadingNode(params: ParseHeadingNodeParams): MarkdownHeadingNode {
 
   const childrenLevelIndices = [];
 
-  for (let i = params.headingStartIndex; i < params.headingEndIndex; i++) {
-    if (params.headingsCaches[i]?.level === params.level + 1) {
-      childrenLevelIndices.push(i);
+  for (let index = params.headingStartIndex; index < params.headingEndIndex; index++) {
+    if (params.headingsCaches[index]?.level === params.level + 1) {
+      childrenLevelIndices.push(index);
     }
   }
 
@@ -252,14 +243,14 @@ function parseHeadingNode(params: ParseHeadingNodeParams): MarkdownHeadingNode {
     children.push(child);
   }
 
-  for (let j = 0; j < childrenLevelIndices.length; j++) {
+  for (let index = 0; index < childrenLevelIndices.length; index++) {
     /* v8 ignore start -- defensive ?? on array indexing and optional heading property. */
-    const headingStartIndex = childrenLevelIndices[j] ?? 0;
+    const headingStartIndex = childrenLevelIndices[index] ?? 0;
     const child = parseHeadingNode({
       content: params.content,
       contentStartOffset: params.contentStartOffset,
       heading: params.headingsCaches[headingStartIndex]?.heading ?? '',
-      headingEndIndex: childrenLevelIndices[j + 1] ?? params.headingEndIndex,
+      headingEndIndex: childrenLevelIndices[index + 1] ?? params.headingEndIndex,
       /* v8 ignore stop */
       headingsCaches: params.headingsCaches,
       headingStartIndex: headingStartIndex + 1,

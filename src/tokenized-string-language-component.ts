@@ -11,7 +11,7 @@ export const TOKENIZED_STRING_LANGUAGE = 'advanced-note-composer-template';
  */
 export class TokenizedStringLanguageComponent extends SyntaxHighlightingComponent {
   public override async onloadAsync(): Promise<void> {
-    await this.registerPrismLanguageAsync({
+    await this.registerPrismLanguage({
       grammar: {
         expression: {
           greedy: true,

@@ -26,8 +26,8 @@ import { SwapSelectionBuffer } from '../swap-selection-buffer.ts';
 import { MarkSelectionToSwapEditorCommandHandler } from './mark-selection-to-swap-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
@@ -53,7 +53,7 @@ interface HandlerParams {
   readonly swapSelectionBuffer: SwapSelectionBuffer;
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -106,25 +106,25 @@ describe('MarkSelectionToSwapEditorCommandHandler', () => {
 
   it('should be available only when something is selected', () => {
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams()));
-    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(true);
-    expect(handler.canExecuteEditor(createMockEditor(false), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(false), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should block canExecuteEditor when the command is blocked on the path', () => {
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, true, true)));
-    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should allow canExecuteEditor when the command is not blocked on the path', () => {
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, true, false)));
-    expect(handler.canExecuteEditor(createMockEditor(true), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
   });
 
-  it('should return early and not mark when ctx.file is null', async () => {
+  it('should return early and not mark when context.file is null', async () => {
     const params = createMockParams();
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(null));
+    await handler.executeEditor(createMockEditor(), createMockContext(null));
 
     expect(params.swapSelectionBuffer.hasMark()).toBe(false);
   });
@@ -134,16 +134,17 @@ describe('MarkSelectionToSwapEditorCommandHandler', () => {
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(params.swapSelectionBuffer.hasMark()).toBe(false);
@@ -154,7 +155,7 @@ describe('MarkSelectionToSwapEditorCommandHandler', () => {
     const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
     const file = createMockFile(2000);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     const marked = params.swapSelectionBuffer.get();
     expect(marked).not.toBeNull();

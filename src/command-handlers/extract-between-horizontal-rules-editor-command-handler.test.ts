@@ -34,13 +34,13 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './extract-between-horizontal-rules-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -88,7 +88,7 @@ const RANGE = {
   start: { ch: 0, line: 2 }
 };
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -140,32 +140,32 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
     expect(handler.icon).toBe('lucide-separator-horizontal');
   });
 
-  it('should return false from canExecuteEditor when ctx.file is null', () => {
+  it('should return false from canExecuteEditor when context.file is null', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(null))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
   });
 
   it('should return false from canExecuteEditor when there is no rule-bounded section', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(null);
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should return true from canExecuteEditor when a rule-bounded section is found', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
   });
 
   it('should return false from canExecuteEditor when the command is blocked on the path', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams(false, true, true)));
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
-  it('should return early when ctx.file is null in executeEditor', async () => {
+  it('should return early when context.file is null in executeEditor', async () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
-    await handler.executeEditor(createMockEditor(), createMockCtx(null));
+    await handler.executeEditor(createMockEditor(), createMockContext(null));
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
 
@@ -174,16 +174,17 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(params));
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
@@ -191,21 +192,21 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
 
   it('should return early when the range is undefined', async () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams(false)));
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
 
   it('should return when prepareForSplitFile returns null', async () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams(false)));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
+    const context = createMockContext(createMockFile());
 
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
 
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(RANGE.start, RANGE.end);
     expect(MockSplitComposer).not.toHaveBeenCalled();
@@ -214,11 +215,11 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
   it('should create SplitComposer and call splitFile on happy path', async () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams(false)));
     const editor = createMockEditor();
-    const ctx = createMockCtx(createMockFile());
+    const context = createMockContext(createMockFile());
     const targetFile = createMockFile();
 
     mockGetSelectionBetweenHorizontalRules.mockReturnValue(RANGE);
-    handler.canExecuteEditor(editor, ctx);
+    handler.canExecuteEditor(editor, context);
 
     mockPrepareForSplitFile.mockResolvedValue({
       capturedSelections: [{ endOffset: 5, startOffset: 0 }],
@@ -237,7 +238,7 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(RANGE.start, RANGE.end);
     expect(MockSplitComposer).toHaveBeenCalled();
@@ -246,7 +247,7 @@ describe('ExtractBetweenHorizontalRulesEditorCommandHandler', () => {
 
   it('should return true from shouldAddToEditorMenu', () => {
     const handler = toTestable(new ExtractBetweenHorizontalRulesEditorCommandHandler(createMockParams()));
-    expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {

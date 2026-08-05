@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('first extract does not refresh the background (issue #102)', () => {
   it('opens the split confirm dialog without transiently switching the active tab', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 500;
 
@@ -38,7 +40,7 @@ describe('first extract does not refresh the background (issue #102)', () => {
 
         const activeLeafChanges: string[] = [];
         const activeBefore = app.workspace.getActiveFile()?.path ?? '';
-        const evRef = app.workspace.on('active-leaf-change', (leaf) => {
+        const eventRef = app.workspace.on('active-leaf-change', (leaf) => {
           const file = leaf?.view.getState()['file'];
           activeLeafChanges.push(typeof file === 'string' ? file : '(none)');
         });
@@ -50,19 +52,19 @@ describe('first extract does not refresh the background (issue #102)', () => {
 
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No picker input.');
+            throw new TypeError('No picker input.');
           }
           input.value = target.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(target.basename))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename))
           });
 
-          const suggestionEl = Array.from(document.querySelectorAll('.suggestion-item'))
+          const suggestionEl = [...document.querySelectorAll('.suggestion-item')]
             .find((el) => el.textContent.includes(target.basename));
           if (!(suggestionEl instanceof HTMLElement)) {
-            throw new Error('No target suggestion element.');
+            throw new TypeError('No target suggestion element.');
           }
           suggestionEl.click();
 
@@ -89,7 +91,7 @@ describe('first extract does not refresh the background (issue #102)', () => {
             backgroundTabSwitches
           };
         } finally {
-          app.workspace.offref(evRef);
+          app.workspace.offref(eventRef);
         }
 
         async function resetFile(path: string, content: string): Promise<TFile> {

@@ -16,11 +16,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('same-note extract via the split picker', () => {
   it('should offer the source note and extract the selection to its bottom (Enter) or top (Shift+Enter)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSplitting(false);
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
           // --- Enter: extract "bravo" to the BOTTOM of the same note. ---
           const bottomFile = await resetFile('extract-same-bottom.md', 'alpha bravo charlie');
@@ -36,13 +38,13 @@ describe('same-note extract via the split picker', () => {
           const topFile = await resetFile('extract-same-top.md', 'delta epsilon gamma');
           await openSplitPickerForSelection(topFile, 14, 19);
           dispatchSelectSuggestion(true);
-          await waitUntil({ predicate: () => movedBefore('extract-same-top.md', 'gamma', 'delta') });
+          await waitUntil({ predicate: () => wasMovedBefore('extract-same-top.md', 'gamma', 'delta') });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const topNote = editorValueFor('extract-same-top.md') ?? '';
 
           return { bottomNote, bottomSuggestions, highlightWhileExtracting, topNote };
         } finally {
-          await setAskBeforeSplitting(originalShouldAsk);
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
 
         async function openSplitPickerForSelection(file: TFile, startOffset: number, endOffset: number): Promise<string[]> {
@@ -54,18 +56,18 @@ describe('same-note extract via the split picker', () => {
 
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = file.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(file.basename)) });
-          return Array.from(document.querySelectorAll('.suggestion-title')).map((el) => el.textContent);
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename)) });
+          return [...document.querySelectorAll('.suggestion-title')].map((el) => el.textContent);
         }
 
         function dispatchSelectSuggestion(shouldPrependToTop: boolean): void {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.dispatchEvent(
             new KeyboardEvent('keydown', {
@@ -77,7 +79,7 @@ describe('same-note extract via the split picker', () => {
           );
         }
 
-        function movedBefore(path: string, moved: string, marker: string): boolean {
+        function wasMovedBefore(path: string, moved: string, marker: string): boolean {
           const value = editorValueFor(path);
           if (value === undefined) {
             return false;
@@ -87,7 +89,7 @@ describe('same-note extract via the split picker', () => {
           return movedIndex !== -1 && markerIndex !== -1 && movedIndex < markerIndex;
         }
 
-        async function setAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -96,11 +98,11 @@ describe('same-note extract via the split picker', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before splitting" toggle was not found.');
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

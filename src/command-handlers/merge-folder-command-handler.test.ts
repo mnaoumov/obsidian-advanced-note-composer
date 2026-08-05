@@ -70,9 +70,9 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
 // Unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -93,6 +93,10 @@ afterEach(() => {
   resourceLockComponent.unload();
   vi.restoreAllMocks();
 });
+
+function containsNotice(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {
+  return showNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent.includes(text));
+}
 
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const hide = vi.fn();
@@ -141,10 +145,6 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
-}
-
-function noticesContain(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {
-  return showNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent.includes(text));
 }
 
 describe('MergeFolderCommandHandler', () => {
@@ -205,7 +205,7 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('dst/sub/secret.md')).toBe(false);
     expect(await app.vault.adapter.read('src/sub/secret.md')).toBe('secret body');
     // A summary notice reported the skipped file.
-    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+    expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(true);
   });
 
   it('should move a markdown-shaped attachment instead of merging it (issue #161)', async () => {
@@ -268,7 +268,7 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('note body');
     expect(await app.vault.adapter.exists('dst/sub/pic.png')).toBe(false);
     expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(true);
-    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(true);
+    expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(true);
   });
 
   it('should merge excluded items instead of skipping them when shouldAlwaysMergeExcludedItems is on (issue #150)', async () => {
@@ -294,7 +294,7 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(false);
     // The non-excluded file still merged, and no "ignored" notice was shown for the excluded ones.
     expect(await app.vault.adapter.read('dst/sub/keep.md')).toContain('keep body');
-    expect(noticesContain(showNotice, 'were not merged because they are ignored')).toBe(false);
+    expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(false);
   });
 
   it('should do nothing when no target folder is selected', async () => {
@@ -429,7 +429,7 @@ describe('MergeFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(noticesContain(showNotice, 'Templater plugin is not installed')).toBe(true);
+    expect(containsNotice(showNotice, 'Templater plugin is not installed')).toBe(true);
   });
 
   it('should not warn about templater when the plugin is installed', async () => {
@@ -441,7 +441,7 @@ describe('MergeFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(noticesContain(showNotice, 'Templater plugin is not installed')).toBe(false);
+    expect(containsNotice(showNotice, 'Templater plugin is not installed')).toBe(false);
   });
 
   it('should sort markdown ascending by depth when the source is inside the target', async () => {

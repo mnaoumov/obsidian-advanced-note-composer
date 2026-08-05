@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('Smart cut & paste notice settings', () => {
   it('shows/hides the notice and its move buttons according to the settings', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
@@ -116,11 +118,11 @@ describe('Smart cut & paste notice settings', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
 
           const isEnabled = toggleEl.classList.contains('is-enabled');

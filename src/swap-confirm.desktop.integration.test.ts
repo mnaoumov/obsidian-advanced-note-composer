@@ -19,11 +19,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('swap confirmation dialog', () => {
   it('swaps two folders when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSwapping(true);
+        const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
         try {
           // Two same-named "shared" folders under different parents; swapping exchanges their children.
           const sourceNote = await resetFile('swap-a/shared/x.md', 'X body');
@@ -42,26 +44,26 @@ describe('swap confirmation dialog', () => {
           // The confirmation dialog appears with the "Swap" button.
           await waitUntil({ predicate: () => findButton('Swap') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const confirmButtonPresent = findButton('Swap') !== null;
-          const changeTargetButtonPresent = findButton('Change target') !== null;
+          const isConfirmButtonPresent = findButton('Swap') !== null;
+          const isChangeTargetButtonPresent = findButton('Change target') !== null;
 
           // Confirm the swap.
           findButton('Swap')?.click();
           await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('swap-a/shared/y.md') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const swapped = app.vault.getAbstractFileByPath('swap-a/shared/y.md') !== null
+          const isSwapped = app.vault.getAbstractFileByPath('swap-a/shared/y.md') !== null
             && app.vault.getAbstractFileByPath('swap-b/shared/x.md') !== null
             && app.vault.getAbstractFileByPath('swap-a/shared/x.md') === null
             && app.vault.getAbstractFileByPath('swap-b/shared/y.md') === null;
 
-          return { changeTargetButtonPresent, confirmButtonPresent, swapped };
+          return { changeTargetButtonPresent: isChangeTargetButtonPresent, confirmButtonPresent: isConfirmButtonPresent, swapped: isSwapped };
         } finally {
-          await setAskBeforeSwapping(originalShouldAsk);
+          await didSetAskBeforeSwapping(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -72,15 +74,15 @@ describe('swap confirmation dialog', () => {
         async function chooseInPicker(itemPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No swap picker input.');
+            throw new TypeError('No swap picker input.');
           }
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(itemPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -89,11 +91,11 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before swapping" toggle was not found.');
+            throw new TypeError('"Should ask before swapping" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {
@@ -128,11 +130,13 @@ describe('swap confirmation dialog', () => {
 
   it('does not swap the folders when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSwapping(true);
+        const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
         try {
           const sourceNote = await resetFile('swap-c/shared/p.md', 'P body');
           await resetFile('swap-d/shared/q.md', 'Q body');
@@ -153,18 +157,18 @@ describe('swap confirmation dialog', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Nothing moved: both folders keep their original children.
-          const untouched = app.vault.getAbstractFileByPath('swap-c/shared/p.md') !== null
+          const isUntouched = app.vault.getAbstractFileByPath('swap-c/shared/p.md') !== null
             && app.vault.getAbstractFileByPath('swap-d/shared/q.md') !== null
             && app.vault.getAbstractFileByPath('swap-c/shared/q.md') === null
             && app.vault.getAbstractFileByPath('swap-d/shared/p.md') === null;
 
-          return { untouched };
+          return { untouched: isUntouched };
         } finally {
-          await setAskBeforeSwapping(originalShouldAsk);
+          await didSetAskBeforeSwapping(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -175,15 +179,15 @@ describe('swap confirmation dialog', () => {
         async function chooseInPicker(itemPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No swap picker input.');
+            throw new TypeError('No swap picker input.');
           }
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(itemPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -192,11 +196,11 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before swapping" toggle was not found.');
+            throw new TypeError('"Should ask before swapping" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {
@@ -229,11 +233,13 @@ describe('swap confirmation dialog', () => {
 
   it('swaps two files when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setAskBeforeSwapping(true);
+        const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
         try {
           const sourceNote = await resetFile('swap-file-src.md', 'SRC body');
           await resetFile('swap-file-tgt.md', 'TGT body');
@@ -258,11 +264,11 @@ describe('swap confirmation dialog', () => {
 
           return { srcContent, tgtContent };
         } finally {
-          await setAskBeforeSwapping(originalShouldAsk);
+          await didSetAskBeforeSwapping(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -273,15 +279,15 @@ describe('swap confirmation dialog', () => {
         async function chooseInPicker(itemPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No swap picker input.');
+            throw new TypeError('No swap picker input.');
           }
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent.includes(itemPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
-        async function setAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
+        async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -290,11 +296,11 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error('"Should ask before swapping" toggle was not found.');
+            throw new TypeError('"Should ask before swapping" toggle was not found.');
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldAsk) {

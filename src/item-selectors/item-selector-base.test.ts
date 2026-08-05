@@ -28,8 +28,8 @@ class ConcreteItemSelector extends ItemSelectorBase {
     return this.inputValue;
   }
 
-  public getIsMod(): boolean {
-    return this.isMod;
+  public getIsModifier(): boolean {
+    return this.isModifier;
   }
 
   public getItem(): Item | null {
@@ -67,7 +67,7 @@ describe('ItemSelectorBase', () => {
     const params: ItemSelectorBaseConstructorParams = {
       app: mockApp,
       inputValue: 'test input',
-      isMod: true,
+      isModifier: true,
       item: mockItem,
       pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile
@@ -79,7 +79,7 @@ describe('ItemSelectorBase', () => {
     expect(selector.getPluginSettingsComponent()).toBe(mockPluginSettingsComponent);
     expect(selector.getSourceFile()).toBe(mockSourceFile);
     expect(selector.getItem()).toBe(mockItem);
-    expect(selector.getIsMod()).toBe(true);
+    expect(selector.getIsModifier()).toBe(true);
     expect(selector.getInputValue()).toBe('test input');
   });
 
@@ -93,7 +93,7 @@ describe('ItemSelectorBase', () => {
     const params: ItemSelectorBaseConstructorParams = {
       app: mockApp,
       inputValue: '',
-      isMod: false,
+      isModifier: false,
       item: null,
       pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile
@@ -114,7 +114,7 @@ describe('ItemSelectorBase', () => {
     const params: ItemSelectorBaseConstructorParams = {
       app: mockApp,
       inputValue: '',
-      isMod: false,
+      isModifier: false,
       item: null,
       pluginSettingsComponent: mockPluginSettingsComponent,
       sourceFile: mockSourceFile

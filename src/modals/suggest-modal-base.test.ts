@@ -68,19 +68,19 @@ interface MockPluginOptions {
 }
 
 class TestSuggestModal extends SuggestModalBase {
-  public lastChosenEvt: KeyboardEvent | MouseEvent | null = null;
+  public lastChosenEvent: KeyboardEvent | MouseEvent | null = null;
   public lastChosenItem: Item | null = null;
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
-  protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
+  protected override async onChooseSuggestionAsync(item: Item | null, $event: KeyboardEvent | MouseEvent): Promise<void> {
     this.lastChosenItem = item;
-    this.lastChosenEvt = evt;
+    this.lastChosenEvent = $event;
   }
 }
 
 function createMockFile(path: string, extension = 'md'): TFile {
   const parts = path.split('/');
-  const name = parts[parts.length - 1] ?? '';
+  const name = parts.at(-1) ?? '';
   const parentPath = parts.slice(0, -1).join('/');
   return strictProxy<TFile>({
     extension,
@@ -147,12 +147,12 @@ function createTestSuggestModal(plugin: MockPlugin, sourceFile: TFile): TestSugg
 
 // Walks up to the prototype that defines `onOpen` (SuggestModalBase) and returns its super prototype
 // (the Obsidian SuggestModal), where `super.onOpen()` / `updateSuggestions()` can be stubbed.
-function getSuggestModalSuperProto(modal: object): SuggestModalSuper {
-  let proto = castTo<object>(Object.getPrototypeOf(modal));
-  while (!Object.hasOwn(proto, 'onOpen')) {
-    proto = castTo<object>(Object.getPrototypeOf(proto));
+function getSuggestModalSuperPrototype(modal: object): SuggestModalSuper {
+  let prototype = castTo<object>(Object.getPrototypeOf(modal));
+  while (!Object.hasOwn(prototype, 'onOpen')) {
+    prototype = castTo<object>(Object.getPrototypeOf(prototype));
   }
-  return castTo<SuggestModalSuper>(Object.getPrototypeOf(proto));
+  return castTo<SuggestModalSuper>(Object.getPrototypeOf(prototype));
 }
 
 describe('SuggestModalBase', () => {
@@ -190,11 +190,11 @@ describe('SuggestModalBase', () => {
 
       // Super.onOpen() and updateSuggestions() are Obsidian-internal and not modeled by the mock; stub
       // Them on the SuggestModal super prototype so the real SuggestModalBase.onOpen can run.
-      const superProto = getSuggestModalSuperProto(modal);
+      const superPrototype = getSuggestModalSuperPrototype(modal);
       const superOnOpen = vi.fn();
       const updateSuggestions = vi.fn();
-      superProto.onOpen = superOnOpen;
-      superProto.updateSuggestions = updateSuggestions;
+      superPrototype.onOpen = superOnOpen;
+      superPrototype.updateSuggestions = updateSuggestions;
 
       modal.onOpen();
 
@@ -208,9 +208,9 @@ describe('SuggestModalBase', () => {
       sourceFile = createMockFile('folder/source.md');
       const modal = createTestSuggestModal(plugin, sourceFile);
 
-      const superProto = getSuggestModalSuperProto(modal);
-      superProto.onOpen = vi.fn();
-      superProto.updateSuggestions = vi.fn();
+      const superPrototype = getSuggestModalSuperPrototype(modal);
+      superPrototype.onOpen = vi.fn();
+      superPrototype.updateSuggestions = vi.fn();
 
       modal.inputEl.value = 'stale';
       modal.onOpen();
@@ -691,6 +691,7 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       vi.mocked(plugin.app.internalPlugins.getEnabledPluginById).mockImplementation(castTo<InternalPlugins['getEnabledPluginById']>((id: string) => {
         if (id === 'webviewer') {
+          // eslint-disable-next-line unicorn/name-replacements -- `db` is the Obsidian Web viewer plugin's own member name.
           return { db: { setIcon: vi.fn() } };
         }
         return null;
@@ -733,10 +734,10 @@ describe('SuggestModalBase', () => {
         match: { matches: [], score: 0 },
         type: 'file'
       };
-      const evt = { shiftKey: false } as MouseEvent;
-      modal.onChooseSuggestion(item, evt);
+      const $event = { shiftKey: false } as MouseEvent;
+      modal.onChooseSuggestion(item, $event);
       expect(modal.lastChosenItem).toBe(item);
-      expect(modal.lastChosenEvt).toBe(evt);
+      expect(modal.lastChosenEvent).toBe($event);
     });
   });
 
@@ -752,11 +753,13 @@ describe('SuggestModalBase', () => {
 
       // Mock ctaEl and chooser
       const ctaEl = createDiv();
-      Object.defineProperty(modal, 'ctaEl', { value: ctaEl });
-      Object.defineProperty(modal, 'chooser', {
-        value: {
-          suggestions: [{ getText: (): string => 'test' }]
-        }
+      Object.defineProperties(modal, {
+        chooser: {
+          value: {
+            suggestions: [{ getText: (): string => 'test' }]
+          }
+        },
+        ctaEl: { value: ctaEl }
       });
 
       // Super.onInput() may not exist on the mock, so we stub it
@@ -773,7 +776,7 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
-      modal.inputEl.value = '   ';
+      modal.inputEl.value = ' '.repeat(3);
 
       const superOnInput = vi.fn();
       castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
@@ -792,11 +795,13 @@ describe('SuggestModalBase', () => {
       modal.inputEl.value = 'test';
 
       const ctaEl = createDiv();
-      Object.defineProperty(modal, 'ctaEl', { value: ctaEl });
-      Object.defineProperty(modal, 'chooser', {
-        value: {
-          suggestions: [{ getText: (): string => 'test' }]
-        }
+      Object.defineProperties(modal, {
+        chooser: {
+          value: {
+            suggestions: [{ getText: (): string => 'test' }]
+          }
+        },
+        ctaEl: { value: ctaEl }
       });
 
       const superOnInput = vi.fn();
@@ -931,8 +936,8 @@ describe('SuggestModalBase', () => {
       };
       Object.defineProperty(modal, 'chooser', { value: chooser });
 
-      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
-      const result = modal['handleTabKey'](evt);
+      const $event = strictProxy<KeyboardEvent>({ isComposing: false });
+      const result = modal['handleTabKey']($event);
       expect(result).toBe(false);
     });
 
@@ -941,8 +946,8 @@ describe('SuggestModalBase', () => {
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
 
-      const evt = strictProxy<KeyboardEvent>({ isComposing: true });
-      const result = modal['handleTabKey'](evt);
+      const $event = strictProxy<KeyboardEvent>({ isComposing: true });
+      const result = modal['handleTabKey']($event);
       expect(result).toBeUndefined();
     });
 
@@ -964,8 +969,8 @@ describe('SuggestModalBase', () => {
 
       modal.inputEl.value = 'different';
       modal.inputEl.trigger = vi.fn();
-      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
-      modal['handleTabKey'](evt);
+      const $event = strictProxy<KeyboardEvent>({ isComposing: false });
+      modal['handleTabKey']($event);
       // When lastMatchEnd is 0 (falsy), path is returned unchanged
       expect(modal.inputEl.value).toBe('folder/test');
     });
@@ -988,8 +993,8 @@ describe('SuggestModalBase', () => {
 
       modal.inputEl.value = 'different';
       modal.inputEl.trigger = vi.fn();
-      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
-      const result = modal['handleTabKey'](evt);
+      const $event = strictProxy<KeyboardEvent>({ isComposing: false });
+      const result = modal['handleTabKey']($event);
       expect(result).toBe(false);
       // The path should be truncated to the match
       expect(modal.inputEl.value).toBeDefined();
@@ -1013,8 +1018,8 @@ describe('SuggestModalBase', () => {
 
       modal.inputEl.value = 'folder/test';
       modal.inputEl.trigger = vi.fn();
-      const evt = strictProxy<KeyboardEvent>({ isComposing: false });
-      const result = modal['handleTabKey'](evt);
+      const $event = strictProxy<KeyboardEvent>({ isComposing: false });
+      const result = modal['handleTabKey']($event);
       expect(result).toBe(false);
     });
   });

@@ -34,7 +34,7 @@ import {
 } from '../plugin-settings.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './move-marked-selection-to-edge-editor-command-handler.ts';
 
-interface CapturedComposerArgs {
+interface CapturedComposerArguments {
   readonly insertMode: InsertMode;
   readonly insertToken: string;
   readonly shouldFixFootnotes: boolean;
@@ -66,8 +66,8 @@ interface HandlerParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly id: string;
   readonly name: string;
 }
@@ -83,8 +83,8 @@ vi.mock('../composers/split-composer.ts', () => {
 
 const MockSplitComposer = vi.mocked(SplitComposer);
 
-function capturedComposerArgs(): CapturedComposerArgs {
-  return castTo<CapturedComposerArgs>(MockSplitComposer.mock.calls[0]?.[0]);
+function capturedComposerArguments(): CapturedComposerArguments {
+  return castTo<CapturedComposerArguments>(MockSplitComposer.mock.calls[0]?.[0]);
 }
 
 function createMarkedBuffer(sourceFile: TFile, capturedSelections: Selection[]): MoveSelectionBuffer {
@@ -102,7 +102,7 @@ function createMarkedBuffer(sourceFile: TFile, capturedSelections: Selection[]):
   return buffer;
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -181,7 +181,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
           createMockParams({ insertMode: InsertMode.Append, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
         )
       );
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('source.md')))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('source.md')))).toBe(true);
     });
 
     it('should be unavailable when the top offset falls inside a selection spanning the frontmatter', () => {
@@ -192,7 +192,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
           createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 12, startOffset: 8 }]) })
         )
       );
-      expect(handler.canExecuteEditor(createMockEditor('---\nx\n---\nbody'), createMockCtx(createMockFile('source.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor('---\nx\n---\nbody'), createMockContext(createMockFile('source.md')))).toBe(false);
     });
 
     it('should be available when moving to a different note', () => {
@@ -202,7 +202,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
           createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
         )
       );
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(true);
     });
 
     it('should be unavailable when the command is blocked on the target path', () => {
@@ -216,7 +216,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
           })
         )
       );
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(false);
     });
   });
 
@@ -227,15 +227,15 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
       const params = createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: buffer });
       const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(MockSplitComposer).toHaveBeenCalledTimes(1);
-      const args = capturedComposerArgs();
-      expect(args.insertMode).toBe(InsertMode.Prepend);
-      expect(args.targetCursorOffset).toBeNull();
-      expect(args.insertToken).toContain('advanced-note-composer-move-');
-      expect(args.shouldFixFootnotes).toBe(true);
-      expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
+      const $arguments = capturedComposerArguments();
+      expect($arguments.insertMode).toBe(InsertMode.Prepend);
+      expect($arguments.targetCursorOffset).toBeNull();
+      expect($arguments.insertToken).toContain('advanced-note-composer-move-');
+      expect($arguments.shouldFixFootnotes).toBe(true);
+      expect($arguments.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
     });
   });
@@ -250,8 +250,8 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
           createMockParams({ insertMode, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
         )
       );
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
-      return capturedComposerArgs().smartCutAndPasteMoveKind;
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
+      return capturedComposerArguments().smartCutAndPasteMoveKind;
     }
 
     it('should report ToTop for a prepend', async () => {
@@ -266,35 +266,35 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
   // Each direction reads its OWN setting, so a test that only flipped one of them would pass against a
   // Handler that read the wrong one — hence the cross cases (top off / bottom on, and the reverse).
   describe('shouldJumpToMovedContent (issue #144)', () => {
-    async function captureJumpFlag(options: CreateMockParamsOptions): Promise<boolean> {
+    async function checkJumpFlag(options: CreateMockParamsOptions): Promise<boolean> {
       const source = createMockFile('source.md');
       const handler = toTestable(
         new MoveMarkedSelectionToEdgeEditorCommandHandler(
           createMockParams({ ...options, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
         )
       );
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
-      return capturedComposerArgs().shouldJumpToMovedContent;
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
+      return capturedComposerArguments().shouldJumpToMovedContent;
     }
 
     it('should jump for both directions by default', async () => {
-      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend })).toBe(true);
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend })).toBe(true);
     });
 
     it('should not jump to the top when only the top setting is off', async () => {
-      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToTop: false })).toBe(false);
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToTop: false })).toBe(false);
     });
 
     it('should still jump to the bottom when only the top setting is off', async () => {
-      expect(await captureJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToTop: false })).toBe(true);
+      expect(await checkJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToTop: false })).toBe(true);
     });
 
     it('should not jump to the bottom when only the bottom setting is off', async () => {
-      expect(await captureJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToBottom: false })).toBe(false);
+      expect(await checkJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToBottom: false })).toBe(false);
     });
 
     it('should still jump to the top when only the bottom setting is off', async () => {
-      expect(await captureJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToBottom: false })).toBe(true);
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToBottom: false })).toBe(true);
     });
   });
 });

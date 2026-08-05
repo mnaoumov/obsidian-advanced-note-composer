@@ -47,12 +47,14 @@ interface SettingsCarrier {
 describe('merged note location (issue #178)', () => {
   it('creates the merged note beside, inside, or in the default new-note folder', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<LocationProbe> {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         const originalLocation = settingsComponent.settings.mergeFolderIntoFileLocation;
         const originalNewFileLocation = app.vault.getConfig('newFileLocation');
         const originalNewFileFolderPath = app.vault.getConfig('newFileFolderPath');
@@ -66,7 +68,7 @@ describe('merged note location (issue #178)', () => {
           const insideFolderPath = await mergeWith('InsideFolder', 'loc-inside', 'loc-inside/loc-inside.md');
 
           // The folder is no longer empty after an inside-merge, so it survives the cleanup.
-          const mergedFolderSurvivesInsideMode = app.vault.getAbstractFileByPath('loc-inside') !== null;
+          const isMergedFolderSurvivesInsideMode = app.vault.getAbstractFileByPath('loc-inside') !== null;
 
           // Point Obsidian's own new-note setting at a specific folder, which is what this mode honours.
           await trashIfExists('loc-inbox');
@@ -80,14 +82,14 @@ describe('merged note location (issue #178)', () => {
             besideFolderPath,
             defaultNewNoteLocationPath,
             insideFolderPath,
-            mergedFolderSurvivesInsideMode
+            mergedFolderSurvivesInsideMode: isMergedFolderSurvivesInsideMode
           };
         } finally {
           app.vault.setConfig('newFileLocation', originalNewFileLocation);
           app.vault.setConfig('newFileFolderPath', originalNewFileFolderPath);
           await settingsComponent.editAndSave((settings) => {
             settings.mergeFolderIntoFileLocation = originalLocation;
-            settings.shouldAskBeforeMerging = originalShouldAsk;
+            settings.shouldAskBeforeMerging = isOriginalShouldAsk;
           });
         }
 

@@ -73,13 +73,13 @@ interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
 }
 
 let capturedConfirmParams: CapturedConfirmParams | null = null;
@@ -192,7 +192,7 @@ function createHeading(level: number, line: number, headingText = `Heading ${Str
   });
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -207,6 +207,12 @@ function createMockFile(path = 'test/note.md'): TFile {
   return strictProxy<TFile>({ path });
 }
 
+function createMockLeaf(): WorkspaceLeaf {
+  return strictProxy<WorkspaceLeaf>({
+    openFile: vi.fn().mockResolvedValue(undefined)
+  });
+}
+
 function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({
@@ -215,9 +221,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
       }),
       workspace: strictProxy<Workspace>({
         getActiveViewOfType: vi.fn(),
-        getLeaf: vi.fn().mockReturnValue(strictProxy<WorkspaceLeaf>({
-          openFile: vi.fn().mockResolvedValue(undefined)
-        }))
+        getLeaf: vi.fn().mockReturnValue(createMockLeaf())
       })
     }),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
@@ -283,9 +287,9 @@ function toTestable(handler: SplitNoteByHeadingsRecursivelyEditorCommandHandler)
  * asserted instead of just the fact that one was shown.
  */
 function useRealFragments(): void {
-  mockCreateFragmentAsync.mockImplementation(async (cb) => {
+  mockCreateFragmentAsync.mockImplementation(async (callback) => {
     const fragment = createFragment();
-    await (cb as (f: DocumentFragment) => Promise<void>)(fragment);
+    await (callback as (f: DocumentFragment) => Promise<void>)(fragment);
     return fragment;
   });
   mockRenderInternalLink.mockImplementation((linkParams) => {
@@ -318,21 +322,21 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
   it('should return false from canExecuteEditor when file is null', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(null))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
   });
 
   it('should return false from canExecuteEditor when cache is null', () => {
     const params = createMockParams();
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(null);
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should return false from canExecuteEditor when the note has no headings', () => {
     const params = createMockParams();
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue({});
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should return true from canExecuteEditor for any heading, wherever the cursor is', () => {
@@ -340,19 +344,19 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const params = createMockParams();
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(createCache([createHeading(3, 7)]));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
   });
 
   it('should return false from canExecuteEditor when the command is blocked on the path', () => {
     const params = createMockParams({ shouldBlockCommandOnPath: true });
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
     vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(createCache([createHeading(1, 0)]));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
-  it('should return early from executeEditor when ctx.file is null', async () => {
+  it('should return early from executeEditor when context.file is null', async () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
-    await handler.executeEditor(createMockEditor(), createMockCtx(null));
+    await handler.executeEditor(createMockEditor(), createMockContext(null));
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
   });
 
@@ -361,16 +365,17 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
@@ -380,7 +385,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
     mockGetCacheSafe.mockResolvedValue(null);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -389,7 +394,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
     mockGetCacheSafe.mockResolvedValue(createCacheWithoutHeadings());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -400,7 +405,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockGetCacheSafe.mockResolvedValue(createCache([createHeading(1, 0)]));
     confirmResult = createConfirmResult(false);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(mockOpenModal).toHaveBeenCalledTimes(1);
     expect(MockSplitComposer).not.toHaveBeenCalled();
@@ -417,7 +422,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     const settings = strictProxy<PluginSettings>({ shouldAskBeforeSplitting: true });
@@ -430,7 +435,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
     mockGetCacheSafe.mockResolvedValue(createCache([]));
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(mockOpenModal).not.toHaveBeenCalled();
   });
@@ -441,7 +446,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createCache([createHeading(1, 0)]))
       .mockResolvedValueOnce(null);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -452,7 +457,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createCache([createHeading(1, 0)]))
       .mockResolvedValueOnce(createCacheWithoutHeadings());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -463,7 +468,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockGetCacheSafe.mockResolvedValue(createCache([createHeading(1, 0)]));
     mockGetSelectionUnderHeading.mockReturnValue(null);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Failed to find heading');
     expect(MockSplitComposer).not.toHaveBeenCalled();
@@ -474,7 +479,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockGetCacheSafe.mockResolvedValue(createCache([createHeading(1, 0)]));
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).not.toHaveBeenCalled();
   });
@@ -489,7 +494,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(editor, createMockCtx(file));
+    await handler.executeEditor(editor, createMockContext(file));
 
     const prepareParams = mockPrepareForSplitFile.mock.calls[0]?.[0];
     expect(prepareParams?.sourceFile).toBe(file);
@@ -527,7 +532,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createSplitResult(grandChildFile));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     // An explicit `false` is what forces Obsidian's own new-file location for the root pass, whatever the
     // `shouldAllowOnlyCurrentFolderByDefault` setting says.
@@ -560,7 +565,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     setActiveEditor(params.app, createMockEditor());
     useRealFragments();
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(2);
     // The second pass splits the note the first pass produced, not the original note.
@@ -588,7 +593,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       .mockResolvedValueOnce(createSplitResult(grandChildFile));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     // Every structural pass writes the extracted content untouched, so nothing the template adds can be
     // Dragged into the next note down.
@@ -629,7 +634,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     setActiveEditor(params.app, createMockEditor());
     useRealFragments();
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
@@ -646,7 +651,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(file));
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     const leaf = vi.mocked(params.app.workspace.getLeaf).mock.results[0]?.value as WorkspaceLeaf;
     const openedFiles = vi.mocked(leaf.openFile).mock.calls.map((call) => call[0]);
@@ -661,7 +666,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
     setActiveEditor(params.app, null);
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
   });
@@ -674,7 +679,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
     setActiveEditor(params.app, createMockEditor());
 
-    await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile()));
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     // An H6 can hold no sub-headings, so its note is never reopened for another pass.
     expect(vi.mocked(params.app.workspace.getActiveViewOfType)).not.toHaveBeenCalled();
@@ -693,7 +698,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     ]));
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(editor, createMockCtx(file));
+    await handler.executeEditor(editor, createMockContext(file));
 
     const fragment = createFragment();
     await capturedConfirmParams?.buildContent(fragment);
@@ -718,7 +723,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
   it('should return true from shouldAddToEditorMenu', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
-    expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
   });
 });
 

@@ -3,7 +3,7 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsExtendedFnParams } from 'obsidian-dev-utils/obsidian/attachment-path';
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type {
   PluginNoticeComponent,
@@ -50,9 +50,9 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
 // Reach into unmocked App internals (embedRegistry). Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -238,12 +238,16 @@ describe('MergeComposer', () => {
       // Test-mocks does not model; absolute format plus wikilinks emits a plain [[target]] wikilink.
       castTo<GenericObject>(app.vault)['getConfig'] = vi.fn((key: string) => {
         switch (key) {
-          case 'newLinkFormat':
+          case 'newLinkFormat': {
             return 'absolute';
-          case 'useMarkdownLinks':
+          }
+          case 'useMarkdownLinks': {
             return false;
-          default:
+          }
+          default: {
+            // eslint-disable-next-line unicorn/no-useless-undefined -- tsc's noImplicitReturns wants every path to return.
             return undefined;
+          }
         }
       });
 
@@ -358,7 +362,7 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
  * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
  */
 function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (notePath: string) => string): void {
-  function extended(params: GetAvailablePathForAttachmentsExtendedFnParams): Promise<string> {
+  function extended(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
     // A real attachment-location plugin also handles a note-less resolution; these tests never ask for one,
     // So fail loudly rather than invent a fallback folder.
     const notePath = getPath(app, ensureNonNullable(params.notePathOrFile));

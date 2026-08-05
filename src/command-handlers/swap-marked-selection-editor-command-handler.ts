@@ -56,8 +56,8 @@ export class SwapMarkedSelectionEditorCommandHandler extends ActiveEditorCommand
     this.resourceLockComponent = params.resourceLockComponent;
   }
 
-  protected override canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean {
-    const targetFile = ctx.file;
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    const targetFile = context.file;
     if (!targetFile) {
       return false;
     }
@@ -73,8 +73,8 @@ export class SwapMarkedSelectionEditorCommandHandler extends ActiveEditorCommand
     });
   }
 
-  protected override async executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void> {
-    const targetFile = ctx.file;
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const targetFile = context.file;
     if (!targetFile) {
       return;
     }

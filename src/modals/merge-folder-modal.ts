@@ -69,8 +69,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     builder.addCheckbox({
       key: '1',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldIncludeChildFolders = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldIncludeChildFolders = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -81,8 +81,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     builder.addCheckbox({
       key: '2',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldIncludeParentFolders = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldIncludeParentFolders = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -121,9 +121,9 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     }
   }
 
-  public override selectSuggestion(value: FuzzyMatch<TFolder>, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: FuzzyMatch<TFolder>, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 
   private isAllowedDestinationFolder(folder: TFolder): boolean {
@@ -213,12 +213,12 @@ async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams):
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: source }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: source }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: target }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: target }));
 }
 
 /* v8 ignore stop */

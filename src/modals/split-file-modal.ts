@@ -157,7 +157,7 @@ interface SplitFileModalSplitResult {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly inputValue: string;
   readonly insertMode: InsertMode;
-  readonly isMod: boolean;
+  readonly isModifier: boolean;
   readonly item: Item | null;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -231,19 +231,19 @@ class SplitFileModal extends SuggestModalBase {
     this.renderSwitchToSmartCutButton();
   }
 
-  public override selectSuggestion(value: Item | null, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: Item | null, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
-  protected override async onChooseSuggestionAsync(item: Item | null, evt: KeyboardEvent | MouseEvent): Promise<void> {
+  protected override async onChooseSuggestionAsync(item: Item | null, $event: KeyboardEvent | MouseEvent): Promise<void> {
     this.promiseResolve({
       action: 'split',
       frontmatterMergeStrategy: this.frontmatterMergeStrategy,
       inputValue: this.inputEl.value,
-      insertMode: getInsertModeFromEvent(evt),
-      isMod: Keymap.isModifier(evt, 'Mod'),
+      insertMode: getInsertModeFromEvent($event),
+      isModifier: Keymap.isModifier($event, 'Mod'),
       item,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
@@ -263,8 +263,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addKeyboardCommand({
       key: 'Enter',
       modifiers: ['Mod'],
-      onKey: (evt) => {
-        this.selectActiveSuggestion(evt);
+      onKey: ($event) => {
+        this.selectActiveSuggestion($event);
         return false;
       },
       purpose: 'to create new'
@@ -272,8 +272,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addKeyboardCommand({
       key: 'Enter',
       modifiers: ['Shift'],
-      onKey: (evt) => {
-        this.selectActiveSuggestion(evt);
+      onKey: ($event) => {
+        this.selectActiveSuggestion($event);
         return false;
       },
       purpose: 'to move to top'
@@ -302,8 +302,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '1',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldIncludeFrontmatter = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldIncludeFrontmatter = isChecked;
       },
       onInit: (checkboxEl) => {
         checkboxEl.checked = canIncludeFrontmatter && this.shouldIncludeFrontmatter;
@@ -314,9 +314,9 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '2',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldTreatTitleAsPath = value;
-        this.treatTitleAsPathCheckboxElValue = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldTreatTitleAsPath = isChecked;
+        this.treatTitleAsPathCheckboxElValue = isChecked;
       },
       onInit: (checkboxEl) => {
         this.treatTitleAsPathCheckboxEl = checkboxEl;
@@ -329,8 +329,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '3',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldFixFootnotes = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldFixFootnotes = isChecked;
       },
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldFixFootnotes;
@@ -341,8 +341,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '4',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldAllowOnlyCurrentFolder = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldAllowOnlyCurrentFolder = isChecked;
         this.updateSuggestions();
         if (this.treatTitleAsPathCheckboxEl !== undefined && this.treatTitleAsPathCheckboxElValue !== undefined) {
           if (this.shouldAllowOnlyCurrentFolder) {
@@ -365,8 +365,8 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '5',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldMergeHeadings = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldMergeHeadings = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -378,9 +378,9 @@ class SplitFileModal extends SuggestModalBase {
     builder.addCheckbox({
       key: '6',
       modifiers: ['Alt'],
-      onChange: (value: boolean) => {
-        this.shouldAllowSplitIntoUnresolvedPath = value;
-        this.shouldShowUnresolved = value;
+      onChange: (isChecked: boolean) => {
+        this.shouldAllowSplitIntoUnresolvedPath = isChecked;
+        this.shouldShowUnresolved = isChecked;
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
@@ -507,7 +507,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
         inputValue: heading,
         insertMode: InsertMode.Append,
-        isMod: false,
+        isModifier: false,
         item: null,
         shouldAllowOnlyCurrentFolder: params.shouldAllowOnlyCurrentFolderOverride ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
         shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
@@ -552,7 +552,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     const selectItemResult = await new SplitItemSelector({
       app: params.app,
       inputValue: splitFileModalResult.inputValue,
-      isMod: splitFileModalResult.isMod,
+      isModifier: splitFileModalResult.isModifier,
       item: splitFileModalResult.item,
       pluginSettingsComponent: params.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
@@ -658,12 +658,12 @@ async function buildSplitConfirmContent(params: BuildSplitConfirmContentParams):
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
-  fragment.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: targetFile }));
   fragment.createEl('br');
   fragment.createEl('br');
   fragment.createEl('h2', { text: 'Source content to split' });

@@ -21,7 +21,7 @@ import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
-import { confirmMergeFolderIntoFile } from './merge-folder-into-file-modal.ts';
+import { shouldMergeFolderIntoFile } from './merge-folder-into-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
@@ -45,14 +45,14 @@ interface AskSettings {
   shouldAskBeforeMerging: boolean;
 }
 
-interface ConfirmArgs {
+interface ConfirmArguments {
   readonly app: App;
   readonly noteCount: number;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFolder: TFolder;
 }
 
-interface ConfirmModalArgs {
+interface ConfirmModalArguments {
   buildContent(fragment: DocumentFragment): Promise<void>;
   promiseResolve(result: ConfirmDialogModalResult): void;
 }
@@ -65,11 +65,11 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function capturedModalParams(): ConfirmModalArgs {
-  return castTo<ConfirmModalArgs>(mockConfirmDialogModal.mock.calls[0]?.[0]);
+function capturedModalParams(): ConfirmModalArguments {
+  return castTo<ConfirmModalArguments>(mockConfirmDialogModal.mock.calls[0]?.[0]);
 }
 
-function createParams(shouldAskBeforeMerging: boolean, editAndSave = vi.fn().mockResolvedValue(undefined)): ConfirmArgs {
+function createParams(shouldAskBeforeMerging: boolean, editAndSave = vi.fn().mockResolvedValue(undefined)): ConfirmArguments {
   return {
     app: strictProxy<App>({}),
     noteCount: 3,
@@ -92,11 +92,11 @@ function makeResult(overrides: Partial<ConfirmDialogModalResult>): ConfirmDialog
   };
 }
 
-describe('confirmMergeFolderIntoFile', () => {
+describe('shouldMergeFolderIntoFile', () => {
   it('confirms immediately without a dialog when shouldAskBeforeMerging is off', async () => {
     const params = createParams(false);
-    const result = await confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
-    expect(result).toBe(true);
+    const isResult = await shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    expect(isResult).toBe(true);
     expect(mockConfirmDialogModal).not.toHaveBeenCalled();
   });
 
@@ -110,7 +110,7 @@ describe('confirmMergeFolderIntoFile', () => {
     const params = createParams(true, editAndSave);
 
     // The modal is constructed synchronously inside the awaited Promise; drive its outcome afterwards.
-    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     expect(mockConfirmDialogModal).toHaveBeenCalledOnce();
     // Invoke buildContent so its wiring is exercised, then confirm.
     await capturedModalParams().buildContent(createFragment());
@@ -123,7 +123,7 @@ describe('confirmMergeFolderIntoFile', () => {
   it('renders the not-yet-created target as a code block, never as a link (issue #166)', async () => {
     const params = createParams(true);
 
-    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     await capturedModalParams().buildContent(createFragment());
     capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
     await promise;
@@ -138,7 +138,7 @@ describe('confirmMergeFolderIntoFile', () => {
   it('returns false when the dialog is cancelled', async () => {
     const params = createParams(true);
 
-    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
 
     expect(await promise).toBe(false);

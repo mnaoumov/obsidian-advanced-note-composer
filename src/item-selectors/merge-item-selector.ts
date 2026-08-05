@@ -17,7 +17,7 @@ export class MergeItemSelector extends ItemSelectorBase {
   }
 
   public override async selectItem(): Promise<SelectItemResult> {
-    if (this.isMod || this.item?.type === 'unresolved') {
+    if (this.isModifier || this.item?.type === 'unresolved') {
       const fileName = this.item?.type === 'unresolved' ? this.item.linktext ?? '' : this.inputValue;
       const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
 

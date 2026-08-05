@@ -18,7 +18,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split into folder note name', () => {
   it('should name the extracted note after the template and keep the folder name as an alias', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SAVE_DELAY_IN_MILLISECONDS = 300;
@@ -27,8 +29,8 @@ describe('split into folder note name', () => {
         const NEW_NOTE_PATH = `${NEW_NOTE_NAME}/${NOTE_NAME_IN_FOLDER}.md`;
         const SOURCE_PATH = 'split-into-folder-note-name-source.md';
 
-        const originalShouldAsk = await setToggle('Should ask before splitting', false);
-        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
+        const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
         const originalNoteName = await setNoteName(NOTE_NAME_IN_FOLDER);
         try {
           // Clean up any leftover from a previous run so the folder name is not de-duplicated.
@@ -45,13 +47,13 @@ describe('split into folder note name', () => {
 
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No split picker input.');
+            throw new TypeError('No split picker input.');
           }
           input.value = NEW_NOTE_NAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'create-new suggestion did not appear',
-            predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent === NEW_NOTE_NAME)
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
@@ -77,13 +79,13 @@ describe('split into folder note name', () => {
             message: 'source link to the extracted note did not resolve',
             predicate: () => Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH)
           });
-          const linkResolves = Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH);
+          const isLinkResolves = Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NEW_NOTE_PATH);
 
-          return { frontmatter, isFolder, isNamedAfterFolder, linkResolves, newFileContent };
+          return { frontmatter, isFolder, isNamedAfterFolder, linkResolves: isLinkResolves, newFileContent };
         } finally {
           await setNoteName(originalNoteName);
-          await setToggle('Should ask before splitting', originalShouldAsk);
-          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
+          await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
+          await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
         }
 
         async function removeIfExists(path: string): Promise<void> {
@@ -127,7 +129,7 @@ describe('split into folder note name', () => {
         }
 
         function findSettingItem(tab: PluginSettingsTab, name: string): Element {
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
           if (!item) {
             throw new Error(`"${name}" setting was not found.`);
@@ -141,7 +143,7 @@ describe('split into folder note name', () => {
 
           const textAreaEl = findSettingItem(tab, 'Split into folder note name').querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new Error('"Split into folder note name" input was not found.');
+            throw new TypeError('"Split into folder note name" input was not found.');
           }
 
           const previousValue = textAreaEl.value;
@@ -155,16 +157,16 @@ describe('split into folder note name', () => {
           return previousValue;
         }
 
-        async function setToggle(name: string, value: boolean): Promise<boolean> {
+        async function didSetToggle(name: string, shouldEnable: boolean): Promise<boolean> {
           const tab = openSettingsTab();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const toggle = findSettingItem(tab, name).querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${name}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
-          if (wasEnabled !== value) {
+          if (wasEnabled !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }

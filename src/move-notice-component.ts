@@ -214,9 +214,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       onClick: (): void => {
         invokeAsyncSafely(() => this.swapMarkedSelectionHandler.executeInActiveEditor());
       }
-    });
-
-    definitions.push({
+    }, {
       getIsEnabled: null,
       label: 'Cancel move',
       onClick: (): void => {

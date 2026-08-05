@@ -215,11 +215,11 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
       app,
       linkConverter: (link) => {
         if (!referenceJsons.has(JSON.stringify(link))) {
-          return undefined;
+          return;
         }
         const rewritten = rewriteHeadingLink({ link, newHeading, oldHeading });
         if (rewritten === undefined) {
-          return undefined;
+          return;
         }
         rewrittenLinks.push(rewritten);
         return rewritten;
@@ -234,9 +234,9 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
 }
 
 function normalizeHeadingForComparison(heading: string): string {
-  return heading.replace(HEADING_MATCH_STRIP_REGEXP, ' ').replace(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
+  return heading.replaceAll(HEADING_MATCH_STRIP_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
 }
 
 function sanitizeHeadingForSubpath(heading: string): string {
-  return heading.replace(SUBPATH_SANITIZE_REGEXP, ' ').replace(WHITESPACE_RUN_REGEXP, ' ').trim();
+  return heading.replaceAll(SUBPATH_SANITIZE_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim();
 }

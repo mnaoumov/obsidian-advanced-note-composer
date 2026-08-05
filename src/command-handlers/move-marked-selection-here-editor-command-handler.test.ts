@@ -39,7 +39,7 @@ import {
 } from '../plugin-settings.ts';
 import { MoveMarkedSelectionHereEditorCommandHandler } from './move-marked-selection-here-editor-command-handler.ts';
 
-interface CapturedComposerArgs {
+interface CapturedComposerArguments {
   readonly capturedSelections: Selection[];
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly insertToken: string;
@@ -61,9 +61,9 @@ interface MockPosition {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
   canExecuteInActiveEditor(): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   executeInActiveEditor(): Promise<void>;
   readonly icon: string;
   readonly id: string;
@@ -72,8 +72,8 @@ interface TestableHandler {
   shouldAddToEditorMenu(): boolean;
 }
 
-function capturedComposerArgs(): CapturedComposerArgs {
-  return castTo<CapturedComposerArgs>(MockSplitComposer.mock.calls[0]?.[0]);
+function capturedComposerArguments(): CapturedComposerArguments {
+  return castTo<CapturedComposerArguments>(MockSplitComposer.mock.calls[0]?.[0]);
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -140,7 +140,7 @@ function createMarkedBuffer(sourceFile: TFile): MoveSelectionBuffer {
   return buffer;
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -223,13 +223,13 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
   describe('canExecuteEditor', () => {
     it('should be unavailable when nothing is marked', () => {
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams()));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(false);
     });
 
     it('should be unavailable when there is no target file', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(null))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
     });
 
     it('should be unavailable when the source note no longer exists', () => {
@@ -240,39 +240,39 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
           moveSelectionBuffer: createMarkedBuffer(source)
         }))
       );
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(false);
     });
 
     it('should be unavailable when the cursor is inside the marked selection in the same note', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
-      expect(handler.canExecuteEditor(createMockEditor(7), createMockCtx(createMockFile('source.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(7), createMockContext(createMockFile('source.md')))).toBe(false);
     });
 
     it('should be available when the cursor is outside the marked selection in the same note', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
-      expect(handler.canExecuteEditor(createMockEditor(20), createMockCtx(createMockFile('source.md')))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(20), createMockContext(createMockFile('source.md')))).toBe(true);
     });
 
     it('should be available when moving into a different note', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(true);
     });
 
     it('should be unavailable when the target selection overlaps the marked selection in the same note', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
       // Marked selection is offsets 5..10; a target selection of 7..9 overlaps it.
-      expect(handler.canExecuteEditor(createMockEditorWithSelection(7, 9), createMockCtx(createMockFile('source.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditorWithSelection(7, 9), createMockContext(createMockFile('source.md')))).toBe(false);
     });
 
     it('should be available when the target selection is clear of the marked selection in the same note', () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
       // A target selection of 12..15 does not overlap the marked 5..10.
-      expect(handler.canExecuteEditor(createMockEditorWithSelection(12, 15), createMockCtx(createMockFile('source.md')))).toBe(true);
+      expect(handler.canExecuteEditor(createMockEditorWithSelection(12, 15), createMockContext(createMockFile('source.md')))).toBe(true);
     });
 
     it('should be unavailable when the command is blocked on the target path', () => {
@@ -280,7 +280,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const handler = toTestable(
         new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source), shouldBlockCommandOnPath: true }))
       );
-      expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile('target.md')))).toBe(false);
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(false);
     });
   });
 
@@ -288,13 +288,13 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
     it('should return when there is no target file', async () => {
       const source = createMockFile('source.md');
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams({ moveSelectionBuffer: createMarkedBuffer(source) })));
-      await handler.executeEditor(createMockEditor(), createMockCtx(null));
+      await handler.executeEditor(createMockEditor(), createMockContext(null));
       expect(MockSplitComposer).not.toHaveBeenCalled();
     });
 
     it('should return when nothing is marked', async () => {
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(createMockParams()));
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
       expect(MockSplitComposer).not.toHaveBeenCalled();
     });
 
@@ -304,7 +304,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const params = createMockParams({ getFileByPathResult: null, moveSelectionBuffer: buffer });
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
       expect(buffer.hasMark()).toBe(false);
@@ -318,16 +318,17 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
       const mockFragment = strictProxy<DocumentFragment>({
+        append: vi.fn(),
         appendChild: vi.fn(),
         appendText: vi.fn()
       });
-      mockCreateFragmentAsync.mockImplementation(async (cb) => {
-        await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+      mockCreateFragmentAsync.mockImplementation(async (callback) => {
+        await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
         return mockFragment;
       });
       mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
       expect(buffer.hasMark()).toBe(true);
@@ -343,7 +344,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       });
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
       expect(buffer.hasMark()).toBe(true);
@@ -361,29 +362,29 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const mockSplitFile = vi.fn().mockResolvedValue(undefined);
       MockSplitComposer.prototype.splitFile = mockSplitFile;
 
-      await handler.executeEditor(createMockEditor(42), createMockCtx(target));
+      await handler.executeEditor(createMockEditor(42), createMockContext(target));
 
       expect(mockOpenPasteOptionsModal).not.toHaveBeenCalled();
       expect(MockSplitComposer).toHaveBeenCalledTimes(1);
-      const args = capturedComposerArgs();
-      expect(args.capturedSelections).toBe(CAPTURED_SELECTIONS);
-      expect(args.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
-      expect(args.insertToken).toContain('advanced-note-composer-move-');
-      expect(args.isNewTargetFile).toBe(false);
-      expect(args.selectedText).toBe('marked text');
-      expect(args.shouldFixFootnotes).toBe(true);
-      expect(args.shouldIncludeFrontmatter).toBe(false);
+      const $arguments = capturedComposerArguments();
+      expect($arguments.capturedSelections).toBe(CAPTURED_SELECTIONS);
+      expect($arguments.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
+      expect($arguments.insertToken).toContain('advanced-note-composer-move-');
+      expect($arguments.isNewTargetFile).toBe(false);
+      expect($arguments.selectedText).toBe('marked text');
+      expect($arguments.shouldFixFootnotes).toBe(true);
+      expect($arguments.shouldIncludeFrontmatter).toBe(false);
       // A move AT THE CURSOR always lands the cursor on the moved content — there is no setting for it
       // (issue #144); only the top/bottom moves are configurable.
-      expect(args.shouldJumpToMovedContent).toBe(true);
+      expect($arguments.shouldJumpToMovedContent).toBe(true);
       // The kind both marks this as a smart cut & paste move and selects its template: the at-cursor move
       // Has no override of its own, so it always takes the shared template (issue #174).
-      expect(args.smartCutAndPasteMoveKind).toBe(SmartCutAndPasteMoveKind.AtCursor);
-      expect(args.sourceFile).toBe(resolvedSource);
-      expect(args.targetCursorOffset).toBe(42);
-      expect(args.targetCursorEndOffset).toBe(42);
-      expect(args.targetFile).toBe(target);
-      expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
+      expect($arguments.smartCutAndPasteMoveKind).toBe(SmartCutAndPasteMoveKind.AtCursor);
+      expect($arguments.sourceFile).toBe(resolvedSource);
+      expect($arguments.targetCursorOffset).toBe(42);
+      expect($arguments.targetCursorEndOffset).toBe(42);
+      expect($arguments.targetFile).toBe(target);
+      expect($arguments.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
       expect(buffer.hasMark()).toBe(false);
       expect(mockSplitFile).toHaveBeenCalledTimes(1);
     });
@@ -395,11 +396,11 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       const params = createMockParams({ getFileByPathResult: createMockFile('source.md'), moveSelectionBuffer: buffer });
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditorWithSelection(12, 15), createMockCtx(target));
+      await handler.executeEditor(createMockEditorWithSelection(12, 15), createMockContext(target));
 
-      const args = capturedComposerArgs();
-      expect(args.targetCursorOffset).toBe(12);
-      expect(args.targetCursorEndOffset).toBe(15);
+      const $arguments = capturedComposerArguments();
+      expect($arguments.targetCursorOffset).toBe(12);
+      expect($arguments.targetCursorEndOffset).toBe(15);
     });
 
     it('should default text after extraction to None for a same-note move when the setting is disabled', async () => {
@@ -414,9 +415,9 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       });
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditor(42), createMockCtx(createMockFile('source.md')));
+      await handler.executeEditor(createMockEditor(42), createMockContext(createMockFile('source.md')));
 
-      expect(capturedComposerArgs().textAfterExtractionMode).toBe(TextAfterExtractionMode.None);
+      expect(capturedComposerArguments().textAfterExtractionMode).toBe(TextAfterExtractionMode.None);
     });
 
     it('should keep the configured text after extraction for a same-note move when the setting is enabled', async () => {
@@ -431,9 +432,9 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       });
       const handler = toTestable(new MoveMarkedSelectionHereEditorCommandHandler(params));
 
-      await handler.executeEditor(createMockEditor(42), createMockCtx(createMockFile('source.md')));
+      await handler.executeEditor(createMockEditor(42), createMockContext(createMockFile('source.md')));
 
-      expect(capturedComposerArgs().textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
+      expect(capturedComposerArguments().textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
     });
 
     it('should prompt for options and move with them when advanced', async () => {
@@ -450,15 +451,15 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       };
       mockOpenPasteOptionsModal.mockResolvedValue(chosen);
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(mockOpenPasteOptionsModal).toHaveBeenCalledTimes(1);
       expect(MockSplitComposer).toHaveBeenCalledTimes(1);
-      const args = capturedComposerArgs();
-      expect(args.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.KeepOriginalFrontmatter);
-      expect(args.shouldFixFootnotes).toBe(false);
-      expect(args.shouldIncludeFrontmatter).toBe(true);
-      expect(args.textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
+      const $arguments = capturedComposerArguments();
+      expect($arguments.frontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.KeepOriginalFrontmatter);
+      expect($arguments.shouldFixFootnotes).toBe(false);
+      expect($arguments.shouldIncludeFrontmatter).toBe(true);
+      expect($arguments.textAfterExtractionMode).toBe(TextAfterExtractionMode.EmbedNewFile);
       expect(buffer.hasMark()).toBe(false);
     });
 
@@ -470,7 +471,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
 
       mockOpenPasteOptionsModal.mockResolvedValue(null);
 
-      await handler.executeEditor(createMockEditor(), createMockCtx(createMockFile('target.md')));
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
 
       expect(MockSplitComposer).not.toHaveBeenCalled();
       expect(buffer.hasMark()).toBe(true);

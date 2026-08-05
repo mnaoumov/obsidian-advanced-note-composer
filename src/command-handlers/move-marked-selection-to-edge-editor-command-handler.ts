@@ -90,17 +90,20 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
 
 function getCommandDefinition(insertMode: InsertMode): CommandDefinition {
   switch (insertMode) {
-    case InsertMode.Append:
+    case InsertMode.Append: {
       return {
         id: 'move-marked-selection-to-bottom-of-file',
         name: 'Smart cut & paste: Move marked selection to bottom of file'
       };
-    case InsertMode.Prepend:
+    }
+    case InsertMode.Prepend: {
       return {
         id: 'move-marked-selection-to-top-of-file',
         name: 'Smart cut & paste: Move marked selection to top of file'
       };
-    default:
+    }
+    default: {
       assertNever(insertMode);
+    }
   }
 }

@@ -9,7 +9,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 export interface ItemSelectorBaseConstructorParams {
   readonly app: App;
   readonly inputValue: string;
-  readonly isMod: boolean;
+  readonly isModifier: boolean;
   readonly item: Item | null;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly sourceFile: TFile;
@@ -23,7 +23,7 @@ export interface SelectItemResult {
 export abstract class ItemSelectorBase {
   protected readonly app: App;
   protected readonly inputValue: string;
-  protected readonly isMod: boolean;
+  protected readonly isModifier: boolean;
   protected readonly item: Item | null;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   protected readonly sourceFile: TFile;
@@ -33,7 +33,7 @@ export abstract class ItemSelectorBase {
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.sourceFile = params.sourceFile;
     this.item = params.item;
-    this.isMod = params.isMod;
+    this.isModifier = params.isModifier;
     this.inputValue = params.inputValue;
   }
   public abstract selectItem(): Promise<SelectItemResult>;

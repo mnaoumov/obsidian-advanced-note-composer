@@ -13,7 +13,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('reorder headings', () => {
   it('should reorder a note\'s top-level heading sections via the modal', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -49,19 +51,19 @@ describe('reorder headings', () => {
 
         function moveDown(headingText: string): void {
           const button = document.querySelector(
-            `.advanced-note-composer-reorder-headings-item[data-heading-text="${headingText}"] .advanced-note-composer-reorder-headings-down`
+            `.advanced-note-composer-reorder-headings-item[data-heading-text="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-headings-down`
           );
           if (!(button instanceof HTMLButtonElement)) {
-            throw new Error(`No move-down button for "${headingText}".`);
+            throw new TypeError(`No move-down button for "${headingText}".`);
           }
           button.click();
         }
 
         function clickReorder(): void {
-          const button = Array.from(document.querySelectorAll('.modal-button-container button'))
+          const button = [...document.querySelectorAll('.modal-button-container button')]
             .find((el) => el.textContent === 'Reorder');
           if (!(button instanceof HTMLButtonElement)) {
-            throw new Error('No Reorder button.');
+            throw new TypeError('No Reorder button.');
           }
           button.click();
         }
@@ -96,7 +98,9 @@ describe('reorder headings', () => {
 
   it('should reorder nested sibling headings, keeping them under their parent', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -129,20 +133,20 @@ describe('reorder headings', () => {
         return { note: await app.vault.read(file) };
 
         function clickReorder(): void {
-          const button = Array.from(document.querySelectorAll('.modal-button-container button'))
+          const button = [...document.querySelectorAll('.modal-button-container button')]
             .find((el) => el.textContent === 'Reorder');
           if (!(button instanceof HTMLButtonElement)) {
-            throw new Error('No Reorder button.');
+            throw new TypeError('No Reorder button.');
           }
           button.click();
         }
 
         function moveDown(headingText: string): void {
           const button = document.querySelector(
-            `.advanced-note-composer-reorder-headings-item[data-heading-text="${headingText}"] .advanced-note-composer-reorder-headings-down`
+            `.advanced-note-composer-reorder-headings-item[data-heading-text="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-headings-down`
           );
           if (!(button instanceof HTMLButtonElement)) {
-            throw new Error(`No move-down button for "${headingText}".`);
+            throw new TypeError(`No move-down button for "${headingText}".`);
           }
           button.click();
         }

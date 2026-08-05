@@ -18,7 +18,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('shouldShowModalInstructions', () => {
   it('should show the modal instruction bar only when the setting is enabled', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
@@ -56,11 +58,11 @@ describe('shouldShowModalInstructions', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should show modal instructions');
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new Error('"Should show modal instructions" toggle was not found.');
+            throw new TypeError('"Should show modal instructions" toggle was not found.');
           }
 
           const isEnabled = toggleEl.classList.contains('is-enabled');
@@ -79,8 +81,8 @@ describe('shouldShowModalInstructions', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const prompt = document.querySelector('.prompt');
-          const checkboxCount = prompt ? prompt.querySelectorAll('.prompt-instructions input[type="checkbox"]').length : 0;
-          const instructionCount = prompt ? prompt.querySelectorAll('.prompt-instructions .prompt-instruction').length : 0;
+          const checkboxCount = prompt ? prompt.querySelectorAll(':scope .prompt-instructions input[type="checkbox"]').length : 0;
+          const instructionCount = prompt ? prompt.querySelectorAll(':scope .prompt-instructions .prompt-instruction').length : 0;
 
           // Cancel the merge via the plugin's own unlock command. Aborting the setup flow closes the
           // Locked modal and releases the source-file lock, leaving no lingering modal or lock behind.

@@ -41,7 +41,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   public override async selectItem(): Promise<SelectItemResult> {
-    if (this.isMod || !this.item) {
+    if (this.isModifier || !this.item) {
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
       if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
         return {
@@ -81,16 +81,14 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
-    fileName = trimEnd({ str: fileName, suffix: '.md' });
+    fileName = trimEnd({ $string: fileName, suffix: '.md' });
     const fixedFileName = `${this.fixFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
-    let overriddenBasename: null | string = null;
-
-    if (this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder) {
-      overriddenBasename = await this.moveIntoOwnFolder(file);
-    }
+    const overriddenBasename = this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
+      ? await this.moveIntoOwnFolder(file)
+      : null;
 
     /*
      * A `splitIntoFolderNoteNameTemplate` override renames the note away from the typed name, so the
@@ -107,16 +105,20 @@ export class SplitItemSelector extends ItemSelectorBase {
     let shouldAddTitleToFrontmatter = false;
 
     switch (this.pluginSettingsComponent.settings.frontmatterTitleMode) {
-      case FrontmatterTitleMode.None:
+      case FrontmatterTitleMode.None: {
         break;
-      case FrontmatterTitleMode.UseAlways:
+      }
+      case FrontmatterTitleMode.UseAlways: {
         shouldAddTitleToFrontmatter = true;
         break;
-      case FrontmatterTitleMode.UseForInvalidTitleOnly:
+      }
+      case FrontmatterTitleMode.UseForInvalidTitleOnly: {
         shouldAddTitleToFrontmatter = isInvalidTitle;
         break;
-      default:
+      }
+      default: {
         throw new Error(`Invalid frontmatter title mode: ${this.pluginSettingsComponent.settings.frontmatterTitleMode as string}`);
+      }
     }
 
     if (shouldAddTitleToFrontmatter) {
@@ -184,7 +186,7 @@ export class SplitItemSelector extends ItemSelectorBase {
       template
     });
 
-    const noteName = trimEnd({ str: resolved.trim(), suffix: '.md' }).trim();
+    const noteName = trimEnd({ $string: resolved.trim(), suffix: '.md' }).trim();
     if (!noteName) {
       return file.basename;
     }

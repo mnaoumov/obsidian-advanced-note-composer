@@ -52,7 +52,7 @@ export function doesSelectionIntersectHeadingOfLevel(params: DoesSelectionInters
     }
     const sectionStartLine = heading.position.start.line;
     const nextBoundaryHeading = headings.slice(index + 1).find((candidate) => candidate.level <= level);
-    const sectionEndLine = nextBoundaryHeading ? nextBoundaryHeading.position.start.line - 1 : Number.POSITIVE_INFINITY;
+    const sectionEndLine = nextBoundaryHeading ? nextBoundaryHeading.position.start.line - 1 : Infinity;
     return sectionStartLine <= selectionEndLine && sectionEndLine >= selectionStartLine;
   });
 }

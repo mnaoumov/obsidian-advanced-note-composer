@@ -96,9 +96,9 @@ class MoveFolderModal extends FuzzySuggestModal<TFolder> {
     }
   }
 
-  public override selectSuggestion(value: FuzzyMatch<TFolder>, evt: KeyboardEvent | MouseEvent): void {
+  public override selectSuggestion(value: FuzzyMatch<TFolder>, $event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
-    super.selectSuggestion(value, evt);
+    super.selectSuggestion(value, $event);
   }
 }
 /* v8 ignore stop */

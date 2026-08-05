@@ -30,7 +30,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
-import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { shouldMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
@@ -61,9 +61,9 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 }));
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn().mockImplementation((cb: (f: DocumentFragment) => Promise<void>) => {
+  createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
-    return cb(fragment).then(() => fragment);
+    return callback(fragment).then(() => fragment);
   })
 }));
 
@@ -72,10 +72,10 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 vi.mock('../modals/merge-folder-into-file-modal.ts', () => ({
-  confirmMergeFolderIntoFile: vi.fn()
+  shouldMergeFolderIntoFile: vi.fn()
 }));
 
-const mockConfirm = vi.mocked(confirmMergeFolderIntoFile);
+const mockConfirm = vi.mocked(shouldMergeFolderIntoFile);
 
 let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
@@ -84,6 +84,10 @@ afterEach(() => {
   resourceLockComponent.unload();
   vi.restoreAllMocks();
 });
+
+function containsNotice(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {
+  return showNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent.includes(text));
+}
 
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
@@ -141,10 +145,6 @@ function initApp(files: Record<string, string>): void {
   resourceLockComponent.load();
 }
 
-function noticesContain(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {
-  return showNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent.includes(text));
-}
-
 describe('MergeFolderIntoFileCommandHandler', () => {
   it('should expose its command identity', () => {
     initApp({});
@@ -191,7 +191,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(noticesContain(showNotice, 'has no markdown notes to merge')).toBe(true);
+    expect(containsNotice(showNotice, 'has no markdown notes to merge')).toBe(true);
     expect(mockConfirm).not.toHaveBeenCalled();
   });
 
@@ -689,7 +689,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
   it('should fall back to the folder name when the template resolves to nothing', async () => {
     initApp({ 'src/a.md': 'alpha body' });
-    const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: '   ' });
+    const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: ' '.repeat(3) });
     mockConfirm.mockResolvedValue(true);
 
     await handler.executeFolder(getFolder('src'));

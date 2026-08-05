@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('move marked selection', () => {
   it('should move a marked selection to the cursor across notes and within the same note', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
@@ -34,7 +36,7 @@ describe('move marked selection', () => {
         const markNoticeEl = findMarkNotice();
         const markNoticeText = markNoticeEl?.textContent ?? '';
         const markNoticeButtonTexts = markNoticeEl
-          ? Array.from(markNoticeEl.querySelectorAll('button')).map((buttonEl) => buttonEl.textContent)
+          ? [...markNoticeEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent)
           : [];
 
         // The marked selection is persistently highlighted in the source editor.
@@ -68,13 +70,13 @@ describe('move marked selection', () => {
         // Once the mark is released (by the move), the permanent notice is hidden again and the
         // Persistent highlight is removed from every editor.
         await sleep(NOTICE_REMOVAL_IN_MILLISECONDS);
-        const markNoticeGoneAfterMoves = findMarkNotice() === null;
-        const highlightGoneAfterMoves = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
+        const isMarkNoticeGoneAfterMoves = findMarkNotice() === null;
+        const isHighlightGoneAfterMoves = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
 
-        return { crossFileSource, crossFileTarget, highlightAfterMark, highlightGoneAfterMoves, markNoticeButtonTexts, markNoticeGoneAfterMoves, markNoticeText, sameNote };
+        return { crossFileSource, crossFileTarget, highlightAfterMark, highlightGoneAfterMoves: isHighlightGoneAfterMoves, markNoticeButtonTexts, markNoticeGoneAfterMoves: isMarkNoticeGoneAfterMoves, markNoticeText, sameNote };
 
         function findMarkNotice(): Element | null {
-          for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
+          for (const el of activeDocument.querySelectorAll('.notice')) {
             if (el.textContent.includes('Smart cut & paste')) {
               return el;
             }

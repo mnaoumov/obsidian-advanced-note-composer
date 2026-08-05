@@ -81,7 +81,7 @@ export interface SwapSameFileContentParams {
  * @param b - The second region.
  * @returns Whether the regions overlap.
  */
-export function doRegionsOverlap(a: SwapRegion, b: SwapRegion): boolean {
+export function areRegionsOverlapping(a: SwapRegion, b: SwapRegion): boolean {
   return a.startOffset < b.endOffset && b.startOffset < a.endOffset;
 }
 

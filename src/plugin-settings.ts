@@ -69,13 +69,19 @@ export enum FrontmatterTitleMode {
  * alone, and `BesideFolder` keeps today's behavior as the default.
  */
 export enum MergeFolderIntoFileLocation {
-  /** Today's behavior, and the default: beside the merged folder, in the folder's own parent. */
+  /**
+  Today's behavior, and the default: beside the merged folder, in the folder's own parent.
+  */
   BesideFolder = 'BesideFolder',
 
-  /** Obsidian's own `Default location for new notes`, resolved through `fileManager.getNewFileParent`. */
+  /**
+  Obsidian's own `Default location for new notes`, resolved through `fileManager.getNewFileParent`.
+  */
   DefaultNewNoteLocation = 'DefaultNewNoteLocation',
 
-  /** Inside the merged folder itself. */
+  /**
+  Inside the merged folder itself.
+  */
   InsideFolder = 'InsideFolder'
 }
 

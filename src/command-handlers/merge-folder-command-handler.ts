@@ -14,7 +14,7 @@ import { Vault } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
-  exists,
+  doesExist,
   FileSystemType,
   isFile,
   isFolder,
@@ -110,7 +110,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
       );
@@ -155,9 +155,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const notice = showOperationPermanentProgressNotice({
       content: await createFragmentAsync(async (f) => {
         f.appendText('Advanced Note Composer: Merging folder ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
+        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
         f.appendText(' with ');
-        f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFolder.path }));
+        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFolder.path }));
         f.createEl('br');
         f.createEl('br');
         f.createDiv('is-loading');
@@ -316,7 +316,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         ignoredSourceFiles.push(sourceMdFile);
         continue;
       }
-      const isNewTargetFile = !exists({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
+      const isNewTargetFile = !doesExist({ app: this.app, path: targetMdFilePath, type: FileSystemType.File });
       const targetMdFile = isNewTargetFile
         ? await vaultTransaction.create(targetMdFilePath, '')
         : await getOrCreateFileSafe(this.app, targetMdFilePath);
@@ -355,7 +355,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         );
         for (const ignoredSourceFile of ignoredSourceFiles) {
           f.createEl('br');
-          f.appendChild(await renderInternalLink({ app: this.app, pathOrAbstractFile: ignoredSourceFile.path }));
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: ignoredSourceFile.path }));
         }
       })
     );

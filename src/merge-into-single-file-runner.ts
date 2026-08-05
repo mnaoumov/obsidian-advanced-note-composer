@@ -155,7 +155,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   const notice = showOperationPermanentProgressNotice({
     content: await createFragmentAsync(async (f) => {
       f.appendText(`Advanced Note Composer: ${progressLabel} into `);
-      f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: targetFile.path }));
+      f.append(await renderInternalLink({ app, pathOrAbstractFile: targetFile.path }));
       f.createEl('br');
       f.createEl('br');
       f.createDiv('is-loading');
@@ -348,7 +348,7 @@ async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNot
       );
       for (const ignoredSourceFile of ignoredSourceFiles) {
         f.createEl('br');
-        f.appendChild(await renderInternalLink({ app, pathOrAbstractFile: ignoredSourceFile.path }));
+        f.append(await renderInternalLink({ app, pathOrAbstractFile: ignoredSourceFile.path }));
       }
     })
   );

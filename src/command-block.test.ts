@@ -26,7 +26,7 @@ function createComponent(shouldBlock: boolean, excludePaths: string[]): PluginSe
   return strictProxy<PluginSettingsComponent>({ settings });
 }
 
-function createCtx(path: null | string): MarkdownFileInfo {
+function createContext(path: null | string): MarkdownFileInfo {
   const file = path === null ? null : strictProxy<TFile>({ path });
   return strictProxy<MarkdownFileInfo>({ file });
 }
@@ -34,22 +34,22 @@ function createCtx(path: null | string): MarkdownFileInfo {
 describe('isEditorCommandBlocked', () => {
   it('should block when blocking is on and the active path is excluded', () => {
     const component = createComponent(true, ['secret']);
-    expect(isEditorCommandBlocked(component, createCtx('secret/note.md'))).toBe(true);
+    expect(isEditorCommandBlocked(component, createContext('secret/note.md'))).toBe(true);
   });
 
   it('should not block when blocking is on but the active path is not excluded', () => {
     const component = createComponent(true, ['secret']);
-    expect(isEditorCommandBlocked(component, createCtx('public/note.md'))).toBe(false);
+    expect(isEditorCommandBlocked(component, createContext('public/note.md'))).toBe(false);
   });
 
   it('should not block when blocking is off even if the active path is excluded', () => {
     const component = createComponent(false, ['secret']);
-    expect(isEditorCommandBlocked(component, createCtx('secret/note.md'))).toBe(false);
+    expect(isEditorCommandBlocked(component, createContext('secret/note.md'))).toBe(false);
   });
 
   it('should not block when there is no active file', () => {
     const component = createComponent(true, ['secret']);
-    expect(isEditorCommandBlocked(component, createCtx(null))).toBe(false);
+    expect(isEditorCommandBlocked(component, createContext(null))).toBe(false);
   });
 });
 

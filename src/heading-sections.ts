@@ -98,6 +98,37 @@ export interface SplitReorderableSectionsResult {
 }
 
 /**
+ * Swaps the tree node with the given section index with its same-parent sibling `delta` places away,
+ * mutating the tree in place. Only same-parent siblings are ever exchanged, so each moved section keeps
+ * its descendants.
+ *
+ * @param roots - The tree roots.
+ * @param index - The section index of the node to move.
+ * @param delta - The signed sibling offset (`-1` up, `+1` down).
+ * @returns `true` when the node was moved, `false` when the move was out of range or the node was not found.
+ */
+export function didMoveSibling(roots: HeadingTreeNode[], index: number, delta: number): boolean {
+  const siblings = findSiblingList(roots, index);
+  if (!siblings) {
+    return false;
+  }
+  const position = siblings.findIndex((node) => node.index === index);
+  const target = position + delta;
+  if (target < 0 || target >= siblings.length) {
+    return false;
+  }
+  const current = siblings[position];
+  const swapped = siblings[target];
+  /* v8 ignore next 3 -- position (from a found node) and target (range-checked) are always in bounds. */
+  if (!current || !swapped) {
+    return false;
+  }
+  siblings[position] = swapped;
+  siblings[target] = current;
+  return true;
+}
+
+/**
  * Flattens the heading tree into indented rows in document (depth-first) order, annotating each row with
  * its depth and whether it can move up/down among its same-parent siblings.
  *
@@ -110,10 +141,10 @@ export function flattenHeadingTree(split: SplitReorderableSectionsResult): FlatH
   return rows;
 
   function visit(nodes: readonly HeadingTreeNode[], depth: number): void {
-    nodes.forEach((node, position) => {
+    for (const [position, node] of nodes.entries()) {
       const section = split.sections[node.index];
       if (!section) {
-        return;
+        continue;
       }
       rows.push({
         canMoveDown: position < nodes.length - 1,
@@ -123,7 +154,7 @@ export function flattenHeadingTree(split: SplitReorderableSectionsResult): FlatH
         section
       });
       visit(node.children, depth + 1);
-    });
+    }
   }
 }
 
@@ -186,37 +217,6 @@ export function joinReorderedSections(split: SplitReorderableSectionsResult, ord
 }
 
 /**
- * Swaps the tree node with the given section index with its same-parent sibling `delta` places away,
- * mutating the tree in place. Only same-parent siblings are ever exchanged, so each moved section keeps
- * its descendants.
- *
- * @param roots - The tree roots.
- * @param index - The section index of the node to move.
- * @param delta - The signed sibling offset (`-1` up, `+1` down).
- * @returns `true` when the node was moved, `false` when the move was out of range or the node was not found.
- */
-export function moveSibling(roots: HeadingTreeNode[], index: number, delta: number): boolean {
-  const siblings = findSiblingList(roots, index);
-  if (!siblings) {
-    return false;
-  }
-  const position = siblings.findIndex((node) => node.index === index);
-  const target = position + delta;
-  if (target < 0 || target >= siblings.length) {
-    return false;
-  }
-  const current = siblings[position];
-  const swapped = siblings[target];
-  /* v8 ignore next 3 -- position (from a found node) and target (range-checked) are always in bounds. */
-  if (!current || !swapped) {
-    return false;
-  }
-  siblings[position] = swapped;
-  siblings[target] = current;
-  return true;
-}
-
-/**
  * Splits a note into its fixed preamble, its flat heading sections, and the heading tree nesting them.
  * Each section owns the slice from its heading to the next heading of any level, so nested subheadings
  * are separate sections held as children of their parent node.
@@ -230,9 +230,9 @@ export function splitIntoReorderableSections(content: string, headings: readonly
   if (!first) {
     return { preamble: content, roots: [], sections: [] };
   }
-  const sections: HeadingSection[] = headings.map((heading, i) => {
+  const sections: HeadingSection[] = headings.map((heading, index) => {
     const start = heading.position.start.offset;
-    const nextHeading = headings[i + 1];
+    const nextHeading = headings[index + 1];
     const end = nextHeading ? nextHeading.position.start.offset : content.length;
     return {
       headingText: heading.heading,
@@ -247,7 +247,7 @@ export function splitIntoReorderableSections(content: string, headings: readonly
 function buildTree(headings: readonly HeadingCache[]): HeadingTreeNode[] {
   const roots: HeadingTreeNode[] = [];
   const stack: HeadingTreeStackEntry[] = [];
-  headings.forEach((heading, index) => {
+  for (const [index, heading] of headings.entries()) {
     const node: HeadingTreeNode = { children: [], index };
     let top = stack.at(-1);
     while (top && top.level >= heading.level) {
@@ -261,7 +261,7 @@ function buildTree(headings: readonly HeadingCache[]): HeadingTreeNode[] {
       roots.push(node);
     }
     stack.push({ level: heading.level, node });
-  });
+  }
   return roots;
 }
 

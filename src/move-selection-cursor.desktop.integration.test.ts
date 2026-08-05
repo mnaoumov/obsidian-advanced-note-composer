@@ -41,7 +41,9 @@ interface OccurrenceResult {
 describe('cursor follows the moved content (issue #144)', () => {
   it('selects the moved text in the target for move-here, move-to-top, and move-to-bottom', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
 
@@ -140,7 +142,9 @@ describe('cursor follows the moved content (issue #144)', () => {
 
   it('lands on the moved text at the bottom, not on an identical copy earlier in the target (issue #175)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<OccurrenceResult> {
         const SETTLE_IN_MILLISECONDS = 400;
         // The target already contains the moved text — with the same blank-line prefix the default
@@ -225,7 +229,9 @@ describe('cursor follows the moved content (issue #144)', () => {
 
   it('places a collapsed cursor and shows a notice in Notice feedback mode (issue #176)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<NoticeFeedbackResult> {
         const SETTLE_IN_MILLISECONDS = 400;
         const FEEDBACK_SETTING_NAME = 'Smart cut & paste completion feedback';
@@ -253,8 +259,8 @@ describe('cursor follows the moved content (issue #144)', () => {
           await waitUntil({
             message: 'completion notice did not appear for the Notice feedback mode',
             predicate: () => {
-              noticeTexts = Array.from(activeDocument.querySelectorAll('.notice')).map((el) => el.textContent);
-              if (!noticeTexts.some((text) => text.includes('Moved the marked selection into'))) {
+              noticeTexts = [...activeDocument.querySelectorAll('.notice')].map((el) => el.textContent);
+              if (noticeTexts.every((text) => !text.includes('Moved the marked selection into'))) {
                 return false;
               }
               const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
@@ -311,14 +317,14 @@ describe('cursor follows the moved content (issue #144)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const selectEl = settingItem?.querySelector('select');
           if (!(selectEl instanceof HTMLSelectElement)) {
-            throw new Error(`"${settingName}" dropdown was not found.`);
+            throw new TypeError(`"${settingName}" dropdown was not found.`);
           }
 
-          const option = Array.from(selectEl.options).find((el) => el.text === optionText);
+          const option = [...selectEl.options].find((el) => el.text === optionText);
           if (!option) {
             throw new Error(`"${optionText}" option was not found in "${settingName}".`);
           }
@@ -347,7 +353,9 @@ describe('cursor follows the moved content (issue #144)', () => {
   // On, so an empty selection here is a real absence rather than a missed window.
   it('leaves the cursor alone for edge moves when their jump settings are off, but still jumps at the cursor', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         // Comfortably past the jump's own timings (200 ms before the target opens, then a poll for the
@@ -446,11 +454,11 @@ describe('cursor follows the moved content (issue #144)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = Array.from(settingTab.containerEl.querySelectorAll('.setting-item'));
+          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
           const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
 
           if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {

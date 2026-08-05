@@ -25,11 +25,13 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('folder operation confirmation dialogs (issue #154)', () => {
   it('flattens the folder when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setToggle('Should ask before flattening a folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
         try {
           await trashIfExists('fc-note.md');
           await trashIfExists('fc-flat');
@@ -43,13 +45,13 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           // The dialog appears, listing the items it will move.
           await waitUntil({ message: 'flatten dialog did not open', predicate: () => findButton('Flatten') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const confirmButtonPresent = findButton('Flatten') !== null;
-          const listsTheItem = Array.from(document.querySelectorAll('.modal-content code')).some((el) => el.textContent === 'fc-note.md');
+          const isConfirmButtonPresent = findButton('Flatten') !== null;
+          const isListsTheItem = [...document.querySelectorAll('.modal-content code')].some((el) => el.textContent === 'fc-note.md');
           // Flatten has no target to reselect, so "Change target" is rendered but disabled.
-          const changeTargetDisabled = findButton('Change target')?.disabled ?? false;
+          const isChangeTargetDisabled = findButton('Change target')?.disabled ?? false;
           // Issue #165: the folder AND its destination are both clickable links. `fc-flat` is top-level,
           // So its destination is the vault root, which is labelled `/` (its own path is blank).
-          const linkTexts = Array.from(document.querySelectorAll('.modal-content a')).map((el) => el.textContent);
+          const linkTexts = [...document.querySelectorAll('.modal-content a')].map((el) => el.textContent);
 
           findButton('Flatten')?.click();
 
@@ -59,16 +61,16 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const promoted = app.vault.getAbstractFileByPath('fc-note.md') !== null
+          const isPromoted = app.vault.getAbstractFileByPath('fc-note.md') !== null
             && app.vault.getAbstractFileByPath('fc-flat/fc-note.md') === null;
 
-          return { changeTargetDisabled, confirmButtonPresent, linkTexts, listsTheItem, promoted };
+          return { changeTargetDisabled: isChangeTargetDisabled, confirmButtonPresent: isConfirmButtonPresent, linkTexts, listsTheItem: isListsTheItem, promoted: isPromoted };
         } finally {
-          await setToggle('Should ask before flattening a folder', originalShouldAsk);
+          await didSetToggle('Should ask before flattening a folder', isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -84,7 +86,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function setToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -93,11 +95,11 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldBeEnabled) {
@@ -131,11 +133,13 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('does not flatten the folder when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setToggle('Should ask before flattening a folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
         try {
           await trashIfExists('fc-keep.md');
           await trashIfExists('fc-flat-cancel');
@@ -153,16 +157,16 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Nothing moved: the child is still inside the folder and nothing landed at the root.
-          const untouched = app.vault.getAbstractFileByPath('fc-flat-cancel/fc-keep.md') !== null
+          const isUntouched = app.vault.getAbstractFileByPath('fc-flat-cancel/fc-keep.md') !== null
             && app.vault.getAbstractFileByPath('fc-keep.md') === null;
 
-          return { untouched };
+          return { untouched: isUntouched };
         } finally {
-          await setToggle('Should ask before flattening a folder', originalShouldAsk);
+          await didSetToggle('Should ask before flattening a folder', isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -178,7 +182,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function setToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -187,11 +191,11 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldBeEnabled) {
@@ -218,11 +222,13 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('moves the folder when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setToggle('Should ask before moving a folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
         try {
           await trashIfExists('fc-mv-dst');
           await trashIfExists('fc-mv-src');
@@ -241,11 +247,11 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           // The confirmation dialog appears after a target is chosen.
           await waitUntil({ message: 'move dialog did not open', predicate: () => findButton('Move') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const confirmButtonPresent = findButton('Move') !== null;
+          const isConfirmButtonPresent = findButton('Move') !== null;
           // The move HAS a picked target, so it can be changed from the dialog.
-          const changeTargetEnabled = !(findButton('Change target')?.disabled ?? true);
+          const isChangeTargetEnabled = !(findButton('Change target')?.disabled ?? true);
           // Issue #165: the source AND the destination are both clickable links.
-          const linkTexts = Array.from(document.querySelectorAll('.modal-content a')).map((el) => el.textContent);
+          const linkTexts = [...document.querySelectorAll('.modal-content a')].map((el) => el.textContent);
 
           findButton('Move')?.click();
 
@@ -255,27 +261,27 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const moved = app.vault.getAbstractFileByPath('fc-mv-dst/fc-mv-src/inner.md') !== null
+          const isMoved = app.vault.getAbstractFileByPath('fc-mv-dst/fc-mv-src/inner.md') !== null
             && app.vault.getAbstractFileByPath('fc-mv-src') === null;
 
-          return { changeTargetEnabled, confirmButtonPresent, linkTexts, moved };
+          return { changeTargetEnabled: isChangeTargetEnabled, confirmButtonPresent: isConfirmButtonPresent, linkTexts, moved: isMoved };
         } finally {
-          await setToggle('Should ask before moving a folder', originalShouldAsk);
+          await didSetToggle('Should ask before moving a folder', isOriginalShouldAsk);
         }
 
         async function chooseInPicker(itemPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No move picker input.');
+            throw new TypeError('No move picker input.');
           }
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === itemPath) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -291,7 +297,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function setToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -300,11 +306,11 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldBeEnabled) {
@@ -336,11 +342,13 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('does not move the folder when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const originalShouldAsk = await setToggle('Should ask before moving a folder', true);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
         try {
           await trashIfExists('fc-mv-dst-cancel');
           await trashIfExists('fc-mv-src-cancel');
@@ -363,27 +371,27 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Nothing moved: the folder is still where it was and the destination stayed empty.
-          const untouched = app.vault.getAbstractFileByPath('fc-mv-src-cancel/inner.md') !== null
+          const isUntouched = app.vault.getAbstractFileByPath('fc-mv-src-cancel/inner.md') !== null
             && app.vault.getAbstractFileByPath('fc-mv-dst-cancel/fc-mv-src-cancel') === null;
 
-          return { untouched };
+          return { untouched: isUntouched };
         } finally {
-          await setToggle('Should ask before moving a folder', originalShouldAsk);
+          await didSetToggle('Should ask before moving a folder', isOriginalShouldAsk);
         }
 
         async function chooseInPicker(itemPath: string): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('No move picker input.');
+            throw new TypeError('No move picker input.');
           }
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-item')).some((el) => el.textContent === itemPath) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
           input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.modal-button-container button'))) {
+          for (const el of document.querySelectorAll('.modal-button-container button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
               return el;
             }
@@ -399,7 +407,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function setToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -408,11 +416,11 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${settingName}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
           if (wasEnabled !== shouldBeEnabled) {

@@ -33,8 +33,8 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './extract-after-cursor-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, ctx: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, ctx: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
+  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
@@ -77,7 +77,7 @@ interface HandlerParams {
   readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
-function createMockCtx(file: null | TFile): MarkdownFileInfo {
+function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
@@ -132,13 +132,13 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     expect(handler.icon).toBe('lucide-arrow-down-from-line');
   });
 
-  it('should return early when ctx.file is null', async () => {
+  it('should return early when context.file is null', async () => {
     const params = createMockParams();
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
-    const ctx = createMockCtx(null);
+    const context = createMockContext(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
@@ -148,19 +148,20 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     const mockFragment = strictProxy<DocumentFragment>({
+      append: vi.fn(),
       appendChild: vi.fn(),
       appendText: vi.fn()
     });
-    mockCreateFragmentAsync.mockImplementation(async (cb) => {
-      await (cb as (f: DocumentFragment) => Promise<void>)(mockFragment);
+    mockCreateFragmentAsync.mockImplementation(async (callback) => {
+      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
       return mockFragment;
     });
     mockRenderInternalLink.mockResolvedValue(createEl('a'));
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
@@ -171,11 +172,11 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
 
     mockPrepareForSplitFile.mockResolvedValue(null);
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalled();
     expect(MockSplitComposer).not.toHaveBeenCalled();
@@ -186,7 +187,7 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
-    const ctx = createMockCtx(file);
+    const context = createMockContext(file);
     const targetFile = createMockFile();
 
     const splitResult = {
@@ -207,7 +208,7 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
     const mockSplitFile = vi.fn().mockResolvedValue(undefined);
     MockSplitComposer.prototype.splitFile = mockSplitFile;
 
-    await handler.executeEditor(editor, ctx);
+    await handler.executeEditor(editor, context);
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(
       { ch: 'some text'.length, line: 10 },
@@ -256,12 +257,12 @@ describe('ExtractAfterCursorEditorCommandHandler', () => {
   it('should block canExecuteEditor when the command is blocked on the path', () => {
     const params = createMockParams(false, true, true);
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(false);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(false);
   });
 
   it('should allow canExecuteEditor when the command is not blocked on the path', () => {
     const params = createMockParams(false, true, false);
     const handler = toTestable(new ExtractAfterCursorEditorCommandHandler(params));
-    expect(handler.canExecuteEditor(createMockEditor(), createMockCtx(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
   });
 });

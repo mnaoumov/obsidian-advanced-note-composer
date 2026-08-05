@@ -221,12 +221,12 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept a valid regular expression literal', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, propertyName, ['/^Inbox\\/[^\\/]*$/'])).toBeUndefined();
+        expect(await validateProperty(component, propertyName, [String.raw`/^Inbox\/[^\/]*$/`])).toBeUndefined();
       });
 
       it('should reject an un-parseable regular expression literal', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, propertyName, ['/^Inbox\\/'])).toBe('Invalid regular expression: /^Inbox\\/');
+        expect(await validateProperty(component, propertyName, [String.raw`/^Inbox\/`])).toBe(String.raw`Invalid regular expression: /^Inbox\/`);
       });
 
       it('should report the first invalid entry of a mixed list', async () => {
@@ -296,7 +296,7 @@ describe('PluginSettingsComponent', () => {
 
     it('should drop a blank sub-extension when converting', async () => {
       const component = createComponent();
-      const legacySettings: GenericObject = { markdownAttachmentSubExtensions: ['', '   ', '...'] };
+      const legacySettings: GenericObject = { markdownAttachmentSubExtensions: ['', ' '.repeat(3), '...'] };
       await component.runLegacyConverters(legacySettings);
       expect(legacySettings['attachmentExtensions']).toEqual([]);
     });

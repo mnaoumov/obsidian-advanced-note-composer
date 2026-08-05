@@ -16,7 +16,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('switch to smart cut from the split/extract picker', () => {
   it('marks the selection and stays on the source note without switching to the highlighted suggestion', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
@@ -42,16 +44,16 @@ describe('switch to smart cut from the split/extract picker', () => {
         // Type the target's basename so it is the highlighted suggestion — but never choose it (no Enter).
         const input = document.querySelector('.prompt-input');
         if (!(input instanceof HTMLInputElement)) {
-          throw new Error('No split picker input.');
+          throw new TypeError('No split picker input.');
         }
         input.value = target.basename;
         input.dispatchEvent(new Event('input', { bubbles: true }));
-        await waitUntil({ predicate: () => Array.from(document.querySelectorAll('.suggestion-title')).some((el) => el.textContent.includes(target.basename)) });
+        await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
         // Click the picker's "Switch to smart cut & paste" button.
         const switchButton = findPickerSwitchButton();
-        const switchButtonPresent = switchButton !== null;
+        const isSwitchButtonPresent = switchButton !== null;
         switchButton?.click();
 
         // The mark is re-established (permanent notice) and the picker closes — but the active note must
@@ -61,7 +63,7 @@ describe('switch to smart cut from the split/extract picker', () => {
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
         const activePath = app.workspace.getActiveFile()?.path ?? '';
-        const markNoticeShown = findMarkNotice() !== null;
+        const isMarkNoticeShown = findMarkNotice() !== null;
         const sourceContent = await app.vault.read(source);
         const targetContent = await app.vault.read(target);
 
@@ -69,10 +71,10 @@ describe('switch to smart cut from the split/extract picker', () => {
         app.commands.executeCommandById(`${pluginId}:cancel-move`);
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-        return { activePath, markNoticeShown, sourceContent, switchButtonPresent, targetContent };
+        return { activePath, markNoticeShown: isMarkNoticeShown, sourceContent, switchButtonPresent: isSwitchButtonPresent, targetContent };
 
         function findPickerSwitchButton(): HTMLButtonElement | null {
-          for (const el of Array.from(document.querySelectorAll('.advanced-note-composer-switch-to-smart-cut button'))) {
+          for (const el of document.querySelectorAll('.advanced-note-composer-switch-to-smart-cut button')) {
             if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to smart cut & paste') {
               return el;
             }
@@ -81,7 +83,7 @@ describe('switch to smart cut from the split/extract picker', () => {
         }
 
         function findMarkNotice(): Element | null {
-          for (const el of Array.from(activeDocument.querySelectorAll('.notice'))) {
+          for (const el of activeDocument.querySelectorAll('.notice')) {
             if (el.textContent.includes('Smart cut & paste')) {
               return el;
             }

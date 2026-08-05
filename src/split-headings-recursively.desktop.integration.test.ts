@@ -47,7 +47,9 @@ interface TemplateSettings {
 describe('split headings recursively', () => {
   it('should mirror the heading hierarchy as a folder tree', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ROOT_FOLDER = 'RecA';
@@ -82,9 +84,9 @@ describe('split headings recursively', () => {
          * being driven, and `Should split headings automatically` stays OFF to show the recursive command
          * does not lean on it.
          */
-        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', false);
-        const originalShouldSplitHeadingsAutomatically = await setToggle('Should split headings automatically', false);
-        const originalShouldAsk = await setToggle('Should ask before splitting', true);
+        const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', false);
+        const isOriginalShouldSplitHeadingsAutomatically = await didSetToggle('Should split headings automatically', false);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', true);
         try {
           // Clean up any leftover from a previous run so no folder name is de-duplicated.
           await removeIfExists(ROOT_FOLDER);
@@ -103,20 +105,20 @@ describe('split headings recursively', () => {
           // The whole restructure is confirmed once, up front — drive that real dialog.
           await waitUntil({
             message: 'the recursive split confirmation dialog did not open',
-            predicate: () => Array.from(document.querySelectorAll('.modal-title')).some((el) => el.textContent === 'Split note recursively')
+            predicate: () => [...document.querySelectorAll('.modal-title')].some((el) => el.textContent === 'Split note recursively')
           });
           // Scope to THIS dialog: a fresh vault also shows the plugin's release-notes modal, and reading
           // `.modal-content` document-wide picks that one up instead.
-          const confirmationModalEl = Array.from(document.querySelectorAll('.modal'))
+          const confirmationModalEl = [...document.querySelectorAll('.modal')]
             .find((el) => el.querySelector('.modal-title')?.textContent === 'Split note recursively');
           if (!confirmationModalEl) {
             throw new Error('The recursive split confirmation modal was not found.');
           }
           const confirmationText = confirmationModalEl.querySelector('.modal-content')?.textContent ?? '';
-          const confirmButtonEl = Array.from(confirmationModalEl.querySelectorAll('.modal-button-container button'))
+          const confirmButtonEl = [...confirmationModalEl.querySelectorAll(':scope .modal-button-container button')]
             .find((el) => el.textContent === 'Split');
           if (!(confirmButtonEl instanceof HTMLElement)) {
-            throw new Error('The "Split" button was not found.');
+            throw new TypeError('The "Split" button was not found.');
           }
           confirmButtonEl.click();
 
@@ -131,7 +133,7 @@ describe('split headings recursively', () => {
           await waitUntil({
             message: 'the heading hierarchy was not mirrored as a folder tree',
             predicate: () => {
-              wasPerNoteConfirmationShown ||= Array.from(document.querySelectorAll('.modal-title')).some((el) => el.textContent === 'Split file');
+              wasPerNoteConfirmationShown ||= [...document.querySelectorAll('.modal-title')].some((el) => el.textContent === 'Split file');
               return expectedPaths.every((path) => app.vault.getAbstractFileByPath(path) instanceof obsidianModule.TFile);
             }
           });
@@ -152,9 +154,9 @@ describe('split headings recursively', () => {
             wasPerNoteConfirmationShown
           };
         } finally {
-          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
-          await setToggle('Should split headings automatically', originalShouldSplitHeadingsAutomatically);
-          await setToggle('Should ask before splitting', originalShouldAsk);
+          await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
+          await didSetToggle('Should split headings automatically', isOriginalShouldSplitHeadingsAutomatically);
+          await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
         }
 
         async function removeIfExists(path: string): Promise<void> {
@@ -186,7 +188,7 @@ describe('split headings recursively', () => {
           return view.editor;
         }
 
-        async function setToggle(name: string, value: boolean): Promise<boolean> {
+        async function didSetToggle(name: string, shouldEnable: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -195,14 +197,14 @@ describe('split headings recursively', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${name}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
-          if (wasEnabled !== value) {
+          if (wasEnabled !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }
@@ -240,7 +242,9 @@ describe('split headings recursively', () => {
 
   it('should apply the split template to every note it creates, exactly once (issue #172)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID, sourcePath: TEMPLATE_SOURCE_PATH, splitTemplate: TEMPLATE_SPLIT_TEMPLATE },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId, sourcePath, splitTemplate }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ROOT_FOLDER = 'TplA';
@@ -267,9 +271,9 @@ describe('split headings recursively', () => {
 
         const settingsComponent = findSettingsComponent();
         const originalSplitTemplate = settingsComponent.settings.splitTemplate;
-        const originalShouldAsk = settingsComponent.settings.shouldAskBeforeSplitting;
-        const originalShouldSplitIntoFolder = settingsComponent.settings.shouldSplitIntoFolder;
-        const originalShouldSplitHeadingsAutomatically = settingsComponent.settings.shouldSplitHeadingsAutomatically;
+        const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeSplitting;
+        const isOriginalShouldSplitIntoFolder = settingsComponent.settings.shouldSplitIntoFolder;
+        const isOriginalShouldSplitHeadingsAutomatically = settingsComponent.settings.shouldSplitHeadingsAutomatically;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.splitTemplate = splitTemplate;
@@ -319,9 +323,9 @@ describe('split headings recursively', () => {
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.splitTemplate = originalSplitTemplate;
-            settings.shouldAskBeforeSplitting = originalShouldAsk;
-            settings.shouldSplitIntoFolder = originalShouldSplitIntoFolder;
-            settings.shouldSplitHeadingsAutomatically = originalShouldSplitHeadingsAutomatically;
+            settings.shouldAskBeforeSplitting = isOriginalShouldAsk;
+            settings.shouldSplitIntoFolder = isOriginalShouldSplitIntoFolder;
+            settings.shouldSplitHeadingsAutomatically = isOriginalShouldSplitHeadingsAutomatically;
           });
         }
 
@@ -409,7 +413,9 @@ describe('split headings recursively', () => {
 
   it('should root the tree in Obsidian\'s default new note folder, keeping it nested (issue #173)', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: { pluginId: PLUGIN_ID },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         /*
@@ -447,9 +453,9 @@ describe('split headings recursively', () => {
         // `Should split into folder` stays OFF here too: the recursive split builds the folder tree itself,
         // And the redirect must not quietly depend on that setting. The up-front dialog is covered by the
         // First case, so it is skipped here.
-        const originalShouldSplitIntoFolder = await setToggle('Should split into folder', false);
-        const originalShouldAsk = await setToggle('Should ask before splitting', false);
-        const originalShouldSplitRecursivelyIntoDefaultNewNoteFolder = await setToggle('Should split recursively into the default new note folder', true);
+        const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', false);
+        const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
+        const isOriginalShouldSplitRecursivelyIntoDefaultNewNoteFolder = await didSetToggle('Should split recursively into the default new note folder', true);
         try {
           // Clean up any leftover from a previous run so no folder name is de-duplicated.
           await removeIfExists(DEFAULT_NEW_NOTE_FOLDER);
@@ -501,9 +507,9 @@ describe('split headings recursively', () => {
         } finally {
           app.vault.setConfig('newFileLocation', originalNewFileLocation);
           app.vault.setConfig('newFileFolderPath', originalNewFileFolderPath);
-          await setToggle('Should split into folder', originalShouldSplitIntoFolder);
-          await setToggle('Should ask before splitting', originalShouldAsk);
-          await setToggle('Should split recursively into the default new note folder', originalShouldSplitRecursivelyIntoDefaultNewNoteFolder);
+          await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
+          await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
+          await didSetToggle('Should split recursively into the default new note folder', isOriginalShouldSplitRecursivelyIntoDefaultNewNoteFolder);
         }
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
@@ -526,7 +532,7 @@ describe('split headings recursively', () => {
           }
         }
 
-        async function setToggle(name: string, value: boolean): Promise<boolean> {
+        async function didSetToggle(name: string, shouldEnable: boolean): Promise<boolean> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -535,14 +541,14 @@ describe('split headings recursively', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = Array.from(tab.containerEl.querySelectorAll('.setting-item'))
+          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
             .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
-            throw new Error(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${name}" toggle was not found.`);
           }
           const wasEnabled = toggle.classList.contains('is-enabled');
-          if (wasEnabled !== value) {
+          if (wasEnabled !== shouldEnable) {
             toggle.click();
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
           }
