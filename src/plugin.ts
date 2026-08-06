@@ -98,47 +98,42 @@ export class Plugin extends PluginBase {
 
     // The three move commands are created up front so the marked-selection notice can offer them as
     // Buttons (and reflect their availability) — see MoveNoticeComponent.
-    const moveAtCursorHandler = new MoveMarkedSelectionHereEditorCommandHandler({
-      app: this.app,
-      consoleDebugComponent: this.consoleDebugComponent,
-      isAdvanced: false,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent,
-      resourceLockComponent
-    });
-    const moveAtCursorAdvancedHandler = new MoveMarkedSelectionHereEditorCommandHandler({
-      app: this.app,
-      consoleDebugComponent: this.consoleDebugComponent,
-      isAdvanced: true,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent,
-      resourceLockComponent
-    });
-    const moveToTopHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
-      app: this.app,
-      consoleDebugComponent: this.consoleDebugComponent,
-      insertMode: InsertMode.Prepend,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent,
-      resourceLockComponent
-    });
-    const moveToBottomHandler = new MoveMarkedSelectionToEdgeEditorCommandHandler({
-      app: this.app,
-      consoleDebugComponent: this.consoleDebugComponent,
-      insertMode: InsertMode.Append,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent,
-      resourceLockComponent
-    });
+    // Every handler that both backs a notice button AND is registered as a command is built through a
+    // Builder rather than shared. Since obsidian-dev-utils 90 a command handler instance cannot be
+    // Registered twice, and the factory below runs once per menu surface, so handing it the same instance
+    // Throws and the whole plugin fails to load. The notice keeps its own unregistered instance: it calls
+    // The handler directly (canExecuteInActiveEditor / executeInActiveEditor / cancelMove), which reads
+    // Constructor state only, exactly like the already-unregistered swapMarkedSelectionHandler below.
+    const buildMoveAtCursorHandler = (isAdvanced: boolean): MoveMarkedSelectionHereEditorCommandHandler =>
+      new MoveMarkedSelectionHereEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        isAdvanced,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      });
+    const buildMoveToEdgeHandler = (insertMode: InsertMode): MoveMarkedSelectionToEdgeEditorCommandHandler =>
+      new MoveMarkedSelectionToEdgeEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        insertMode,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      });
+    const buildCancelMoveCommandHandler = (): CancelMoveCommandHandler =>
+      new CancelMoveCommandHandler({
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      });
 
-    const cancelMoveCommandHandler = new CancelMoveCommandHandler({
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent
-    });
+    const moveAtCursorHandler = buildMoveAtCursorHandler(false);
+    const moveToTopHandler = buildMoveToEdgeHandler(InsertMode.Prepend);
+    const moveToBottomHandler = buildMoveToEdgeHandler(InsertMode.Append);
+    const cancelMoveCommandHandler = buildCancelMoveCommandHandler();
 
     // Backs the notice's `Swap with selection` button only (not registered as a command, so no hotkey
     // And no main-editor key interception).
@@ -164,23 +159,26 @@ export class Plugin extends PluginBase {
       })
     );
 
-    const extractCurrentSelectionEditorCommandHandler = new ExtractCurrentSelectionEditorCommandHandler({
-      app: this.app,
-      consoleDebugComponent: this.consoleDebugComponent,
-      moveNoticeComponent,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent,
-      resourceLockComponent,
-      selectionHighlightComponent
-    });
-    const openSplitModalCommandHandler = new OpenSplitModalCommandHandler({
-      app: this.app,
-      extractCurrentSelectionEditorCommandHandler,
-      moveSelectionBuffer,
-      pluginNoticeComponent: this.pluginNoticeComponent
-    });
-    moveNoticeComponent.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
+    const buildExtractCurrentSelectionEditorCommandHandler = (): ExtractCurrentSelectionEditorCommandHandler =>
+      new ExtractCurrentSelectionEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      });
+    const buildOpenSplitModalCommandHandler = (): OpenSplitModalCommandHandler =>
+      new OpenSplitModalCommandHandler({
+        app: this.app,
+        extractCurrentSelectionEditorCommandHandler: buildExtractCurrentSelectionEditorCommandHandler(),
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      });
+
+    moveNoticeComponent.setOpenSplitModalCommandHandler(buildOpenSplitModalCommandHandler());
 
     await this.commandHandlerComponent.registerCommandHandlers(() => [
       new MergeFileCommandHandler({
@@ -190,7 +188,7 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent
       }),
-      extractCurrentSelectionEditorCommandHandler,
+      buildExtractCurrentSelectionEditorCommandHandler(),
       new ExtractThisHeadingEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
@@ -240,12 +238,12 @@ export class Plugin extends PluginBase {
         resourceLockComponent,
         selectionHighlightComponent
       }),
-      moveAtCursorHandler,
-      moveAtCursorAdvancedHandler,
-      moveToTopHandler,
-      moveToBottomHandler,
-      cancelMoveCommandHandler,
-      openSplitModalCommandHandler,
+      buildMoveAtCursorHandler(false),
+      buildMoveAtCursorHandler(true),
+      buildMoveToEdgeHandler(InsertMode.Prepend),
+      buildMoveToEdgeHandler(InsertMode.Append),
+      buildCancelMoveCommandHandler(),
+      buildOpenSplitModalCommandHandler(),
       new MergeFolderCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,

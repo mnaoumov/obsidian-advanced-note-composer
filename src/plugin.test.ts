@@ -228,6 +228,31 @@ describe('Plugin', () => {
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 
+  it('should build fresh command handler instances on every factory call', async () => {
+    const plugin = new Plugin(createMockApp(), createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    const registerCommandHandlers = vi.fn();
+    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
+
+    await internals.onloadImpl();
+
+    // CommandHandlerComponent calls the factory once per menu surface, and since obsidian-dev-utils 90 a
+    // Command handler instance cannot be registered twice — so a factory closing over an instance built
+    // Outside it throws and the whole plugin fails to load in real Obsidian. Unit tests never caught that
+    // While they called the factory only once, which is exactly how it shipped.
+    const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
+    const firstBatch = buildCommandHandlers();
+    const secondBatch = buildCommandHandlers();
+
+    expect(secondBatch).toHaveLength(firstBatch.length);
+    const firstBatchInstances = new Set<CommandHandler>(firstBatch);
+    const shared = secondBatch.filter((commandHandler) => firstBatchInstances.has(commandHandler));
+    expect(shared).toEqual([]);
+  });
+
   it('should register an unload cleanup that releases the marked selection', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
