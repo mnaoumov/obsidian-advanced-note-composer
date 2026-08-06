@@ -55,7 +55,7 @@ const FLATTEN_MODES: readonly FlattenMode[] = [
 ];
 
 export class Plugin extends PluginBase {
-  protected override onloadImpl(): void {
+  protected override async onloadImpl(): Promise<void> {
     const pluginSettingsComponent = this.addChild(
       new PluginSettingsComponent({
         dataHandler: new PluginDataHandler(this),
@@ -182,7 +182,7 @@ export class Plugin extends PluginBase {
     });
     moveNoticeComponent.setOpenSplitModalCommandHandler(openSplitModalCommandHandler);
 
-    this.commandHandlerComponent.registerCommandHandlers(() => [
+    await this.commandHandlerComponent.registerCommandHandlers(() => [
       new MergeFileCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,

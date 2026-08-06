@@ -175,7 +175,7 @@ interface PluginInternals {
   _consoleDebugComponent: ConsoleDebugComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
   _resourceLockComponent: ResourceLockComponent;
-  onloadImpl(): void;
+  onloadImpl(): Promise<void>;
 }
 
 function createMockApp(): App {
@@ -191,7 +191,7 @@ function createMockManifest(): PluginManifest {
 }
 
 describe('Plugin', () => {
-  it('should wire up all components in onloadImpl', () => {
+  it('should wire up all components in onloadImpl', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
@@ -201,7 +201,7 @@ describe('Plugin', () => {
     internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
-    internals.onloadImpl();
+    await internals.onloadImpl();
 
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
@@ -228,7 +228,7 @@ describe('Plugin', () => {
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 
-  it('should register an unload cleanup that releases the marked selection', () => {
+  it('should register an unload cleanup that releases the marked selection', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
@@ -237,7 +237,7 @@ describe('Plugin', () => {
     internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers: vi.fn() });
     const registerSpy = vi.spyOn(plugin, 'register');
 
-    internals.onloadImpl();
+    await internals.onloadImpl();
 
     const cleanups = registerSpy.mock.calls.map((call) => call[0]);
     expect(cleanups.length).toBeGreaterThan(0);
