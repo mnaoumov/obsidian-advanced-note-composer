@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 5.3.1
+
+- fix: build fresh command handler instances on every factory call
+- chore: update libs
+- fix(test): build the command handlers through the registered factory
+- feat: re #183
+- chore: update libs
+- feat: show a progress and completion notice for every operation (#182)
+- fix: re #181
+- chore(vitest): adopt the shared Obsidian plugin vitest configuration
+- feat: re #177
+- feat: re #178
+- fix: re #179
+- refactor(prism): register the template language through ODU's SyntaxHighlightingComponent
+
 ## 5.3.0
 
 - refactor(settings): move the settings tab onto the declarative settings API
