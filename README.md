@@ -277,6 +277,8 @@ Attachments need no special handling in `Flatten folder...`: because every direc
 
 The two folder-only commands do have to be careful, because notes are staying behind. A child folder is left where it is when it holds the attachments of a note that is *not* moving with it, as resolved by Obsidian's own attachment-folder setting — which means an attachment-location plugin such as Custom Attachment Location is honoured too. Note the flip side: when your attachments live in the vault root or in one fixed folder, a folder you merely *named* `attachments` is not any note's attachment folder, so it is promoted like any other.
 
+That is also why the two folder-only commands hide themselves when the only child folder they could promote is such an attachment folder: there would be nothing to move. The one exception is a vault running an attachment-location plugin — resolving the folder is then up to that plugin and cannot be answered while the menu is being built, so the commands stay listed and tell you nothing would move if you run one.
+
 ## Move folder to…
 
 The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.

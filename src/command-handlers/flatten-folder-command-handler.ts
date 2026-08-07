@@ -21,7 +21,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getAvailablePathForAbstractFile } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
-import { collectFlattenItems } from '../flatten-items.ts';
+import {
+  collectFlattenItems,
+  collectFlattenItemsSyncOrNull
+} from '../flatten-items.ts';
 import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
@@ -163,14 +166,28 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (this.flattenMode === FlattenMode.AllChildren) {
       return folder.children.length > 0;
     }
+    if (folder.children.every((child) => !isFolder(child))) {
+      // Cheapest answer first: a folder-only mode needs at least one child folder — and a descendant folder
+      // Implies one, so the same check covers the recursive mode. It also spares the subtree walk below on
+      // Every folder-menu open.
+      return false;
+    }
     /*
-     * A folder-only mode needs at least one child folder — and a descendant folder implies one, so the same
-     * check covers the recursive mode. The attachment-folder exclusion is deliberately NOT applied here:
-     * resolving it is async (it goes through the attachment-location machinery) and `canExecuteFolder` is
-     * not. In the corner case where the only child folder IS the attachment folder, the command is offered
-     * and `executeFolder` says so with a notice rather than silently doing nothing.
+     * The attachment-folder exclusion IS applied here (issue #185), through the very collector
+     * `executeFolder` uses, so the two cannot disagree about whether anything would move.
+     *
+     * `null` means an attachment-location plugin (Custom Attachment Location and friends) owns the
+     * resolution and it is genuinely asynchronous, which Obsidian's synchronous menu / `checkCallback` pass
+     * cannot wait for. There the original behavior stands verbatim: the command is offered, and
+     * `executeFolder` says so with a notice rather than silently doing nothing.
      */
-    return folder.children.some((child) => isFolder(child));
+    const itemsToMove = collectFlattenItemsSyncOrNull({
+      app: this.app,
+      attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
+      folder,
+      mode: this.flattenMode
+    });
+    return itemsToMove ? itemsToMove.length > 0 : true;
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
@@ -201,8 +218,9 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     });
 
     if (itemsToMove.length === 0) {
-      // Only reachable in a folder-only mode: `canExecuteFolder` saw a child folder, and it turned out to
-      // Be the attachment folder of a note staying behind.
+      // Only reachable in a folder-only mode, and only in a vault where an attachment-location plugin owns
+      // The resolution: everywhere else `canExecuteFolder` already answered this synchronously and never
+      // Offered the command (issue #185).
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('There is nothing to flatten in ');

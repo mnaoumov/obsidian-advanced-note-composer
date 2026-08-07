@@ -15,7 +15,10 @@ import {
   vi
 } from 'vitest';
 
-import { collectFlattenItems } from './flatten-items.ts';
+import {
+  collectFlattenItems,
+  collectFlattenItemsSyncOrNull
+} from './flatten-items.ts';
 import { FlattenMode } from './plugin-settings.ts';
 
 const ATTACHMENT_EXTENSIONS = ['.excalidraw.md'];
@@ -30,6 +33,16 @@ async function collectPaths(folderPath: string, mode: FlattenMode): Promise<stri
     mode
   });
   return items.map((item) => item.path);
+}
+
+function collectPathsSyncOrNull(folderPath: string, mode: FlattenMode): null | string[] {
+  const items = collectFlattenItemsSyncOrNull({
+    app,
+    attachmentExtensions: ATTACHMENT_EXTENSIONS,
+    folder: getFolder(folderPath),
+    mode
+  });
+  return items?.map((item) => item.path) ?? null;
 }
 
 function getFolder(path: string): TFolder {
@@ -230,5 +243,66 @@ describe('collectFlattenItems', () => {
       // The attachment folder is left exactly as it is, contents included.
       expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
     });
+  });
+});
+
+/**
+ * Issue #185: Obsidian builds a folder's context menu synchronously, so `canExecuteFolder` cannot await the
+ * attachment resolution — which is why the two folder-only commands used to be offered even when the only
+ * thing they could promote was an attachment folder. `obsidian-dev-utils`'
+ * `getAttachmentFolderPathSyncOrNull` answers exactly whenever no attachment-location plugin installed its
+ * own `extended` resolution, so the answer here is either identical to the asynchronous one or an honest
+ * `null`.
+ */
+describe('collectFlattenItemsSyncOrNull', () => {
+  it('should give the asynchronous collector\'s answer in every mode', async () => {
+    initApp({
+      'parent/a/attachments/pic.png': 'PIC',
+      'parent/a/b/c/deepest.md': 'deepest',
+      'parent/a/b/deep.md': 'deep',
+      'parent/a/note.md': 'note'
+    }, './attachments');
+
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllChildren)).toStrictEqual(await collectPaths('parent/a', FlattenMode.AllChildren));
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly));
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual(
+      await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)
+    );
+  });
+
+  it('should take nothing when the only child folder is the attachment folder (issue #185)', () => {
+    initApp({
+      'parent/a/attachments/pic.png': 'PIC',
+      'parent/a/note.md': 'note'
+    }, './attachments');
+
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+  });
+
+  it('should answer null for a folder-only mode once an attachment-location plugin owns the resolution', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/note/pic.png': 'PIC'
+    });
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+    // Not "nothing to flatten" — "ask the asynchronous collector", which is what keeps the command offered.
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+  });
+
+  it('should still answer AllChildren with an attachment-location plugin installed', () => {
+    // `AllChildren` resolves no attachment folder at all, so nothing about it is asynchronous.
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/note/pic.png': 'PIC'
+    });
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllChildren)?.sort()).toStrictEqual([
+      'parent/a/note',
+      'parent/a/note.md'
+    ]);
   });
 });

@@ -2,6 +2,7 @@ import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type {
   PluginNoticeComponent,
@@ -12,6 +13,7 @@ import type { MockInstance } from 'vitest';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
   requestResourceUnlockForPath,
@@ -436,6 +438,38 @@ describe('FlattenFolderCommandHandler', () => {
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
 
+    it('should refuse a folder whose only child folder is the attachment folder of a note staying behind (issue #185)', () => {
+      initApp({
+        'parent/a/attachments/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      }, './attachments');
+      // Nothing would move, so the command is not offered at all — instead of being offered and answering
+      // With a notice.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+    });
+
+    it('should keep offering a folder-only mode when an attachment-location plugin owns the resolution (issue #185)', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/note/pic.png': 'PIC'
+      });
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+      // The resolution is genuinely asynchronous now, so a synchronous menu pass cannot know the answer.
+      // Behavior is unchanged there: the command is offered and `executeFolder` explains with a notice.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should keep offering AllChildren when the only child folder is the attachment folder', () => {
+      initApp({
+        'parent/a/attachments/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      }, './attachments');
+      // `AllChildren` promotes every direct child, attachment folder included, so it has plenty to do.
+      expect(createHandler().handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
     it('should promote only the child folders, leaving the folder\'s files and attachment folder behind (issue #170)', async () => {
       initApp({
         'parent/a/attachments/pic.png': 'PIC',
@@ -472,21 +506,22 @@ describe('FlattenFolderCommandHandler', () => {
       expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
     });
 
-    it('should show a notice and move nothing when the only child folder is the attachment folder', async () => {
+    it('should show a notice and move nothing when the only child folder is the attachment folder an attachment-location plugin resolved', async () => {
       initApp({
-        'parent/a/attachments/pic.png': 'PIC',
-        'parent/a/note.md': 'note body'
-      }, './attachments');
+        'parent/a/note.md': 'note body',
+        'parent/a/note/pic.png': 'PIC'
+      });
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
       const { handler, showNotice } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
 
-      // `canExecuteFolder` cannot run the async attachment resolution, so it offers the command and this
-      // Is where the user finds out nothing would move.
+      // An attachment-location plugin owns the resolution, so `canExecuteFolder` cannot run it: it offers
+      // The command, and this is where the user finds out nothing would move (issue #185).
       expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       await handler.executeFolder(getFolder('parent/a'));
 
       expect(showNotice).toHaveBeenCalledOnce();
       expect(mockOpenModal).not.toHaveBeenCalled();
-      expect(await app.vault.adapter.exists('parent/a/attachments/pic.png')).toBe(true);
+      expect(await app.vault.adapter.exists('parent/a/note/pic.png')).toBe(true);
     });
 
     it('should word the confirmation for the mode it is about to run', async () => {
@@ -555,4 +590,24 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     });
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
+}
+
+/**
+ * Models an attachment-location plugin (e.g. Custom Attachment Location): the `extended` member it installs
+ * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
+ * native resolution.
+ *
+ * Its mere PRESENCE is what these tests are about — it makes the resolution asynchronous, so
+ * `canExecuteFolder` cannot answer and stays permissive (issue #185).
+ *
+ * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
+ */
+function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (notePath: string) => string): void {
+  function extended(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
+    const notePath = getPath(app, ensureNonNullable(params.notePathOrFile));
+    const folderPath = resolveAttachmentFolderPathForNote(notePath);
+    return Promise.resolve(`${folderPath}/${params.attachmentFileBaseName}.${params.attachmentFileExtension}`);
+  }
+
+  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
 }

@@ -5,7 +5,10 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { getAttachmentFolderPath } from 'obsidian-dev-utils/obsidian/attachment-path';
+import {
+  getAttachmentFolderPath,
+  getAttachmentFolderPathSyncOrNull
+} from 'obsidian-dev-utils/obsidian/attachment-path';
 import {
   isFile,
   isFolder,
@@ -42,6 +45,12 @@ export interface CollectFlattenItemsParams {
 }
 
 /**
+ * Parameters for {@link collectFlattenItemsSyncOrNull} — the same question as
+ * {@link CollectFlattenItemsParams}, asked synchronously.
+ */
+export type CollectFlattenItemsSyncOrNullParams = CollectFlattenItemsParams;
+
+/**
  * One note in the flattened folder's subtree, paired with the folder its attachments belong in.
  */
 interface NoteAttachmentFolder {
@@ -67,6 +76,39 @@ interface NoteAttachmentFolder {
  * @returns The files and folders the flatten will move, in the order it will move them.
  */
 export async function collectFlattenItems(params: CollectFlattenItemsParams): Promise<TAbstractFile[]> {
+  const syncItems = collectFlattenItemsSyncOrNull(params);
+  if (syncItems) {
+    return syncItems;
+  }
+
+  const {
+    app,
+    attachmentExtensions,
+    folder,
+    mode
+  } = params;
+  const noteAttachmentFolders = await collectNoteAttachmentFolders(app, folder, attachmentExtensions);
+  return buildItems(folder, noteAttachmentFolders, mode);
+}
+
+/**
+ * The synchronous twin of {@link collectFlattenItems}, for callers that cannot await — Obsidian builds a
+ * folder's context menu and evaluates a command's `checkCallback` synchronously, so `canExecuteFolder`
+ * deciding whether to merely OFFER a flatten has no chance to resolve attachment folders (issue #185).
+ *
+ * `null` means "ask {@link collectFlattenItems}", never "nothing to flatten": a folder-only mode has to know
+ * where every note's attachments belong, and once an attachment-location plugin (Custom Attachment Location
+ * and friends) installs its own resolution, that answer is genuinely asynchronous. Otherwise the answer is
+ * exact rather than a guess — `obsidian-dev-utils`' {@link getAttachmentFolderPathSyncOrNull} runs the very
+ * code {@link getAttachmentFolderPath} would have run.
+ *
+ * {@link FlattenMode.AllChildren} resolves no attachment folder at all, so it never answers `null`.
+ *
+ * @param params - The parameters.
+ * @returns The files and folders the flatten will move, or `null` when that is only knowable
+ * asynchronously.
+ */
+export function collectFlattenItemsSyncOrNull(params: CollectFlattenItemsSyncOrNullParams): null | TAbstractFile[] {
   const {
     app,
     attachmentExtensions,
@@ -79,7 +121,15 @@ export async function collectFlattenItems(params: CollectFlattenItemsParams): Pr
     return [...folder.children];
   }
 
-  const noteAttachmentFolders = await collectNoteAttachmentFolders(app, folder, attachmentExtensions);
+  const noteAttachmentFolders = collectNoteAttachmentFoldersSyncOrNull(app, folder, attachmentExtensions);
+  if (!noteAttachmentFolders) {
+    return null;
+  }
+
+  return buildItems(folder, noteAttachmentFolders, mode);
+}
+
+function buildItems(folder: TFolder, noteAttachmentFolders: readonly NoteAttachmentFolder[], mode: FlattenMode): TAbstractFile[] {
   const items: TAbstractFile[] = [];
   collectFolders(folder, noteAttachmentFolders, mode === FlattenMode.AllFoldersRecursively, items);
   return items;
@@ -128,6 +178,35 @@ async function collectNoteAttachmentFolders(
   const noteAttachmentFolders: NoteAttachmentFolder[] = [];
   for (const noteFile of noteFiles) {
     const attachmentFolderPath = await getAttachmentFolderPath({ app, notePathOrFile: noteFile });
+    noteAttachmentFolders.push({ attachmentFolderPath, notePath: noteFile.path });
+  }
+  return noteAttachmentFolders;
+}
+
+/**
+ * The synchronous twin of {@link collectNoteAttachmentFolders}, answering `null` the moment one note's
+ * folder is only knowable asynchronously — which is a property of the vault, not of the note, so the first
+ * `null` is also the last word.
+ *
+ * @param app - The Obsidian application instance.
+ * @param folder - The folder being flattened.
+ * @param attachmentExtensions - The extensions that make a markdown file an attachment rather than a note.
+ * @returns One entry per note in the subtree, or `null` when the resolution is asynchronous.
+ */
+function collectNoteAttachmentFoldersSyncOrNull(
+  app: App,
+  folder: TFolder,
+  attachmentExtensions: readonly string[]
+): NoteAttachmentFolder[] | null {
+  const noteFiles: TFile[] = [];
+  collectNotes(folder, attachmentExtensions, noteFiles);
+
+  const noteAttachmentFolders: NoteAttachmentFolder[] = [];
+  for (const noteFile of noteFiles) {
+    const attachmentFolderPath = getAttachmentFolderPathSyncOrNull({ app, notePathOrFile: noteFile });
+    if (attachmentFolderPath === null) {
+      return null;
+    }
     noteAttachmentFolders.push({ attachmentFolderPath, notePath: noteFile.path });
   }
   return noteAttachmentFolders;
