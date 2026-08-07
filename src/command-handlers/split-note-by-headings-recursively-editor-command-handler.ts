@@ -226,7 +226,13 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
 
   protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
     super.shouldAddToEditorMenu(editor, context);
-    return true;
+    /*
+     * A user who made a selection is asking about that selection, so a whole-note command has no business
+     * in that context menu (issue #188) — `Extract current selection...` is the one that belongs there.
+     * Deliberately NOT in `canExecuteEditor`: unlike the level-scoped gate of issue #94, this only hides the
+     * menu item, so the palette command and any hotkey keep working while a selection is active.
+     */
+    return !editor.somethingSelected();
   }
 
   /**

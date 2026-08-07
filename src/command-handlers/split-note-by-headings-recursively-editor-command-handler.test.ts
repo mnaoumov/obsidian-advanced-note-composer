@@ -196,10 +196,11 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(): Editor {
+function createMockEditor(isSomethingSelected = false): Editor {
   return strictProxy<Editor>({
     getValue: vi.fn().mockReturnValue('# Heading 0\n'),
-    setSelection: vi.fn()
+    setSelection: vi.fn(),
+    somethingSelected: vi.fn().mockReturnValue(isSomethingSelected)
   });
 }
 
@@ -721,9 +722,21 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
   });
 
-  it('should return true from shouldAddToEditorMenu', () => {
+  it('should return true from shouldAddToEditorMenu when nothing is selected', () => {
     const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
     expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
+  });
+
+  it('should return false from shouldAddToEditorMenu when something is selected (issue #188)', () => {
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToEditorMenu(createMockEditor(true), createMockContext(createMockFile()))).toBe(false);
+  });
+
+  it('should still return true from canExecuteEditor when something is selected, so the palette command stays available (issue #188)', () => {
+    const params = createMockParams();
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+    vi.mocked(params.app.metadataCache.getFileCache).mockReturnValue(createCache([createHeading(1, 0)]));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
   });
 });
 

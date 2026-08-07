@@ -13,6 +13,13 @@ Extract a heading **and everything under it** into its own note, named after the
 3. Confirm - a new note named `Ideas worth their own note` is created with that section's
    content, and a link is left here.
 
+## Right-click with a selection
+
+Select some text first and right-click it: `Extract this heading...` is **not** in the menu
+(issue #188). A selection is a question about the selection, so `Extract current selection...` is what
+you get. Click once to drop the selection and the heading command is back — still from anywhere inside
+the section.
+
 ## Ideas worth their own note
 
 This whole section - heading and body - becomes a separate note. Put your cursor right here, on this

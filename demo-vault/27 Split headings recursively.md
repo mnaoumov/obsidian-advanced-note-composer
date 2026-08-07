@@ -36,6 +36,13 @@ Two things this command does *not* care about:
 
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
 
+## Right-click with a selection
+
+Select some text first and right-click it: this command is **not** in the menu (issue #188). A
+selection is a question about the selection, not about the whole note, so the selection-scoped commands
+are what you get. Click once to drop the selection and the command is back. Only the context menu hides
+it — the command palette and any hotkey you assigned still run it with a selection active.
+
 ## Build the tree somewhere else
 
 By default the tree lands next to the note you split. Turn on `Should split recursively into the
