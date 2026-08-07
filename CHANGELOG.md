@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 5.6.0
+
+- fix: re #185
+- docs: describe flatten as three commands, not a Flatten mode setting
+
 ## 5.5.0
 
 - feat: re #188
