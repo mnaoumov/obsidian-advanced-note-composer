@@ -132,7 +132,14 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const targetPath = this.resolveTargetPath(folder);
+    const desiredPath = this.resolveDesiredTargetPath(folder);
+    // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
+    // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
+    // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the
+    // End. A clash with a note that is NOT being merged is a real one and keeps its de-duplicated name.
+    const pathToCreate = getAvailablePath(this.app, desiredPath);
+    const isDesiredPathFreedByMerge = pathToCreate !== desiredPath && sourceMdFiles.some((file) => file.path === desiredPath);
+    const targetPath = isDesiredPathFreedByMerge ? desiredPath : pathToCreate;
 
     const isConfirmed = await shouldMergeFolderIntoFile({
       app: this.app,
@@ -148,7 +155,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
     const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder);
 
-    const targetFile = await this.app.vault.create(targetPath, '');
+    const targetFile = await this.app.vault.create(pathToCreate, '');
 
     const result = await mergeFilesIntoSingleFile({
       app: this.app,
@@ -173,6 +180,14 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       // Cancelled or nothing merged (e.g. all notes ignored): remove the empty target we created.
       await trashSafe(this.app, targetFile);
       return;
+    }
+
+    // Issue #186: the merged-away note has released the configured path, so claim it. Guarded on the path
+    // Actually being free, because the merge may have been partial - an ignored note is never merged away and
+    // Keeps its name. The adapter is asked rather than the vault index, because the index is what the merge
+    // Has just been mutating and it is the filesystem that decides whether the rename can land.
+    if (targetFile.path !== targetPath && !await this.app.vault.adapter.exists(targetPath)) {
+      await this.app.fileManager.renameFile(targetFile, targetPath);
     }
 
     /*
@@ -200,6 +215,25 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;
+  }
+
+  /**
+   * Resolves where the merged note WANTS to live, named by {@link resolveTargetBasename}. De-duplication
+   * against what is already there (issue #178) is the caller's job, because whether a clash is real depends
+   * on whether the occupying note is itself being merged away (issue #186).
+   *
+   * The `BesideFolder` prefix is sliced off `folder.path` rather than rebuilt from the parent folder,
+   * which keeps it correct when the folder sits at the vault root. `DefaultNewNoteLocation` goes through
+   * `fileManager.getNewFileParent`, so it honours Obsidian's own `Default location for new notes`
+   * including its `Same folder as current file` mode — the same resolution
+   * `shouldSplitRecursivelyIntoDefaultNewNoteFolder` uses.
+   *
+   * @param folder - The folder being merged.
+   * @returns The path the merged note should end up at.
+   */
+  private resolveDesiredTargetPath(folder: TFolder): string {
+    const fileName = `${this.resolveTargetBasename(folder)}.md`;
+    return join(this.resolveTargetParentPath(folder, fileName), fileName);
   }
 
   /**
@@ -259,24 +293,6 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
         return folder.path.slice(0, Math.max(0, folder.path.length - folder.name.length - 1));
       }
     }
-  }
-
-  /**
-   * Resolves where the merged note is created, named by {@link resolveTargetBasename} and de-duplicated
-   * against what is already there (issue #178).
-   *
-   * The `BesideFolder` prefix is sliced off `folder.path` rather than rebuilt from the parent folder,
-   * which keeps it correct when the folder sits at the vault root. `DefaultNewNoteLocation` goes through
-   * `fileManager.getNewFileParent`, so it honours Obsidian's own `Default location for new notes`
-   * including its `Same folder as current file` mode — the same resolution
-   * `shouldSplitRecursivelyIntoDefaultNewNoteFolder` uses.
-   *
-   * @param folder - The folder being merged.
-   * @returns The path of the note to create.
-   */
-  private resolveTargetPath(folder: TFolder): string {
-    const fileName = `${this.resolveTargetBasename(folder)}.md`;
-    return getAvailablePath(this.app, join(this.resolveTargetParentPath(folder, fileName), fileName));
   }
 }
 

@@ -273,6 +273,73 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     });
   });
 
+  // Issue #186. The de-duplication from #178 must not fire against a note that the merge is about to
+  // Consume: that clash resolves itself, so bumping the name leaves the user with a note they did not ask for.
+  describe('configured name already taken (issue #186)', () => {
+    it('should keep the configured name when the note holding it is itself being merged', async () => {
+      initApp({
+        'parent/src/a.md': 'alpha body',
+        'parent/src/Overview.md': 'overview body'
+      });
+      const { handler } = createHandler({
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder,
+        mergeFolderIntoFileNoteNameTemplate: 'Overview',
+        replacement: '_',
+        shouldReplaceInvalidTitleCharacters: true
+      });
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.exists('parent/src/Overview.md')).toBe(true);
+      expect(await app.vault.adapter.exists('parent/src/Overview 1.md')).toBe(false);
+      const merged = await app.vault.adapter.read('parent/src/Overview.md');
+      expect(merged).toContain('overview body');
+      expect(merged).toContain('alpha body');
+    });
+
+    it('should still de-duplicate against a note that is not part of the merge', async () => {
+      initApp({
+        'parent/Overview.md': 'unrelated body',
+        'parent/src/a.md': 'alpha body'
+      });
+      const { handler } = createHandler({
+        mergeFolderIntoFileNoteNameTemplate: 'Overview',
+        replacement: '_',
+        shouldReplaceInvalidTitleCharacters: true
+      });
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      // The bystander is untouched and the merged note took the next free name.
+      expect(await app.vault.adapter.read('parent/Overview.md')).toBe('unrelated body');
+      expect(await app.vault.adapter.read('parent/Overview 1.md')).toContain('alpha body');
+    });
+
+    it('should keep the de-duplicated name when the clashing note survives the merge', async () => {
+      initApp({
+        'parent/src/a.md': 'alpha body',
+        'parent/src/Overview.md': 'overview body'
+      });
+      const { handler } = createHandler({
+        // The clashing note is ignored, so it is still there when the merge finishes and the configured
+        // Name never becomes free.
+        isPathIgnored: (path: string) => path === 'parent/src/Overview.md',
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder,
+        mergeFolderIntoFileNoteNameTemplate: 'Overview',
+        replacement: '_',
+        shouldReplaceInvalidTitleCharacters: true
+      });
+      mockConfirm.mockResolvedValue(true);
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.read('parent/src/Overview.md')).toBe('overview body');
+      expect(await app.vault.adapter.read('parent/src/Overview 1.md')).toContain('alpha body');
+    });
+  });
+
   it('should merge all descendant notes into a single new file named after the folder', async () => {
     initApp({
       'src/a.md': 'alpha body',
