@@ -35,14 +35,26 @@ export interface Frontmatter extends GenericObject {
  */
 export interface MergeRecursivelyParams {
   /**
-   * The object whose values win.
+   * The object whose values are merged in.
    */
   readonly newObject: GenericObject;
 
   /**
-   * The object merged into, IN PLACE, and returned.
+   * The object merged into, IN PLACE, and returned. Its key order is preserved, with keys only present in
+   * {@link MergeRecursivelyParams.newObject} appended after it.
    */
   readonly oldObject: GenericObject;
+
+  /**
+   * Whether a key present in both objects keeps the {@link MergeRecursivelyParams.oldObject} value rather than
+   * taking the {@link MergeRecursivelyParams.newObject} one.
+   *
+   * This exists so "prefer the original values" does not have to be expressed by swapping the two arguments:
+   * swapping also swaps whose key ORDER survives, which reorders the destination note's properties (issue #187).
+   *
+   * @default `false`
+   */
+  readonly shouldPreferOldValues?: boolean;
 }
 
 /**
@@ -66,26 +78,34 @@ export function extractFrontmatter($string: string): ExtractFrontmatterResult {
 }
 
 /**
- * Deep-merges {@link MergeRecursivelyParams.newObject} into {@link MergeRecursivelyParams.oldObject}, with the new
- * values winning: nested objects merge recursively, arrays union with duplicates removed, and a
- * `null`/`undefined` old value is simply replaced.
+ * Deep-merges {@link MergeRecursivelyParams.newObject} into {@link MergeRecursivelyParams.oldObject}: nested
+ * objects merge recursively, arrays union with duplicates removed, and a `null`/`undefined` old value is simply
+ * replaced. Which side wins a scalar conflict is governed by
+ * {@link MergeRecursivelyParams.shouldPreferOldValues}; the key order is always `oldObject`'s, with new-only keys
+ * appended.
  *
  * @param params - The objects to merge.
  * @returns `oldObject`, mutated in place.
  */
 export function mergeRecursively(params: MergeRecursivelyParams): GenericObject {
   const { newObject, oldObject } = params;
+  const shouldPreferOldValues = params.shouldPreferOldValues ?? false;
   const oldKeys = Object.keys(oldObject);
   for (const [newKey, newValue] of Object.entries(newObject)) {
     if (oldKeys.includes(newKey)) {
       const oldValue = oldObject[newKey];
       if (oldValue === undefined || oldValue === null) {
+        // An absent old value is filled in regardless of preference: there is nothing to prefer.
         oldObject[newKey] = newValue;
       } else if (Array.isArray(oldObject[newKey]) && Array.isArray(newValue)) {
         oldObject[newKey] = [...oldObject[newKey], ...newValue].unique();
       } else if (typeof oldObject[newKey] === 'object' && typeof newValue === 'object') {
-        oldObject[newKey] = mergeRecursively({ newObject: newValue as GenericObject, oldObject: oldObject[newKey] as GenericObject });
-      } else {
+        oldObject[newKey] = mergeRecursively({
+          newObject: newValue as GenericObject,
+          oldObject: oldObject[newKey] as GenericObject,
+          shouldPreferOldValues
+        });
+      } else if (!shouldPreferOldValues) {
         oldObject[newKey] = newValue;
       }
     } else {
