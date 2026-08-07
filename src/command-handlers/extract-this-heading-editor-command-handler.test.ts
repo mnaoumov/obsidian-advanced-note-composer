@@ -92,11 +92,12 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(): Editor {
+function createMockEditor(isSomethingSelected = false): Editor {
   return strictProxy<Editor>({
     getCursor: vi.fn().mockReturnValue({ ch: 0, line: 2 }),
     getLine: vi.fn().mockReturnValue('## My Heading'),
-    setSelection: vi.fn()
+    setSelection: vi.fn(),
+    somethingSelected: vi.fn().mockReturnValue(isSomethingSelected)
   });
 }
 
@@ -365,12 +366,35 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     }));
   });
 
-  it('should return true from shouldAddToEditorMenu', () => {
+  it('should return true from shouldAddToEditorMenu when nothing is selected', () => {
     const params = createMockParams();
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const context = createMockContext(createMockFile());
     expect(handler.shouldAddToEditorMenu(editor, context)).toBe(true);
+  });
+
+  it('should return false from shouldAddToEditorMenu when something is selected (issue #188)', () => {
+    const params = createMockParams();
+    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
+    const editor = createMockEditor(true);
+    const context = createMockContext(createMockFile());
+    expect(handler.shouldAddToEditorMenu(editor, context)).toBe(false);
+  });
+
+  it('should still return true from canExecuteEditor when something is selected, so the palette command stays available (issue #188)', () => {
+    const params = createMockParams();
+    const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
+    const editor = createMockEditor(true);
+    const context = createMockContext(createMockFile());
+
+    mockGetSelectionUnderHeading.mockReturnValue({
+      end: { ch: 0, line: 5 },
+      heading: 'My Heading',
+      start: { ch: 0, line: 2 }
+    });
+
+    expect(handler.canExecuteEditor(editor, context)).toBe(true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {

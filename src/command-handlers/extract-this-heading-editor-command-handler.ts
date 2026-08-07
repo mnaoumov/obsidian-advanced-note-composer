@@ -154,6 +154,14 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   }
 
   protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
-    return super.shouldAddToEditorMenu(editor, context) || true;
+    super.shouldAddToEditorMenu(editor, context);
+    /*
+     * Hidden only while a selection is active (issue #188), where `Extract current selection...` is the
+     * command the user means. Without a selection the item stays, resolving the heading that ENCLOSES the
+     * cursor — so it still works from anywhere in the heading's body (issue #143), not only on the `#` line.
+     * Deliberately NOT in `canExecuteEditor`: the palette command and any hotkey keep working with a
+     * selection active.
+     */
+    return !editor.somethingSelected();
   }
 }

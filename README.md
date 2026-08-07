@@ -249,6 +249,14 @@ setting off (the default)      setting on
 
 The note you split is never moved — it stays where it is and links down into the new tree. The setting affects no other command, and it has no visible effect while Obsidian's own setting is `Same folder as current file`, since that resolves to the very location the setting replaces.
 
+## Which commands the editor menu offers
+
+Right-clicking with text selected offers the commands that act on a **selection**; the ones that act on a heading or on the whole note step aside. Concretely, `Extract this heading...` and `Split note by headings recursively...` are not in the editor menu while a selection is active — `Extract current selection...` is the one you want there. Drop the selection and both are back.
+
+This only affects the editor's right-click menu. The commands stay available in the command palette and through any hotkey you assigned, selection or not, so nothing you can do today stops working.
+
+Two related rules are unchanged: `Split note by headings - H<n>` (and its `content` variant) is offered whenever the cursor or selection sits anywhere inside a heading of that level, and `Extract this heading...` — with nothing selected — works from anywhere inside a heading's section, not just from the heading line itself.
+
 ## Flatten folder
 
 The `Flatten folder...` command (also on a folder's right-click menu) moves children of the chosen folder up one level, so they become siblings of that folder. Folders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The source folder is left in place; delete it manually if you no longer need it.
