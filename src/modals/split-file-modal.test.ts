@@ -287,6 +287,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldLockAllNotesWhenMarkingSelection: false,
       shouldMergeHeadingsByDefault: false,
+      shouldOfferCurrentNoteWhenSplitting: true,
       shouldShowModalInstructions: true,
       shouldSplitHeadingsAutomatically,
       shouldTreatTitleAsPathByDefault: true

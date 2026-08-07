@@ -585,6 +585,27 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('Whether the note you are splitting from is offered in the split/extract picker.');
+              f.createEl('br');
+              f.appendText('Picking it extracts the selection to that same note: ');
+              appendCodeBlock(f, 'Enter');
+              f.appendText(' puts it at the bottom, ');
+              appendCodeBlock(f, 'Shift+Enter');
+              f.appendText(' at the top.');
+              f.createEl('br');
+              f.appendText('Turn this off to only ever pick another note. Note that ');
+              appendCodeBlock(f, 'Switch to smart cut & paste');
+              f.appendText(' is not a replacement: it moves the selection to the cursor, not to the top or bottom of the note.');
+            }),
+            name: 'Should offer the current note when splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldOfferCurrentNoteWhenSplitting', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Template to use when splitting notes into a new file.');
               f.createEl('br');
               f.appendText('Leave empty to reuse ');

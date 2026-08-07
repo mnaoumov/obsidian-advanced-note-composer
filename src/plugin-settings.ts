@@ -202,6 +202,7 @@ export class PluginSettings {
   public shouldMergeHeadingsByDefault = false;
   public shouldMoveAttachmentsWhenMergingFile = true;
   public shouldMoveAttachmentsWhenMergingFolder = true;
+  public shouldOfferCurrentNoteWhenSplitting = true;
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;
