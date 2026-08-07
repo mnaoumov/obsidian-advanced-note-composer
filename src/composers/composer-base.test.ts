@@ -678,6 +678,23 @@ describe('mergeFrontmatter strategies', () => {
     expect(seeded).toEqual({ key: 'original' });
   });
 
+  // Issue #187: preferring the original VALUES must not also hand the incoming note control of the KEY ORDER.
+  it('should keep the original property order for MergeAndPreferOriginalValues', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({ frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferOriginalValues });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ alfa: 3, aliases: ['existing'], mike: 2, zulu: 1 });
+
+    await composer.callInsertIntoTargetFile('---\naliases:\n  - incoming\n---\ncontent');
+
+    // `aliases` is the key the incoming note also carries, and it is NOT first here - the bug moved it to the
+    // Front. (The literal above is kept sorted by `perfectionist/sort-objects`, which is still enough to catch it.)
+    expect(Object.keys(seeded)).toStrictEqual(['alfa', 'aliases', 'mike', 'zulu']);
+    // The destination's own values come first in the union, matching the other merge strategy.
+    expect(seeded['aliases']).toStrictEqual(['existing', 'incoming']);
+  });
+
   it('should nest both frontmatters under generated keys for PreserveBothOriginalAndNewFrontmatter', async () => {
     const seeded: GenericObject = {};
     stubProcessFrontMatter(seeded);

@@ -706,7 +706,10 @@ export abstract class ComposerBase {
         return mergeRecursively({ newObject: newFrontmatter, oldObject: originalFrontmatter });
       }
       case FrontmatterMergeStrategy.MergeAndPreferOriginalValues: {
-        return mergeRecursively({ newObject: originalFrontmatter, oldObject: newFrontmatter });
+        // Issue #187: the original frontmatter has to stay the object being merged INTO, otherwise the
+        // Destination note's property order is replaced by the incoming note's. Value preference is expressed
+        // By the flag rather than by swapping the arguments.
+        return mergeRecursively({ newObject: newFrontmatter, oldObject: originalFrontmatter, shouldPreferOldValues: true });
       }
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {
         let suffix = 0;
