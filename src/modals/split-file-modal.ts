@@ -207,8 +207,11 @@ class SplitFileModal extends SuggestModalBase {
 
     this.allowCreateNewFile = true;
     // The split picker offers the current note so a selection can be extracted to its top/bottom
-    // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery.
-    this.shouldAllowSameFile = true;
+    // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery. Issue #184 asked for it to
+    // Go away, so it is a setting rather than a removal: it is the only route to a same-note top/bottom
+    // Extraction, which "Switch to smart cut & paste" does NOT replace (that moves to an arbitrary cursor
+    // Position instead).
+    this.shouldAllowSameFile = this.pluginSettingsComponent.settings.shouldOfferCurrentNoteWhenSplitting;
     this.shouldShowUnresolved = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
