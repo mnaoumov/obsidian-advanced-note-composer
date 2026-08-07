@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 5.4.0
+
+- feat: re #184
+- fix: re #186
+- fix: re #187
+
 ## 5.3.1
 
 - fix: build fresh command handler instances on every factory call
