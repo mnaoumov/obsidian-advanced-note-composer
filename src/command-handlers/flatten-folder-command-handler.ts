@@ -15,6 +15,7 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { join } from 'obsidian-dev-utils/path';
 
+import type { CollectFlattenItemsParams } from '../flatten-items.ts';
 import type { FlattenPreviewRow } from '../flatten-preview.ts';
 import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -163,10 +164,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
       return false;
     }
-    if (this.flattenMode === FlattenMode.AllChildren) {
-      return folder.children.length > 0;
-    }
-    if (folder.children.every((child) => !isFolder(child))) {
+    if (this.flattenMode !== FlattenMode.AllChildren && folder.children.every((child) => !isFolder(child))) {
       // Cheapest answer first: a folder-only mode needs at least one child folder — and a descendant folder
       // Implies one, so the same check covers the recursive mode. It also spares the subtree walk below on
       // Every folder-menu open.
@@ -174,19 +172,16 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     }
     /*
      * The attachment-folder exclusion IS applied here (issue #185), through the very collector
-     * `executeFolder` uses, so the two cannot disagree about whether anything would move.
+     * `executeFolder` uses, so the two cannot disagree about whether anything would move. Every mode goes
+     * through it, `AllChildren` included: excluded paths do not move either (issue #193), so its own count
+     * is no longer just `folder.children.length`.
      *
      * `null` means an attachment-location plugin (Custom Attachment Location and friends) owns the
      * resolution and it is genuinely asynchronous, which Obsidian's synchronous menu / `checkCallback` pass
      * cannot wait for. There the original behavior stands verbatim: the command is offered, and
      * `executeFolder` says so with a notice rather than silently doing nothing.
      */
-    const itemsToMove = collectFlattenItemsSyncOrNull({
-      app: this.app,
-      attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
-      folder,
-      mode: this.flattenMode
-    });
+    const itemsToMove = collectFlattenItemsSyncOrNull(this.buildCollectFlattenItemsParams(folder));
     return itemsToMove ? itemsToMove.length > 0 : true;
   }
 
@@ -210,22 +205,18 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     /* v8 ignore stop */
 
     const mode = this.flattenMode;
-    const itemsToMove = await collectFlattenItems({
-      app: this.app,
-      attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
-      folder,
-      mode
-    });
+    const itemsToMove = await collectFlattenItems(this.buildCollectFlattenItemsParams(folder));
 
     if (itemsToMove.length === 0) {
       // Only reachable in a folder-only mode, and only in a vault where an attachment-location plugin owns
       // The resolution: everywhere else `canExecuteFolder` already answered this synchronously and never
-      // Offered the command (issue #185).
+      // Offered the command (issue #185) — both of the other reasons a folder is left alone (excluded, or
+      // The configured attachment folder) are themselves synchronous.
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('There is nothing to flatten in ');
           f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
-          f.appendText(': its only child folders hold attachments of the notes that stay in it.');
+          f.appendText(': its only child folders hold attachments of the notes that stay in it, are excluded in the plugin settings, or are the configured attachment folder.');
         })
       );
       return;
@@ -320,6 +311,24 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;
+  }
+
+  /**
+   * The ONE place the collector's inputs are assembled, so `canExecuteFolder` and `executeFolder` cannot
+   * hand it different settings and disagree about what would move.
+   *
+   * @param folder - The folder being flattened.
+   * @returns The collector parameters.
+   */
+  private buildCollectFlattenItemsParams(folder: TFolder): CollectFlattenItemsParams {
+    const { settings } = this.pluginSettingsComponent;
+    return {
+      app: this.app,
+      attachmentExtensions: settings.attachmentExtensions,
+      folder,
+      isPathIgnored: (path) => settings.isPathIgnored(path),
+      mode: this.flattenMode
+    };
   }
 
   /**

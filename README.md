@@ -275,9 +275,16 @@ Because a flatten has no picker to review, it asks for confirmation first and li
 
 Attachments need no special handling in `Flatten folder...`: because every direct child moves, an attachment sitting beside a note travels with it and an attachment sub-folder moves as a whole, so embeds keep resolving. Attachments kept in a central attachment folder live outside the flattened folder and correctly stay where they are.
 
-The two folder-only commands do have to be careful, because notes are staying behind. A child folder is left where it is when it holds the attachments of a note that is *not* moving with it, as resolved by Obsidian's own attachment-folder setting — which means an attachment-location plugin such as Custom Attachment Location is honoured too. Note the flip side: when your attachments live in the vault root or in one fixed folder, a folder you merely *named* `attachments` is not any note's attachment folder, so it is promoted like any other.
+The two folder-only commands do have to be careful, because notes are staying behind. A child folder is left where it is when it holds the attachments of a note that is *not* moving with it, as resolved by Obsidian's own attachment-folder setting — which means an attachment-location plugin such as Custom Attachment Location is honoured too.
 
-That is also why the two folder-only commands hide themselves when the only child folder they could promote is such an attachment folder: there would be nothing to move. The one exception is a vault running an attachment-location plugin — resolving the folder is then up to that plugin and cannot be answered while the menu is being built, so the commands stay listed and tell you nothing would move if you run one.
+A child folder is also left where it is in two more cases, both decided without resolving anything:
+
+- **You excluded it** (see [Include/exclude paths](#includeexclude-paths)). This is the one that always works, whatever decides where your attachments go.
+- **It matches your vault's `Files & Links > Default location for new attachments`** — either a folder whose path is that fixed location, or a folder named after the sub-folder of a `./assets`-style setting and sitting beside at least one note. A folder you merely *named* `assets` next to no note at all is promoted like any other.
+
+That is also why the two folder-only commands hide themselves when everything they could promote falls into one of those cases: there would be nothing to move. In a vault running an attachment-location plugin, resolving a note's attachment folder is up to that plugin and cannot be answered while the menu is being built — the two checks above still apply, and if something else could still move, the commands stay listed and tell you nothing would move if you run one.
+
+`Flatten folder...` differs on purpose: it empties the folder, so no note stays behind for an attachment folder to be kept beside, and every direct child moves. Only your exclusions hold it back there.
 
 ## Move folder to…
 
@@ -348,6 +355,8 @@ The two forms match differently, and the difference is the thing worth knowing:
 A `/regular expression/` that does not parse is reported under the setting as `Invalid regular expression: …`, and while it is there **the whole list is ignored** — so a single broken entry stops the other entries in that box from matching until you fix it. Half-typed values are fine: nothing happens while you type, the message only tells you the entry as it stands is not usable yet.
 
 Ignored paths are skipped by the pickers, and the folder/file batch commands (`Merge current folder contents into a single file...`, `Merge these files into one file...`) skip and report ignored notes — unless **Should always merge excluded items** is on.
+
+An ignored path is also never **moved**. A flatten leaves an excluded item exactly where it is, contents included, and hides its command entirely when that leaves nothing to move. This is the reliable way to protect your attachment folder from [Flatten folder](#flatten-folder) when a plugin such as Custom Attachment Location decides where attachments go: it derives each folder from the note — potentially from the note's name, its properties, the date, or even a prompt — so there is no way to work backwards from a folder to "this is an attachment folder". Excluding the folder says it directly. Without such a plugin, your vault's own `Files & Links > Default location for new attachments` is recognized on its own.
 
 By default the plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Turn **Should block commands on excluded paths** on to hide them entirely instead — they disappear from the command palette and from the editor, file, and folder context menus.
 
