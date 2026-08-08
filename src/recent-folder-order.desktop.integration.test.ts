@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -41,10 +41,7 @@ interface MenuLike {
 describe('recent folder ordering (issue #158)', () => {
   it('offers the folder of the note you are on first when the command runs on another folder', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const MERGE_ITEM_TITLE = 'Merge entire folder with...';
@@ -167,7 +164,8 @@ describe('recent folder ordering (issue #158)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The premise this fix rests on: Obsidian's recent list is headed by the note we LEFT, never by the

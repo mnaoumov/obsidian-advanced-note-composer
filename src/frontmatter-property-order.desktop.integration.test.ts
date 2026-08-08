@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -41,10 +41,7 @@ interface SettingsCarrier {
 describe('property order when extracting a property value (issue #187)', () => {
   it('should keep the destination note\'s own property order under every merge strategy', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'fm-order-source.md';
         const TARGET_PATH = 'fm-order-target.md';
@@ -192,7 +189,8 @@ describe('property order when extracting a property value (issue #187)', () => {
           return app.vault.create(path, content);
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.preferNewValues).toStrictEqual(['zulu', 'aliases', 'mike', 'alfa']);

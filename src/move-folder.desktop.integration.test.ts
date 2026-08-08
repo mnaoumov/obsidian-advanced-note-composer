@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -34,10 +34,7 @@ interface SettingsCarrier {
 describe('move folder to... (issue #73)', () => {
   it('moves the chosen folder into a target picked from the suggester and updates links', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -144,7 +141,8 @@ describe('move folder to... (issue #73)', () => {
           });
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The folder was moved into the destination folder, keeping its own name and contents.
@@ -157,10 +155,7 @@ describe('move folder to... (issue #73)', () => {
 
   it('front-loads the recently-opened folders in the picker, in recent order (issue #149)', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         await trashIfExists('rf-src');
@@ -219,7 +214,8 @@ describe('move folder to... (issue #73)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The picker front-loads the recently-opened folders, most-recent-first. `rf-src` holds the active

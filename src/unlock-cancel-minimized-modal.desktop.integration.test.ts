@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -16,10 +16,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('cancel a pending extract from the minimized modal bar', () => {
   it('should cancel the extract and release the source lock when the minimized bar Cancel button is clicked', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
 
         // Start an `Extract current selection...` on the source note. `prepareForSplitFile` acquires a
@@ -86,7 +83,8 @@ describe('cancel a pending extract from the minimized modal bar', () => {
           return app.vault.create(path, content);
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The extract picker opened and is minimizable, and the source note is locked while it is open.

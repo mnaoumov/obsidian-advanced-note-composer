@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -16,10 +16,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract between horizontal rules', () => {
   it('extracts the block between the rules closest to the cursor, leaving the rules in place', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Two different rule spellings (`---` and `***`) prove Obsidian's parser tags both as thematicBreak
         // Sections, which is what the command keys off. `middle` sits between them.
@@ -124,7 +121,8 @@ describe('extract between horizontal rules', () => {
           return undefined;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The command was enabled (the note has horizontal rules).

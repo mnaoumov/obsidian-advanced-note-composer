@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -47,10 +47,7 @@ interface TemplateSettings {
 describe('split headings recursively', () => {
   it('should mirror the heading hierarchy as a folder tree', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ROOT_FOLDER = 'RecA';
         const SOURCE_PATH = 'split-headings-recursively-source.md';
@@ -213,7 +210,8 @@ describe('split headings recursively', () => {
           return wasEnabled;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The confirmation listed every note it was about to create, indented by nesting depth.
@@ -242,10 +240,7 @@ describe('split headings recursively', () => {
 
   it('should apply the split template to every note it creates, exactly once (issue #172)', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID, sourcePath: TEMPLATE_SOURCE_PATH, splitTemplate: TEMPLATE_SPLIT_TEMPLATE },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId, sourcePath, splitTemplate }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId, sourcePath, splitTemplate }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ROOT_FOLDER = 'TplA';
         const SOURCE_CONTENT = [
@@ -380,7 +375,8 @@ describe('split headings recursively', () => {
           return app.vault.create(path, content);
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID, sourcePath: TEMPLATE_SOURCE_PATH, splitTemplate: TEMPLATE_SPLIT_TEMPLATE },
+      vaultPath: getTemporaryVault().path
     });
 
     // Every produced note OPENS with the template's header, naming itself.
@@ -413,10 +409,7 @@ describe('split headings recursively', () => {
 
   it('should root the tree in Obsidian\'s default new note folder, keeping it nested (issue #173)', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         /*
          * The source lives in its OWN folder, which is what makes the assertion discriminating: without the
@@ -557,7 +550,8 @@ describe('split headings recursively', () => {
           return wasEnabled;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The whole tree is rooted in Obsidian's `Default location for new notes`...

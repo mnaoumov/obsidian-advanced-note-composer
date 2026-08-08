@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -13,10 +13,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('reorder headings', () => {
   it('should reorder a note\'s top-level heading sections via the modal', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const file = await resetFile('reorder-headings.md', '# A\naaa\n\n# B\nbbb\n\n# C\nccc\n');
@@ -85,7 +82,8 @@ describe('reorder headings', () => {
           });
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.canRun).toBe(true);
@@ -98,10 +96,7 @@ describe('reorder headings', () => {
 
   it('should reorder nested sibling headings, keeping them under their parent', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const file = await resetFile('reorder-nested-headings.md', '# A\n\n## A.1\na1\n\n## A.2\na2\n\n# B\nbbb\n');
@@ -168,7 +163,8 @@ describe('reorder headings', () => {
           return app.vault.create(path, content);
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The whole "A" section (parent + both nested children) still precedes "B".

@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -16,10 +16,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split into folder', () => {
   it('should create the extracted note inside a new folder named after it, with a resolving link', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const NEW_NOTE_NAME = 'Extracted into folder';
         const NEW_NOTE_PATH = `${NEW_NOTE_NAME}/${NEW_NOTE_NAME}.md`;
@@ -131,7 +128,8 @@ describe('split into folder', () => {
           return wasEnabled;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The extracted note lives inside a new folder named after it.

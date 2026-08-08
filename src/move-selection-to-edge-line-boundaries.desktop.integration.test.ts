@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -33,10 +33,7 @@ interface EdgeBoundaryProbe {
 describe('a marked selection moved to an edge lands on its own line', () => {
   it('should not glue the moved block onto the adjacent line, under either template (issue #179)', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -136,7 +133,8 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           return undefined;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The defect stated directly: no line ever holds the moved block AND the line next to it. Asserting on

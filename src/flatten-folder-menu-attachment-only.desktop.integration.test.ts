@@ -1,7 +1,7 @@
 import type { TFolder } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -42,10 +42,7 @@ interface MenuProbe {
 describe('flatten folder menu with an attachment-only folder (issue #185)', () => {
   it('hides the folder-only flatten entries when the sole child folder holds the staying note\'s attachments', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginName: PLUGIN_NAME },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, obsidianModule, pluginName }): Promise<MenuProbe> {
+      async callback({ app, obsidianModule, pluginName }): Promise<MenuProbe> {
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
         try {
           // A per-folder attachment sub-folder is the configuration the issue is reported against.
@@ -116,7 +113,8 @@ describe('flatten folder menu with an attachment-only folder (issue #185)', () =
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginName: PLUGIN_NAME },
+      vaultPath: getTemporaryVault().path
     });
 
     // The two folder-only commands are gone; `Flatten folder...` stays, because it promotes every direct

@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -40,10 +40,7 @@ interface SettingsCarrier {
 describe('merge folder into file confirmation dialog (issue #166)', () => {
   it('renders the not-yet-created target as a code block, so the dialog cannot create it', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -130,7 +127,8 @@ describe('merge folder into file confirmation dialog (issue #166)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // Issue #166: the target is a code block, NOT an anchor — before the fix `renderInternalLink` rendered

@@ -4,7 +4,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -16,10 +16,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split headings automatically', () => {
   it('should extract the enclosing heading into its own folder with no picker and no confirmation', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADING = 'Auto Heading';
         const NEW_NOTE_PATH = `${HEADING}/${HEADING}.md`;
@@ -140,7 +137,8 @@ describe('split headings automatically', () => {
           return wasEnabled;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The heading was extracted with no user interaction at all.
@@ -154,10 +152,7 @@ describe('split headings automatically', () => {
 
   it('should split every heading into its own folder in one go with no confirmation', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADINGS = ['Sec One', 'Sec Two', 'Sec Three'];
         const SOURCE_PATH = 'split-headings-automatically-batch-source.md';
@@ -261,7 +256,8 @@ describe('split headings automatically', () => {
           return wasEnabled;
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // Every H2 section was split in one run, with no user interaction at any point.

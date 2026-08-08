@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -37,10 +37,7 @@ interface SettingsCarrier {
 describe('operation notices (issue #182)', () => {
   it('reports a finished operation, and stays silent when the setting is off', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         // Doubles as the silence window for the setting-off run: long enough that a notice would have
         // Rendered had one been shown, so timing out there means none was.
         const NOTICE_TIMEOUT_IN_MILLISECONDS = 5000;
@@ -164,7 +161,8 @@ describe('operation notices (issue #182)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // With the setting on, the finished flatten names both the folder and where its children landed.

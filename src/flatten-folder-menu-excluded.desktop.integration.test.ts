@@ -1,7 +1,7 @@
 import type { TFolder } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -75,10 +75,7 @@ interface SettingsCarrier {
 describe('flatten folder menu with an excluded or configured attachment folder (issue #193)', () => {
   it('hides the folder-only flatten entries when nothing but an excluded or configured attachment folder could move', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, obsidianModule, pluginId, pluginName }): Promise<MenuProbe> {
+      async callback({ app, obsidianModule, pluginId, pluginName }): Promise<MenuProbe> {
         const settingsComponent = findSettingsComponent();
         const originalExcludePaths = [...settingsComponent.settings.excludePaths];
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
@@ -225,7 +222,8 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME },
+      vaultPath: getTemporaryVault().path
     });
 
     // The user's own exclusion is enough, with no attachment resolution possible at all. `Flatten folder...`
