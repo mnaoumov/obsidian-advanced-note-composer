@@ -37,6 +37,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 - [[17 Flatten folder]]
 - [[18 Move folder to]]
+- [[29 Create folder with notes]]
 
 ## Smart cut & paste
 

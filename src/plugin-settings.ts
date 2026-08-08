@@ -161,7 +161,34 @@ export class PluginSettings {
   public mergeFolderIntoFileLocation = MergeFolderIntoFileLocation.BesideFolder;
 
   public mergeFolderIntoFileNoteNameTemplate = '';
+
   public mergeTemplate = '\n\n{{content}}';
+
+  /**
+   * The notes `Create folder with notes...` puts inside the folder it creates (issue #191).
+   *
+   * A line whose first non-whitespace is `{{file}}` starts a new note and names it with the rest of that
+   * line; everything up to the next marker is that note's content. The default is EMPTY, which declares no
+   * marker and therefore means one empty note named after the folder — issue #191's literal ask, with the
+   * multi-note machinery costing nothing until someone writes a marker.
+   *
+   * The marker is a bare `{{file}}` with the name after it rather than a `{{file:NAME}}` parameter, because
+   * a name may itself contain tokens (`{{file}} {{safeFolderName}}.md`) and `TEMPLATE_TOKEN_REG_EXP`
+   * is lazy — it would stop at the inner `}}`. Nothing nests, so the token grammar is untouched.
+   */
+  public newFolderContentTemplate = '';
+  /**
+   * The name `Create folder with notes...` gives the folder it creates (issue #191).
+   *
+   * The default reproduces the reporter's own `folder-note-extended` plugin: `1. Test Notes`. `{{index}}`
+   * is the next number in the sibling sequence, and `{{index:000}}` zero-pads it to the mask's width.
+   *
+   * Numbering is a template rather than a toggle so that the prefix/suffix, the separator and the padding
+   * are all one decision written the way it will look — and dropping `{{index}}` turns numbering off, so no
+   * separate switch is needed. The sibling scan derives its pattern from this very template, which is what
+   * keeps "what gets numbered" and "what counts as already numbered" from drifting apart.
+   */
+  public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
   public releaseNotesShown: readonly string[] = [];
   public replacement = '_';
   public shouldAddCommandsToSubmenu = true;
@@ -170,6 +197,17 @@ export class PluginSettings {
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   public shouldAlwaysMergeExcludedItems = false;
   public shouldApplyTextAfterExtractionToSameFile = false;
+  /**
+   * Whether `Create folder with notes...` confirms before creating anything (issue #191).
+   *
+   * Defaults to `false`, unlike every other `shouldAskBefore*` setting, and deliberately: this flow already
+   * has a modal the user types into, so a second dialog would make the one-step flow the request describes
+   * into a two-step one. It is worth turning on for a different reason than the other flows have — the
+   * normalization means the folder's name is not what was typed, and the dialog is where that becomes
+   * visible before it happens.
+   */
+  public shouldAskBeforeCreatingFolder = false;
+
   public shouldAskBeforeFlattening = true;
   public shouldAskBeforeMerging = true;
   public shouldAskBeforeMovingFolder = true;
@@ -203,6 +241,13 @@ export class PluginSettings {
   public shouldMoveAttachmentsWhenMergingFile = true;
   public shouldMoveAttachmentsWhenMergingFolder = true;
   public shouldOfferCurrentNoteWhenSplitting = true;
+  /**
+   * Whether `Create folder with notes...` opens the note it created (issue #191). Defaults to `true`,
+   * matching the reporter's own plugin — the point of the command is to start writing in the new note.
+   * With several notes declared, the FIRST one declared is the one opened.
+   */
+  public shouldOpenNoteAfterCreatingFolder = true;
+
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
   public shouldReplaceInvalidTitleCharacters = true;
@@ -254,6 +299,17 @@ export class PluginSettings {
    */
   public shouldSplitRecursivelyIntoDefaultNewNoteFolder = false;
   public shouldSwapEntireFolderStructureByDefault = true;
+  /**
+   * Whether `Create folder with notes...` Title Cases the typed folder name (issue #191): the first letter
+   * of each word upper-cased and the rest lower-cased, EXCEPT a word that is already entirely upper-case,
+   * which is left alone so an acronym survives (`api TEST` becomes `Api TEST`).
+   *
+   * The only normalization step with a switch of its own, because it is the only one that rewrites letters
+   * the user deliberately typed. Trimming and whitespace collapsing are unconditional, and invalid
+   * characters are already governed by `shouldReplaceInvalidTitleCharacters` / `replacement`.
+   */
+  public shouldTitleCaseCreatedFolderName = true;
+
   public shouldTreatTitleAsPathByDefault = true;
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
 

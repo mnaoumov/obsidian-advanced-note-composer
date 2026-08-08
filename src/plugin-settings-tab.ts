@@ -1208,6 +1208,117 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         ]
       }),
       this.settingGroupEx({
+        heading: 'Create folder with notes',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The name to give the folder created by ');
+              appendCodeBlock(f, 'Create folder with notes...');
+              f.appendText('.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{index}}');
+              f.appendText(' is the next number in the sequence, read from the sibling folders that already match this template. Use ');
+              appendCodeBlock(f, '{{index:000}}');
+              f.appendText(' to zero-pad it to the width of the mask.');
+              f.createEl('br');
+              f.appendText('Leave ');
+              appendCodeBlock(f, '{{index}}');
+              f.appendText(' out to stop numbering altogether.');
+              f.createEl('br');
+              addCreateFolderTokens(f, false);
+            }),
+            name: 'Create folder name template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'newFolderNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The notes to create inside the new folder.');
+              f.createEl('br');
+              f.appendText('Leave empty to create a single empty note named after the folder.');
+              f.createEl('br');
+              f.appendText('To create several notes, start each one with ');
+              appendCodeBlock(f, '{{file}}');
+              f.appendText(' at the beginning of its own line, followed by the note name. Everything up to the next ');
+              appendCodeBlock(f, '{{file}}');
+              f.appendText(' line is that note\'s content, and the first note declared is the one that gets opened. For example:');
+              f.createEl('br');
+              appendCodeBlock(f, '{{file}} {{safeFolderName}}.md');
+              f.createEl('br');
+              appendCodeBlock(f, '# {{folderName}}');
+              f.createEl('br');
+              f.appendText('When ');
+              appendCodeBlock(f, 'Should run templater on destination file');
+              f.appendText(' is on, every token is also available to Templater code as ');
+              appendCodeBlock(f, '<% TOKENS.safeFolderName %>');
+              f.appendText(' — as real values, so ');
+              appendCodeBlock(f, '<% TOKENS.index + 1 %>');
+              f.appendText(' works too. A template pulled in with ');
+              appendCodeBlock(f, 'tp.file.include');
+              f.appendText(' does not see them; pass what it needs through the note\'s own properties instead.');
+              f.createEl('br');
+              addCreateFolderTokens(f, true);
+            }),
+            name: 'Create folder content template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'newFolderContentTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether the typed folder name is capitalized: the first letter of each word upper-cased and the rest lower-cased.');
+              f.createEl('br');
+              f.appendText('A word that is already entirely upper-case is left alone, so an acronym survives — ');
+              appendCodeBlock(f, 'api TEST');
+              f.appendText(' becomes ');
+              appendCodeBlock(f, 'Api TEST');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Trimming and collapsing repeated whitespace always happen. Invalid characters are governed by ');
+              appendCodeBlock(f, 'Should replace invalid title characters');
+              f.appendText(' and ');
+              appendCodeBlock(f, 'Replacement');
+              f.appendText('.');
+            }),
+            name: 'Should capitalize the created folder name',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldTitleCaseCreatedFolderName', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: 'Whether to open the created note. With several notes declared, the first one is opened.',
+            name: 'Should open note after creating folder',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldOpenNoteAfterCreatingFolder', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether to show a confirmation dialog before creating the folder.');
+              f.createEl('br');
+              f.appendText('The dialog shows the normalized folder name and the notes about to be created, which is the only place the difference between what you typed and what you get is visible beforehand.');
+            }),
+            name: 'Should ask before creating a folder',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldAskBeforeCreatingFolder', valueComponent: toggle });
+              });
+            }
+          })
+        ]
+      }),
+      this.settingGroupEx({
         heading: 'UI',
         items: [
           this.settingEx({
@@ -1293,6 +1404,34 @@ function addAvailableTokens(f: DocumentFragment, shouldIncludeContentToken = tru
   appendCodeBlock(f, '{{date:FORMAT}}');
   f.appendText(', e.g. ');
   appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+}
+
+/**
+ * Lists the tokens of the `Create folder with notes...` templates. A separate list from
+ * {@link addAvailableTokens} because the vocabularies do not overlap — there is no source/destination note
+ * pair here, only the folder being created.
+ *
+ * @param f - The fragment to append to.
+ * @param shouldIncludeFolderTokens - Whether the tokens naming the CREATED folder are listed. They are
+ * unavailable in the folder-name template, which is what produces them.
+ */
+function addCreateFolderTokens(f: DocumentFragment, shouldIncludeFolderTokens: boolean): void {
+  f.appendText('Available tokens:');
+  f.createEl('br');
+  const tokens = ['{{index}}', '{{rawFolderName}}', '{{safeFolderName}}'];
+  if (shouldIncludeFolderTokens) {
+    tokens.push('{{folderName}}', '{{folderPath}}');
+  }
+  tokens.push('{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}');
+  for (const token of tokens) {
+    f.appendText('- ');
+    appendCodeBlock(f, token);
+    f.createEl('br');
+  }
+  appendCodeBlock(f, '{{safeFolderName}}');
+  f.appendText(' is the typed name after normalization, without the index. ');
+  appendCodeBlock(f, '{{folderName}}');
+  f.appendText(' is the folder\'s real final name, index included.');
 }
 
 function appendPathFormsDesc(f: DocumentFragment): void {
