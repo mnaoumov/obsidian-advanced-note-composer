@@ -285,6 +285,34 @@ The `Move folder to...` command (also on a folder's right-click menu) moves the 
 
 After you pick a destination, a confirmation dialog shows the folder and where it is going; `Change target` sends you back to the picker. Both the source and the destination are clickable links that reveal that folder in the file explorer (the vault root is shown as `/`). Turn **Should ask before moving a folder** (under `Move/flatten folders` in the settings) off, or tick `Don't ask again` in the dialog, to move as soon as you pick a destination.
 
+## Create folder with notes
+
+The `Create folder with notes...` command (also on a folder's right-click menu) creates **a folder and the notes inside it** in one step. From the folder menu the new folder goes into the folder you right-clicked; from the command palette a picker asks where it should go (the vault root included). A prompt then asks for the folder name, and what you type is cleaned up before anything is created: surrounding whitespace and leading/trailing dots are dropped, runs of whitespace collapse to a single space, invalid characters are replaced per **Should replace invalid title characters** / **Replacement**, and the name is capitalized — the first letter of each word upper-cased and the rest lower-cased, except a word that is already entirely upper-case, so `api TEST` becomes `Api TEST`. Turn **Should capitalize the created folder name** off to keep your capitalization. A name that ends up empty is refused and the prompt asks again.
+
+Two templates under `Create folder with notes` decide the rest:
+
+- **Create folder name template** names the folder. The default `{{index}}. {{safeFolderName}}` numbers it after its siblings, so typing `notes` next to `1. Alpha` and `3. Beta` gives `4. Notes`. `{{index}}` is `1 + the highest number already in use`, so a gap is never backfilled and a deleted folder never causes a collision; which siblings count is derived from this very template, so changing the separator changes both halves at once. `{{index:000}}` zero-pads to the width of the mask. Leave `{{index}}` out to stop numbering altogether.
+- **Create folder content template** decides the notes. Leave it empty for a single empty note named after the folder. To create several, start each one with `{{file}}` at the beginning of its own line, followed by the note name — everything up to the next `{{file}}` line is that note's content, and the first note declared is the one that opens (turn **Should open note after creating folder** off to stay where you are). A note name with no extension gets `.md`.
+
+Both templates accept `{{index}}`, `{{rawFolderName}}` (exactly what you typed), `{{safeFolderName}}` (the cleaned-up name, **without** the number), `{{parentFolder}}`, `{{parentFolderPath}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}`. The content template also accepts `{{folderName}}` and `{{folderPath}}` — the folder's real final name and path, number and any de-duplication suffix included. That distinction is the point: `{{folderName}}` is `2. Api TEST`, `{{safeFolderName}}` is `Api TEST`, so a note can carry one as its title and the other as an alias. They are rejected in the name template, which is what produces them.
+
+```text
+{{file}} !.md
+---
+title: "{{folderName}}"
+aliases:
+  - {{safeFolderName}}
+---
+
+- [ ] refine
+{{file}} {{safeFolderName}}.md
+# {{folderName}}
+```
+
+With **Should run templater on destination file** on, every created note is handed to [Templater](https://github.com/SilentVoid13/Templater) — and because the plugin's own tokens are substituted first, they are available to Templater code as well. They are also bound to a `TOKENS` object, so `<% TOKENS.safeFolderName %>` and `<% TOKENS.index + 1 %>` both work, and a name containing a quote cannot break the expression. A template pulled in with `tp.file.include(...)` is parsed separately and does not see `TOKENS`; pass what it needs through the note's own properties instead. A template that declares its own `TOKENS` will fail to run.
+
+Turn **Should ask before creating a folder** (off by default) on to see a confirmation dialog first — it shows the cleaned-up folder name and every note about to be created, which is the one place the difference between what you typed and what you get is visible beforehand. The whole creation runs in one reversible, resource-locked transaction, so a cancellation or a failure leaves no half-built folder behind.
+
 ## Merge folder contents into a single file
 
 The `Merge current folder contents into a single file...` command (also on a folder's right-click menu) concatenates **every note inside a folder** — recursively, a folder's own notes first and then each sub-folder's — into **one brand-new note** named after the folder and placed next to it. This is distinct from `Merge current folder with another folder...`, which mirrors the folder's structure into another folder; here everything collapses into a single file. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The whole batch runs in one reversible, resource-locked transaction (cancel or an external change rolls everything back), the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on.

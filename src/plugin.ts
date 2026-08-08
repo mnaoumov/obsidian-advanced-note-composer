@@ -7,6 +7,7 @@ import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin
 import type { Level } from './markdown-heading-document.ts';
 
 import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
+import { CreateFolderWithNotesCommandHandler } from './command-handlers/create-folder-with-notes-command-handler.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './command-handlers/extract-between-horizontal-rules-editor-command-handler.ts';
@@ -296,6 +297,12 @@ export class Plugin extends PluginBase {
         })
       ),
       new MoveFolderCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new CreateFolderWithNotesCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,

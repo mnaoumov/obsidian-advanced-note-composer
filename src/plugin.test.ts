@@ -214,8 +214,8 @@ describe('Plugin', () => {
     // Handler's own suite.
     const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
     const commandHandlers = buildCommandHandlers();
-    // 24 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
-    const EXPECTED_COMMAND_HANDLER_COUNT = 39;
+    // 25 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
+    const EXPECTED_COMMAND_HANDLER_COUNT = 40;
     expect(commandHandlers).toHaveLength(EXPECTED_COMMAND_HANDLER_COUNT);
     expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TokenizedStringLanguageComponent).toHaveBeenCalledOnce();

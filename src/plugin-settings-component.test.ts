@@ -206,6 +206,96 @@ describe('PluginSettingsComponent', () => {
       });
     });
 
+    describe('newFolderNameTemplate validator', () => {
+      it('should accept the default template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeUndefined();
+      });
+
+      it('should accept a template with no index token, which simply does not number', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{safeFolderName}}')).toBeUndefined();
+      });
+
+      it('should accept a date token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{date:YYYY}} {{safeFolderName}}')).toBeUndefined();
+      });
+
+      it('should reject an empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '')).toBe('Folder name template should not be empty');
+      });
+
+      it('should reject a whitespace-only template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', ' '.repeat(3))).toBe('Folder name template should not be empty');
+      });
+
+      it('should reject the folder name token, which this template IS', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{folderName}}'))
+          .toBe('{{folderName}} cannot be used here, because this template IS the folder name');
+      });
+
+      it('should reject the folder path token for the same reason', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{folderPath}}'))
+          .toBe('{{folderPath}} cannot be used here, because this template IS the folder name');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{nope}}')).toBe('Unknown token {{nope}}');
+      });
+
+      it('should reject a template spanning folders', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', 'a/{{safeFolderName}}')).toBe('Invalid folder name');
+      });
+
+      it('should reject literal characters invalid in a file name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{safeFolderName}}:x')).toBe('Invalid folder name');
+      });
+    });
+
+    describe('newFolderContentTemplate validator', () => {
+      it('should accept an empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept the reporter\'s two-note layout', async () => {
+        const component = createComponent();
+        const template = '{{file}} !.md\n---\ntitle: "{{folderName}}"\n---\n{{file}} {{safeFolderName}}.md\n# {{folderName}}';
+        expect(await validateProperty(component, 'newFolderContentTemplate', template)).toBeUndefined();
+      });
+
+      it('should not report the file marker itself as an unknown token', async () => {
+        // It is parsed out as a marker before any token is resolved.
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} a.md\nbody')).toBeUndefined();
+      });
+
+      it('should reject an unknown token in a note name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} {{nope}}.md\nbody'))
+          .toBe('Unknown token {{nope}} in a note name');
+      });
+
+      it('should reject an unknown token in a note body', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} a.md\n{{nope}}')).toBe('Unknown token {{nope}}');
+      });
+
+      it('should reject a note name spanning folders', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} sub/a.md\nbody'))
+          .toBe('Invalid note name: sub/a.md');
+      });
+    });
+
     // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
     // Wording change fails here instead of silently degrading the setting's feedback.
     describe.each(['excludePaths', 'includePaths'] as const)('%s validator', (propertyName) => {

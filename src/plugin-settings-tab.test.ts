@@ -176,6 +176,7 @@ describe('PluginSettingsTab', () => {
       'Merge folders',
       'Swap folders',
       'Move/flatten folders',
+      'Create folder with notes',
       'UI'
     ]);
   });
