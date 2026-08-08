@@ -33,10 +33,7 @@ interface SettingsCarrier {
 describe('create folder with notes... (issue #191)', () => {
   it('normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, pluginId }) {
+      async callback({ app, lib: { waitUntil }, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const PARENT_PATH = 'create-parent';
         // Exercises every normalization rule at once: the surrounding and repeated whitespace collapse, `api`
@@ -187,7 +184,8 @@ describe('create folder with notes... (issue #191)', () => {
             await app.fileManager.trashFile(existing);
           }
         }
-      }
+      },
+      input: { pluginId: PLUGIN_ID }
     });
 
     // Asserted first, because it is the assertion that says what happened when the rest fail: the typed

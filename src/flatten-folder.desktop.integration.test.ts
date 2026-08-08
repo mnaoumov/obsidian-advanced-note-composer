@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -33,10 +33,7 @@ interface SettingsCarrier {
 describe('flatten folder (issue #105)', () => {
   it('promotes a folder\'s direct children up one level (subfolders kept whole) and links still resolve', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -131,7 +128,8 @@ describe('flatten folder (issue #105)', () => {
           });
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.canRun).toBe(true);
@@ -154,10 +152,7 @@ describe('flatten folder (issue #105)', () => {
    */
   it('carries a note\'s attachments along, whether they sit beside it or in an attachment sub-folder', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -241,7 +236,8 @@ describe('flatten folder (issue #105)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The attachment beside the note was promoted with it, and the embed still resolves.
@@ -259,10 +255,7 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes only the child folders in `Child folders only` mode, keeping the folder and its attachment folder intact', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { commandId: 'flatten-folder-child-folders-only', pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         commandId,
         lib: { waitUntil },
@@ -358,7 +351,8 @@ describe('flatten folder (issue #105)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { commandId: 'flatten-folder-child-folders-only', pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The child folder was promoted, whole.
@@ -377,10 +371,7 @@ describe('flatten folder (issue #105)', () => {
    */
   it('promotes every descendant folder up to the folder\'s own level in `All folders recursively` mode', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { commandId: 'flatten-folder-all-folders-recursively', pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         commandId,
         lib: { waitUntil },
@@ -468,7 +459,8 @@ describe('flatten folder (issue #105)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { commandId: 'flatten-folder-all-folders-recursively', pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // Both folders became siblings of the flattened folder, each keeping its own files.

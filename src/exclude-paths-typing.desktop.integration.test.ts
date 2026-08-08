@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -45,14 +45,7 @@ interface TypingResult {
 describe('typing a regular expression into Exclude paths (issue #155)', () => {
   it('shows no error notice, still saves the completed value, and reports an incomplete one', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        completeValue: REPORTED_EXCLUDE_PATH,
-        incompleteValue: INCOMPLETE_EXCLUDE_PATH,
-        pluginId: PLUGIN_ID
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, completeValue, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
+      async callback({ app, completeValue, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const KEYSTROKE_DELAY_IN_MILLISECONDS = 60;
         const SETTLE_DELAY_IN_MILLISECONDS = 400;
@@ -190,7 +183,12 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           throw new Error('Settings component was not found.');
         }
       },
-      vaultPath: getTempVault().path
+      input: {
+        completeValue: REPORTED_EXCLUDE_PATH,
+        incompleteValue: INCOMPLETE_EXCLUDE_PATH,
+        pluginId: PLUGIN_ID
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     // The reported symptom: no keystroke may raise the unhandled-error notice.

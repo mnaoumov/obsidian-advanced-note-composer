@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -31,10 +31,7 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
 describe('folder merge does not cycle the active leaf (issue #106)', () => {
   it('opens no merged target note even when "Should open note after merge" is on', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, noteCount: NOTE_COUNT, pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, mergeTimeoutInMilliseconds, noteCount, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, mergeTimeoutInMilliseconds, noteCount, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
         const SOURCE_FOLDER = 'cyc-src';
         const TARGET_FOLDER = 'cyc-tgt';
@@ -145,7 +142,8 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
       },
-      vaultPath: getTempVault().path
+      input: { mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, noteCount: NOTE_COUNT, pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The merge actually happened: every source note landed in the target folder and the source is gone.

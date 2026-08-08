@@ -1,7 +1,7 @@
 import type { TFolder } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -45,10 +45,7 @@ interface MenuProbe {
 describe('flatten folder menu entries (issue #177)', () => {
   it('offers one entry per flatten variant, with the submenu setting on and off', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME, submenuSettingName: SUBMENU_SETTING_NAME },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, obsidianModule, pluginId, pluginName, submenuSettingName }): Promise<MenuProbe> {
+      async callback({ app, obsidianModule, pluginId, pluginName, submenuSettingName }): Promise<MenuProbe> {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
 
         await trashIfExists('flat-menu-src');
@@ -130,7 +127,8 @@ describe('flatten folder menu entries (issue #177)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME, submenuSettingName: SUBMENU_SETTING_NAME },
+      vaultPath: getTemporaryVault().path
     });
 
     // All three variants are reachable straight from the folder menu — the point of the issue. The

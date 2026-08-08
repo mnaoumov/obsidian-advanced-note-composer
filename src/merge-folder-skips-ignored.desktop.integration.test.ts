@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -37,10 +37,7 @@ interface SettingsCarrier {
 describe('merge folder skips ignored files (issue #72)', () => {
   it('does not create a stray empty target for an ignored file and reports it in a summary notice', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { ignoredPath: 'ign-src/ignored.md', pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -199,7 +196,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
           });
         }
       },
-      vaultPath: getTempVault().path
+      input: { ignoredPath: 'ign-src/ignored.md', pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The normal file was merged into the target folder.
@@ -215,10 +213,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
 
   it('merges an excluded file too when Should always merge excluded items is on (issue #150)', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { ignoredPath: 'am-src/ignored.md', pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -334,7 +329,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
           }
         }
       },
-      vaultPath: getTempVault().path
+      input: { ignoredPath: 'am-src/ignored.md', pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // The excluded file was merged into the target instead of being skipped.

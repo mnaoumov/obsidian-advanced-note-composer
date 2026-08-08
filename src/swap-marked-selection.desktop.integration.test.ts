@@ -1,7 +1,7 @@
 import type { TFile } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -13,10 +13,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('swap marked selection from the smart cut & paste notice', () => {
   it('should swap the marked selection with the active editor selection when the Swap button is clicked', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: { pluginId: PLUGIN_ID },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const BIG_TIMEOUT_IN_MILLISECONDS = 30_000;
 
         const sourceFile = await resetFile('swap-source.md', 'AAA BBB CCC\n');
@@ -93,7 +90,8 @@ describe('swap marked selection from the smart cut & paste notice', () => {
           activeDocument.dispatchEvent(new Event('selectionchange'));
         }
       },
-      vaultPath: getTempVault().path
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
     });
 
     // "BBB" and "YYY" were exchanged across the two notes.
