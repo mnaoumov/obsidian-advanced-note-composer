@@ -387,9 +387,11 @@ function isConfiguredAttachmentFolder(folder: TFolder, context: FlattenContext):
   // Parent there is nothing to be separated from, and an unrelated folder that merely shares the configured
   // Name keeps flattening normally.
   const parentFolder = folder.parent;
+  /* v8 ignore start -- a non-root folder always has a parent. */
   if (!parentFolder) {
     return false;
   }
+  /* v8 ignore stop */
   return hasOwnNote(parentFolder, context.attachmentExtensions);
 }
 
