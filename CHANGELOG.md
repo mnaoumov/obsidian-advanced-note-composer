@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 5.6.1
+
+- chore(flatten): exempt the unreachable parent-less guard from coverage
+- chore: update libs and adopt obsidian-integration-testing 10
+- feat(flatten): protect excluded items and the configured attachment folder
+- feat: add `Create folder with notes...` command (#191)
+
 ## 5.6.0
 
 - fix: re #185
