@@ -563,6 +563,90 @@ describe('FlattenFolderCommandHandler', () => {
     });
   });
 
+  /**
+   * Issue #193: the reporter excluded their attachment folder and the flatten commands kept appearing. Both
+   * new skips are synchronous, which is what lets `canExecuteFolder` answer even in the vault that prompted
+   * the report — one running Custom Attachment Location, where the exact resolution cannot.
+   */
+  describe('excluded paths and the configured attachment folder (issue #193)', () => {
+    it('should refuse every mode when the only child folder is excluded', () => {
+      initApp({
+        'parent/a/assets/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      });
+      function isPathIgnored(path: string): boolean {
+        return path.startsWith('parent/a/assets');
+      }
+
+      // `AllChildren` still has `note.md` to promote, so only the folder-only modes go quiet here.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly, isPathIgnored }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively, isPathIgnored }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(
+        false
+      );
+      expect(createHandler({ isPathIgnored }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should refuse AllChildren when every direct child is excluded', () => {
+      initApp({
+        'parent/a/assets/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      });
+
+      expect(createHandler({ isPathIgnored: (path: string) => path.startsWith('parent/a/') }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(
+        false
+      );
+    });
+
+    it('should refuse the folder-only modes when everything is excluded under an attachment-location plugin', () => {
+      initApp({
+        'parent/a/assets/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      });
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+      function isPathIgnored(path: string): boolean {
+        return path.startsWith('parent/a/assets');
+      }
+
+      // The reporter's exact vault. Without the exclusion these stay permissive (the test above at
+      // "should keep offering a folder-only mode…"); with it, nothing could move and nothing is offered.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly, isPathIgnored }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively, isPathIgnored }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(
+        false
+      );
+    });
+
+    it('should refuse the folder-only modes when the only child folder is the configured attachment folder, under an attachment-location plugin', () => {
+      initApp({
+        'parent/a/assets/pic.png': 'PIC',
+        'parent/a/note.md': 'note'
+      }, './assets');
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+      // No exclusion configured: Obsidian's own `attachmentFolderPath` is enough, and it is the only signal
+      // Readable synchronously once the resolution is owned elsewhere.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+    });
+
+    it('should leave an excluded folder in place when flattening moves everything else', async () => {
+      initApp({
+        'parent/a/assets/pic.png': 'PIC',
+        'parent/a/sub/deep.md': 'deep body'
+      });
+      const { handler } = createHandler({
+        flattenMode: FlattenMode.ChildFoldersOnly,
+        isPathIgnored: (path: string) => path.startsWith('parent/a/assets')
+      });
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      expect(await app.vault.adapter.read('parent/sub/deep.md')).toBe('deep body');
+      expect(await app.vault.adapter.exists('parent/a/assets/pic.png')).toBe(true);
+      expect(await app.vault.adapter.exists('parent/assets')).toBe(false);
+    });
+  });
+
   it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {
     initApp({});
     expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);

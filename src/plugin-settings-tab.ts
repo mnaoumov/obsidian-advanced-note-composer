@@ -902,6 +902,21 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendPathFormsDesc(f);
               f.createEl('br');
               f.appendText('If the setting is empty, no notes are excluded');
+              f.createEl('br');
+              f.appendText(
+                'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the setting below, which only decides whether the commands are offered at all'
+              );
+              f.createEl('br');
+              f.appendText('This is how to protect your attachment folder when ');
+              /**
+              HACK: see the TSDoc for {@link EMPTY} for motivation.
+              */
+              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+              f.appendText(
+                ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
+              );
+              appendCodeBlock(f, 'Files & Links > Default location for new attachments');
+              f.appendText(' is recognized');
             }),
             name: 'Exclude paths',
             render: (setting) => {

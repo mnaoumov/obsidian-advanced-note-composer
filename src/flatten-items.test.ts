@@ -24,12 +24,14 @@ import { FlattenMode } from './plugin-settings.ts';
 const ATTACHMENT_EXTENSIONS = ['.excalidraw.md'];
 
 let app: AppOriginal;
+let excludedPaths: string[] = [];
 
 async function collectPaths(folderPath: string, mode: FlattenMode): Promise<string[]> {
   const items = await collectFlattenItems({
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
     folder: getFolder(folderPath),
+    isPathIgnored,
     mode
   });
   return items.map((item) => item.path);
@@ -40,9 +42,20 @@ function collectPathsSyncOrNull(folderPath: string, mode: FlattenMode): null | s
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
     folder: getFolder(folderPath),
+    isPathIgnored,
     mode
   });
   return items?.map((item) => item.path) ?? null;
+}
+
+/**
+ * Stands in for `PluginSettings.isPathIgnored`, matching the path and its whole subtree exactly as ODU's
+ * `PathSettings` compiles a plain path entry (`^<escaped>(/|$)`).
+ *
+ * @param paths - The excluded paths.
+ */
+function excludePaths(...paths: string[]): void {
+  excludedPaths = paths;
 }
 
 function getFolder(path: string): TFolder {
@@ -52,6 +65,11 @@ function getFolder(path: string): TFolder {
 function initApp(files: Record<string, string>, attachmentFolderPath = './'): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   app.vault.setConfig('attachmentFolderPath', attachmentFolderPath);
+  excludedPaths = [];
+}
+
+function isPathIgnored(path: string): boolean {
+  return excludedPaths.some((excludedPath) => path === excludedPath || path.startsWith(`${excludedPath}/`));
 }
 
 /**
@@ -304,5 +322,180 @@ describe('collectFlattenItemsSyncOrNull', () => {
       'parent/a/note',
       'parent/a/note.md'
     ]);
+  });
+});
+
+/**
+ * Issue #193: excluding a path used to gate only the commands run ON it, never the items a flatten MOVES, so
+ * a user who excluded their attachment folder still saw it promoted out of its parent. Exclusion now means
+ * the same thing here as it already did for the merges (`isMergeIgnored`) — the plugin does not move it.
+ *
+ * Being a plain synchronous predicate is what makes it the answer for a vault where an attachment-location
+ * plugin owns the resolution: it is decidable exactly when nothing else is.
+ */
+describe('excluded paths', () => {
+  it('should not move an excluded child in any mode', async () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+    excludePaths('parent/a/assets');
+
+    const allChildrenPaths = await collectPaths('parent/a', FlattenMode.AllChildren);
+    expect(allChildrenPaths.sort()).toStrictEqual([
+      'parent/a/note.md',
+      'parent/a/sub'
+    ]);
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual(['parent/a/sub']);
+  });
+
+  it('should skip an excluded folder\'s whole subtree', async () => {
+    initApp({
+      'parent/a/assets/nested/pic.png': 'PIC',
+      'parent/a/note.md': 'note'
+    });
+    excludePaths('parent/a/assets');
+
+    // `nested` is never promoted either — the excluded folder is left exactly as it is, contents included.
+    expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+  });
+
+  it('should answer an exact empty list, not null, when everything is excluded under an attachment-location plugin', () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note'
+    });
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+    excludePaths('parent/a/assets');
+
+    // The whole point of testing exclusion BEFORE resolving: this is the reporter's vault, and the answer
+    // Here is what hides the command instead of offering one that would do nothing.
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+  });
+
+  it('should still answer null under an attachment-location plugin while a non-excluded candidate remains', () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+    excludePaths('parent/a/assets');
+
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
+  });
+
+  it('should still protect the attachment folder of an EXCLUDED note', async () => {
+    initApp({
+      'parent/a/attachments/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    }, './attachments');
+    excludePaths('parent/a/note.md');
+
+    // Exclusion says "do not move this", not "this note has no attachments": dropping an excluded note from
+    // The resolution would UNPROTECT `attachments` and scatter the very files the note still owns.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+  });
+});
+
+/**
+ * Issue #193: Obsidian's own `attachmentFolderPath` is a second, best-effort opinion next to the exact
+ * resolution — the only one available synchronously once an attachment-location plugin owns the resolution,
+ * and the only one at all for a fixed attachment folder whose notes live outside the flattened folder.
+ */
+describe('configured attachment folder', () => {
+  it('should protect a fixed attachment folder no note under the flattened folder resolves into', async () => {
+    initApp({
+      'other/note.md': 'note',
+      'parent/a/Files/pic.png': 'PIC',
+      'parent/a/sub/pic.png': 'PIC'
+    }, 'parent/a/Files');
+
+    // Nothing under `parent/a` is a note, so the exact resolution has no entry to protect `Files` with — it
+    // Only ever walks notes INSIDE the flattened folder. The configured path is what catches it.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+  });
+
+  it('should protect a child folder that merely CONTAINS the fixed attachment folder', async () => {
+    initApp({
+      'parent/a/sub/pic.png': 'PIC',
+      'parent/a/x/assets/pic.png': 'PIC'
+    }, 'parent/a/x/assets');
+
+    // Promoting `x` separates `x/assets` from every note in the vault just as surely as promoting the
+    // Attachment folder itself would.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+  });
+
+  it('should match a fixed attachment folder case-insensitively', async () => {
+    initApp({
+      'parent/a/files/pic.png': 'PIC',
+      'parent/a/sub/pic.png': 'PIC'
+    }, 'parent/a/FILES');
+
+    // `obsidian-dev-utils` resolves the configured folder case-insensitively, so this has to agree with it.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+  });
+
+  it('should match a note-relative attachment folder by name, case-insensitively', async () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    }, './Assets');
+
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+  });
+
+  it('should not protect a folder that only shares the configured name beside no note', async () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/pic.png': 'PIC'
+    }, './assets');
+
+    // A note-relative attachment folder belongs to the notes NEXT to it. With none staying behind there is
+    // Nothing to be separated from, so an unrelated folder of that name keeps flattening.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/assets']);
+  });
+
+  it('should protect nothing when attachments go to the vault root', async () => {
+    for (const attachmentFolderPath of ['', '/', '.']) {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deep.md': 'deep'
+      }, attachmentFolderPath);
+
+      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    }
+  });
+
+  it('should answer an exact empty list under an attachment-location plugin', () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note'
+    }, './assets');
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+    // No exclusion configured at all: the vault's own setting is enough to hide the commands here.
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+  });
+
+  it('should give the same answer synchronously and asynchronously', async () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    }, './assets');
+    excludePaths('parent/a/sub');
+
+    // The menu and the executor read the same collector, so they can never disagree about what would move.
+    for (const mode of [FlattenMode.AllChildren, FlattenMode.ChildFoldersOnly, FlattenMode.AllFoldersRecursively]) {
+      expect(collectPathsSyncOrNull('parent/a', mode)).toStrictEqual(await collectPaths('parent/a', mode));
+    }
   });
 });
