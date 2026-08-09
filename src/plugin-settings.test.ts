@@ -106,6 +106,10 @@ describe('TextAfterExtractionMode enum', () => {
 describe('PluginSettings', () => {
   it('should have correct default values', () => {
     const settings = new PluginSettings();
+    // Both halves of the command-visibility filter start empty (issue #198), which is what reproduces the
+    // Removed `shouldBlockCommandsOnExcludedPaths` toggle's off-by-default behavior: nothing is blocked.
+    expect(settings.commandExcludePaths).toEqual([]);
+    expect(settings.commandIncludePaths).toEqual([]);
     expect(settings.defaultFrontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
     expect(settings.frontmatterTitleMode).toBe(FrontmatterTitleMode.UseForInvalidTitleOnly);
     // `BesideFolder` IS the pre-#178 behavior, which is what makes the new setting need no legacy converter.
@@ -125,7 +129,6 @@ describe('PluginSettings', () => {
     expect(settings.shouldAskBeforeMovingFolder).toBe(true);
     expect(settings.shouldAskBeforeSplitting).toBe(true);
     expect(settings.shouldAskBeforeSwapping).toBe(true);
-    expect(settings.shouldBlockCommandsOnExcludedPaths).toBe(false);
     expect(settings.shouldFixFootnotesByDefault).toBe(true);
     expect(settings.shouldIncludeChildFoldersWhenMergingByDefault).toBe(true);
     expect(settings.shouldIncludeChildFoldersWhenSwappingByDefault).toBe(true);
@@ -218,25 +221,66 @@ describe('PluginSettings', () => {
   });
 });
 
-describe('PluginSettings.shouldBlockCommandOnPath', () => {
-  it('should block an excluded path when blocking is enabled', () => {
+describe('PluginSettings.commandIncludePaths / commandExcludePaths', () => {
+  it('should get and set commandIncludePaths', () => {
     const settings = new PluginSettings();
-    settings.shouldBlockCommandsOnExcludedPaths = true;
-    settings.excludePaths = ['secret'];
+    settings.commandIncludePaths = ['path1', 'path2'];
+    expect(settings.commandIncludePaths).toEqual(['path1', 'path2']);
+  });
+
+  it('should get and set commandExcludePaths', () => {
+    const settings = new PluginSettings();
+    settings.commandExcludePaths = ['excluded'];
+    expect(settings.commandExcludePaths).toEqual(['excluded']);
+  });
+
+  // The two filters are backed by SEPARATE PathSettings instances (issue #198) — writing one must not
+  // Leak into the other, which is the whole point of the split.
+  it('should keep the command filter independent of the content filter', () => {
+    const settings = new PluginSettings();
+    settings.commandExcludePaths = ['blocked'];
+    settings.excludePaths = ['ignored'];
+    expect(settings.commandExcludePaths).toEqual(['blocked']);
+    expect(settings.excludePaths).toEqual(['ignored']);
+  });
+});
+
+describe('PluginSettings.shouldBlockCommandOnPath', () => {
+  it('should block a path listed in commandExcludePaths', () => {
+    const settings = new PluginSettings();
+    settings.commandExcludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('secret/file.md')).toBe(true);
   });
 
-  it('should not block a non-excluded path even when blocking is enabled', () => {
+  it('should not block a path outside commandExcludePaths', () => {
     const settings = new PluginSettings();
-    settings.shouldBlockCommandsOnExcludedPaths = true;
-    settings.excludePaths = ['secret'];
+    settings.commandExcludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('public/file.md')).toBe(false);
   });
 
-  it('should not block an excluded path when blocking is disabled', () => {
+  it('should block a path outside commandIncludePaths when it is set', () => {
     const settings = new PluginSettings();
-    settings.shouldBlockCommandsOnExcludedPaths = false;
+    settings.commandIncludePaths = ['allowed'];
+    expect(settings.shouldBlockCommandOnPath('elsewhere/file.md')).toBe(true);
+    expect(settings.shouldBlockCommandOnPath('allowed/file.md')).toBe(false);
+  });
+
+  it('should block nothing when both command path lists are empty', () => {
+    const settings = new PluginSettings();
+    expect(settings.shouldBlockCommandOnPath('anything/file.md')).toBe(false);
+  });
+
+  // Issue #198's actual ask: a path excluded from merges/splits keeps its commands unless it is ALSO
+  // Listed in the command filter. Before the split, `excludePaths` alone could hide them.
+  it('should not block a path that is only in excludePaths', () => {
+    const settings = new PluginSettings();
     settings.excludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('secret/file.md')).toBe(false);
+  });
+
+  it('should not be affected by includePaths', () => {
+    const settings = new PluginSettings();
+    settings.includePaths = ['allowed'];
+    expect(settings.shouldBlockCommandOnPath('elsewhere/file.md')).toBe(false);
   });
 });

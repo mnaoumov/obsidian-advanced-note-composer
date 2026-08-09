@@ -952,8 +952,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText('If the setting is empty, no notes are excluded');
               f.createEl('br');
               f.appendText(
-                'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the setting below, which only decides whether the commands are offered at all'
+                'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the '
               );
+              appendCodeBlock(f, 'Command include/exclude paths');
+              f.appendText(' settings below, which only decide whether the commands are offered at all');
               f.createEl('br');
               f.appendText('This is how to protect your attachment folder when ');
               /**
@@ -972,21 +974,57 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
               });
             }
+          })
+        ]
+      }),
+      this.settingGroupEx({
+        heading: 'Command include/exclude paths',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Offer Advanced Note Composer commands only on notes and folders from the following paths');
+              f.createEl('br');
+              f.appendText('Insert each path on a new line');
+              f.createEl('br');
+              f.appendText('You can use path string or ');
+              appendCodeBlock(f, '/regular expression/');
+              f.createEl('br');
+              appendPathFormsDesc(f);
+              f.createEl('br');
+              f.appendText('If the setting is empty, the commands are offered everywhere');
+            }),
+            name: 'Command include paths',
+            render: (setting) => {
+              setting.addMultipleText((multipleText) => {
+                this.bind({ propertyName: 'commandIncludePaths', valueComponent: multipleText });
+              });
+            }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText(
-                'When enabled, Advanced Note Composer commands are hidden entirely (from the command palette and the editor/file/folder menus) on notes and folders whose path is excluded/ignored by the settings above.'
-              );
+              f.appendText('Hide Advanced Note Composer commands on notes and folders from the following paths');
+              f.createEl('br');
+              f.appendText('Insert each path on a new line');
+              f.createEl('br');
+              f.appendText('You can use path string or ');
+              appendCodeBlock(f, '/regular expression/');
+              f.createEl('br');
+              appendPathFormsDesc(f);
+              f.createEl('br');
+              f.appendText('If the setting is empty, no commands are hidden');
               f.createEl('br');
               f.appendText(
-                'When disabled (the default), the commands stay visible on excluded paths and show an "ignored in the plugin settings" notice when triggered instead.'
+                'A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from '
+              );
+              appendCodeBlock(f, 'Include/exclude paths');
+              f.appendText(
+                ' on purpose: a path excluded there is still refused as a merge/split target and never moved, but its commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
               );
             }),
-            name: 'Should block commands on excluded paths',
+            name: 'Command exclude paths',
             render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldBlockCommandsOnExcludedPaths', valueComponent: toggle });
+              setting.addMultipleText((multipleText) => {
+                this.bind({ propertyName: 'commandExcludePaths', valueComponent: multipleText });
               });
             }
           })

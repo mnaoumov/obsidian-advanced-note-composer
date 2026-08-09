@@ -239,7 +239,6 @@ export class PluginSettings {
   public shouldAskBeforeMovingFolder = true;
   public shouldAskBeforeSplitting = true;
   public shouldAskBeforeSwapping = true;
-  public shouldBlockCommandsOnExcludedPaths = false;
   public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
 
   /**
@@ -390,6 +389,30 @@ export class PluginSettings {
   public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
 
+  /**
+   * Paths on which the plugin's commands are NOT offered — the exclude half of the SECOND, independent
+   * path filter that decides command visibility (issue #198).
+   */
+  public get commandExcludePaths(): string[] {
+    return this._commandPathSettings.excludePaths;
+  }
+
+  public set commandExcludePaths(value: string[]) {
+    this._commandPathSettings.excludePaths = value;
+  }
+
+  /**
+   * Paths the plugin's commands are restricted to — the include half of the command-visibility filter
+   * (issue #198). Empty (the default) offers them everywhere the exclude half does not block.
+   */
+  public get commandIncludePaths(): string[] {
+    return this._commandPathSettings.includePaths;
+  }
+
+  public set commandIncludePaths(value: string[]) {
+    this._commandPathSettings.includePaths = value;
+  }
+
   public get excludePaths(): string[] {
     return this._pathSettings.excludePaths;
   }
@@ -406,6 +429,25 @@ export class PluginSettings {
     this._pathSettings.includePaths = value;
   }
 
+  /**
+   * The command-visibility filter (issue #198) — a SECOND {@link PathSettings} instance, deliberately
+   * separate from {@link _pathSettings}.
+   *
+   * The two filters answer different questions and the client wanted them controlled separately:
+   * {@link _pathSettings} decides what is off-limits as CONTENT (never a picker entry, never a merge/split
+   * target or source, never moved by a folder operation), while this one decides only whether the commands
+   * are OFFERED at all. Wanting commands hidden in a subtree that is still a valid merge destination — or
+   * the reverse — was impossible while one list drove both.
+   *
+   * It replaces the `shouldBlockCommandsOnExcludedPaths` toggle, which needed a switch precisely because it
+   * borrowed the other filter's list. Two empty lists already mean "block nothing" (ODU's `PathSettings`
+   * defaults make {@link PathSettings.isPathIgnored} `false`), which IS the old toggle-off default, so a
+   * separate switch would only add the incoherent "off, yet paths listed" state. Existing settings are
+   * carried over by the `shouldBlockCommandsOnExcludedPaths` legacy converter in
+   * `plugin-settings-component.ts`, which seeds BOTH halves from the original lists — the include half
+   * matters because the old blocking fired on `isPathIgnored`, which already accounted for `includePaths`.
+   */
+  private readonly _commandPathSettings = new PathSettings();
   private readonly _pathSettings = new PathSettings();
 
   public isPathIgnored(path: string): boolean {
@@ -413,15 +455,18 @@ export class PluginSettings {
   }
 
   /**
-   * Whether an Advanced Note Composer command must be blocked (hidden) on the given path: only when the
-   * `shouldBlockCommandsOnExcludedPaths` setting is on AND the path is excluded/ignored in the settings
-   * (issue #93). When off, commands stay visible on excluded paths and show an "ignored" notice on
-   * trigger instead.
+   * Whether an Advanced Note Composer command must be blocked (hidden) on the given path (issue #93):
+   * decided ENTIRELY by the command-visibility filter, {@link _commandPathSettings}, and no longer by
+   * `excludePaths` plus a toggle (issue #198).
+   *
+   * With both of its lists empty — the default — nothing is ever blocked, so commands stay visible on a
+   * merely excluded path and show an "ignored in the plugin settings" notice on trigger instead, exactly
+   * as they did with the removed toggle off.
    *
    * @param path - The path to check.
    * @returns Whether commands must be blocked on the path.
    */
   public shouldBlockCommandOnPath(path: string): boolean {
-    return this.shouldBlockCommandsOnExcludedPaths && this.isPathIgnored(path);
+    return this._commandPathSettings.isPathIgnored(path);
   }
 }

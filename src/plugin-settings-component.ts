@@ -59,6 +59,7 @@ interface PluginSettingsComponentConstructorParams {
 class LegacySettings {
   public markdownAttachmentSubExtensions: string[] = [];
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
+  public shouldBlockCommandsOnExcludedPaths = false;
 }
 /* v8 ignore stop */
 
@@ -99,6 +100,18 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
           .map((subExtension) => subExtension.trim().replace(/^\.+/, ''))
           .filter((subExtension) => subExtension !== '')
           .map((subExtension) => `.${subExtension}.md`);
+      }
+
+      // `shouldBlockCommandsOnExcludedPaths` made command blocking borrow the CONTENT filter's lists;
+      // Issue #198 gave command visibility a filter of its own, so the toggle is gone. Seeding both halves
+      // Of the new filter from the old lists is what keeps an upgraded vault behaving identically: the old
+      // Blocking fired on `isPathIgnored`, which already accounted for `includePaths`, so copying only the
+      // Exclude half would silently un-block everything outside a configured include list. With the toggle
+      // Off there is nothing to carry over — two empty lists ARE that behavior — so the key is simply
+      // Dropped (obsidian-dev-utils deletes it from the record, since it is no longer a plugin setting).
+      if (legacySettings.shouldBlockCommandsOnExcludedPaths) {
+        legacySettings.commandIncludePaths = legacySettings.includePaths ?? [];
+        legacySettings.commandExcludePaths = legacySettings.excludePaths ?? [];
       }
     });
   }
@@ -167,6 +180,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // Entries from matching. The validator is the ODU export, not a local copy.
     this.registerValidator('includePaths', pathsValidator);
     this.registerValidator('excludePaths', pathsValidator);
+
+    // The command-visibility filter (issue #198) takes the same two entry forms, so it needs the same
+    // Validator — the silent all-or-nothing fallback above is not specific to the content filter.
+    this.registerValidator('commandIncludePaths', pathsValidator);
+    this.registerValidator('commandExcludePaths', pathsValidator);
   }
 }
 
