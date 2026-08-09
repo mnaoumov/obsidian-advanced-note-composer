@@ -173,6 +173,9 @@ describe('PluginSettingsTab', () => {
       'Swap',
       'Smart cut & paste',
       'Include/exclude paths',
+      // Its own group rather than a row inside the one above (issue #198): it is a second, independent
+      // Path filter, and burying it there is what made the two behaviors look like one setting.
+      'Command include/exclude paths',
       'Merge folders',
       'Swap folders',
       'Move/flatten folders',
@@ -214,11 +217,23 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    for (const name of ['Include paths', 'Exclude paths']) {
+    // The command-visibility filter (issue #198) takes the same two entry forms, so it explains them too.
+    for (const name of ['Include paths', 'Exclude paths', 'Command include paths', 'Command exclude paths']) {
       const desc = findDesc(name);
       expect(desc).toContain('A path string matches that note or folder and everything inside it');
       expect(desc).toContain('/^Inbox$/');
     }
+  });
+
+  // Issue #198 replaced the `Should block commands on excluded paths` toggle with its own path lists;
+  // Two empty lists already mean "block nothing", so a master switch would only add an incoherent state.
+  it('should render the command path lists instead of a blocking toggle', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    expect(findDesc('Command exclude paths')).toContain('Hide Advanced Note Composer commands');
+    expect(findDesc('Command include paths')).toContain('Offer Advanced Note Composer commands only');
+    expect(() => findToggle('Should block commands on excluded paths')).toThrow();
   });
 
   it('should render the show-modal-instructions toggle bound to its setting', async () => {
@@ -240,13 +255,6 @@ describe('PluginSettingsTab', () => {
     renderRows(tab);
 
     expect(findToggle('Should always merge excluded items').getValue()).toBe(false);
-  });
-
-  it('should render the block-commands-on-excluded-paths toggle bound to its setting', async () => {
-    const tab = await createSettingsTab();
-    renderRows(tab);
-
-    expect(findToggle('Should block commands on excluded paths').getValue()).toBe(false);
   });
 
   it('should render the ask-before-swapping toggle bound to its setting', async () => {

@@ -1,7 +1,9 @@
+import type { AsyncEventRef } from 'obsidian-dev-utils/async-events';
 import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { noopAsync } from 'obsidian-dev-utils/function';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -23,6 +25,28 @@ function createComponent(): TestablePluginSettingsComponent {
     dataHandler: strictProxy<DataHandler>({}),
     pluginEventSource: strictProxy<PluginEventSource>({})
   });
+}
+
+/**
+ * Loads a component whose `data.json` is the given record through the REAL load path
+ * (`loadWithPromises` → `onloadAsync` → `loadFromFile`) rather than the converters alone — which is what
+ * proves a migrated key is actually a recognized plugin setting and survives into `component.settings`.
+ *
+ * @param record - The persisted record to load.
+ * @returns The loaded component.
+ */
+async function loadComponentFromRecord(record: GenericObject): Promise<TestablePluginSettingsComponent> {
+  const component = new TestablePluginSettingsComponent({
+    dataHandler: strictProxy<DataHandler>({
+      loadData: () => Promise.resolve(record),
+      saveData: noopAsync
+    }),
+    pluginEventSource: strictProxy<PluginEventSource>({
+      on: () => strictProxy<AsyncEventRef>({})
+    })
+  });
+  await component.loadWithPromises();
+  return component;
 }
 
 async function validateProperty<PropertyName extends keyof PluginSettings>(
@@ -325,7 +349,8 @@ describe('PluginSettingsComponent', () => {
 
     // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
     // Wording change fails here instead of silently degrading the setting's feedback.
-    describe.each(['excludePaths', 'includePaths'] as const)('%s validator', (propertyName) => {
+    // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator.
+    describe.each(['commandExcludePaths', 'commandIncludePaths', 'excludePaths', 'includePaths'] as const)('%s validator', (propertyName) => {
       it('should accept an empty list', async () => {
         const component = createComponent();
         expect(await validateProperty(component, propertyName, [])).toBeUndefined();
@@ -423,6 +448,82 @@ describe('PluginSettingsComponent', () => {
       const legacySettings: GenericObject = {};
       await component.runLegacyConverters(legacySettings);
       expect(legacySettings['attachmentExtensions']).toBeUndefined();
+    });
+
+    // Issue #198. The old toggle made command blocking borrow the content filter's lists; the new
+    // Command-visibility filter has its own, so an upgraded vault has to be seeded from the old ones.
+    it('should seed both command path lists from the old lists when blocking was on', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        excludePaths: ['secret'],
+        includePaths: ['allowed'],
+        shouldBlockCommandsOnExcludedPaths: true
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['commandExcludePaths']).toEqual(['secret']);
+      // The include half matters: the old blocking fired on `isPathIgnored`, which already accounted for
+      // `includePaths`, so copying only the exclude half would un-block everything outside the include list.
+      expect(legacySettings['commandIncludePaths']).toEqual(['allowed']);
+      expect(legacySettings['shouldBlockCommandsOnExcludedPaths']).toBeUndefined();
+    });
+
+    it('should seed empty command path lists when blocking was on with no paths configured', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { shouldBlockCommandsOnExcludedPaths: true };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['commandExcludePaths']).toEqual([]);
+      expect(legacySettings['commandIncludePaths']).toEqual([]);
+    });
+
+    it('should leave the command path lists alone when blocking was off', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        excludePaths: ['secret'],
+        shouldBlockCommandsOnExcludedPaths: false
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['commandExcludePaths']).toBeUndefined();
+      expect(legacySettings['commandIncludePaths']).toBeUndefined();
+      expect(legacySettings['shouldBlockCommandsOnExcludedPaths']).toBeUndefined();
+      // The content filter is untouched — the split does not change what is excluded from merges/splits.
+      expect(legacySettings['excludePaths']).toEqual(['secret']);
+    });
+
+    it('should not set the command path lists when the toggle was never persisted', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {};
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['commandExcludePaths']).toBeUndefined();
+      expect(legacySettings['commandIncludePaths']).toBeUndefined();
+    });
+
+    // Driving the REAL load pipeline, not just the converters: this is what proves the migrated keys are
+    // Recognized plugin settings that survive into `component.settings` — the accessor pairs added for
+    // Issue #198 would be silently dropped if the base did not enumerate them.
+    it('should carry a pre-#198 data.json through a real load with its blocking behavior intact', async () => {
+      const component = await loadComponentFromRecord({
+        excludePaths: ['secret'],
+        shouldBlockCommandsOnExcludedPaths: true
+      });
+
+      expect(component.settings.commandExcludePaths).toEqual(['secret']);
+      // The behavior the upgraded user had before: commands hidden on the excluded path, and only there.
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md')).toBe(true);
+      expect(component.settings.shouldBlockCommandOnPath('public/note.md')).toBe(false);
+      // The content filter is untouched by the migration.
+      expect(component.settings.excludePaths).toEqual(['secret']);
+    });
+
+    it('should leave a pre-#198 data.json with blocking off offering commands everywhere', async () => {
+      const component = await loadComponentFromRecord({
+        excludePaths: ['secret'],
+        shouldBlockCommandsOnExcludedPaths: false
+      });
+
+      expect(component.settings.commandExcludePaths).toEqual([]);
+      expect(component.settings.commandIncludePaths).toEqual([]);
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md')).toBe(false);
+      expect(component.settings.isPathIgnored('secret/note.md')).toBe(true);
     });
   });
 });

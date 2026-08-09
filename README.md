@@ -396,7 +396,7 @@ Select two or more notes in the file explorer, right-click, and choose `Merge th
 
 ## Include/exclude paths
 
-The **Include paths** and **Exclude paths** settings (under `Include/exclude paths`) decide which notes and folders this plugin works on. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`.
+The **Include paths** and **Exclude paths** settings (under `Include/exclude paths`) decide which notes and folders this plugin will *touch*. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`. (Where the commands are *offered* is a separate setting — see [Command include/exclude paths](#command-includeexclude-paths).)
 
 The two forms match differently, and the difference is the thing worth knowing:
 
@@ -409,7 +409,17 @@ Ignored paths are skipped by the pickers, and the folder/file batch commands (`M
 
 An ignored path is also never **moved**. A flatten leaves an excluded item exactly where it is, contents included, and hides its command entirely when that leaves nothing to move. This is the reliable way to protect your attachment folder from [Flatten folder](#flatten-folder) when a plugin such as Custom Attachment Location decides where attachments go: it derives each folder from the note — potentially from the note's name, its properties, the date, or even a prompt — so there is no way to work backwards from a folder to "this is an attachment folder". Excluding the folder says it directly. Without such a plugin, your vault's own `Files & Links > Default location for new attachments` is recognized on its own.
 
-By default the plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Turn **Should block commands on excluded paths** on to hide them entirely instead — they disappear from the command palette and from the editor, file, and folder context menus.
+The plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Hiding them is a separate setting with its own paths — see below.
+
+## Command include/exclude paths
+
+**Command include paths** and **Command exclude paths** (under `Command include/exclude paths`) decide where this plugin's commands are *offered*. A path listed in `Command exclude paths` — or, when `Command include paths` is not empty, any path outside it — has the commands hidden entirely: they disappear from the command palette and from the editor, file, and folder context menus, so you cannot trigger them there at all.
+
+This is a **second, independent** filter, and that is the point of it. The `Include/exclude paths` box above decides what is off-limits as *content* — never a picker entry, never a merge/split target or source, never moved by a folder operation — while this one decides only whether the commands *show up*. So you can hide the commands in a folder you still merge into, or keep the commands handy in a folder that must never be merged. Excluding a path there no longer hides its commands: list it here as well if that is what you want.
+
+Both boxes take exactly the same entries as `Include/exclude paths` — one per line, each a path string or a `/regular expression/`, matching by the same two rules described above. Leave them both empty (the default) and no command is ever hidden.
+
+If you had **Should block commands on excluded paths** turned on before, your `Include paths` and `Exclude paths` entries were copied into these two boxes when you upgraded, so nothing changed for you.
 
 ## Operation notices
 
