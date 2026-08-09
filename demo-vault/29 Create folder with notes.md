@@ -77,6 +77,51 @@ bound to a `TOKENS` object:
 Because those are real values rather than pasted text, `<% TOKENS.index + 1 %>` adds rather than
 concatenates, and a folder name containing a quote cannot break the expression.
 
+### Several aliases from one name
+
+A name like `A - B` can become two separate `aliases` entries, without any setting for it — the split
+rule is just JavaScript, so it can be exactly the rule you want:
+
+```text
+{{file}} !.md
+<%*
+const aliases = TOKENS.rawFolderName.split(' - ').map((a) => a.trim()).filter(Boolean);
+-%>
+---
+aliases: <% JSON.stringify(aliases) %>
+---
+```
+
+Type `A - B` and the note opens with:
+
+```text
+---
+aliases: ["A","B"]
+---
+```
+
+Splitting on `' - '` rather than `'-'` is what keeps `Well-known - B` two entries and not three;
+`.trim()` drops the spaces around each part, and `.filter(Boolean)` drops empty ones. Want the parts
+title-cased, or a different separator per case? That is another line of the same JavaScript.
+
+**The template must not start with `---`.** The `TOKENS` block is inserted *below* any frontmatter
+your template already has — it has to be, or that block would stop being frontmatter at all — so
+`TOKENS` used **inside** a frontmatter block is not defined yet and Templater leaves the note
+unrendered. Letting Templater print the frontmatter, as above, is what avoids it.
+
+If you would rather keep the frontmatter at the top, use the plugin's own token instead: it is
+substituted as text before Templater ever parses the note, so nothing is referenced too early.
+
+```text
+{{file}} !.md
+---
+aliases: <% JSON.stringify("{{rawFolderName}}".split(' - ').map((a) => a.trim())) %>
+---
+```
+
+That form is shorter but not quote-safe — a name containing a `"` lands inside a JavaScript string
+and breaks it, which is the exact problem `TOKENS` exists to remove.
+
 ## Before it happens
 
 Turn **Should ask before creating a folder** on to get a confirmation dialog showing the cleaned-up
