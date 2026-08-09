@@ -106,10 +106,8 @@ declares are merged rather than replaced:
 ```text
 {{file}} !.md
 <%*
-tp.hooks.on_all_templates_executed(async () => {
-  await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
-    fm.aliases = TOKENS.rawFolderName.split(' - ');
-  });
+await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
+  fm.aliases = TOKENS.rawFolderName.split(' - ');
 });
 -%>
 # <% TOKENS.folderName %>
@@ -125,10 +123,10 @@ aliases:
 ---
 ```
 
-**`tp.hooks.on_all_templates_executed` is not decoration here.** Templater writes the rendered note
-*after* your code has run, so a `processFrontMatter` call made outside the hook is overwritten by that
-write and the properties disappear without an error. The hook runs your change once the note has
-settled.
+Elsewhere in Templater a plain `processFrontMatter` like that is lost — the rendered note is written
+*after* your code runs, straight over the top of it, so you have to defer the call with
+`tp.hooks.on_all_templates_executed`. Here the plugin owns that write and keeps whatever properties
+your template set while it ran, so the plain call is enough. The hook still works if you prefer it.
 
 ## Before it happens
 

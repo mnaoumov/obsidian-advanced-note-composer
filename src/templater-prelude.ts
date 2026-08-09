@@ -47,12 +47,5 @@ export const TEMPLATER_PRELUDE_VARIABLE_NAME = 'TOKENS';
  * @returns The prelude, ending with a newline.
  */
 export function buildTemplaterPrelude(tokens: TemplaterPreludeTokens): string {
-  // Spread into a fresh literal so the entries type as the union the tokens actually hold: an interface has
-  // No implicit index signature, which would otherwise leave every value `unknown`.
-  const values: Record<string, number | string> = { ...tokens };
-  const entries = Object.entries(values)
-    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    .map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`)
-    .join(',\n');
-  return `<%*\nconst ${TEMPLATER_PRELUDE_VARIABLE_NAME} = {\n${entries}\n};\n-%>\n`;
+  return `<%*\nconst ${TEMPLATER_PRELUDE_VARIABLE_NAME} = ${JSON.stringify(tokens)};\n-%>\n`;
 }

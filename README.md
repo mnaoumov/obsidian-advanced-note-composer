@@ -355,19 +355,19 @@ aliases: <% JSON.stringify(TOKENS.rawFolderName.split(' - ')) %>
 # <% TOKENS.folderName %>
 ```
 
-To *write* the properties instead of printing them — letting Obsidian own the YAML, so a part containing a `:` or a quote is still formatted correctly and existing properties are merged rather than replaced — use `processFrontMatter` from inside `tp.hooks.on_all_templates_executed`. The hook is required: Templater writes the rendered note *after* your code runs, so a call made outside it is overwritten and the properties disappear without an error.
+To *write* the properties instead of printing them — letting Obsidian own the YAML, so a part containing a `:` or a quote is still formatted correctly and existing properties are merged rather than replaced — call `processFrontMatter` directly:
 
 ```text
 {{file}} !.md
 <%*
-tp.hooks.on_all_templates_executed(async () => {
-  await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
-    fm.aliases = TOKENS.rawFolderName.split(' - ');
-  });
+await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
+  fm.aliases = TOKENS.rawFolderName.split(' - ');
 });
 -%>
 # <% TOKENS.folderName %>
 ```
+
+Everywhere else in Templater that plain call is lost, because the rendered note is written over the top of it once your code has run, and you have to defer it with `tp.hooks.on_all_templates_executed`. Here the plugin owns that write and keeps whatever properties the template set while it ran, so the plain call is enough — the hook still works if you prefer it. The note's own text always comes from the render, so a template that rewrites its body mid-run keeps the rendered version.
 
 Turn **Should ask before creating a folder** (off by default) on to see a confirmation dialog first — it shows the cleaned-up folder name and every note about to be created, which is the one place the difference between what you typed and what you get is visible beforehand. The whole creation runs in one reversible, resource-locked transaction, so a cancellation or a failure leaves no half-built folder behind.
 

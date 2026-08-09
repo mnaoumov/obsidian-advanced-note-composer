@@ -708,8 +708,8 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const parsedTemplate = castTo<string>(parseTemplate.mock.calls[0]?.[1]);
       // Declared FIRST: anything below it may reference `TOKENS`, including the note's own frontmatter.
       expect(parsedTemplate.startsWith('<%*\nconst TOKENS = {')).toBe(true);
-      expect(parsedTemplate).toContain('safeFolderName: "Alpha"');
-      expect(parsedTemplate).toContain('index: 1,');
+      expect(parsedTemplate).toContain('"safeFolderName":"Alpha"');
+      expect(parsedTemplate).toContain('"index":1');
       expect(parsedTemplate.endsWith('# 1. Alpha\n')).toBe(true);
 
       // The note on disk NEVER holds the prelude — that is what keeps its frontmatter real for the
