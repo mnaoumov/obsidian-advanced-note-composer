@@ -31,6 +31,7 @@ import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { parseFolderContentTemplate } from '../folder-content-template.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
+import { applyNameTransform } from '../name-transform.ts';
 import { resolveNextFolderIndex } from '../next-folder-index.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import {
@@ -167,7 +168,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     }
 
     const settings = this.pluginSettingsComponent.settings;
-    const safeFolderName = this.normalizeFolderName(rawFolderName);
+    // Cannot throw: the prompt's validator already ran the same transform over the same text.
+    const safeFolderName = await this.normalizeFolderName(rawFolderName);
     const index = resolveNextFolderIndex({
       nameTemplate: settings.newFolderNameTemplate,
       parentFolder
@@ -350,13 +352,16 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * Applies the same normalization the prompt validated with. Kept in one place so the name that was
    * accepted and the name that gets created can never diverge.
    *
+   * The `Name transform template` runs FIRST, on the untouched typed text (issue #196) — that is what
+   * `{{rawString}}` means, and running it after the invalid-character pass would leave it nothing to map.
+   *
    * @param rawFolderName - The name as typed.
    * @returns The normalized name.
    */
-  private normalizeFolderName(rawFolderName: string): string {
+  private async normalizeFolderName(rawFolderName: string): Promise<string> {
     const settings = this.pluginSettingsComponent.settings;
     return normalizeTypedFolderName({
-      rawName: rawFolderName,
+      rawName: await this.transformName(rawFolderName),
       replacement: settings.replacement,
       shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
       shouldTitleCase: settings.shouldTitleCaseCreatedFolderName
@@ -366,6 +371,11 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   /**
    * Makes a resolved note name usable as a file name, and gives it the markdown extension unless it already
    * carries an extension of its own.
+   *
+   * The `Name transform template` deliberately does NOT run here (issue #196): this name is built from
+   * tokens that already carry the transformed folder name, so transforming again would apply the rewrite
+   * twice — `{{rawString}} notes` over `alpha` would name the note `Alpha Notes notes`. The transform runs
+   * once, where the name enters from outside; a template author who wants more can say so in the template.
    *
    * @param resolvedName - The note name with its tokens resolved.
    * @returns The file name to create.
@@ -417,7 +427,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       okButtonText: 'Create',
       placeholder: 'Folder name',
       title: 'Enter folder name',
-      valueValidator: (value: string): MaybeReturn<string> => this.validateTypedFolderName(value)
+      valueValidator: async (value: string): Promise<MaybeReturn<string>> => await this.validateTypedFolderName(value)
     });
   }
 
@@ -453,13 +463,41 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   }
 
   /**
+   * Runs the `Name transform template` over a name (issue #196).
+   *
+   * The Templater context is left to the active note: this command creates a folder rather than working on
+   * an existing note, so it has none of its own to offer.
+   *
+   * @param rawString - The name to transform.
+   * @returns The transformed name.
+   */
+  private async transformName(rawString: string): Promise<string> {
+    return await applyNameTransform({
+      app: this.app,
+      contextFile: null,
+      rawString,
+      template: this.pluginSettingsComponent.settings.nameTransformTemplate
+    });
+  }
+
+  /**
    * Validates what was typed into the prompt, in the terms the user typed it.
+   *
+   * A broken `Name transform template` is reported HERE rather than being allowed to escape (issue #196):
+   * the prompt is the one place that can say what went wrong and re-ask with the typed text intact, and
+   * every later use of the template runs on a name this validator already accepted.
    *
    * @param value - The typed name.
    * @returns The error message, or nothing when the name is usable.
    */
-  private validateTypedFolderName(value: string): MaybeReturn<string> {
-    const normalizedName = this.normalizeFolderName(value);
+  private async validateTypedFolderName(value: string): Promise<MaybeReturn<string>> {
+    let normalizedName: string;
+    try {
+      normalizedName = await this.normalizeFolderName(value);
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+
     if (!normalizedName) {
       return 'Folder name cannot be empty';
     }

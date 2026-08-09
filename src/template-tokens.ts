@@ -68,6 +68,21 @@ export interface CreateFolderTemplateTokens {
   readonly safeFolderName: string;
 }
 
+/**
+ * Everything the `Name transform template` knows about the name it is rewriting (issue #196).
+ *
+ * Exactly one member, deliberately: the transform's whole job is to turn the supplied name into another
+ * name, so anything else it needs it can compute from that string. The same bag is handed to the Templater
+ * prelude, so `{{rawString}}` and `<% TOKENS.rawString %>` always mean the same thing.
+ */
+export interface NameTransformTokens {
+  /**
+   * The name as supplied, before ANY normalization — the typed folder name, the typed split target, or a
+   * note-name template's own resolved output.
+   */
+  readonly rawString: string;
+}
+
 interface ResolveCreateFolderTemplateTokensParams {
   /**
    * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
@@ -91,6 +106,18 @@ interface ResolveFolderTemplateTokensParams {
    * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
    */
   readonly template: string;
+}
+
+interface ResolveNameTransformTokensParams {
+  /**
+   * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
+   */
+  readonly template: string;
+
+  /**
+   * The values the tokens resolve to.
+   */
+  readonly tokens: NameTransformTokens;
 }
 
 interface ResolveTemplateTokensParams {
@@ -204,6 +231,30 @@ export function resolveFolderTemplateTokens(params: ResolveFolderTemplateTokensP
       }
       case 'parentFolder'.toLowerCase(): {
         return sourceFolder.parent?.name ?? '';
+      }
+      default: {
+        return resolveDateTimeToken(key, format);
+      }
+    }
+  });
+}
+
+/**
+ * Resolves the tokens of the `Name transform template` setting (issue #196) inside a template string.
+ *
+ * Shares {@link TEMPLATE_TOKEN_REG_EXP} and the "unknown key throws" contract with the other resolvers, so
+ * `{{date}}` / `{{time}}` work here too and a typo still fails loudly — here it surfaces as a prompt
+ * validation error rather than as a mangled name.
+ *
+ * @param params - The template and the values its tokens resolve to.
+ * @returns The template with every token replaced by its value.
+ */
+export function resolveNameTransformTokens(params: ResolveNameTransformTokensParams): string {
+  const { template, tokens } = params;
+  return replaceTemplateTokens(template, (key, format) => {
+    switch (key.toLowerCase()) {
+      case 'rawString'.toLowerCase(): {
+        return tokens.rawString;
       }
       default: {
         return resolveDateTimeToken(key, format);

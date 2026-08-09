@@ -60,6 +60,33 @@ describe('PluginSettingsComponent', () => {
       });
     });
 
+    describe('nameTransformTemplate validator', () => {
+      it('should accept an empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'nameTransformTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept the rawString token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'nameTransformTemplate', 'Project {{rawString}}')).toBeUndefined();
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'nameTransformTemplate', '{{folderName}}')).toBe('Unknown token {{folderName}}');
+      });
+
+      it('should accept literal text that is not a valid file name, since the result is sanitized afterwards', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'nameTransformTemplate', '{{rawString}}: extra')).toBeUndefined();
+      });
+
+      it('should accept templater syntax, which cannot be checked until it runs', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'nameTransformTemplate', '<% TOKENS.rawString.replaceAll(": ", " - ") %>')).toBeUndefined();
+      });
+    });
+
     describe('mergeTemplate validator', () => {
       it('should reject template without content token', async () => {
         const component = createComponent();

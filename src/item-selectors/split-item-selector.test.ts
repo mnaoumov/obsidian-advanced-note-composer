@@ -42,6 +42,7 @@ vi.mock('../plugin-settings.ts', () => ({
 interface SettingsOverrides {
   frontmatterTitleMode?: string;
   isPathIgnored?: ReturnType<typeof vi.fn>;
+  nameTransformTemplate?: string;
   replacement?: string;
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldReplaceInvalidTitleCharacters?: boolean;
@@ -95,6 +96,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
     settings: castTo<PluginSettings>({
       frontmatterTitleMode: FrontmatterTitleMode.UseForInvalidTitleOnly,
       isPathIgnored: vi.fn().mockReturnValue(false),
+      nameTransformTemplate: '',
       replacement: '_',
       shouldAddInvalidTitleToNoteAlias: true,
       shouldReplaceInvalidTitleCharacters: true,

@@ -5,7 +5,10 @@ import type { MaybeReturn } from 'obsidian-dev-utils/type';
 import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
-import type { CreateFolderTemplateTokens } from './template-tokens.ts';
+import type {
+  CreateFolderTemplateTokens,
+  NameTransformTokens
+} from './template-tokens.ts';
 
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import { parseFolderContentTemplate } from './folder-content-template.ts';
@@ -16,6 +19,7 @@ import {
 import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
+  resolveNameTransformTokens,
   TEMPLATE_TOKEN_REG_EXP
 } from './template-tokens.ts';
 
@@ -39,6 +43,12 @@ const SAMPLE_CREATE_FOLDER_TOKENS: CreateFolderTemplateTokens = {
   rawFolderName: 'sample',
   safeFolderName: 'Sample'
 };
+
+/**
+ * Stand-in value for validating a `nameTransformTemplate` without a name to transform. As with
+ * {@link SAMPLE_CREATE_FOLDER_TOKENS}, only its shape matters — the point is to make the resolver run.
+ */
+const SAMPLE_NAME_TRANSFORM_TOKENS: NameTransformTokens = { rawString: 'Sample' };
 
 interface PluginSettingsComponentConstructorParams {
   readonly dataHandler: DataHandler;
@@ -101,6 +111,20 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       }
     });
 
+    // Only the token keys are checked. There is deliberately NO invalid-character check on the literal
+    // Text, unlike every other name-shaped template here: emitting a `:` or a ` - ` is the entire point of
+    // A transform, and whatever it leaves invalid is answered downstream by
+    // `shouldReplaceInvalidTitleCharacters`. Templater syntax cannot be validated statically at all — a
+    // Broken template surfaces when it runs, in the prompt that refuses the name.
+    this.registerValidator('nameTransformTemplate', (value): MaybeReturn<string> => {
+      const unknownKey = findUnknownTokenKey(value, (probe) => {
+        resolveNameTransformTokens({ template: probe, tokens: SAMPLE_NAME_TRANSFORM_TOKENS });
+      });
+      if (unknownKey) {
+        return `Unknown token {{${unknownKey}}}`;
+      }
+    });
+
     this.registerValidator('mergeTemplate', (value): MaybeReturn<string> => {
       if (!value.includes('{{content}}')) {
         return 'Merge template should contain {{content}} token';
@@ -149,17 +173,31 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 /**
  * Reports the first token key the create-folder resolver does not know.
  *
- * Each key is probed on its own rather than the whole template being resolved once, so the message can name
- * the offending token. Probing THROUGH the resolver — instead of comparing against a hard-coded key list —
- * is what keeps this from drifting the day a token is added.
- *
  * @param template - The template to check.
  * @returns The unknown key, or `undefined` when every token resolves.
  */
 function findUnknownCreateFolderTokenKey(template: string): string | undefined {
+  return findUnknownTokenKey(template, (probe) => {
+    resolveCreateFolderTemplateTokens({ template: probe, tokens: SAMPLE_CREATE_FOLDER_TOKENS });
+  });
+}
+
+/**
+ * Reports the first token key a resolver does not know.
+ *
+ * Each key is probed on its own rather than the whole template being resolved once, so the message can name
+ * the offending token. Probing THROUGH the resolver — instead of comparing against a hard-coded key list —
+ * is what keeps this from drifting the day a token is added, and taking the resolver as a parameter is what
+ * lets each template vocabulary reuse it (issue #196 added the second one).
+ *
+ * @param template - The template to check.
+ * @param resolveToken - Resolves a single `{{key}}` probe, throwing when the key is unknown.
+ * @returns The unknown key, or `undefined` when every token resolves.
+ */
+function findUnknownTokenKey(template: string, resolveToken: (probe: string) => void): string | undefined {
   for (const key of getTemplateTokenKeys(template)) {
     try {
-      resolveCreateFolderTemplateTokens({ template: `{{${key}}}`, tokens: SAMPLE_CREATE_FOLDER_TOKENS });
+      resolveToken(`{{${key}}}`);
     } catch {
       return key;
     }

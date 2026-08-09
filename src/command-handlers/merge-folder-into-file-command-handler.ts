@@ -30,10 +30,10 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
-import { fixFileName } from '../filename-validation.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { shouldMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { transformAndFixFileName } from '../name-transform.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
@@ -132,7 +132,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const desiredPath = this.resolveDesiredTargetPath(folder);
+    const desiredPath = await this.resolveDesiredTargetPath(folder);
     // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
     // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
     // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the
@@ -231,8 +231,8 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
    * @param folder - The folder being merged.
    * @returns The path the merged note should end up at.
    */
-  private resolveDesiredTargetPath(folder: TFolder): string {
-    const fileName = `${this.resolveTargetBasename(folder)}.md`;
+  private async resolveDesiredTargetPath(folder: TFolder): Promise<string> {
+    const fileName = `${await this.resolveTargetBasename(folder)}.md`;
     return join(this.resolveTargetParentPath(folder, fileName), fileName);
   }
 
@@ -246,7 +246,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
    * @param folder - The folder being merged.
    * @returns The base name to give the merged note, without the `.md` extension.
    */
-  private resolveTargetBasename(folder: TFolder): string {
+  private async resolveTargetBasename(folder: TFolder): Promise<string> {
     const { settings } = this.pluginSettingsComponent;
     const template = settings.mergeFolderIntoFileNoteNameTemplate;
     if (!template) {
@@ -259,8 +259,13 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return folder.name;
     }
 
-    const fixedNoteName = fixFileName({
+    // A folder merge has no note of its own to offer Templater as context (issue #196), so the
+    // `Name transform template` falls back to whatever note is open.
+    const fixedNoteName = await transformAndFixFileName({
+      app: this.app,
+      contextFile: null,
       fileName: noteName,
+      nameTransformTemplate: settings.nameTransformTemplate,
       replacement: settings.replacement,
       shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
       shouldTreatTitleAsPath: false

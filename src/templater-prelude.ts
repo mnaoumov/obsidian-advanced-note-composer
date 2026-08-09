@@ -1,6 +1,16 @@
-import type { CreateFolderTemplateTokens } from './template-tokens.ts';
+import type {
+  CreateFolderTemplateTokens,
+  NameTransformTokens
+} from './template-tokens.ts';
 
 import { extractFrontmatter } from './frontmatter-merge.ts';
+
+/**
+ * Every token bag the prelude can expose. A union rather than `Record<string, …>` because an interface has
+ * no implicit index signature, so a bag would not be assignable to one — and listing them keeps a new bag a
+ * deliberate edit here rather than something that silently starts working.
+ */
+export type TemplaterPreludeTokens = CreateFolderTemplateTokens | NameTransformTokens;
 
 /**
  * The name the prelude binds the token bag to.
@@ -28,8 +38,9 @@ export interface InsertTemplaterPreludeParams {
 }
 
 /**
- * Builds the Templater execution-command prelude that exposes this command's tokens to Templater code
- * (issue #191).
+ * Builds the Templater execution-command prelude that exposes a command's tokens to Templater code
+ * (issue #191). Shared by the created notes' content and by the `Name transform template` (issue #196),
+ * which parses a bare string rather than a file but needs the same `TOKENS` binding.
  *
  * Templater offers no way to pass data INTO a template run — `tp.config` carries only `template_file`,
  * `target_file`, `run_mode` and `active_file` — so the values are injected as source instead. A variable
@@ -45,7 +56,7 @@ export interface InsertTemplaterPreludeParams {
  * @param tokens - The values to expose.
  * @returns The prelude, ending with a newline.
  */
-export function buildTemplaterPrelude(tokens: CreateFolderTemplateTokens): string {
+export function buildTemplaterPrelude(tokens: TemplaterPreludeTokens): string {
   // Spread into a fresh literal so the entries type as the union the tokens actually hold: an interface has
   // No implicit index signature, which would otherwise leave every value `unknown`.
   const values: Record<string, number | string> = { ...tokens };

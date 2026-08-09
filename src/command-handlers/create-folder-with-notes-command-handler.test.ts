@@ -142,6 +142,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       editAndSave,
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
+        nameTransformTemplate: '',
         newFolderContentTemplate: '',
         newFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         replacement: '_',
@@ -403,42 +404,110 @@ describe('CreateFolderWithNotesCommandHandler', () => {
   });
 
   describe('the prompt validator', () => {
-    async function captureValidator(settingsOverrides?: Partial<PluginSettings>): Promise<(value: string) => unknown> {
+    async function captureValidator(settingsOverrides?: Partial<PluginSettings>): Promise<(value: string) => Promise<unknown>> {
       mockPrompt.mockResolvedValue(null);
       const { handler } = createHandler(settingsOverrides);
       await handler.executeFolder(getFolder('parent'));
       const promptParams = ensureNonNullable(mockPrompt.mock.calls[0]?.[0]);
-      return castTo<(value: string) => unknown>(promptParams.valueValidator);
+      return castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
     }
 
     it('should accept a usable name', async () => {
       initApp({ 'parent/note.md': 'note' });
       const validate = await captureValidator();
-      expect(validate('test notes')).toBeUndefined();
+      expect(await validate('test notes')).toBeUndefined();
     });
 
     it('should reject an empty name', async () => {
       initApp({ 'parent/note.md': 'note' });
       const validate = await captureValidator();
-      expect(validate('')).toBe('Folder name cannot be empty');
+      expect(await validate('')).toBe('Folder name cannot be empty');
     });
 
     it('should reject a name that normalizes to nothing', async () => {
       initApp({ 'parent/note.md': 'note' });
       const validate = await captureValidator();
-      expect(validate('  ...  ')).toBe('Folder name cannot be empty');
+      expect(await validate('  ...  ')).toBe('Folder name cannot be empty');
     });
 
     it('should accept an invalid character while replacing is on, since it gets replaced', async () => {
       initApp({ 'parent/note.md': 'note' });
       const validate = await captureValidator();
-      expect(validate('a*b')).toBeUndefined();
+      expect(await validate('a*b')).toBeUndefined();
     });
 
     it('should reject an invalid character while replacing is off', async () => {
       initApp({ 'parent/note.md': 'note' });
       const validate = await captureValidator({ shouldReplaceInvalidTitleCharacters: false });
-      expect(validate('a*b')).toBe('Folder name contains invalid characters');
+      expect(await validate('a*b')).toBe('Folder name contains invalid characters');
+    });
+  });
+
+  describe('name transform (issue #196)', () => {
+    it('should apply the transform before the rest of the normalization', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+      const { handler } = createHandler({ nameTransformTemplate: '{{rawString}} notes' });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      // Title Case runs on the transform's output, not on what was typed.
+      expect(listPaths('parent/1. Alpha Notes')).toEqual(['parent/1. Alpha Notes/Alpha Notes.md']);
+    });
+
+    it('should map a character that the replacement string would otherwise mangle', async () => {
+      const parseTemplate = vi.fn().mockResolvedValue('A - B');
+      initApp({ 'parent/note.md': 'note' }, {
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            parse_template: parseTemplate
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
+      });
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
+      mockPrompt.mockResolvedValue('A: B');
+      const { handler } = createHandler({ nameTransformTemplate: '<% TOKENS.rawString.replaceAll(": ", " - ") %>' });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      // Without the transform the `:` would have become `_`, giving `1. A_ B`.
+      expect(app.vault.getFolderByPath('parent/1. A - B')).not.toBeNull();
+    });
+
+    it('should report a broken transform in the prompt instead of letting it escape', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue(null);
+      const { handler } = createHandler({ nameTransformTemplate: '{{nope}}' });
+      await handler.executeFolder(getFolder('parent'));
+      const promptParams = ensureNonNullable(mockPrompt.mock.calls[0]?.[0]);
+      const validate = castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
+
+      expect(await validate('alpha')).toBe('Invalid template key: nope');
+    });
+
+    it('should report a template that throws something other than an Error', async () => {
+      // Templater runs user JS, and `throw "boom"` is legal JS.
+      initApp({ 'parent/note.md': 'note' }, {
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            parse_template: vi.fn().mockRejectedValue('boom')
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
+      });
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
+      mockPrompt.mockResolvedValue(null);
+      const { handler } = createHandler({ nameTransformTemplate: '<% throw "boom" %>' });
+      await handler.executeFolder(getFolder('parent'));
+      const promptParams = ensureNonNullable(mockPrompt.mock.calls[0]?.[0]);
+      const validate = castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
+
+      expect(await validate('alpha')).toBe('boom');
     });
   });
 

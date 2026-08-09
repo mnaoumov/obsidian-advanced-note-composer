@@ -199,6 +199,54 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             }
           }),
           this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('How a name is rewritten before it is turned into a file name, so you can define your own replacements ');
+              f.appendText('instead of relying on the single replacement string above.');
+              f.createEl('br');
+              f.appendText('Leave empty to use the name as it was typed.');
+              f.createEl('br');
+              f.appendText('Available tokens:');
+              f.createEl('br');
+              f.appendText('- ');
+              appendCodeBlock(f, '{{rawString}}');
+              f.appendText(' - the name as it was typed, before any other clean-up.');
+              f.createEl('br');
+              f.appendText('- ');
+              appendCodeBlock(f, '{{date:FORMAT}}');
+              f.appendText(' and ');
+              appendCodeBlock(f, '{{time:FORMAT}}');
+              f.createEl('br');
+              f.appendText('With ');
+              f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+              f.appendText(' installed, the same values are available as ');
+              appendCodeBlock(f, 'TOKENS.rawString');
+              f.appendText(', which is how you write a mapping:');
+              f.createEl('br');
+              appendCodeBlock(f, '<% TOKENS.rawString.replaceAll(": ", " - ") %>');
+              f.createEl('br');
+              f.appendText('turns ');
+              appendCodeBlock(f, 'A: B');
+              f.appendText(' into ');
+              appendCodeBlock(f, 'A - B');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
+              appendCodeBlock(f, 'Create folder with notes...');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Characters the rewrite leaves invalid are handled by ');
+              appendCodeBlock(f, 'Should replace invalid characters');
+              f.appendText(' above: turn it off to have such names refused instead of replaced.');
+            }),
+            name: 'Name transform template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'nameTransformTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
             desc: 'Whether to add invalid title to the note alias.',
             name: 'Should add invalid title to note aliases',
             render: (setting) => {
