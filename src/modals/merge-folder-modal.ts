@@ -16,7 +16,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import {
-  openMinimizableModal,
+  openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
 import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
@@ -167,7 +167,7 @@ export async function selectTargetFolderForMergeFolder(params: SelectTargetFolde
       return targetFolder;
     }
     const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openMinimizableModal(
+      openConfirmDialogModal(
         new ConfirmDialogModal({
           app: params.app,
           buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app: params.app, fragment, source: params.sourceFolder, target: targetFolder }),

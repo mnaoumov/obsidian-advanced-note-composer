@@ -35,7 +35,7 @@ import { InsertMode } from '../insert-mode.ts';
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the move
 // Proceeds without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { MoveFolderCommandHandler } from './move-folder-command-handler.ts';
 
 /**
@@ -100,14 +100,14 @@ vi.mock('../modals/move-folder-modal.ts', () => ({
 }));
 
 vi.mock('../open-minimizable-modal.ts', () => ({
-  openMinimizableModal: vi.fn(() => {
+  openConfirmDialogModal: vi.fn(() => {
     // The "Change target" loop can open the dialog more than once, so the results are a script; a round
     // The test did not script falls back to a plain cancel.
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
   })
 }));
 
-const mockOpenMinimizableModal = vi.mocked(openMinimizableModal);
+const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMove);
 
@@ -285,7 +285,7 @@ describe('MoveFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(mockOpenMinimizableModal).toHaveBeenCalledTimes(1);
+    expect(mockOpenConfirmDialogModal).toHaveBeenCalledTimes(1);
     expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
     expect(await app.vault.adapter.exists('dst/a/note.md')).toBe(false);
     expect(editAndSave).not.toHaveBeenCalled();
@@ -333,7 +333,7 @@ describe('MoveFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(mockOpenMinimizableModal).not.toHaveBeenCalled();
+    expect(mockOpenConfirmDialogModal).not.toHaveBeenCalled();
     expect(await app.vault.adapter.read('dst/a/note.md')).toBe('note body');
   });
 

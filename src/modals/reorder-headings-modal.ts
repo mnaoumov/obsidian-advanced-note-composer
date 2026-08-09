@@ -13,6 +13,7 @@ import {
   flattenHeadingTree,
   flattenTreeToOrder
 } from '../heading-sections.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 
 /**
  * Parameters for {@link openReorderHeadingsModal}.
@@ -127,13 +128,16 @@ class ReorderHeadingsModal extends Modal {
  * Opens the reorder-headings modal for the note's heading tree and resolves the chosen new order (a
  * depth-first permutation of section indices), or `null` when the user cancels.
  *
+ * Minimizable (issue #201): the modal lists headings by text alone, so checking what actually sits under
+ * one before confirming the new order means getting the modal out of the way first.
+ *
  * @param params - The parameters.
  * @returns The chosen order, or `null` if cancelled.
  */
 /* v8 ignore start -- thin modal-open glue tested via the real app (integration). */
 export async function openReorderHeadingsModal(params: OpenReorderHeadingsModalParams): Promise<null | number[]> {
   return await new Promise<null | number[]>((promiseResolve) => {
-    new ReorderHeadingsModal({ app: params.app, promiseResolve, split: params.split }).open();
+    openMinimizableModal(new ReorderHeadingsModal({ app: params.app, promiseResolve, split: params.split }));
   });
 }
 /* v8 ignore stop */

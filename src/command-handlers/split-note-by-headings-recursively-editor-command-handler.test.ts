@@ -46,7 +46,7 @@ import {
 import { InsertMode } from '../insert-mode.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
-import { openModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './split-note-by-headings-recursively-editor-command-handler.ts';
 
 /**
@@ -144,7 +144,7 @@ vi.mock('../modals/select-folder-modal.ts', () => ({
 }));
 
 vi.mock('../open-minimizable-modal.ts', () => ({
-  openModal: vi.fn(() => {
+  openConfirmDialogModal: vi.fn(() => {
     // The "Change target" loop can open the dialog more than once, so a scripted queue takes precedence;
     // A round the test did not script falls back to the single `confirmResult` every other test sets.
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? confirmResult);
@@ -162,7 +162,7 @@ const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockGetCacheSafe = vi.mocked(getCacheSafe);
 const mockResolveSplitTemplateForNewTargetFile = vi.mocked(resolveSplitTemplateForNewTargetFile);
 const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
-const mockOpenModal = vi.mocked(openModal);
+const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectFolder = vi.mocked(selectFolder);
@@ -445,7 +445,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
-    expect(mockOpenModal).toHaveBeenCalledTimes(1);
+    expect(mockOpenConfirmDialogModal).toHaveBeenCalledTimes(1);
     expect(MockSplitComposer).not.toHaveBeenCalled();
     expect(params.pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
   });
@@ -546,7 +546,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
-    expect(mockOpenModal).not.toHaveBeenCalled();
+    expect(mockOpenConfirmDialogModal).not.toHaveBeenCalled();
   });
 
   it('should stop when the cache becomes unavailable mid-run', async () => {

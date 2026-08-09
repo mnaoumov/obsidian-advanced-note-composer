@@ -9,7 +9,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 /**
@@ -55,7 +55,7 @@ export async function confirmMergeFolderIntoFile(params: ConfirmMergeFolderIntoF
   }
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(
+    openConfirmDialogModal(
       new ConfirmDialogModal({
         app: params.app,
         buildContent: (fragment): Promise<void> =>

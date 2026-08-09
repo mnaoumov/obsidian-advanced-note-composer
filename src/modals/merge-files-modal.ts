@@ -13,7 +13,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import {
-  openMinimizableModal,
+  openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
@@ -117,7 +117,7 @@ export async function selectTargetFileForMergeFiles(params: SelectTargetFileForM
       return targetFile;
     }
     const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openMinimizableModal(
+      openConfirmDialogModal(
         new ConfirmDialogModal({
           app: params.app,
           buildContent: (fragment): Promise<void> => buildConfirmContent({ app: params.app, fragment, sourceCount: params.sourceFiles.length, target: targetFile }),

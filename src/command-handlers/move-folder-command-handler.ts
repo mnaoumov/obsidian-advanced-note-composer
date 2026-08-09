@@ -20,7 +20,7 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -167,7 +167,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
   private async confirmMove(sourceFolder: TFolder, targetFolder: TFolder): Promise<ConfirmDialogModalResult> {
     const app = this.app;
     return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openMinimizableModal(
+      openConfirmDialogModal(
         new ConfirmDialogModal({
           app,
           buildContent: (fragment): Promise<void> =>

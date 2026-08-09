@@ -37,7 +37,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
-import { openModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { CreateFolderWithNotesCommandHandler } from './create-folder-with-notes-command-handler.ts';
 
 interface CapturedConfirmParams {
@@ -113,7 +113,7 @@ vi.mock('../modals/select-folder-modal.ts', () => ({
 }));
 
 vi.mock('../open-minimizable-modal.ts', () => ({
-  openModal: vi.fn(() => {
+  openConfirmDialogModal: vi.fn(() => {
     const renameButtonIndex = renameButtonClicks.shift();
     if (renameButtonIndex === undefined) {
       capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
@@ -130,7 +130,7 @@ vi.mock('../open-minimizable-modal.ts', () => ({
   })
 }));
 
-const mockOpenModal = vi.mocked(openModal);
+const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockSelectFolder = vi.mocked(selectFolder);
 const mockPrompt = vi.mocked(prompt);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
@@ -650,7 +650,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
       await handler.executeFolder(getFolder('parent'));
 
-      expect(mockOpenModal).toHaveBeenCalledOnce();
+      expect(mockOpenConfirmDialogModal).toHaveBeenCalledOnce();
       expect(listPaths('parent')).toEqual(['parent/note.md']);
     });
 

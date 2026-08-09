@@ -34,7 +34,10 @@ import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
-import { openMinimizableModal } from '../open-minimizable-modal.ts';
+import {
+  openConfirmDialogModal,
+  openMinimizableModal
+} from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
@@ -705,7 +708,7 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
 
   const { app, editor, sourceFile, targetFile } = params;
   return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(
+    openConfirmDialogModal(
       new ConfirmDialogModal({
         app,
         buildContent: (fragment): Promise<void> => buildSplitConfirmContent({ app, editor, fragment, sourceFile, targetFile }),
