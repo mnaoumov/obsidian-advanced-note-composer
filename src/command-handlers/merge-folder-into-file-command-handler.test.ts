@@ -104,6 +104,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.BesideFolder,
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
+        nameTransformTemplate: '',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,

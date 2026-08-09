@@ -165,6 +165,32 @@ export class PluginSettings {
   public mergeTemplate = '\n\n{{content}}';
 
   /**
+   * How a user-supplied name is rewritten before it is sanitized into a file name (issue #196) — the vault's
+   * OWN replacements, instead of living with one universal {@link replacement} character.
+   *
+   * `{{rawString}}` is the name as supplied; with Templater installed the same value is bound as
+   * `TOKENS.rawString`, so a mapping is written as
+   * `<% TOKENS.rawString.replaceAll(": ", " - ") %>` — which turns `A: B` into `A - B` — and a
+   * conditional one is just as easy. (The separator carries its space: replacing a bare `:` in `A: B`
+   * would leave `A -  B`, which only survives because folder names collapse whitespace runs.)
+   *
+   * A TEMPLATE rather than a `FROM => TO` mapping list, for the reason the rest of this plugin's decisions
+   * are templates: a list can only ever express the substitutions someone already thought of, while one
+   * escape hatch covers every mapping anyone will ask for. It is also why Templater is required for anything
+   * conditional — plain token substitution cannot branch, and inventing a second mini-language to make it
+   * branch would be a worse Templater.
+   *
+   * Applies EVERYWHERE a name becomes a file name — splits, extracts, the folder-merge note name, folder
+   * creation — matching {@link replacement}, which is already plugin-wide. Empty (the default) skips it
+   * entirely, which is what makes this need no `registerLegacySettingsConverter`: an existing `data.json`
+   * has no such key, gets `''`, and behaves exactly as before.
+   *
+   * What the transform leaves invalid is NOT its problem — see
+   * {@link shouldReplaceInvalidTitleCharacters}.
+   */
+  public nameTransformTemplate = '';
+
+  /**
    * The notes `Create folder with notes...` puts inside the folder it creates (issue #191).
    *
    * A line whose first non-whitespace is `{{file}}` starts a new note and names it with the rest of that
@@ -250,6 +276,16 @@ export class PluginSettings {
 
   public shouldOpenNoteAfterMerge = false;
   public shouldOpenTargetNoteAfterSplit = false;
+  /**
+   * What happens to invalid characters that {@link nameTransformTemplate} did NOT handle (issue #196).
+   *
+   * On (the default), they take the universal {@link replacement} — the plugin's original behavior. Off,
+   * they are left exactly where they are, and the flow's own validation refuses the name: the prompt of
+   * `Create folder with notes...` re-asks, and the split / folder-merge note-name templates fall back to
+   * their default name. That refusal IS issue #196's "block the characters that have no replacement", which
+   * is why the request needed no setting of its own — with a transform mapping the characters the user
+   * cares about, this toggle already says what to do with the rest.
+   */
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
   public shouldShowModalInstructions = true;

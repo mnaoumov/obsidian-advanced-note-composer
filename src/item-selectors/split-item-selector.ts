@@ -13,6 +13,7 @@ import type {
 
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { fixFileName } from '../filename-validation.ts';
+import { transformAndFixFileName } from '../name-transform.ts';
 import { FrontmatterTitleMode } from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
@@ -82,7 +83,7 @@ export class SplitItemSelector extends ItemSelectorBase {
 
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd({ $string: fileName, suffix: '.md' });
-    const fixedFileName = `${this.fixFileName(fileName)}.md`;
+    const fixedFileName = `${await this.resolveFileName(fileName)}.md`;
     const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
@@ -130,16 +131,6 @@ export class SplitItemSelector extends ItemSelectorBase {
     return file;
   }
 
-  private fixFileName(fileName: string, shouldTreatTitleAsPath = this.shouldTreatTitleAsPath): string {
-    const { settings } = this.pluginSettingsComponent;
-    return fixFileName({
-      fileName,
-      replacement: settings.replacement,
-      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
-      shouldTreatTitleAsPath
-    });
-  }
-
   /**
    * Relocates a freshly-created split/extract note into a brand-new folder named after it, so the note
    * lives at `<dir>/<name>/<name>.md` instead of `<dir>/<name>.md` (issue #79). The folder name is
@@ -164,11 +155,35 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   /**
+   * Runs the typed target name through the `Name transform template` and then the invalid-character pass
+   * (issue #196), in that order. The split's SOURCE note is the Templater context, which is the note the
+   * user is actually working on.
+   *
+   * @param fileName - The name as typed.
+   * @returns The transformed, sanitized name.
+   */
+  private async resolveFileName(fileName: string): Promise<string> {
+    const { settings } = this.pluginSettingsComponent;
+    return await transformAndFixFileName({
+      app: this.app,
+      contextFile: this.sourceFile,
+      fileName,
+      nameTransformTemplate: settings.nameTransformTemplate,
+      replacement: settings.replacement,
+      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
+      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath
+    });
+  }
+
+  /**
    * Resolves the base name a split/extract note gets inside its own folder from the
    * `splitIntoFolderNoteNameTemplate` setting (issue #153), so every folder split can produce e.g.
    * `<dir>/<name>/Overview.md`. Tokens are resolved against the note as it exists *before* the move, so
    * `{{newTitle}}` is the folder's name. An empty setting, a template resolving to nothing, or a name
    * that still spans folders after sanitization all fall back to the folder's name (today's behavior).
+   *
+   * The `Name transform template` deliberately does NOT run here (issue #196): `{{newTitle}}` is the note
+   * whose name the transform already produced, so running it again would apply the rewrite twice.
    *
    * @param file - The just-created note, before it is moved into its folder.
    * @returns The base name to give the note inside its folder, without the `.md` extension.
@@ -191,7 +206,13 @@ export class SplitItemSelector extends ItemSelectorBase {
       return file.basename;
     }
 
-    const fixedNoteName = this.fixFileName(noteName, false);
+    const { settings } = this.pluginSettingsComponent;
+    const fixedNoteName = fixFileName({
+      fileName: noteName,
+      replacement: settings.replacement,
+      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
+      shouldTreatTitleAsPath: false
+    });
     // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
     // Renaming into the folder that separator implies would fail, since it does not exist.
     if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {

@@ -30,6 +30,33 @@ If those invalid characters were used intentionally, the plugin allows to add th
 - to the note alias (to be able to access it from the `Quick switcher`).
 - to the frontmatter title key.
 
+### Your own replacements
+
+One **Replacement string** for every invalid character is a blunt instrument: it turns `Report: Q1` into
+`Report_ Q1` whether or not that is what you wanted. **Name transform template** lets you say what each
+character should become instead. It rewrites the name *before* the invalid characters are dealt with, and
+it applies everywhere a name becomes a file name — split and extract targets, the merged note name, and
+`Create folder with notes...`.
+
+`{{rawString}}` is the name as you typed it. With
+[Templater](https://silentvoid13.github.io/Templater/) installed the same value is available as
+`TOKENS.rawString`, which is what lets you write a real mapping:
+
+```text
+<% TOKENS.rawString.replaceAll(": ", " - ") %>
+```
+
+With that set, typing `A: B` creates `A - B`. Conditional mappings are ordinary JavaScript, so one template
+can handle as many characters as you like. Templater is only needed for the logic — a template made purely
+of `{{tokens}}` works on its own.
+
+Characters your template does **not** map are still governed by **Should replace invalid characters**: leave
+it on and they take the **Replacement string** as before, or turn it off and a name that still contains them
+is refused rather than silently rewritten — so nothing is replaced except what you asked for.
+
+A broken template is reported where you can see it: the `Create folder with notes...` prompt shows the error
+and asks again, and the other commands stop rather than create a note under a name you did not intend.
+
 ## Treat title as path
 
 `Treat title as path` option converts titles that contain `/` into paths.
@@ -294,7 +321,7 @@ After you pick a destination, a confirmation dialog shows the folder and where i
 
 ## Create folder with notes
 
-The `Create folder with notes...` command (also on a folder's right-click menu) creates **a folder and the notes inside it** in one step. From the folder menu the new folder goes into the folder you right-clicked; from the command palette it goes into your vault's `Files & Links > Default location for new notes` — all three of its modes are honoured, so `Same folder as current file` puts it beside the note you have open, and with no note open it lands in the vault root. There is nothing to configure and nothing to pick: right-click a folder when you want it somewhere else. A prompt then asks for the folder name, and what you type is cleaned up before anything is created: surrounding whitespace and leading/trailing dots are dropped, runs of whitespace collapse to a single space, invalid characters are replaced per **Should replace invalid title characters** / **Replacement**, and the name is capitalized — the first letter of each word upper-cased and the rest lower-cased, except a word that is already entirely upper-case, so `api TEST` becomes `Api TEST`. Turn **Should capitalize the created folder name** off to keep your capitalization. A name that ends up empty is refused and the prompt asks again.
+The `Create folder with notes...` command (also on a folder's right-click menu) creates **a folder and the notes inside it** in one step. From the folder menu the new folder goes into the folder you right-clicked; from the command palette it goes into your vault's `Files & Links > Default location for new notes` — all three of its modes are honoured, so `Same folder as current file` puts it beside the note you have open, and with no note open it lands in the vault root. There is nothing to configure and nothing to pick: right-click a folder when you want it somewhere else. A prompt then asks for the folder name, and what you type is cleaned up before anything is created: the **Name transform template** rewrites it first (see [Your own replacements](#your-own-replacements)), surrounding whitespace and leading/trailing dots are dropped, runs of whitespace collapse to a single space, invalid characters are replaced per **Should replace invalid title characters** / **Replacement**, and the name is capitalized — the first letter of each word upper-cased and the rest lower-cased, except a word that is already entirely upper-case, so `api TEST` becomes `Api TEST`. Turn **Should capitalize the created folder name** off to keep your capitalization. A name that ends up empty is refused and the prompt asks again.
 
 Two templates under `Create folder with notes` decide the rest:
 

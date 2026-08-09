@@ -111,6 +111,8 @@ describe('PluginSettings', () => {
     // `BesideFolder` IS the pre-#178 behavior, which is what makes the new setting need no legacy converter.
     expect(settings.mergeFolderIntoFileLocation).toBe(MergeFolderIntoFileLocation.BesideFolder);
     expect(settings.mergeTemplate).toBe('\n\n{{content}}');
+    // Empty IS the pre-#196 behavior — the transform is skipped entirely — so no legacy converter is needed.
+    expect(settings.nameTransformTemplate).toBe('');
     expect(settings.releaseNotesShown).toEqual([]);
     expect(settings.replacement).toBe('_');
     expect(settings.shouldAddCommandsToSubmenu).toBe(true);
