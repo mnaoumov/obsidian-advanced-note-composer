@@ -41,6 +41,7 @@ import {
 } from '../operation-notices.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
+import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
 import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../templater.ts';
 
 interface BuildCreateConfirmContentParams {
@@ -445,10 +446,14 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * parsed STRING has neither problem: the file on disk keeps real frontmatter for the metadata cache, and
    * `TOKENS` is declared before anything that could reference it.
    *
+   * Owning the write is also what lets a plain `app.fileManager.processFrontMatter(tp.config.target_file, …)`
+   * work: the render is computed from the note as it stood BEFORE that call, so writing it back would revert
+   * it — which is why Templater requires `tp.hooks.on_all_templates_executed(…)` everywhere else.
+   * {@link applyPropertiesWrittenDuringRun} reconciles the two versions instead, so the hook is optional here.
+   *
    * The `start`/`end` task pair is not bookkeeping — it is the only thing that fires
-   * `templater:all-templates-executed`, so a template's `tp.hooks.on_all_templates_executed(…)` callback
-   * (the supported way to write properties, since Templater's own write lands after the template runs) never
-   * runs without it. It is in a `finally` so a broken template cannot strand the pair.
+   * `templater:all-templates-executed`, so a template that DOES use `tp.hooks.on_all_templates_executed(…)`
+   * never runs its callback without it. It is in a `finally` so a broken template cannot strand the pair.
    *
    * Templater's own cursor jump is deliberately NOT reproduced: it acts on `workspace.activeEditor`, which at
    * this point is still whatever note the user was on — never the note just created, which is opened later.
@@ -477,10 +482,16 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     for (const file of files) {
       templater.start_templater_task(file.path);
       try {
+        const contentBeforeRun = await this.app.vault.read(file);
         const runningConfig = templater.create_running_config(file, file, TEMPLATER_RUN_MODE_OVERWRITE_FILE);
-        const parsed = await templater.parse_template(runningConfig, `${buildTemplaterPrelude(tokens)}${await this.app.vault.read(file)}`);
-        await this.app.vault.modify(file, parsed);
-        this.app.workspace.trigger('templater:overwrite-file', { content: parsed, file });
+        const renderedContent = await templater.parse_template(runningConfig, `${buildTemplaterPrelude(tokens)}${contentBeforeRun}`);
+        const content = applyPropertiesWrittenDuringRun({
+          contentAfterRun: await this.app.vault.read(file),
+          contentBeforeRun,
+          renderedContent
+        });
+        await this.app.vault.modify(file, content);
+        this.app.workspace.trigger('templater:overwrite-file', { content, file });
       } catch (error) {
         // Templater's own entry point swallows this into a notice that names neither the note nor the
         // Template, and leaves the note unrendered. The note is kept the same way — it already exists and
