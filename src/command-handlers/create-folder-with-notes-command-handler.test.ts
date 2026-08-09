@@ -680,11 +680,21 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       expect(await readNote('parent/1. Alpha/Alpha.md')).toBe('');
     });
 
-    it('should inject the TOKENS prelude and hand each note to templater', async () => {
-      const overwriteFileCommands = vi.fn().mockResolvedValue(undefined);
+    it('should parse each note with TOKENS declared first and write back the result', async () => {
+      const parseTemplate = vi.fn().mockResolvedValue('rendered\n');
+      const startTask = vi.fn();
+      const endTask = vi.fn().mockResolvedValue(undefined);
       initApp({ 'parent/note.md': 'note' }, {
-        // eslint-disable-next-line camelcase -- `overwrite_file_commands` is Templater's own API name.
-        'templater-obsidian': { templater: { overwrite_file_commands: overwriteFileCommands } }
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            end_templater_task: endTask,
+            parse_template: parseTemplate,
+            start_templater_task: startTask
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
       });
       mockPrompt.mockResolvedValue('alpha');
       const { handler } = createHandler({
@@ -694,13 +704,85 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
       await handler.executeFolder(getFolder('parent'));
 
-      expect(overwriteFileCommands).toHaveBeenCalledOnce();
-      const content = await readNote('parent/1. Alpha/n.md');
-      expect(content).toContain('<%*');
-      expect(content).toContain('const TOKENS = {');
-      expect(content).toContain('safeFolderName: "Alpha"');
-      expect(content).toContain('index: 1,');
-      expect(content.endsWith('# 1. Alpha\n')).toBe(true);
+      expect(parseTemplate).toHaveBeenCalledOnce();
+      const parsedTemplate = castTo<string>(parseTemplate.mock.calls[0]?.[1]);
+      // Declared FIRST: anything below it may reference `TOKENS`, including the note's own frontmatter.
+      expect(parsedTemplate.startsWith('<%*\nconst TOKENS = {')).toBe(true);
+      expect(parsedTemplate).toContain('safeFolderName: "Alpha"');
+      expect(parsedTemplate).toContain('index: 1,');
+      expect(parsedTemplate.endsWith('# 1. Alpha\n')).toBe(true);
+
+      // The note on disk NEVER holds the prelude — that is what keeps its frontmatter real for the
+      // Metadata cache, and therefore what keeps `tp.frontmatter` working.
+      expect(await readNote('parent/1. Alpha/n.md')).toBe('rendered\n');
+      expect(startTask).toHaveBeenCalledWith('parent/1. Alpha/n.md');
+      expect(endTask).toHaveBeenCalledWith('parent/1. Alpha/n.md');
+    });
+
+    it('should name the note a broken template failed on, close its task, and keep going', async () => {
+      const endTask = vi.fn().mockResolvedValue(undefined);
+      const parseTemplate = vi.fn()
+        .mockRejectedValueOnce(new Error('bad template'))
+        .mockResolvedValueOnce('second\n');
+      initApp({ 'parent/note.md': 'note' }, {
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            end_templater_task: endTask,
+            parse_template: parseTemplate,
+            start_templater_task: vi.fn()
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
+      });
+      mockPrompt.mockResolvedValue('alpha');
+      const { handler, showNotice } = createHandler({
+        newFolderContentTemplate: '{{file}} first.md\n# one\n{{file}} second.md\n# two',
+        shouldRunTemplaterOnDestinationFile: true
+      });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      // Not the LAST notice — the operation still completes, so its completion notice comes after this one.
+      // The path is rendered with `appendCodeBlock`, which contributes nothing to `textContent` under the
+      // Mocks (the completion notice loses its names the same way), so only the message is asserted here.
+      const noticeTexts = showNotice.mock.calls.map((call) => {
+        const content = call[0];
+        return typeof content === 'string' ? content : content.textContent;
+      });
+      expect(noticeTexts.some((text) => text.includes('Templater failed on') && text.includes('bad template'))).toBe(true);
+      // The failed note keeps what it had; the next one is still rendered.
+      expect(await readNote('parent/1. Alpha/first.md')).toBe('# one\n');
+      expect(await readNote('parent/1. Alpha/second.md')).toBe('second\n');
+      // `finally`, so a broken template cannot strand the pair that fires `tp.hooks`.
+      expect(endTask).toHaveBeenCalledTimes(2);
+    });
+
+    it('should report a created note whose template throws something other than an Error', async () => {
+      // Templater runs user JS, and `throw "boom"` is legal JS.
+      initApp({ 'parent/note.md': 'note' }, {
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            end_templater_task: vi.fn().mockResolvedValue(undefined),
+            parse_template: vi.fn().mockRejectedValue('boom'),
+            start_templater_task: vi.fn()
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
+      });
+      mockPrompt.mockResolvedValue('alpha');
+      const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      const noticeTexts = showNotice.mock.calls.map((call) => {
+        const content = call[0];
+        return typeof content === 'string' ? content : content.textContent;
+      });
+      expect(noticeTexts.some((text) => text.includes('Templater failed on') && text.includes('boom'))).toBe(true);
     });
   });
 });

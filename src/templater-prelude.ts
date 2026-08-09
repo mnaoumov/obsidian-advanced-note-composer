@@ -3,8 +3,6 @@ import type {
   NameTransformTokens
 } from './template-tokens.ts';
 
-import { extractFrontmatter } from './frontmatter-merge.ts';
-
 /**
  * Every token bag the prelude can expose. A union rather than `Record<string, …>` because an interface has
  * no implicit index signature, so a bag would not be assignable to one — and listing them keeps a new bag a
@@ -23,21 +21,6 @@ export type TemplaterPreludeTokens = CreateFolderTemplateTokens | NameTransformT
 export const TEMPLATER_PRELUDE_VARIABLE_NAME = 'TOKENS';
 
 /**
- * Parameters for {@link insertTemplaterPrelude}.
- */
-export interface InsertTemplaterPreludeParams {
-  /**
-   * The note's content, with the plugin's own `{{tokens}}` already resolved.
-   */
-  readonly content: string;
-
-  /**
-   * The values to expose to Templater code.
-   */
-  readonly tokens: CreateFolderTemplateTokens;
-}
-
-/**
  * Builds the Templater execution-command prelude that exposes a command's tokens to Templater code
  * (issue #191). Shared by the created notes' content and by the `Name transform template` (issue #196),
  * which parses a bare string rather than a file but needs the same `TOKENS` binding.
@@ -53,6 +36,13 @@ export interface InsertTemplaterPreludeParams {
  *
  * The closing `-%>` trims exactly one newline after the command, so the prelude leaves no blank line behind.
  *
+ * **Every caller puts it FIRST, at position 0 of the text handed to Templater, and never writes it to disk.**
+ * A `const` is in the temporal dead zone for every command ABOVE it, so a prelude placed any lower makes
+ * `TOKENS` unusable in the note's own frontmatter — and Templater then abandons the WHOLE note, body
+ * included, with a generic `Template parsing error, aborting.` notice. Prepending is only safe because the
+ * combined string goes to `parse_template`: a FILE that starts with `<%*` has no frontmatter as far as the
+ * metadata cache is concerned, which is what would break `tp.frontmatter`.
+ *
  * @param tokens - The values to expose.
  * @returns The prelude, ending with a newline.
  */
@@ -65,23 +55,4 @@ export function buildTemplaterPrelude(tokens: TemplaterPreludeTokens): string {
     .map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`)
     .join(',\n');
   return `<%*\nconst ${TEMPLATER_PRELUDE_VARIABLE_NAME} = {\n${entries}\n};\n-%>\n`;
-}
-
-/**
- * Prepends {@link buildTemplaterPrelude} to a note's content, BELOW its frontmatter block when it has one.
- *
- * The insertion point is not cosmetic: a prelude above the opening `---` stops that block being frontmatter
- * at all, so `tp.frontmatter` — and Obsidian's own metadata cache — would see nothing.
- *
- * Only called when Templater will actually run; otherwise the raw `<%* … %>` block would be left sitting in
- * the created note.
- *
- * @param params - The content and the values to expose.
- * @returns The content with the prelude inserted.
- */
-export function insertTemplaterPrelude(params: InsertTemplaterPreludeParams): string {
-  const { content, tokens } = params;
-  const { content: body } = extractFrontmatter(content);
-  const frontmatterBlock = content.slice(0, content.length - body.length);
-  return `${frontmatterBlock}${buildTemplaterPrelude(tokens)}${body}`;
 }
