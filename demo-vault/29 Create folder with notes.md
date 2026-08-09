@@ -67,11 +67,11 @@ as an alias.
 
 This section needs the [Templater](https://github.com/SilentVoid13/Templater) plugin, which this vault
 does not ship. The button installs it from the community store, turns **Should run templater on
-destination file** on, loads the multi-alias template below, and reloads:
+destination file** on, and loads the multi-alias template below — no reload needed:
 
 ```code-button
 ---
-caption: Install Templater and load the example, then reload
+caption: Install Templater and load the example
 ---
 await require('/demoSetup.ts').setUpTemplaterExample(app);
 ```

@@ -4,7 +4,12 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
-import { installConfigureEnableCommunityPlugin } from 'obsidian-dev-utils/obsidian/community-plugins';
+import {
+  configureCommunityPlugin,
+  disableCommunityPlugin,
+  enableCommunityPlugin,
+  installConfigureEnableCommunityPlugin
+} from 'obsidian-dev-utils/obsidian/community-plugins';
 
 const PLUGIN_ID = 'advanced-note-composer';
 const TEMPLATER_PLUGIN_ID = 'templater-obsidian';
@@ -48,16 +53,28 @@ export async function changeSettingsAndReload(app: App, patch: DemoSettingsPatch
 export async function setUpTemplaterExample(app: App): Promise<void> {
   new Notice('Installing Templater...');
   await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
-  await changeSettingsAndReload(app, {
-    newFolderContentTemplate: [
-      '{{file}} !.md',
-      '---',
-      'aliases: <% JSON.stringify(TOKENS.rawFolderName.split(\' - \')) %>',
-      '---',
-      '# <% TOKENS.folderName %>'
-    ].join('\n'),
-    shouldRunTemplaterOnDestinationFile: true
+
+  // Deliberately NOT `changeSettingsAndReload`: writing `data.json` behind a loaded plugin's back and
+  // Then reloading is a race the plugin wins — it saves its own in-memory settings as it unloads, over
+  // The file just written. Disabling first means nothing holds stale settings while the file changes,
+  // And enabling again picks them up with no window reload at all.
+  await disableCommunityPlugin({ app, pluginId: PLUGIN_ID });
+  await configureCommunityPlugin({
+    app,
+    pluginId: PLUGIN_ID,
+    settings: {
+      newFolderContentTemplate: [
+        '{{file}} !.md',
+        '---',
+        'aliases: <% JSON.stringify(TOKENS.rawFolderName.split(\' - \')) %>',
+        '---',
+        '# <% TOKENS.folderName %>'
+      ].join('\n'),
+      shouldRunTemplaterOnDestinationFile: true
+    }
   });
+  await enableCommunityPlugin({ app, pluginId: PLUGIN_ID });
+  new Notice('Templater is ready — the example template is loaded.');
 }
 
 export function bindHotkey(app: App, commandId: string, hotkey: Hotkey): void {
