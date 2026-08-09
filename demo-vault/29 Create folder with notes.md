@@ -154,3 +154,10 @@ you prefer it.
 Turn **Should ask before creating a folder** on to get a confirmation dialog showing the cleaned-up
 folder name and every note about to be created — the one place you can see the difference between
 what you typed and what you will get.
+
+It is also where you can move the folder somewhere else. The parent is decided before you are asked —
+it is the folder you right-clicked, or Obsidian's own `Default location for new notes` when you ran
+the command from the palette — so `Change target` (or `Alt+C`) opens a folder picker. Everything is
+recomputed for the folder you pick, the numbering included: `{{index}}` counts the NEW parent's
+children, so the previewed name is always the one you will actually get. Dismissing the picker keeps
+the parent you had.

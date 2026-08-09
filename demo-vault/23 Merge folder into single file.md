@@ -18,6 +18,13 @@ The notes [[Intro]], [[Part 1]], and the nested [[Part 2]] are combined into a n
 as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing,
 and link/backlink updates all apply. The source notes are deleted once merged.
 
+## Send the merged note somewhere else
+
+Where the merged note lands is decided by **Merge folder into file location** (below), but you can
+override it for one merge: press `Change target` (or `Alt+C`) in the confirmation dialog and pick a
+folder. The dialog re-renders with the new path, re-checking there for a name clash. Nothing is saved
+to your settings - the next merge goes back to the configured location.
+
 ## Name the merged note
 
 **Merge folder into file note name** (under `Merge folders` in the settings) names the merged note

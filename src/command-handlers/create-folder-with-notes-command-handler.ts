@@ -31,6 +31,7 @@ import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { parseFolderContentTemplate } from '../folder-content-template.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { applyNameTransform } from '../name-transform.ts';
 import { resolveNextFolderIndex } from '../next-folder-index.ts';
 import { openModal } from '../open-minimizable-modal.ts';
@@ -70,6 +71,12 @@ interface PlannedNote {
 
 const MARKDOWN_EXTENSION = '.md';
 
+interface CreateFolderWithNotesCommandHandlerBuildPlanParams {
+  readonly parentFolder: TFolder;
+  readonly rawFolderName: string;
+  readonly safeFolderName: string;
+}
+
 interface CreateFolderWithNotesCommandHandlerConfirmCreateParams {
   readonly notes: readonly PlannedNote[];
   readonly parentFolder: TFolder;
@@ -80,6 +87,23 @@ interface CreateFolderWithNotesCommandHandlerCreateFolderWithNotesParams {
   readonly folderPath: string;
   readonly notes: readonly PlannedNote[];
   readonly parentFolder: TFolder;
+}
+
+interface CreateFolderWithNotesCommandHandlerResolvePlanParams {
+  readonly parentFolder: TFolder;
+  readonly rawFolderName: string;
+  readonly safeFolderName: string;
+}
+
+/**
+ * Everything the creation needs, all of it derived from ONE parent folder. Bundled so that changing the
+ * target (issue #199) swaps the whole set at once and nothing can be left pointing at the old parent.
+ */
+interface CreateFolderWithNotesPlan {
+  readonly folderPath: string;
+  readonly notes: readonly PlannedNote[];
+  readonly parentFolder: TFolder;
+  readonly tokens: CreateFolderTemplateTokens;
 }
 
 /**
@@ -169,9 +193,68 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const settings = this.pluginSettingsComponent.settings;
     // Cannot throw: the prompt's validator already ran the same transform over the same text.
     const safeFolderName = await this.normalizeFolderName(rawFolderName);
+
+    const plan = await this.resolvePlan({ parentFolder, rawFolderName, safeFolderName });
+    if (!plan) {
+      return;
+    }
+
+    const createdFiles = await this.createFolderWithNotes({
+      folderPath: plan.folderPath,
+      notes: plan.notes,
+      parentFolder: plan.parentFolder
+    });
+    if (!createdFiles) {
+      return;
+    }
+
+    await this.runTemplater(createdFiles, plan.tokens);
+
+    const firstFile = createdFiles[0];
+    if (firstFile && this.pluginSettingsComponent.settings.shouldOpenNoteAfterCreatingFolder) {
+      await this.app.workspace.getLeaf().openFile(firstFile, { active: true });
+    }
+
+    showOperationCompletionNotice({
+      content: await buildOperationNoticeContent({
+        app: this.app,
+        preposition: 'in',
+        sourcePathOrAbstractFile: plan.folderPath,
+        suffix: `, with ${String(createdFiles.length)} note(s)`,
+        targetPathOrAbstractFile: plan.parentFolder,
+        verb: 'Created folder'
+      }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
+    super.shouldAddToFolderMenu(params);
+    return true;
+  }
+
+  /**
+   * Resolves everything the creation depends on, for one candidate parent folder.
+   *
+   * Kept as one function because every value below is derived from `parentFolder` — the sibling-aware index,
+   * the rendered folder name, the de-duplicated path, the tokens and the notes that interpolate them. When
+   * "Change target" moves the folder somewhere else (issue #199), ALL of it has to be recomputed together,
+   * or the confirmation dialog would preview a plan the write then contradicts.
+   *
+   * @param params - The candidate parent folder and the typed/normalized names.
+   * @returns The plan for that parent folder.
+   */
+  private buildPlan(params: CreateFolderWithNotesCommandHandlerBuildPlanParams): CreateFolderWithNotesPlan {
+    const { parentFolder, rawFolderName, safeFolderName } = params;
+    const settings = this.pluginSettingsComponent.settings;
     const index = resolveNextFolderIndex({
       nameTemplate: settings.newFolderNameTemplate,
       parentFolder
@@ -208,61 +291,18 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       safeFolderName
     };
 
-    const notes = this.planNotes(tokens);
-
-    if (settings.shouldAskBeforeCreatingFolder) {
-      const confirmResult = await this.confirmCreate({ notes, parentFolder, tokens });
-      if (!confirmResult.isConfirmed) {
-        return;
-      }
-      await this.pluginSettingsComponent.editAndSave((settingsToEdit) => {
-        settingsToEdit.shouldAskBeforeCreatingFolder = confirmResult.shouldAskAgain;
-      });
-    }
-
-    const createdFiles = await this.createFolderWithNotes({ folderPath, notes, parentFolder });
-    if (!createdFiles) {
-      return;
-    }
-
-    await this.runTemplater(createdFiles, tokens);
-
-    const firstFile = createdFiles[0];
-    if (firstFile && settings.shouldOpenNoteAfterCreatingFolder) {
-      await this.app.workspace.getLeaf().openFile(firstFile, { active: true });
-    }
-
-    showOperationCompletionNotice({
-      content: await buildOperationNoticeContent({
-        app: this.app,
-        preposition: 'in',
-        sourcePathOrAbstractFile: folderPath,
-        suffix: `, with ${String(createdFiles.length)} note(s)`,
-        targetPathOrAbstractFile: parentFolder,
-        verb: 'Created folder'
-      }),
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent: this.pluginSettingsComponent
-    });
-  }
-
-  protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
-
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
-  protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
-    super.shouldAddToFolderMenu(params);
-    return true;
+    return {
+      folderPath,
+      notes: this.planNotes(tokens),
+      parentFolder,
+      tokens
+    };
   }
 
   /**
    * Asks before creating, showing the NORMALIZED folder name and every note about to appear in it. That
    * preview is the whole point of the dialog here: the other flows ask because their operation is
    * destructive, this one asks because what gets created is not quite what was typed.
-   *
-   * "Change target" is disabled — the parent folder was either right-clicked or already picked, so there is
-   * nothing to reselect.
    *
    * @param params - The planned notes and the folder they go into.
    * @returns The dialog result.
@@ -282,7 +322,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
               parentFolder,
               tokens
             }),
-          canReselectTarget: false,
+          canReselectTarget: true,
           confirmButtonMobileText: 'Create and don\'t ask again',
           confirmButtonText: 'Create',
           promiseResolve,
@@ -431,6 +471,54 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       title: 'Enter folder name',
       valueValidator: async (value: string): Promise<MaybeReturn<string>> => await this.validateTypedFolderName(value)
     });
+  }
+
+  /**
+   * Runs the confirmation dialog and, whenever it comes back with "Change target", the parent-folder picker
+   * — looping until the user confirms a plan or cancels (issue #199).
+   *
+   * The loop is INVERTED relative to the picker-first flows (merge/move/swap): the parent folder is already
+   * DECIDED when the command starts — it is the right-clicked folder, or Obsidian's own
+   * `Default location for new notes` — so the picker must not run first. It appears only when asked for,
+   * and the whole plan is rebuilt around the new parent each pass.
+   *
+   * Cancelling the picker returns to the same dialog with the parent unchanged, rather than abandoning the
+   * creation. The typed NAME is never re-asked here — renaming from the dialog is its own feature (#200).
+   *
+   * @param params - The initial parent folder and the typed/normalized names.
+   * @returns The confirmed plan, or `null` when the flow was cancelled.
+   */
+  private async resolvePlan(params: CreateFolderWithNotesCommandHandlerResolvePlanParams): Promise<CreateFolderWithNotesPlan | null> {
+    const { rawFolderName, safeFolderName } = params;
+    let parentFolder = params.parentFolder;
+    if (!this.pluginSettingsComponent.settings.shouldAskBeforeCreatingFolder) {
+      return this.buildPlan({ parentFolder, rawFolderName, safeFolderName });
+    }
+
+    for (;;) {
+      const plan = this.buildPlan({ parentFolder, rawFolderName, safeFolderName });
+      const confirmResult = await this.confirmCreate(plan);
+      if (confirmResult.shouldReselectTarget) {
+        const selectedFolder = await selectFolder({
+          app: this.app,
+          // An ignored folder is refused by `executeFolder` up front, so it is never offered here either.
+          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path),
+          placeholder: 'Select folder to create the new folder in...',
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
+        if (selectedFolder) {
+          parentFolder = selectedFolder;
+        }
+        continue;
+      }
+      if (!confirmResult.isConfirmed) {
+        return null;
+      }
+      await this.pluginSettingsComponent.editAndSave((settingsToEdit) => {
+        settingsToEdit.shouldAskBeforeCreatingFolder = confirmResult.shouldAskAgain;
+      });
+      return plan;
+    }
   }
 
   /**

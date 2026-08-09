@@ -1,6 +1,7 @@
 import type {
   App,
-  TFile
+  TFile,
+  TFolder
 } from 'obsidian';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
@@ -574,6 +575,44 @@ describe('SplitItemSelector', () => {
       });
 
       await expect(selector.selectItem()).rejects.toThrow('Invalid frontmatter title mode: InvalidMode');
+    });
+
+    it('should use the target parent override in preference to the source folder (issue #205)', async () => {
+      // The recursive split's "Change target" names a root that is neither the source's own folder nor
+      // Obsidian's default new-note location, so it has to beat both branches.
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+      const sourceFile = strictProxy<TFile>({
+        basename: 'source',
+        parent: strictProxy({
+          getParentPrefix: vi.fn().mockReturnValue('my-folder/')
+        }),
+        path: 'my-folder/source.md'
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: true,
+        item: null,
+        pluginSettingsComponent,
+        // `true` would otherwise force `my-folder/`; the override wins.
+        shouldAllowOnlyCurrentFolder: true,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        targetParentFolderOverride: strictProxy<TFolder>({
+          getParentPrefix: vi.fn().mockReturnValue('picked/')
+        })
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/picked/new-note.md',
+        'my-folder/source.md'
+      );
     });
 
     it('should use prefix when shouldAllowOnlyCurrentFolder is true', async () => {

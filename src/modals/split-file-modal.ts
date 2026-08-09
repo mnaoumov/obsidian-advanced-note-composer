@@ -1,3 +1,4 @@
+import type { TFolder } from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
@@ -49,7 +50,6 @@ interface BuildSplitConfirmContentParams {
 interface ConfirmSplitParams {
   readonly abortController: AbortController;
   readonly app: App;
-  readonly canReselectTarget: boolean;
   readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -113,6 +113,15 @@ interface PrepareForSplitFileParams {
   readonly shouldSkipConfirmation?: boolean;
   readonly shouldSkipModal?: boolean;
   readonly sourceFile: TFile;
+
+  /**
+   * Creates the new note in THIS folder, overriding
+   * {@link PrepareForSplitFileParams.shouldAllowOnlyCurrentFolderOverride} and the setting behind it. The
+   * recursive split passes it for its ROOT pass after the user changed the target from the confirmation
+   * dialog (issue #205) — a destination that is neither "beside the source" nor Obsidian's default new-note
+   * location cannot be said any other way.
+   */
+  readonly targetParentFolderOverride?: null | TFolder;
 }
 
 interface PrepareForSplitFileResult {
@@ -490,9 +499,13 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   // Its notice component, and the highlight component (all needed by markSelectionToMove).
   const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer && params.selectionHighlightComponent);
 
-  // The target can be re-selected from the confirmation dialog only when there is a picker to reopen
-  // (a heading-driven split derives its target automatically, so there is nothing to reopen).
-  const canReselectTarget = !params.shouldSkipModal;
+  /*
+   * A heading-driven split derives its target from the heading and never shows the picker, but the picker
+   * still EXISTS — so "Change target" reopens it rather than being disabled (issue #205). The flag is
+   * per-pass, not per-call: only the FIRST pass is skipped, and choosing "Change target" clears it so the
+   * next pass asks properly. Everything else about the loop is unchanged.
+   */
+  let shouldSkipModalThisPass = Boolean(params.shouldSkipModal);
 
   // The confirmation dialog can send the flow back to the target picker ("Change target"); loop until
   // The user confirms the split, cancels, or switches to smart cut. `pickerSeed` seeds the picker input:
@@ -504,7 +517,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     // The mutable `pickerSeed` (reassigned below on "Change target").
     const currentSeed = pickerSeed;
 
-    const splitFileModalResult: null | SplitFileModalResult = params.shouldSkipModal
+    const splitFileModalResult: null | SplitFileModalResult = shouldSkipModalThisPass
       ? {
         action: 'split',
         frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
@@ -563,7 +576,8 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
       shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
       /* v8 ignore stop */
-      sourceFile: params.sourceFile
+      sourceFile: params.sourceFile,
+      targetParentFolderOverride: resolveTargetParentFolderOverride(params, shouldSkipModalThisPass)
     }).selectItem();
 
     const prepareForSplitFileResult: PrepareForSplitFileResult = {
@@ -584,7 +598,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       shouldSkipSplitConfirmation({
         pluginSettingsComponent: params.pluginSettingsComponent,
         shouldSkipConfirmation: Boolean(params.shouldSkipConfirmation),
-        shouldSkipModal: Boolean(params.shouldSkipModal)
+        // The PER-PASS flag: once "Change target" has reopened the picker, this is an ordinary picked
+        // Split, so `shouldSplitHeadingsAutomatically` must no longer suppress its confirmation.
+        shouldSkipModal: shouldSkipModalThisPass
       })
     ) {
       return prepareForSplitFileResult;
@@ -593,7 +609,6 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     const confirmDialogResult = await confirmSplit({
       abortController,
       app: params.app,
-      canReselectTarget,
       canSwitchToSmartCut,
       editor: params.editor,
       resourceLockComponent: params.resourceLockComponent,
@@ -610,6 +625,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         await trashSafe(params.app, prepareForSplitFileResult.targetFile);
       }
       pickerSeed = splitFileModalResult.inputValue;
+      // A heading-driven split skipped the picker on the first pass; asking to change the target is asking
+      // For that picker, so the next pass shows it seeded with the heading (issue #205).
+      shouldSkipModalThisPass = false;
       continue;
     }
     if (confirmDialogResult.shouldSwitchToSmartCut) {
@@ -691,7 +709,9 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
       new ConfirmDialogModal({
         app,
         buildContent: (fragment): Promise<void> => buildSplitConfirmContent({ app, editor, fragment, sourceFile, targetFile }),
-        canReselectTarget: params.canReselectTarget,
+        // Always available: every split has a picker, even the heading-driven flows that skipped it on the
+        // First pass (issue #205).
+        canReselectTarget: true,
         confirmButtonMobileText: 'Split and don\'t ask again',
         confirmButtonText: 'Split',
         promiseResolve,
@@ -714,6 +734,24 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
  * @param params - The parameters.
  * @returns Whether to skip the confirmation dialog.
  */
+/**
+ * The forced target folder to hand the item selector for THIS pass.
+ *
+ * The override only holds while the picker is still being skipped. Once "Change target" has opened it, the
+ * folder the user picked there wins — an override that outlived the picker would silently ignore their
+ * choice, which is the exact failure issue #205 is about.
+ *
+ * @param params - The prepare parameters.
+ * @param isPickerStillSkipped - Whether this pass is still running without the picker.
+ * @returns The folder to force the new note into, or `null` to leave the resolution alone.
+ */
+function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, isPickerStillSkipped: boolean): null | TFolder {
+  if (!isPickerStillSkipped) {
+    return null;
+  }
+  return params.targetParentFolderOverride ?? null;
+}
+
 function shouldSkipSplitConfirmation(params: ShouldSkipSplitConfirmationParams): boolean {
   const settings = params.pluginSettingsComponent.settings;
   return !settings.shouldAskBeforeSplitting

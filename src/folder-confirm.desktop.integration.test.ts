@@ -44,7 +44,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isConfirmButtonPresent = findButton('Flatten') !== null;
           const isListsTheItem = [...document.querySelectorAll('.modal-content code')].some((el) => el.textContent === 'fc-note.md');
-          // Flatten has no target to reselect, so "Change target" is rendered but disabled.
+          // Issue #205: flatten's destination defaults to the folder's own parent but is not fixed to it,
+          // So "Change target" is enabled here like on every other confirmation dialog.
           const isChangeTargetDisabled = findButton('Change target')?.disabled ?? false;
           // Issue #165: the folder AND its destination are both clickable links. `fc-flat` is top-level,
           // So its destination is the vault root, which is labelled `/` (its own path is blank).
@@ -122,7 +123,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
     expect(result.confirmButtonPresent).toBe(true);
     // The dialog previews what will move — the whole point of asking before a flatten.
     expect(result.listsTheItem).toBe(true);
-    expect(result.changeTargetDisabled).toBe(true);
+    expect(result.changeTargetDisabled).toBe(false);
     expect(result.promoted).toBe(true);
     // Issue #165: both paths render as real anchors, the vault-root destination labelled `/`.
     expect(result.linkTexts).toContain('fc-flat');

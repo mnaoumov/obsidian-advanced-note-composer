@@ -57,6 +57,11 @@ flattened. This note itself is never moved; it stays put and links down into the
 Nothing changes while Obsidian's own setting is `Same folder as current file`, because that is already
 where the tree would have been built.
 
+Neither answer is a setting you have to commit to. With `Should ask before splitting` on, the
+confirmation dialog names the folder the tree will be rooted in, and `Change target` (or `Alt+C`) picks
+a different one for this run. Only the root moves: every note below it still nests under its own
+parent, and every note's *name* still comes from its heading, which you do not get to change here.
+
 ## Trip
 
 Everything about the trip lives here.

@@ -35,9 +35,13 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import { FlattenMode } from '../plugin-settings.ts';
-import { FlattenFolderCommandHandler } from './flatten-folder-command-handler.ts';
+import {
+  FlattenFolderCommandHandler,
+  isAllowedFlattenDestination
+} from './flatten-folder-command-handler.ts';
 
 /**
  * The subset of the confirmation dialog's constructor params the tests drive: the body builder (so the
@@ -106,29 +110,50 @@ vi.mock('../modals/confirm-dialog-modal.ts', () => ({
   }
 }));
 
+vi.mock('../modals/select-folder-modal.ts', () => ({
+  selectFolder: vi.fn()
+}));
+
 vi.mock('../open-minimizable-modal.ts', () => ({
   openModal: vi.fn(() => {
-    capturedConfirmParams?.promiseResolve(confirmResult);
+    // The "Change target" loop can open the dialog more than once, so a scripted queue takes precedence;
+    // A round the test did not script falls back to the single `confirmResult` every other test sets.
+    capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? confirmResult);
   })
 }));
 
 const mockOpenModal = vi.mocked(openModal);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
+const mockSelectFolder = vi.mocked(selectFolder);
 
 let app: AppOriginal;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
+let confirmResults: ConfirmDialogModalResult[] = [];
 let resourceLockComponent: ResourceLockComponent;
 
 afterEach(() => {
   resourceLockComponent.unload();
   capturedConfirmParams = null;
   confirmResult = createConfirmResult(false);
+  confirmResults = [];
   // The module mocks are created once for the whole file, so their call history has to be dropped between
   // Tests; `restoreAllMocks` only undoes the per-test spies.
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
+
+/**
+ * A dialog result that asks to go back to the destination picker.
+ *
+ * @returns The result.
+ */
+function createConfirmReselect(): ConfirmDialogModalResult {
+  return {
+    ...createConfirmResult(false),
+    shouldReselectTarget: true
+  };
+}
 
 function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): ConfirmDialogModalResult {
   return {
@@ -167,6 +192,12 @@ function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
     handler: castTo<Testable>(handler),
     showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
+}
+
+function createSettingsComponentStub(isPathIgnored: (path: string) => boolean): PluginSettingsComponent {
+  return strictProxy<PluginSettingsComponent>({
+    settings: strictProxy<PluginSettings>({ isPathIgnored })
+  });
 }
 
 function getFolder(path: string): TFolder {
@@ -367,9 +398,131 @@ describe('FlattenFolderCommandHandler', () => {
     expect(renderedLinks).toContain(getFolder('parent/a'));
     expect(renderedLinks).toContain(getFolder('parent'));
     expect(fragment.querySelector('h2')?.textContent).toBe('Items that will be moved');
-    // There is no target to reselect: the destination is always the folder's own parent.
-    expect(capturedConfirmParams?.canReselectTarget).toBe(false);
+    // The destination DEFAULTS to the folder's own parent but is not fixed to it (issue #205).
+    expect(capturedConfirmParams?.canReselectTarget).toBe(true);
     expect(capturedConfirmParams?.title).toBe('Flatten folder');
+  });
+
+  // Issue #205: flatten's destination defaults to the folder's own parent but is no longer fixed to it.
+  describe('change target', () => {
+    it('should promote the children into the folder picked from the dialog', async () => {
+      initApp({
+        'elsewhere/other.md': 'other body',
+        'parent/a/note.md': 'inner body'
+      });
+      const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      // Not `parent/note.md`, which is where a plain flatten would have put it.
+      expect(app.vault.getAbstractFileByPath('elsewhere/note.md')).not.toBeNull();
+      expect(app.vault.getAbstractFileByPath('parent/note.md')).toBeNull();
+      expect(mockSelectFolder).toHaveBeenCalledOnce();
+
+      // The picker is wired to flatten's own filter, which keeps the current parent on offer.
+      const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0].isAllowedFolder;
+      expect(isAllowedFolder?.(getFolder('parent'))).toBe(true);
+      expect(isAllowedFolder?.(getFolder('parent/a'))).toBe(false);
+    });
+
+    it('should rebuild the preview against the newly picked destination', async () => {
+      // The dialog must never list where the children were going BEFORE the change.
+      initApp({
+        'elsewhere/note.md': 'occupied',
+        'parent/a/note.md': 'inner body'
+      });
+      const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+      confirmResults = [createConfirmReselect(), createConfirmResult(false)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      const fragment = createFragment();
+      await capturedConfirmParams?.buildContent(fragment);
+      const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+      const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+      // `elsewhere/note.md` is taken, so the de-duplication is recomputed for the NEW destination.
+      expect(renderedCodeBlocks).toContain('note.md → note 1.md');
+      const renderedLinks = mockRenderInternalLink.mock.calls.map((call) => call[0].pathOrAbstractFile);
+      expect(renderedLinks).toContain(getFolder('elsewhere'));
+    });
+
+    it('should keep the current destination when the picker is dismissed', async () => {
+      initApp({ 'parent/a/note.md': 'inner body' });
+      const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      // Dismissing the picker is "never mind", not "cancel the flatten".
+      mockSelectFolder.mockResolvedValue(null);
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      expect(app.vault.getAbstractFileByPath('parent/note.md')).not.toBeNull();
+    });
+
+    it('should not flatten when the dialog is cancelled after a target change', async () => {
+      initApp({
+        'elsewhere/other.md': 'other body',
+        'parent/a/note.md': 'inner body'
+      });
+      const { handler } = createHandler({ shouldAskBeforeFlattening: true });
+      confirmResults = [createConfirmReselect(), createConfirmResult(false)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      expect(app.vault.getAbstractFileByPath('parent/a/note.md')).not.toBeNull();
+      expect(app.vault.getAbstractFileByPath('elsewhere/note.md')).toBeNull();
+    });
+
+    it('should not open the picker at all when the confirmation is turned off', async () => {
+      initApp({ 'parent/a/note.md': 'inner body' });
+      const { handler } = createHandler({ shouldAskBeforeFlattening: false });
+
+      await handler.executeFolder(getFolder('parent/a'));
+
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+      expect(app.vault.getAbstractFileByPath('parent/note.md')).not.toBeNull();
+    });
+  });
+
+  describe('isAllowedFlattenDestination', () => {
+    it('should reject the source folder and its descendants', () => {
+      initApp({ 'parent/a/sub/note.md': 'body' });
+      const pluginSettingsComponent = createSettingsComponentStub(() => false);
+      const sourceFolder = getFolder('parent/a');
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder, targetFolder: sourceFolder })).toBe(false);
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder, targetFolder: getFolder('parent/a/sub') })).toBe(false);
+    });
+
+    it('should reject an ignored folder', () => {
+      initApp({
+        'other/x.md': 'x',
+        'parent/a/note.md': 'body'
+      });
+      const pluginSettingsComponent = createSettingsComponentStub((path) => path === 'other');
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder: getFolder('parent/a'), targetFolder: getFolder('other') })).toBe(false);
+    });
+
+    it('should allow the source current parent, unlike a move', () => {
+      // The whole difference from `isAllowedMoveTarget`: the parent is flatten's DEFAULT destination, so
+      // Offering it is how the user goes back to a plain flatten after changing their mind.
+      initApp({ 'parent/a/note.md': 'body' });
+      const pluginSettingsComponent = createSettingsComponentStub(() => false);
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder: getFolder('parent/a'), targetFolder: getFolder('parent') })).toBe(true);
+    });
+
+    it('should allow an unrelated folder and the vault root', () => {
+      initApp({
+        'other/x.md': 'x',
+        'parent/a/note.md': 'body'
+      });
+      const pluginSettingsComponent = createSettingsComponentStub(() => false);
+      const sourceFolder = getFolder('parent/a');
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder, targetFolder: getFolder('other') })).toBe(true);
+      expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder, targetFolder: app.vault.getRoot() })).toBe(true);
+    });
   });
 
   it('should label the vault root destination link with a slash when flattening a top-level folder', async () => {

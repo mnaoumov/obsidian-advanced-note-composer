@@ -32,7 +32,8 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
-import { shouldMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { transformAndFixFileName } from '../name-transform.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
@@ -60,6 +61,16 @@ interface MergeFolderIntoFileCommandHandlerConstructorParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+}
+
+/**
+ * The two paths a folder merge needs, which differ only in the issue-#186 case where the configured name is
+ * occupied by a note that the merge itself is about to remove: the note is CREATED de-duplicated and RENAMED
+ * to the configured name at the end.
+ */
+interface MergeFolderIntoFileTargetPaths {
+  readonly pathToCreate: string;
+  readonly targetPath: string;
 }
 
 /**
@@ -132,25 +143,11 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const desiredPath = await this.resolveDesiredTargetPath(folder);
-    // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
-    // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
-    // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the
-    // End. A clash with a note that is NOT being merged is a real one and keeps its de-duplicated name.
-    const pathToCreate = getAvailablePath(this.app, desiredPath);
-    const isDesiredPathFreedByMerge = pathToCreate !== desiredPath && sourceMdFiles.some((file) => file.path === desiredPath);
-    const targetPath = isDesiredPathFreedByMerge ? desiredPath : pathToCreate;
-
-    const isConfirmed = await shouldMergeFolderIntoFile({
-      app: this.app,
-      noteCount: sourceMdFiles.length,
-      pluginSettingsComponent: this.pluginSettingsComponent,
-      sourceFolder: folder,
-      targetPath
-    });
-    if (!isConfirmed) {
+    const targetPaths = await this.resolveTargetPaths(folder, sourceMdFiles);
+    if (!targetPaths) {
       return;
     }
+    const { pathToCreate, targetPath } = targetPaths;
 
     // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
     const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder);
@@ -231,9 +228,13 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
    * @param folder - The folder being merged.
    * @returns The path the merged note should end up at.
    */
-  private async resolveDesiredTargetPath(folder: TFolder): Promise<string> {
+  private async resolveDesiredTargetPath(folder: TFolder, targetParentFolder: null | TFolder): Promise<string> {
     const fileName = `${await this.resolveTargetBasename(folder)}.md`;
-    return join(this.resolveTargetParentPath(folder, fileName), fileName);
+    const parentPath = targetParentFolder
+      // Matches the `BesideFolder` branch's contract: the vault root is the empty string, not `/`.
+      ? (targetParentFolder.isRoot() ? '' : targetParentFolder.path)
+      : this.resolveTargetParentPath(folder, fileName);
+    return join(parentPath, fileName);
   }
 
   /**
@@ -297,6 +298,63 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       default: {
         return folder.path.slice(0, Math.max(0, folder.path.length - folder.name.length - 1));
       }
+    }
+  }
+
+  /**
+   * Runs the confirmation dialog and, whenever it comes back with "Change target", the destination picker —
+   * looping until the user confirms a destination or cancels (issue #205).
+   *
+   * The loop is INVERTED relative to the picker-first flows (merge-file/move/swap): the merged note's
+   * location is DERIVED from the `Merge folder into file location` setting, so the picker must not run
+   * first. A picked folder overrides that setting FOR THIS RUN ONLY — nothing is persisted, because the
+   * user is redirecting one merge, not reconfiguring the command.
+   *
+   * Both paths are recomputed each pass, including the issue-#186 "the occupying note is itself being
+   * merged away" branch: whether the desired name is free depends on the folder it is being asked for.
+   *
+   * Cancelling the picker returns to the same dialog with the destination unchanged, rather than abandoning
+   * the merge.
+   *
+   * @param folder - The folder being merged.
+   * @param sourceMdFiles - The notes being merged away.
+   * @returns The path to create the note at and the path it should end up at, or `null` when cancelled.
+   */
+  private async resolveTargetPaths(folder: TFolder, sourceMdFiles: readonly TFile[]): Promise<MergeFolderIntoFileTargetPaths | null> {
+    let targetParentFolder: null | TFolder = null;
+    for (;;) {
+      const desiredPath = await this.resolveDesiredTargetPath(folder, targetParentFolder);
+      // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
+      // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
+      // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the
+      // End. A clash with a note that is NOT being merged is a real one and keeps its de-duplicated name.
+      const pathToCreate = getAvailablePath(this.app, desiredPath);
+      const isDesiredPathFreedByMerge = pathToCreate !== desiredPath && sourceMdFiles.some((file) => file.path === desiredPath);
+      const targetPath = isDesiredPathFreedByMerge ? desiredPath : pathToCreate;
+
+      const confirmResult = await confirmMergeFolderIntoFile({
+        app: this.app,
+        noteCount: sourceMdFiles.length,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        sourceFolder: folder,
+        targetPath
+      });
+      if (confirmResult === 'reselect-target') {
+        const selectedFolder = await selectFolder({
+          app: this.app,
+          isAllowedFolder: (candidateFolder) => !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path),
+          placeholder: 'Select folder for the merged note...',
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
+        if (selectedFolder) {
+          targetParentFolder = selectedFolder;
+        }
+        continue;
+      }
+      if (confirmResult === 'cancelled') {
+        return null;
+      }
+      return { pathToCreate, targetPath };
     }
   }
 }

@@ -12,6 +12,15 @@ import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
+/**
+ * What the confirmation dialog decided.
+ *
+ * A three-way answer rather than the `boolean` this returned before issue #205: "Change target" is neither
+ * a confirmation nor a cancellation, and collapsing it into either would silently merge into the wrong place
+ * or throw the operation away.
+ */
+export type ConfirmMergeFolderIntoFileResult = 'cancelled' | 'confirmed' | 'reselect-target';
+
 interface BuildConfirmContentParams {
   readonly app: App;
   readonly fragment: DocumentFragment;
@@ -20,7 +29,7 @@ interface BuildConfirmContentParams {
   readonly targetPath: string;
 }
 
-interface ShouldMergeFolderIntoFileParams {
+interface ConfirmMergeFolderIntoFileParams {
   readonly app: App;
   readonly noteCount: number;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -29,16 +38,20 @@ interface ShouldMergeFolderIntoFileParams {
 }
 
 /**
- * Shows the confirmation dialog for merging a folder's contents into a single new note (issue #92). The
- * target note is created by the caller (named after the folder), so there is no target picker and no
- * "Change target" action. When `Should ask before merging` is off, it confirms immediately.
+ * Shows the confirmation dialog for merging a folder's contents into a single new note (issue #92). When
+ * `Should ask before merging` is off, it confirms immediately.
+ *
+ * The target note does not exist yet — it is created by the caller, named after the folder and placed by the
+ * `Merge folder into file location` setting — so "Change target" here means the FOLDER that note lands in.
+ * The caller owns that loop (see `MergeFolderIntoFileCommandHandler.resolveTargetPaths`), because it is the
+ * one that knows how the path is derived.
  *
  * @param params - The source folder, the target path, the note count, and the shared app/settings.
- * @returns A {@link Promise} resolving to `true` when the merge should proceed, `false` when cancelled.
+ * @returns What the user chose.
  */
-export async function shouldMergeFolderIntoFile(params: ShouldMergeFolderIntoFileParams): Promise<boolean> {
+export async function confirmMergeFolderIntoFile(params: ConfirmMergeFolderIntoFileParams): Promise<ConfirmMergeFolderIntoFileResult> {
   if (!params.pluginSettingsComponent.settings.shouldAskBeforeMerging) {
-    return true;
+    return 'confirmed';
   }
 
   const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
@@ -53,7 +66,7 @@ export async function shouldMergeFolderIntoFile(params: ShouldMergeFolderIntoFil
             sourceFolder: params.sourceFolder,
             targetPath: params.targetPath
           }),
-        canReselectTarget: false,
+        canReselectTarget: true,
         confirmButtonMobileText: 'Merge and don\'t ask again',
         confirmButtonText: 'Merge',
         promiseResolve,
@@ -62,13 +75,16 @@ export async function shouldMergeFolderIntoFile(params: ShouldMergeFolderIntoFil
     );
   });
 
+  if (confirmDialogResult.shouldReselectTarget) {
+    return 'reselect-target';
+  }
   if (!confirmDialogResult.isConfirmed) {
-    return false;
+    return 'cancelled';
   }
   await params.pluginSettingsComponent.editAndSave((settings) => {
     settings.shouldAskBeforeMerging = confirmDialogResult.shouldAskAgain;
   });
-  return true;
+  return 'confirmed';
 }
 
 /* v8 ignore start -- builds the confirmation dialog DOM; exercised via desktop integration tests, not unit tests. */

@@ -35,6 +35,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import { CreateFolderWithNotesCommandHandler } from './create-folder-with-notes-command-handler.ts';
 
@@ -95,6 +96,10 @@ vi.mock('../modals/confirm-dialog-modal.ts', () => ({
   }
 }));
 
+vi.mock('../modals/select-folder-modal.ts', () => ({
+  selectFolder: vi.fn()
+}));
+
 vi.mock('../open-minimizable-modal.ts', () => ({
   openModal: vi.fn(() => {
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
@@ -102,6 +107,7 @@ vi.mock('../open-minimizable-modal.ts', () => ({
 }));
 
 const mockOpenModal = vi.mocked(openModal);
+const mockSelectFolder = vi.mocked(selectFolder);
 const mockPrompt = vi.mocked(prompt);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
@@ -117,6 +123,18 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
+
+/**
+ * A dialog result that asks to go back to the parent-folder picker.
+ *
+ * @returns The result.
+ */
+function createConfirmReselect(): ConfirmDialogModalResult {
+  return {
+    ...createConfirmResult(false),
+    shouldReselectTarget: true
+  };
+}
 
 function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): ConfirmDialogModalResult {
   return {
@@ -615,7 +633,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       expect(editAndSave).toHaveBeenCalledOnce();
     });
 
-    it('should render the dialog body with the destination linked and the target unchangeable', async () => {
+    it('should render the dialog body with the destination linked and the target changeable', async () => {
       initApp({ 'parent/note.md': 'note' });
       mockPrompt.mockResolvedValue('alpha');
       confirmResults = [createConfirmResult(true)];
@@ -625,13 +643,76 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
       const params = ensureNonNullable(capturedConfirmParams);
       expect(params.title).toBe('Create folder with notes');
-      expect(params.canReselectTarget).toBe(false);
+      // Issue #199: the parent folder can be changed from the dialog.
+      expect(params.canReselectTarget).toBe(true);
       const fragment = createFragment();
       // The completion notice renders links of its own, so only the dialog's are counted.
       mockRenderInternalLink.mockClear();
       await params.buildContent(fragment);
       expect(mockRenderInternalLink).toHaveBeenCalledOnce();
       expect(fragment.textContent).toContain('Are you sure you want to create');
+    });
+
+    // Issue #199: the parent folder is decided before the command starts (right-clicked, or Obsidian's
+    // Default new-note location), so "Change target" is the only way to move it without starting over.
+    it('should create the folder under the parent picked from the dialog', async () => {
+      initApp({
+        'elsewhere/other.md': 'other',
+        'parent/note.md': 'note'
+      });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(app.vault.getFolderByPath('elsewhere/1. Alpha')).not.toBeNull();
+      expect(app.vault.getFolderByPath('parent/1. Alpha')).toBeNull();
+
+      // An ignored folder is refused by `executeFolder` up front, so it is never offered here either.
+      const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0].isAllowedFolder;
+      expect(isAllowedFolder?.(getFolder('elsewhere'))).toBe(true);
+    });
+
+    it('should renumber the folder against the NEW parent siblings', async () => {
+      // The whole plan is rebuilt around the picked parent: the index counts ITS children, not the old
+      // Parent's, so the previewed name is the one the write actually produces.
+      initApp({
+        'elsewhere/1. Existing/x.md': 'x',
+        'parent/note.md': 'note'
+      });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(app.vault.getFolderByPath('elsewhere/2. Alpha')).not.toBeNull();
+    });
+
+    it('should keep the current parent when the picker is dismissed', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(null);
+
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(app.vault.getFolderByPath('parent/1. Alpha')).not.toBeNull();
+    });
+
+    it('should not open the picker at all when the confirmation is turned off', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: false });
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+      expect(app.vault.getFolderByPath('parent/1. Alpha')).not.toBeNull();
     });
 
     it('should label the vault root as / in the dialog', async () => {
