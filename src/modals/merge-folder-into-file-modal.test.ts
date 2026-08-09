@@ -21,7 +21,7 @@ import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
-import { shouldMergeFolderIntoFile } from './merge-folder-into-file-modal.ts';
+import { confirmMergeFolderIntoFile } from './merge-folder-into-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
@@ -92,15 +92,35 @@ function makeResult(overrides: Partial<ConfirmDialogModalResult>): ConfirmDialog
   };
 }
 
-describe('shouldMergeFolderIntoFile', () => {
+describe('confirmMergeFolderIntoFile', () => {
   it('confirms immediately without a dialog when shouldAskBeforeMerging is off', async () => {
     const params = createParams(false);
-    const isResult = await shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
-    expect(isResult).toBe(true);
+    const result = await confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    expect(result).toBe('confirmed');
     expect(mockConfirmDialogModal).not.toHaveBeenCalled();
   });
 
-  it('returns true and persists the "don\'t ask again" choice when confirmed', async () => {
+  it('reports "reselect-target" without persisting anything when "Change target" is chosen', async () => {
+    const params = createParams(true);
+
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    capturedModalParams().promiseResolve(makeResult({ shouldReselectTarget: true }));
+
+    // Neither a confirmation nor a cancellation: the caller reopens the picker and asks again (issue #205).
+    expect(await promise).toBe('reselect-target');
+    expect(params.pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
+  });
+
+  it('offers the "Change target" action (issue #205)', async () => {
+    const params = createParams(true);
+
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    expect(mockConfirmDialogModal).toHaveBeenCalledWith(expect.objectContaining({ canReselectTarget: true }));
+    capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
+    await promise;
+  });
+
+  it('returns "confirmed" and persists the "don\'t ask again" choice when confirmed', async () => {
     const editAndSave = vi.fn((editor: (settings: AskSettings) => void) => {
       const settings: AskSettings = { shouldAskBeforeMerging: true };
       editor(settings);
@@ -110,20 +130,20 @@ describe('shouldMergeFolderIntoFile', () => {
     const params = createParams(true, editAndSave);
 
     // The modal is constructed synchronously inside the awaited Promise; drive its outcome afterwards.
-    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     expect(mockConfirmDialogModal).toHaveBeenCalledOnce();
     // Invoke buildContent so its wiring is exercised, then confirm.
     await capturedModalParams().buildContent(createFragment());
     capturedModalParams().promiseResolve(makeResult({ isConfirmed: true, shouldAskAgain: false }));
 
-    expect(await promise).toBe(true);
+    expect(await promise).toBe('confirmed');
     expect(editAndSave).toHaveBeenCalledOnce();
   });
 
   it('renders the not-yet-created target as a code block, never as a link (issue #166)', async () => {
     const params = createParams(true);
 
-    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     await capturedModalParams().buildContent(createFragment());
     capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
     await promise;
@@ -135,13 +155,13 @@ describe('shouldMergeFolderIntoFile', () => {
     expect(mockAppendCodeBlock).toHaveBeenCalledWith(expect.anything(), 'src.md');
   });
 
-  it('returns false when the dialog is cancelled', async () => {
+  it('returns "cancelled" when the dialog is cancelled', async () => {
     const params = createParams(true);
 
-    const promise = shouldMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
+    const promise = confirmMergeFolderIntoFile({ ...params, targetPath: 'src.md' });
     capturedModalParams().promiseResolve(makeResult({ isConfirmed: false }));
 
-    expect(await promise).toBe(false);
+    expect(await promise).toBe('cancelled');
     expect(params.pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
   });
 });

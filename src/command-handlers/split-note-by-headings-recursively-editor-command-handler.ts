@@ -2,7 +2,8 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
-  TFile
+  TFile,
+  TFolder
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -36,6 +37,7 @@ import {
   MAX_HEADING_LEVEL
 } from '../heading-split-recursion.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import {
@@ -48,6 +50,7 @@ interface BuildRecursiveSplitConfirmContentParams {
   readonly app: App;
   readonly fragment: DocumentFragment;
   readonly previewRows: readonly RecursiveSplitPreviewRow[];
+  readonly rootFolder: TFolder;
   readonly sourceFile: TFile;
 }
 
@@ -58,6 +61,17 @@ interface BuildRecursiveSplitConfirmContentParams {
 interface RecursiveSplitChild {
   readonly file: TFile;
   readonly level: number;
+}
+
+/**
+ * Where the recursive split roots the tree it produces.
+ *
+ * `rootFolderOverride` is `null` on an untouched run — the DERIVED destination stands, resolved as it always
+ * was from `shouldSplitRecursivelyIntoDefaultNewNoteFolder`. Only a folder the user picked from "Change
+ * target" (issue #205) makes it non-`null`, and it applies to the root pass alone.
+ */
+interface RecursiveSplitRootTarget {
+  readonly rootFolderOverride: null | TFolder;
 }
 
 interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
@@ -87,6 +101,12 @@ interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerSplitBranchParams {
    * the parent heading's level plus one for every note the split itself produced.
    */
   readonly minLevel: number;
+
+  /**
+   * The folder the user picked from the confirmation dialog's "Change target", or `null` to keep the derived
+   * destination. Meaningful for the ROOT pass only — a deeper pass always nests beside its own source.
+   */
+  readonly rootFolderOverride: null | TFolder;
 }
 
 const PREVIEW_INDENT_WIDTH = 4;
@@ -157,15 +177,9 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
-      const previewRows = buildRecursiveSplitPreviewRows(editor.getValue(), headings);
-      const confirmResult = await this.confirmRecursiveSplit(file, previewRows);
-      if (!confirmResult.isConfirmed) {
-        return;
-      }
-      await this.pluginSettingsComponent.editAndSave((settings) => {
-        settings.shouldAskBeforeSplitting = confirmResult.shouldAskAgain;
-      });
+    const rootTarget = await this.resolveRootTarget(file, buildRecursiveSplitPreviewRows(editor.getValue(), headings));
+    if (!rootTarget) {
+      return;
     }
 
     /*
@@ -186,7 +200,13 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
 
     let createdNotes: readonly SplitTemplateNote[];
     try {
-      createdNotes = await this.splitBranch({ editor, file, isRootPass: true, minLevel: 1 });
+      createdNotes = await this.splitBranch({
+        editor,
+        file,
+        isRootPass: true,
+        minLevel: 1,
+        rootFolderOverride: rootTarget.rootFolderOverride
+      });
     } finally {
       progressNotice?.[Symbol.dispose]();
       /*
@@ -241,19 +261,33 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
    * would be unusable. Mirrors the other flows in mapping "Don't ask again" back onto
    * `shouldAskBeforeSplitting`.
    *
+   * Every note's own name comes from its heading and is not changeable, but WHERE the produced tree is
+   * rooted is — so "Change target" picks the root folder (issue #205).
+   *
    * @param sourceFile - The note being split.
+   * @param rootFolder - The folder the produced tree will be rooted in.
    * @param previewRows - The notes that will be created, in document order.
    * @returns The dialog result.
    */
-  private async confirmRecursiveSplit(sourceFile: TFile, previewRows: readonly RecursiveSplitPreviewRow[]): Promise<ConfirmDialogModalResult> {
+  private async confirmRecursiveSplit(
+    sourceFile: TFile,
+    rootFolder: TFolder,
+    previewRows: readonly RecursiveSplitPreviewRow[]
+  ): Promise<ConfirmDialogModalResult> {
     const app = this.app;
     return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
       openModal(
         new ConfirmDialogModal({
           app,
-          buildContent: (fragment): Promise<void> => buildRecursiveSplitConfirmContent({ app, fragment, previewRows, sourceFile }),
-          // There is no target to reselect: every target is derived from a heading.
-          canReselectTarget: false,
+          buildContent: (fragment): Promise<void> =>
+            buildRecursiveSplitConfirmContent({
+              app,
+              fragment,
+              previewRows,
+              rootFolder,
+              sourceFile
+            }),
+          canReselectTarget: true,
           confirmButtonMobileText: 'Split and don\'t ask again',
           confirmButtonText: 'Split',
           promiseResolve,
@@ -275,6 +309,67 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
     await this.app.workspace.getLeaf(false).openFile(file, { active: true });
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     return view?.editor ?? null;
+  }
+
+  /**
+   * Where the produced tree is rooted when the user does not change it — the two answers issue #173 settled
+   * on. Resolved here rather than left implicit inside the split machinery, because the confirmation dialog
+   * has to SHOW it before "Change target" can mean anything.
+   *
+   * @param sourceFile - The note being split.
+   * @returns The folder the root pass would create its notes in.
+   */
+  private resolveDefaultRootFolder(sourceFile: TFile): TFolder {
+    if (this.pluginSettingsComponent.settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder) {
+      return this.app.fileManager.getNewFileParent(sourceFile.path);
+    }
+    /* v8 ignore next -- a note in the vault always has a parent folder. */
+    return sourceFile.parent ?? this.app.vault.getRoot();
+  }
+
+  /**
+   * Runs the confirmation dialog and, whenever it comes back with "Change target", the root-folder picker —
+   * looping until the user confirms or cancels (issue #205).
+   *
+   * The override stays `null` unless the user actually picks something, so an untouched run goes down
+   * exactly the path it did before: the root pass keeps resolving through
+   * `shouldSplitRecursivelyIntoDefaultNewNoteFolder`, and nothing about the nesting of the deeper passes
+   * changes. The preview rows need no rebuilding — they are heading text and depth, which the root folder
+   * does not affect.
+   *
+   * @param sourceFile - The note being split.
+   * @param previewRows - The notes that will be created, in document order.
+   * @returns The chosen root, or `null` when the flow was cancelled.
+   */
+  private async resolveRootTarget(sourceFile: TFile, previewRows: readonly RecursiveSplitPreviewRow[]): Promise<null | RecursiveSplitRootTarget> {
+    if (!this.pluginSettingsComponent.settings.shouldAskBeforeSplitting) {
+      return { rootFolderOverride: null };
+    }
+
+    const defaultRootFolder = this.resolveDefaultRootFolder(sourceFile);
+    let rootFolderOverride: null | TFolder = null;
+    for (;;) {
+      const confirmResult = await this.confirmRecursiveSplit(sourceFile, rootFolderOverride ?? defaultRootFolder, previewRows);
+      if (confirmResult.shouldReselectTarget) {
+        const selectedFolder = await selectFolder({
+          app: this.app,
+          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path),
+          placeholder: 'Select folder to root the produced tree in...',
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
+        if (selectedFolder) {
+          rootFolderOverride = selectedFolder;
+        }
+        continue;
+      }
+      if (!confirmResult.isConfirmed) {
+        return null;
+      }
+      await this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.shouldAskBeforeSplitting = confirmResult.shouldAskAgain;
+      });
+      return { rootFolderOverride };
+    }
   }
 
   /**
@@ -334,7 +429,10 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
         shouldForceSplitIntoFolder: true,
         shouldSkipConfirmation: true,
         shouldSkipModal: true,
-        sourceFile: file
+        sourceFile: file,
+        // Root pass only: the deeper passes must keep nesting beside their own source, which IS the folder
+        // Tree. `null` on an untouched run, so the setting-driven resolution above stands unchanged.
+        targetParentFolderOverride: params.isRootPass ? params.rootFolderOverride : null
       });
       if (!result) {
         return createdNotes;
@@ -370,7 +468,15 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       if (!childEditor) {
         continue;
       }
-      createdNotes.push(...await this.splitBranch({ editor: childEditor, file: child.file, isRootPass: false, minLevel: child.level + 1 }));
+      createdNotes.push(
+        ...await this.splitBranch({
+          editor: childEditor,
+          file: child.file,
+          isRootPass: false,
+          minLevel: child.level + 1,
+          rootFolderOverride: null
+        })
+      );
     }
 
     return createdNotes;
@@ -382,18 +488,32 @@ async function buildRecursiveSplitConfirmContent(params: BuildRecursiveSplitConf
     app,
     fragment,
     previewRows,
+    rootFolder,
     sourceFile
   } = params;
   fragment.appendText('Are you sure you want to split ');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(' into a folder tree of ');
   appendCodeBlock(fragment, String(previewRows.length));
-  fragment.appendText(' notes?');
+  fragment.appendText(' notes under ');
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('?');
   fragment.createEl('br');
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Source');
   fragment.appendText(': ');
   fragment.append(await renderInternalLink({ app, pathOrAbstractFile: sourceFile }));
+  fragment.createEl('br');
+  fragment.createEl('br');
+  /*
+   * The root the tree is built under. Rendered because "Change target" changes it (issue #205), and a
+   * control whose effect is invisible is indistinguishable from one that does nothing — the very complaint
+   * that issue is about. It is a real, existing folder, so it links (unlike the merge target of issue #166,
+   * which does not exist until the operation runs).
+   */
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText(': ');
+  fragment.append(await renderInternalLink({ app, pathOrAbstractFile: rootFolder }));
   fragment.createEl('br');
   fragment.createEl('br');
   fragment.createEl('h2', { text: 'Notes that will be created' });

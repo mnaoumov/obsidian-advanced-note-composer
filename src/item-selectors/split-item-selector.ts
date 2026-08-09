@@ -1,4 +1,7 @@
-import type { TFile } from 'obsidian';
+import type {
+  TFile,
+  TFolder
+} from 'obsidian';
 
 import { normalizePath } from 'obsidian';
 import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
@@ -27,18 +30,28 @@ interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructor
    */
   readonly shouldForceSplitIntoFolder?: boolean;
   readonly shouldTreatTitleAsPath: boolean;
+
+  /**
+   * Creates the new note in THIS folder, whatever `shouldAllowOnlyCurrentFolder` would otherwise have
+   * resolved to. Set by the recursive split when the user changed the target of its root pass (issue #205),
+   * which is the only way to state a destination that is neither "beside the source" nor Obsidian's default
+   * new-note location.
+   */
+  readonly targetParentFolderOverride?: null | TFolder;
 }
 
 export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
   private readonly shouldForceSplitIntoFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
+  private readonly targetParentFolderOverride: null | TFolder;
 
   public constructor(params: SplitItemSelectorConstructorParams) {
     super(params);
     this.shouldAllowOnlyCurrentFolder = params.shouldAllowOnlyCurrentFolder;
     this.shouldForceSplitIntoFolder = params.shouldForceSplitIntoFolder ?? false;
     this.shouldTreatTitleAsPath = params.shouldTreatTitleAsPath;
+    this.targetParentFolderOverride = params.targetParentFolderOverride ?? null;
   }
 
   public override async selectItem(): Promise<SelectItemResult> {
@@ -84,7 +97,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
     fileName = trimEnd({ $string: fileName, suffix: '.md' });
     const fixedFileName = `${await this.resolveFileName(fileName)}.md`;
-    const prefix = this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
+    const prefix = this.resolveTargetFolderPrefix();
     const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
 
     const overriddenBasename = this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
@@ -220,5 +233,21 @@ export class SplitItemSelector extends ItemSelectorBase {
     }
 
     return fixedNoteName;
+  }
+
+  /**
+   * The linktext prefix that decides which folder the new note is created in.
+   *
+   * An explicit override wins over everything: it is the only way to name a folder that is neither the
+   * source's own (`shouldAllowOnlyCurrentFolder`) nor whatever Obsidian's new-file resolution picks from an
+   * empty prefix. Without one, the original two-way choice stands unchanged.
+   *
+   * @returns The prefix to prepend to the file name, or an empty string to let Obsidian resolve the folder.
+   */
+  private resolveTargetFolderPrefix(): string {
+    if (this.targetParentFolderOverride) {
+      return `/${this.targetParentFolderOverride.getParentPrefix()}`;
+    }
+    return this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
   }
 }

@@ -30,7 +30,8 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
-import { shouldMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
@@ -72,10 +73,15 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 vi.mock('../modals/merge-folder-into-file-modal.ts', () => ({
-  shouldMergeFolderIntoFile: vi.fn()
+  confirmMergeFolderIntoFile: vi.fn()
 }));
 
-const mockConfirm = vi.mocked(shouldMergeFolderIntoFile);
+vi.mock('../modals/select-folder-modal.ts', () => ({
+  selectFolder: vi.fn()
+}));
+
+const mockConfirm = vi.mocked(confirmMergeFolderIntoFile);
+const mockSelectFolder = vi.mocked(selectFolder);
 
 let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
@@ -203,7 +209,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     it('should create the note beside the folder by default, which is the existing behavior', async () => {
       initApp({ 'parent/src/a.md': 'alpha body' });
       const { handler } = createHandler();
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -214,7 +220,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     it('should create the note beside a root-level folder without a leading separator', async () => {
       initApp({ 'src/a.md': 'alpha body' });
       const { handler } = createHandler();
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -224,7 +230,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     it('should create the note inside the folder when configured to', async () => {
       initApp({ 'parent/src/a.md': 'alpha body' });
       const { handler } = createHandler({ mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder });
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -244,7 +250,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
         mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder
       });
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -264,7 +270,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       // Folder path and the note's file name, rather than computing a path of its own.
       const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent')
         .mockReturnValue(getFolder('Inbox'));
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -288,7 +294,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         replacement: '_',
         shouldReplaceInvalidTitleCharacters: true
       });
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -309,7 +315,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         replacement: '_',
         shouldReplaceInvalidTitleCharacters: true
       });
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -332,7 +338,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         replacement: '_',
         shouldReplaceInvalidTitleCharacters: true
       });
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('parent/src'));
 
@@ -347,7 +353,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/sub/b.md': 'bravo body'
     });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -368,7 +374,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/zeta.md': 'zeta body'
     });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -387,7 +393,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/intro.md': '# Intro\nintro body'
     });
     const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -404,7 +410,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should not write folder headings when the setting is off', async () => {
     initApp({ 'src/api/get.md': '# Get\nget body' });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -422,7 +428,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       isPathIgnored: (path) => path === 'src/api/get.md',
       shouldConvertFoldersToHeadingsWhenMergingFolder: true
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -440,7 +446,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     });
     await app.vault.createFolder('src/2');
     const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -454,7 +460,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     initApp({ 'src/b/note.md': 'b body' });
     await app.vault.createFolder('src/a');
     const { handler } = createHandler({ shouldConvertFoldersToHeadingsWhenMergingFolder: true });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -482,7 +488,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         'src/note.md': 'root body'
       });
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -497,7 +503,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         'src/zz-attachments/img.png': 'PIC'
       });
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -513,7 +519,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       });
       await app.vault.createFolder('src/empty');
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -527,7 +533,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         'src/note.md': 'root body'
       });
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -543,7 +549,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       });
       await app.vault.createFolder('src/attachments/nested');
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -558,7 +564,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         'src/note.md': 'root body'
       });
       const { handler } = createHandler(HEADING_SETTINGS);
-      mockConfirm.mockResolvedValue(true);
+      mockConfirm.mockResolvedValue('confirmed');
 
       await handler.executeFolder(getFolder('src'));
 
@@ -574,7 +580,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': 'note body'
     });
     const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -591,7 +597,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': 'note body'
     });
     const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -614,7 +620,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': 'note body'
     });
     const { handler } = createHandler({ emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -627,7 +633,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should keep the folders when the behavior is Keep', async () => {
     initApp({ 'src/note.md': 'note body' });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -640,7 +646,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
       isPathIgnored: (path) => path === 'src/a.md'
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -654,7 +660,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/sketch.excalidraw.md': 'raw excalidraw payload'
     });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -671,7 +677,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/sketch.excalidraw.md': 'raw excalidraw payload'
     });
     const { handler } = createHandler({ attachmentExtensions: [] });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -684,7 +690,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': '![[img.png]]'
     });
     const { handler } = createHandler({ shouldMoveAttachmentsWhenMergingFolder: true });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -699,7 +705,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       'src/note.md': '![[img.png]]'
     });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -716,7 +722,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       isPathIgnored: (path) => path === 'src/note.md',
       shouldMoveAttachmentsWhenMergingFolder: true
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -731,7 +737,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       replacement: '_',
       shouldReplaceInvalidTitleCharacters: true
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -747,7 +753,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       replacement: '_',
       shouldReplaceInvalidTitleCharacters: true
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('top/src'));
 
@@ -758,7 +764,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should fall back to the folder name when the template resolves to nothing', async () => {
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: ' '.repeat(3) });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -772,7 +778,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       replacement: '_',
       shouldReplaceInvalidTitleCharacters: false
     });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -783,7 +789,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should not create a target when the user cancels the confirmation', async () => {
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler();
-    mockConfirm.mockResolvedValue(false);
+    mockConfirm.mockResolvedValue('cancelled');
 
     await handler.executeFolder(getFolder('src'));
 
@@ -794,13 +800,77 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should trash the empty target when every note is ignored', async () => {
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler({ isPathIgnored: (path) => path === 'src/a.md' });
-    mockConfirm.mockResolvedValue(true);
+    mockConfirm.mockResolvedValue('confirmed');
 
     await handler.executeFolder(getFolder('src'));
 
     // Nothing merged, so the empty target was removed and the source stayed put.
     expect(await app.vault.adapter.exists('src.md')).toBe(false);
     expect(await app.vault.adapter.read('src/a.md')).toBe('alpha body');
+  });
+
+  // Issue #205: the merged note's location comes from `Merge folder into file location`, and "Change
+  // Target" overrides it for this run only.
+  describe('change target', () => {
+    it('should create the merged note in the folder picked from the dialog', async () => {
+      initApp({
+        'elsewhere/other.md': 'other body',
+        'src/a.md': 'alpha body'
+      });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValueOnce('reselect-target').mockResolvedValueOnce('confirmed');
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      // Not `src.md`, which is where the `BesideFolder` default would have put it.
+      expect(await app.vault.adapter.read('elsewhere/src.md')).toContain('alpha body');
+      expect(await app.vault.adapter.exists('src.md')).toBe(false);
+      expect(mockSelectFolder).toHaveBeenCalledOnce();
+
+      const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0].isAllowedFolder;
+      expect(isAllowedFolder?.(getFolder('elsewhere'))).toBe(true);
+    });
+
+    it('should keep the derived location when the picker is dismissed', async () => {
+      initApp({ 'src/a.md': 'alpha body' });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValueOnce('reselect-target').mockResolvedValueOnce('confirmed');
+      mockSelectFolder.mockResolvedValue(null);
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.read('src.md')).toContain('alpha body');
+    });
+
+    it('should re-derive the target path against the picked folder, de-duplicating there', async () => {
+      // The occupied-name check (issue #186) depends on the folder being asked about, so it is recomputed.
+      initApp({
+        'elsewhere/src.md': 'occupied',
+        'src/a.md': 'alpha body'
+      });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValueOnce('reselect-target').mockResolvedValueOnce('confirmed');
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      // The occupying note is NOT being merged away, so the clash is real and the new note is renamed.
+      expect(await app.vault.adapter.read('elsewhere/src.md')).toBe('occupied');
+      expect(await app.vault.adapter.read('elsewhere/src 1.md')).toContain('alpha body');
+    });
+
+    it('should create the merged note at the vault root when the root is picked', async () => {
+      // The root's path is `/`, which must not leak into the joined path as a leading slash.
+      initApp({ 'nested/src/a.md': 'alpha body' });
+      const { handler } = createHandler();
+      mockConfirm.mockResolvedValueOnce('reselect-target').mockResolvedValueOnce('confirmed');
+      mockSelectFolder.mockResolvedValue(app.vault.getRoot());
+
+      await handler.executeFolder(getFolder('nested/src'));
+
+      expect(await app.vault.adapter.read('src.md')).toContain('alpha body');
+    });
   });
 
   it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {

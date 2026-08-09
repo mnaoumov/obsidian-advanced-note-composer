@@ -13,6 +13,7 @@ import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handle
 import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 import { join } from 'obsidian-dev-utils/path';
 
 import type { CollectFlattenItemsParams } from '../flatten-items.ts';
@@ -29,6 +30,7 @@ import {
 import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
@@ -103,6 +105,24 @@ interface FlattenFolderCommandHandlerFlattenImplParams {
   readonly itemsToMove: readonly TAbstractFile[];
   readonly parentFolder: TFolder;
   readonly vaultTransaction: VaultTransaction;
+}
+
+interface FlattenFolderCommandHandlerResolveDestinationFolderParams {
+  /**
+   * Where the children land unless the user picks somewhere else: the folder's own parent, which is what
+   * flatten meant before issue #205 made the destination changeable.
+   */
+  readonly defaultParentFolder: TFolder;
+  readonly folder: TFolder;
+  readonly itemsToMove: readonly TAbstractFile[];
+  readonly mode: FlattenMode;
+}
+
+interface IsAllowedFlattenDestinationParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly sourceFolder: TFolder;
+  readonly targetFolder: TFolder;
 }
 
 /**
@@ -197,9 +217,9 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const parentFolder = folder.parent;
+    const defaultParentFolder = folder.parent;
     /* v8 ignore start -- a non-root folder always has a parent. */
-    if (!parentFolder) {
+    if (!defaultParentFolder) {
       return;
     }
     /* v8 ignore stop */
@@ -222,29 +242,14 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.shouldAskBeforeFlattening) {
-      /*
-       * Flatten has no target picker, so this dialog is the only chance to see what the command is about
-       * to do. It is asked before the lock and the transaction are taken, so cancelling costs nothing.
-       */
-      const previewRows = buildFlattenPreviewRows({
-        app: this.app,
-        children: itemsToMove,
-        folder,
-        parentFolder
-      });
-      const confirmResult = await this.confirmFlatten({
-        folder,
-        mode,
-        parentFolder,
-        previewRows
-      });
-      if (!confirmResult.isConfirmed) {
-        return;
-      }
-      await this.pluginSettingsComponent.editAndSave((settings) => {
-        settings.shouldAskBeforeFlattening = confirmResult.shouldAskAgain;
-      });
+    const parentFolder = await this.resolveDestinationFolder({
+      defaultParentFolder,
+      folder,
+      itemsToMove,
+      mode
+    });
+    if (!parentFolder) {
+      return;
     }
 
     const abortController = new AbortController();
@@ -332,10 +337,11 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   }
 
   /**
-   * Asks before promoting the folder's children, listing every one of them (issue #154). There is no
-   * target to reselect — the destination is always the folder's own parent — so the dialog's
-   * "Change target" action is disabled. Mirrors the other flows in mapping "Don't ask again" back onto
-   * the flow's own `shouldAskBefore*` setting.
+   * Asks before promoting the folder's children, listing every one of them (issue #154). Mirrors the other
+   * flows in mapping "Don't ask again" back onto the flow's own `shouldAskBefore*` setting.
+   *
+   * "Change target" is enabled (issue #205): the destination DEFAULTS to the folder's own parent, but it is
+   * not fixed to it — see {@link FlattenFolderCommandHandler.resolveDestinationFolder}.
    *
    * @param params - The parameters.
    * @returns The dialog result.
@@ -361,7 +367,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
               parentFolder,
               previewRows
             }),
-          canReselectTarget: false,
+          canReselectTarget: true,
           confirmButtonMobileText: 'Flatten and don\'t ask again',
           confirmButtonText: 'Flatten',
           promiseResolve,
@@ -386,6 +392,94 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       await vaultTransaction.rename(item, targetPath);
     }
   }
+
+  /**
+   * Runs the confirmation dialog and, whenever it comes back with "Change target", the destination picker —
+   * looping until the user confirms a destination or cancels (issue #205).
+   *
+   * The loop is INVERTED relative to the picker-first flows (merge/move/swap, e.g.
+   * `MoveFolderCommandHandler.resolveTargetFolder`): flatten's destination is DERIVED — the folder's own
+   * parent — so the picker must not run first. It appears only when asked for, and the preview rows are
+   * rebuilt each pass so the dialog never lists where the children were going to land before the change.
+   *
+   * Cancelling the picker returns to the same dialog with the destination unchanged, rather than abandoning
+   * the flatten: "Change target" is a detour, and cancelling a detour is not cancelling the journey.
+   *
+   * @param params - The parameters.
+   * @returns The confirmed destination, or `null` when the flow was cancelled.
+   */
+  private async resolveDestinationFolder(params: FlattenFolderCommandHandlerResolveDestinationFolderParams): Promise<null | TFolder> {
+    const { defaultParentFolder, folder, itemsToMove, mode } = params;
+    if (!this.pluginSettingsComponent.settings.shouldAskBeforeFlattening) {
+      return defaultParentFolder;
+    }
+
+    let parentFolder = defaultParentFolder;
+    for (;;) {
+      /*
+       * Flatten has no target picker of its own, so this dialog is the only chance to see what the command
+       * is about to do. It is asked before the lock and the transaction are taken, so cancelling costs
+       * nothing.
+       */
+      const previewRows = buildFlattenPreviewRows({
+        app: this.app,
+        children: itemsToMove,
+        folder,
+        parentFolder
+      });
+      const confirmResult = await this.confirmFlatten({
+        folder,
+        mode,
+        parentFolder,
+        previewRows
+      });
+      if (confirmResult.shouldReselectTarget) {
+        const selectedFolder = await selectFolder({
+          app: this.app,
+          isAllowedFolder: (targetFolder) =>
+            isAllowedFlattenDestination({
+              app: this.app,
+              pluginSettingsComponent: this.pluginSettingsComponent,
+              sourceFolder: folder,
+              targetFolder
+            }),
+          placeholder: 'Select folder to flatten into...',
+          pluginSettingsComponent: this.pluginSettingsComponent
+        });
+        if (selectedFolder) {
+          parentFolder = selectedFolder;
+        }
+        continue;
+      }
+      if (!confirmResult.isConfirmed) {
+        return null;
+      }
+      await this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.shouldAskBeforeFlattening = confirmResult.shouldAskAgain;
+      });
+      return parentFolder;
+    }
+  }
+}
+
+/**
+ * Whether `targetFolder` is a valid destination for flattening `sourceFolder`'s children into it: not the
+ * source itself or one of its descendants (the children are already inside it, and a folder cannot be moved
+ * into its own subtree), and not an ignored path.
+ *
+ * Deliberately NOT `isAllowedMoveTarget`, which additionally rejects the source's current parent as a
+ * no-op. Here that parent is flatten's DEFAULT destination, so it has to stay offered — picking it is how
+ * the user undoes a change of mind and goes back to plain flatten.
+ *
+ * @param params - The parameters.
+ * @returns Whether the folder is offered as a flatten destination.
+ */
+export function isAllowedFlattenDestination(params: IsAllowedFlattenDestinationParams): boolean {
+  const { app, pluginSettingsComponent, sourceFolder, targetFolder } = params;
+  if (isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
+    return false;
+  }
+  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path);
 }
 
 /**

@@ -24,6 +24,16 @@ import {
   isAllowedMoveTarget,
   selectTargetFolderForMove
 } from './move-folder-modal.ts';
+import { selectFolder } from './select-folder-modal.ts';
+
+vi.mock('./select-folder-modal.ts', async (importOriginal) => {
+  // Partially mocked: the cancellation test still drives the REAL picker, while the filter test only needs
+  // The parameters it was handed.
+  const original = await importOriginal<typeof import('./select-folder-modal.ts')>();
+  return { selectFolder: vi.fn(original.selectFolder) };
+});
+
+const mockSelectFolder = vi.mocked(selectFolder);
 
 function createSettingsComponent(isPathIgnored: (path: string) => boolean = () => false): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
@@ -121,5 +131,33 @@ describe('selectTargetFolderForMove', () => {
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
+  });
+
+  it('should filter the shared picker by the move rules', async () => {
+    // Since the picker itself was extracted to `select-folder-modal.ts` (issue #205), the move-specific part
+    // Is exactly this callback — so it is asserted here rather than left to the suggester's internals.
+    const app = App.createConfigured__({
+      files: {
+        'other/x.md': 'x',
+        'parent/a/note.md': 'note'
+      }
+    }).asOriginalType__();
+    const sourceFolder = ensureNonNullable(app.vault.getFolderByPath('parent/a'));
+    const pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
+      settings: strictProxy<PluginSettings>({
+        isPathIgnored: () => false,
+        shouldShowModalInstructions: true
+      })
+    });
+
+    const promise = selectTargetFolderForMove({ app, pluginSettingsComponent, sourceFolder });
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+
+    // `lastCall`, not `calls[0]`: this describe block does not clear mocks between its tests.
+    const isAllowedFolder = mockSelectFolder.mock.lastCall?.[0].isAllowedFolder;
+    expect(isAllowedFolder?.(ensureNonNullable(app.vault.getFolderByPath('other')))).toBe(true);
+    // The current parent is a no-op destination for a MOVE (unlike a flatten, where it is the default).
+    expect(isAllowedFolder?.(ensureNonNullable(app.vault.getFolderByPath('parent')))).toBe(false);
   });
 });

@@ -216,13 +216,23 @@ Notes:
   paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
   can switch after the target is chosen.
 
-- **Change target from a confirmation dialog.** Every confirmation dialog that follows a target picker shows a
-  **Change target** button (or press `Alt+C`) that sends you back to the picker to pick a different target —
-  without cancelling and re-triggering the whole operation. This applies to the split confirmation dialog
-  (when *Ask before splitting* is on), to the merge-file and merge-folder confirmation dialogs (when *Ask
-  before merging* is on), and to the swap-file and swap-folder confirmation dialogs (when *Ask before
-  swapping* is on). For the split and merge-file pickers, the reopened picker is preselected with your
-  previous choice.
+- **Change target from a confirmation dialog.** **Every** confirmation dialog shows a working **Change
+  target** button (or press `Alt+C`), so you can redirect an operation without cancelling and re-triggering
+  it. Where the operation already asked you to pick a target, the button reopens that picker — for the split
+  and merge-file pickers it is preselected with your previous choice. Where the target was decided *for* you,
+  the button opens a folder picker and the dialog re-renders around your choice:
+
+  | Operation | What **Change target** picks |
+  | --- | --- |
+  | Split / extract, merge file, merge folder, swap file, swap folder, move folder | the original target picker, reopened |
+  | `Extract this heading...`, `Split note by headings` | the split target picker, which these normally skip — seeded with the heading |
+  | `Flatten folder` (all variants) | the folder the children are promoted into, instead of the folder's own parent |
+  | `Create folder with notes...` | the folder the new folder is created in; the name, numbering and note previews are all recomputed for it |
+  | `Merge folder into single file` | the folder the merged note lands in, overriding *Merge folder into file location* for this run only |
+  | `Split note by headings recursively` | the folder the produced tree is rooted in |
+
+  Dismissing the folder picker means "never mind": you go back to the same confirmation dialog with the
+  target unchanged, rather than losing the operation.
 
 - **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
   the Smart cut & paste notice (or the `Smart cut & paste: Switch to split/extract` command) re-opens the

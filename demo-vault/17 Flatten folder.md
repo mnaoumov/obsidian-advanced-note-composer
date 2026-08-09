@@ -23,6 +23,15 @@ The dialog is there because this command has no picker to review before it acts.
 `Don't ask again` in it, or turn off **Should ask before flattening a folder** under
 `Move/flatten folders` in the settings, to flatten straight away.
 
+## Send the children somewhere else
+
+The children go to the folder's own parent by default, but that is only the default. Run
+`Flatten folder...` again and press `Change target` (or `Alt+C`) in the dialog: pick any other folder
+and the preview redraws for it - including the de-duplicated names, which depend on what is already
+sitting in the destination you chose. The folder's own subtree is not offered, since the children are
+already inside it. Dismissing the picker leaves the destination as it was and returns you to the
+dialog, so a change of mind costs nothing.
+
 ## Try the other flatten commands
 
 *What* gets promoted is decided by **which command you run** - there is no setting to flip. Undo the

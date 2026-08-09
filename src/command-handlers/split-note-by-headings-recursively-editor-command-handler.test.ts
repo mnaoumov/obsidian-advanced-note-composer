@@ -1,11 +1,13 @@
 import type {
   App,
   Editor,
+  FileManager,
   HeadingCache,
   MarkdownFileInfo,
   MarkdownView,
   MetadataCache,
   TFile,
+  TFolder,
   Workspace,
   WorkspaceLeaf
 } from 'obsidian';
@@ -42,6 +44,7 @@ import {
   SplitComposer
 } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
+import { selectFolder } from '../modals/select-folder-modal.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './split-note-by-headings-recursively-editor-command-handler.ts';
@@ -84,6 +87,7 @@ interface TestableHandler {
 
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
+let confirmResults: ConfirmDialogModalResult[] = [];
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
@@ -135,9 +139,15 @@ vi.mock('../modals/split-file-modal.ts', () => ({
   prepareForSplitFile: vi.fn()
 }));
 
+vi.mock('../modals/select-folder-modal.ts', () => ({
+  selectFolder: vi.fn()
+}));
+
 vi.mock('../open-minimizable-modal.ts', () => ({
   openModal: vi.fn(() => {
-    capturedConfirmParams?.promiseResolve(confirmResult);
+    // The "Change target" loop can open the dialog more than once, so a scripted queue takes precedence;
+    // A round the test did not script falls back to the single `confirmResult` every other test sets.
+    capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? confirmResult);
   })
 }));
 
@@ -155,6 +165,7 @@ const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
 const mockOpenModal = vi.mocked(openModal);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
+const mockSelectFolder = vi.mocked(selectFolder);
 const MockSplitComposer = vi.mocked(SplitComposer);
 
 function createCache(headings: HeadingCache[]): CachedMetadataEx {
@@ -169,6 +180,18 @@ function createCache(headings: HeadingCache[]): CachedMetadataEx {
  */
 function createCacheWithoutHeadings(): CachedMetadataEx {
   return castTo<CachedMetadataEx>({});
+}
+
+/**
+ * A dialog result that asks to go back to the root-folder picker.
+ *
+ * @returns The result.
+ */
+function createConfirmReselect(): ConfirmDialogModalResult {
+  return {
+    ...createConfirmResult(false),
+    shouldReselectTarget: true
+  };
 }
 
 function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): ConfirmDialogModalResult {
@@ -205,7 +228,15 @@ function createMockEditor(isSomethingSelected = false): Editor {
 }
 
 function createMockFile(path = 'test/note.md'): TFile {
-  return strictProxy<TFile>({ path });
+  // The parent is read to resolve the tree's default root, which the confirmation dialog now shows so
+  // "Change target" has something visible to change (issue #205).
+  return strictProxy<TFile>({
+    parent: strictProxy<TFolder>({
+      name: 'test',
+      path: 'test'
+    }),
+    path
+  });
 }
 
 function createMockLeaf(): WorkspaceLeaf {
@@ -217,6 +248,11 @@ function createMockLeaf(): WorkspaceLeaf {
 function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({
+      fileManager: strictProxy<FileManager>({
+        // Only reached with `shouldSplitRecursivelyIntoDefaultNewNoteFolder` on: the tree is rooted in
+        // Obsidian's own `Default location for new notes` (issue #173).
+        getNewFileParent: vi.fn().mockReturnValue(strictProxy<TFolder>({ name: 'Inbox', path: 'Inbox' }))
+      }),
       metadataCache: strictProxy<MetadataCache>({
         getFileCache: vi.fn()
       }),
@@ -305,6 +341,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     useRealFragments();
     capturedConfirmParams = null;
     confirmResult = createConfirmResult(false);
+    confirmResults = [];
     mockResolveSplitTemplateForNewTargetFile.mockReturnValue(RESOLVED_TEMPLATE);
     MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
     mockGetSelectionUnderHeading.mockReturnValue({
@@ -429,6 +466,77 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     const settings = strictProxy<PluginSettings>({ shouldAskBeforeSplitting: true });
     await vi.mocked(params.pluginSettingsComponent.editAndSave).mock.calls[0]?.[0](settings);
     expect(settings.shouldAskBeforeSplitting).toBe(false);
+  });
+
+  // Issue #205: the tree's ROOT is the one thing about a recursive split the user gets to pick — every
+  // Note's own name comes from its heading.
+  describe('change target', () => {
+    it('should root the tree in the folder picked from the dialog', async () => {
+      const params = createMockParams({ shouldAskBeforeSplitting: true });
+      const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+      const pickedFolder = strictProxy<TFolder>({ name: 'Elsewhere', path: 'Elsewhere' });
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(pickedFolder);
+      scriptCaches(createCache([createHeading(1, 0)]), createCache([createHeading(1, 0)]), createCache([]));
+      mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
+      setActiveEditor(params.app, createMockEditor());
+
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
+
+      // Root pass only — a deeper pass must keep nesting beside its own source, which IS the folder tree.
+      // Read off the captured call rather than matched with `objectContaining`, whose pretty-printer walks
+      // Into the `strictProxy` folder and trips its unmocked-property guard.
+      expect(mockPrepareForSplitFile.mock.calls[0]?.[0].targetParentFolderOverride).toBe(pickedFolder);
+
+      const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0].isAllowedFolder;
+      expect(isAllowedFolder?.(pickedFolder)).toBe(true);
+    });
+
+    it('should keep the derived root when the picker is dismissed', async () => {
+      const params = createMockParams({ shouldAskBeforeSplitting: true });
+      const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(null);
+      scriptCaches(createCache([createHeading(1, 0)]), createCache([createHeading(1, 0)]), createCache([]));
+      mockPrepareForSplitFile.mockResolvedValue(createSplitResult(createMockFile('A/A.md')));
+      setActiveEditor(params.app, createMockEditor());
+
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
+
+      // `null` leaves the setting-driven resolution exactly as it was before issue #205.
+      expect(mockPrepareForSplitFile.mock.calls[0]?.[0].targetParentFolderOverride).toBeNull();
+    });
+
+    it('should show the source parent as the default root', async () => {
+      const params = createMockParams({ shouldAskBeforeSplitting: true });
+      const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+      const file = createMockFile();
+      mockGetCacheSafe.mockResolvedValue(createCache([createHeading(1, 0)]));
+      mockRenderInternalLink.mockResolvedValue(createEl('a'));
+
+      await handler.executeEditor(createMockEditor(), createMockContext(file));
+
+      mockRenderInternalLink.mockClear();
+      await capturedConfirmParams?.buildContent(createFragment());
+      // A control whose effect is invisible is indistinguishable from one that does nothing, which is the
+      // Complaint issue #205 is about — so the dialog names the destination.
+      const renderedLinks = mockRenderInternalLink.mock.calls.map((call) => call[0].pathOrAbstractFile);
+      expect(renderedLinks).toContain(file.parent);
+    });
+
+    it('should show Obsidian default new-note folder as the root when that setting is on', async () => {
+      const params = createMockParams({
+        shouldAskBeforeSplitting: true,
+        shouldSplitRecursivelyIntoDefaultNewNoteFolder: true
+      });
+      const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+      mockGetCacheSafe.mockResolvedValue(createCache([createHeading(1, 0)]));
+      mockRenderInternalLink.mockResolvedValue(createEl('a'));
+
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
+
+      expect(params.app.fileManager.getNewFileParent).toHaveBeenCalled();
+    });
   });
 
   it('should skip the confirmation entirely when the setting is off', async () => {
