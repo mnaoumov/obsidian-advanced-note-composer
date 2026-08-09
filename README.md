@@ -345,14 +345,24 @@ aliases:
 
 With **Should run templater on destination file** on, every created note is handed to [Templater](https://github.com/SilentVoid13/Templater) — and because the plugin's own tokens are substituted first, they are available to Templater code as well. They are also bound to a `TOKENS` object, so `<% TOKENS.safeFolderName %>` and `<% TOKENS.index + 1 %>` both work, and a name containing a quote cannot break the expression. `TOKENS` is declared before everything else in the note, so it can be used in the note's own frontmatter too; the note on disk never holds that declaration, which is what keeps `tp.frontmatter` reporting real properties. A template pulled in with `tp.file.include(...)` is parsed separately and does not see `TOKENS`; pass what it needs through the note's own properties instead. A template that declares its own `TOKENS` will fail to run.
 
-To write properties rather than print them, use `processFrontMatter` from inside `tp.hooks.on_all_templates_executed` — Templater writes the rendered note *after* your code runs, so a call made outside that hook is overwritten and lost. That is how one typed name becomes several `aliases` entries:
+That is what lets one typed name become several `aliases` entries — typing `A - B` here gives two:
+
+```text
+{{file}} !.md
+---
+aliases: <% JSON.stringify(TOKENS.rawFolderName.split(' - ')) %>
+---
+# <% TOKENS.folderName %>
+```
+
+To *write* the properties instead of printing them — letting Obsidian own the YAML, so a part containing a `:` or a quote is still formatted correctly and existing properties are merged rather than replaced — use `processFrontMatter` from inside `tp.hooks.on_all_templates_executed`. The hook is required: Templater writes the rendered note *after* your code runs, so a call made outside it is overwritten and the properties disappear without an error.
 
 ```text
 {{file}} !.md
 <%*
 tp.hooks.on_all_templates_executed(async () => {
   await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
-    fm.aliases = TOKENS.rawFolderName.split(' - ').map((a) => a.trim()).filter(Boolean);
+    fm.aliases = TOKENS.rawFolderName.split(' - ');
   });
 });
 -%>

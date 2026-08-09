@@ -84,17 +84,38 @@ splitting rule is just JavaScript, so it can be exactly the rule you want:
 
 ```text
 {{file}} !.md
+---
+aliases: <% JSON.stringify(TOKENS.rawFolderName.split(' - ')) %>
+---
+# <% TOKENS.folderName %>
+```
+
+Type `A - B` and the note gets `aliases: ["A","B"]` — two entries, which is what Obsidian reads that
+as. Splitting on `' - '` rather than `'-'` is what keeps `Well-known - B` two entries and not three.
+Want the parts trimmed, title-cased, or a different separator in some other case? That is the same
+one line with a `.map(...)` on it.
+
+`TOKENS` works inside the properties block because it is declared before everything else in the note,
+and the declaration itself never reaches the file — which is also why `tp.frontmatter` still reports
+this note's real properties.
+
+For more control, *write* the properties instead of printing them. Obsidian then owns the YAML, so a
+part containing a `:` or a quote is still formatted correctly, and properties your template already
+declares are merged rather than replaced:
+
+```text
+{{file}} !.md
 <%*
 tp.hooks.on_all_templates_executed(async () => {
   await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
-    fm.aliases = TOKENS.rawFolderName.split(' - ').map((a) => a.trim()).filter(Boolean);
+    fm.aliases = TOKENS.rawFolderName.split(' - ');
   });
 });
 -%>
 # <% TOKENS.folderName %>
 ```
 
-Type `A - B` and the note gets:
+which gives a proper list:
 
 ```text
 ---
@@ -104,16 +125,10 @@ aliases:
 ---
 ```
 
-Obsidian writes those properties itself, so the quoting and the formatting are never your problem,
-and anything your template already declares is kept rather than replaced.
-
-Splitting on `' - '` rather than `'-'` is what keeps `Well-known - B` two entries and not three;
-`.trim()` drops the spaces around each part, and `.filter(Boolean)` drops empty ones. Want the parts
-title-cased, or a different separator in some other case? That is another line of the same JavaScript.
-
-**`tp.hooks.on_all_templates_executed` is not decoration.** Templater writes the rendered note *after*
-your code has run, so a `processFrontMatter` call made outside the hook is overwritten by that write
-and the properties silently disappear. The hook is what runs your change once the note has settled.
+**`tp.hooks.on_all_templates_executed` is not decoration here.** Templater writes the rendered note
+*after* your code has run, so a `processFrontMatter` call made outside the hook is overwritten by that
+write and the properties disappear without an error. The hook runs your change once the note has
+settled.
 
 ## Before it happens
 
