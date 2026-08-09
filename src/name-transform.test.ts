@@ -84,7 +84,7 @@ describe('applyNameTransform', () => {
     expect(templater.createRunningConfig).toHaveBeenCalledWith(undefined, contextFile, RUN_MODE_DYNAMIC_PROCESSOR);
     const parsedContent = castTo<string>(templater.parseTemplate.mock.calls[0]?.[1]);
     expect(parsedContent).toContain('const TOKENS = {');
-    expect(parsedContent).toContain('rawString: "A: B"');
+    expect(parsedContent).toContain('"rawString":"A: B"');
     expect(parsedContent.endsWith(MAPPING_TEMPLATE)).toBe(true);
   });
 
