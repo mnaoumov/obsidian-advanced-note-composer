@@ -13,6 +13,24 @@
   margin-top: var(--size-4-2);
 }
 
+// One name plus its `Rename` button in the `Create folder with notes...` confirmation (issue #200). The
+// Dialog body renders into the modal's own content element, outside the plugin-scoped container, so these
+// Are styled at the top level like the notice buttons above.
+.advanced-note-composer-confirm-name-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-1);
+}
+
+// Sized down so a column of them beside the note names reads as a row affordance rather than as the
+// Dialog's own actions.
+.advanced-note-composer-confirm-rename-button {
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-4-1) var(--size-4-2);
+}
+
 // Persistent highlight of the captured source selection of a pending smart-cut mark or split/extract
 // Setup. Uses the theme's text-selection color so it reads as "this is the selection being moved".
 .advanced-note-composer-pending-selection {

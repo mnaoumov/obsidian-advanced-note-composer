@@ -161,3 +161,26 @@ the command from the palette — so `Change target` (or `Alt+C`) opens a folder 
 recomputed for the folder you pick, the numbering included: `{{index}}` counts the NEW parent's
 children, so the previewed name is always the one you will actually get. Dismissing the picker keeps
 the parent you had.
+
+### Fixing a name from the dialog
+
+Seeing the difference is only half of it — a `Rename` button sits beside the folder name and beside
+every note in that list, so you can correct one without cancelling and starting over.
+
+1. Paste the two-note template from [Several notes at once](#several-notes-at-once) into **Create
+   folder content template**, turn **Should ask before creating a folder** on, and run the command on
+   `Create example`.
+2. Type `api TEST` and press `Create`. The dialog previews `2. Api TEST` holding `!.md` and
+   `Api TEST.md`.
+3. Press `Rename` beside `Api TEST.md` and call it `Overview`. Only that row changes.
+4. Press `Rename` beside the folder name and call it `Reference`. The whole preview is rebuilt —
+   the folder becomes `2. Reference`, `{{folderName}}` in the notes follows it, and `Overview.md`
+   **keeps** the name you gave it.
+
+That last point is the rule: a name you typed yourself is never re-derived behind your back — not by
+a folder rename, not by `Change target`. Everything else still comes from the templates.
+
+Each prompt opens on the name it is about, so a small edit is a small edit. Dismissing one means
+"never mind". A note name is refused if it would be empty, if it still holds invalid characters (with
+**Should replace invalid title characters** off), or if another note in the folder already has it —
+so what the dialog shows is always what gets created.

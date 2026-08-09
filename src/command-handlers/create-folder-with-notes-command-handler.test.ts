@@ -7,6 +7,7 @@ import type {
   PluginNoticeComponent,
   PluginNoticeComponentShowNoticeAfterDelayParams
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { MaybeReturn } from 'obsidian-dev-utils/type';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
@@ -62,6 +63,12 @@ interface Testable {
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
+  validateTypedNoteName(params: ValidateTypedNoteNameParams): Promise<MaybeReturn<string>>;
+}
+
+interface ValidateTypedNoteNameParams {
+  readonly otherNoteNames: readonly string[];
+  readonly value: string;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -93,6 +100,11 @@ vi.mock('../modals/confirm-dialog-modal.ts', () => ({
       this.params = params;
       capturedConfirmParams = params;
     }
+
+    // A `Rename` button closes the dialog after resolving (issue #200).
+    public close(): void {
+      closeCount++;
+    }
   }
 }));
 
@@ -102,7 +114,19 @@ vi.mock('../modals/select-folder-modal.ts', () => ({
 
 vi.mock('../open-minimizable-modal.ts', () => ({
   openModal: vi.fn(() => {
-    capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
+    const renameButtonIndex = renameButtonClicks.shift();
+    if (renameButtonIndex === undefined) {
+      capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
+      return;
+    }
+
+    // The `Rename` buttons live in the dialog BODY (issue #200), not in its button container, so driving one
+    // Means building the content and clicking the real button.
+    invokeAsyncSafely(async () => {
+      const fragment = createFragment();
+      await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
+      ensureNonNullable([...fragment.querySelectorAll('button')][renameButtonIndex]).click();
+    });
   })
 }));
 
@@ -113,13 +137,22 @@ const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 let app: AppOriginal;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
+let closeCount = 0;
 let confirmResults: ConfirmDialogModalResult[] = [];
+
+/**
+ * Which `Rename` button each successive dialog should click: `0` is the folder's, `1 + n` is note `n`'s. A
+ * dialog with no entry left resolves from {@link confirmResults}, exactly as before issue #200.
+ */
+let renameButtonClicks: number[] = [];
 let resourceLockComponent: ResourceLockComponent;
 
 afterEach(() => {
   resourceLockComponent.unload();
   capturedConfirmParams = null;
+  closeCount = 0;
   confirmResults = [];
+  renameButtonClicks = [];
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
@@ -727,6 +760,186 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       mockRenderInternalLink.mockClear();
       await params.buildContent(createFragment());
       expect(mockRenderInternalLink).toHaveBeenCalledWith(expect.objectContaining({ displayText: '/' }));
+    });
+  });
+
+  // Issue #200: the dialog previews a name that is not what was typed, so it is the one place a rename can
+  // Still change the outcome. The folder's `Rename` rebuilds the whole plan; a note's overrides that row.
+  describe('renaming from the confirmation dialog (issue #200)', () => {
+    it('should rebuild the plan around the folder name typed into Rename', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('beta');
+      renameButtonClicks = [0];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(app.vault.getFolderByPath('parent/1. Alpha')).toBeNull();
+      // The token-derived note name followed the rename, so the whole plan was rebuilt rather than patched.
+      expect(listPaths('parent/1. Beta')).toEqual(['parent/1. Beta/Beta.md']);
+      // The dialog was closed rather than left open behind the prompt.
+      expect(closeCount).toBe(1);
+    });
+
+    it('should seed the folder Rename prompt with the name already typed', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('beta');
+      renameButtonClicks = [0];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(mockPrompt.mock.calls[0]?.[0]).toMatchObject({ defaultValue: '', okButtonText: 'Create' });
+      expect(mockPrompt.mock.calls[1]?.[0]).toMatchObject({ defaultValue: 'alpha', okButtonText: 'Rename' });
+    });
+
+    it('should keep the current name when the folder Rename prompt is dismissed', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce(null);
+      renameButtonClicks = [0];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Alpha')).toEqual(['parent/1. Alpha/Alpha.md']);
+    });
+
+    it('should rename one note without touching the others', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('renamed');
+      // `0` is the folder's button, so `2` is the SECOND note's.
+      renameButtonClicks = [2];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({
+        newFolderContentTemplate: '{{file}} first.md\na\n{{file}} second.md\nb',
+        shouldAskBeforeCreatingFolder: true
+      });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Alpha')).toEqual(['parent/1. Alpha/first.md', 'parent/1. Alpha/renamed.md']);
+      expect(mockPrompt.mock.calls[1]?.[0]).toMatchObject({ defaultValue: 'second.md', okButtonText: 'Rename' });
+
+      // The prompt's validator knows about the OTHER planned notes, so a collision is refused up front
+      // Rather than silently de-duplicated into `first 1.md` by the write.
+      const validate = castTo<(value: string) => Promise<unknown>>(ensureNonNullable(mockPrompt.mock.calls[1]?.[0]).valueValidator);
+      expect(await validate('first')).toBe('Another note in this folder is already named that');
+    });
+
+    it('should keep the previewed note name when its Rename prompt is dismissed', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce(null);
+      renameButtonClicks = [1];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Alpha')).toEqual(['parent/1. Alpha/Alpha.md']);
+    });
+
+    it('should keep a renamed note when the folder is renamed afterwards', async () => {
+      // The user named that note deliberately; re-deriving it from `{{safeFolderName}}` would silently undo
+      // Them, so the override outlives the rebuild.
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('kept').mockResolvedValueOnce('beta');
+      renameButtonClicks = [1, 0];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Beta')).toEqual(['parent/1. Beta/kept.md']);
+    });
+
+    it('should keep a renamed note across Change target', async () => {
+      initApp({
+        'elsewhere/other.md': 'other',
+        'parent/note.md': 'note'
+      });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('kept');
+      renameButtonClicks = [1];
+      confirmResults = [createConfirmReselect(), createConfirmResult(true)];
+      mockSelectFolder.mockResolvedValue(getFolder('elsewhere'));
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('elsewhere/1. Alpha')).toEqual(['elsewhere/1. Alpha/kept.md']);
+    });
+
+    it('should render a Rename button beside the folder and beside every note', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({
+        newFolderContentTemplate: '{{file}} first.md\na\n{{file}} second.md\nb',
+        shouldAskBeforeCreatingFolder: true
+      });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      const fragment = createFragment();
+      await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
+      const buttonTexts = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
+      expect(buttonTexts).toEqual(['Rename', 'Rename', 'Rename']);
+    });
+  });
+
+  describe('note rename validation (issue #200)', () => {
+    it('should refuse a name that normalizes to nothing', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      const { handler } = createHandler();
+      // Without this the empty name would become a note literally called `.md`.
+      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: ' ' })).toBe('Note name cannot be empty');
+    });
+
+    it('should refuse an invalid character while replacing is off', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      const { handler } = createHandler({ shouldReplaceInvalidTitleCharacters: false });
+      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: 'a*b' })).toBe('Note name contains invalid characters');
+    });
+
+    it('should refuse a name another planned note already holds, case-insensitively', async () => {
+      // The write de-duplicates through `getAvailablePath`, so without this the dialog would preview
+      // `second.md` twice and create `second 1.md`.
+      initApp({ 'parent/note.md': 'note' });
+      const { handler } = createHandler();
+      const message = 'Another note in this folder is already named that';
+      expect(await handler.validateTypedNoteName({ otherNoteNames: ['second.md'], value: 'second' })).toBe(message);
+      expect(await handler.validateTypedNoteName({ otherNoteNames: ['second.md'], value: 'SECOND.md' })).toBe(message);
+    });
+
+    it('should accept a name nothing else holds', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      const { handler } = createHandler();
+      expect(await handler.validateTypedNoteName({ otherNoteNames: ['second.md'], value: 'third' })).toBeUndefined();
+    });
+
+    it('should report a broken name transform instead of letting it escape', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      const { handler } = createHandler({ nameTransformTemplate: '{{nope}}' });
+      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: 'alpha' })).toBe('Invalid template key: nope');
+    });
+
+    it('should report a transform that throws something other than an Error', async () => {
+      initApp({ 'parent/note.md': 'note' }, {
+        'templater-obsidian': {
+          templater: {
+            /* eslint-disable camelcase -- Templater's own API method names. */
+            create_running_config: vi.fn().mockReturnValue({}),
+            parse_template: vi.fn().mockRejectedValue('boom')
+            /* eslint-enable camelcase -- Templater's own API method names. */
+          }
+        }
+      });
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
+      const { handler } = createHandler({ nameTransformTemplate: '<% throw "boom" %>' });
+
+      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: 'alpha' })).toBe('boom');
     });
   });
 

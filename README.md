@@ -234,6 +234,11 @@ Notes:
   Dismissing the folder picker means "never mind": you go back to the same confirmation dialog with the
   target unchanged, rather than losing the operation.
 
+- **Rename from the create-folder confirmation dialog.** `Create folder with notes...` adds a **`Rename`**
+  button beside the folder name and beside every note it is about to create, so a name can be corrected
+  without cancelling and starting over — see
+  [Create folder with notes](#create-folder-with-notes).
+
 - **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
   the Smart cut & paste notice (or the `Smart cut & paste: Switch to split/extract` command) re-opens the
   source note with the selection restored and opens the split/extract picker, so you can search for a target
@@ -380,6 +385,13 @@ await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
 That plain call needs care in Templater generally: wherever Templater *rewrites a whole note* from what it read before your code ran — creating a note from a template, or replacing the templates in a file — the rendered text lands on top of your write and the properties are lost, which is why `tp.hooks.on_all_templates_executed` exists. (Inserting a template into a note you already have open is unaffected, because that writes through the editor; so is writing properties to some *other* file.) `Create folder with notes...` is a rewriting flow, but the plugin owns that write and keeps whatever properties the template set while it ran, so the plain call is enough here — the hook still works if you prefer it. The note's own text always comes from the render, so a template that rewrites its body mid-run keeps the rendered version.
 
 Turn **Should ask before creating a folder** (off by default) on to see a confirmation dialog first — it shows the cleaned-up folder name and every note about to be created, which is the one place the difference between what you typed and what you get is visible beforehand. The whole creation runs in one reversible, resource-locked transaction, so a cancellation or a failure leaves no half-built folder behind.
+
+Because that dialog is where the difference is visible, it is also where you can fix it: a **`Rename`** button sits beside the folder name and beside every note, each opening a prompt seeded with the name it is about.
+
+- Renaming the **folder** rebuilds the whole preview around the new name — the number is recounted, the de-duplication redone, and every note named from `{{safeFolderName}}` follows along. What you type goes through the same cleaning as the original prompt, **Name transform template** included.
+- Renaming a **note** changes that row only, and the name **sticks**: rename the folder afterwards, or send the folder somewhere else with `Change target`, and your name is still there. Its content still comes from the template — only the name is yours.
+
+A note name is refused if it would be empty, if it still contains invalid characters (with **Should replace invalid title characters** off), or if another note in the same folder is already called that — so the preview can never show two notes the vault would silently number apart. Dismissing a rename prompt means "never mind": the dialog comes back exactly as it was.
 
 ## Merge folder contents into a single file
 
