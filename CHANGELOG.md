@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 5.7.0
+
+- docs: narrow the overstated processFrontMatter claim to the flows it applies to
+- feat(demo-vault): install Templater from the note that needs it
+- feat(create-folder): make a template's own property writes survive the render (#197)
+- fix(create-folder): declare TOKENS first, so it works in a note's frontmatter (#197)
+- docs(demo-vault): show how to split a name into several aliases (#197)
+- fix(prompt): show the empty-name error only after Create is clicked (#195)
+- feat(name-transform): define your own replacements via a template (#196)
+- feat(create-folder): resolve the palette's destination from Obsidian's setting (#194)
+
 ## 5.6.1
 
 - chore(flatten): exempt the unreachable parent-less guard from coverage
