@@ -35,9 +35,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
-// The picker is the plugin's OWN sibling UI module: stub only its resolved folder so the palette path runs
-// Without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
-import { selectParentFolderForCreate } from '../modals/create-folder-parent-modal.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import { CreateFolderWithNotesCommandHandler } from './create-folder-with-notes-command-handler.ts';
 
@@ -98,10 +95,6 @@ vi.mock('../modals/confirm-dialog-modal.ts', () => ({
   }
 }));
 
-vi.mock('../modals/create-folder-parent-modal.ts', () => ({
-  selectParentFolderForCreate: vi.fn()
-}));
-
 vi.mock('../open-minimizable-modal.ts', () => ({
   openModal: vi.fn(() => {
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
@@ -111,7 +104,6 @@ vi.mock('../open-minimizable-modal.ts', () => ({
 const mockOpenModal = vi.mocked(openModal);
 const mockPrompt = vi.mocked(prompt);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
-const mockSelectParentFolder = vi.mocked(selectParentFolderForCreate);
 
 let app: AppOriginal;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
@@ -478,26 +470,54 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     });
   });
 
+  /*
+   * Issue #194: the palette used to open a folder picker. It now resolves through Obsidian's own
+   * `Default location for new notes`, so each of the two entry points has ONE unambiguous source.
+   * `newFileLocation` / `newFileFolderPath` are modeled by neither obsidian-typings nor
+   * obsidian-test-mocks, so the RESOLUTION itself can only be exercised in an integration test. What is
+   * asserted here is that the palette routes through Obsidian's own resolver at all, with the source path
+   * that makes its `Same folder as current file` mode mean anything.
+   */
   describe('the palette path', () => {
-    it('should ask which folder to create in, then create there', async () => {
+    it('should resolve the parent through Obsidian\'s new-note location, then create there', async () => {
       initApp({ 'parent/note.md': 'note' });
-      mockSelectParentFolder.mockImplementation(() => Promise.resolve(getFolder('parent')));
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(ensureNonNullable(app.vault.getFileByPath('parent/note.md')));
+      const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent').mockReturnValue(getFolder('parent'));
       mockPrompt.mockResolvedValue('alpha');
       const { handler } = createHandler();
 
       await handler.execute();
 
-      expect(mockSelectParentFolder).toHaveBeenCalledOnce();
+      expect(getNewFileParent).toHaveBeenCalledWith('parent/note.md');
       expect(app.vault.getFolderByPath('parent/1. Alpha')).not.toBeNull();
     });
 
-    it('should do nothing when the picker is dismissed', async () => {
-      initApp({ 'parent/note.md': 'note' });
-      mockSelectParentFolder.mockResolvedValue(null);
+    it('should resolve with an empty source path when no note is open', async () => {
+      // The command is offered with nothing open, which is the one case `Same folder as current file` has
+      // No answer for — Obsidian's own resolver falls back to the vault root for it.
+      initApp({ 'note.md': 'note' });
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+      const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent').mockReturnValue(app.vault.getRoot());
+      mockPrompt.mockResolvedValue('alpha');
       const { handler } = createHandler();
 
       await handler.execute();
 
+      expect(getNewFileParent).toHaveBeenCalledWith('');
+      expect(app.vault.getFolderByPath('1. Alpha')).not.toBeNull();
+    });
+
+    it('should refuse when the resolved folder is ignored', async () => {
+      // Obsidian points at a folder the plugin is told to ignore. The refusal states that contradiction
+      // Rather than silently creating the folder somewhere else.
+      initApp({ 'parent/note.md': 'note' });
+      vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+      vi.spyOn(app.fileManager, 'getNewFileParent').mockReturnValue(getFolder('parent'));
+      const { handler, showNotice } = createHandler({ isPathIgnored: () => true });
+
+      await handler.execute();
+
+      expect(showNotice).toHaveBeenCalledOnce();
       expect(mockPrompt).not.toHaveBeenCalled();
     });
   });

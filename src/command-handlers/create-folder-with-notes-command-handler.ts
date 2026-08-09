@@ -31,7 +31,6 @@ import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { parseFolderContentTemplate } from '../folder-content-template.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
-import { selectParentFolderForCreate } from '../modals/create-folder-parent-modal.ts';
 import { resolveNextFolderIndex } from '../next-folder-index.ts';
 import { openModal } from '../open-minimizable-modal.ts';
 import {
@@ -131,20 +130,22 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
 
   /**
    * The command-palette path. The base resolves the active note's parent folder, which is a guess — so this
-   * asks instead, then hands the answer to the same {@link CreateFolderWithNotesCommandHandler.executeFolder}
-   * the folder menu uses.
+   * resolves through Obsidian's own `Default location for new notes` instead, then hands the answer to the
+   * same {@link CreateFolderWithNotesCommandHandler.executeFolder} the folder menu uses.
    *
-   * @returns A {@link Promise} that resolves when the folder has been created or the picker was dismissed.
+   * Each of the two entry points therefore has ONE unambiguous source for where the folder goes (issue
+   * #194): from the folder menu it is the folder that was right-clicked, from the palette it is Obsidian's
+   * setting. That is why this is not a setting and why the picker that used to ask here is gone — a third
+   * answer would only exist to contradict one of those two.
+   *
+   * `getNewFileParent` is what makes all three of Obsidian's modes work, `Same folder as current file`
+   * included; the active file is what that mode resolves against, and with no note open the empty path
+   * lands on the vault root, exactly as a new note would.
+   *
+   * @returns A {@link Promise} that resolves when the folder has been created.
    */
   protected override async execute(): Promise<void> {
-    const parentFolder = await selectParentFolderForCreate({
-      app: this.app,
-      pluginSettingsComponent: this.pluginSettingsComponent
-    });
-    if (!parentFolder) {
-      return;
-    }
-
+    const parentFolder = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path ?? '');
     await this.executeFolder(parentFolder);
   }
 
