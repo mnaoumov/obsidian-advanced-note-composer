@@ -18,8 +18,9 @@ is already ALL CAPS, which is left alone so an acronym survives.
 It became `2.` rather than `1.` because `1. Existing` is already there: the number is always one more
 than the highest already in use.
 
-Running the command from the **command palette** instead asks which folder to create in first, so it
-works with no note open.
+Running the command from the **command palette** instead creates the folder in your vault's
+`Files & Links > Default location for new notes`, so it works with no note open and never asks where
+to put it. Right-click a folder whenever you want it somewhere else — that is the whole choice.
 
 ## Naming
 

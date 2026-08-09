@@ -5,8 +5,10 @@ import {
   it
 } from 'vitest';
 
-// Desktop-only: the flow is driven through two real modals (the folder picker and the name prompt), so it
-// Follows the plugin's established integration convention.
+// Desktop-only: the flow is driven through a real modal (the name prompt), and since issue #194 the
+// Palette's destination comes from Obsidian's own `newFileLocation` / `newFileFolderPath`, which are
+// Modeled by neither `obsidian-typings` nor `obsidian-test-mocks` — so the resolution can only be
+// Exercised here.
 // Isolation: `npx vitest run --project integration-tests:desktop src/create-folder-with-notes.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -30,8 +32,8 @@ interface SettingsCarrier {
   settings: CreateFolderSettings;
 }
 
-describe('create folder with notes... (issue #191)', () => {
-  it('normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
+describe('create folder with notes... (issues #191, #194)', () => {
+  it('creates in Obsidian\'s default new-note location, normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -47,6 +49,8 @@ describe('create folder with notes... (issue #191)', () => {
 
         const settingsComponent = findSettingsComponent();
         const originalSettings = { ...settingsComponent.settings };
+        const originalNewFileLocation = app.vault.getConfig('newFileLocation');
+        const originalNewFileFolderPath = app.vault.getConfig('newFileFolderPath');
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
@@ -74,33 +78,27 @@ describe('create folder with notes... (issue #191)', () => {
           // The sibling the numbering has to continue from — `1.` means the new folder must become `2.`.
           await app.vault.createFolder(`${PARENT_PATH}/1. Existing`);
 
+          // The whole point of issue #194: the palette is given NO folder, and the destination comes from
+          // Obsidian's own setting. `folder` is the mode that pins it somewhere specific, so the folder
+          // Landing in `PARENT_PATH` is only explicable by this resolution having run.
+          app.vault.setConfig('newFileLocation', 'folder');
+          app.vault.setConfig('newFileFolderPath', PARENT_PATH);
+
           app.commands.executeCommandById(`${pluginId}:create-folder-with-notes`);
 
-          // First modal: the parent-folder picker (the palette has no folder in hand).
-          await waitUntil({
-            message: 'parent folder picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
-          });
-          await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
-          const pickerInput = document.querySelector('.prompt-input');
-          if (!(pickerInput instanceof HTMLInputElement)) {
-            throw new TypeError('No parent folder picker input.');
-          }
-          pickerInput.value = PARENT_PATH;
-          pickerInput.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({
-            message: 'parent folder suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === PARENT_PATH)
-          });
-          pickerInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
-
-          // Second modal: the name prompt.
+          // The name prompt is now the FIRST and ONLY modal — there is no folder picker any more.
           await waitUntil({
             message: 'folder name prompt did not open',
             predicate: () => document.querySelector('.prompt-modal .text-box') !== null
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          /*
+           * The `waitUntil` above is what actually pins the ORDER — a reintroduced picker would open
+           * first, nothing here would drive it, and the wait would time out. This is the cheaper
+           * secondary check that no suggester is open ALONGSIDE the prompt: the removed picker was a
+           * `FuzzySuggestModal`, whose input is the one element the name prompt does not have.
+           */
+          const wasSuggesterOpen = document.querySelector('.prompt-input') !== null;
 
           const nameInput = document.querySelector('.prompt-modal .text-box');
           if (!(nameInput instanceof HTMLInputElement)) {
@@ -148,12 +146,15 @@ describe('create folder with notes... (issue #191)', () => {
             folderNoteContent: folderNoteFile ? await app.vault.read(folderNoteFile) : null,
             namedNoteContent: namedNoteFile ? await app.vault.read(namedNoteFile) : null,
             // The `1.` sibling is untouched, so the new folder continued the sequence rather than colliding.
-            siblingUntouched: app.vault.getFolderByPath(`${PARENT_PATH}/1. Existing`) !== null
+            siblingUntouched: app.vault.getFolderByPath(`${PARENT_PATH}/1. Existing`) !== null,
+            wasSuggesterOpen
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
             Object.assign(settings, originalSettings);
           });
+          app.vault.setConfig('newFileLocation', originalNewFileLocation);
+          app.vault.setConfig('newFileFolderPath', originalNewFileFolderPath);
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -193,6 +194,9 @@ describe('create folder with notes... (issue #191)', () => {
     // The `1.` sibling — and nothing else appeared beside it.
     expect(result.actualChildren).toEqual(['create-parent/1. Existing', 'create-parent/2. Api TEST X_y']);
     expect(result.folderExists).toBe(true);
+    // Issue #194: the folder landed in the folder `newFileFolderPath` names, and the name prompt was the
+    // Only modal in the flow.
+    expect(result.wasSuggesterOpen).toBe(false);
     expect(result.siblingUntouched).toBe(true);
     // `{{folderName}}` carries the index, `{{safeFolderName}}` does not — the distinction the
     // Reporter's own output depends on.
