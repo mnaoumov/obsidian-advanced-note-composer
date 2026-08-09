@@ -65,6 +65,21 @@ as an alias.
 
 ## Templater
 
+This section needs the [Templater](https://github.com/SilentVoid13/Templater) plugin, which this vault
+does not ship. The button installs it from the community store, turns **Should run templater on
+destination file** on, and loads the multi-alias template below — no reload needed:
+
+```code-button
+---
+caption: Install Templater and load the example
+---
+await require('/demoSetup.ts').setUpTemplaterExample(app);
+```
+
+Manual equivalent: install and enable **Templater** from **Settings → Community plugins**, then turn on
+**Should run templater on destination file** in **Settings → Advanced Note Composer** and paste the
+template below into **Create folder content template**.
+
 With **Should run templater on destination file** on, each created note is handed to Templater. The
 plugin substitutes its own tokens first, so they are available to Templater code too — and they are
 bound to a `TOKENS` object:
