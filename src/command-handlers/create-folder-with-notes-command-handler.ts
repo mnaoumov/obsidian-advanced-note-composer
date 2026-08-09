@@ -40,7 +40,8 @@ import {
   showOperationProgressNotice
 } from '../operation-notices.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
-import { insertTemplaterPrelude } from '../templater-prelude.ts';
+import { buildTemplaterPrelude } from '../templater-prelude.ts';
+import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../templater.ts';
 
 interface BuildCreateConfirmContentParams {
   readonly app: App;
@@ -434,8 +435,23 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   /**
    * Runs Templater over each created note, exposing this command's tokens to it first.
    *
-   * The prelude is written into the note only when Templater will actually process it — otherwise the raw
-   * `<%* … %>` block would be left behind as visible garbage.
+   * This drives Templater itself rather than calling its `overwrite_file_commands`, and the reason is the
+   * prelude's POSITION. `overwrite_file_commands` reads the note from disk, so the only way to give it the
+   * prelude is to write the prelude into the note — and a file that starts with `<%*` has no frontmatter as
+   * far as the metadata cache is concerned, which leaves `tp.frontmatter` empty. Writing it lower instead (it
+   * used to go below the frontmatter block) puts `TOKENS` in the temporal dead zone for the frontmatter
+   * above it, so `aliases: <% TOKENS.… %>` made Templater abandon the WHOLE note with a generic
+   * `Template parsing error, aborting.` — the note kept the raw prelude as visible garbage. Prepending to the
+   * parsed STRING has neither problem: the file on disk keeps real frontmatter for the metadata cache, and
+   * `TOKENS` is declared before anything that could reference it.
+   *
+   * The `start`/`end` task pair is not bookkeeping — it is the only thing that fires
+   * `templater:all-templates-executed`, so a template's `tp.hooks.on_all_templates_executed(…)` callback
+   * (the supported way to write properties, since Templater's own write lands after the template runs) never
+   * runs without it. It is in a `finally` so a broken template cannot strand the pair.
+   *
+   * Templater's own cursor jump is deliberately NOT reproduced: it acts on `workspace.activeEditor`, which at
+   * this point is still whatever note the user was on — never the note just created, which is opened later.
    *
    * @param files - The created notes.
    * @param tokens - The values to expose to Templater code.
@@ -456,9 +472,27 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return;
     }
 
+    const templater = templaterPlugin.templater;
+
     for (const file of files) {
-      await this.app.vault.process(file, (content) => insertTemplaterPrelude({ content, tokens }));
-      await templaterPlugin.templater.overwrite_file_commands(file);
+      templater.start_templater_task(file.path);
+      try {
+        const runningConfig = templater.create_running_config(file, file, TEMPLATER_RUN_MODE_OVERWRITE_FILE);
+        const parsed = await templater.parse_template(runningConfig, `${buildTemplaterPrelude(tokens)}${await this.app.vault.read(file)}`);
+        await this.app.vault.modify(file, parsed);
+        this.app.workspace.trigger('templater:overwrite-file', { content: parsed, file });
+      } catch (error) {
+        // Templater's own entry point swallows this into a notice that names neither the note nor the
+        // Template, and leaves the note unrendered. The note is kept the same way — it already exists and
+        // The remaining notes still deserve their turn — but the message says which one failed.
+        this.pluginNoticeComponent.showNotice(createFragment((f) => {
+          f.appendText('Advanced Note Composer: Templater failed on ');
+          appendCodeBlock(f, file.path);
+          f.appendText(`: ${error instanceof Error ? error.message : String(error)}`);
+        }));
+      } finally {
+        await templater.end_templater_task(file.path);
+      }
     }
   }
 

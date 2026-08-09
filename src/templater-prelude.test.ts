@@ -6,10 +6,7 @@ import {
 
 import type { CreateFolderTemplateTokens } from './template-tokens.ts';
 
-import {
-  buildTemplaterPrelude,
-  insertTemplaterPrelude
-} from './templater-prelude.ts';
+import { buildTemplaterPrelude } from './templater-prelude.ts';
 
 const TOKENS: CreateFolderTemplateTokens = {
   folderName: '1. Test Notes',
@@ -63,23 +60,11 @@ describe('buildTemplaterPrelude', () => {
   it('should close with -%>, which trims the newline after it', () => {
     expect(buildTemplaterPrelude(TOKENS)).toContain('\n-%>\n');
   });
-});
 
-describe('insertTemplaterPrelude', () => {
-  it('should prepend the prelude to content without frontmatter', () => {
-    const result = insertTemplaterPrelude({ content: '# Heading\n', tokens: TOKENS });
-    expect(result).toBe(`${buildTemplaterPrelude(TOKENS)}# Heading\n`);
-  });
-
-  it('should insert the prelude BELOW a frontmatter block', () => {
-    // Above the opening `---` the block would stop being frontmatter at all, so `tp.frontmatter` — and
-    // Obsidian's own metadata cache — would see nothing.
-    const content = '---\ntitle: X\n---\n# Heading\n';
-    const result = insertTemplaterPrelude({ content, tokens: TOKENS });
-    expect(result).toBe(`---\ntitle: X\n---\n${buildTemplaterPrelude(TOKENS)}# Heading\n`);
-  });
-
-  it('should handle empty content', () => {
-    expect(insertTemplaterPrelude({ content: '', tokens: TOKENS })).toBe(buildTemplaterPrelude(TOKENS));
+  it('should declare TOKENS before anything a template could reference it from', () => {
+    // The whole placement contract in one assertion: callers prepend this, so the `const` can never sit in
+    // The temporal dead zone of a command above it — which is what made `aliases: <% TOKENS.… %>` in a
+    // Note's own frontmatter abandon the entire note.
+    expect(buildTemplaterPrelude(TOKENS).startsWith('<%*\nconst TOKENS = {')).toBe(true);
   });
 });

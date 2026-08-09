@@ -79,48 +79,56 @@ concatenates, and a folder name containing a quote cannot break the expression.
 
 ### Several aliases from one name
 
-A name like `A - B` can become two separate `aliases` entries, without any setting for it — the split
-rule is just JavaScript, so it can be exactly the rule you want:
+A name like `A - B` can become two separate `aliases` entries, and no setting is needed for it — the
+splitting rule is just JavaScript, so it can be exactly the rule you want:
+
+```text
+{{file}} !.md
+---
+aliases: <% JSON.stringify(TOKENS.rawFolderName.split(' - ')) %>
+---
+# <% TOKENS.folderName %>
+```
+
+Type `A - B` and the note gets `aliases: ["A","B"]` — two entries, which is what Obsidian reads that
+as. Splitting on `' - '` rather than `'-'` is what keeps `Well-known - B` two entries and not three.
+Want the parts trimmed, title-cased, or a different separator in some other case? That is the same
+one line with a `.map(...)` on it.
+
+`TOKENS` works inside the properties block because it is declared before everything else in the note,
+and the declaration itself never reaches the file — which is also why `tp.frontmatter` still reports
+this note's real properties.
+
+For more control, *write* the properties instead of printing them. Obsidian then owns the YAML, so a
+part containing a `:` or a quote is still formatted correctly, and properties your template already
+declares are merged rather than replaced:
 
 ```text
 {{file}} !.md
 <%*
-const aliases = TOKENS.rawFolderName.split(' - ').map((a) => a.trim()).filter(Boolean);
+tp.hooks.on_all_templates_executed(async () => {
+  await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
+    fm.aliases = TOKENS.rawFolderName.split(' - ');
+  });
+});
 -%>
----
-aliases: <% JSON.stringify(aliases) %>
----
+# <% TOKENS.folderName %>
 ```
 
-Type `A - B` and the note opens with:
+which gives a proper list:
 
 ```text
 ---
-aliases: ["A","B"]
+aliases:
+  - A
+  - B
 ---
 ```
 
-Splitting on `' - '` rather than `'-'` is what keeps `Well-known - B` two entries and not three;
-`.trim()` drops the spaces around each part, and `.filter(Boolean)` drops empty ones. Want the parts
-title-cased, or a different separator per case? That is another line of the same JavaScript.
-
-**The template must not start with `---`.** The `TOKENS` block is inserted *below* any frontmatter
-your template already has — it has to be, or that block would stop being frontmatter at all — so
-`TOKENS` used **inside** a frontmatter block is not defined yet and Templater leaves the note
-unrendered. Letting Templater print the frontmatter, as above, is what avoids it.
-
-If you would rather keep the frontmatter at the top, use the plugin's own token instead: it is
-substituted as text before Templater ever parses the note, so nothing is referenced too early.
-
-```text
-{{file}} !.md
----
-aliases: <% JSON.stringify("{{rawFolderName}}".split(' - ').map((a) => a.trim())) %>
----
-```
-
-That form is shorter but not quote-safe — a name containing a `"` lands inside a JavaScript string
-and breaks it, which is the exact problem `TOKENS` exists to remove.
+**`tp.hooks.on_all_templates_executed` is not decoration here.** Templater writes the rendered note
+*after* your code has run, so a `processFrontMatter` call made outside the hook is overwritten by that
+write and the properties disappear without an error. The hook runs your change once the note has
+settled.
 
 ## Before it happens
 
