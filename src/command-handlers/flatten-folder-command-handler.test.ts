@@ -36,7 +36,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
-import { openModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { FlattenMode } from '../plugin-settings.ts';
 import {
   FlattenFolderCommandHandler,
@@ -115,14 +115,14 @@ vi.mock('../modals/select-folder-modal.ts', () => ({
 }));
 
 vi.mock('../open-minimizable-modal.ts', () => ({
-  openModal: vi.fn(() => {
+  openConfirmDialogModal: vi.fn(() => {
     // The "Change target" loop can open the dialog more than once, so a scripted queue takes precedence;
     // A round the test did not script falls back to the single `confirmResult` every other test sets.
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? confirmResult);
   })
 }));
 
-const mockOpenModal = vi.mocked(openModal);
+const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectFolder = vi.mocked(selectFolder);
 
@@ -342,7 +342,7 @@ describe('FlattenFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(mockOpenModal).toHaveBeenCalledTimes(1);
+    expect(mockOpenConfirmDialogModal).toHaveBeenCalledTimes(1);
     // Nothing was promoted and the "Don't ask again" choice was not persisted.
     expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
     expect(await app.vault.adapter.exists('parent/note.md')).toBe(false);
@@ -368,7 +368,7 @@ describe('FlattenFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(mockOpenModal).not.toHaveBeenCalled();
+    expect(mockOpenConfirmDialogModal).not.toHaveBeenCalled();
     expect(await app.vault.adapter.read('parent/note.md')).toBe('note body');
   });
 
@@ -673,7 +673,7 @@ describe('FlattenFolderCommandHandler', () => {
       await handler.executeFolder(getFolder('parent/a'));
 
       expect(showNotice).toHaveBeenCalledOnce();
-      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockOpenConfirmDialogModal).not.toHaveBeenCalled();
       expect(await app.vault.adapter.exists('parent/a/note/pic.png')).toBe(true);
     });
 

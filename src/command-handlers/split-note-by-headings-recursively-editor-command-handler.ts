@@ -39,7 +39,7 @@ import {
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
-import { openModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -276,7 +276,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
   ): Promise<ConfirmDialogModalResult> {
     const app = this.app;
     return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openModal(
+      openConfirmDialogModal(
         new ConfirmDialogModal({
           app,
           buildContent: (fragment): Promise<void> =>

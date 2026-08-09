@@ -23,7 +23,7 @@ import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
 import {
-  openMinimizableModal,
+  openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
@@ -388,7 +388,7 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogMo
     targetFile
   } = params;
   return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-    openMinimizableModal(
+    openConfirmDialogModal(
       new ConfirmDialogModal({
         app,
         buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app, fragment, source: sourceFile, target: targetFile }),

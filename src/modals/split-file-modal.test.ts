@@ -68,6 +68,9 @@ interface OpenableModal {
 }
 
 vi.mock('../open-minimizable-modal.ts', () => ({
+  openConfirmDialogModal: vi.fn((modal: OpenableModal) => {
+    modal.open();
+  }),
   openMinimizableModal: vi.fn((modal: OpenableModal) => {
     modal.open();
   }),

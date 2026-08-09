@@ -32,7 +32,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 vi.mock('../open-minimizable-modal.ts', () => ({
-  openMinimizableModal: vi.fn()
+  openConfirmDialogModal: vi.fn()
 }));
 
 // The modal itself is a `/* v8 ignore */` UI class; mock it as a bare constructor so the test can drive

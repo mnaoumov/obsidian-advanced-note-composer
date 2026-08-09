@@ -36,7 +36,7 @@ import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
 import { applyNameTransform } from '../name-transform.ts';
 import { resolveNextFolderIndex } from '../next-folder-index.ts';
-import { openModal } from '../open-minimizable-modal.ts';
+import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -503,7 +503,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       closeModal = (): void => {
         modal.close();
       };
-      openModal(modal);
+      openConfirmDialogModal(modal);
     });
   }
 

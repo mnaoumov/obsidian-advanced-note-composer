@@ -6,6 +6,7 @@ import {
   Setting
 } from 'obsidian';
 
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import {
   FrontmatterMergeStrategy,
   TextAfterExtractionMode
@@ -151,13 +152,16 @@ class PasteOptionsModal extends Modal {
  * Opens the advanced-move options modal seeded with the given defaults, and resolves the chosen
  * options, or `null` when the user cancels.
  *
+ * Minimizable (issue #201): this is the last step before the text actually moves, so peeking at the
+ * target note before pressing `Move` is worth as much here as it is in a confirmation dialog.
+ *
  * @param params - The parameters.
  * @returns The chosen options, or `null` if cancelled.
  */
 /* v8 ignore start -- thin modal-open glue tested via the real app (integration). */
 export async function openPasteOptionsModal(params: OpenPasteOptionsModalParams): Promise<MoveOptions | null> {
   return await new Promise<MoveOptions | null>((promiseResolve) => {
-    new PasteOptionsModal({ app: params.app, defaultOptions: params.defaultOptions, promiseResolve }).open();
+    openMinimizableModal(new PasteOptionsModal({ app: params.app, defaultOptions: params.defaultOptions, promiseResolve }));
   });
 }
 /* v8 ignore stop */

@@ -17,7 +17,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
 
 import {
-  openMinimizableModal,
+  openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
 import { reorderSuggestionsByRecentFiles } from '../recent-suggestions.ts';
@@ -133,7 +133,7 @@ export async function selectFileForSwap(params: SelectFileForSwapParams): Promis
       return targetFile;
     }
     const confirmDialogResult = await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openMinimizableModal(
+      openConfirmDialogModal(
         new ConfirmDialogModal({
           app: params.app,
           buildContent: (fragment): Promise<void> => buildSwapConfirmContent({ app: params.app, fragment, source: params.sourceFile, target: targetFile }),
