@@ -32,7 +32,7 @@ interface SettingsCarrier {
   settings: CreateFolderSettings;
 }
 
-describe('create folder with notes... (issues #191, #194)', () => {
+describe('create folder with notes... (issues #191, #194, #195)', () => {
   it('creates in Obsidian\'s default new-note location, normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
@@ -204,5 +204,107 @@ describe('create folder with notes... (issues #191, #194)', () => {
     expect(result.namedNoteContent).toBe('# 2. Api TEST X_y\n');
     // The FIRST note declared is the one that opens.
     expect(result.activeFilePath).toBe('create-parent/2. Api TEST X_y/!.md');
+  });
+
+  it('reports the empty-name error only once the prompt is touched, never on open (issue #195)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { waitUntil }, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        // Already normalized, so a folder appearing under this exact name is unambiguous evidence that
+        // Cancel did not create anything.
+        const TYPED_NAME = 'Prompt Validity Probe';
+
+        /*
+         * The native validation bubble lives outside the DOM, so it cannot be queried — the observable
+         * Is the `reportValidity()` call that raises it. The prototype is wrapped BEFORE the command
+         * Runs because the call under test is the one the modal makes while opening, long before the
+         * Input element is reachable from here.
+         */
+        const originalReportValidity = HTMLInputElement.prototype.reportValidity;
+        let reportValidityCallCount = 0;
+        HTMLInputElement.prototype.reportValidity = checkValidityAndCountReport;
+
+        try {
+          app.commands.executeCommandById(`${pluginId}:create-folder-with-notes`);
+
+          await waitUntil({
+            message: 'folder name prompt did not open',
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+          });
+          // The modal validates on open through `invokeAsyncSafely`, so the count only means anything
+          // Once that has had a chance to run — reading it synchronously would pass even unfixed.
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const callCountOnOpen = reportValidityCallCount;
+
+          // The reporter's whole complaint is the error arriving before this click; here is where it belongs.
+          requirePromptElement('.ok-button').click();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const callCountAfterEmptySubmit = reportValidityCallCount;
+          const isStillOpenAfterEmptySubmit = document.querySelector('.prompt-modal .text-box') !== null;
+
+          const nameInput = requirePromptInput();
+          nameInput.value = TYPED_NAME;
+          // The modal tracks its value through the component's change handler, so a bare `value`
+          // Assignment would never reach the validator.
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'the typed folder name never became valid',
+            predicate: () => nameInput.checkValidity()
+          });
+          const callCountAfterTyping = reportValidityCallCount;
+
+          requirePromptElement('.cancel-button').click();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          return {
+            callCountAfterEmptySubmit,
+            callCountAfterTyping,
+            callCountOnOpen,
+            isPromptClosedAfterCancel: document.querySelector('.prompt-modal .text-box') === null,
+            isStillOpenAfterEmptySubmit,
+            matchingFolderPaths: app.vault.getAllFolders().filter((folder) => folder.name === TYPED_NAME).map((folder) => folder.path)
+          };
+        } finally {
+          restoreReportValidity();
+        }
+
+        function checkValidityAndCountReport(this: HTMLInputElement): boolean {
+          reportValidityCallCount++;
+          return originalReportValidity.call(this);
+        }
+
+        function requirePromptElement(selector: string): HTMLElement {
+          const element = document.querySelector(`.prompt-modal ${selector}`);
+          if (!(element instanceof HTMLElement)) {
+            throw new TypeError(`No folder name prompt element matching ${selector}.`);
+          }
+          return element;
+        }
+
+        function requirePromptInput(): HTMLInputElement {
+          const element = requirePromptElement('.text-box');
+          if (!element.instanceOf(HTMLInputElement)) {
+            throw new TypeError('No folder name prompt input.');
+          }
+          return element;
+        }
+
+        function restoreReportValidity(): void {
+          HTMLInputElement.prototype.reportValidity = originalReportValidity;
+        }
+      },
+      input: { pluginId: PLUGIN_ID }
+    });
+
+    // Issue #195: opening the prompt reports nothing — this is the assertion the whole item is about.
+    expect(result.callCountOnOpen).toBe(0);
+    // ...but the rule itself is unchanged, so submitting empty still refuses AND still says why.
+    expect(result.callCountAfterEmptySubmit).toBeGreaterThan(0);
+    expect(result.isStillOpenAfterEmptySubmit).toBe(true);
+    // Typing reports too — the message must follow the input, not wait for another submit.
+    expect(result.callCountAfterTyping).toBeGreaterThan(result.callCountAfterEmptySubmit);
+    expect(result.isPromptClosedAfterCancel).toBe(true);
+    // Cancel after a VALID name: the prompt is the only thing this test is allowed to have touched.
+    expect(result.matchingFolderPaths).toEqual([]);
   });
 });
