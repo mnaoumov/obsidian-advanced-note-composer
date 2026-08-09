@@ -9,6 +9,7 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { normalizePath } from 'obsidian';
+import { noop } from 'obsidian-dev-utils/function';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
@@ -29,6 +30,7 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { normalizeTypedFolderName } from '../create-folder-name.ts';
 import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { parseFolderContentTemplate } from '../folder-content-template.ts';
+import { InsertMode } from '../insert-mode.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
@@ -45,12 +47,42 @@ import { buildTemplaterPrelude } from '../templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
 import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../templater.ts';
 
+/**
+ * Which name a {@link RenameRequest} is about. An enum rather than a nullable note index so a request
+ * cannot express "the folder, at note 3".
+ */
+enum RenameKind {
+  Folder = 'Folder',
+  Note = 'Note'
+}
+
 interface BuildCreateConfirmContentParams {
   readonly app: App;
   readonly fragment: DocumentFragment;
   readonly notes: readonly PlannedNote[];
   readonly parentFolder: TFolder;
+
+  /**
+   * Closes the dialog and sends the flow to the matching rename prompt. Called by the `Rename` button of the
+   * folder row and of each note row.
+   */
+  requestRename(this: void, renameRequest: RenameRequest): void;
   readonly tokens: CreateFolderTemplateTokens;
+}
+
+/**
+ * The confirmation dialog's own result, widened with the one thing only this flow can ask for.
+ *
+ * The rename lives here rather than on the shared {@link ConfirmDialogModalResult} because only this flow
+ * renders rename controls — putting it on the shared result would push a one-flow concept through every
+ * other confirmation dialog.
+ *
+ * OPTIONAL rather than nullable so a plain {@link ConfirmDialogModalResult} still satisfies it: that is what
+ * lets the modal's own `promiseResolve` be handed straight through, with no wrapper translating results the
+ * shared dialog produced.
+ */
+interface CreateConfirmResult extends ConfirmDialogModalResult {
+  readonly renameRequest?: RenameRequest;
 }
 
 interface CreateFolderWithNotesCommandHandlerConstructorParams {
@@ -58,6 +90,25 @@ interface CreateFolderWithNotesCommandHandlerConstructorParams {
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
+}
+
+interface FolderRenameRequest {
+  readonly kind: RenameKind.Folder;
+}
+
+interface NoteRenameRequest {
+  /**
+   * The name the row currently previews — what the rename prompt is seeded with. Carried on the request so
+   * the flow never has to index back into the note list it just rendered.
+   */
+  readonly currentName: string;
+  readonly kind: RenameKind.Note;
+
+  /**
+   * The note's index in the content template's section list — stable across a folder rename and a
+   * `Change target`, because {@link parseFolderContentTemplate} depends on neither.
+   */
+  readonly noteIndex: number;
 }
 
 /**
@@ -69,12 +120,26 @@ interface PlannedNote {
   readonly name: string;
 }
 
+type RenameRequest = FolderRenameRequest | NoteRenameRequest;
+
 const MARKDOWN_EXTENSION = '.md';
+
+/**
+ * A confirmation-dialog row holding one name and its `Rename` button (issue #200).
+ */
+const NAME_ROW_CLASS = 'advanced-note-composer-confirm-name-row';
+
+const RENAME_BUTTON_CLASS = 'advanced-note-composer-confirm-rename-button';
+
+interface CreateFolderWithNotesCommandHandlerApplyRenameRequestParams {
+  readonly notes: readonly PlannedNote[];
+  readonly renameRequest: RenameRequest;
+  readonly renameState: CreateFolderWithNotesRenameState;
+}
 
 interface CreateFolderWithNotesCommandHandlerBuildPlanParams {
   readonly parentFolder: TFolder;
-  readonly rawFolderName: string;
-  readonly safeFolderName: string;
+  readonly renameState: CreateFolderWithNotesRenameState;
 }
 
 interface CreateFolderWithNotesCommandHandlerConfirmCreateParams {
@@ -89,10 +154,31 @@ interface CreateFolderWithNotesCommandHandlerCreateFolderWithNotesParams {
   readonly parentFolder: TFolder;
 }
 
+interface CreateFolderWithNotesCommandHandlerPlanNotesParams {
+  readonly noteNameOverrides: ReadonlyMap<number, string>;
+  readonly tokens: CreateFolderTemplateTokens;
+}
+
+interface CreateFolderWithNotesCommandHandlerPromptForFolderNameParams {
+  readonly defaultValue: string;
+  readonly okButtonText: string;
+  readonly title: string;
+}
+
+interface CreateFolderWithNotesCommandHandlerPromptForNoteNameParams {
+  readonly defaultValue: string;
+  readonly otherNoteNames: readonly string[];
+}
+
 interface CreateFolderWithNotesCommandHandlerResolvePlanParams {
   readonly parentFolder: TFolder;
   readonly rawFolderName: string;
   readonly safeFolderName: string;
+}
+
+interface CreateFolderWithNotesCommandHandlerValidateTypedNoteNameParams {
+  readonly otherNoteNames: readonly string[];
+  readonly value: string;
 }
 
 /**
@@ -104,6 +190,19 @@ interface CreateFolderWithNotesPlan {
   readonly notes: readonly PlannedNote[];
   readonly parentFolder: TFolder;
   readonly tokens: CreateFolderTemplateTokens;
+}
+
+/**
+ * Everything a rename from the confirmation dialog can change (issue #200), carried as one immutable value so
+ * the confirmation loop cannot rebuild the plan from a half-updated set.
+ *
+ * The note overrides SURVIVE a later folder rename or `Change target`: the user named that note deliberately,
+ * and re-deriving it from the template would silently undo them.
+ */
+interface CreateFolderWithNotesRenameState {
+  readonly noteNameOverrides: ReadonlyMap<number, string>;
+  readonly rawFolderName: string;
+  readonly safeFolderName: string;
 }
 
 /**
@@ -188,7 +287,11 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const rawFolderName = await this.promptForFolderName();
+    const rawFolderName = await this.promptForFolderName({
+      defaultValue: '',
+      okButtonText: 'Create',
+      title: 'Enter folder name'
+    });
     if (rawFolderName === null) {
       return;
     }
@@ -242,6 +345,53 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   }
 
   /**
+   * Runs the prompt a `Rename` button asked for and folds the answer into the rename state (issue #200).
+   *
+   * Cancelling the prompt returns the state UNCHANGED, so the confirmation dialog reopens exactly as it was —
+   * the same "never mind" the parent picker already has.
+   *
+   * @param params - The current rename state, the notes currently previewed, and what was asked for.
+   * @returns The next rename state.
+   */
+  private async applyRenameRequest(params: CreateFolderWithNotesCommandHandlerApplyRenameRequestParams): Promise<CreateFolderWithNotesRenameState> {
+    const { notes, renameRequest, renameState } = params;
+
+    if (renameRequest.kind === RenameKind.Folder) {
+      const rawFolderName = await this.promptForFolderName({
+        defaultValue: renameState.rawFolderName,
+        okButtonText: 'Rename',
+        title: 'Rename folder'
+      });
+      if (rawFolderName === null) {
+        return renameState;
+      }
+
+      // Cannot throw: the prompt's validator already ran the same transform over the same text.
+      return {
+        noteNameOverrides: renameState.noteNameOverrides,
+        rawFolderName,
+        safeFolderName: await this.normalizeFolderName(rawFolderName)
+      };
+    }
+
+    const noteName = await this.promptForNoteName({
+      defaultValue: renameRequest.currentName,
+      otherNoteNames: notes.filter((_note, noteIndex) => noteIndex !== renameRequest.noteIndex).map((note) => note.name)
+    });
+    if (noteName === null) {
+      return renameState;
+    }
+
+    const noteNameOverrides = new Map(renameState.noteNameOverrides);
+    noteNameOverrides.set(renameRequest.noteIndex, noteName);
+    return {
+      noteNameOverrides,
+      rawFolderName: renameState.rawFolderName,
+      safeFolderName: renameState.safeFolderName
+    };
+  }
+
+  /**
    * Resolves everything the creation depends on, for one candidate parent folder.
    *
    * Kept as one function because every value below is derived from `parentFolder` — the sibling-aware index,
@@ -249,11 +399,12 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * "Change target" moves the folder somewhere else (issue #199), ALL of it has to be recomputed together,
    * or the confirmation dialog would preview a plan the write then contradicts.
    *
-   * @param params - The candidate parent folder and the typed/normalized names.
+   * @param params - The candidate parent folder and the current rename state.
    * @returns The plan for that parent folder.
    */
   private buildPlan(params: CreateFolderWithNotesCommandHandlerBuildPlanParams): CreateFolderWithNotesPlan {
-    const { parentFolder, rawFolderName, safeFolderName } = params;
+    const { parentFolder, renameState } = params;
+    const { noteNameOverrides, rawFolderName, safeFolderName } = renameState;
     const settings = this.pluginSettingsComponent.settings;
     const index = resolveNextFolderIndex({
       nameTemplate: settings.newFolderNameTemplate,
@@ -293,7 +444,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
 
     return {
       folderPath,
-      notes: this.planNotes(tokens),
+      notes: this.planNotes({ noteNameOverrides, tokens }),
       parentFolder,
       tokens
     };
@@ -307,28 +458,52 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * @param params - The planned notes and the folder they go into.
    * @returns The dialog result.
    */
-  private async confirmCreate(params: CreateFolderWithNotesCommandHandlerConfirmCreateParams): Promise<ConfirmDialogModalResult> {
+  private async confirmCreate(params: CreateFolderWithNotesCommandHandlerConfirmCreateParams): Promise<CreateConfirmResult> {
     const { notes, parentFolder, tokens } = params;
     const app = this.app;
-    return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
-      openModal(
-        new ConfirmDialogModal({
-          app,
-          buildContent: (fragment): Promise<void> =>
-            buildCreateConfirmContent({
-              app,
-              fragment,
-              notes,
-              parentFolder,
-              tokens
-            }),
-          canReselectTarget: true,
-          confirmButtonMobileText: 'Create and don\'t ask again',
-          confirmButtonText: 'Create',
-          promiseResolve,
-          title: 'Create folder with notes'
-        })
-      );
+    return await new Promise<CreateConfirmResult>((promiseResolve) => {
+      // Assigned as soon as the modal exists, which is long before any button can be clicked. A function
+      // Rather than a nullable modal reference, so the rename handler needs no `?.` — a branch whose false
+      // Arm nothing could ever reach, and the coverage gate is at 100 %.
+      let closeModal: (this: void) => void = noop;
+
+      function requestRename(renameRequest: RenameRequest): void {
+        promiseResolve({
+          insertMode: InsertMode.Append,
+          isConfirmed: false,
+          renameRequest,
+          shouldAskAgain: false,
+          shouldReselectTarget: false,
+          shouldSwitchToSmartCut: false
+        });
+        // Closing fires `onClose`, which resolves again — the promise is already settled, so it is a no-op.
+        closeModal();
+      }
+
+      const modal = new ConfirmDialogModal({
+        app,
+        buildContent: (fragment): Promise<void> =>
+          buildCreateConfirmContent({
+            app,
+            fragment,
+            notes,
+            parentFolder,
+            requestRename,
+            tokens
+          }),
+        canReselectTarget: true,
+        confirmButtonMobileText: 'Create and don\'t ask again',
+        confirmButtonText: 'Create',
+        // Handed straight through: the shared modal knows nothing about renaming, so every result IT produces
+        // Simply carries no request.
+        promiseResolve,
+        title: 'Create folder with notes'
+      });
+
+      closeModal = (): void => {
+        modal.close();
+      };
+      openModal(modal);
     });
   }
 
@@ -420,7 +595,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * once, where the name enters from outside; a template author who wants more can say so in the template.
    *
    * @param resolvedName - The note name with its tokens resolved.
-   * @returns The file name to create.
+   * @returns The file name to create, or an empty string when nothing usable was given — the rename prompt's
+   * validator reports that rather than letting a note be created literally named `.md`.
    */
   private normalizeNoteName(resolvedName: string): string {
     const settings = this.pluginSettingsComponent.settings;
@@ -432,21 +608,46 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       // Literally — capitalizing `!.md` into `!.Md` would be actively wrong.
       shouldTitleCase: false
     });
+    if (!fixedName) {
+      return '';
+    }
     return fixedName.includes('.') ? fixedName : `${fixedName}${MARKDOWN_EXTENSION}`;
+  }
+
+  /**
+   * Normalizes a note name TYPED into the rename prompt (issue #200).
+   *
+   * Unlike {@link CreateFolderWithNotesCommandHandler.normalizeNoteName} on its own, the `Name transform
+   * template` DOES run here — and that is not a contradiction of the run-once rule. That rule skips the
+   * transform for a name built from tokens which already carry it; a typed rename is a name entering from
+   * outside, exactly what the transform is for, and it is how the folder prompt already behaves.
+   *
+   * Everything after the transform is the same call the template path makes, so what the dialog previews and
+   * what gets written cannot diverge.
+   *
+   * @param rawName - The name as typed.
+   * @returns The name the note would be created under.
+   */
+  private async normalizeTypedNoteName(rawName: string): Promise<string> {
+    return this.normalizeNoteName(await this.transformName(rawName));
   }
 
   /**
    * Turns the content template into the concrete notes to write, resolving every token now that the folder's
    * final name is known.
    *
-   * @param tokens - The resolved token values.
+   * A note the user renamed from the confirmation dialog takes its typed name instead of the template's
+   * (issue #200); the CONTENT is still the template's, since only the name was renamed.
+   *
+   * @param params - The resolved token values and the names renamed from the dialog.
    * @returns The notes, in declaration order — the first is the one that gets opened.
    */
-  private planNotes(tokens: CreateFolderTemplateTokens): readonly PlannedNote[] {
+  private planNotes(params: CreateFolderWithNotesCommandHandlerPlanNotesParams): readonly PlannedNote[] {
+    const { noteNameOverrides, tokens } = params;
     const sections = parseFolderContentTemplate(this.pluginSettingsComponent.settings.newFolderContentTemplate);
-    return sections.map((section) => {
+    return sections.map((section, noteIndex) => {
       const resolvedName = resolveCreateFolderTemplateTokens({ template: section.nameTemplate, tokens }).trim();
-      const name = this.normalizeNoteName(resolvedName || tokens.safeFolderName);
+      const name = noteNameOverrides.get(noteIndex) ?? this.normalizeNoteName(resolvedName || tokens.safeFolderName);
       return {
         content: resolveCreateFolderTemplateTokens({ template: section.contentTemplate, tokens }),
         name
@@ -460,17 +661,50 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * Reuses the `obsidian-dev-utils` prompt rather than a bespoke modal: it already re-asks with the typed
    * text preserved when the validator refuses, which is exactly the behavior the reporter's video shows.
    *
+   * The same prompt serves the initial ask and the confirmation dialog's `Rename` (issue #200) — one
+   * validator, so a name refused when creating is refused when renaming. Only the wording differs, and it is
+   * passed in rather than derived from the seeded value, so neither call has to guess which one it is.
+   *
+   * @param params - The seeded value and the wording for this use of the prompt.
    * @returns The name as typed, or `null` when the prompt was cancelled.
    */
-  private async promptForFolderName(): Promise<null | string> {
+  private async promptForFolderName(params: CreateFolderWithNotesCommandHandlerPromptForFolderNameParams): Promise<null | string> {
+    const { defaultValue, okButtonText, title } = params;
     return await prompt({
       app: this.app,
       cancelButtonText: 'Cancel',
-      okButtonText: 'Create',
+      defaultValue,
+      okButtonText,
       placeholder: 'Folder name',
-      title: 'Enter folder name',
+      title,
       valueValidator: async (value: string): Promise<MaybeReturn<string>> => await this.validateTypedFolderName(value)
     });
+  }
+
+  /**
+   * Prompts for one note's name, seeded with the name the dialog is previewing (issue #200).
+   *
+   * @param params - The seeded name and the names the other planned notes already hold.
+   * @returns The name as typed, or `null` when the prompt was cancelled.
+   */
+  private async promptForNoteName(params: CreateFolderWithNotesCommandHandlerPromptForNoteNameParams): Promise<null | string> {
+    const { defaultValue, otherNoteNames } = params;
+    const typedName = await prompt({
+      app: this.app,
+      cancelButtonText: 'Cancel',
+      defaultValue,
+      okButtonText: 'Rename',
+      placeholder: 'Note name',
+      title: 'Rename note',
+      valueValidator: async (value: string): Promise<MaybeReturn<string>> => await this.validateTypedNoteName({ otherNoteNames, value })
+    });
+
+    if (typedName === null) {
+      return null;
+    }
+
+    // Cannot throw: the prompt's validator already ran the same transform over the same text.
+    return await this.normalizeTypedNoteName(typedName);
   }
 
   /**
@@ -483,21 +717,34 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * and the whole plan is rebuilt around the new parent each pass.
    *
    * Cancelling the picker returns to the same dialog with the parent unchanged, rather than abandoning the
-   * creation. The typed NAME is never re-asked here — renaming from the dialog is its own feature (#200).
+   * creation. The typed NAME is never re-asked by `Change target` — it is re-asked only when the dialog's own
+   * `Rename` button asks for it (issue #200), which is the other arm of this loop.
    *
    * @param params - The initial parent folder and the typed/normalized names.
    * @returns The confirmed plan, or `null` when the flow was cancelled.
    */
   private async resolvePlan(params: CreateFolderWithNotesCommandHandlerResolvePlanParams): Promise<CreateFolderWithNotesPlan | null> {
-    const { rawFolderName, safeFolderName } = params;
     let parentFolder = params.parentFolder;
+    let renameState: CreateFolderWithNotesRenameState = {
+      noteNameOverrides: new Map<number, string>(),
+      rawFolderName: params.rawFolderName,
+      safeFolderName: params.safeFolderName
+    };
     if (!this.pluginSettingsComponent.settings.shouldAskBeforeCreatingFolder) {
-      return this.buildPlan({ parentFolder, rawFolderName, safeFolderName });
+      return this.buildPlan({ parentFolder, renameState });
     }
 
     for (;;) {
-      const plan = this.buildPlan({ parentFolder, rawFolderName, safeFolderName });
+      const plan = this.buildPlan({ parentFolder, renameState });
       const confirmResult = await this.confirmCreate(plan);
+      if (confirmResult.renameRequest) {
+        renameState = await this.applyRenameRequest({
+          notes: plan.notes,
+          renameRequest: confirmResult.renameRequest,
+          renameState
+        });
+        continue;
+      }
       if (confirmResult.shouldReselectTarget) {
         const selectedFolder = await selectFolder({
           app: this.app,
@@ -641,6 +888,69 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return 'Folder name contains invalid characters';
     }
   }
+
+  /**
+   * Validates a note name typed into the confirmation dialog's `Rename` prompt (issue #200).
+   *
+   * The first two rules mirror {@link CreateFolderWithNotesCommandHandler.validateTypedFolderName}, so a
+   * broken `Name transform template` is reported where it can be fixed and a name is judged by the same
+   * standard whichever prompt it was typed into.
+   *
+   * The third has no folder counterpart and closes a real gap: the write de-duplicates through
+   * `getAvailablePath`, so two notes renamed to the same thing would silently become `X.md` and `X 1.md` —
+   * the dialog would be previewing something other than what gets created. The folder side needs no such
+   * rule, because `getAvailableFolderPath` runs while the plan is built and the tokens are read back from the
+   * de-duplicated path.
+   *
+   * @param params - The typed name and the names the other planned notes already hold.
+   * @returns The error message, or nothing when the name is usable.
+   */
+  private async validateTypedNoteName(params: CreateFolderWithNotesCommandHandlerValidateTypedNoteNameParams): Promise<MaybeReturn<string>> {
+    const { otherNoteNames, value } = params;
+    let normalizedName: string;
+    try {
+      normalizedName = await this.normalizeTypedNoteName(value);
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+
+    if (!normalizedName) {
+      return 'Note name cannot be empty';
+    }
+
+    if (new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(normalizedName)) {
+      return 'Note name contains invalid characters';
+    }
+
+    // Case-insensitively: the vault would treat `Alpha.md` and `alpha.md` as the same note on Windows and
+    // MacOS, so accepting one as "different" would just move the collision to the write.
+    if (otherNoteNames.some((otherNoteName) => otherNoteName.toLowerCase() === normalizedName.toLowerCase())) {
+      return 'Another note in this folder is already named that';
+    }
+  }
+}
+
+/**
+ * Appends the `Rename` button that sits beside a name in the confirmation dialog (issue #200).
+ *
+ * A text label rather than an icon: the complaint the issue files is that there is no rename button, so it
+ * has to read as one.
+ *
+ * A plain `button` with a real listener rather than a `ButtonComponent`, matching how
+ * {@link ConfirmDialogModal} builds its own buttons — the click is then a real DOM event, which is what lets
+ * both the unit test and the desktop integration test drive it by clicking.
+ *
+ * @param rowEl - The row the name was just written into.
+ * @param onClick - What the button asks the flow to rename.
+ */
+function appendRenameButton(rowEl: HTMLElement, onClick: (this: void) => void): void {
+  rowEl.createEl('button', {
+    attr: { 'aria-label': 'Change this name before anything is created' },
+    cls: RENAME_BUTTON_CLASS,
+    text: 'Rename'
+  }, (buttonEl) => {
+    buttonEl.addEventListener('click', onClick);
+  });
 }
 
 /**
@@ -655,6 +965,7 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
     fragment,
     notes,
     parentFolder,
+    requestRename,
     tokens
   } = params;
   fragment.appendText('Are you sure you want to create ');
@@ -664,11 +975,14 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   fragment.appendText(' note(s)?');
   fragment.createEl('br');
   fragment.createEl('br');
-  appendCodeBlock(fragment, 'Folder');
-  fragment.appendText(': ');
+  const folderRowEl = fragment.createDiv(NAME_ROW_CLASS);
+  appendCodeBlock(folderRowEl, 'Folder');
+  folderRowEl.appendText(': ');
   // Plain text, not a link: the folder does not exist yet.
-  appendCodeBlock(fragment, tokens.folderName);
-  fragment.createEl('br');
+  appendCodeBlock(folderRowEl, tokens.folderName);
+  appendRenameButton(folderRowEl, () => {
+    requestRename({ kind: RenameKind.Folder });
+  });
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
   fragment.appendText(': ');
@@ -685,8 +999,11 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   fragment.createEl('br');
   fragment.createEl('br');
   fragment.createEl('h2', { text: 'Notes that will be created' });
-  for (const note of notes) {
-    appendCodeBlock(fragment, note.name);
-    fragment.createEl('br');
+  for (const [noteIndex, note] of notes.entries()) {
+    const noteRowEl = fragment.createDiv(NAME_ROW_CLASS);
+    appendCodeBlock(noteRowEl, note.name);
+    appendRenameButton(noteRowEl, () => {
+      requestRename({ currentName: note.name, kind: RenameKind.Note, noteIndex });
+    });
   }
 }
