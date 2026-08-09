@@ -138,10 +138,16 @@ aliases:
 ---
 ```
 
-Elsewhere in Templater a plain `processFrontMatter` like that is lost — the rendered note is written
-*after* your code runs, straight over the top of it, so you have to defer the call with
-`tp.hooks.on_all_templates_executed`. Here the plugin owns that write and keeps whatever properties
-your template set while it ran, so the plain call is enough. The hook still works if you prefer it.
+A plain `processFrontMatter` like that needs care in Templater generally. Wherever Templater *rewrites
+a whole note* from what it read before your code ran — creating a note from a template, or replacing
+the templates in a file — the rendered text lands on top of your write and the properties are lost,
+which is why `tp.hooks.on_all_templates_executed` exists. Inserting a template into a note you already
+have open is unaffected, because that writes through the editor, and so is writing properties to some
+*other* file.
+
+Creating a folder with notes is a rewriting flow, but the plugin owns that write and keeps whatever
+properties your template set while it ran — so the plain call is enough here. The hook still works if
+you prefer it.
 
 ## Before it happens
 
