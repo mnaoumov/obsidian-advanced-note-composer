@@ -50,6 +50,15 @@ With that set, typing `A: B` creates `A - B`. Conditional mappings are ordinary 
 can handle as many characters as you like. Templater is only needed for the logic — a template made purely
 of `{{tokens}}` works on its own.
 
+**The template must produce a single line — chain your replacements, do not write one per line.** Each
+command emits its own result, so two commands on two lines produce a two-line name, which no file name can
+be; the operation is refused with a message saying so rather than creating something mangled. Handle several
+characters in one expression:
+
+```text
+<% TOKENS.rawString.replaceAll(": ", " - ").replaceAll("?", "_") %>
+```
+
 Characters your template does **not** map are still governed by **Should replace invalid characters**: leave
 it on and they take the **Replacement string** as before, or turn it off and a name that still contains them
 is refused rather than silently rewritten — so nothing is replaced except what you asked for.

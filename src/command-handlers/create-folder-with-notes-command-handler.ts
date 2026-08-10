@@ -34,7 +34,10 @@ import { InsertMode } from '../insert-mode.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
-import { applyNameTransform } from '../name-transform.ts';
+import {
+  applyNameTransform,
+  NameTransformError
+} from '../name-transform.ts';
 import { resolveNextFolderIndex } from '../next-folder-index.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
@@ -875,7 +878,11 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     try {
       normalizedName = await this.normalizeFolderName(value);
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      /* v8 ignore next 3 -- the transform is the only thing here that throws, and it throws nothing else. */
+      if (!(error instanceof NameTransformError)) {
+        throw error;
+      }
+      return error.message;
     }
 
     if (!normalizedName) {
@@ -911,7 +918,11 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     try {
       normalizedName = await this.normalizeTypedNoteName(value);
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      /* v8 ignore next 3 -- the transform is the only thing here that throws, and it throws nothing else. */
+      if (!(error instanceof NameTransformError)) {
+        throw error;
+      }
+      return error.message;
     }
 
     if (!normalizedName) {

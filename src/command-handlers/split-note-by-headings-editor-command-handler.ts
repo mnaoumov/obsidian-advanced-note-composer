@@ -139,6 +139,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
           app: this.app,
           editor,
           heading: headingInfo.heading,
+          pluginNoticeComponent: this.pluginNoticeComponent,
           pluginSettingsComponent: this.pluginSettingsComponent,
           resourceLockComponent: this.resourceLockComponent,
           shouldSkipModal: true,

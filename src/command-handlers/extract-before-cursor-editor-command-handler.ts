@@ -84,6 +84,7 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
       editor,
       moveNoticeComponent: this.moveNoticeComponent,
       moveSelectionBuffer: this.moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
       selectionHighlightComponent: this.selectionHighlightComponent,

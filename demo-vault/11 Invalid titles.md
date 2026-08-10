@@ -32,6 +32,14 @@ available as `TOKENS.rawString`, which is what lets you write a real mapping:
 <% TOKENS.rawString.replaceAll(": ", " - ") %>
 ```
 
+The template must produce a **single line** - chain your replacements instead of writing one
+command per line. Each command emits its own result, so two lines produce a two-line name,
+which no file name can be; the operation is refused with a message saying so:
+
+```text
+<% TOKENS.rawString.replaceAll(": ", " - ").replaceAll("?", "_") %>
+```
+
 Characters your template does not map are still governed by **Should replace invalid
 characters**: on, they take the **Replacement string**; off, a name that still contains them is
 refused rather than rewritten - so nothing is replaced except what you asked for.
