@@ -17,6 +17,7 @@ import {
 
 import {
   applyNameTransform,
+  NameTransformError,
   transformAndFixFileName
 } from './name-transform.ts';
 
@@ -107,6 +108,38 @@ describe('applyNameTransform', () => {
 
     await expect(applyNameTransform({ app, contextFile: getFile(app, 'note.md'), rawString: 'A: B', template: MAPPING_TEMPLATE }))
       .rejects.toThrow('TOKENS is not defined');
+  });
+
+  it('should refuse a multi-line result, which is a name no file system can hold (issue #203)', async () => {
+    // Issue #203's reporter wrote one Templater command per line; this is the same shape through the
+    // Plugin's own token pass, which is why the token path has to refuse it too.
+    const app = createApp();
+    await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: '{{rawString}}\n{{rawString}}' }))
+      .rejects.toThrow('Name transform template produced a multi-line name: \'A: B\' / \'A: B\'.');
+  });
+
+  it('should refuse a multi-line result coming back from templater', async () => {
+    const app = createApp();
+    const templater = installTemplater(app);
+    // The two lines the reporter's own template produced, blank line included — a blank line is neither a
+    // Name nor part of one, so it is left out of the message.
+    templater.parseTemplate.mockResolvedValue('A - B\n\nA: B');
+
+    await expect(applyNameTransform({ app, contextFile: getFile(app, 'note.md'), rawString: 'A: B', template: MAPPING_TEMPLATE }))
+      .rejects.toThrow('Name transform template produced a multi-line name: \'A - B\' / \'A: B\'.');
+  });
+
+  it('should type every refusal so a caller can tell a broken template from a real bug', async () => {
+    const app = createApp();
+    await expect(applyNameTransform({ app, contextFile: null, rawString: 'a', template: '{{nope}}' }))
+      .rejects.toBeInstanceOf(NameTransformError);
+    await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
+      .rejects.toBeInstanceOf(NameTransformError);
+
+    installTemplater(app);
+    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+    await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
+      .rejects.toBeInstanceOf(NameTransformError);
   });
 });
 

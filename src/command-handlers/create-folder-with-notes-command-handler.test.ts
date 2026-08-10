@@ -558,7 +558,9 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const promptParams = ensureNonNullable(mockPrompt.mock.calls[0]?.[0]);
       const validate = castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
 
-      expect(await validate('alpha')).toBe('boom');
+      // The message names the setting that failed — a bare `boom` from deep inside Templater told the user
+      // Nothing about where to go and fix it (issue #203).
+      expect(await validate('alpha')).toBe('Name transform template failed: boom');
     });
   });
 
@@ -939,7 +941,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
       const { handler } = createHandler({ nameTransformTemplate: '<% throw "boom" %>' });
 
-      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: 'alpha' })).toBe('boom');
+      expect(await handler.validateTypedNoteName({ otherNoteNames: [], value: 'alpha' })).toBe('Name transform template failed: boom');
     });
   });
 

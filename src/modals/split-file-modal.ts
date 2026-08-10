@@ -1,5 +1,6 @@
 import type { TFolder } from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import {
@@ -18,6 +19,7 @@ import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { Selection } from '../composers/composer-base.ts';
+import type { SelectItemResult } from '../item-selectors/item-selector-base.ts';
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -34,6 +36,7 @@ import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
+import { NameTransformError } from '../name-transform.ts';
 import {
   openConfirmDialogModal,
   openMinimizableModal
@@ -76,6 +79,15 @@ interface PrepareForSplitFileParams {
    * to enable the modal's "switch to smart cut & paste" action; omit to disable it.
    */
   readonly moveSelectionBuffer?: MoveSelectionBuffer;
+
+  /**
+   * Where a refused `Name transform template` is reported (issue #203).
+   *
+   * These flows can run with no picker and no confirmation dialog (`shouldSkipModal`), so a misconfigured
+   * transform has nowhere else to surface — before this it escaped into the generic unhandled-error notice,
+   * which named neither the setting nor the problem.
+   */
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
 
@@ -142,6 +154,26 @@ interface PrepareForSplitFileResult {
 }
 
 /* v8 ignore stop */
+
+interface SelectSplitTargetParams {
+  /**
+   * The heading naming the new note, or an empty string when the split is not heading-driven.
+   */
+  readonly heading: string;
+
+  /**
+   * Whether this pass is still running without the picker, which is what decides whether the caller's
+   * target-folder override still applies.
+   */
+  readonly isPickerStillSkipped: boolean;
+
+  readonly params: PrepareForSplitFileParams;
+
+  /**
+   * What the picker resolved to (or the heading-driven stand-in for it).
+   */
+  readonly splitFileModalResult: SplitFileModalSplitResult;
+}
 
 interface ShouldSkipSplitConfirmationParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -568,20 +600,15 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       return null;
     }
 
-    const selectItemResult = await new SplitItemSelector({
-      app: params.app,
-      inputValue: splitFileModalResult.inputValue,
-      isModifier: splitFileModalResult.isModifier,
-      item: splitFileModalResult.item,
-      pluginSettingsComponent: params.pluginSettingsComponent,
-      shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
-      shouldForceSplitIntoFolder: params.shouldForceSplitIntoFolder ?? false,
-      /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
-      shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
-      /* v8 ignore stop */
-      sourceFile: params.sourceFile,
-      targetParentFolderOverride: resolveTargetParentFolderOverride(params, shouldSkipModalThisPass)
-    }).selectItem();
+    const selectItemResult = await selectSplitTarget({
+      heading,
+      isPickerStillSkipped: shouldSkipModalThisPass,
+      params,
+      splitFileModalResult
+    });
+    if (!selectItemResult) {
+      return null;
+    }
 
     const prepareForSplitFileResult: PrepareForSplitFileResult = {
       capturedSelections,
@@ -727,17 +754,6 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
 }
 
 /**
- * Decides whether this split runs without the confirmation dialog.
- *
- * A heading-driven split (`shouldSkipModal`) derives its target from the heading, so with
- * `shouldSplitHeadingsAutomatically` on it must run start-to-finish without prompting (issue #79) — without
- * touching the confirmation of ordinary, manually-targeted splits. A caller that already confirmed the whole
- * operation once up front (the recursive split) suppresses it outright.
- *
- * @param params - The parameters.
- * @returns Whether to skip the confirmation dialog.
- */
-/**
  * The forced target folder to hand the item selector for THIS pass.
  *
  * The override only holds while the picker is still being skipped. Once "Change target" has opened it, the
@@ -755,6 +771,66 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
   return params.targetParentFolderOverride ?? null;
 }
 
+/**
+ * Resolves the note this split writes into, reporting a refused `Name transform template` rather than
+ * letting it escape (issue #203).
+ *
+ * The refusal is reported HERE because these flows can run with no picker and no confirmation dialog, so
+ * there is no prompt to report into and the user would otherwise see only the generic unhandled-error
+ * notice. Nothing has been created at this point, so cancelling costs nothing.
+ *
+ * ONLY {@link NameTransformError} is caught: catching `Error` would turn every genuine bug in the selector
+ * into a polite notice.
+ *
+ * It is a function of its own rather than a `try` in the loop above so `prepareForSplitFile` stays under the
+ * complexity limit.
+ *
+ * @param params - The prepare parameters, the picker's result, and whether the picker is still skipped.
+ * @returns The chosen target, or `null` when the transform refused the name.
+ */
+async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null | SelectItemResult> {
+  const {
+    heading,
+    isPickerStillSkipped,
+    splitFileModalResult
+  } = params;
+  const prepareParams = params.params;
+
+  try {
+    return await new SplitItemSelector({
+      app: prepareParams.app,
+      inputValue: splitFileModalResult.inputValue,
+      isModifier: splitFileModalResult.isModifier,
+      item: splitFileModalResult.item,
+      pluginSettingsComponent: prepareParams.pluginSettingsComponent,
+      shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+      shouldForceSplitIntoFolder: prepareParams.shouldForceSplitIntoFolder ?? false,
+      /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
+      shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
+      /* v8 ignore stop */
+      sourceFile: prepareParams.sourceFile,
+      targetParentFolderOverride: resolveTargetParentFolderOverride(prepareParams, isPickerStillSkipped)
+    }).selectItem();
+  } catch (error) {
+    if (!(error instanceof NameTransformError)) {
+      throw error;
+    }
+    prepareParams.pluginNoticeComponent.showNotice(error.message);
+    return null;
+  }
+}
+
+/**
+ * Decides whether this split runs without the confirmation dialog.
+ *
+ * A heading-driven split (`shouldSkipModal`) derives its target from the heading, so with
+ * `shouldSplitHeadingsAutomatically` on it must run start-to-finish without prompting (issue #79) — without
+ * touching the confirmation of ordinary, manually-targeted splits. A caller that already confirmed the whole
+ * operation once up front (the recursive split) suppresses it outright.
+ *
+ * @param params - The parameters.
+ * @returns Whether to skip the confirmation dialog.
+ */
 function shouldSkipSplitConfirmation(params: ShouldSkipSplitConfirmationParams): boolean {
   const settings = params.pluginSettingsComponent.settings;
   return !settings.shouldAskBeforeSplitting

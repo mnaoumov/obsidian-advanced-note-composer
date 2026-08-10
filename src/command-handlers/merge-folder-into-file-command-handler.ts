@@ -34,7 +34,10 @@ import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
-import { transformAndFixFileName } from '../name-transform.ts';
+import {
+  NameTransformError,
+  transformAndFixFileName
+} from '../name-transform.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
@@ -323,7 +326,22 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   private async resolveTargetPaths(folder: TFolder, sourceMdFiles: readonly TFile[]): Promise<MergeFolderIntoFileTargetPaths | null> {
     let targetParentFolder: null | TFolder = null;
     for (;;) {
-      const desiredPath = await this.resolveDesiredTargetPath(folder, targetParentFolder);
+      let desiredPath: string;
+      try {
+        desiredPath = await this.resolveDesiredTargetPath(folder, targetParentFolder);
+      } catch (error) {
+        /*
+         * A refused `Name transform template` is a configuration problem, so it is reported and the merge
+         * abandoned before anything is created — the note name is the FIRST thing this flow needs, so there
+         * is nothing to undo. Only that type is caught; anything else is a genuine bug (issue #203).
+         */
+        if (!(error instanceof NameTransformError)) {
+          throw error;
+        }
+        this.pluginNoticeComponent.showNotice(error.message);
+        return null;
+      }
+
       // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
       // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
       // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the

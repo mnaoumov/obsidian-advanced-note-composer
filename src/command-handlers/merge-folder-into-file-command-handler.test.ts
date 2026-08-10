@@ -786,6 +786,37 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(await app.vault.adapter.read('src.md')).toContain('alpha body');
   });
 
+  it('should report a refused name transform and merge nothing (issue #203)', async () => {
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler, showNotice } = createHandler({
+      mergeFolderIntoFileNoteNameTemplate: 'Overview',
+      // The shape issue #203's reporter configured: a result spanning two lines, which is not a name.
+      nameTransformTemplate: '{{rawString}}\n{{rawString}}',
+      replacement: '_',
+      shouldReplaceInvalidTitleCharacters: true
+    });
+    mockConfirm.mockResolvedValue('confirmed');
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(showNotice.mock.calls.some(([content]) => typeof content === 'string' && content.includes('multi-line'))).toBe(true);
+    // The name is the first thing this flow needs, so the refusal costs nothing: no note, no merge.
+    expect(await app.vault.adapter.exists('Overview.md')).toBe(false);
+    expect(await app.vault.adapter.exists('src.md')).toBe(false);
+    expect(await app.vault.adapter.exists('src/a.md')).toBe(true);
+  });
+
+  it('should let an unknown token in the note-name template through, since it is not a transform failure', async () => {
+    // The catch above is narrow on purpose: only a `NameTransformError` becomes a notice, so a broken
+    // `Merge folder into file note name template` still fails loudly rather than being reported as a
+    // Transform problem (issue #203).
+    initApp({ 'src/a.md': 'alpha body' });
+    const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: '{{nope}}' });
+    mockConfirm.mockResolvedValue('confirmed');
+
+    await expect(handler.executeFolder(getFolder('src'))).rejects.toThrow('Invalid template key: nope');
+  });
+
   it('should not create a target when the user cancels the confirmation', async () => {
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler();

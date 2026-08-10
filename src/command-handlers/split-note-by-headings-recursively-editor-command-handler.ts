@@ -423,6 +423,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
         app: this.app,
         editor,
         heading: headingInfo.heading,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent,
         resourceLockComponent: this.resourceLockComponent,
         shouldAllowOnlyCurrentFolderOverride,
