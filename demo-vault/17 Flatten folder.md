@@ -66,3 +66,10 @@ nothing but folders, that one steps aside too and only `Flatten folder...` is le
 What counts is what would really move, not how the folders look: a nested folder you excluded in the
 settings, or one holding the attachments of a note that stays behind, is never promoted, so it does
 not bring the recursive command back by itself.
+
+If you run an attachment-location plugin such as Custom Attachment Location, where a note's attachment
+folder is that plugin's answer rather than a setting, none of this can be worked out while the menu is
+being built - so all three commands stay listed and tell you afterwards if nothing would move. Your
+vault's `Default location for new attachments` is ignored in that case on purpose: the plugin keeps it
+pointed at whatever folder it last resolved for the note you have open, which used to make an ordinary
+folder look like an attachment folder and take two of the commands away.

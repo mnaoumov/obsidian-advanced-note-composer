@@ -69,11 +69,16 @@ interface SettingsCarrier {
  *
  * The vault here is the one that produced the report — an attachment-location plugin (Custom Attachment
  * Location) owns the resolution, so `getAttachmentFolderPathSyncOrNull` answers `null` and the exact
- * attachment check that fixed issue #185 cannot run at all. Both replacements are synchronous, and this is
- * the real-Obsidian confirmation that each one alone is enough to take the entries away.
+ * attachment check that fixed issue #185 cannot run at all. This is the real-Obsidian confirmation that the
+ * user's own exclusion is enough to take the entries away with no resolution available.
+ *
+ * Issue #193 shipped a SECOND synchronous replacement beside it — reading Obsidian's own
+ * `attachmentFolderPath` — and issue #213 withdrew it for exactly this kind of vault: the plugin owning the
+ * resolution owns that setting too. The `t366-configured` shape below is kept as the pin on the withdrawal,
+ * asserting the entries STAY.
  */
 describe('flatten folder menu with an excluded or configured attachment folder (issue #193)', () => {
-  it('hides the folder-only flatten entries when nothing but an excluded or configured attachment folder could move', async () => {
+  it('hides the folder-only flatten entries when nothing but an excluded folder could move', async () => {
     const result = await evalInObsidian({
       async callback({ app, obsidianModule, pluginId, pluginName }): Promise<MenuProbe> {
         const settingsComponent = findSettingsComponent();
@@ -97,7 +102,8 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           await app.vault.create('t366-excluded/t366-note.md', 'See ![[t366-pic.png]].');
 
           // 2. Configured: the only child folder is named after Obsidian's own `attachmentFolderPath`, with
-          // No exclusion configured for it at all.
+          // No exclusion configured for it at all. Since issue #213 that setting is not consulted here at
+          // All, so this shape keeps its entries — it is the pin on that withdrawal.
           await app.vault.createFolder('t366-configured');
           await app.vault.createFolder('t366-configured/t366-cfg-assets');
           await app.vault.createBinary('t366-configured/t366-cfg-assets/t366-pic2.png', new ArrayBuffer(4));
@@ -229,8 +235,17 @@ describe('flatten folder menu with an excluded or configured attachment folder (
     // The user's own exclusion is enough, with no attachment resolution possible at all. `Flatten folder...`
     // Stays: it still promotes the note, and an excluded child is simply left out of what it moves.
     expect(result.excludedTitles).toStrictEqual(['Flatten folder...']);
-    // Obsidian's own `attachmentFolderPath` is enough on its own, with nothing excluded.
-    expect(result.configuredAttachmentFolderTitles).toStrictEqual(['Flatten folder...']);
+    /*
+     * Issue #213: Obsidian's own `attachmentFolderPath` is NOT consulted once a plugin owns the resolution,
+     * so naming the child folder after it changes nothing and all three entries stay. This assertion was the
+     * exact opposite before #213 — see `flatten-folder-menu-attachment-plugin-config…` for the vault where
+     * reading that setting actively hid commands.
+     */
+    expect(result.configuredAttachmentFolderTitles).toStrictEqual([
+      'Flatten folder...',
+      'Flatten folder (child folders only)...',
+      'Flatten folder recursively (all folders at any depth)...'
+    ]);
     // One ordinary child folder is enough to bring both folder-only entries back. The recursive entry
     // Survives issue #210's duplicate rule here even though `t366-sub` holds no folder of its own: an
     // Attachment-location plugin owns the resolution, so the collector cannot answer synchronously and

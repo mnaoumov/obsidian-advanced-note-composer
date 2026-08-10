@@ -501,16 +501,51 @@ describe('configured attachment folder', () => {
     }
   });
 
-  it('should answer an exact empty list under an attachment-location plugin', () => {
+  it('should ignore the vault\'s own setting under an attachment-location plugin', () => {
     initApp({
       'parent/a/assets/pic.png': 'PIC',
       'parent/a/note.md': 'note'
     }, './assets');
     stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
-    // No exclusion configured at all: the vault's own setting is enough to hide the commands here.
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+    /*
+     * This used to answer an exact `[]` off `attachmentFolderPath` alone. Issue #213 is why it no longer
+     * does: the plugin owning the resolution also owns that setting, so reading it answers a question
+     * nobody asked. `null` is the honest answer — resolve asynchronously and offer the command meanwhile.
+     */
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+  });
+
+  it('should not mistake a candidate folder for the attachment folder when a plugin parks its own path in the setting (issue #213)', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+    stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
+    /*
+     * Custom Attachment Location keeps `attachmentFolderPath` pointed at the folder it last resolved for
+     * the ACTIVE note — an absolute path, and after `Create folder with notes...` that path sits inside the
+     * folder just created. Read as a setting it made `isConfiguredAttachmentFolder` claim `parent/a/sub`,
+     * and its every ancestor, as an attachment folder, so both folder-only variants vanished from the menu.
+     */
+    app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
+
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+  });
+
+  it('should promote the folder the parked path pointed at, once resolved asynchronously (issue #213)', async () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+    stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
+    app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
+
+    // The exact per-note resolution keeps `sub` promotable: its own note travels inside it, so nothing is
+    // Separated from its attachments. Offering the command was therefore right, not merely permissive.
+    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should give the same answer synchronously and asynchronously', async () => {
