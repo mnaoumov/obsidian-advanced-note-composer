@@ -720,6 +720,10 @@ describe('merge folder contents into a single file (issue #92)', () => {
           // The note sits directly in the merged folder: the command resolves the folder from the ACTIVE
           // File's parent, so opening a note in `sub` would merge `sub` instead.
           const note = await app.vault.create('attach-src/note.md', '![[pic.png]]\nnote body');
+          // A SECOND ordinary note, because the drawing is not one: issue #209 stopped offering the command
+          // For a folder holding fewer than two MERGEABLE notes, and `sketch.excalidraw.md` — the whole point
+          // Of this case — counts as an attachment, so `note.md` alone would leave the folder below the bar.
+          await app.vault.create('attach-src/second.md', 'second body');
 
           await openFile(note);
           await waitUntil({

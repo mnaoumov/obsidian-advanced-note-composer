@@ -52,17 +52,21 @@ describe('move folder to... (issue #73)', () => {
           await trashIfExists('mv-link.md');
 
           // `mv-src` is the folder to move; `mv-dst` is the destination; `mv-link.md` links into `mv-src`.
+          // The note's basename is prefixed for THIS suite: the link below is unqualified, so it resolves by
+          // Basename across the whole vault the aggregate shares - and a leftover note of the same name from
+          // Another suite (`recent-target-order` moves one, and this file's own second test creates one) makes
+          // The resolution ambiguous, which is decided by cache order rather than by the move under test.
           await app.vault.createFolder('mv-src');
-          const noteInSrc = await app.vault.create('mv-src/note-in-src.md', 'inner body');
+          const noteInSrc = await app.vault.create('mv-src/mv-note.md', 'inner body');
           await app.vault.createFolder('mv-dst');
           await app.vault.create('mv-dst/keep.md', 'keep body');
-          await app.vault.create('mv-link.md', 'Go to [[note-in-src]].');
+          await app.vault.create('mv-link.md', 'Go to [[mv-note]].');
 
           // Open a note inside `mv-src` so the folder command resolves the active file's parent folder.
           await openFile(noteInSrc);
           await waitUntil({
             message: 'link cache not ready',
-            predicate: () => app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-src/note-in-src.md'
+            predicate: () => app.metadataCache.getFirstLinkpathDest('mv-note', 'mv-link.md')?.path === 'mv-src/mv-note.md'
           });
 
           app.commands.executeCommandById(`${pluginId}:move-folder`);
@@ -88,16 +92,18 @@ describe('move folder to... (issue #73)', () => {
           // The folder is moved into the destination: `mv-src` now lives under `mv-dst`.
           await waitUntil({
             message: 'folder was not moved into the destination',
-            predicate: () => app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null
+            predicate: () => app.vault.getAbstractFileByPath('mv-dst/mv-src/mv-note.md') !== null
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const isMovedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/note-in-src.md') !== null;
+          const isMovedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/mv-note.md') !== null;
           const isOldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
-          // The inbound link now resolves to the folder's new location (links updated by the move).
-          const isLinkUpdated = app.metadataCache.getFirstLinkpathDest('note-in-src', 'mv-link.md')?.path === 'mv-dst/mv-src/note-in-src.md';
+          // The inbound link now resolves to the folder's new location (links updated by the move). Reported
+          // As the resolved PATH rather than as a boolean, so a failure names what it resolved to instead of
+          // Just `expected false to be true`.
+          const linkDestinationPath = app.metadataCache.getFirstLinkpathDest('mv-note', 'mv-link.md')?.path ?? null;
 
-          return { linkUpdated: isLinkUpdated, movedIntoTarget: isMovedIntoTarget, oldLocationGone: isOldLocationGone };
+          return { linkDestinationPath, movedIntoTarget: isMovedIntoTarget, oldLocationGone: isOldLocationGone };
         } finally {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMovingFolder = isOriginalShouldAsk;
@@ -150,7 +156,7 @@ describe('move folder to... (issue #73)', () => {
     // It no longer exists at its old top-level location.
     expect(result.oldLocationGone).toBe(true);
     // The inbound link resolves to the folder's new location.
-    expect(result.linkUpdated).toBe(true);
+    expect(result.linkDestinationPath).toBe('mv-dst/mv-src/mv-note.md');
   });
 
   it('front-loads the recently-opened folders in the picker, in recent order (issue #149)', async () => {

@@ -55,6 +55,9 @@ describe('merge folder into file confirmation dialog (issue #166)', () => {
 
           await app.vault.createFolder('merge-confirm');
           const note = await app.vault.create('merge-confirm/note.md', 'note body');
+          // Two notes, because issue #209 stopped offering the command for a folder holding fewer: this
+          // Case is about what the dialog RENDERS, so it needs the dialog to open at all.
+          await app.vault.create('merge-confirm/other.md', 'other body');
           await openFile(note);
 
           app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
