@@ -17,6 +17,8 @@ import {
   isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
 
+import { compareNatural } from './natural-sort.ts';
+
 /**
  * One attachment move: where it is, which note it came from, and which note it now belongs to.
  */
@@ -181,7 +183,7 @@ export function collectAttachmentsOwnedByNote(params: CollectAttachmentsOwnedByN
     attachments.push({ file: candidate, ownerNoteFile: noteFile });
   }
 
-  return attachments.sort((a, b) => a.file.path.localeCompare(b.file.path));
+  return attachments.sort((a, b) => compareNatural(a.file.path, b.file.path));
 }
 
 /**
@@ -236,7 +238,7 @@ export async function collectAttachmentsToRelocate(params: CollectAttachmentsToR
     }
   }
 
-  return attachments.sort((a, b) => a.file.path.localeCompare(b.file.path));
+  return attachments.sort((a, b) => compareNatural(a.file.path, b.file.path));
 }
 
 /**

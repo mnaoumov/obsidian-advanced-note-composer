@@ -18,6 +18,20 @@ The notes [[Intro]], [[Part 1]], and the nested [[Part 2]] are combined into a n
 as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing,
 and link/backlink updates all apply. The source notes are deleted once merged.
 
+## Numbered folders merge in index order
+
+Notes and sub-folders are ordered by the numbers in their names, one numeric run at a time - so `5.`
+comes before `30.`, and `1.2` before `1.10`. Text ordering would put both the other way round, since
+it compares `3` against `5` and `1` against `2` character by character.
+
+Run the merge on the `Merge index order` folder and read the result top to bottom:
+
+1. [[1. Overview]], [[5. Middle]], [[30. Appendix]] - the folder's own notes, in index order.
+2. Then the `1. Chapters` sub-folder: [[1.1 First]], [[1.2 Second]], [[1.10 Tenth]].
+
+The rule is general, not an index-prefix parser: **every** run of digits in a name counts as one
+number, wherever it sits. A name with no digits in it sorts alphabetically exactly as before.
+
 ## Send the merged note somewhere else
 
 Where the merged note lands is decided by **Merge folder into file location** (below), but you can
