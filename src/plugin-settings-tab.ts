@@ -1447,7 +1447,58 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             name: 'Should ask before creating a folder',
             render: (setting) => {
               setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAskBeforeCreatingFolder', valueComponent: toggle });
+                this.bind({
+                  onChanged: () => {
+                    // Only the two rename-button rows read this value, through their `disabled` predicates.
+                    this.refreshDomState();
+                  },
+                  propertyName: 'shouldAskBeforeCreatingFolder',
+                  valueComponent: toggle
+                });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether the confirmation dialog offers a ');
+              appendCodeBlock(f, 'Rename');
+              f.appendText(' button beside the folder name.');
+              f.createEl('br');
+              f.appendText('That name is the one you typed, rewritten by the numbering template and the title rules, so the button is where you correct what the normalization did to it.');
+              f.createEl('br');
+              f.appendText('Has no effect while ');
+              appendCodeBlock(f, 'Should ask before creating a folder');
+              f.appendText(' is off: without the dialog there is no button.');
+            }),
+            disabled: () => !this.pluginSettingsComponent.settings.shouldAskBeforeCreatingFolder,
+            name: 'Should show rename button for the created folder',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldShowRenameButtonForCreatedFolder', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether the confirmation dialog offers a ');
+              appendCodeBlock(f, 'Rename');
+              f.appendText(' button beside each note under ');
+              appendCodeBlock(f, 'Notes that will be created');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Turn it off when the names in ');
+              appendCodeBlock(f, 'Create folder content template');
+              f.appendText(' are already the names you want: the dialog still previews every note, but the previewed names are final.');
+              f.createEl('br');
+              f.appendText('Has no effect while ');
+              appendCodeBlock(f, 'Should ask before creating a folder');
+              f.appendText(' is off: without the dialog there is no button.');
+            }),
+            disabled: () => !this.pluginSettingsComponent.settings.shouldAskBeforeCreatingFolder,
+            name: 'Should show rename button for created notes',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldShowRenameButtonForCreatedNotes', valueComponent: toggle });
               });
             }
           })

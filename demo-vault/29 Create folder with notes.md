@@ -184,3 +184,18 @@ Each prompt opens on the name it is about, so a small edit is a small edit. Dism
 "never mind". A note name is refused if it would be empty, if it still holds invalid characters (with
 **Should replace invalid title characters** off), or if another note in the folder already has it —
 so what the dialog shows is always what gets created.
+
+### Turning the buttons off
+
+If your templates already produce the names you want, the buttons are only a way to drift from them.
+**Should show rename button for created notes** removes the ones in the list above, and **Should show
+rename button for the created folder** removes the one beside the folder name — independently, because
+the folder name is the one *you* typed and the numbering and title rules rewrite it, while the note
+names are your content template's own.
+
+Try it: turn **Should show rename button for created notes** off and run the command again on
+`Create example`. The dialog still lists every note it is about to create — the preview is the reason
+it exists — but the names are now final.
+
+Both are on by default, so nothing changes until you turn one off, and neither does anything while
+**Should ask before creating a folder** is off: with no dialog there is no button.

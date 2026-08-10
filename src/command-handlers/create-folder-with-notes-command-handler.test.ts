@@ -71,6 +71,12 @@ interface ValidateTypedNoteNameParams {
   readonly value: string;
 }
 
+/**
+ * The confirmation dialog's name rows. Duplicated here rather than exported from the handler: it is a CSS
+ * hook the dialog's own layout owns, and the desktop integration tests match on the same literal.
+ */
+const NAME_ROW_CLASS = 'advanced-note-composer-confirm-name-row';
+
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -204,6 +210,8 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldReplaceInvalidTitleCharacters: true,
         shouldRunTemplaterOnDestinationFile: false,
         shouldShowOperationNotices: true,
+        shouldShowRenameButtonForCreatedFolder: true,
+        shouldShowRenameButtonForCreatedNotes: true,
         shouldTitleCaseCreatedFolderName: true,
         ...settingsOverrides
       })
@@ -255,6 +263,30 @@ function listPaths(folderPath: string): string[] {
 
 async function readNote(path: string): Promise<string> {
   return await app.vault.read(ensureNonNullable(app.vault.getFileByPath(path)));
+}
+
+/**
+ * Runs the flow over a two-note template with the confirmation dialog on, then counts the `Rename` buttons
+ * the dialog body renders (issue #214).
+ *
+ * @param settingsOverrides - The rename-button flags under test.
+ * @returns How many `Rename` buttons the dialog offers.
+ */
+async function renderConfirmButtonCount(settingsOverrides: Partial<PluginSettings>): Promise<number> {
+  initApp({ 'parent/note.md': 'note' });
+  mockPrompt.mockResolvedValue('alpha');
+  confirmResults = [createConfirmResult(true)];
+  const { handler } = createHandler({
+    newFolderContentTemplate: '{{file}} first.md\na\n{{file}} second.md\nb',
+    shouldAskBeforeCreatingFolder: true,
+    ...settingsOverrides
+  });
+
+  await handler.executeFolder(getFolder('parent'));
+
+  const fragment = createFragment();
+  await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
+  return fragment.querySelectorAll('button').length;
 }
 
 describe('CreateFolderWithNotesCommandHandler', () => {
@@ -888,6 +920,69 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
       const buttonTexts = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
       expect(buttonTexts).toEqual(['Rename', 'Rename', 'Rename']);
+    });
+  });
+
+  // Issue #214: the same reporter who asked for the buttons wants them turn-off-able, so a vault whose note
+  // Names come from the content template cannot deviate from it by accident. Two independent flags, because
+  // The folder name was TYPED and normalization rewrites it, while the note names are the template's own.
+  describe('hiding the Rename buttons (issue #214)', () => {
+    it('should drop only the note buttons when the note flag is off', async () => {
+      expect(await renderConfirmButtonCount({ shouldShowRenameButtonForCreatedNotes: false })).toBe(1);
+    });
+
+    it('should drop only the folder button when the folder flag is off', async () => {
+      expect(await renderConfirmButtonCount({ shouldShowRenameButtonForCreatedFolder: false })).toBe(2);
+    });
+
+    it('should render no Rename button when both flags are off', async () => {
+      expect(
+        await renderConfirmButtonCount({
+          shouldShowRenameButtonForCreatedFolder: false,
+          shouldShowRenameButtonForCreatedNotes: false
+        })
+      ).toBe(0);
+    });
+
+    it('should still route a surviving note button to its own row', async () => {
+      // The buttons are indexed positionally, so hiding the folder's shifts every note's — the remaining
+      // Ones must still rename the row they sit beside.
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('renamed');
+      // With the folder button gone, `0` is the FIRST note's.
+      renameButtonClicks = [0];
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({
+        newFolderContentTemplate: '{{file}} first.md\na\n{{file}} second.md\nb',
+        shouldAskBeforeCreatingFolder: true,
+        shouldShowRenameButtonForCreatedFolder: false
+      });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Alpha')).toEqual(['parent/1. Alpha/renamed.md', 'parent/1. Alpha/second.md']);
+      expect(mockPrompt.mock.calls[1]?.[0]).toMatchObject({ defaultValue: 'first.md', okButtonText: 'Rename' });
+    });
+
+    it('should keep previewing every note it is about to create', async () => {
+      // Hiding the buttons must not hide the PREVIEW — that is the reason the dialog exists.
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({
+        newFolderContentTemplate: '{{file}} first.md\na\n{{file}} second.md\nb',
+        shouldAskBeforeCreatingFolder: true,
+        shouldShowRenameButtonForCreatedFolder: false,
+        shouldShowRenameButtonForCreatedNotes: false
+      });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      expect(listPaths('parent/1. Alpha')).toEqual(['parent/1. Alpha/first.md', 'parent/1. Alpha/second.md']);
+      // `appendCodeBlock` is mocked away, so the rows themselves are what proves nothing else was dropped.
+      const fragment = createFragment();
+      await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
+      expect(fragment.querySelectorAll(`.${NAME_ROW_CLASS}`)).toHaveLength(3);
     });
   });
 
