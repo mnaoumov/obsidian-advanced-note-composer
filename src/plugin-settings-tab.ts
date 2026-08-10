@@ -1240,6 +1240,40 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'mergeFolderIntoFileLocation', valueComponent: dropdown });
               });
             }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether to open the merged note once ');
+              appendCodeBlock(f, 'Merge current folder contents into a single file...');
+              f.appendText(' finishes.');
+              f.createEl('br');
+              f.appendText('The note is opened once, at the very end. The merged notes themselves are never opened, whatever ');
+              appendCodeBlock(f, 'Should open note after merge');
+              f.appendText(' says.');
+            }),
+            name: 'Should open the merged note after merging folder contents into a single file',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldOpenNoteAfterMergingFolderIntoFile', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether to open the first note of the destination folder once ');
+              appendCodeBlock(f, 'Merge current folder with another folder...');
+              f.appendText(' finishes.');
+              f.createEl('br');
+              f.appendText(
+                'The first note is the one the file explorer shows first: the destination folder\'s own notes, ordered naturally, and only if it holds none, the first note of its first sub-folder. Notes that were already there count too. Nothing is opened if the destination holds no note at all.'
+              );
+            }),
+            name: 'Should open the first note after merging folders',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldOpenFirstNoteAfterMergingFolder', valueComponent: toggle });
+              });
+            }
           })
         ]
       }),

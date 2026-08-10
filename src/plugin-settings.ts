@@ -267,6 +267,19 @@ export class PluginSettings {
   public shouldMoveAttachmentsWhenMergingFolder = true;
   public shouldOfferCurrentNoteWhenSplitting = true;
   /**
+   * Whether `Merge current folder with another folder...` opens the first note of the destination folder
+   * once the merge lands (issue #215) — the folder's own notes ordered naturally, descending into a
+   * sub-folder only when the top level holds none.
+   *
+   * NOT the per-note {@link shouldOpenNoteAfterMerge}, which the folder merge deliberately overrides to
+   * `false`: opening every merged note in turn is the "visual cycling" of issue #106. This is ONE open,
+   * after the whole transaction has committed.
+   *
+   * Defaults to `false`, so an existing vault behaves exactly as before and needs no
+   * `registerLegacySettingsConverter` — an absent key already resolves to it.
+   */
+  public shouldOpenFirstNoteAfterMergingFolder = false;
+  /**
    * Whether `Create folder with notes...` opens the note it created (issue #191). Defaults to `true`,
    * matching the reporter's own plugin — the point of the command is to start writing in the new note.
    * With several notes declared, the FIRST one declared is the one opened.
@@ -274,6 +287,17 @@ export class PluginSettings {
   public shouldOpenNoteAfterCreatingFolder = true;
 
   public shouldOpenNoteAfterMerge = false;
+  /**
+   * Whether `Merge folder contents into a single file...` opens the note it produced (issue #212).
+   *
+   * Same shape as {@link shouldOpenFirstNoteAfterMergingFolder}, and separate from it on purpose: the two
+   * commands produce different things — one merged note against a folder full of them — so wanting to land
+   * in one is not wanting to land in the other. Both are layered ABOVE the per-note
+   * `shouldOpenAfterMerge: false` that issue #106 requires, never a relaxation of it.
+   *
+   * Defaults to `false`; see {@link shouldOpenFirstNoteAfterMergingFolder} for why that needs no converter.
+   */
+  public shouldOpenNoteAfterMergingFolderIntoFile = false;
   public shouldOpenTargetNoteAfterSplit = false;
   /**
    * What happens to invalid characters that {@link nameTransformTemplate} did NOT handle (issue #196).

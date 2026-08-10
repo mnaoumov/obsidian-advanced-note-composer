@@ -39,6 +39,8 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
+import { compareNatural } from '../natural-sort.ts';
+import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -141,6 +143,24 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     return file.path.split('/').length;
   }
 
+  /**
+   * Whether a file is one of the notes this merge would concatenate, as opposed to a file that merely
+   * travels with them. A markdown-shaped attachment (an Excalidraw drawing is a `.md` file) is moved like
+   * any other attachment, never merged: merging it into a same-named drawing in the destination would
+   * concatenate two raw payloads (issue #160 item 3, issue #161).
+   *
+   * The ONE definition, shared by the source walk and by {@link findFirstNote}'s search of the destination
+   * (issue #215), so what the merge treats as a note and what the post-merge open would land in cannot
+   * drift apart. Mirrors `MergeFolderIntoFileCommandHandler.isMergeableNote`.
+   *
+   * @param file - The file to classify.
+   * @returns Whether the file is a note to merge.
+   */
+  private isMergeableNote(file: TFile): boolean {
+    return isMarkdownFile(file)
+      && !isTreatedAsAttachment({ attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions, pathOrFile: file });
+  }
+
   private isMergeIgnored(sourcePath: string, targetPath: string): boolean {
     const { settings } = this.pluginSettingsComponent;
     // When the user opts in, excluded/ignored items are merged too (issue #150), so nothing is skipped
@@ -211,11 +231,24 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
+
+    /*
+     * Issue #215: land the user in the folder the merge produced. ONE open, after the transaction has
+     * committed — the per-note merges inside it are constructed with `shouldOpenAfterMerge: false`, which is
+     * the issue-#106 fix, and this must not become a second way to flicker the active tab. An aborted merge
+     * returned above, so this is only ever reached by a merge that landed; a destination holding no note at
+     * all (an attachment-only merge) opens nothing rather than failing.
+     */
+    if (this.pluginSettingsComponent.settings.shouldOpenFirstNoteAfterMergingFolder) {
+      const firstNote = findFirstNote(targetFolder, (file) => this.isMergeableNote(file));
+      if (firstNote) {
+        await openFileAfterOperation({ app: this.app, file: firstNote });
+      }
+    }
   }
 
   private async mergeFolderImpl(params: MergeFolderCommandHandlerMergeFolderImplParams): Promise<void> {
     const { abortController, sourceFolder, targetFolder, vaultTransaction } = params;
-    const { settings } = this.pluginSettingsComponent;
     const sourceSubfolders: TFolder[] = [];
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];
@@ -228,10 +261,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       if (!isFile(child)) {
         return;
       }
-      // A markdown-shaped attachment (an Excalidraw drawing is a `.md` file) is moved like any other
-      // Attachment, never merged: merging it into a same-named drawing in the destination would
-      // Concatenate two raw payloads (issue #160 item 3, issue #161).
-      if (isMarkdownFile(child) && !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: child })) {
+      if (this.isMergeableNote(child)) {
         sourceMdFiles.push(child);
         return;
       }
@@ -378,4 +408,46 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       throw new Error('Folder merge aborted.');
     }
   }
+}
+
+/**
+ * The note a user reading the destination folder would see FIRST — what issue #215 asks to be opened once a
+ * folder merge lands.
+ *
+ * Folder-grouped rather than a flat path sort, mirroring `collectMergeItemsDepthFirst` in
+ * `merge-folder-into-file-command-handler.ts`: the folder's OWN notes come first, and a sub-folder is
+ * descended into only once they have failed to produce one — which is how the file explorer presents a
+ * folder, and a flat sort would let `sub/a.md` beat `zeta.md` sitting right there in the folder.
+ *
+ * Ordered by {@link compareNatural}, the same comparator the merge itself orders by (issue #208), so a
+ * numbered folder opens at `5. …` rather than at `30. …`.
+ *
+ * The search covers the destination's PRE-EXISTING notes as well as the merged ones, deliberately: the ask
+ * is about what appears first in the folder now, not about which note the merge happened to process first.
+ *
+ * @param folder - The destination folder.
+ * @param isMergeableNote - Whether a file is a note as opposed to an attachment, so a markdown-shaped
+ * attachment is never the file that opens.
+ * @returns The first note, or `null` when the subtree holds none.
+ */
+function findFirstNote(folder: TFolder, isMergeableNote: (file: TFile) => boolean): null | TFile {
+  const firstNote = folder.children
+    .filter(isFile)
+    .filter((child) => isMergeableNote(child))
+    .sort((a, b) => compareNatural(a.name, b.name))[0];
+  if (firstNote) {
+    return firstNote;
+  }
+
+  const subFolders = folder.children
+    .filter(isFolder)
+    .sort((a, b) => compareNatural(a.name, b.name));
+  for (const subFolder of subFolders) {
+    const noteInSubFolder = findFirstNote(subFolder, isMergeableNote);
+    if (noteInSubFolder) {
+      return noteInSubFolder;
+    }
+  }
+
+  return null;
 }

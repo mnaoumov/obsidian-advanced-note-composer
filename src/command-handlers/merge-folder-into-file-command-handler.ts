@@ -39,6 +39,7 @@ import {
   transformAndFixFileName
 } from '../name-transform.ts';
 import { compareNatural } from '../natural-sort.ts';
+import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
@@ -222,6 +223,18 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
         ? folderPathsToCleanUp.filter((folderPath) => folderPath !== folder.path)
         : folderPathsToCleanUp
     });
+
+    /*
+     * Issue #212: the merged note is what the command produced, so the user can be put in it. LAST, and
+     * deliberately so — after the issue-#186 rename (the note is only now at the path the settings asked
+     * for) and after the empty folders are gone (so the explorer is not still reshuffling around it). Every
+     * unhappy path returned above, which is what keeps this to the ONE open the setting promises: a
+     * cancelled or nothing-merged run never reaches here, and the per-note merges inside the transaction are
+     * constructed with `shouldOpenAfterMerge: false` for issue #106.
+     */
+    if (settings.shouldOpenNoteAfterMergingFolderIntoFile) {
+      await openFileAfterOperation({ app: this.app, file: targetFile });
+    }
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {

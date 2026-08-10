@@ -1,6 +1,7 @@
 import type {
   App as AppOriginal,
-  TFolder
+  TFolder,
+  WorkspaceLeaf
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -119,6 +120,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldMergeHeadingsByDefault: false,
         shouldMoveAttachmentsWhenMergingFolder: false,
         shouldOpenNoteAfterMerge: false,
+        shouldOpenNoteAfterMergingFolderIntoFile: false,
         shouldRunTemplaterOnDestinationFile: false,
         shouldShowOperationNotices: true,
         shouldUseSourceTitleWhenTargetHasNoTitle: false,
@@ -131,6 +133,22 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     handler: castTo<Testable>(handler),
     showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
+}
+
+/**
+ * Asserts that exactly one note was opened, and which one.
+ *
+ * The opened file is compared by PATH rather than handed to `toHaveBeenCalledWith`: a failing matcher would
+ * pretty-format the mocked `TFile`, which probes properties the mock does not model and throws
+ * `Property "$$typeof" is not mocked in TFile` — hiding the real mismatch behind an unrelated error.
+ *
+ * @param openFile - The `openFile` spy from {@link stubOpenFile}.
+ * @param expectedPath - The path of the note that should have been opened.
+ */
+function expectOpened(openFile: MockInstance<WorkspaceLeaf['openFile']>, expectedPath: string): void {
+  expect(openFile).toHaveBeenCalledOnce();
+  expect(openFile.mock.lastCall?.[0].path).toBe(expectedPath);
+  expect(openFile.mock.lastCall?.[1]).toEqual({ active: true });
 }
 
 function getFolder(path: string): TFolder {
@@ -1006,6 +1024,94 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     });
   });
 
+  // Issue #212. The merged note is what the command produced, so the user can be put in it — ONE open, at
+  // The very end, layered above the per-note `shouldOpenAfterMerge: false` that issue #106 requires.
+  describe('opening the merged note (issue #212)', () => {
+    it('should not open anything by default', async () => {
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/b.md': 'bravo body'
+      });
+      const { handler } = createHandler();
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('src.md')).toBe(true);
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+
+    it('should open the merged note when the setting is enabled', async () => {
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/b.md': 'bravo body'
+      });
+      const { handler } = createHandler({ shouldOpenNoteAfterMergingFolderIntoFile: true });
+      const openFile = stubOpenFile();
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      expectOpened(openFile, 'src.md');
+    });
+
+    // The open runs AFTER the issue-#186 rename, so it lands in the note at its final path rather than at
+    // The de-duplicated one it was created under.
+    it('should open the merged note at its final path when the configured name was freed by the merge', async () => {
+      initApp({
+        'parent/src/a.md': 'alpha body',
+        'parent/src/Overview.md': 'overview body'
+      });
+      const { handler } = createHandler({
+        mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder,
+        mergeFolderIntoFileNoteNameTemplate: 'Overview',
+        replacement: '_',
+        shouldOpenNoteAfterMergingFolderIntoFile: true,
+        shouldReplaceInvalidTitleCharacters: true
+      });
+      const openFile = stubOpenFile();
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('parent/src'));
+
+      expect(await app.vault.adapter.exists('parent/src/Overview 1.md')).toBe(false);
+      expectOpened(openFile, 'parent/src/Overview.md');
+    });
+
+    it('should open nothing when every note was ignored, since the empty target is trashed', async () => {
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/b.md': 'bravo body'
+      });
+      const { handler } = createHandler({
+        isPathIgnored: (path) => path.startsWith('src/'),
+        shouldOpenNoteAfterMergingFolderIntoFile: true
+      });
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('src.md')).toBe(false);
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+
+    it('should open nothing when the confirmation is cancelled', async () => {
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/b.md': 'bravo body'
+      });
+      const { handler } = createHandler({ shouldOpenNoteAfterMergingFolderIntoFile: true });
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockConfirm.mockResolvedValue('cancelled');
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+  });
+
   it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {
     initApp({});
     expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);
@@ -1034,4 +1140,16 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     });
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
+}
+
+/**
+ * Replaces the workspace's leaf with one whose `openFile` is a spy, so a test can see which note — if any —
+ * the merge opened at the end (issue #212).
+ *
+ * @returns The `openFile` spy.
+ */
+function stubOpenFile(): MockInstance<WorkspaceLeaf['openFile']> {
+  const openFile = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile }));
+  return castTo<MockInstance<WorkspaceLeaf['openFile']>>(openFile);
 }
