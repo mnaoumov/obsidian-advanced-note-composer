@@ -337,6 +337,39 @@ export class PluginSettings {
    * later by flipping the default.
    */
   public shouldShowOperationNotices = true;
+
+  /**
+   * Whether the `Create folder with notes...` confirmation dialog offers a `Rename` button beside the FOLDER
+   * name (issue #214).
+   *
+   * Separate from {@link shouldShowRenameButtonForCreatedNotes} because the two names arrive from opposite
+   * directions. This one is the name the user TYPED, which normalization then rewrites — title casing,
+   * invalid characters, the numbering template — so the button is the affordance for fixing what
+   * normalization did, and is worth keeping even when the note buttons are gone.
+   *
+   * Only has any effect while `shouldAskBeforeCreatingFolder` is on: with no dialog there is no button.
+   *
+   * Defaults to `true`, so an existing vault behaves exactly as it did after issue #200 and needs no
+   * `registerLegacySettingsConverter` — an absent key already resolves to it.
+   */
+  public shouldShowRenameButtonForCreatedFolder = true;
+
+  /**
+   * Whether the `Create folder with notes...` confirmation dialog offers a `Rename` button beside each note
+   * in `Notes that will be created` — issue #214's literal ask.
+   *
+   * Those names come from {@link newFolderContentTemplate}, which the user wrote themselves: for a vault
+   * with a consistent naming scheme the template is already the answer, and the button is only a way to
+   * deviate from it by accident. Turning it off makes the previewed names final without removing the
+   * preview, which is the whole point of the dialog.
+   *
+   * Reported by the same person who asked for the buttons in issue #200 — the request is to make that
+   * feature optional, never to withdraw it, which is why the default is `true`. See
+   * {@link shouldShowRenameButtonForCreatedFolder} for why the folder half is a setting of its own and for
+   * why neither needs a `registerLegacySettingsConverter`.
+   */
+  public shouldShowRenameButtonForCreatedNotes = true;
+
   public shouldShowSmartCutNotice = true;
   public shouldSplitHeadingsAutomatically = false;
   public shouldSplitIntoFolder = false;

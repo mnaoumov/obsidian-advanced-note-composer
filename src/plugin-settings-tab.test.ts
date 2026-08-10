@@ -293,6 +293,15 @@ describe('PluginSettingsTab', () => {
     expect(findToggle('Should split headings automatically').getValue()).toBe(false);
   });
 
+  it('should render the create-folder rename-button toggles bound to their settings', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    // Issue #214 makes the issue-#200 buttons optional, never withdrawn — so both default to shown.
+    expect(findToggle('Should show rename button for the created folder').getValue()).toBe(true);
+    expect(findToggle('Should show rename button for created notes').getValue()).toBe(true);
+  });
+
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -379,6 +388,51 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     // The toggle is bound with an `onChanged` handler that asks Obsidian to re-evaluate the predicates.
     // `bind` wires an async onChange, so it happens after the microtask flush.
     findToggle('Should replace invalid characters').setValue(false);
+
+    await vi.waitFor(() => {
+      expect(refreshDomStateSpy).toHaveBeenCalled();
+    });
+  });
+});
+
+// Issue #214: the two rename-button rows only mean anything while the confirmation dialog is shown, so
+// They follow `shouldAskBeforeCreatingFolder` the way the replacement string follows its own toggle.
+describe('shouldAskBeforeCreatingFolder', () => {
+  const RENAME_BUTTON_ROW_NAMES = [
+    'Should show rename button for the created folder',
+    'Should show rename button for created notes'
+  ];
+
+  it('should disable the rename-button rows while the confirmation dialog is off', async () => {
+    // Off is the DEFAULT for this flow, unlike every other `shouldAskBefore*`.
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    for (const name of RENAME_BUTTON_ROW_NAMES) {
+      expect(isRowDisabled(tab, name)).toBe(true);
+    }
+  });
+
+  it('should enable the rename-button rows once the confirmation dialog is on', async () => {
+    const settingsComponent = await createSettingsComponent();
+    castTo<PluginSettings>(settingsComponent.settings).shouldAskBeforeCreatingFolder = true;
+
+    const tab = await createSettingsTab(settingsComponent);
+    renderRows(tab);
+
+    for (const name of RENAME_BUTTON_ROW_NAMES) {
+      expect(isRowDisabled(tab, name)).toBe(false);
+    }
+  });
+
+  it('should re-evaluate the predicates when the ask-before-creating toggle changes', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const refreshDomStateSpy = vi.fn();
+    tab.refreshDomState = refreshDomStateSpy;
+    // `bind` wires an async onChange, so the refresh happens after the microtask flush.
+    findToggle('Should ask before creating a folder').setValue(true);
 
     await vi.waitFor(() => {
       expect(refreshDomStateSpy).toHaveBeenCalled();

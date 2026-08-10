@@ -71,6 +71,16 @@ interface BuildCreateConfirmContentParams {
    * folder row and of each note row.
    */
   requestRename(this: void, renameRequest: RenameRequest): void;
+
+  /**
+   * Whether the folder row gets its `Rename` button (issue #214).
+   */
+  readonly shouldShowFolderRenameButton: boolean;
+
+  /**
+   * Whether each note row gets its `Rename` button (issue #214).
+   */
+  readonly shouldShowNoteRenameButton: boolean;
   readonly tokens: CreateFolderTemplateTokens;
 }
 
@@ -469,6 +479,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   private async confirmCreate(params: CreateFolderWithNotesCommandHandlerConfirmCreateParams): Promise<CreateConfirmResult> {
     const { notes, parentFolder, tokens } = params;
     const app = this.app;
+    const settings = this.pluginSettingsComponent.settings;
     return await new Promise<CreateConfirmResult>((promiseResolve) => {
       // Assigned as soon as the modal exists, which is long before any button can be clicked. A function
       // Rather than a nullable modal reference, so the rename handler needs no `?.` — a branch whose false
@@ -497,6 +508,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
             notes,
             parentFolder,
             requestRename,
+            shouldShowFolderRenameButton: settings.shouldShowRenameButtonForCreatedFolder,
+            shouldShowNoteRenameButton: settings.shouldShowRenameButtonForCreatedNotes,
             tokens
           }),
         canReselectTarget: true,
@@ -982,6 +995,8 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
     notes,
     parentFolder,
     requestRename,
+    shouldShowFolderRenameButton,
+    shouldShowNoteRenameButton,
     tokens
   } = params;
   fragment.appendText('Are you sure you want to create ');
@@ -996,9 +1011,11 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   folderRowEl.appendText(': ');
   // Plain text, not a link: the folder does not exist yet.
   appendCodeBlock(folderRowEl, tokens.folderName);
-  appendRenameButton(folderRowEl, () => {
-    requestRename({ kind: RenameKind.Folder });
-  });
+  if (shouldShowFolderRenameButton) {
+    appendRenameButton(folderRowEl, () => {
+      requestRename({ kind: RenameKind.Folder });
+    });
+  }
   fragment.createEl('br');
   appendCodeBlock(fragment, 'Destination');
   fragment.appendText(': ');
@@ -1018,8 +1035,10 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   for (const [noteIndex, note] of notes.entries()) {
     const noteRowEl = fragment.createDiv(NAME_ROW_CLASS);
     appendCodeBlock(noteRowEl, note.name);
-    appendRenameButton(noteRowEl, () => {
-      requestRename({ currentName: note.name, kind: RenameKind.Note, noteIndex });
-    });
+    if (shouldShowNoteRenameButton) {
+      appendRenameButton(noteRowEl, () => {
+        requestRename({ currentName: note.name, kind: RenameKind.Note, noteIndex });
+      });
+    }
   }
 }

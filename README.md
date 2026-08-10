@@ -245,7 +245,9 @@ Notes:
 
 - **Rename from the create-folder confirmation dialog.** `Create folder with notes...` adds a **`Rename`**
   button beside the folder name and beside every note it is about to create, so a name can be corrected
-  without cancelling and starting over — see
+  without cancelling and starting over. Each half can be turned off on its own — **Should show rename button
+  for the created folder** and **Should show rename button for created notes** — for a vault whose templates
+  already produce the names you want. See
   [Create folder with notes](#create-folder-with-notes).
 
 - **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
@@ -412,6 +414,8 @@ Because that dialog is where the difference is visible, it is also where you can
 - Renaming a **note** changes that row only, and the name **sticks**: rename the folder afterwards, or send the folder somewhere else with `Change target`, and your name is still there. Its content still comes from the template — only the name is yours.
 
 A note name is refused if it would be empty, if it still contains invalid characters (with **Should replace invalid title characters** off), or if another note in the same folder is already called that — so the preview can never show two notes the vault would silently number apart. Dismissing a rename prompt means "never mind": the dialog comes back exactly as it was.
+
+Neither button is compulsory: **Should show rename button for the created folder** and **Should show rename button for created notes** turn them off independently. Turn the notes one off when the names in **Create folder content template** are already the names you want — the dialog still previews every note, but the previewed names are final. The folder one is worth keeping longer, since that name is the one you typed and the numbering and title rules rewrite it. Both are on by default and do nothing while **Should ask before creating a folder** is off, because without the dialog there is no button.
 
 ## Merge folder contents into a single file
 
