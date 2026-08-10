@@ -16,6 +16,11 @@
  *   picker modals (merge file/folder, swap file/folder), where a target has not been chosen yet:
  *   minimizing there serves no purpose and risks the user forgetting which note the operation was
  *   triggered on (see issue #125).
+ *
+ * The wrapper decides more than whether a minimize button is drawn: a wrapped modal also **minimizes**
+ * when its dimmed background is clicked, instead of being dismissed by it (see issue #202), while a
+ * plainly opened one keeps Obsidian's native close-on-background-click. Cancelling a wrapped modal
+ * therefore takes a deliberate `Escape`, the dialog's own Cancel, or the floating bar's ✕.
  */
 
 import type { Modal } from 'obsidian';
