@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 5.8.0
+
+- test(integration): restore the fixtures the two-note merge guard broke (#209)
+- fix(merge-folder-into-file): hide the command for folders with fewer than two notes (#209)
+- test(modals): pin that a background click minimizes a confirmation (#202)
+- chore: update libs
+- fix(merge-folder-into-file): order numbered notes and folders naturally (#208)
+- feat(recent-suggestions): count a completed operation's target as clicked-on (#206)
+- fix(name-transform): refuse a multi-line name and say why (#203)
+- feat(modals): show the minimize button on every confirmation menu (#201)
+- feat(confirm-dialog): rename the folder and each note from `Create folder with notes...` (#200)
+- feat(confirm-dialog): make `Change target` work on every confirmation menu (#205, #199)
+- feat(settings): split command blocking out of Exclude paths (#198)
+
 ## 5.7.0
 
 - docs: narrow the overstated processFrontMatter claim to the flows it applies to
