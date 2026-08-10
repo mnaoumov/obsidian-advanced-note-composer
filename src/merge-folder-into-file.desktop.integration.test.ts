@@ -576,6 +576,119 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.subFolderGone).toBe(true);
   });
 
+  it('orders numbered notes and sub-folders by their index rather than as text (issue #208)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.mergeFolderIntoFileNoteNameTemplate = '';
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = false;
+            // The emptied tree disappearing is the post-commit signal that everything has been written.
+            settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
+          });
+
+          await trashIfExists('index-order-src');
+          await trashIfExists('index-order-src.md');
+
+          /*
+           * The reporter's shape: text ordering puts `30.` before `5.` (`'3' < '5'`) and `1.10` before
+           * `1.2`, so every pair here disagrees with index order.
+           */
+          await app.vault.createFolder('index-order-src');
+          await app.vault.createFolder('index-order-src/1. Chapters');
+          const overview = await app.vault.create('index-order-src/1. Overview.md', 'overview body');
+          await app.vault.create('index-order-src/5. Middle.md', 'middle body');
+          await app.vault.create('index-order-src/30. Appendix.md', 'appendix body');
+          await app.vault.create('index-order-src/1. Chapters/1.1 First.md', 'first body');
+          await app.vault.create('index-order-src/1. Chapters/1.2 Second.md', 'second body');
+          await app.vault.create('index-order-src/1. Chapters/1.10 Tenth.md', 'tenth body');
+
+          await openFile(overview);
+
+          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
+
+          await waitUntil({
+            message: 'merged single file was not created',
+            predicate: () => app.vault.getAbstractFileByPath('index-order-src.md') !== null
+          });
+          await waitUntil({
+            message: 'the emptied folder tree was not deleted, so the merge had not committed',
+            predicate: () => app.vault.getAbstractFileByPath('index-order-src') === null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const merged = app.vault.getAbstractFileByPath('index-order-src.md');
+          const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
+
+          // The folder's own notes first, then the sub-folder's — each half in index order.
+          return {
+            positions: ['overview body', 'middle body', 'appendix body', 'first body', 'second body', 'tenth body']
+              .map((body) => mergedContent.indexOf(body))
+          };
+        } finally {
+          // The merged note lands at the vault root, which the whole aggregate shares.
+          await trashIfExists('index-order-src.md');
+          await trashIfExists('index-order-src');
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.mergeFolderIntoFileNoteNameTemplate = original.mergeFolderIntoFileNoteNameTemplate;
+            settings.shouldConvertFoldersToHeadingsWhenMergingFolder = original.shouldConvertFoldersToHeadingsWhenMergingFolder;
+            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
+        }
+
+        async function openFile(file: TFile): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({
+            message: `editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // Every body made it into the merged note...
+    expect(result.positions.every((position) => position >= 0)).toBe(true);
+    // ...and they appear in index order, which text order would have got wrong three times over.
+    expect(result.positions).toStrictEqual([...result.positions].sort((a, b) => a - b));
+  });
+
   it('excludes an Excalidraw drawing, moves attachments over, and deletes the emptied folders (issues #160, #161)', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {

@@ -38,6 +38,7 @@ import {
   NameTransformError,
   transformAndFixFileName
 } from '../name-transform.ts';
+import { compareNatural } from '../natural-sort.ts';
 import {
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
@@ -393,14 +394,17 @@ function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
       folderPaths.add(child.path);
     }
   });
-  return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || b.localeCompare(a));
+  return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || compareNatural(b, a));
 }
 
 /**
- * Walks the folder in folder-grouped depth-first order — a folder's own mergeable notes (alphabetically)
- * first, then each sub-folder followed by its whole subtree. A flat sort by path would interleave a
- * sub-folder's notes with the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a
- * folder and make the folder-heading plan emit its heading more than once.
+ * Walks the folder in folder-grouped depth-first order — a folder's own mergeable notes first, then each
+ * sub-folder followed by its whole subtree. A flat sort by path would interleave a sub-folder's notes with
+ * the root's own ones (`sub/z.md` sorts before `zeta.md`), which would re-enter a folder and make the
+ * folder-heading plan emit its heading more than once.
+ *
+ * Each half is ordered by {@link compareNatural}, so a numbered tree merges in its own index order rather
+ * than in text order, which put `30.` before `5.` (issue #208).
  *
  * The sub-folders themselves are part of the result, not just their notes: the heading plan needs them to
  * head a folder that holds no notes at all, which no note path can reveal (issue #168). The notes to merge
@@ -415,12 +419,12 @@ function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TF
   const notes = folder.children
     .filter(isFile)
     .filter((child) => isMergeableNote(child))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compareNatural(a.name, b.name));
   const subFolders = folder.children
     .filter(isFolder)
     // A rejected folder takes its whole subtree with it: the `flatMap` below never recurses into it.
     .filter((subFolder) => shouldHeadSubFolder(subFolder, isMergeableNote))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compareNatural(a.name, b.name));
   return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, isMergeableNote)])];
 }
 

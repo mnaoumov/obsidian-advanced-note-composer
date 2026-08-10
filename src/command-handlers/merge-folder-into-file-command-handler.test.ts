@@ -386,6 +386,26 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(positions.every((position) => position >= 0)).toBe(true);
   });
 
+  it('should order numbered notes and sub-folders by their index, not as text', async () => {
+    // Issue #208: `5.` used to land after `30.`, because `'30.' < '5.'` as text.
+    initApp({
+      'src/10. Ten/note.md': 'ten body',
+      'src/2. Two/note.md': 'two body',
+      'src/30. Thirty.md': 'thirty body',
+      'src/5. Five.md': 'five body'
+    });
+    const { handler } = createHandler();
+    mockConfirm.mockResolvedValue('confirmed');
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The folder's own notes first, then the sub-folders — each half in index order.
+    const merged = await app.vault.adapter.read('src.md');
+    const positions = ['five body', 'thirty body', 'two body', 'ten body'].map((body) => merged.indexOf(body));
+    expect(positions).toStrictEqual([...positions].sort((a, b) => a - b));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+  });
+
   it('should turn sub-folders into headings and demote the merged notes when the setting is on', async () => {
     initApp({
       'src/api/get.md': '# Get\nget body',
