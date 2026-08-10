@@ -45,6 +45,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 
 interface BuildRecursiveSplitConfirmContentParams {
   readonly app: App;
@@ -227,6 +228,12 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends EditorCo
       resourceLockComponent: this.resourceLockComponent,
       template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
     });
+
+    // The run landed, so the folder the produced tree was rooted in counts as clicked-on for the next
+    // Picker (issue #206). Recorded here, once, rather than by the per-note composers: this is the only
+    // Destination in the run the user actually chose, and recording every produced note would bury the
+    // List under a single operation's output.
+    recordRecentTarget(rootTarget.rootFolderOverride ?? this.resolveDefaultRootFolder(file));
 
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({

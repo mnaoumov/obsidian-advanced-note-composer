@@ -6,6 +6,8 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { getRecentTargetPaths } from './recent-targets.ts';
+
 /**
  * How many recently-opened files to consider. Obsidian's own default is `10`, which silently truncates
  * the recent list long before the vault runs out of interesting folders, so the pickers ask for more.
@@ -13,9 +15,9 @@ import type {
 const RECENT_FILE_PATHS_MAX_COUNT = 50;
 
 /**
- * Parameters for {@link getRecentFilePaths}.
+ * Parameters for {@link getRecentPaths}.
  */
-export interface GetRecentFilePathsParams {
+export interface GetRecentPathsParams {
   readonly app: App;
 
   /**
@@ -100,9 +102,10 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
   readonly query: string;
 
   /**
-   * Resolves a recent file path into the item the picker offers (the file itself, or its parent folder).
+   * Resolves a recent path into the item the picker offers (the file itself, the folder itself, or a
+   * file's parent folder).
    *
-   * @param path - The recent file path.
+   * @param path - The recent path.
    * @returns The item, or `null` when the path resolves to nothing offerable.
    */
   resolveItem(this: void, path: string): Item | null;
@@ -112,14 +115,23 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
 }
 
 /**
- * The recently-opened file paths every picker orders by, most-recent-first.
+ * The paths every picker orders by, most-recent-first: the plugin's own recorded operation targets, then
+ * (optionally) the active file, then Obsidian's recently-opened files.
+ *
+ * Recorded targets come FIRST, ahead of even the active file (issue #206, owner's call). The reporter's ask
+ * is that a destination used once is "always the top one on the list" for the operations that follow, and
+ * anything below the active file's own folder would not be — the two collide exactly when the user runs a
+ * second operation without first navigating into the folder the previous one landed in, which is the case
+ * the request is about. Targets are file OR folder paths (see `recent-targets.ts`); a reader that cannot
+ * resolve one simply skips it, which is what keeps folders out of the file pickers.
  *
  * @param params - The parameters.
- * @returns The recent file paths, most-recent-first. May contain duplicates and paths that no longer
+ * @returns The recent paths, most-recent-first. May contain duplicates and paths that no longer
  * resolve, so callers de-duplicate on the resolved item.
  */
-export function getRecentFilePaths(params: GetRecentFilePathsParams): string[] {
+export function getRecentPaths(params: GetRecentPathsParams): string[] {
   const { app, shouldIncludeActiveFile } = params;
+  const recentTargetPaths = getRecentTargetPaths();
   const recentFilePaths = app.workspace.getRecentFiles({
     maxCount: RECENT_FILE_PATHS_MAX_COUNT,
     showCanvas: true,
@@ -130,21 +142,23 @@ export function getRecentFilePaths(params: GetRecentFilePathsParams): string[] {
   });
 
   if (!shouldIncludeActiveFile) {
-    return recentFilePaths;
+    return [...recentTargetPaths, ...recentFilePaths];
   }
 
   const activeFile = app.workspace.getActiveFile();
   if (!activeFile) {
-    return recentFilePaths;
+    return [...recentTargetPaths, ...recentFilePaths];
   }
 
-  return [activeFile.path, ...recentFilePaths];
+  return [...recentTargetPaths, activeFile.path, ...recentFilePaths];
 }
 
 /**
- * Surfaces the most-recently-opened files at the top of a file picker's suggestions when there is no
- * query, filtered by `isAllowedFile` and de-duplicated, with the remaining fuzzy suggestions following
- * (minus any already listed as recent).
+ * Surfaces the files a completed operation targeted, then the most-recently-opened files, at the top of a
+ * file picker's suggestions when there is no query, filtered by `isAllowedFile` and de-duplicated, with the
+ * remaining fuzzy suggestions following (minus any already listed as recent). A recorded target that is a
+ * FOLDER resolves to nothing here and is skipped, so the folder half of the recorded list never leaks into
+ * a file picker.
  *
  * @param params - The parameters.
  * @returns The reordered suggestions.
@@ -168,11 +182,11 @@ export function reorderSuggestionsByRecentFiles(params: ReorderSuggestionsByRece
 }
 
 /**
- * Surfaces the folder the user is currently on, followed by the most-recently-opened folders (the
- * parents of the recently-opened files), at the top of the folder-picker suggestions when there is no
- * query, filtered by `isAllowedFolder` and de-duplicated, with the remaining fuzzy suggestions following
- * (minus any already listed as recent). Shared by the merge, move and swap folder pickers so all three
- * order recent folders the same way.
+ * Surfaces the folders a completed operation targeted, then the folder the user is currently on, then the
+ * most-recently-opened folders (the parents of the recently-opened files), at the top of the folder-picker
+ * suggestions when there is no query, filtered by `isAllowedFolder` and de-duplicated, with the remaining
+ * fuzzy suggestions following (minus any already listed as recent). Shared by the merge, move and swap
+ * folder pickers so all three order recent folders the same way.
  *
  * @param params - The parameters.
  * @returns The reordered suggestions.
@@ -188,7 +202,10 @@ export function reorderSuggestionsByRecentFolders(params: ReorderSuggestionsByRe
     app,
     isAllowedItem: isAllowedFolder,
     query,
-    resolveItem: (path) => app.vault.getFileByPath(path)?.parent ?? null,
+    // A recorded target is resolved as the folder itself when it IS one, and otherwise as the parent of the
+    // Target file — which is how "the folder a note was merged into counts as clicked on" falls out of the
+    // Same lookup that turns a recently-opened file into its folder (issue #206).
+    resolveItem: (path) => app.vault.getFolderByPath(path) ?? app.vault.getFileByPath(path)?.parent ?? null,
     // The folder the user is on is exactly what the picker is expected to offer first (issue #158), and
     // Obsidian's recent list never contains the active file.
     shouldIncludeActiveFile: true,
@@ -209,11 +226,11 @@ function reorderSuggestionsByRecentItems<Item extends TAbstractFile>(params: Reo
     return suggestions;
   }
 
-  const recentFilePaths = getRecentFilePaths({ app, shouldIncludeActiveFile });
+  const recentPaths = getRecentPaths({ app, shouldIncludeActiveFile });
   const recentItems: Item[] = [];
   const recentItemsSet = new Set<Item>();
-  for (const filePath of recentFilePaths) {
-    const item = resolveItem(filePath);
+  for (const recentPath of recentPaths) {
+    const item = resolveItem(recentPath);
     if (!item) {
       continue;
     }

@@ -28,6 +28,7 @@ import {
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice
 } from './operation-notices.ts';
+import { recordRecentTarget } from './recent-targets.ts';
 
 /**
  * Parameters for {@link mergeFilesIntoSingleFile}.
@@ -270,6 +271,10 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   }
 
   if (mergedCount > 0) {
+    // The batch records its target once for the whole run, for the same reason it reports once: the
+    // Per-note composers run on the injected transaction and deliberately record nothing (issue #206).
+    recordRecentTarget(targetFile);
+
     // The batch reports once for the whole run — every `MergeComposer` in it was constructed with
     // `shouldShowNotice: false` precisely so it does not report per note.
     showOperationCompletionNotice({

@@ -38,6 +38,7 @@ import {
   showOperationProgressNotice
 } from '../operation-notices.ts';
 import { FlattenMode } from '../plugin-settings.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 
 interface BuildFlattenConfirmContentParams {
   readonly app: App;
@@ -294,6 +295,10 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     } finally {
       progressNotice?.[Symbol.dispose]();
     }
+
+    // The flatten landed, so the folder its items were promoted into counts as clicked-on for the next
+    // Picker (issue #206).
+    recordRecentTarget(parentFolder);
 
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({

@@ -44,6 +44,7 @@ import {
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice
 } from '../operation-notices.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
@@ -190,6 +191,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     } finally {
       notice?.hide();
     }
+
+    // The merge landed, so the folder it merged into counts as clicked-on for the next picker (issue
+    // #206). Recorded here rather than by the per-note merges inside the transaction: those run on an
+    // Injected transaction that can still roll back, and the folder is what the user chose.
+    recordRecentTarget(targetFolder);
 
     // The source folder is gone by now (its emptied sub-folders are trashed), so it is named as plain
     // Text — an unresolved link to it would create a note at that path when clicked.
