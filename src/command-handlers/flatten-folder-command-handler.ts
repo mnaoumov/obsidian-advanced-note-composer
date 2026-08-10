@@ -25,7 +25,8 @@ import { getAvailablePathForAbstractFile } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import {
   collectFlattenItems,
-  collectFlattenItemsSyncOrNull
+  collectFlattenItemsSyncOrNull,
+  isFlattenModeDistinct
 } from '../flatten-items.ts';
 import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
@@ -155,6 +156,9 @@ const FLATTEN_CONFIRM_SUMMARIES: Record<FlattenMode, string> = {
  * toggle, but {@link FlattenMode} deliberately is NOT that cross product — issues #170/#171 collapsed
  * WHAT-moves × HOW-DEEP into three cells and rejected the fourth (dissolving every descendant FILE into
  * the parent), which nobody asked for. One command per existing member keeps that call.
+ *
+ * A variant is only OFFERED on a folder where it would move something a simpler variant would not (issue
+ * #210) — see {@link FlattenFolderCommandHandler.canExecuteFolder}.
  */
 export class FlattenFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
@@ -202,8 +206,24 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
      * cannot wait for. There the original behavior stands verbatim: the command is offered, and
      * `executeFolder` says so with a notice rather than silently doing nothing.
      */
-    const itemsToMove = collectFlattenItemsSyncOrNull(this.buildCollectFlattenItemsParams(folder));
-    return itemsToMove ? itemsToMove.length > 0 : true;
+    const collectFlattenItemsParams = this.buildCollectFlattenItemsParams(folder);
+    const itemsToMove = collectFlattenItemsSyncOrNull(collectFlattenItemsParams);
+    if (!itemsToMove) {
+      return true;
+    }
+    if (itemsToMove.length === 0) {
+      return false;
+    }
+    /*
+     * Nothing is offered twice (issue #210): a mode that would move exactly what a simpler variant moves is
+     * a second menu entry promising the same result. The reporter met it as `Flatten folder recursively (all
+     * folders at any depth)...` on a folder whose sub-folders hold no sub-folders of their own, where it can
+     * only repeat `Flatten folder (child folders only)...`; the same collision exists one step over, on a
+     * folder holding nothing but folders. The SIMPLER variant is the one kept, which is why this can only
+     * ever hide the two newer commands and never `Flatten folder...` — the one carrying the original command
+     * id and any hotkey bound to it.
+     */
+    return isFlattenModeDistinct({ ...collectFlattenItemsParams, items: itemsToMove });
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

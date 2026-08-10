@@ -50,3 +50,19 @@ flatten above, then right-click `Flatten example` in the file explorer and pick 
 
 `Flatten folder...` kept the command id it has always had, so a hotkey bound to it keeps working; the
 two others start unbound.
+
+## Why another folder shows fewer commands
+
+All three appear on `Flatten example` because they all do something different there. Elsewhere you
+will see fewer: a command hides itself when it would move exactly what a simpler one of the three
+moves.
+
+Try it on the `Nested` folder instead. It holds `Deeper` and nothing is nested below that, so
+`Flatten folder recursively (all folders at any depth)...` would promote the same single folder
+`Flatten folder (child folders only)...` promotes - and it is not offered. `Nested` also has a note of
+its own ([[Deep note]]), which is what keeps the child-folders-only command there; on a folder holding
+nothing but folders, that one steps aside too and only `Flatten folder...` is left.
+
+What counts is what would really move, not how the folders look: a nested folder you excluded in the
+settings, or one holding the attachments of a note that stays behind, is never promoted, so it does
+not bring the recursive command back by itself.

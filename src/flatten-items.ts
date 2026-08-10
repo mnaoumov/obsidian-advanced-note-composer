@@ -60,6 +60,18 @@ export interface CollectFlattenItemsParams {
 export type CollectFlattenItemsSyncOrNullParams = CollectFlattenItemsParams;
 
 /**
+ * Parameters for {@link isFlattenModeDistinct}: the same inputs the collector was given, plus what it
+ * collected — so the question is answered against the very items the flatten would move.
+ */
+export interface IsFlattenModeDistinctParams extends CollectFlattenItemsParams {
+  /**
+   * What the mode collected, as returned by {@link collectFlattenItems} /
+   * {@link collectFlattenItemsSyncOrNull}.
+   */
+  readonly items: readonly TAbstractFile[];
+}
+
+/**
  * Obsidian's own `attachmentFolderPath` setting, reduced to the two forms that can be recognized from a
  * FOLDER alone. Both are `null` for the two forms that cannot: the vault root (never a flatten candidate)
  * and the plain `.`/`./` mode, where every folder holding a note is its own attachment folder — recognizing
@@ -99,6 +111,35 @@ interface FlattenContext {
    */
   isPathIgnored(path: string): boolean;
 }
+
+/**
+ * Whether each mode promotes something the next-simpler mode would NOT — the question behind issue #210.
+ *
+ * Every mode is compared against exactly ONE simpler mode, the one it can end up duplicating:
+ * {@link FlattenMode.AllFoldersRecursively} against {@link FlattenMode.ChildFoldersOnly},
+ * {@link FlattenMode.ChildFoldersOnly} against {@link FlattenMode.AllChildren}. The collections nest in that
+ * order, so a difference in COUNT is a difference in the set itself.
+ *
+ * A `Record` keyed by the enum, matching `FLATTEN_COMMAND_DEFINITIONS` in
+ * `command-handlers/flatten-folder-command-handler.ts`, so a new member is a compile error rather than a
+ * variant silently treated as always-distinct.
+ */
+const FLATTEN_MODE_DISTINCTNESS_CHECKS: Record<FlattenMode, (params: IsFlattenModeDistinctParams) => boolean> = {
+  // Nothing is simpler than promoting every direct child, so this one can never be the duplicate.
+  [FlattenMode.AllChildren]: () => true,
+  /*
+   * `ChildFoldersOnly` would have moved every direct child folder; anything deeper is exactly what it would
+   * have left behind. Reading the collected items answers this without collecting a second time — and it is
+   * sound because the recursive collection is the child-only one plus those deeper folders.
+   */
+  [FlattenMode.AllFoldersRecursively]: (params) => params.items.some((item) => item.parent !== params.folder),
+  /*
+   * `ChildFoldersOnly` is a subset of `AllChildren` (both drop excluded paths; the folder-only mode
+   * additionally drops files, attachment folders and protected folders), so equal counts mean the two move
+   * the very same items and this entry only repeats `Flatten folder...`.
+   */
+  [FlattenMode.ChildFoldersOnly]: (params) => params.items.length !== collectAllChildrenItems(params.folder, buildFlattenContext(params)).length
+};
 
 /**
  * The parsed configuration that recognizes nothing — the vault root and the plain `.`/`./` mode both land
@@ -173,17 +214,7 @@ export function collectFlattenItemsSyncOrNull(params: CollectFlattenItemsSyncOrN
   const context = buildFlattenContext(params);
 
   if (mode === FlattenMode.AllChildren) {
-    /*
-     * `filter` also snapshots, which this mode needs either way: renaming mutates `folder.children`
-     * mid-iteration.
-     *
-     * Only the EXCLUSION applies here. The attachment rules — both `isProtectedFolder` and the configured
-     * attachment folder — deliberately do not: this mode empties the folder, so no note stays behind for an
-     * attachment folder to be kept beside, and the folder travels with its notes like any other child. An
-     * excluded path is different in kind: the user said "do not touch this", which holds no matter what
-     * moves around it.
-     */
-    return folder.children.filter((child) => !context.isPathIgnored(child.path));
+    return collectAllChildrenItems(folder, context);
   }
 
   /*
@@ -204,6 +235,18 @@ export function collectFlattenItemsSyncOrNull(params: CollectFlattenItemsSyncOrN
   return buildItems(folder, noteAttachmentFolders, mode, context);
 }
 
+/**
+ * Whether the mode promotes something the next-simpler mode would NOT — i.e. whether offering it as its own
+ * command still says anything (issue #210). See {@link FLATTEN_MODE_DISTINCTNESS_CHECKS} for the pairing
+ * and why comparing counts compares the sets.
+ *
+ * @param params - The parameters.
+ * @returns Whether the mode moves something a simpler one would not.
+ */
+export function isFlattenModeDistinct(params: IsFlattenModeDistinctParams): boolean {
+  return FLATTEN_MODE_DISTINCTNESS_CHECKS[params.mode](params);
+}
+
 function buildFlattenContext(params: CollectFlattenItemsParams): FlattenContext {
   return {
     attachmentExtensions: params.attachmentExtensions,
@@ -221,6 +264,30 @@ function buildItems(
   const items: TAbstractFile[] = [];
   collectFolders(folder, noteAttachmentFolders, mode === FlattenMode.AllFoldersRecursively, context, items);
   return items;
+}
+
+/**
+ * What {@link FlattenMode.AllChildren} moves: every direct child the user has not excluded.
+ *
+ * `filter` also snapshots, which that mode needs either way: renaming mutates `folder.children`
+ * mid-iteration.
+ *
+ * Only the EXCLUSION applies here. The attachment rules — both {@link isProtectedFolder} and the configured
+ * attachment folder — deliberately do not: this mode empties the folder, so no note stays behind for an
+ * attachment folder to be kept beside, and the folder travels with its notes like any other child. An
+ * excluded path is different in kind: the user said "do not touch this", which holds no matter what moves
+ * around it.
+ *
+ * It is a function of its own so {@link FLATTEN_MODE_DISTINCTNESS_CHECKS} can ask the same question without going
+ * through {@link collectFlattenItemsSyncOrNull} — this mode resolves no attachment folder, so it has an
+ * answer where that one may only have `null`.
+ *
+ * @param folder - The folder being flattened.
+ * @param context - The exclusion predicate and the configured attachment folder.
+ * @returns The direct children the flatten will move.
+ */
+function collectAllChildrenItems(folder: TFolder, context: FlattenContext): TAbstractFile[] {
+  return folder.children.filter((child) => !context.isPathIgnored(child.path));
 }
 
 function collectFolders(
