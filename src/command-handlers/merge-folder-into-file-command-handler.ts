@@ -46,6 +46,14 @@ import {
 import { resolveFolderTemplateTokens } from '../template-tokens.ts';
 
 /**
+ * How many mergeable notes a folder needs before the command is offered at all (issue #209). Merging ONE
+ * note into a brand-new note produces a copy of that note under a different name, which is not what the
+ * command is for — and a folder with none has nothing to merge either. Mirrors
+ * `MergeFileCommandHandler`'s `MIN_MERGEABLE_FILE_COUNT`, which refuses a multi-select of fewer than two.
+ */
+const MIN_MERGEABLE_NOTE_COUNT = 2;
+
+/**
  * The `obsidian-dev-utils` behavior each setting value cleans up with. `DeleteSubFoldersOnly` maps to plain
  * `Delete` — never `DeleteWithEmptyParents` — because the merged folder itself is excluded from the paths
  * offered to the cleanup, so no ancestor of it can end up empty and the parent half would be meaningless.
@@ -112,7 +120,20 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
+    // Cheapest answers first: both are a property of the folder itself, and they spare the subtree walk
+    // Below on every folder-menu open.
+    if (folder.isRoot() || isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
+      return false;
+    }
+    /*
+     * Issue #209: a folder holding a single mergeable note has nothing to merge INTO anything — the run
+     * would just reproduce that note under the folder's name — and a folder holding none has nothing at
+     * all, so the command is not offered in either case. The count goes through the very predicate
+     * `executeFolder` collects with, so the menu and the executor cannot disagree about what counts as a
+     * note (same discipline as `FlattenFolderCommandHandler`, issue #185), and it stops at the threshold
+     * rather than walking a large subtree to learn a fact two notes already settle.
+     */
+    return countMergeableNotes(folder, (file) => this.isMergeableNote(file), MIN_MERGEABLE_NOTE_COUNT) >= MIN_MERGEABLE_NOTE_COUNT;
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
@@ -128,12 +149,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     }
 
     const { settings } = this.pluginSettingsComponent;
-    // Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are never merged: their raw
-    // Payload would land in the merged note. They are relocated with the other attachments instead.
-    const mergeItems = collectMergeItemsDepthFirst(
-      folder,
-      (file) => isMarkdownFile(file) && !isTreatedAsAttachment({ attachmentExtensions: settings.attachmentExtensions, pathOrFile: file })
-    );
+    const mergeItems = collectMergeItemsDepthFirst(folder, (file) => this.isMergeableNote(file));
     const sourceMdFiles = mergeItems.filter(isFile);
 
     if (sourceMdFiles.length === 0) {
@@ -216,6 +232,23 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;
+  }
+
+  /**
+   * Whether a file is one of the notes this merge would concatenate, as opposed to an attachment that
+   * merely travels with them. Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are
+   * never merged: their raw payload would land in the merged note. They are relocated with the other
+   * attachments instead.
+   *
+   * The ONE definition, shared by `canExecuteFolder`'s count and `executeFolder`'s walk, so whether the
+   * command is offered and what it would actually merge cannot drift apart.
+   *
+   * @param file - The file to classify.
+   * @returns Whether the file is a note to merge.
+   */
+  private isMergeableNote(file: TFile): boolean {
+    return isMarkdownFile(file)
+      && !isTreatedAsAttachment({ attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions, pathOrFile: file });
   }
 
   /**
@@ -426,6 +459,39 @@ function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TF
     .filter((subFolder) => shouldHeadSubFolder(subFolder, isMergeableNote))
     .sort((a, b) => compareNatural(a.name, b.name));
   return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, isMergeableNote)])];
+}
+
+/**
+ * Counts the mergeable notes under a folder, at any depth, stopping as soon as `limit` of them have been
+ * seen (issue #209). The cap is what makes this affordable in `canExecuteFolder`, which Obsidian runs
+ * synchronously on every folder-menu open and every `checkCallback` pass: the question is only ever
+ * "are there at least two", so a 5000-note folder must not be walked to answer it.
+ *
+ * Hand-rolled rather than `Vault.recurseChildren`, which visits the whole subtree with no way to break.
+ * The folder's own notes are counted first — a sub-folder is only descended into once they have not
+ * settled it.
+ *
+ * @param folder - The folder to walk.
+ * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @param limit - The count to stop at.
+ * @returns The number of mergeable notes found, which stops growing once it reaches `limit`.
+ */
+function countMergeableNotes(folder: TFolder, isMergeableNote: (file: TFile) => boolean, limit: number): number {
+  let count = folder.children.filter(isFile).filter((file) => isMergeableNote(file)).length;
+  if (count >= limit) {
+    return count;
+  }
+
+  // Resolved only once the folder's own notes have failed to settle it, so a folder that already holds
+  // Two of them never pays for the array.
+  const subFolders = folder.children.filter(isFolder);
+  for (const subFolder of subFolders) {
+    count += countMergeableNotes(subFolder, isMergeableNote, limit - count);
+    if (count >= limit) {
+      return count;
+    }
+  }
+  return count;
 }
 
 function getDepth(folderPath: string): number {
