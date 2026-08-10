@@ -277,6 +277,15 @@ export class SplitComposer extends ComposerBase {
         return;
       }
 
+      // A batch split records nothing: `prepareForSplitFile` resolves each produced note's location from
+      // The settings with no picker involved, so there is no target the user CHOSE to remember, and
+      // Recording every note of a recursive run would bury the list under one operation's output (issue
+      // #206). The recursive split records the root folder the user picked, once, itself. A smart cut &
+      // Paste move is a single operation with a real destination, so it does record.
+      if (!this.isMultipleSplit) {
+        this.recordTargetFileAsRecent();
+      }
+
       // A batch split reports once for the whole run (the command handler does it), and a smart cut &
       // Paste move is reported by `applyMovedContentFeedback` through its own
       // `smartCutAndPasteCompletionFeedback` setting — reporting either here would say it twice.

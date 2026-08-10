@@ -137,6 +137,8 @@ export class MergeComposer extends ComposerBase {
         return;
       }
 
+      this.recordTargetFileAsRecent();
+
       if (this.shouldShowNotice) {
         // The source note is gone by now, so it is named as plain text — an unresolved link to it would
         // Create it back when clicked.

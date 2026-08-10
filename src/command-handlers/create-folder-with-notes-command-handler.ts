@@ -45,6 +45,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
@@ -322,6 +323,10 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     if (firstFile && this.pluginSettingsComponent.settings.shouldOpenNoteAfterCreatingFolder) {
       await this.app.workspace.getLeaf().openFile(firstFile, { active: true });
     }
+
+    // The folder was created, so the folder it was created IN counts as clicked-on for the next picker
+    // (issue #206) — that is the destination the user chose, the new folder being the operation's result.
+    recordRecentTarget(plan.parentFolder);
 
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({

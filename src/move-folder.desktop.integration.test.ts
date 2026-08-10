@@ -194,7 +194,6 @@ describe('move folder to... (issue #73)', () => {
         // The expectations are stated outright, NOT derived from `getRecentFiles()` the way the
         // Production code does — deriving them made this test pass under ANY ordering (issue #158).
         return {
-          firstSuggestion: suggestions[0] ?? '',
           olderIndex: suggestions.indexOf('rf-older'),
           recentIndex: suggestions.indexOf('rf-recent')
         };
@@ -220,9 +219,13 @@ describe('move folder to... (issue #73)', () => {
 
     // The picker front-loads the recently-opened folders, most-recent-first. `rf-src` holds the active
     // Note but is the folder being moved, so it is not an offered target and the folder of the note we
-    // Were on just before it — `rf-recent` — heads the list, ahead of the earlier `rf-older`. (Other
-    // Folders visited by the previous test in this file can sit between them, hence the index compare.)
-    expect(result.firstSuggestion).toBe('rf-recent');
+    // Were on just before it — `rf-recent` — comes ahead of the earlier `rf-older`. (Other folders
+    // Visited by the previous test in this file can sit between them, hence the index compare.)
+    // The claim is relative rather than "`rf-recent` is suggestion #0": since issue #206 the folders a
+    // Completed operation targeted rank above every recently-opened one, and the move this file's first
+    // Test performs records one — which says nothing about the recent-order behavior under test here.
+    // Issue #206's own ordering is pinned by `recent-target-order.desktop.integration.test.ts`.
+    expect(result.recentIndex).toBeGreaterThan(-1);
     expect(result.recentIndex).toBeLessThan(result.olderIndex);
     expect(result.olderIndex).toBeGreaterThan(-1);
   });

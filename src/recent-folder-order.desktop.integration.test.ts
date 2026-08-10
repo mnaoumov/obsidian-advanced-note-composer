@@ -69,15 +69,15 @@ describe('recent folder ordering (issue #158)', () => {
 
           // The commands are triggered on `rc-b`, so `rc-b` is the source and is never offered.
           const sourceFolder = getFolder('rc-b');
-          const mergeFirstSuggestion = await firstPickerSuggestion(sourceFolder, MERGE_ITEM_TITLE);
-          const moveFirstSuggestion = await firstPickerSuggestion(sourceFolder, MOVE_ITEM_TITLE);
+          const mergeSuggestions = await pickerSuggestions(sourceFolder, MERGE_ITEM_TITLE);
+          const moveSuggestions = await pickerSuggestions(sourceFolder, MOVE_ITEM_TITLE);
 
-          return { mergeFirstSuggestion, moveFirstSuggestion, recentPaths };
+          return { mergeSuggestions, moveSuggestions, recentPaths };
         } finally {
           await setToggle(SUBMENU_SETTING_NAME, true);
         }
 
-        async function firstPickerSuggestion(folder: TFolder, itemTitle: string): Promise<string> {
+        async function pickerSuggestions(folder: TFolder, itemTitle: string): Promise<string[]> {
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const menuItem = (menu as MenuLike).items.find((item) => item.section === pluginName && (item.dom?.textContent ?? '').includes(itemTitle));
@@ -92,7 +92,7 @@ describe('recent folder ordering (issue #158)', () => {
             predicate: () => document.querySelector('.suggestion-item') !== null
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const firstSuggestion = document.querySelector('.suggestion-item')?.textContent ?? '';
+          const suggestions = [...document.querySelectorAll('.suggestion-item')].map((el) => el.textContent);
 
           // Close the picker without running anything: this test only checks ordering.
           const input = document.querySelector('.prompt-input');
@@ -103,7 +103,7 @@ describe('recent folder ordering (issue #158)', () => {
             message: `the picker for "${itemTitle}" did not close`,
             predicate: () => document.querySelector('.prompt') === null
           });
-          return firstSuggestion;
+          return suggestions;
         }
 
         function getFile(path: string): TFile {
@@ -172,9 +172,17 @@ describe('recent folder ordering (issue #158)', () => {
     // Note we are on. If this ever changes, the fix below needs revisiting.
     expect(result.recentPaths[0]).toBe('rc-b/rc-b.md');
 
-    // Both folder pickers put the folder of the note we are on (`rc-c`) first — the reported bug was
-    // That the FIRST suggestion was `rc-a`, the least recently visited of the three.
-    expect(result.mergeFirstSuggestion).toBe('rc-c');
-    expect(result.moveFirstSuggestion).toBe('rc-c');
+    // Both folder pickers put the folder of the note we are on (`rc-c`) ahead of `rc-a` — the reported bug
+    // Was that the FIRST suggestion was `rc-a`, the least recently visited of the three. The claim is
+    // Relative rather than "`rc-c` is suggestion #0", because since issue #206 the folders a completed
+    // Operation targeted rank above even the active file's folder, and an earlier suite in the aggregate
+    // Run may have recorded some — which says nothing about the ordering under test here.
+    for (const suggestions of [result.mergeSuggestions, result.moveSuggestions]) {
+      expect(suggestions.indexOf('rc-c')).toBeGreaterThan(-1);
+      expect(suggestions.indexOf('rc-a')).toBeGreaterThan(-1);
+      expect(suggestions.indexOf('rc-c')).toBeLessThan(suggestions.indexOf('rc-a'));
+      // `rc-b` is the source the commands were triggered on, so it is never offered.
+      expect(suggestions).not.toContain('rc-b');
+    }
   });
 });

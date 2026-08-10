@@ -29,7 +29,7 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { getRecentFilePaths } from '../recent-suggestions.ts';
+import { getRecentPaths } from '../recent-suggestions.ts';
 
 export interface Item extends SearchResultContainer {
   alias?: string;
@@ -351,9 +351,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   /* v8 ignore stop */
 
   private getRecentFiles(): Item[] {
-    // The per-type flags are not passed to `getRecentFilePaths`: `shouldIncludeFile` below applies the
-    // Same ones, so the shared superset keeps every picker reading one recent list (issue #158).
-    const recentFilePaths = getRecentFilePaths({
+    // The per-type flags are not passed to `getRecentPaths`: `shouldIncludeFile` below applies the
+    // Same ones, so the shared superset keeps every picker reading one recent list (issue #158). The list
+    // Now leads with the plugin's own recorded operation targets (issue #206); a recorded FOLDER path is
+    // Dropped by the `getFileByPath` lookup below, exactly like a path that no longer resolves.
+    const recentPaths = getRecentPaths({
       app: this.app,
       // The active file is this operation's own source, which `shouldIncludeFile` excludes anyway.
       shouldIncludeActiveFile: false
@@ -361,7 +363,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     const filePaths = new Set<string>();
     const items: Item[] = [];
-    for (const filePath of recentFilePaths) {
+    for (const filePath of recentPaths) {
       if (filePaths.has(filePath)) {
         continue;
       }

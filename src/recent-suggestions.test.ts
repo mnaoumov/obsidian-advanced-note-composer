@@ -11,6 +11,7 @@ import type {
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
+  beforeEach,
   describe,
   expect,
   it,
@@ -18,10 +19,14 @@ import {
 } from 'vitest';
 
 import {
-  getRecentFilePaths,
+  getRecentPaths,
   reorderSuggestionsByRecentFiles,
   reorderSuggestionsByRecentFolders
 } from './recent-suggestions.ts';
+import {
+  clearRecentTargets,
+  recordRecentTarget
+} from './recent-targets.ts';
 
 const FOLDER_A = castTo<TFolder>({ path: 'A' });
 const FOLDER_B = castTo<TFolder>({ path: 'B' });
@@ -42,12 +47,20 @@ const FILE_MAP: Record<string, TFile> = {
   [FILE_ORPHAN.path]: FILE_ORPHAN
 };
 
+const FOLDER_MAP: Record<string, TFolder> = {
+  [FOLDER_A.path]: FOLDER_A,
+  [FOLDER_B.path]: FOLDER_B,
+  [FOLDER_C.path]: FOLDER_C,
+  [FOLDER_D.path]: FOLDER_D
+};
+
 const EXPECTED_MAX_COUNT = 50;
 
 function createApp(recentPaths: string[], activeFile: null | TFile = null): App {
   return strictProxy<App>({
     vault: strictProxy<Vault>({
-      getFileByPath: vi.fn((path: string) => FILE_MAP[path] ?? null)
+      getFileByPath: vi.fn((path: string) => FILE_MAP[path] ?? null),
+      getFolderByPath: vi.fn((path: string) => FOLDER_MAP[path] ?? null)
     }),
     workspace: strictProxy<Workspace>({
       getActiveFile: vi.fn().mockReturnValue(activeFile),
@@ -55,6 +68,12 @@ function createApp(recentPaths: string[], activeFile: null | TFile = null): App 
     })
   });
 }
+
+// The recorded targets are module state shared by every test in this file, so a leak from one would
+// Silently reorder the next one's expectations.
+beforeEach(() => {
+  clearRecentTargets();
+});
 
 function items<Item extends TAbstractFile>(suggestions: FuzzyMatch<Item>[]): Item[] {
   return suggestions.map((fuzzyMatch) => fuzzyMatch.item);
@@ -64,16 +83,16 @@ function suggestion<Item extends TAbstractFile>(item: Item): FuzzyMatch<Item> {
   return { item, match: { matches: [], score: -1 } };
 }
 
-describe('getRecentFilePaths', () => {
+describe('getRecentPaths', () => {
   it('should ask Obsidian for more than its own default of 10 recent files', () => {
     const app = createApp([FILE_A1.path]);
-    getRecentFilePaths({ app, shouldIncludeActiveFile: false });
+    getRecentPaths({ app, shouldIncludeActiveFile: false });
     expect(vi.mocked(app.workspace.getRecentFiles)).toHaveBeenCalledWith(expect.objectContaining({ maxCount: EXPECTED_MAX_COUNT }));
   });
 
   it('should return the recent paths untouched when the active file is not wanted', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
-    expect(getRecentFilePaths({ app, shouldIncludeActiveFile: false })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: false })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
   });
 
   // Obsidian's `RecentFileTracker` collects the file you just LEFT — `Workspace`'s active-leaf change
@@ -82,12 +101,33 @@ describe('getRecentFilePaths', () => {
   // (issue #158).
   it('should prepend the active file, which Obsidian never puts at the head of its own recent list', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
-    expect(getRecentFilePaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_C1.path, FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_C1.path, FILE_B1.path, FILE_A1.path]);
   });
 
   it('should return the recent paths untouched when there is no active file', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path]);
-    expect(getRecentFilePaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
+  });
+
+  // Issue #206: a completed operation's target outranks even the active file. The two only disagree when
+  // The user runs a second operation without first navigating into the folder the previous one landed in,
+  // Which is precisely the case the request is about.
+  it('should put the recorded targets ahead of the active file and of Obsidian\'s own list', () => {
+    const app = createApp([FILE_B1.path], FILE_C1);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_C1.path, FILE_B1.path]);
+  });
+
+  it('should put the recorded targets ahead of Obsidian\'s own list when the active file is not wanted', () => {
+    const app = createApp([FILE_B1.path], FILE_C1);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: false })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
+  });
+
+  it('should put the recorded targets first when there is no active file', () => {
+    const app = createApp([FILE_B1.path]);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
   });
 });
 
@@ -178,6 +218,50 @@ describe('reorderSuggestionsByRecentFolders', () => {
     });
     expect(items(result)).toStrictEqual([FOLDER_A, FOLDER_D]);
   });
+
+  // Issue #206: the folder a completed operation targeted leads the list — ahead of the folder of the note
+  // The user is on, which is issue #158's own first pick. This ordering is the owner's call, so it is
+  // Pinned here rather than left to fall out of the implementation.
+  it('should offer a recorded target folder ahead of the folder of the active file', () => {
+    const app = createApp([FILE_A1.path], FILE_C1);
+    const suggestions = [suggestion(FOLDER_A), suggestion(FOLDER_C), suggestion(FOLDER_D)];
+    recordRecentTarget(FOLDER_D);
+    const result = reorderSuggestionsByRecentFolders({
+      app,
+      isAllowedFolder: () => true,
+      query: '',
+      suggestions
+    });
+    expect(items(result)).toStrictEqual([FOLDER_D, FOLDER_C, FOLDER_A]);
+  });
+
+  // The other half of issue #206: merging a note INTO another note makes that note's folder a destination
+  // Too, which falls out of the same resolution that turns a recently-opened file into its folder.
+  it('should offer the parent folder of a recorded target file', () => {
+    const app = createApp([], FILE_C1);
+    const suggestions = [suggestion(FOLDER_B), suggestion(FOLDER_C)];
+    recordRecentTarget(FILE_B1);
+    const result = reorderSuggestionsByRecentFolders({
+      app,
+      isAllowedFolder: () => true,
+      query: '',
+      suggestions
+    });
+    expect(items(result)).toStrictEqual([FOLDER_B, FOLDER_C]);
+  });
+
+  it('should skip a recorded target the caller disallows', () => {
+    const app = createApp([]);
+    const suggestions = [suggestion(FOLDER_A), suggestion(FOLDER_D)];
+    recordRecentTarget(FOLDER_D);
+    const result = reorderSuggestionsByRecentFolders({
+      app,
+      isAllowedFolder: (folder) => folder !== FOLDER_D,
+      query: '',
+      suggestions
+    });
+    expect(items(result)).toStrictEqual([FOLDER_A, FOLDER_D]);
+  });
 });
 
 describe('reorderSuggestionsByRecentFiles', () => {
@@ -205,6 +289,23 @@ describe('reorderSuggestionsByRecentFiles', () => {
       suggestions
     });
     expect(items(result)).toStrictEqual([FILE_B1, FILE_A1, FILE_A2, FILE_C1]);
+  });
+
+  // Issue #206: a recorded target FILE leads a file picker, while a recorded target FOLDER resolves to
+  // Nothing here and is skipped — which is what keeps the folder half of the one recorded list out of the
+  // File pickers.
+  it('should offer a recorded target file first and skip a recorded target folder', () => {
+    const app = createApp([FILE_A1.path]);
+    const suggestions = [suggestion(FILE_A1), suggestion(FILE_B1)];
+    recordRecentTarget(FILE_B1);
+    recordRecentTarget(FOLDER_C);
+    const result = reorderSuggestionsByRecentFiles({
+      app,
+      isAllowedFile: () => true,
+      query: '',
+      suggestions
+    });
+    expect(items(result)).toStrictEqual([FILE_B1, FILE_A1]);
   });
 
   // A file picker's source IS the active file, and every file picker already excludes it, so the active

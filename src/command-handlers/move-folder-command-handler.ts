@@ -26,6 +26,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 
 interface BuildMoveConfirmContentParams {
   readonly app: App;
@@ -132,6 +133,9 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
     } finally {
       progressNotice?.[Symbol.dispose]();
     }
+
+    // The move landed, so the destination counts as clicked-on for the next picker (issue #206).
+    recordRecentTarget(targetFolder);
 
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({

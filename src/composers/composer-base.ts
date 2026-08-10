@@ -51,6 +51,7 @@ import {
   Action,
   FrontmatterMergeStrategy
 } from '../plugin-settings.ts';
+import { recordRecentTarget } from '../recent-targets.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 
 export function getInsertModeFromEvent($event: KeyboardEvent | MouseEvent): InsertMode {
@@ -499,6 +500,22 @@ export abstract class ComposerBase {
   /* v8 ignore stop */
 
   protected abstract prepareBacklinkSubpaths(): Set<string>;
+
+  /**
+   * Records the target note as a recently used target once the operation has actually landed, so the next
+   * picker offers it — and its folder — first (issue #206).
+   *
+   * A composer running inside an INJECTED transaction records nothing: it is one step of a batch (a folder
+   * merge, a merge into a single file, a recursive split) whose outer transaction can still roll back, and
+   * recording a target the batch then undoes is exactly the "cancelled operations must not count" case. The
+   * batch's own runner records once for the whole run instead.
+   */
+  protected recordTargetFileAsRecent(): void {
+    if (this.injectedVaultTransaction) {
+      return;
+    }
+    recordRecentTarget(this.targetFile);
+  }
 
   protected updateEditorSelections(_params: ComposerBaseUpdateEditorSelectionsParams): void {
     noop();

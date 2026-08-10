@@ -38,6 +38,7 @@ import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { FlattenMode } from './plugin-settings.ts';
+import { clearRecentTargets } from './recent-targets.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
@@ -74,6 +75,11 @@ export class Plugin extends PluginBase {
         })
       })
     );
+
+    // The targets a completed operation recorded rank ahead of everything in the pickers (issue #206) and
+    // Are deliberately session-only, so they are dropped on unload — a reload starts from Obsidian's own
+    // Recency, never from the previous session's operations.
+    this.register(clearRecentTargets);
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
