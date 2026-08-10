@@ -586,7 +586,12 @@ describe('FlattenFolderCommandHandler', () => {
     });
 
     it('should allow a folder with a child folder in a folder-only mode', () => {
-      initApp({ 'parent/a/sub/deep.md': 'deep' });
+      // The folder keeps a file of its own and the child folder nests, so neither mode merely repeats a
+      // Simpler one (issue #210) and each is judged on the child folder alone, as issues #170/#171 intend.
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deeper/deepest.md': 'deepest'
+      });
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -797,6 +802,75 @@ describe('FlattenFolderCommandHandler', () => {
       expect(await app.vault.adapter.read('parent/sub/deep.md')).toBe('deep body');
       expect(await app.vault.adapter.exists('parent/a/assets/pic.png')).toBe(true);
       expect(await app.vault.adapter.exists('parent/assets')).toBe(false);
+    });
+  });
+
+  /*
+   * Issue #210: a variant is not offered where it would move exactly what a simpler variant moves — two
+   * entries promising the same result are noise, and the simpler one is the keeper.
+   */
+  describe('duplicate entries (issue #210)', () => {
+    it('should refuse the recursive mode when no child folder holds a folder of its own', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deep.md': 'deep'
+      });
+      // The reported case: there IS something to promote, but `ChildFoldersOnly` already promotes exactly
+      // It, so the recursive entry says nothing new.
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should allow the recursive mode as soon as a child folder nests', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deeper/deepest.md': 'deepest'
+      });
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should refuse the recursive mode when the only nested folder is excluded', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deep.md': 'deep',
+        'parent/a/sub/hidden/buried.md': 'buried'
+      });
+      // Judged by what would MOVE, not by the shape of the tree: the nested folder is excluded, so the
+      // Recursive mode would promote the same single folder `ChildFoldersOnly` promotes.
+      expect(
+        createHandler({
+          flattenMode: FlattenMode.AllFoldersRecursively,
+          isPathIgnored: (path: string) => path.startsWith('parent/a/sub/hidden')
+        }).handler.canExecuteFolder(getFolder('parent/a'))
+      ).toBe(false);
+    });
+
+    it('should refuse the child-folders-only mode when the folder holds nothing but folders', () => {
+      initApp({ 'parent/a/sub/deep.md': 'deep' });
+      // Nothing stays behind, so this repeats `Flatten folder...` — which keeps its entry, being the one
+      // The original command id and any hotkey are bound to.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler().handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should keep the recursive mode when the child-folders-only mode is itself a duplicate', () => {
+      initApp({ 'parent/a/sub/deeper/deepest.md': 'deepest' });
+      // A folder of folders: the middle variant drops out while the recursive one still promotes a folder
+      // Neither of the other two would.
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should keep offering every mode when an attachment-location plugin owns the resolution', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deep.md': 'deep'
+      });
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+      // The collector cannot answer synchronously, so nothing can be called a duplicate: the permissive
+      // Behavior of issue #185 is unchanged.
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
   });
 

@@ -231,7 +231,10 @@ describe('flatten folder menu with an excluded or configured attachment folder (
     expect(result.excludedTitles).toStrictEqual(['Flatten folder...']);
     // Obsidian's own `attachmentFolderPath` is enough on its own, with nothing excluded.
     expect(result.configuredAttachmentFolderTitles).toStrictEqual(['Flatten folder...']);
-    // One ordinary child folder is enough to bring both folder-only entries back.
+    // One ordinary child folder is enough to bring both folder-only entries back. The recursive entry
+    // Survives issue #210's duplicate rule here even though `t366-sub` holds no folder of its own: an
+    // Attachment-location plugin owns the resolution, so the collector cannot answer synchronously and
+    // Nothing can be judged a duplicate — the permissive behavior of issue #185, unchanged.
     expect(result.controlTitles).toStrictEqual([
       'Flatten folder...',
       'Flatten folder (child folders only)...',

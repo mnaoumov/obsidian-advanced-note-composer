@@ -17,7 +17,8 @@ import {
 
 import {
   collectFlattenItems,
-  collectFlattenItemsSyncOrNull
+  collectFlattenItemsSyncOrNull,
+  isFlattenModeDistinct
 } from './flatten-items.ts';
 import { FlattenMode } from './plugin-settings.ts';
 
@@ -66,6 +67,33 @@ function initApp(files: Record<string, string>, attachmentFolderPath = './'): vo
   app = App.createConfigured__({ files }).asOriginalType__();
   app.vault.setConfig('attachmentFolderPath', attachmentFolderPath);
   excludedPaths = [];
+}
+
+/**
+ * Asks {@link isFlattenModeDistinct} about a folder, collecting the mode's items first exactly as
+ * `canExecuteFolder` does.
+ *
+ * @param folderPath - The folder being flattened.
+ * @param mode - The mode to judge.
+ * @returns Whether the mode moves something a simpler one would not.
+ */
+function isDistinct(folderPath: string, mode: FlattenMode): boolean {
+  const folder = getFolder(folderPath);
+  const items = ensureNonNullable(collectFlattenItemsSyncOrNull({
+    app,
+    attachmentExtensions: ATTACHMENT_EXTENSIONS,
+    folder,
+    isPathIgnored,
+    mode
+  }));
+  return isFlattenModeDistinct({
+    app,
+    attachmentExtensions: ATTACHMENT_EXTENSIONS,
+    folder,
+    isPathIgnored,
+    items,
+    mode
+  });
 }
 
 function isPathIgnored(path: string): boolean {
@@ -497,5 +525,98 @@ describe('configured attachment folder', () => {
     for (const mode of [FlattenMode.AllChildren, FlattenMode.ChildFoldersOnly, FlattenMode.AllFoldersRecursively]) {
       expect(collectPathsSyncOrNull('parent/a', mode)).toStrictEqual(await collectPaths('parent/a', mode));
     }
+  });
+});
+
+/**
+ * Issue #210: a variant is only worth offering where it moves something a simpler variant would not. The
+ * pairing is per-mode — recursive against child-folders-only, child-folders-only against all-children — and
+ * the answer comes from what would ACTUALLY move, not from the shape of the tree.
+ */
+describe('isFlattenModeDistinct', () => {
+  it('should always call AllChildren distinct, since nothing is simpler', () => {
+    initApp({ 'parent/a/sub/deep.md': 'deep' });
+
+    expect(isDistinct('parent/a', FlattenMode.AllChildren)).toBe(true);
+  });
+
+  it('should call ChildFoldersOnly a duplicate when the folder holds nothing but folders', () => {
+    initApp({ 'parent/a/sub/deep.md': 'deep' });
+
+    // Both modes move `parent/a/sub` and nothing else, so the second entry only repeats the first.
+    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
+  });
+
+  it('should call ChildFoldersOnly distinct when a file of the folder stays behind', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+
+    // `AllChildren` would take the note too — leaving it is exactly what this mode is for.
+    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+  });
+
+  it('should call ChildFoldersOnly distinct when a child folder is left behind as an attachment folder', () => {
+    initApp({
+      'parent/a/assets/pic.png': 'PIC',
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    }, './assets');
+
+    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+  });
+
+  it('should call AllFoldersRecursively a duplicate when no child folder holds a folder of its own', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+
+    // The reported case: there is a folder to promote, but nothing nested under it, so the recursive
+    // Variant can only repeat `ChildFoldersOnly`.
+    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should call AllFoldersRecursively distinct when a child folder holds a folder of its own', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deeper/deepest.md': 'deepest'
+    });
+
+    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+  });
+
+  it('should judge the recursive mode by what would move, not by the shape of the tree', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep',
+      'parent/a/sub/hidden/buried.md': 'buried'
+    });
+    excludePaths('parent/a/sub/hidden');
+
+    // The tree IS nested, but the only nested folder is excluded, so the recursive mode would move exactly
+    // What `ChildFoldersOnly` moves.
+    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should keep the recursive mode distinct even when ChildFoldersOnly is itself a duplicate', () => {
+    initApp({ 'parent/a/sub/deeper/deepest.md': 'deepest' });
+
+    // A folder of folders only: `ChildFoldersOnly` repeats `Flatten folder...` and drops out, while the
+    // Recursive variant still promotes the nested folder neither of them would.
+    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+  });
+
+  it('should ignore an excluded child on both sides of the comparison', () => {
+    initApp({
+      'parent/a/hidden/buried.md': 'buried',
+      'parent/a/sub/deep.md': 'deep'
+    });
+    excludePaths('parent/a/hidden');
+
+    // The excluded folder is dropped by both modes, so it cannot make them look different.
+    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
   });
 });

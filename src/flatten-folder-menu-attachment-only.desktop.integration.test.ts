@@ -63,6 +63,9 @@ describe('flatten folder menu with an attachment-only folder (issue #185)', () =
           await app.vault.createBinary('att-only-plain/att-only-assets/att-only-pic2.png', new ArrayBuffer(4));
           await app.vault.create('att-only-plain/att-only-note2.md', 'See ![[att-only-pic2.png]].');
           await app.vault.createFolder('att-only-plain/att-only-sub');
+          // Nested, so the recursive variant is not a duplicate of the child-folders-only one and the
+          // Control keeps expecting all three entries (issue #210).
+          await app.vault.createFolder('att-only-plain/att-only-sub/att-only-deeper');
           await app.vault.create('att-only-plain/att-only-sub/att-only-deep.md', 'deep body');
 
           return {

@@ -51,6 +51,9 @@ describe('flatten folder menu entries (issue #177)', () => {
         await trashIfExists('flat-menu-src');
         await app.vault.createFolder('flat-menu-src');
         await app.vault.createFolder('flat-menu-src/sub');
+        // The child folder nests, and the folder keeps a file of its own, so no variant is a duplicate of a
+        // Simpler one and all three are expected to appear (issue #210).
+        await app.vault.createFolder('flat-menu-src/sub/deeper');
         await app.vault.create('flat-menu-src/note.md', 'body');
 
         const folder = app.vault.getFolderByPath('flat-menu-src');

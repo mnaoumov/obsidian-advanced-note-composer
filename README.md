@@ -337,6 +337,15 @@ That is also why the two folder-only commands hide themselves when everything th
 
 `Flatten folder...` differs on purpose: it empties the folder, so no note stays behind for an attachment folder to be kept beside, and every direct child moves. Only your exclusions hold it back there.
 
+### Why you sometimes see fewer than three commands
+
+A command also hides itself when it would move **exactly what a simpler one of the three moves** — two entries promising the same result are just noise, and the simpler one is the one kept. Two shapes produce that:
+
+- **Nothing is nested.** If no sub-folder of the folder you right-clicked holds a sub-folder of its own, `Flatten folder recursively (all folders at any depth)...` can only move the same folders `Flatten folder (child folders only)...` moves, so it is not offered. Nest one folder and it comes back.
+- **The folder holds nothing but folders.** With no file staying behind, `Flatten folder (child folders only)...` moves exactly what `Flatten folder...` moves, so it steps aside — `Flatten folder...` is the one that keeps its entry, since it is the command your existing hotkey is bound to.
+
+The comparison is against what would *really* move, not against the shape of the folder tree: a nested folder that is excluded, or that holds a staying note's attachments, is never promoted, so it does not bring the recursive command back on its own. In a vault where an attachment-location plugin owns the resolution, none of this can be worked out while the menu is being built, and all three commands stay listed.
+
 ## Move folder to…
 
 The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.
