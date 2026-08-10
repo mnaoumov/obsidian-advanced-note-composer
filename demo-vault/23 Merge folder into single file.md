@@ -65,6 +65,22 @@ line, which Obsidian renders as plain text rather than a heading. The full depth
 This is the exact opposite of `Split note by headings recursively...` (see [[27 Split headings
 recursively]]): split a note into a folder tree and merge it back, and the heading levels agree.
 
+## See the merged note
+
+Turn on **Should open the merged note after merging folder contents into a single file** and the merge
+finishes by opening the note it produced, so you can read the result straight away.
+
+It opens once, at the very end - after the note has taken its final name and the emptied folders are
+gone. The merged notes are never opened on the way there, whatever **Should open note after merge**
+says: that would flicker the active tab through every one of them.
+
+```code-button
+---
+caption: Open the merged note, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenNoteAfterMergingFolderIntoFile: true });
+```
+
 ## Attachments
 
 **Should move attachments when merging a folder** (on by default) carries the merged notes' attachments

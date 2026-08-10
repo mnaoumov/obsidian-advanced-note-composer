@@ -20,6 +20,7 @@ import {
   relocateAttachments
 } from '../attachments.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
+import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
   showOperationCompletionNotice,
   showOperationProgressNotice
@@ -150,11 +151,7 @@ export class MergeComposer extends ComposerBase {
       }
 
       if (this.shouldOpenAfterMerge) {
-        const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
-        await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
-        await this.app.workspace.getLeaf().openFile(this.targetFile, {
-          active: true
-        });
+        await openFileAfterOperation({ app: this.app, file: this.targetFile });
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {

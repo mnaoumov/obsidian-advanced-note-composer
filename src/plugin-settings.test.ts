@@ -140,7 +140,11 @@ describe('PluginSettings', () => {
     expect(settings.shouldKeepHeadingsWhenSplittingContent).toBe(true);
     expect(settings.shouldLockAllNotesWhenMarkingSelection).toBe(false);
     expect(settings.shouldMergeHeadingsByDefault).toBe(false);
+    // Both default OFF, so an existing vault behaves exactly as it did before issues #212 / #215 and
+    // Neither needs a legacy-settings converter.
+    expect(settings.shouldOpenFirstNoteAfterMergingFolder).toBe(false);
     expect(settings.shouldOpenNoteAfterMerge).toBe(false);
+    expect(settings.shouldOpenNoteAfterMergingFolderIntoFile).toBe(false);
     expect(settings.shouldOpenTargetNoteAfterSplit).toBe(false);
     expect(settings.shouldReplaceInvalidTitleCharacters).toBe(true);
     expect(settings.shouldRunTemplaterOnDestinationFile).toBe(false);

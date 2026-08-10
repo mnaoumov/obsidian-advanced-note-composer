@@ -22,6 +22,7 @@ import type {
 import { extractFrontmatterSelection } from '../frontmatter-selection.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
+import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -305,11 +306,7 @@ export class SplitComposer extends ComposerBase {
       }
 
       if (!this.isMultipleSplit && (this.insertToken !== null || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit)) {
-        const DELAY_BEFORE_OPEN_IN_MILLISECONDS = 200;
-        await sleep(DELAY_BEFORE_OPEN_IN_MILLISECONDS);
-        await this.app.workspace.getLeaf().openFile(this.targetFile, {
-          active: true
-        });
+        await openFileAfterOperation({ app: this.app, file: this.targetFile });
 
         // For a smart cut & paste move (mark → move here / at cursor / to top / bottom), land the cursor
         // On the moved content in the freshly opened target note, instead of leaving it wherever the

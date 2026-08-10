@@ -1,7 +1,8 @@
 import type {
   App as AppOriginal,
   TAbstractFile,
-  TFolder
+  TFolder,
+  WorkspaceLeaf
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -116,6 +117,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldBlockCommandOnPath: () => false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
+        shouldOpenFirstNoteAfterMergingFolder: false,
         shouldOpenNoteAfterMerge: false,
         shouldRunTemplaterOnDestinationFile: false,
         shouldShowOperationNotices: true,
@@ -130,6 +132,22 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
     hide,
     showNotice: castTo<MockInstance<PluginNoticeComponent['showNotice']>>(showNotice)
   };
+}
+
+/**
+ * Asserts that exactly one note was opened, and which one.
+ *
+ * The opened file is compared by PATH rather than handed to `toHaveBeenCalledWith`: a failing matcher would
+ * pretty-format the mocked `TFile`, which probes properties the mock does not model and throws
+ * `Property "$$typeof" is not mocked in TFile` — hiding the real mismatch behind an unrelated error.
+ *
+ * @param openFile - The `openFile` spy from {@link stubOpenFile}.
+ * @param expectedPath - The path of the note that should have been opened.
+ */
+function expectOpened(openFile: MockInstance<WorkspaceLeaf['openFile']>, expectedPath: string): void {
+  expect(openFile).toHaveBeenCalledOnce();
+  expect(openFile.mock.lastCall?.[0].path).toBe(expectedPath);
+  expect(openFile.mock.lastCall?.[1]).toEqual({ active: true });
 }
 
 function getFolder(path: string): TFolder {
@@ -506,6 +524,129 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('dst/keep.md')).toBe('keep');
   });
 
+  // Issue #215. ONE open once the merge has landed — never the per-note open of issue #106, which stays
+  // Suppressed whatever `Should open note after merge` says.
+  describe('opening the first note of the destination folder (issue #215)', () => {
+    it('should not open anything by default', async () => {
+      initApp({ 'src/sub/a.md': 'a body' });
+      await app.vault.createFolder('dst');
+      const { handler } = createHandler();
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('dst/sub/a.md')).toBe(true);
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+
+    // Naturally, not textually: `5.` before `30.` (issue #208's comparator), and a note that was already in
+    // The destination competes on equal terms with the merged ones — what is asked for is the first note in
+    // The folder, not the first note of the merge.
+    it('should open the naturally-first note, counting notes that were already there', async () => {
+      initApp({
+        'dst/30. alpha.md': 'alpha body',
+        'dst/5. beta.md': 'beta body',
+        'src/sub/gamma.md': 'gamma body'
+      });
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const openFile = stubOpenFile();
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expectOpened(openFile, 'dst/5. beta.md');
+    });
+
+    // Folder-grouped, like the file explorer: a note sitting in the folder itself beats one buried in a
+    // Sub-folder, however the two paths would sort against each other.
+    it('should prefer the folder\'s own note over one in a sub-folder', async () => {
+      initApp({
+        'dst/sub/aaa.md': 'aaa body',
+        'dst/zzz.md': 'zzz body',
+        'src/sub/mmm.md': 'mmm body'
+      });
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const openFile = stubOpenFile();
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expectOpened(openFile, 'dst/zzz.md');
+    });
+
+    it('should descend into the first sub-folder when the destination itself holds no note', async () => {
+      initApp({
+        'dst/a-sub/first.md': 'first body',
+        'dst/b-sub/second.md': 'second body',
+        'src/sub/third.md': 'third body'
+      });
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const openFile = stubOpenFile();
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expectOpened(openFile, 'dst/a-sub/first.md');
+    });
+
+    // A markdown-shaped attachment is not a note anywhere else in this handler, and it is not one here.
+    it('should skip a markdown-shaped attachment', async () => {
+      initApp({
+        'dst/a.excalidraw.md': 'raw excalidraw payload',
+        'dst/b.md': 'b body',
+        'src/sub/c.md': 'c body'
+      });
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const openFile = stubOpenFile();
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expectOpened(openFile, 'dst/b.md');
+    });
+
+    it('should open nothing when the destination ends up holding no note at all', async () => {
+      initApp({
+        'dst/pic.png': 'PIC',
+        'src/sub/other.png': 'OTHER'
+      });
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('dst/sub/other.png')).toBe(true);
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+
+    it('should open nothing when the merge is cancelled mid-way', async () => {
+      initApp({
+        'src/sub/a.md': 'a body',
+        'src/sub/b.md': 'b body'
+      });
+      await app.vault.createFolder('dst');
+      const { handler } = createHandler({ shouldOpenFirstNoteAfterMergingFolder: true });
+      const getLeaf = vi.spyOn(app.workspace, 'getLeaf');
+      mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+      const originalRead = app.vault.read.bind(app.vault);
+      let hasAborted = false;
+      vi.spyOn(app.vault, 'read').mockImplementation((file) => {
+        if (!hasAborted) {
+          hasAborted = true;
+          requestResourceUnlockForPath(app, 'src');
+        }
+        return originalRead(file);
+      });
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(getLeaf).not.toHaveBeenCalled();
+    });
+  });
+
   it('should fall back to the submenu setting for shouldAddCommandToSubmenu', () => {
     initApp({});
     expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);
@@ -534,4 +675,16 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     });
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
+}
+
+/**
+ * Replaces the workspace's leaf with one whose `openFile` is a spy, so a test can see which note — if any —
+ * the merge opened at the end (issue #215).
+ *
+ * @returns The `openFile` spy.
+ */
+function stubOpenFile(): MockInstance<WorkspaceLeaf['openFile']> {
+  const openFile = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile }));
+  return castTo<MockInstance<WorkspaceLeaf['openFile']>>(openFile);
 }

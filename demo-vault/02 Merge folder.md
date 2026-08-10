@@ -20,6 +20,28 @@ The confirmation step lets you include child folders and parent folders. Toggle
 **Should include child folders when merging folders** and **Should include parent folders
 when merging folders** in **Settings → Advanced Note Composer** to change the defaults.
 
+## Land in the merged folder
+
+Turn on **Should open the first note after merging folders** and the merge finishes by opening the first
+note of the destination folder, so you end up where everything went instead of on a note that no longer
+exists.
+
+"First" is what the file explorer shows first: the destination folder's own notes, ordered naturally
+(`5.` before `30.`), and only if it holds none, the first note of its first sub-folder. Notes that were
+already in the destination count too - the point is where the folder starts, not which note the merge
+happened to process first. A destination holding no note at all opens nothing.
+
+Exactly one note is opened, once the whole merge has landed. The merged notes are never opened on the
+way there, whatever **Should open note after merge** says - that would flicker the active tab through
+every one of them.
+
+```code-button
+---
+caption: Open the first note after merging folders, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenFirstNoteAfterMergingFolder: true });
+```
+
 ## Excluded items
 
 By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and

@@ -25,6 +25,8 @@ interface DemoSettingsPatch {
   shouldJumpToMovedContentToTop?: boolean;
   shouldKeepHeadingsWhenSplittingContent?: boolean;
   shouldLockAllNotesWhenMarkingSelection?: boolean;
+  shouldOpenFirstNoteAfterMergingFolder?: boolean;
+  shouldOpenNoteAfterMergingFolderIntoFile?: boolean;
   shouldRunTemplaterOnDestinationFile?: boolean;
   shouldSwapEntireFolderStructureByDefault?: boolean;
   shouldTreatTitleAsPathByDefault?: boolean;
