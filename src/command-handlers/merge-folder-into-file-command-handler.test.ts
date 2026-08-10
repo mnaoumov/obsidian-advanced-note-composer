@@ -167,18 +167,100 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     expect(handler.canExecuteFolder(app.vault.getRoot())).toBe(false);
   });
 
-  it('should allow a non-root folder in canExecuteFolder', async () => {
-    initApp({});
-    await app.vault.createFolder('some/folder');
+  it('should allow a non-root folder holding two notes in canExecuteFolder', () => {
+    initApp({
+      'some/folder/a.md': 'alpha body',
+      'some/folder/b.md': 'bravo body'
+    });
     const { handler } = createHandler();
     expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(true);
   });
 
-  it('should block a non-root folder when the command is blocked on its path', async () => {
-    initApp({});
-    await app.vault.createFolder('some/folder');
+  it('should block a non-root folder when the command is blocked on its path', () => {
+    initApp({
+      'some/folder/a.md': 'alpha body',
+      'some/folder/b.md': 'bravo body'
+    });
     const { handler } = createHandler({ shouldBlockCommandOnPath: () => true });
     expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(false);
+  });
+
+  // Issue #209. Merging a lone note into a brand-new note reproduces it under the folder's name, so the
+  // Command is not offered at all - and neither is it for a folder with nothing to merge.
+  describe('folders with too few mergeable notes (issue #209)', () => {
+    it('should refuse a folder holding a single note', () => {
+      initApp({ 'src/a.md': 'alpha body' });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should refuse a folder holding a single note alongside attachments', () => {
+      // "Only one file" is about the notes: an attachment is carried along by a merge, never merged.
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/img.png': 'PIC',
+        'src/pic.png': 'PIC'
+      });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should refuse a folder holding no files at all', async () => {
+      initApp({});
+      await app.vault.createFolder('src/empty');
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should refuse a folder holding no mergeable notes', () => {
+      initApp({ 'src/pic.png': 'PIC' });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should refuse a folder holding a single markdown-shaped attachment', () => {
+      initApp({ 'src/sketch.excalidraw.md': 'raw excalidraw payload' });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should count a markdown-shaped attachment as a note when no sub-extension is configured', () => {
+      // The count goes through the same predicate the merge does, so the setting moves both together.
+      initApp({
+        'src/note.md': 'note body',
+        'src/sketch.excalidraw.md': 'raw excalidraw payload'
+      });
+      expect(createHandler().handler.canExecuteFolder(getFolder('src'))).toBe(false);
+      expect(createHandler({ attachmentExtensions: [] }).handler.canExecuteFolder(getFolder('src'))).toBe(true);
+    });
+
+    it('should allow a folder whose second note lives in a sub-folder', () => {
+      // The merge walks the whole subtree, so the count has to as well.
+      initApp({
+        'src/a.md': 'alpha body',
+        'src/sub/b.md': 'bravo body'
+      });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(true);
+    });
+
+    it('should allow a folder whose notes all live in sub-folders', () => {
+      initApp({
+        'src/sub/a.md': 'alpha body',
+        'src/sub/b.md': 'bravo body'
+      });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(true);
+    });
+
+    it('should refuse a folder with a single note spread across sub-folders', () => {
+      initApp({
+        'src/attachments/img.png': 'PIC',
+        'src/sub/a.md': 'alpha body'
+      });
+      const { handler } = createHandler();
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
   });
 
   it('should show a notice and not merge when the folder path is ignored', async () => {

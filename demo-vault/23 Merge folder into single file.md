@@ -90,6 +90,11 @@ matters — it is where you keep filing things — but whose inner structure doe
 
 ## Notes
 
+- The command only appears where it has something to do: a folder holding fewer than two mergeable
+  notes gets it in neither the right-click menu nor the command palette, since merging a lone note
+  would only reproduce it under the folder's name. Attachments and sub-folders do not count towards
+  the two - a folder holding one note plus a `sketch.excalidraw.md` is still a one-note folder, while
+  a folder whose second note sits three levels down is not.
 - The whole batch runs in one reversible transaction: if you cancel (or an external change is detected),
   everything rolls back. Folders are deleted only after it commits, so a cancelled merge never removes
   one.
