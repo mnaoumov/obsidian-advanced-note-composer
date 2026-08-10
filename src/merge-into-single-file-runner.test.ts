@@ -1,9 +1,16 @@
-import type { App as AppOriginal } from 'obsidian';
+import type {
+  App as AppOriginal,
+  MarkdownView as MarkdownViewOriginal,
+  OpenViewState,
+  TFile as TFileOriginal,
+  WorkspaceLeaf as WorkspaceLeafOriginal
+} from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
+import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   requestResourceUnlockForPath,
@@ -11,7 +18,11 @@ import {
 } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
-import { App } from 'obsidian-test-mocks/obsidian';
+import {
+  App,
+  MarkdownView,
+  WorkspaceLeaf
+} from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   describe,
@@ -61,6 +72,14 @@ interface InitAppOptions {
   readonly plugins?: Record<string, unknown>;
 }
 
+/**
+ * A tab the rollback put back, as recorded by the stubbed leaf it was reopened in.
+ */
+interface ReopenedTab {
+  isActive: boolean;
+  path: string;
+}
+
 interface RunnerContext {
   hide: MockInstance;
   showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
@@ -105,7 +124,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
   };
 }
 
-function getFile(path: string): import('obsidian').TFile {
+function getFile(path: string): TFileOriginal {
   return ensureNonNullable(app.vault.getFileByPath(path));
 }
 
@@ -120,6 +139,32 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
+}
+
+function isLeafOpen(leaf: WorkspaceLeafOriginal): boolean {
+  // By identity, and reported as a boolean: the leaves are `strictProxy`-wrapped, and a failed
+  // `toContain` would have to format one, which probes properties the mock refuses to answer.
+  let isOpen = false;
+  app.workspace.iterateAllLeaves((openLeaf) => {
+    isOpen ||= openLeaf === leaf;
+  });
+  return isOpen;
+}
+
+/**
+ * Opens a note in a new tab the way the workspace really holds one — a leaf carrying a `MarkdownView` whose
+ * `file` is the note. The mock's own `openFile` only records the file on the leaf and never builds a view,
+ * which is precisely what the code under test looks at.
+ *
+ * @param path - The note to open.
+ * @returns The leaf it was opened in.
+ */
+function openInTab(path: string): WorkspaceLeafOriginal {
+  const leaf = app.workspace.getLeaf('tab');
+  const view = MarkdownView.create2__(WorkspaceLeaf.fromOriginalType3__(leaf));
+  castTo<GenericObject>(view)['file'] = app.vault.getFileByPath(path);
+  castTo<GenericObject>(leaf)['view'] = view;
+  return leaf;
 }
 
 describe('mergeFilesIntoSingleFile', () => {
@@ -400,5 +445,132 @@ describe('mergeFilesIntoSingleFile', () => {
     });
 
     expect(containsNotice(context.showNotice, 'Templater plugin is not installed')).toBe(false);
+  });
+
+  it('closes the tabs showing the notes it merges away and leaves every other tab alone (issue #212)', async () => {
+    initApp({
+      'a.md': 'alpha body',
+      'b.md': 'bravo body',
+      'keep.md': 'keep body',
+      'target.md': ''
+    });
+    const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+    const alphaLeaf = openInTab('a.md');
+    const bravoLeaf = openInTab('b.md');
+    // A note that is not part of the merge, a tab showing no file, and a tab with no view at all: none of
+    // Them is a note being merged away, so none of them may be touched.
+    const keepLeaf = openInTab('keep.md');
+    const fileLessLeaf = openInTab('gone.md');
+    const viewLessLeaf = app.workspace.getLeaf('tab');
+
+    await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [getFile('a.md'), getFile('b.md')],
+      targetFile: getFile('target.md')
+    });
+
+    expect(isLeafOpen(alphaLeaf)).toBe(false);
+    expect(isLeafOpen(bravoLeaf)).toBe(false);
+    expect(isLeafOpen(keepLeaf)).toBe(true);
+    expect(isLeafOpen(fileLessLeaf)).toBe(true);
+    expect(isLeafOpen(viewLessLeaf)).toBe(true);
+  });
+
+  it('puts the closed tabs back when the merge rolls back, the user\'s own one active (issue #212)', async () => {
+    initApp({
+      'a.md': 'alpha body',
+      'b.md': 'bravo body',
+      'target.md': ''
+    });
+    const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+    const alphaLeaf = openInTab('a.md');
+    openInTab('b.md');
+    // The user was in `a.md`, so that is the tab they are put back into.
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(castTo<MarkdownViewOriginal>(alphaLeaf.view));
+
+    // Same mid-merge unlock as the rollback test above.
+    const originalRead = app.vault.read.bind(app.vault);
+    let hasAborted = false;
+    vi.spyOn(app.vault, 'read').mockImplementation((file) => {
+      if (!hasAborted) {
+        hasAborted = true;
+        requestResourceUnlockForPath(app, 'a.md');
+      }
+      return originalRead(file);
+    });
+
+    // Installed only now: the tabs above were opened through the real `getLeaf`.
+    const reopened: ReopenedTab[] = [];
+    vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(castTo<WorkspaceLeafOriginal>({
+      async openFile(file: TFileOriginal, openState?: OpenViewState): Promise<void> {
+        reopened.push({ isActive: openState?.active ?? false, path: file.path });
+        await noopAsync();
+      }
+    }));
+
+    const result = await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [getFile('a.md'), getFile('b.md')],
+      targetFile: getFile('target.md')
+    });
+
+    expect(result.aborted).toBe(true);
+    expect(reopened).toEqual([
+      { isActive: true, path: 'a.md' },
+      { isActive: false, path: 'b.md' }
+    ]);
+  });
+
+  it('skips a tab whose note the rollback did not bring back (issue #212)', async () => {
+    initApp({
+      'a.md': 'alpha body',
+      'target.md': ''
+    });
+    const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+    openInTab('a.md');
+    // Resolved before `getFileByPath` is stubbed out below.
+    const alphaFile = getFile('a.md');
+    const targetFile = getFile('target.md');
+
+    vi.spyOn(app.vault, 'read').mockRejectedValue(new Error('boom'));
+
+    const reopened: string[] = [];
+    vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(castTo<WorkspaceLeafOriginal>({
+      async openFile(file: TFileOriginal): Promise<void> {
+        reopened.push(file.path);
+        await noopAsync();
+      }
+    }));
+    // The note is not there when the tabs are restored, so there is nothing to reopen it with.
+    vi.spyOn(app.vault, 'getFileByPath').mockReturnValue(null);
+
+    await expect(mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [alphaFile],
+      targetFile
+    })).rejects.toThrow('boom');
+
+    expect(reopened).toEqual([]);
   });
 });

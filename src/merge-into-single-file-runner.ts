@@ -1,12 +1,16 @@
 import type {
   App,
-  TFolder
+  TFolder,
+  WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { TFile } from 'obsidian';
+import {
+  MarkdownView,
+  TFile
+} from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
@@ -107,6 +111,20 @@ export interface MergeFilesIntoSingleFileResult {
   readonly mergedCount: number;
 }
 
+/**
+ * A tab that was showing one of the notes being merged away, closed up front so its disappearance does not
+ * cascade (issue #212). Enough to put it back if the merge rolls back.
+ */
+interface ClosedNoteLeaf {
+  readonly path: string;
+
+  /**
+   * Whether this was the tab the user was in, so a restored workspace puts them back in it rather than in
+   * whichever note happened to be reopened last.
+   */
+  readonly wasActive: boolean;
+}
+
 interface CollectAttachmentsParams {
   readonly app: App;
   readonly attachmentExtensions: readonly string[];
@@ -165,16 +183,30 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     pluginSettingsComponent
   });
 
-  // Collected against the sources that will actually be merged, so an ignored note's attachments are
-  // Left alone exactly as the note itself is.
-  const notesToCollectAttachmentsFor = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
+  // The sources that will actually be merged away, as opposed to the ignored ones, which are left exactly
+  // As they are - both their attachments and their open tabs.
+  const notesToMerge = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
   const attachmentsToRelocate = await collectAttachments({
     app,
     attachmentExtensions: settings.attachmentExtensions,
     folder: attachmentSourceFolder,
-    noteFiles: notesToCollectAttachmentsFor,
+    noteFiles: notesToMerge,
     shouldRelocateOwnedAttachments: shouldRelocateOwnedAttachments ?? false
   });
+
+  /*
+   * Issue #212: every note in this batch is about to be deleted, so every tab showing one is doomed. Left to
+   * happen on its own, that is a cascade: `VaultTransaction` trashes the staged notes one at a time on
+   * commit, and Obsidian activates the NEXT surviving tab on each closure - the tab strip visibly walks
+   * through the notes being merged. Measured with four of a folder's notes open: four `active-leaf-change`
+   * events, the last of them landing on an unrelated note. Closing them here, in ONE synchronous pass before
+   * anything is mutated, collapses that to a single change (measured: zero events for the batch itself).
+   *
+   * This is NOT the issue-#106 bug - nothing here ever OPENED a merged note, and the per-note
+   * `shouldOpenAfterMerge: false` below has always held - but it is the same symptom the user sees, which is
+   * why #212 reported it as one.
+   */
+  const closedNoteLeaves = closeLeavesShowingFiles(app, notesToMerge);
 
   const lockTargets: LockTarget[] = [{ mode: 'file', pathOrFile: targetFile }];
   for (const sourceFile of sourcesToMerge) {
@@ -261,6 +293,9 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       resourceLockComponent
     });
   } catch (error) {
+    // The transaction has rolled back, so every merged-away note is back on disk - and so must be the tabs
+    // Closed for them above, or a cancelled merge would leave the workspace quietly rearranged.
+    await reopenClosedLeaves(app, closedNoteLeaves);
     if (abortController.signal.aborted) {
       // The operation was cancelled (user or external change); the transaction has rolled back.
       return { aborted: true, ignoredSourceFiles, mergedCount: 0 };
@@ -296,6 +331,49 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
 
 function buildHeadingBlock(headings: readonly string[]): string {
   return headings.map((heading) => `\n\n${heading}`).join('');
+}
+
+/**
+ * Closes every open tab showing one of the notes this batch is about to merge away, in ONE synchronous pass
+ * (issue #212).
+ *
+ * The tabs are doomed either way — the notes are deleted — so the choice is only between them going all at
+ * once and them falling away one at a time. The latter is what a user sees as the tab strip "cycling"
+ * through the notes being merged: `VaultTransaction` trashes the staged notes individually on commit, and
+ * Obsidian activates the next surviving tab on each closure. Detaching them together produces no
+ * intermediate activation at all.
+ *
+ * The detaching is deliberately separated from the collecting: mutating the workspace while iterating it is
+ * how a leaf gets skipped.
+ *
+ * @param app - The Obsidian application instance.
+ * @param files - The notes that are about to be merged away.
+ * @returns What was closed, in the order it was found, for {@link reopenClosedLeaves} to restore.
+ */
+function closeLeavesShowingFiles(app: App, files: readonly TFile[]): ClosedNoteLeaf[] {
+  const pathsToClose = new Set(files.map((file) => file.path));
+  const activeLeaf = app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
+  const leavesToDetach: WorkspaceLeaf[] = [];
+  const closedNoteLeaves: ClosedNoteLeaf[] = [];
+
+  app.workspace.iterateAllLeaves((leaf) => {
+    const { view } = leaf;
+    if (!(view instanceof MarkdownView)) {
+      return;
+    }
+    const path = view.file?.path;
+    if (path === undefined || !pathsToClose.has(path)) {
+      return;
+    }
+    leavesToDetach.push(leaf);
+    closedNoteLeaves.push({ path, wasActive: leaf === activeLeaf });
+  });
+
+  for (const leaf of leavesToDetach) {
+    leaf.detach();
+  }
+
+  return closedNoteLeaves;
 }
 
 /**
@@ -340,6 +418,26 @@ function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, source
     return false;
   }
   return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
+}
+
+/**
+ * Puts back the tabs {@link closeLeavesShowingFiles} closed, after a merge that rolled back (issue #212).
+ *
+ * A note that is not there is skipped rather than treated as an error: the rollback restores what the
+ * transaction staged, and a note it could not bring back has no tab to restore either.
+ *
+ * @param app - The Obsidian application instance.
+ * @param closedNoteLeaves - What was closed before the merge started.
+ * @returns A {@link Promise} that resolves once the tabs are back.
+ */
+async function reopenClosedLeaves(app: App, closedNoteLeaves: readonly ClosedNoteLeaf[]): Promise<void> {
+  for (const closedNoteLeaf of closedNoteLeaves) {
+    const file = app.vault.getFileByPath(closedNoteLeaf.path);
+    if (!file) {
+      continue;
+    }
+    await app.workspace.getLeaf('tab').openFile(file, { active: closedNoteLeaf.wasActive });
+  }
 }
 
 async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNoticeComponent, ignoredSourceFiles: readonly TFile[]): Promise<void> {
