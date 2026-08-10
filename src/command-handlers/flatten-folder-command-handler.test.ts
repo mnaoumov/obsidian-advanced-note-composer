@@ -774,17 +774,36 @@ describe('FlattenFolderCommandHandler', () => {
       );
     });
 
-    it('should refuse the folder-only modes when the only child folder is the configured attachment folder, under an attachment-location plugin', () => {
+    it('should keep offering the folder-only modes when only the configured attachment folder says otherwise, under an attachment-location plugin (issue #213)', () => {
       initApp({
         'parent/a/assets/pic.png': 'PIC',
         'parent/a/note.md': 'note'
       }, './assets');
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
-      // No exclusion configured: Obsidian's own `attachmentFolderPath` is enough, and it is the only signal
-      // Readable synchronously once the resolution is owned elsewhere.
-      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
-      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      /*
+       * This used to refuse, on the grounds that `attachmentFolderPath` was the only signal readable
+       * synchronously once the resolution is owned elsewhere. Issue #213 showed that signal is not the
+       * user's: Custom Attachment Location parks its own last-resolved path there, so it hid the commands on
+       * folders that had nothing to do with attachments. Both variants are offered again, and
+       * `executeFolder` resolves for real and says so if nothing turns out to move.
+       */
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should keep offering the folder-only modes when a plugin parks an absolute path inside a candidate folder (issue #213)', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deep.md': 'deep'
+      });
+      stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
+      // The reporter's vault verbatim: the path Custom Attachment Location last resolved for the note it
+      // Had just created and opened, sitting inside the folder that was created with it.
+      app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
+
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
 
     it('should leave an excluded folder in place when flattening moves everything else', async () => {

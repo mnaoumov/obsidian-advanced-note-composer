@@ -4,6 +4,7 @@ import type {
   TFile,
   TFolder
 } from 'obsidian';
+import type { GetAvailablePathForAttachmentsFunctionExtended } from 'obsidian-dev-utils/obsidian/attachment-path';
 
 import {
   getAttachmentFolderPath,
@@ -76,7 +77,8 @@ export interface IsFlattenModeDistinctParams extends CollectFlattenItemsParams {
  * FOLDER alone. Both are `null` for the two forms that cannot: the vault root (never a flatten candidate)
  * and the plain `.`/`./` mode, where every folder holding a note is its own attachment folder — recognizing
  * that would protect the entire vault, and the exact resolution correctly protects nothing there (see
- * {@link isProtectedFolder}).
+ * {@link isProtectedFolder}) — and for the vault where the setting is not the user's answer at all (see
+ * {@link isAttachmentResolutionOwnedByPlugin}).
  */
 interface AttachmentFolderConfig {
   /**
@@ -420,14 +422,35 @@ function hasOwnNote(folder: TFolder, attachmentExtensions: readonly string[]): b
 }
 
 /**
+ * Whether an attachment-location plugin (Custom Attachment Location and friends) has taken the resolution
+ * over, which is what makes Obsidian's own `attachmentFolderPath` unusable as a statement of intent (issue
+ * #213).
+ *
+ * The `extended` member `obsidian-dev-utils` hangs on `Vault.getAvailablePathForAttachments` IS the
+ * hand-over — the same signal `getAttachmentFolderPathSyncOrNull` reads to answer `null` — so this asks the
+ * question in the one place the answer is recorded rather than sniffing for a plugin id.
+ *
+ * @param app - The Obsidian application instance.
+ * @returns Whether a plugin owns the attachment resolution.
+ */
+function isAttachmentResolutionOwnedByPlugin(app: App): boolean {
+  return !!(app.vault.getAvailablePathForAttachments as Partial<GetAvailablePathForAttachmentsFunctionExtended>).extended;
+}
+
+/**
  * Whether Obsidian's own `attachmentFolderPath` says this folder is where attachments go — the best-effort
  * second opinion next to {@link isProtectedFolder}'s exact one.
  *
- * It earns its place twice over. It is the ONLY signal available synchronously once an attachment-location
- * plugin owns the resolution (issue #193), and it catches a case the exact resolution structurally cannot:
+ * It earns its place by catching a case the exact resolution structurally cannot:
  * {@link collectNoteAttachmentFolders} only walks notes UNDER the flattened folder, so a fixed attachment
  * folder that happens to sit inside it, serving notes elsewhere in the vault, resolves for nobody and would
  * otherwise be promoted.
+ *
+ * It used to be described as earning it twice over, the second time as the ONLY signal available
+ * synchronously once an attachment-location plugin owns the resolution (issue #193). **That half was wrong,
+ * and issue #213 is the bill for it** — in such a vault `attachmentFolderPath` is that plugin's scratch
+ * space rather than a setting, so the "signal" was noise that HID commands. It is now switched off there
+ * entirely; see {@link parseAttachmentFolderConfig}.
  *
  * It is best-effort by construction and cannot be otherwise — an attachment-location plugin derives the
  * folder from the note through a template that may include a UUID, a random value or a user prompt, so
@@ -547,6 +570,28 @@ function isSkippedFolder(folder: TFolder, context: FlattenContext): boolean {
  * @returns The parsed configuration.
  */
 function parseAttachmentFolderConfig(app: App): AttachmentFolderConfig {
+  /*
+   * Issue #213: once an attachment-location plugin owns the resolution, `attachmentFolderPath` is no longer
+   * the user's ANSWER — it is that plugin's scratch space. Custom Attachment Location keeps it pointed at
+   * the folder it just resolved for the ACTIVE note, an absolute path like `Test/1. Test Notes/@`, so that
+   * Obsidian's own paste/drop lands in the right place. Read as a setting, that value makes
+   * `isConfiguredAttachmentFolder` answer `true` for the active note's own folder and every ancestor of it,
+   * which took `Flatten folder (child folders only)...` and `Flatten folder recursively...` off the menu of
+   * a perfectly ordinary folder — and took them off again the moment a different note was opened. The
+   * reporter met it right after `Create folder with notes...`, whose new note is opened at the end, so the
+   * folder it had just created was the one being mistaken for an attachment folder.
+   *
+   * So the heuristic is DROPPED wherever it cannot be trusted, rather than being taught to recognize the
+   * shapes one plugin happens to write. What is lost is only ever a guess: the note-by-note resolution in
+   * {@link isProtectedFolder} is exact and still runs (asynchronously, which is what such a vault forces),
+   * `Exclude paths` covers what no resolution can express, and a folder-only flatten in such a vault is now
+   * OFFERED and answers honestly instead of silently vanishing — issue #185's behavior for exactly this
+   * case.
+   */
+  if (isAttachmentResolutionOwnedByPlugin(app)) {
+    return NO_ATTACHMENT_FOLDER_CONFIG;
+  }
+
   const raw = app.vault.getConfig('attachmentFolderPath') as string | undefined;
 
   // An unset value is the vault root too — Obsidian always writes the key, but `obsidian-dev-utils` reads it
