@@ -466,10 +466,14 @@ Two related settings are deliberately separate and unaffected by this one: **Sho
 
 ## Minimizing dialogs
 
-Every picker and confirmation dialog this plugin opens — the `Merge …`, `Extract …` (split), and `Swap …` pickers and their confirmation dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
+Every confirmation dialog this plugin opens — plus the `Extract …` (split) picker and the `Move marked selection here (advanced)…` / `Reorder headings` option dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
 
 - **Restore** — reopens the dialog where you left off.
 - **Cancel** — closes the dialog. For an operation that locks its note while the dialog is open (an extract/split or a merge), cancelling this way also **unlocks the note and cancels the operation** — the same effect as the built-in `Unlock active note` command or right-clicking the note's lock indicator, but reachable directly from the minimized bar.
+
+Clicking the dimmed background behind such a dialog **minimizes it** rather than cancelling the operation, so a stray click while you go and look at something does not throw away the pending command. To actually cancel, use `Escape`, the dialog's own **Cancel** button, or the ✕ on the minimized bar.
+
+The initial `Merge …` and `Swap …` pickers are deliberately **not** minimizable and are still dismissed by a background click: no target has been chosen yet, so there is nothing to park, and leaving one parked risks forgetting which note the operation was started from.
 
 ## Demo vault
 
