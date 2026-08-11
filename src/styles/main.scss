@@ -38,6 +38,65 @@
   border-radius: var(--radius-s);
 }
 
+// The shared reorder modal (issue #216), used by `Reorder headings` and by the two folder reorders. Its
+// Body renders into the modal's own content element, outside the plugin-scoped container.
+.advanced-note-composer-reorder-item {
+  align-items: center;
+  border-radius: var(--radius-s);
+  display: flex;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1);
+
+  &:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  // The drop indicator is a line rather than a moved row: nothing is reordered until the drop actually
+  // Lands, so the list must not animate as if it already had.
+  &.advanced-note-composer-reorder-drag-over-before {
+    box-shadow: inset 0 2px 0 0 var(--interactive-accent);
+  }
+
+  &.advanced-note-composer-reorder-drag-over-after {
+    box-shadow: inset 0 -2px 0 0 var(--interactive-accent);
+  }
+}
+
+.advanced-note-composer-reorder-handle {
+  color: var(--text-faint);
+  cursor: grab;
+  display: flex;
+}
+
+.advanced-note-composer-reorder-index {
+  background-color: var(--interactive-accent);
+  border-radius: var(--radius-s);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  min-width: var(--size-4-6);
+  padding: 0 var(--size-4-1);
+  text-align: center;
+}
+
+.advanced-note-composer-reorder-title {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.advanced-note-composer-reorder-controls {
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+.advanced-note-composer-reorder-group-title {
+  margin-bottom: var(--size-4-1);
+  margin-top: var(--size-4-3);
+}
+
+.advanced-note-composer-reorder-toggle {
+  margin-bottom: var(--size-4-2);
+}
+
 .advanced-note-composer {
   &.suggest-modal-base {
     input[type=checkbox] {

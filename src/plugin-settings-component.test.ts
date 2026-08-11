@@ -526,4 +526,145 @@ describe('PluginSettingsComponent', () => {
       expect(component.settings.isPathIgnored('secret/note.md')).toBe(true);
     });
   });
+
+  describe('reorder validators (issue #216)', () => {
+    describe('reorderedFolderNameTemplate validator', () => {
+      it('should accept the default template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeUndefined();
+      });
+
+      it('should accept a template that pads the index and puts it last', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeUndefined();
+      });
+
+      it('should reject an empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '  ')).toBe('Folder name template should not be empty');
+      });
+
+      it('should reject a template with no index, which could not renumber anything', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{safeFolderName}}'))
+          .toBe('Folder name template should contain {{index}}, which is the number a reorder rewrites');
+      });
+
+      it('should reject a template that never names the folder, which would drop the name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{parentFolder}}'))
+          .toBe('Folder name template should contain {{safeFolderName}}, or renumbering would drop the name');
+      });
+
+      it('should reject the token this template itself produces', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{folderName}}'))
+          .toBe('{{folderName}} cannot be used here, because this template IS the name');
+      });
+
+      it('should reject the typed name, which a reorder never has', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{rawFolderName}}'))
+          .toBe('{{rawFolderName}} cannot be used here, because this template IS the name');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{safeFolderName}} {{nope}}'))
+          .toBe('Unknown token {{nope}}');
+      });
+
+      it('should reject a name that could not be a single folder name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}/{{safeFolderName}}')).toBe('Invalid folder name');
+      });
+    });
+
+    describe('reorderedFileNameTemplate validator', () => {
+      it('should accept the default template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{safeName}}')).toBeUndefined();
+      });
+
+      it('should reject a template with no index', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{safeName}}'))
+          .toBe('File name template should contain {{index}}, which is the number a reorder rewrites');
+      });
+
+      it('should reject a template that never names the file', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{parentFolder}}'))
+          .toBe('File name template should contain {{safeName}}, or renumbering would drop the name');
+      });
+
+      it('should reject the token this template itself produces', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{name}}'))
+          .toBe('{{name}} cannot be used here, because this template IS the name');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{safeName}} {{nope}}')).toBe('Unknown token {{nope}}');
+      });
+    });
+
+    describe('folderNoteTitleTemplate validator', () => {
+      it('should accept the default template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{folderName}}')).toBeUndefined();
+      });
+
+      it('should accept an empty template, which is how the property is left alone', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept a title that is not a valid file name, a title being no such thing', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{parentFolder}}: {{folderName}}')).toBeUndefined();
+      });
+
+      it('should reject the typed name, which a reorder never has', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{rawFolderName}}'))
+          .toBe('{{rawFolderName}} cannot be used here, because a reorder has no typed name');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{nope}}')).toBe('Unknown token {{nope}}');
+      });
+    });
+
+    describe('reorderedFileTitleTemplate validator', () => {
+      it('should accept an empty template, which is the default and leaves the property alone', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept the new basename with its index', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '{{name}}')).toBeUndefined();
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '{{nope}}')).toBe('Unknown token {{nope}}');
+      });
+    });
+
+    describe('folderNoteNameTemplate validator', () => {
+      it('should accept a note named after its folder', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteNameTemplate', '{{folderName}}')).toBeUndefined();
+      });
+
+      it('should reject a name spanning folders', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteNameTemplate', 'notes/{{folderName}}')).toBe('Invalid note name');
+      });
+    });
+  });
 });

@@ -1,12 +1,9 @@
 import type { TFolder } from 'obsidian';
 
 import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
-import {
-  escapeRegExp,
-  getMandatoryNamedGroup
-} from 'obsidian-dev-utils/reg-exp';
+import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
 
-import { TEMPLATE_TOKEN_REG_EXP } from './template-tokens.ts';
+import { buildNumberedNameRegExp } from './numbered-name.ts';
 
 /**
  * The index a folder gets when no numbered sibling exists yet. The reporter's own plugin starts at `1`, not
@@ -15,7 +12,6 @@ import { TEMPLATE_TOKEN_REG_EXP } from './template-tokens.ts';
 export const FIRST_FOLDER_INDEX = 1;
 
 const INDEX_CAPTURE_GROUP_NAME = 'Index';
-const INDEX_TOKEN_KEY = 'index';
 
 /**
  * Parameters for {@link resolveNextFolderIndex}.
@@ -35,43 +31,17 @@ export interface ResolveNextFolderIndexParams {
 /**
  * Derives, from the folder-name template itself, the pattern that recognizes an already-numbered sibling.
  *
- * `{{index}}` becomes `(\d+)` and **every other token becomes `.*`** — that second half is the load-bearing
- * one. Substituting the real values instead would produce a pattern matching only a folder with the SAME
- * name, so the scan would find nothing and every folder would be numbered `1`. Widening the other tokens is
- * what makes the default `{{index}}. {{safeFolderName}}` compile to `^(\d+)\. .*$` — precisely the
- * `/^(\d+)\./` rule the reporter's `folder-note-extended` uses.
+ * A thin delegate to {@link buildNumberedNameRegExp} asking for no base capture: this side only needs to
+ * know WHETHER a sibling is numbered and with what, never what its name-without-the-index was. The default
+ * `{{index}}. {{safeFolderName}}` therefore still compiles to `^(\d+)\. .*$` — precisely the `/^(\d+)\./`
+ * rule the reporter's `folder-note-extended` uses.
  *
- * Only the FIRST `{{index}}` is captured: a second named group of the same name is a regex `SyntaxError`, and
- * the first occurrence is the one that carries the number anyway.
- *
- * @param nameTemplate - The `createFolderNameTemplate` setting, as typed.
+ * @param nameTemplate - The `newFolderNameTemplate` setting, as typed.
  * @returns The sibling pattern, or `null` when the template has no `{{index}}` token at all — that template
  * does not number anything, so there is no sequence to continue.
  */
 export function buildNumberedSiblingRegExp(nameTemplate: string): null | RegExp {
-  // A fresh instance: the shared regex carries the `g` flag, and `matchAll` reads its `lastIndex`.
-  const tokenRegExp = new RegExp(TEMPLATE_TOKEN_REG_EXP.source, 'g');
-  let hasIndexToken = false;
-  let pattern = '';
-  let literalStart = 0;
-
-  for (const match of nameTemplate.matchAll(tokenRegExp)) {
-    pattern += escapeRegExp(nameTemplate.slice(literalStart, match.index));
-    if (getMandatoryNamedGroup(match, 'Key').toLowerCase() === INDEX_TOKEN_KEY) {
-      pattern += hasIndexToken ? String.raw`\d+` : String.raw`(?<${INDEX_CAPTURE_GROUP_NAME}>\d+)`;
-      hasIndexToken = true;
-    } else {
-      pattern += '.*';
-    }
-    literalStart = match.index + match[0].length;
-  }
-
-  if (!hasIndexToken) {
-    return null;
-  }
-
-  pattern += escapeRegExp(nameTemplate.slice(literalStart));
-  return new RegExp(`^${pattern}$`);
+  return buildNumberedNameRegExp({ baseTokenKey: null, nameTemplate });
 }
 
 /**

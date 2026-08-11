@@ -83,6 +83,53 @@ export interface NameTransformTokens {
   readonly rawString: string;
 }
 
+/**
+ * Everything a reorder knows about a FILE it is renumbering (issue #216).
+ *
+ * The folder-flavored bag above cannot serve here: `{{safeFolderName}}` would be a lie on a note, and a
+ * file has an extension the numbering must never touch. Both spellings of the name are members for the same
+ * reason as {@link CreateFolderTemplateTokens} — the new name WITH the index goes into `title`, the one
+ * WITHOUT it is what the next renumbering reads back.
+ */
+export interface ReorderedFileTemplateTokens {
+  /**
+   * The file's extension, leading dot included (`.md`). Renumbering never rewrites it.
+   */
+  readonly extension: string;
+
+  /**
+   * The position the file is being renumbered to, counting from `1`.
+   */
+  readonly index: number;
+
+  /**
+   * The final basename, index included. Empty while the NAME template is being resolved, because it IS
+   * that template's result — the settings validator rejects the token there.
+   */
+  readonly name: string;
+
+  /**
+   * The name of the folder the file sits in.
+   */
+  readonly parentFolder: string;
+
+  /**
+   * The path of the folder the file sits in.
+   */
+  readonly parentFolderPath: string;
+
+  /**
+   * The file's full vault path after the renumbering. Empty while the NAME template is being resolved, for
+   * the same reason as {@link ReorderedFileTemplateTokens.name}.
+   */
+  readonly path: string;
+
+  /**
+   * The basename WITHOUT the index — what the file was called before the sequence claimed a number for it.
+   */
+  readonly safeName: string;
+}
+
 interface ResolveCreateFolderTemplateTokensParams {
   /**
    * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
@@ -118,6 +165,18 @@ interface ResolveNameTransformTokensParams {
    * The values the tokens resolve to.
    */
   readonly tokens: NameTransformTokens;
+}
+
+interface ResolveReorderedFileTemplateTokensParams {
+  /**
+   * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
+   */
+  readonly template: string;
+
+  /**
+   * The values the tokens resolve to.
+   */
+  readonly tokens: ReorderedFileTemplateTokens;
 }
 
 interface ResolveTemplateTokensParams {
@@ -255,6 +314,48 @@ export function resolveNameTransformTokens(params: ResolveNameTransformTokensPar
     switch (key.toLowerCase()) {
       case 'rawString'.toLowerCase(): {
         return tokens.rawString;
+      }
+      default: {
+        return resolveDateTimeToken(key, format);
+      }
+    }
+  });
+}
+
+/**
+ * Resolves the tokens a reorder exposes when renaming a FILE (issue #216) inside a template string.
+ *
+ * Shares {@link TEMPLATE_TOKEN_REG_EXP} and the "unknown key throws" contract with the other resolvers, so
+ * `{{date}}` / `{{time}}` work here too and a typo still fails loudly — and `{{index}}` takes the same
+ * zero-pad MASK, so `{{index:000}}` numbers notes the way it numbers folders.
+ *
+ * @param params - The template and the values its tokens resolve to.
+ * @returns The template with every token replaced by its value.
+ */
+export function resolveReorderedFileTemplateTokens(params: ResolveReorderedFileTemplateTokensParams): string {
+  const { template, tokens } = params;
+  return replaceTemplateTokens(template, (key, format) => {
+    switch (key.toLowerCase()) {
+      case 'parentFolder'.toLowerCase(): {
+        return tokens.parentFolder;
+      }
+      case 'parentFolderPath'.toLowerCase(): {
+        return tokens.parentFolderPath;
+      }
+      case 'safeName'.toLowerCase(): {
+        return tokens.safeName;
+      }
+      case 'extension': {
+        return tokens.extension;
+      }
+      case 'index': {
+        return formatIndex(tokens.index, format);
+      }
+      case 'name': {
+        return tokens.name;
+      }
+      case 'path': {
+        return tokens.path;
       }
       default: {
         return resolveDateTimeToken(key, format);

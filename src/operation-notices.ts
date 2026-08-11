@@ -12,6 +12,7 @@ import type { ValueProvider } from 'obsidian-dev-utils/value-provider';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
+import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
@@ -160,10 +161,14 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
 /**
  * Reports a finished operation, unless the user turned operation notices off.
  *
- * Shown as a STANDALONE notice (`isReusable: false`) rather than in the shared per-plugin slot. An
- * operation can have more than one thing to say — a folder merge reports which notes it skipped as
- * ignored, and that summary is emitted on either side of this one depending on the flow — and a reusable
- * notice silently replaces whatever is in the slot, so one report would erase the other.
+ * Shown as a STANDALONE notice ({@link PluginNoticeMode.Separate}) rather than in the shared per-plugin
+ * slot. An operation can have more than one thing to say — a folder merge reports which notes it skipped as
+ * ignored, and that summary is emitted on either side of this one depending on the flow — and a slot notice
+ * silently replaces whatever is in the slot, so one report would erase the other.
+ *
+ * `obsidian-dev-utils` 93 replaced the `isReusable` boolean this used to pass with
+ * {@link PluginNoticeMode}; `Separate` is that boolean's `false` — it "never replaces, and is never
+ * replaced by, a slot notice" — so the behavior above is unchanged.
  *
  * @param params - The parameters.
  */
@@ -172,7 +177,7 @@ export function showOperationCompletionNotice(params: ShowOperationCompletionNot
   if (!pluginSettingsComponent.settings.shouldShowOperationNotices) {
     return;
   }
-  pluginNoticeComponent.showNotice(content, { isReusable: false });
+  pluginNoticeComponent.showNotice(content, { mode: PluginNoticeMode.Separate });
 }
 
 /**

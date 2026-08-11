@@ -7,6 +7,7 @@ import type {
   PluginNoticeComponentDelayedNotice
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
+import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -151,7 +152,7 @@ describe('showOperationCompletionNotice', () => {
       pluginSettingsComponent: createPluginSettingsComponent(true)
     });
 
-    expect(showNotice).toHaveBeenCalledExactlyOnceWith('Merged.', { isReusable: false });
+    expect(showNotice).toHaveBeenCalledExactlyOnceWith('Merged.', { mode: PluginNoticeMode.Separate });
   });
 
   it('should show nothing when the setting is off', () => {

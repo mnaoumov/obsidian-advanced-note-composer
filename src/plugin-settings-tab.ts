@@ -11,6 +11,7 @@ import type { PluginSettings } from './plugin-settings.ts';
 import {
   Action,
   EmptyFolderBehaviorAfterMergingFolder,
+  FolderNoteLocation,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   MergeFolderIntoFileLocation,
@@ -1505,6 +1506,178 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         ]
       }),
       this.settingGroupEx({
+        heading: 'Folder note',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Where this vault keeps the note that describes a folder — the only note a reorder or a rename rewrites the properties of.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Auto');
+              f.appendText(' reads the installed ');
+              appendCodeBlock(f, 'Folder notes');
+              f.appendText(' plugin every time, so reconfiguring that plugin needs no change here. Without it, ');
+              appendCodeBlock(f, 'Auto');
+              f.appendText(' means a note named after its folder, inside it.');
+              f.createEl('br');
+              f.appendText('That plugin\'s third option — keeping every folder note in one central folder — has no equivalent here, and ');
+              appendCodeBlock(f, 'Auto');
+              f.appendText(' falls back when it is set: with the notes pooled, which note belongs to a folder no longer follows from the folder\'s path.');
+            }),
+            name: 'Folder note location',
+            render: (setting) => {
+              setting.addDropdown((dropdown) => {
+                dropdown.addOptions({
+                  [FolderNoteLocation.Auto]: 'Auto (follow the Folder notes plugin)',
+                  [FolderNoteLocation.InsideFolder]: 'Inside the folder',
+                  [FolderNoteLocation.None]: 'This vault has no folder notes',
+                  [FolderNoteLocation.ParentFolder]: 'Beside the folder'
+                });
+                this.bind({
+                  onChanged: () => {
+                    // The name row is meaningless while the location is Auto (that plugin supplies the
+                    // Name too) or None.
+                    this.refreshDomState();
+                  },
+                  propertyName: 'folderNoteLocation',
+                  valueComponent: dropdown
+                });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('What the folder note is called.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{folderName}}');
+              f.appendText(' names it after its folder; a literal like ');
+              appendCodeBlock(f, '!');
+              f.appendText(' or ');
+              appendCodeBlock(f, 'index');
+              f.appendText(' gives every folder note the same name.');
+              f.createEl('br');
+              f.appendText('Has no effect while ');
+              appendCodeBlock(f, 'Folder note location');
+              f.appendText(' is ');
+              appendCodeBlock(f, 'Auto');
+              f.appendText(' — the other plugin supplies the name as well.');
+            }),
+            disabled: () =>
+              this.pluginSettingsComponent.settings.folderNoteLocation !== FolderNoteLocation.InsideFolder
+              && this.pluginSettingsComponent.settings.folderNoteLocation !== FolderNoteLocation.ParentFolder,
+            name: 'Folder note name template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'folderNoteNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          })
+        ]
+      }),
+      this.settingGroupEx({
+        heading: 'Reorder',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The name to give a folder renumbered by ');
+              appendCodeBlock(f, 'Reorder sibling folders...');
+              f.appendText(' or ');
+              appendCodeBlock(f, 'Reorder child folders...');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('The whole format lives here: the separator is ordinary text, ');
+              appendCodeBlock(f, '{{index:000}}');
+              f.appendText(' zero-pads to the width of the mask, and the number does not have to come first — ');
+              appendCodeBlock(f, '{{safeFolderName}} ({{index}})');
+              f.appendText(' works too. Reading an existing number back uses this same template, so the two can never disagree.');
+              f.createEl('br');
+              f.appendText('Separate from ');
+              appendCodeBlock(f, 'Create folder name template');
+              f.appendText(' on purpose, so reordering can follow a different scheme from creating.');
+              f.createEl('br');
+              addReorderFolderTokens(f);
+            }),
+            name: 'Reordered folder name template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'reorderedFolderNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The ');
+              appendCodeBlock(f, 'title');
+              f.appendText(' property to write into a renumbered folder\'s folder note.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{folderName}}');
+              f.appendText(' is the new folder name with its number, ');
+              appendCodeBlock(f, '{{safeFolderName}}');
+              f.appendText(' the same name without it.');
+              f.createEl('br');
+              f.appendText('Leave empty to leave the property alone.');
+              f.createEl('br');
+              addReorderFolderTokens(f);
+            }),
+            name: 'Reordered folder title template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'folderNoteTitleTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether a reorder also offers the folder\'s notes, and not only its folders.');
+              f.createEl('br');
+              f.appendText('This seeds the ');
+              appendCodeBlock(f, 'Include files');
+              f.appendText(' checkbox in the reorder dialog, where the choice is actually made. Folders and files are always numbered as two separate sequences, because the file explorer sorts folders above files.');
+            }),
+            name: 'Should include files when reordering by default',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldIncludeFilesWhenReorderingByDefault', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The name to give a renumbered note. The extension is never touched.');
+              f.createEl('br');
+              addReorderFileTokens(f);
+            }),
+            name: 'Reordered file name template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'reorderedFileNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The ');
+              appendCodeBlock(f, 'title');
+              f.appendText(' property to write into a renumbered note.');
+              f.createEl('br');
+              f.appendText('Empty by default, which leaves the property alone: only folders were asked for, so a reordered note is renamed and nothing else until you fill this in.');
+              f.createEl('br');
+              addReorderFileTokens(f);
+            }),
+            name: 'Reordered file title template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'reorderedFileTitleTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          })
+        ]
+      }),
+      this.settingGroupEx({
         heading: 'UI',
         items: [
           this.settingEx({
@@ -1618,6 +1791,32 @@ function addCreateFolderTokens(f: DocumentFragment, shouldIncludeFolderTokens: b
   f.appendText(' is the typed name after normalization, without the index. ');
   appendCodeBlock(f, '{{folderName}}');
   f.appendText(' is the folder\'s real final name, index included.');
+}
+
+function addReorderFileTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeName}}', '{{name}}', '{{extension}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{path}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeName}}');
+  f.appendText(' is the basename without the number. ');
+  appendCodeBlock(f, '{{name}}');
+  f.appendText(' is the new basename with it, and is available in the title template only — the name template is what produces it.');
+}
+
+function addReorderFolderTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeFolderName}}', '{{folderName}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{folderPath}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeFolderName}}');
+  f.appendText(' is the folder name without the number. ');
+  appendCodeBlock(f, '{{folderName}}');
+  f.appendText(' is the new name with it, and is available in the title template only — the name template is what produces it.');
+}
+
+function addTokenList(f: DocumentFragment, tokens: readonly string[]): void {
+  f.appendText('Available tokens:');
+  f.createEl('br');
+  for (const token of tokens) {
+    f.appendText('- ');
+    appendCodeBlock(f, token);
+    f.createEl('br');
+  }
 }
 
 function appendPathFormsDesc(f: DocumentFragment): void {

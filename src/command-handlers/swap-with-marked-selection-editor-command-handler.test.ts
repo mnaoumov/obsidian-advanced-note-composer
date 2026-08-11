@@ -12,6 +12,7 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -320,7 +321,7 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       expect(mockModify).toHaveBeenCalledWith(sourceFile, 'src [PICK] end');
       expect(mockModify).toHaveBeenCalledWith(targetFile, 'tgt [MARK] fin');
       expect(params.swapSelectionBuffer.hasMark()).toBe(false);
-      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { isReusable: false });
+      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { mode: PluginNoticeMode.Separate });
     });
 
     it('should swap two selections within the same note, writing it once', async () => {
@@ -334,7 +335,7 @@ describe('SwapWithMarkedSelectionEditorCommandHandler', () => {
       expect(mockRunLockedTransaction).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledWith(sourceFile, 'three and one');
-      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { isReusable: false });
+      expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith('Selections swapped.', { mode: PluginNoticeMode.Separate });
     });
   });
 
