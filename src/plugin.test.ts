@@ -6,6 +6,7 @@ import type { CommandHandler } from 'obsidian-dev-utils/obsidian/command-handler
 import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
@@ -22,6 +23,7 @@ import {
 import type { PluginSettings } from './plugin-settings.ts';
 
 import { MoveNoticeComponent } from './move-notice-component.ts';
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
@@ -170,12 +172,16 @@ vi.mock('./render-link-handlers-warmup-component.ts', () => ({
   RenderLinkHandlersWarmupComponent: vi.fn()
 }));
 
+// Since obsidian-dev-utils 93.2.0 the universal components live in a private `components` bag behind
+// PROTECTED accessors, not in `_`-prefixed backing fields — assigning the old fields silently registered
+// Nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
 interface PluginInternals {
-  _commandHandlerComponent: CommandHandlerComponent;
-  _consoleDebugComponent: ConsoleDebugComponent;
-  _pluginNoticeComponent: PluginNoticeComponent;
-  _resourceLockComponent: ResourceLockComponent;
+  commandHandlerComponent: CommandHandlerComponent;
+  consoleDebugComponent: ConsoleDebugComponent;
   onloadImpl(): Promise<void>;
+  pluginNoticeComponent: PluginNoticeComponent;
+  pluginSettingsComponent: PluginSettingsComponentBase<object>;
+  resourceLockComponent: ResourceLockComponent;
 }
 
 function createMockApp(): App {
@@ -194,17 +200,20 @@ describe('Plugin', () => {
   it('should wire up all components in onloadImpl', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
-    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
-    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    internals.consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals.resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals.pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const registerCommandHandlers = vi.fn();
-    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
+    internals.commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
     await internals.onloadImpl();
 
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
+    // The plugin's own settings component must REPLACE the placeholder one obsidian-dev-utils 93.2.0
+    // Registers, or every dev-utils helper reading `plugin.pluginSettingsComponent` sees empty settings.
+    expect(internals.pluginSettingsComponent).toBeInstanceOf(PluginSettingsComponent);
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
 
     // `registerCommandHandlers` takes a FACTORY, so the handler list is only built when the component
@@ -231,11 +240,11 @@ describe('Plugin', () => {
   it('should build fresh command handler instances on every factory call', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
-    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
-    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    internals.consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals.resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals.pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const registerCommandHandlers = vi.fn();
-    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
+    internals.commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
 
     await internals.onloadImpl();
 
@@ -256,10 +265,10 @@ describe('Plugin', () => {
   it('should register an unload cleanup that releases the marked selection', async () => {
     const plugin = new Plugin(createMockApp(), createMockManifest());
     const internals = castTo<PluginInternals>(plugin);
-    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._resourceLockComponent = strictProxy<ResourceLockComponent>({});
-    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
-    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers: vi.fn() });
+    internals.consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals.resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals.pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    internals.commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers: vi.fn() });
     const registerSpy = vi.spyOn(plugin, 'register');
 
     await internals.onloadImpl();
