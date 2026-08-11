@@ -54,7 +54,7 @@ interface MoveNoticeButtonDefinition {
 }
 
 /**
- * Owns the permanent notice shown while a selection is marked for moving. The notice carries a
+ * Owns the non-dismissable notice shown while a selection is marked for moving. The notice carries a
  * `Switch to split/extract` button, up to three configurable move buttons, a `Swap with selection`
  * button (swaps the marked selection with the active editor's current selection), and an always-shown
  * `Cancel move` button. Button state is refreshed whenever the active leaf or the editor selection changes.
@@ -130,7 +130,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Builds and shows the permanent marked-selection notice with its enabled buttons, returning the notice
+   * Builds and shows the non-dismissable marked-selection notice with its enabled buttons, returning the notice
    * so the caller can hide it when the mark is released. The three move buttons are controlled by the
    * `Smart cut & paste` settings; switching to split/extract and cancelling are always shown. When the
    * notice itself is disabled (`shouldShowSmartCutNotice` is off), nothing is shown and `null` is returned.
@@ -157,8 +157,12 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       }
     });
 
+    // No `isPermanent`: `shouldHideOnClick: false` already gives the notice an infinite duration and puts
+    // It in `PluginNoticeMode.Separate`, so no later notice can replace it — and dev-utils 93 throws on the
+    // Combination, since a permanent notice needs the shared slot that a separate one deliberately avoids.
+    // Permanence would be wrong here anyway: it outlives the plugin, while the mark this notice reports
+    // Dies with it.
     const notice = this.pluginNoticeComponent.showNotice(message, {
-      isPermanent: true,
       shouldHideOnClick: false,
       shouldShowCloseButton: false
     });

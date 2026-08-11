@@ -137,12 +137,14 @@ function getButtons(): TestButton[] {
 }
 
 describe('MoveNoticeComponent', () => {
-  it('shows a permanent notice with the Switch to split/extract button, the three move buttons, plus Cancel move', () => {
+  it('shows a non-dismissable notice with the Switch to split/extract button, the three move buttons, plus Cancel move', () => {
     const shownNotice = component.showNotice();
 
     expect(shownNotice).toBe(notice);
-    expect(capturedOptions).toMatchObject({
-      isPermanent: true,
+    // Exact equality, not `toMatchObject`: the ABSENCE of `isPermanent` is the assertion. Combined with
+    // `shouldHideOnClick: false` it throws in dev-utils 93, since that mode is `Separate` and a permanent
+    // Notice needs the shared slot.
+    expect(capturedOptions).toEqual({
       shouldHideOnClick: false,
       shouldShowCloseButton: false
     });
