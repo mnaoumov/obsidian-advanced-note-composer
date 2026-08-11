@@ -1,5 +1,7 @@
 {
   "defaultFrontmatterMergeStrategy": "MergeAndPreferNewValues",
+  "folderNoteLocation": "InsideFolder",
+  "folderNoteNameTemplate": "!",
   "frontmatterTitleMode": "UseForInvalidTitleOnly",
   "mergeTemplate": "\n\n{{content}}",
   "shouldAddInvalidTitleToNoteAlias": true,

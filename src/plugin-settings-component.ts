@@ -7,7 +7,8 @@ import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
 import type {
   CreateFolderTemplateTokens,
-  NameTransformTokens
+  NameTransformTokens,
+  ReorderedFileTemplateTokens
 } from './template-tokens.ts';
 
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
@@ -17,9 +18,14 @@ import {
   PluginSettings
 } from './plugin-settings.ts';
 import {
+  BASE_TOKEN_KEYS,
+  ReorderItemKind
+} from './reorder-items.ts';
+import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
   resolveNameTransformTokens,
+  resolveReorderedFileTemplateTokens,
   TEMPLATE_TOKEN_REG_EXP
 } from './template-tokens.ts';
 
@@ -50,9 +56,72 @@ const SAMPLE_CREATE_FOLDER_TOKENS: CreateFolderTemplateTokens = {
  */
 const SAMPLE_NAME_TRANSFORM_TOKENS: NameTransformTokens = { rawString: 'Sample' };
 
+/**
+ * Stand-in values for validating a reordered-FILE template. As above, only the shape matters.
+ */
+const SAMPLE_REORDERED_FILE_TOKENS: ReorderedFileTemplateTokens = {
+  extension: '.md',
+  index: 1,
+  name: '1. Sample',
+  parentFolder: 'Parent',
+  parentFolderPath: 'Parent',
+  path: 'Parent/1. Sample.md',
+  safeName: 'Sample'
+};
+
+/**
+ * Token keys a reordered FILE's name template cannot use: they are what that template PRODUCES.
+ */
+const REORDER_FILE_RESULT_TOKEN_KEYS = new Set(['name', 'path']);
+
+/**
+ * The name someone TYPED into the create-folder prompt. A reorder never has one, so this is meaningless in
+ * every reorder template, the title included.
+ */
+const RAW_FOLDER_NAME_TOKEN_KEY = 'rawFolderName'.toLowerCase();
+
+/**
+ * Token keys a reorder's folder NAME template cannot use: the two it produces itself, plus the typed name.
+ */
+const REORDER_FOLDER_FORBIDDEN_TOKEN_KEYS = new Set([...FOLDER_ONLY_TOKEN_KEYS, RAW_FOLDER_NAME_TOKEN_KEY]);
+
+/**
+ * What a reorder TITLE template cannot use — only the typed name.
+ *
+ * It deliberately does NOT inherit the rest of the name template's ban: `{{folderName}}` is precisely what
+ * a title wants (it is the default), because by the time the title is written the folder HAS its new name.
+ */
+const REORDER_TYPED_NAME_TOKEN_KEYS = new Set([RAW_FOLDER_NAME_TOKEN_KEY]);
+
 interface PluginSettingsComponentConstructorParams {
   readonly dataHandler: DataHandler;
   readonly pluginEventSource: PluginEventSource;
+}
+
+interface ValidateReorderNameTemplateParams {
+  /**
+   * The token carrying the item's own name — the one the template must contain.
+   */
+  readonly baseTokenKey: string;
+
+  /**
+   * Reports the first token key this kind's resolver does not know.
+   *
+   * @param template - The template to check.
+   * @returns The unknown key, or `undefined` when every token resolves.
+   */
+  findUnknownTokenKey(this: void, template: string): string | undefined;
+
+  /**
+   * Token keys this kind's name template may not use.
+   */
+  readonly forbiddenTokenKeys: ReadonlySet<string>;
+
+  /**
+   * How the message names what is being validated, e.g. `Folder name`.
+   */
+  readonly subject: string;
+  readonly value: string;
 }
 
 /* v8 ignore start -- LegacySettings is only instantiated during legacy settings migration. */
@@ -174,6 +243,15 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('newFolderNameTemplate', validateCreateFolderNameTemplate);
     this.registerValidator('newFolderContentTemplate', validateCreateFolderContentTemplate);
 
+    // The folder note's own name follows the same rules as the plugin's two other note-name templates —
+    // Same vocabulary, same "must be one file-name segment" constraint (issue #216).
+    this.registerValidator('folderNoteNameTemplate', validateNoteNameTemplate);
+
+    this.registerValidator('reorderedFolderNameTemplate', validateReorderedFolderNameTemplate);
+    this.registerValidator('reorderedFileNameTemplate', validateReorderedFileNameTemplate);
+    this.registerValidator('folderNoteTitleTemplate', validateFolderNoteTitleTemplate);
+    this.registerValidator('reorderedFileTitleTemplate', validateReorderedFileTitleTemplate);
+
     // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
     // Validator that fallback is invisible, so a single broken entry would silently stop the other
@@ -189,6 +267,17 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 }
 
 /**
+ * Reports the first token key the template uses out of a forbidden set, spelled the way it was typed.
+ *
+ * @param template - The template to check.
+ * @param forbiddenTokenKeys - The lower-cased keys to look for.
+ * @returns The offending key, or `undefined` when the template uses none of them.
+ */
+function findTokenKey(template: string, forbiddenTokenKeys: ReadonlySet<string>): string | undefined {
+  return getTemplateTokenKeys(template).find((key) => forbiddenTokenKeys.has(key.toLowerCase()));
+}
+
+/**
  * Reports the first token key the create-folder resolver does not know.
  *
  * @param template - The template to check.
@@ -197,6 +286,18 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 function findUnknownCreateFolderTokenKey(template: string): string | undefined {
   return findUnknownTokenKey(template, (probe) => {
     resolveCreateFolderTemplateTokens({ template: probe, tokens: SAMPLE_CREATE_FOLDER_TOKENS });
+  });
+}
+
+/**
+ * Reports the first token key the reordered-file resolver does not know.
+ *
+ * @param template - The template to check.
+ * @returns The unknown key, or `undefined` when every token resolves.
+ */
+function findUnknownReorderedFileTokenKey(template: string): string | undefined {
+  return findUnknownTokenKey(template, (probe) => {
+    resolveReorderedFileTemplateTokens({ template: probe, tokens: SAMPLE_REORDERED_FILE_TOKENS });
   });
 }
 
@@ -293,6 +394,31 @@ function validateCreateFolderNameTemplate(value: string): MaybeReturn<string> {
 }
 
 /**
+ * Validates the `folderNoteTitleTemplate` setting (issue #216).
+ *
+ * Unlike the name templates this one may be EMPTY — that is how the `title` property is left alone, which
+ * is why there is no separate toggle beside it.
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateFolderNoteTitleTemplate(value: string): MaybeReturn<string> {
+  if (!value) {
+    return;
+  }
+
+  const typedOnlyKey = findTokenKey(value, REORDER_TYPED_NAME_TOKEN_KEYS);
+  if (typedOnlyKey) {
+    return `{{${typedOnlyKey}}} cannot be used here, because a reorder has no typed name`;
+  }
+
+  const unknownKey = findUnknownCreateFolderTokenKey(value);
+  if (unknownKey) {
+    return `Unknown token {{${unknownKey}}}`;
+  }
+}
+
+/**
  * Validates a template that names a NOTE (rather than formatting its content): it must not carry
  * `{{content}}`, and its literal text must be usable as a single file-name segment. Shared by
  * `splitIntoFolderNoteNameTemplate` (issue #153) and `mergeFolderIntoFileNoteNameTemplate` (issue #160),
@@ -313,5 +439,102 @@ function validateNoteNameTemplate(value: string): MaybeReturn<string> {
   // Only the literal text is checked: what a token expands to is sanitized when the note is created.
   if (!hasValidFileNameLiteral(value)) {
     return 'Invalid note name';
+  }
+}
+
+/**
+ * Validates the `reorderedFileNameTemplate` setting (issue #216).
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateReorderedFileNameTemplate(value: string): MaybeReturn<string> {
+  return validateReorderNameTemplate({
+    baseTokenKey: BASE_TOKEN_KEYS[ReorderItemKind.File],
+    findUnknownTokenKey: findUnknownReorderedFileTokenKey,
+    forbiddenTokenKeys: REORDER_FILE_RESULT_TOKEN_KEYS,
+    subject: 'File name',
+    value
+  });
+}
+
+/**
+ * Validates the `reorderedFileTitleTemplate` setting (issue #216). Empty is the opt-out, as above.
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateReorderedFileTitleTemplate(value: string): MaybeReturn<string> {
+  if (!value) {
+    return;
+  }
+
+  const unknownKey = findUnknownReorderedFileTokenKey(value);
+  if (unknownKey) {
+    return `Unknown token {{${unknownKey}}}`;
+  }
+}
+
+/**
+ * Validates the `reorderedFolderNameTemplate` setting (issue #216).
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateReorderedFolderNameTemplate(value: string): MaybeReturn<string> {
+  return validateReorderNameTemplate({
+    baseTokenKey: BASE_TOKEN_KEYS[ReorderItemKind.Folder],
+    findUnknownTokenKey: findUnknownCreateFolderTokenKey,
+    forbiddenTokenKeys: REORDER_FOLDER_FORBIDDEN_TOKEN_KEYS,
+    subject: 'Folder name',
+    value
+  });
+}
+
+/**
+ * The rules every reorder NAME template shares, whichever kind it names.
+ *
+ * The two required tokens are what make a renumbering possible at all: without `{{index}}` there is no
+ * number to rewrite, and without the base token the new name would not carry the item's own name — the
+ * rename would erase it. Requiring them here is also what lets `numbered-name.ts` build its parser from the
+ * same template and always succeed.
+ *
+ * @param params - The template, its kind's tokens, and the wording for the message.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateReorderNameTemplate(params: ValidateReorderNameTemplateParams): MaybeReturn<string> {
+  const {
+    baseTokenKey,
+    findUnknownTokenKey: findUnknownKey,
+    forbiddenTokenKeys,
+    subject,
+    value
+  } = params;
+
+  if (!value.trim()) {
+    return `${subject} template should not be empty`;
+  }
+
+  const resultKey = findTokenKey(value, forbiddenTokenKeys);
+  if (resultKey) {
+    return `{{${resultKey}}} cannot be used here, because this template IS the name`;
+  }
+
+  const unknownKey = findUnknownKey(value);
+  if (unknownKey) {
+    return `Unknown token {{${unknownKey}}}`;
+  }
+
+  const tokenKeys = new Set(getTemplateTokenKeys(value).map((key) => key.toLowerCase()));
+  if (!tokenKeys.has('index')) {
+    return `${subject} template should contain {{index}}, which is the number a reorder rewrites`;
+  }
+
+  if (!tokenKeys.has(baseTokenKey.toLowerCase())) {
+    return `${subject} template should contain {{${baseTokenKey}}}, or renumbering would drop the name`;
+  }
+
+  if (!hasValidFileNameLiteral(value)) {
+    return `Invalid ${subject.toLowerCase()}`;
   }
 }

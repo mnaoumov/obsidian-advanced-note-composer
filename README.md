@@ -417,6 +417,47 @@ A note name is refused if it would be empty, if it still contains invalid charac
 
 Neither button is compulsory: **Should show rename button for the created folder** and **Should show rename button for created notes** turn them off independently. Turn the notes one off when the names in **Create folder content template** are already the names you want — the dialog still previews every note, but the previewed names are final. The folder one is worth keeping longer, since that name is the one you typed and the numbering and title rules rewrite it. Both are on by default and do nothing while **Should ask before creating a folder** is off, because without the dialog there is no button.
 
+## Reorder folders
+
+The `Reorder sibling folders...` and `Reorder child folders...` commands (both also on a folder's right-click menu) put a folder's contents in the order **you** choose and renumber them to match, rewriting the number in each folder's name and in its folder note's `title` property.
+
+The two commands differ only in which row they reorder:
+
+- **`Reorder sibling folders...`** reorders the folder you right-clicked **among its siblings** — every child folder of its parent. This is also the only way to reorder your **top-level** folders, since the vault root has no right-click menu of its own: right-click any folder at the root and all of them are offered.
+- **`Reorder child folders...`** reorders what is **inside** the folder you right-clicked. From the command palette it uses your vault's `Files & Links > Default location for new notes`, exactly as `Create folder with notes...` does.
+
+A dialog lists the items with their numbers stripped off, each badged with the number it **will** get. Drag a row, or move it with the arrow buttons; the badges update as you go, so the dialog is the preview and there is no second confirmation. On `Reorder`, the **whole sequence** is renumbered from 1 — not only the row you moved — which is what keeps the numbering contiguous, and a folder that never had a number simply gains one. Everything happens in one reversible, resource-locked transaction: cancel it, or change something externally, and the names and properties roll back together.
+
+Tick **Include files** to renumber the folder's own notes as well. Folders and notes are always **two independent sequences**, each numbered from 1, because the file explorer always sorts folders above files — a single merged numbering could never be displayed in the order it claims. The box starts from **Should include files when reordering by default** (off), so reordering subfolders never silently renames the notes beside them. A file's extension is never touched.
+
+Items whose path is ignored by the plugin's [include/exclude paths](#includeexclude-paths) are left out of the dialog entirely, so a reorder neither renames nor renumbers around them.
+
+### The numbering is yours
+
+Nothing about the `1.` prefix shape is hard-coded. **Reordered folder name template** and **Reordered file name template** (under `Reorder` in the settings) decide it, and they are separate from **Create folder name template** on purpose, so reordering can follow a different scheme from creating:
+
+- the separator is ordinary text — `{{index}} {{safeFolderName}}` drops the period, `{{index}}-{{safeFolderName}}` changes it;
+- `{{index:000}}` zero-pads to the width of the mask, giving `007. Notes`;
+- the number does not have to come first — `{{safeFolderName}} ({{index}})` works just as well.
+
+Reading an existing number back uses the same template, so what writes the names and what recognizes them can never disagree. `{{safeFolderName}}` (or `{{safeName}}` for a note) is the name without its number, and both templates must contain it and `{{index}}` — otherwise renumbering would drop the name, or have no number to rewrite.
+
+**Reordered folder title template** (default `{{folderName}}`) is what goes into the folder note's `title`: `{{folderName}}` is the new name **with** its number, `{{safeFolderName}}` the same name without it. Leave it empty to leave the property alone. **Reordered file title template** is the same thing for notes and is **empty by default**, so a reordered note is renamed and nothing else until you fill it in. Only `title` is ever written — `aliases` and everything else are left as they are.
+
+## Folder note
+
+Several commands need to know which note **describes** a folder — the one whose properties a reorder or rename keeps in step. **Folder note location** (under `Folder note` in the settings) answers that:
+
+- **`Auto`** (the default) reads the installed [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin every time, so reconfiguring that plugin needs no change here. Without it, `Auto` means a note named after its folder, inside it (`alpha/bravo/charlie/charlie.md`).
+- **`Inside the folder`** and **`Beside the folder`** say it yourself. The second is the `alpha/bravo/charlie.md` layout, whose point is that `[[alpha/bravo/charlie]]` links to a folder with no special syntax.
+- **`This vault has no folder notes`** turns the whole idea off; no properties are ever rewritten.
+
+**Folder note name template** names it when you have chosen a location yourself: `{{folderName}}` names it after its folder, while a literal like `!` or `index` gives every folder note the same name.
+
+That plugin's third option — keeping every folder note in one central folder — has no equivalent here, and `Auto` falls back when it is set: with the notes pooled, which note belongs to a folder no longer follows from the folder's path.
+
+When the folder note is named after its folder, renumbering the folder renames the note with it — otherwise `1. Alpha/1. Alpha.md` would become `3. Alpha/1. Alpha.md`, which by that very rule is no longer a folder note. A fixed name like `!` needs no rename and gets none.
+
 ## Merge folder contents into a single file
 
 The `Merge current folder contents into a single file...` command (also on a folder's right-click menu) concatenates **every note inside a folder** — recursively, a folder's own notes first and then each sub-folder's — into **one brand-new note** named after the folder and placed next to it. This is distinct from `Merge current folder with another folder...`, which mirrors the folder's structure into another folder; here everything collapses into a single file. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The whole batch runs in one reversible, resource-locked transaction (cancel or an external change rolls everything back), the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on.

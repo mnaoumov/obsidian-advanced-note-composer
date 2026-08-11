@@ -27,7 +27,7 @@ describe('reorder headings', () => {
         const canRun = app.commands.executeCommandById(`${pluginId}:reorder-headings`);
         await waitUntil({
           message: 'reorder modal did not open',
-          predicate: () => document.querySelector('.advanced-note-composer-reorder-headings-list') !== null
+          predicate: () => document.querySelector('.advanced-note-composer-reorder-list') !== null
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -48,7 +48,7 @@ describe('reorder headings', () => {
 
         function moveDown(headingText: string): void {
           const button = document.querySelector(
-            `.advanced-note-composer-reorder-headings-item[data-heading-text="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-headings-down`
+            `.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-down`
           );
           if (!(button instanceof HTMLButtonElement)) {
             throw new TypeError(`No move-down button for "${headingText}".`);
@@ -109,7 +109,7 @@ describe('reorder headings', () => {
         app.commands.executeCommandById(`${pluginId}:reorder-headings`);
         await waitUntil({
           message: 'reorder modal did not open',
-          predicate: () => document.querySelector('.advanced-note-composer-reorder-headings-list') !== null
+          predicate: () => document.querySelector('.advanced-note-composer-reorder-list') !== null
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -138,7 +138,7 @@ describe('reorder headings', () => {
 
         function moveDown(headingText: string): void {
           const button = document.querySelector(
-            `.advanced-note-composer-reorder-headings-item[data-heading-text="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-headings-down`
+            `.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(headingText)}"] .advanced-note-composer-reorder-down`
           );
           if (!(button instanceof HTMLButtonElement)) {
             throw new TypeError(`No move-down button for "${headingText}".`);

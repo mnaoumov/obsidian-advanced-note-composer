@@ -11,12 +11,16 @@ import {
   it
 } from 'vitest';
 
-import type { CreateFolderTemplateTokens } from './template-tokens.ts';
+import type {
+  CreateFolderTemplateTokens,
+  ReorderedFileTemplateTokens
+} from './template-tokens.ts';
 
 import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
   resolveFolderTemplateTokens,
+  resolveReorderedFileTemplateTokens,
   resolveTemplateTokens
 } from './template-tokens.ts';
 
@@ -226,6 +230,62 @@ describe('resolveFolderTemplateTokens', () => {
 
   it('should throw for a note-flavored token key, which has nothing to resolve against', () => {
     expect(() => resolve('{{fromTitle}}')).toThrow('Invalid template key: fromTitle');
+  });
+
+  it('should throw for an unknown token key', () => {
+    expect(() => resolve('{{unknown}}')).toThrow('Invalid template key: unknown');
+  });
+});
+
+describe('resolveReorderedFileTemplateTokens', () => {
+  const TOKENS: ReorderedFileTemplateTokens = {
+    extension: '.md',
+    index: 7,
+    name: '7. Meeting',
+    parentFolder: 'Projects',
+    parentFolderPath: 'Work/Projects',
+    path: 'Work/Projects/7. Meeting.md',
+    safeName: 'Meeting'
+  };
+
+  function resolve(template: string): string {
+    return resolveReorderedFileTemplateTokens({ template, tokens: TOKENS });
+  }
+
+  it('should substitute the basename without its number', () => {
+    expect(resolve('{{safeName}}')).toBe('Meeting');
+  });
+
+  it('should substitute the new basename with its number', () => {
+    expect(resolve('{{name}}')).toBe('7. Meeting');
+  });
+
+  it('should substitute the extension, which renumbering never rewrites', () => {
+    expect(resolve('{{extension}}')).toBe('.md');
+  });
+
+  it('should substitute the path', () => {
+    expect(resolve('{{path}}')).toBe('Work/Projects/7. Meeting.md');
+  });
+
+  it('should substitute both parent tokens', () => {
+    expect(resolve('{{parentFolder}}|{{parentFolderPath}}')).toBe('Projects|Work/Projects');
+  });
+
+  it('should substitute the index', () => {
+    expect(resolve('{{index}}')).toBe('7');
+  });
+
+  it('should zero-pad the index to the width of its mask', () => {
+    expect(resolve('{{index:000}}')).toBe('007');
+  });
+
+  it('should be case-insensitive for token keys', () => {
+    expect(resolve('{{SafeName}}')).toBe('Meeting');
+  });
+
+  it('should format the date token', () => {
+    expect(resolve('{{date:YYYY}}')).toMatch(/^\d{4}$/);
   });
 
   it('should throw for an unknown token key', () => {

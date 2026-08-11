@@ -34,7 +34,10 @@ import type { PluginSettings } from './plugin-settings.ts';
 
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
-import { MergeFolderIntoFileLocation } from './plugin-settings.ts';
+import {
+  FolderNoteLocation,
+  MergeFolderIntoFileLocation
+} from './plugin-settings.ts';
 
 const PLUGIN_ID = 'test-plugin-id';
 
@@ -180,6 +183,10 @@ describe('PluginSettingsTab', () => {
       'Swap folders',
       'Move/flatten folders',
       'Create folder with notes',
+      // Its own group rather than rows inside `Reorder` (issue #216): what a folder note IS also answers
+      // Issue #217's rename, so it is not a reorder detail.
+      'Folder note',
+      'Reorder',
       'UI'
     ]);
   });
@@ -377,6 +384,51 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     // The predicate is what the tab owns; Obsidian applies it — and propagates it to the row's
     // Components — on every render and on every `refreshDomState()`.
     expect(isRowDisabled(tab, 'Replacement string')).toBe(true);
+  });
+
+  it('should offer every folder-note location, Auto first', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const location = dropdowns.find((dropdown) => dropdown.name === 'Folder note location');
+    const options = [...(location?.component.selectEl.options ?? [])].map((option) => option.value);
+    expect(options).toStrictEqual([
+      FolderNoteLocation.Auto,
+      FolderNoteLocation.InsideFolder,
+      FolderNoteLocation.None,
+      FolderNoteLocation.ParentFolder
+    ]);
+  });
+
+  it('should disable the folder-note name row while the location is Auto, that plugin supplying the name', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    expect(isRowDisabled(tab, 'Folder note name template')).toBe(true);
+  });
+
+  it('should enable the folder-note name row once a location is chosen explicitly', async () => {
+    const settingsComponent = await createSettingsComponent();
+    castTo<PluginSettings>(settingsComponent.settings).folderNoteLocation = FolderNoteLocation.ParentFolder;
+
+    const tab = await createSettingsTab(settingsComponent);
+    renderRows(tab);
+
+    expect(isRowDisabled(tab, 'Folder note name template')).toBe(false);
+  });
+
+  it('should re-evaluate the predicates when the folder-note location changes', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const refreshDomStateSpy = vi.fn();
+    tab.refreshDomState = refreshDomStateSpy;
+    const location = dropdowns.find((dropdown) => dropdown.name === 'Folder note location');
+    location?.component.setValue(FolderNoteLocation.InsideFolder);
+
+    await vi.waitFor(() => {
+      expect(refreshDomStateSpy).toHaveBeenCalled();
+    });
   });
 
   it('should re-evaluate the predicates when the replace-invalid-characters toggle changes', async () => {

@@ -24,7 +24,9 @@ import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
 import { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import { RenameHeadingEditorCommandHandler } from './command-handlers/rename-heading-editor-command-handler.ts';
+import { ReorderChildFoldersCommandHandler } from './command-handlers/reorder-child-folders-command-handler.ts';
 import { ReorderHeadingsEditorCommandHandler } from './command-handlers/reorder-headings-editor-command-handler.ts';
+import { ReorderSiblingFoldersCommandHandler } from './command-handlers/reorder-sibling-folders-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './command-handlers/split-note-by-headings-recursively-editor-command-handler.ts';
@@ -321,6 +323,18 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       new ReorderHeadingsEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new ReorderSiblingFoldersCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new ReorderChildFoldersCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,

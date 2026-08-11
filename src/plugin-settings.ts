@@ -44,6 +44,39 @@ export enum FlattenMode {
   ChildFoldersOnly = 'ChildFoldersOnly'
 }
 
+/**
+ * Where a folder's folder note lives (issue #217's thread) — the one note whose properties describe the
+ * folder itself, and therefore the only note a folder rename or renumber may rewrite.
+ *
+ * The three concrete members are the shapes the folder-note ecosystem actually uses:
+ * `charlie/charlie.md` and `charlie/index.md` are both `InsideFolder` (they differ only in the NAME
+ * template, which is why the name is a template and not a fourth member), while `charlie.md` beside the
+ * folder is `ParentFolder` — whose whole point is that `[[alpha/bravo/charlie]]` links to a folder with no
+ * special syntax.
+ */
+export enum FolderNoteLocation {
+  /**
+   * Take the answer from the installed `folder-notes` plugin, falling back to a note named after its
+   * folder, inside it. The default, and resolved LIVE rather than copied — see `folder-note.ts`.
+   */
+  Auto = 'Auto',
+
+  /**
+   * `alpha/bravo/charlie/<name>.md`.
+   */
+  InsideFolder = 'InsideFolder',
+
+  /**
+   * The vault has no folder notes — nothing is resolved and no properties are ever rewritten.
+   */
+  None = 'None',
+
+  /**
+   * `alpha/bravo/<name>.md`, beside the folder rather than inside it.
+   */
+  ParentFolder = 'ParentFolder'
+}
+
 export enum FrontmatterMergeStrategy {
   KeepOriginalFrontmatter = 'KeepOriginalFrontmatter',
   MergeAndPreferNewValues = 'MergeAndPreferNewValues',
@@ -151,6 +184,50 @@ export class PluginSettings {
    */
   public emptyFolderBehaviorAfterMergingFolder = EmptyFolderBehaviorAfterMergingFolder.Delete;
 
+  /**
+   * The notes `Create folder with notes...` puts inside the folder it creates (issue #191).
+   *
+   * A line whose first non-whitespace is `{{file}}` starts a new note and names it with the rest of that
+   * line; everything up to the next marker is that note's content. The default is EMPTY, which declares no
+   * marker and therefore means one empty note named after the folder — issue #191's literal ask, with the
+   * multi-note machinery costing nothing until someone writes a marker.
+   *
+   * The marker is a bare `{{file}}` with the name after it rather than a `{{file:NAME}}` parameter, because
+   * a name may itself contain tokens (`{{file}} {{safeFolderName}}.md`) and `TEMPLATE_TOKEN_REG_EXP`
+   * is lazy — it would stop at the inner `}}`. Nothing nests, so the token grammar is untouched.
+   */
+  /**
+   * Where this vault keeps its folder notes (issue #216 / issue #217's thread).
+   *
+   * `Auto` reads the installed `folder-notes` plugin at every use rather than copying its values here — a
+   * copy would go stale the moment that plugin is reconfigured — and falls back to a note named after its
+   * folder, inside it, when that plugin is absent or set to a storage location with no counterpart here.
+   *
+   * @default {@link FolderNoteLocation.Auto}
+   */
+  public folderNoteLocation = FolderNoteLocation.Auto;
+
+  /**
+   * What a folder's folder note is called, when {@link folderNoteLocation} is not `Auto`.
+   *
+   * `{{folderName}}` names the note after its folder (`charlie/charlie.md`); a literal like `!` or `index`
+   * gives every folder note the same name. This is why the layout is a location PLUS a name rather than an
+   * enum of fixed shapes: the two established inside-the-folder conventions differ only here.
+   */
+  public folderNoteNameTemplate = '{{folderName}}';
+
+  /**
+   * The `title` property a reorder writes into a renumbered FOLDER's folder note (issue #216).
+   *
+   * `{{folderName}}` is the new folder name WITH its index — which is exactly what the reporter's own
+   * plugin writes — while `{{safeFolderName}}` is the same name without it, so a vault whose titles differ
+   * from its folder names can say how.
+   *
+   * An EMPTY template leaves the property alone entirely; that is the opt-out, so no separate toggle
+   * exists.
+   */
+  public folderNoteTitleTemplate = '{{folderName}}';
+
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 
   /**
@@ -190,18 +267,6 @@ export class PluginSettings {
    */
   public nameTransformTemplate = '';
 
-  /**
-   * The notes `Create folder with notes...` puts inside the folder it creates (issue #191).
-   *
-   * A line whose first non-whitespace is `{{file}}` starts a new note and names it with the rest of that
-   * line; everything up to the next marker is that note's content. The default is EMPTY, which declares no
-   * marker and therefore means one empty note named after the folder — issue #191's literal ask, with the
-   * multi-note machinery costing nothing until someone writes a marker.
-   *
-   * The marker is a bare `{{file}}` with the name after it rather than a `{{file:NAME}}` parameter, because
-   * a name may itself contain tokens (`{{file}} {{safeFolderName}}.md`) and `TEMPLATE_TOKEN_REG_EXP`
-   * is lazy — it would stop at the inner `}}`. Nothing nests, so the token grammar is untouched.
-   */
   public newFolderContentTemplate = '';
   /**
    * The name `Create folder with notes...` gives the folder it creates (issue #191).
@@ -216,6 +281,39 @@ export class PluginSettings {
    */
   public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
   public releaseNotesShown: readonly string[] = [];
+
+  /**
+   * The name a reorder gives a renumbered FILE (issue #216).
+   *
+   * Its own setting rather than the folder one: folders and files are numbered as two independent
+   * sequences (the file explorer always sorts folders above files), so a vault that numbers folders
+   * `01. ` and notes `1 - ` can say so. The extension is never templated — it is carried across the rename
+   * untouched.
+   *
+   * As with every numbered name here, the format is entirely this template's: the separator is literal
+   * text, `{{index:000}}` zero-pads, and `{{safeName}} ({{index}})` puts the number at the end. The parse
+   * that reads an existing index back is derived from this same template, so the two can never disagree.
+   */
+  public reorderedFileNameTemplate = '{{index}}. {{safeName}}';
+
+  /**
+   * The `title` property a reorder writes into a renumbered FILE (issue #216).
+   *
+   * Empty by default — and that means the property is left alone. Only folders were asked for, so a
+   * reordered note is renamed and nothing else until this is filled in; `{{name}}` is the new basename
+   * with its index, `{{safeName}}` the one without.
+   */
+  public reorderedFileTitleTemplate = '';
+
+  /**
+   * The name a reorder gives a renumbered FOLDER (issue #216).
+   *
+   * Deliberately NOT {@link newFolderNameTemplate}: that one names a folder being CREATED, and a vault may
+   * want reordering to follow a different scheme — so the two are separate settings that merely start from
+   * the same default.
+   */
+  public reorderedFolderNameTemplate = '{{index}}. {{safeFolderName}}';
+
   public replacement = '_';
   public shouldAddCommandsToSubmenu = true;
   public shouldAddInvalidTitleToNoteAlias = true;
@@ -255,6 +353,17 @@ export class PluginSettings {
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
+
+  /**
+   * Whether a reorder offers the folder's FILES for renumbering as well, and not only its folders
+   * (issue #216).
+   *
+   * Seeds the modal's `Include files` checkbox, which is where the choice is actually made — so this is a
+   * default, not a switch. It starts OFF so that reordering a folder's subfolders never silently renames
+   * the notes sitting beside them.
+   */
+  public shouldIncludeFilesWhenReorderingByDefault = false;
+
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
   public shouldIncludeParentFoldersWhenMergingByDefault = true;
   public shouldIncludeParentFoldersWhenSwappingByDefault = true;
