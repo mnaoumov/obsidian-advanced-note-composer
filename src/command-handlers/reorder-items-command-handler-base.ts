@@ -121,8 +121,8 @@ type PlannedReorderItem = PlannedReorderFile | PlannedReorderFolder;
  */
 export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandler {
   protected readonly app: App;
-  protected readonly pluginNoticeComponent: PluginNoticeComponent;
-  protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
 
   protected constructor(params: ReorderItemsCommandHandlerBaseConstructorParams) {
