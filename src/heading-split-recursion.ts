@@ -66,3 +66,37 @@ export function findNextHeadingToSplit(headings: readonly HeadingCache[], minLev
   const shallowestLevel = Math.min(...candidates.map((heading) => heading.level));
   return candidates.find((heading) => heading.level === shallowestLevel) ?? null;
 }
+
+/**
+ * The headings a single-heading recursive split will turn into notes: the heading starting at
+ * `headingLine` plus every heading nested under it — that is, the following headings up to the first one
+ * of an equal or shallower level. The same rule `getSelectionUnderHeading` uses to decide how much text
+ * the heading owns, applied to the heading cache, so the preview and the extraction agree on what the
+ * subtree is.
+ *
+ * A heading with no sub-headings yields just itself, which is what makes the leaf case produce a single
+ * note rather than nothing.
+ *
+ * @param headings - The note's headings, in document order (from `metadataCache`).
+ * @param headingLine - The line the target heading starts on.
+ * @returns The subtree in document order, or an empty array when no heading starts at that line.
+ */
+export function getHeadingSubtree(headings: readonly HeadingCache[], headingLine: number): HeadingCache[] {
+  const rootIndex = headings.findIndex((heading) => heading.position.start.line === headingLine);
+  if (rootIndex === -1) {
+    return [];
+  }
+  const root = headings[rootIndex];
+  /* v8 ignore next 3 -- `rootIndex` came from `findIndex`, so the entry is always there. */
+  if (!root) {
+    return [];
+  }
+  const subtree: HeadingCache[] = [root];
+  for (const heading of headings.slice(rootIndex + 1)) {
+    if (heading.level <= root.level) {
+      break;
+    }
+    subtree.push(heading);
+  }
+  return subtree;
+}

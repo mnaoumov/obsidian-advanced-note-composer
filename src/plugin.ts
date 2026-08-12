@@ -28,6 +28,7 @@ import { RenameHeadingEditorCommandHandler } from './command-handlers/rename-hea
 import { ReorderChildFoldersCommandHandler } from './command-handlers/reorder-child-folders-command-handler.ts';
 import { ReorderHeadingsEditorCommandHandler } from './command-handlers/reorder-headings-editor-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './command-handlers/reorder-sibling-folders-command-handler.ts';
+import { SplitHeadingRecursivelyEditorCommandHandler } from './command-handlers/split-heading-recursively-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './command-handlers/split-note-by-headings-recursively-editor-command-handler.ts';
@@ -355,6 +356,15 @@ export class Plugin extends PluginBase {
         pluginVersion: this.manifest.version
       }),
       new SplitNoteByHeadingsRecursivelyEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      // The same recursion scoped to the heading the cursor is in, leaving the note's other headings
+      // Intact (issue #228).
+      new SplitHeadingRecursivelyEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,

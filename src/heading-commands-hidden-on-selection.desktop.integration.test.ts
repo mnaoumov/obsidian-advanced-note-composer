@@ -37,11 +37,13 @@ interface ProbeResult {
   readonly isExtractThisHeadingInMenu: boolean;
   readonly isRecursiveSplitAvailable: boolean;
   readonly isRecursiveSplitInMenu: boolean;
+  readonly isScopedSplitAvailable: boolean;
+  readonly isScopedSplitInMenu: boolean;
   readonly isSplitByH2InMenu: boolean;
 }
 
 describe('heading commands hidden when a selection is made (issue #188)', () => {
-  it('hides the recursive split and extract-this-heading menu items while a selection is active, keeping the palette command available', async () => {
+  it('hides the recursive split, scoped split and extract-this-heading menu items while a selection is active, keeping the palette command available', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
@@ -51,6 +53,10 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
         const EXTRACT_CURRENT_SELECTION_ITEM_TITLE = 'Extract current selection';
         const SPLIT_BY_H2_ITEM_TITLE = 'Split note by headings - H2';
         const RECURSIVE_SPLIT_COMMAND_ID = `${pluginId}:split-note-by-headings-recursively`;
+        // The scoped variant (issue #228) follows the same rule, and its title is not a substring of the
+        // Whole-note one, so `includes` cannot confuse the two.
+        const SCOPED_SPLIT_ITEM_TITLE = 'Split heading recursively';
+        const SCOPED_SPLIT_COMMAND_ID = `${pluginId}:split-heading-recursively`;
         const NOTE_PATH = 'anc-selection-menu-visibility.md';
         // Line layout (0-indexed):
         // 0 Intro paragraph.
@@ -97,6 +103,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
 
           const command = app.commands.commands[RECURSIVE_SPLIT_COMMAND_ID];
           const isRecursiveSplitAvailable = command?.editorCheckCallback?.(true, editor, view) === true;
+          const scopedCommand = app.commands.commands[SCOPED_SPLIT_COMMAND_ID];
+          const isScopedSplitAvailable = scopedCommand?.editorCheckCallback?.(true, editor, view) === true;
 
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('editor-menu', menu, editor, view);
@@ -106,6 +114,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
             isExtractThisHeadingInMenu: titles.some((title) => title.includes(EXTRACT_THIS_HEADING_ITEM_TITLE)),
             isRecursiveSplitAvailable,
             isRecursiveSplitInMenu: titles.some((title) => title.includes(RECURSIVE_SPLIT_ITEM_TITLE)),
+            isScopedSplitAvailable,
+            isScopedSplitInMenu: titles.some((title) => title.includes(SCOPED_SPLIT_ITEM_TITLE)),
             isSplitByH2InMenu: titles.some((title) => title.includes(SPLIT_BY_H2_ITEM_TITLE))
           };
           menu.hide();
@@ -175,14 +185,18 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
       vaultPath: getTemporaryVault().path
     });
 
-    // Caret in the heading's body with nothing selected: both heading commands are offered, and
-    // `Extract this heading...` works from the body rather than only the `#` line (issue #143).
+    // Caret in the heading's body with nothing selected: the heading commands are offered, and both
+    // `Extract this heading...` and `Split heading recursively...` work from the body rather than only
+    // the `#` line (issue #143) — which is what makes right-clicking a section the entry point for
+    // issue #228, with no menu surface of its own.
     expect(result.caretInBody.isRecursiveSplitInMenu).toBe(true);
+    expect(result.caretInBody.isScopedSplitInMenu).toBe(true);
     expect(result.caretInBody.isExtractThisHeadingInMenu).toBe(true);
     expect(result.caretInBody.isExtractCurrentSelectionInMenu).toBe(false);
 
-    // A selection on the same line: both heading commands leave the menu (issue #188)...
+    // A selection on the same line: the heading commands leave the menu (issue #188)...
     expect(result.selectionInBody.isRecursiveSplitInMenu).toBe(false);
+    expect(result.selectionInBody.isScopedSplitInMenu).toBe(false);
     expect(result.selectionInBody.isExtractThisHeadingInMenu).toBe(false);
     // ...and the selection-scoped command is the one offered instead.
     expect(result.selectionInBody.isExtractCurrentSelectionInMenu).toBe(true);
@@ -190,6 +204,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
     // The hide is menu-only: the palette command (and any hotkey) stays available either way.
     expect(result.caretInBody.isRecursiveSplitAvailable).toBe(true);
     expect(result.selectionInBody.isRecursiveSplitAvailable).toBe(true);
+    expect(result.caretInBody.isScopedSplitAvailable).toBe(true);
+    expect(result.selectionInBody.isScopedSplitAvailable).toBe(true);
 
     // The level-scoped items keep their own rule (issue #94): shown whenever the selection intersects a
     // Heading of that level, selection or not.

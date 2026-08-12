@@ -10,6 +10,7 @@ import {
 import {
   buildRecursiveSplitPreviewRows,
   findNextHeadingToSplit,
+  getHeadingSubtree,
   MAX_HEADING_LEVEL
 } from './heading-split-recursion.ts';
 
@@ -43,12 +44,38 @@ function createHeading(level: number, headingText: string, offset: number): Head
   });
 }
 
+function createHeadingOnLine(level: number, headingText: string, line: number): HeadingCache {
+  return strictProxy<HeadingCache>({
+    heading: headingText,
+    level,
+    position: {
+      end: { col: 0, line, offset: 0 },
+      start: { col: 0, line, offset: 0 }
+    }
+  });
+}
+
 function createHeadings(): HeadingCache[] {
   return [
     createHeading(1, 'A', CONTENT.indexOf('# A')),
     createHeading(2, 'B', CONTENT.indexOf('## B')),
     createHeading(3, 'C', CONTENT.indexOf('### C')),
     createHeading(2, 'D', CONTENT.indexOf('## D'))
+  ];
+}
+
+/**
+ * The same `# A` / `## B` / `### C` / `## D` note, but positioned by LINE — which is what
+ * {@link getHeadingSubtree} matches on (the cursor gives a line, not an offset).
+ *
+ * @returns The headings, in document order.
+ */
+function createLineHeadings(): HeadingCache[] {
+  return [
+    createHeadingOnLine(1, 'A', 0),
+    createHeadingOnLine(2, 'B', 4),
+    createHeadingOnLine(3, 'C', 8),
+    createHeadingOnLine(2, 'D', 12)
   ];
 }
 
@@ -114,6 +141,53 @@ describe('buildRecursiveSplitPreviewRows', () => {
       { depth: 0, headingText: 'A' },
       { depth: 1, headingText: 'C' }
     ]);
+  });
+});
+
+describe('getHeadingSubtree', () => {
+  it('should return nothing when no heading starts on that line', () => {
+    expect(getHeadingSubtree(createLineHeadings(), 3)).toEqual([]);
+  });
+
+  it('should return nothing when the note has no headings', () => {
+    expect(getHeadingSubtree([], 0)).toEqual([]);
+  });
+
+  it('should return the heading and everything nested under it', () => {
+    // `B` owns `C`, and stops at `D` — its own H2 sibling.
+    expect(getHeadingSubtree(createLineHeadings(), 4).map((heading) => heading.heading)).toEqual(['B', 'C']);
+  });
+
+  it('should stop at a heading of the same level', () => {
+    // `D` is the last H2 and has nothing under it, so the subtree is `D` alone.
+    expect(getHeadingSubtree(createLineHeadings(), 12).map((heading) => heading.heading)).toEqual(['D']);
+  });
+
+  it('should return the whole note when the target heading is the shallowest one', () => {
+    expect(getHeadingSubtree(createLineHeadings(), 0).map((heading) => heading.heading)).toEqual(['A', 'B', 'C', 'D']);
+  });
+
+  it('should include a nested heading whose level is skipped', () => {
+    // `####` under a `##` is still nested under it — the subtree is bounded by level, not by adjacency.
+    const headings = [
+      createHeadingOnLine(2, 'B', 0),
+      createHeadingOnLine(4, 'Loose end', 4),
+      createHeadingOnLine(2, 'D', 8)
+    ];
+    expect(getHeadingSubtree(headings, 0).map((heading) => heading.heading)).toEqual(['B', 'Loose end']);
+  });
+
+  it('should return a leaf heading on its own', () => {
+    // The degenerate case the command is deliberately still offered for: it produces a single note.
+    expect(getHeadingSubtree(createLineHeadings(), 8).map((heading) => heading.heading)).toEqual(['C']);
+  });
+
+  it('should stop at a shallower heading', () => {
+    const headings = [
+      createHeadingOnLine(3, 'C', 0),
+      createHeadingOnLine(1, 'A', 4)
+    ];
+    expect(getHeadingSubtree(headings, 0).map((heading) => heading.heading)).toEqual(['C']);
   });
 });
 

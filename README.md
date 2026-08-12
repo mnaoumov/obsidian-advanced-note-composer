@@ -253,7 +253,7 @@ Notes:
   | `Flatten folder` (all variants) | the folder the children are promoted into, instead of the folder's own parent |
   | `Create folder with notes...` | the folder the new folder is created in; the name, numbering and note previews are all recomputed for it |
   | `Merge folder into single file` | the folder the merged note lands in, overriding *Merge folder into file location* for this run only |
-  | `Split note by headings recursively` | the folder the produced tree is rooted in |
+  | `Split note by headings recursively`, `Split heading recursively` | the folder the produced tree is rooted in |
 
   Dismissing the folder picker means "never mind": you go back to the same confirmation dialog with the
   target unchanged, rather than losing the operation.
@@ -317,13 +317,36 @@ setting off (the default)      setting on
 
 The note you split is never moved — it stays where it is and links down into the new tree. The setting affects no other command, and it has no visible effect while Obsidian's own setting is `Same folder as current file`, since that resolves to the very location the setting replaces.
 
+To restructure a single section instead of the whole note, see [Split heading recursively](#split-heading-recursively) below.
+
+## Split heading recursively
+
+`Split heading recursively...` is the same operation scoped to **one** heading: the heading your cursor is in becomes a folder holding a note of its own name, its sub-headings nest inside it exactly as above, and **every other heading in the note is left alone**. Use it when only one section of a note has outgrown it and the rest should stay put.
+
+Which heading it acts on is the one **enclosing the cursor**, the same rule `Extract this heading...` follows — so it works from anywhere inside the heading's body, not only from the `#` line, and right-clicking inside a heading's section is all the "pick this heading" the command needs. It is in the editor's right-click menu and in the command palette, and (like the other heading commands) it steps out of the right-click menu while text is selected.
+
+Given a note of `## A`, `## B` (with `### B1` and `### B2` under it) and `## C`, running it with the cursor anywhere in `B` produces:
+
+```text
+B/
+  B.md
+  B1/
+    B1.md
+  B2/
+    B2.md
+```
+
+`A` and `C` are still in the original note, unchanged, and `B` is replaced by the usual **Text after extraction** residual that links down into the new tree. A heading with no sub-headings is still a valid target — it simply produces `<heading>/<heading>.md`, which is exactly what the whole-note command does when it reaches a leaf.
+
+Everything else matches `Split note by headings recursively...`: it builds the folder tree regardless of **Should split into folder**, wraps every note it creates in the **Split template**, asks for confirmation once up front as configured by **Should ask before splitting** (the dialog names the heading and lists only the notes that heading will produce, with `Change target` picking the folder the produced tree is rooted in), and honors **Should split recursively into the default new note folder** for that root.
+
 ## Which commands the editor menu offers
 
-Right-clicking with text selected offers the commands that act on a **selection**; the ones that act on a heading or on the whole note step aside. Concretely, `Extract this heading...` and `Split note by headings recursively...` are not in the editor menu while a selection is active — `Extract current selection...` is the one you want there. Drop the selection and both are back.
+Right-clicking with text selected offers the commands that act on a **selection**; the ones that act on a heading or on the whole note step aside. Concretely, `Extract this heading...`, `Split heading recursively...` and `Split note by headings recursively...` are not in the editor menu while a selection is active — `Extract current selection...` is the one you want there. Drop the selection and they are back.
 
 This only affects the editor's right-click menu. The commands stay available in the command palette and through any hotkey you assigned, selection or not, so nothing you can do today stops working.
 
-Two related rules are unchanged: `Split note by headings - H<n>` (and its `content` variant) is offered whenever the cursor or selection sits anywhere inside a heading of that level, and `Extract this heading...` — with nothing selected — works from anywhere inside a heading's section, not just from the heading line itself.
+Two related rules are unchanged: `Split note by headings - H<n>` (and its `content` variant) is offered whenever the cursor or selection sits anywhere inside a heading of that level, and `Extract this heading...` — with nothing selected — works from anywhere inside a heading's section, not just from the heading line itself. `Split heading recursively...` resolves its heading the same way.
 
 ## Flatten folder
 
