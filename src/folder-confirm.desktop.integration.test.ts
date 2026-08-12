@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // The flatten/move confirmation dialogs are v8-ignored modal UI (see flatten-folder-command-handler.ts /
 // Move-folder-command-handler.ts); this suite drives the REAL dialog DOM against a real Obsidian to prove
 // The wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
@@ -25,7 +27,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('folder operation confirmation dialogs (issue #154)', () => {
   it('flattens the folder when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
@@ -93,8 +95,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const item = await findSettingItem({ app, name: settingName, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -116,7 +117,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -132,7 +133,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('does not flatten the folder when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
@@ -187,8 +188,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const item = await findSettingItem({ app, name: settingName, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -210,7 +210,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -219,7 +219,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('moves the folder when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
@@ -300,8 +300,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const item = await findSettingItem({ app, name: settingName, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -323,7 +322,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -337,7 +336,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('does not move the folder when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
@@ -408,8 +407,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const item = await findSettingItem({ app, name: settingName, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -431,7 +429,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

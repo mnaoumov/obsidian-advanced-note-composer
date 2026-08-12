@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // The swap confirmation dialog is v8-ignored modal UI (see swap-file-modal.ts / swap-folder-modal.ts);
 // This suite drives the REAL dialog DOM against a real Obsidian to prove the wiring (issue #74).
 // G99: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
@@ -19,7 +21,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('swap confirmation dialog', () => {
   it('swaps two folders when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
@@ -88,8 +90,7 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
+          const item = await findSettingItem({ app, name: 'Should ask before swapping', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before swapping" toggle was not found.');
@@ -117,7 +118,7 @@ describe('swap confirmation dialog', () => {
           return app.vault.create(path, content);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -128,7 +129,7 @@ describe('swap confirmation dialog', () => {
 
   it('does not swap the folders when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
@@ -191,8 +192,7 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
+          const item = await findSettingItem({ app, name: 'Should ask before swapping', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before swapping" toggle was not found.');
@@ -220,7 +220,7 @@ describe('swap confirmation dialog', () => {
           return app.vault.create(path, content);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -229,7 +229,7 @@ describe('swap confirmation dialog', () => {
 
   it('swaps two files when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSwapping(true);
@@ -289,8 +289,7 @@ describe('swap confirmation dialog', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before swapping');
+          const item = await findSettingItem({ app, name: 'Should ask before swapping', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before swapping" toggle was not found.');
@@ -318,7 +317,7 @@ describe('swap confirmation dialog', () => {
           return app.vault.create(path, content);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

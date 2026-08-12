@@ -8,12 +8,14 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('merge folder preserves a child note title (issue #114)', () => {
   it('keeps the title frontmatter of a moved child note merged into a folder with no colliding note', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
@@ -88,8 +90,7 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before merging');
+          const item = await findSettingItem({ app, name: 'Should ask before merging', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before merging" toggle was not found.');
@@ -117,7 +118,7 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           return app.vault.create(path, content);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

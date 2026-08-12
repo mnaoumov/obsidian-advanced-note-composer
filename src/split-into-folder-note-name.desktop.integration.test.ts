@@ -13,12 +13,14 @@ import {
 
 import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('split into folder note name', () => {
   it('should name the extracted note after the template and keep the folder name as an alias', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SAVE_DELAY_IN_MILLISECONDS = 300;
         const NEW_NOTE_NAME = 'Named split';
@@ -125,9 +127,8 @@ describe('split into folder note name', () => {
           return pluginSettingsTab;
         }
 
-        function findSettingItem(tab: PluginSettingsTab, name: string): Element {
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+        async function requireSettingItem(tab: PluginSettingsTab, name: string): Promise<HTMLElement> {
+          const item = await findSettingItem({ app, name, settingTab: tab });
           if (!item) {
             throw new Error(`"${name}" setting was not found.`);
           }
@@ -138,7 +139,8 @@ describe('split into folder note name', () => {
           const tab = openSettingsTab();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const textAreaEl = findSettingItem(tab, 'Split into folder note name').querySelector('textarea');
+          const noteNameItem = await requireSettingItem(tab, 'Split into folder note name');
+          const textAreaEl = noteNameItem.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError('"Split into folder note name" input was not found.');
           }
@@ -158,7 +160,8 @@ describe('split into folder note name', () => {
           const tab = openSettingsTab();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const toggle = findSettingItem(tab, name).querySelector('.checkbox-container');
+          const toggleItem = await requireSettingItem(tab, name);
+          const toggle = toggleItem.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${name}" toggle was not found.`);
           }
@@ -172,7 +175,7 @@ describe('split into folder note name', () => {
           return wasEnabled;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

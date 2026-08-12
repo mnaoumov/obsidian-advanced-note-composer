@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 interface InstructionCounts {
   checkboxCount: number;
   instructionCount: number;
@@ -18,7 +20,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('shouldShowModalInstructions', () => {
   it('should show the modal instruction bar only when the setting is enabled', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
 
@@ -55,8 +57,7 @@ describe('shouldShowModalInstructions', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should show modal instructions');
+          const settingItem = await findSettingItem({ app, name: 'Should show modal instructions', settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
             throw new TypeError('"Should show modal instructions" toggle was not found.');
@@ -89,7 +90,7 @@ describe('shouldShowModalInstructions', () => {
           return { checkboxCount, instructionCount };
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

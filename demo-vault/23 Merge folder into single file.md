@@ -41,7 +41,7 @@ to your settings - the next merge goes back to the configured location.
 
 ## Name the merged note
 
-**Merge folder into file note name** (under `Merge folders` in the settings) names the merged note
+**Merge folder into file note name** (under `Merge` → `Merge folder` in the settings) names the merged note
 instead of always using the folder name. Set it to `{{folderName}} summary` and the merge above lands
 at `Merge into single file summary.md`. It takes `{{folderName}}`, `{{folderPath}}`, `{{parentFolder}}`,
 `{{date:FORMAT}}` and `{{time:FORMAT}}`. Leave it empty to keep naming the note after the folder.

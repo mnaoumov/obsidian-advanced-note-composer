@@ -11,12 +11,14 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('split headings automatically', () => {
   it('should extract the enclosing heading into its own folder with no picker and no confirmation', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADING = 'Auto Heading';
         const NEW_NOTE_PATH = `${HEADING}/${HEADING}.md`;
@@ -121,8 +123,7 @@ describe('split headings automatically', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          const item = await findSettingItem({ app, name, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${name}" toggle was not found.`);
@@ -137,7 +138,7 @@ describe('split headings automatically', () => {
           return wasEnabled;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -152,7 +153,7 @@ describe('split headings automatically', () => {
 
   it('should split every heading into its own folder in one go with no confirmation', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const HEADINGS = ['Sec One', 'Sec Two', 'Sec Three'];
         const SOURCE_PATH = 'split-headings-automatically-batch-source.md';
@@ -240,8 +241,7 @@ describe('split headings automatically', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          const item = await findSettingItem({ app, name, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${name}" toggle was not found.`);
@@ -256,7 +256,7 @@ describe('split headings automatically', () => {
           return wasEnabled;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

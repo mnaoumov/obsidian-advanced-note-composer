@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: this is a folder-merge (file-move) flow. It runs desktop-only, matching the plugin's
 // Established integration convention (no Android emulator wired for it). File-move suites can hit the
 // Documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run in one
@@ -37,7 +39,7 @@ interface SettingsCarrier {
 describe('merge folder skips ignored files (issue #72)', () => {
   it('does not create a stray empty target for an ignored file and reports it in a summary notice', async () => {
     const result = await evalInObsidian({
-      async callback({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -165,8 +167,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before merging');
+          const item = await findSettingItem({ app, name: 'Should ask before merging', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before merging" toggle was not found.');
@@ -196,7 +197,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
           });
         }
       },
-      input: { ignoredPath: 'ign-src/ignored.md', pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, ignoredPath: 'ign-src/ignored.md', pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

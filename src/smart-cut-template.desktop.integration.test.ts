@@ -11,12 +11,14 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('Smart cut & paste template', () => {
   it('uses the smart cut & paste template for a marked-selection move, falling back to the split template when empty', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -68,8 +70,7 @@ describe('Smart cut & paste template', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError(`"${settingName}" template input was not found.`);
@@ -113,7 +114,7 @@ describe('Smart cut & paste template', () => {
           return undefined;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -130,7 +131,7 @@ describe('Smart cut & paste template', () => {
 
   it('applies each direction\'s own template, falling back to the shared one when the override is empty (issue #174)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -187,8 +188,7 @@ describe('Smart cut & paste template', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError(`"${settingName}" template input was not found.`);
@@ -232,7 +232,7 @@ describe('Smart cut & paste template', () => {
           return undefined;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

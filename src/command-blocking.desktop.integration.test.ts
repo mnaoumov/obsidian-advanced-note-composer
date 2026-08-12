@@ -13,6 +13,8 @@ import {
 
 import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: this exercises the command palette + editor context menu, which are desktop-only
 // Surfaces here (matching the plugin's established integration convention; no Android emulator is
 // Wired for it). G99: this feature is pure plugin logic (a settings-gated `canExecute*` guard) with
@@ -37,7 +39,7 @@ interface ProbeResult {
 describe('block commands on excluded paths (issues #93, #198)', () => {
   it('hides Advanced Note Composer commands from the command path lists alone', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         // Use a command that ONLY Advanced Note Composer provides (Obsidian's core Note Composer plugin
@@ -132,8 +134,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
 
         async function setPaths(settingName: string, value: string): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError(`"${settingName}" text area was not found.`);
@@ -147,8 +148,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
 
         async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -173,7 +173,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
           return settingTab as PluginSettingsTab;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

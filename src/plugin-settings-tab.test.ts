@@ -3,6 +3,9 @@ import type {
   DropdownComponent,
   Plugin,
   SettingDefinition,
+  SettingDefinitionGroup,
+  SettingDefinitionItem,
+  SettingDefinitionPage,
   SettingGroup,
   TextComponent,
   ToggleComponent
@@ -40,6 +43,16 @@ import {
 } from './plugin-settings.ts';
 
 const PLUGIN_ID = 'test-plugin-id';
+
+/**
+ * `Folder note` is the deliberate exception to issue #220's template-first rule: its location dropdown
+ * decides whether the templates below it apply at all — and disables the name row outright while the
+ * location is `Auto` — so putting a disabled template above the setting that disables it would read
+ * backwards.
+ */
+const TEMPLATE_FIRST_EXCEPTIONS = new Set(['Folder note']);
+
+const TOP_LEVEL_LABEL = 'top level';
 
 interface AppStatics {
   createConfigured__(): App;
@@ -163,31 +176,124 @@ describe('PluginSettingsTab', () => {
     expect(tab).toBeInstanceOf(PluginSettingsTab);
   });
 
-  it('should render all setting group headings in order', async () => {
+  // Issue #221 asked for collapsible headers, collapsed on open. Obsidian 1.13 has no collapsible groups
+  // And its groups do not nest, so each section is a navigable PAGE instead: the tab opens as a short
+  // List of entries, and a page holding groups is the two-level hierarchy issues #224/#225/#226 wanted.
+  it('should open as two inline groups followed by the page entries', async () => {
+    const tab = await createSettingsTab();
+
+    expect(collectTopLevel(tab)).toEqual([
+      'group:Common',
+      'group:Merge/split/extract strategies',
+      'page:Merge',
+      'page:Split/extract',
+      'page:Swap',
+      'page:Smart cut & paste',
+      // Its own page rather than rows scattered across three others (issue #223).
+      'page:Frontmatter',
+      'page:Title',
+      // One page over what used to be two top-level headers (issue #225); the second path filter is still
+      // Independent of the first (issue #198), it is now its own subheading rather than its own header.
+      'page:Include/exclude',
+      'page:Move/flatten folders',
+      'page:Create folder with notes',
+      // Its own page rather than rows inside `Reorder` (issue #216): what a folder note IS also answers
+      // Issue #217's rename, so it is not a reorder detail.
+      'page:Folder note',
+      'page:Reorder',
+      'page:UI'
+    ]);
+  });
+
+  it('should give the merge, swap, smart cut and path pages their subheadings', async () => {
+    const tab = await createSettingsTab();
+
+    expect(collectPageSubheadings(tab)).toEqual({
+      'Create folder with notes': [],
+      'Folder note': [],
+      'Frontmatter': [],
+      // Issue #225.
+      'Include/exclude': ['Paths', 'Commands'],
+      // Issue #224.
+      'Merge': ['Merge file', 'Merge folder'],
+      'Move/flatten folders': [],
+      'Reorder': [],
+      // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
+      'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file'],
+      'Split/extract': [],
+      // Issue #226.
+      'Swap': ['Swap file', 'Swap folders'],
+      'Title': [],
+      'UI': []
+    });
+  });
+
+  it('should render every heading exactly once', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
     expect(headings).toEqual([
       'Common',
       'Merge/split/extract strategies',
-      'Title',
-      'Merge',
-      'Split/extract',
-      'Swap',
-      'Smart cut & paste',
-      'Include/exclude paths',
-      // Its own group rather than a row inside the one above (issue #198): it is a second, independent
-      // Path filter, and burying it there is what made the two behaviors look like one setting.
-      'Command include/exclude paths',
-      'Merge folders',
+      'Merge file',
+      'Merge folder',
+      'Swap file',
       'Swap folders',
-      'Move/flatten folders',
-      'Create folder with notes',
-      // Its own group rather than rows inside `Reorder` (issue #216): what a folder note IS also answers
-      // Issue #217's rename, so it is not a reorder detail.
-      'Folder note',
-      'Reorder',
-      'UI'
+      'Notice',
+      'At cursor',
+      'To top of file',
+      'To bottom of file',
+      'Paths',
+      'Commands'
+    ]);
+  });
+
+  // Issue #220: every header that has a template leads with it, so the templates stop reading as though
+  // They were placed at random.
+  it('should lead every header that has a template with its templates', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const templateNames = new Set(codeHighlighters.map((codeHighlighter) => codeHighlighter.name));
+    const offenders: string[] = [];
+    for (const [label, rowNames] of collectContainers(tab)) {
+      if (TEMPLATE_FIRST_EXCEPTIONS.has(label)) {
+        continue;
+      }
+
+      const lastTemplateIndex = rowNames.findLastIndex((name) => templateNames.has(name));
+      const firstPlainIndex = rowNames.findIndex((name) => !templateNames.has(name));
+      if (lastTemplateIndex !== -1 && firstPlainIndex !== -1 && firstPlainIndex < lastTemplateIndex) {
+        offenders.push(`${label}: ${rowNames.join(' | ')}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  // Issue #223 named no settings, only screenshots — these six are everything that reads or writes
+  // Frontmatter, drawn out of three headers that each held a couple of them.
+  it('should gather the frontmatter settings onto their own page', async () => {
+    const tab = await createSettingsTab();
+
+    expect(collectContainers(tab).get('Frontmatter')).toEqual([
+      'Frontmatter merge strategy',
+      'Frontmatter title mode',
+      'Should use source title when destination has none',
+      'Should add invalid title to note aliases',
+      'Should include frontmatter when splitting',
+      'Should extract a properties selection as properties'
+    ]);
+  });
+
+  it('should keep the folder-note location above the templates it governs', async () => {
+    const tab = await createSettingsTab();
+
+    expect(collectContainers(tab).get('Folder note')).toEqual([
+      'Folder note location',
+      'Folder note name template',
+      'Folder note title template',
+      'Folder note aliases template'
     ]);
   });
 
@@ -496,7 +602,62 @@ type AddComponentFunction = (callback: (component: BaseComponent) => void) => Se
 type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
 
 /**
+ * Describes the containers a row can sit in — every group, plus every page's own direct rows — as the
+ * ordered row names they hold. What the issue-#220 invariant is asserted against.
+ *
+ * @param tab - The settings tab.
+ * @returns The containers, keyed by the heading or page name that labels them.
+ */
+function collectContainers(tab: PluginSettingsTab): Map<string, string[]> {
+  const containers = new Map<string, string[]>();
+
+  function walk(items: SettingDefinitionItem[], label: string): void {
+    const rowNames: string[] = [];
+    for (const item of items) {
+      if ('items' in item) {
+        const nested = castTo<SettingDefinitionGroup>(item);
+        walk(castTo<SettingDefinitionItem[]>(nested.items ?? []), nested.heading ?? castTo<SettingDefinitionPage>(item).name);
+      } else {
+        rowNames.push(castTo<SettingDefinition>(item).name);
+      }
+    }
+
+    if (rowNames.length > 0) {
+      containers.set(label, rowNames);
+    }
+  }
+
+  walk(tab.getSettingDefinitions(), TOP_LEVEL_LABEL);
+  return containers;
+}
+
+/**
+ * Maps each page to the subheadings it holds — empty for a page whose rows sit directly on it.
+ *
+ * @param tab - The settings tab.
+ * @returns The subheadings of each page, keyed by page name.
+ */
+function collectPageSubheadings(tab: PluginSettingsTab): Record<string, string[]> {
+  const subheadings: Record<string, string[]> = {};
+  for (const item of tab.getSettingDefinitions()) {
+    if (!('items' in item) || castTo<SettingDefinitionGroup>(item).heading !== undefined) {
+      continue;
+    }
+
+    const page = castTo<SettingDefinitionPage>(item);
+    subheadings[page.name] = (page.items ?? [])
+      .filter((child) => 'heading' in child)
+      .map((child) => castTo<SettingDefinitionGroup>(child).heading ?? '');
+  }
+
+  return subheadings;
+}
+
+/**
  * Flattens the declared items into the rows they contain, recording the group headings on the way.
+ *
+ * Recurses through pages (issue #221), whose `items` hold groups or rows of their own — a flat walk over
+ * the top level would see nothing but the page entries.
  *
  * @param tab - The settings tab.
  * @param shouldRecordHeadings - Whether to record the headings.
@@ -504,19 +665,37 @@ type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
  */
 function collectRows(tab: PluginSettingsTab, shouldRecordHeadings = false): SettingDefinition[] {
   const rows: SettingDefinition[] = [];
-  for (const item of tab.getSettingDefinitions()) {
-    if ('items' in item) {
-      if (shouldRecordHeadings && 'heading' in item) {
-        headings.push(castTo<string>(item.heading));
-      }
 
-      rows.push(...castTo<SettingDefinition[]>(item.items ?? []));
-    } else {
-      rows.push(castTo<SettingDefinition>(item));
+  function walk(items: SettingDefinitionItem[]): void {
+    for (const item of items) {
+      if ('items' in item) {
+        if (shouldRecordHeadings && 'heading' in item) {
+          headings.push(castTo<string>(item.heading));
+        }
+
+        walk(castTo<SettingDefinitionItem[]>(item.items ?? []));
+      } else {
+        rows.push(castTo<SettingDefinition>(item));
+      }
     }
   }
 
+  walk(tab.getSettingDefinitions());
   return rows;
+}
+
+/**
+ * Describes the top level of the tab the way the user first meets it: the inline groups, then the
+ * navigable page entries.
+ *
+ * @param tab - The settings tab.
+ * @returns One `group:<heading>` / `page:<name>` entry per top-level item.
+ */
+function collectTopLevel(tab: PluginSettingsTab): string[] {
+  return tab.getSettingDefinitions().map((item) => {
+    const heading = castTo<SettingDefinitionGroup>(item).heading;
+    return heading === undefined ? `page:${castTo<SettingDefinitionPage>(item).name}` : `group:${heading}`;
+  });
 }
 
 function installSettingSpies(): void {

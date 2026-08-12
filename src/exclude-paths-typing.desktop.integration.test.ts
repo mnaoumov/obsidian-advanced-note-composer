@@ -6,6 +6,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: this drives the plugin settings tab, which is where the report came from (matching the
 // Plugin's established integration convention; no Android emulator is wired for it). G99: it uses only
 // The stable settings-tab DOM (`.setting-item` / `textarea`) and public APIs, with no dependence on
@@ -45,7 +47,7 @@ interface TypingResult {
 describe('typing a regular expression into Exclude paths (issue #155)', () => {
   it('shows no error notice, still saves the completed value, and reports an incomplete one', async () => {
     const result = await evalInObsidian({
-      async callback({ app, completeValue, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
+      async callback({ app, completeValue, findSettingItem, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const KEYSTROKE_DELAY_IN_MILLISECONDS = 60;
         const SETTLE_DELAY_IN_MILLISECONDS = 400;
@@ -152,8 +154,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItem = [...settingTab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Exclude paths');
+          const settingItem = await findSettingItem({ app, name: 'Exclude paths', settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError('"Exclude paths" text area was not found.');
@@ -185,6 +186,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
       },
       input: {
         completeValue: REPORTED_EXCLUDE_PATH,
+        findSettingItem: findSettingItemInObsidian,
         incompleteValue: INCOMPLETE_EXCLUDE_PATH,
         pluginId: PLUGIN_ID
       },

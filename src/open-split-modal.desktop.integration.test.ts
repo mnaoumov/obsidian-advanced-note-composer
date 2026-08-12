@@ -11,12 +11,14 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('switch to split/extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
@@ -99,8 +101,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
+          const item = await findSettingItem({ app, name: 'Should ask before splitting', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before splitting" toggle was not found.');
@@ -134,7 +135,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           return view.editor;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

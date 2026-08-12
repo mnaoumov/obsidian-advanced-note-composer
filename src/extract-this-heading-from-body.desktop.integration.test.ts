@@ -11,6 +11,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: `Extract this heading...` is a cross-platform editor command, but this plugin's
 // Behavioral integration suites all run desktop-only (there is no Android emulator wired for this
 // Feature and the plugin follows the established desktop-only integration convention). The command
@@ -20,7 +22,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract this heading from the body (issue #143)', () => {
   it('extracts the whole heading section when the cursor sits in the heading BODY, not on the # line', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const TARGET_BASENAME = 'extracted-section';
 
@@ -101,8 +103,7 @@ describe('extract this heading from the body (issue #143)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
+          const item = await findSettingItem({ app, name: 'Should ask before splitting', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before splitting" toggle was not found.');
@@ -139,7 +140,7 @@ describe('extract this heading from the body (issue #143)', () => {
           return view.editor;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

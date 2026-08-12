@@ -11,6 +11,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface EdgeBoundaryProbe {
@@ -33,7 +35,7 @@ interface EdgeBoundaryProbe {
 describe('a marked selection moved to an edge lands on its own line', () => {
   it('should not glue the moved block onto the adjacent line, under either template (issue #179)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -88,8 +90,7 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           }
           await sleep(RENDER_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
             throw new TypeError(`"${settingName}" template input was not found.`);
@@ -133,7 +134,7 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           return undefined;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
