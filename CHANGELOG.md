@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 5.9.0
+
+- chore: update libs
+- fix(smart-cut): stop the marked-selection notice from throwing on dev-utils 93
+- chore: overexposed
+- chore: update libs
+- feat(reorder): reorder a folder's contents, renumbering names and folder-note titles (#216)
+- fix(merge-into-single-file): close the tabs of the merged-away notes in one pass (#212)
+- feat(create-folder): make the confirmation dialog's rename buttons optional (#214)
+- fix(flatten-folder): ignore the attachment setting a plugin has taken over (#213)
+- feat(merge-folder): open the result after a folder merge (#212, #215)
+- feat(flatten-folder): hide a flatten variant that duplicates a simpler one (#210)
+
 ## 5.8.0
 
 - test(integration): restore the fixtures the two-note merge guard broke (#209)
