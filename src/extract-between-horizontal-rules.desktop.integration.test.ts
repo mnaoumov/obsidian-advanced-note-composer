@@ -11,12 +11,14 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('extract between horizontal rules', () => {
   it('extracts the block between the rules closest to the cursor, leaving the rules in place', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Two different rule spellings (`---` and `***`) prove Obsidian's parser tags both as thematicBreak
         // Sections, which is what the command keys off. `middle` sits between them.
@@ -76,8 +78,7 @@ describe('extract between horizontal rules', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before splitting');
+          const item = await findSettingItem({ app, name: 'Should ask before splitting', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before splitting" toggle was not found.');
@@ -121,7 +122,7 @@ describe('extract between horizontal rules', () => {
           return undefined;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

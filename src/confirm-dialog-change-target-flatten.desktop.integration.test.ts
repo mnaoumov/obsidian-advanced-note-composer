@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Issue #205's own example: "Change target" was rendered-but-disabled for flatten. Flatten has no picker of
 // Its own, so this proves the INVERTED loop (derived default -> dialog -> picker on demand -> dialog again)
 // Against a real Obsidian; the unit tests mock `selectFolder`, so only this exercises the real suggester.
@@ -19,7 +21,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('change target from the flatten confirmation dialog (issue #205)', () => {
   it('opens the folder picker and promotes the children into the newly chosen folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeFlattening(true);
@@ -102,8 +104,7 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === 'Should ask before flattening a folder');
+          const item = await findSettingItem({ app, name: 'Should ask before flattening a folder', settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError('"Should ask before flattening a folder" toggle was not found.');
@@ -138,7 +139,7 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

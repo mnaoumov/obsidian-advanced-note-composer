@@ -8,6 +8,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Isolation:
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-entries.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
@@ -45,7 +47,7 @@ interface MenuProbe {
 describe('flatten folder menu entries (issue #177)', () => {
   it('offers one entry per flatten variant, with the submenu setting on and off', async () => {
     const result = await evalInObsidian({
-      async callback({ app, obsidianModule, pluginId, pluginName, submenuSettingName }): Promise<MenuProbe> {
+      async callback({ app, findSettingItem, obsidianModule, pluginId, pluginName, submenuSettingName }): Promise<MenuProbe> {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
 
         await trashIfExists('flat-menu-src');
@@ -107,8 +109,7 @@ describe('flatten folder menu entries (issue #177)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === submenuSettingName);
+          const settingItem = await findSettingItem({ app, name: submenuSettingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
             throw new TypeError(`"${submenuSettingName}" toggle was not found.`);
@@ -130,7 +131,7 @@ describe('flatten folder menu entries (issue #177)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME, submenuSettingName: SUBMENU_SETTING_NAME },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID, pluginName: PLUGIN_NAME, submenuSettingName: SUBMENU_SETTING_NAME },
       vaultPath: getTemporaryVault().path
     });
 

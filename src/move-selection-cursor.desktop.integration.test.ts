@@ -11,6 +11,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: an editor-selection behavior on a move flow, matching the plugin's established
 // Integration convention (no Android emulator wired). G99: pure editor-API behavior (`setSelection`)
 // With no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
@@ -225,7 +227,7 @@ describe('cursor follows the moved content (issue #144)', () => {
 
   it('places a collapsed cursor and shows a notice in Notice feedback mode (issue #176)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<NoticeFeedbackResult> {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }): Promise<NoticeFeedbackResult> {
         const SETTLE_IN_MILLISECONDS = 400;
         const FEEDBACK_SETTING_NAME = 'Smart cut & paste completion feedback';
 
@@ -310,8 +312,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const selectEl = settingItem?.querySelector('select');
           if (!(selectEl instanceof HTMLSelectElement)) {
             throw new TypeError(`"${settingName}" dropdown was not found.`);
@@ -331,7 +332,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -347,7 +348,7 @@ describe('cursor follows the moved content (issue #144)', () => {
   // On, so an empty selection here is a real absence rather than a missed window.
   it('leaves the cursor alone for edge moves when their jump settings are off, but still jumps at the cursor', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         // Comfortably past the jump's own timings (200 ms before the target opens, then a poll for the
         // Moved content that gives up after 2 s), so an empty selection cannot just mean "not yet".
@@ -445,8 +446,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -461,7 +461,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

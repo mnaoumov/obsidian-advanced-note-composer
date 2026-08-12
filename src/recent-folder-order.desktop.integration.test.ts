@@ -13,6 +13,8 @@ import {
 
 import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: this drives the file-explorer folder context menu and the real folder-picker suggester
 // DOM, matching the plugin's established integration convention (no Android emulator is wired for it).
 // G99: the behavior under test depends on an Obsidian INTERNAL — `RecentFileTracker` collects the file
@@ -41,7 +43,7 @@ interface MenuLike {
 describe('recent folder ordering (issue #158)', () => {
   it('offers the folder of the note you are on first when the command runs on another folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const MERGE_ITEM_TITLE = 'Merge entire folder with...';
@@ -143,8 +145,7 @@ describe('recent folder ordering (issue #158)', () => {
 
         async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItems = [...settingTab.containerEl.querySelectorAll('.setting-item')];
-          const settingItem = settingItems.find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -164,7 +165,7 @@ describe('recent folder ordering (issue #158)', () => {
           }
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

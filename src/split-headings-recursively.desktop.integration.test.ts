@@ -11,6 +11,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 /*
@@ -47,7 +49,7 @@ interface TemplateSettings {
 describe('split headings recursively', () => {
   it('should mirror the heading hierarchy as a folder tree', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ROOT_FOLDER = 'RecA';
         const SOURCE_PATH = 'split-headings-recursively-source.md';
@@ -194,8 +196,7 @@ describe('split headings recursively', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          const item = await findSettingItem({ app, name, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${name}" toggle was not found.`);
@@ -210,7 +211,7 @@ describe('split headings recursively', () => {
           return wasEnabled;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
@@ -409,7 +410,7 @@ describe('split headings recursively', () => {
 
   it('should root the tree in Obsidian\'s default new note folder, keeping it nested (issue #173)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         /*
          * The source lives in its OWN folder, which is what makes the assertion discriminating: without the
@@ -534,8 +535,7 @@ describe('split headings recursively', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === name);
+          const item = await findSettingItem({ app, name, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${name}" toggle was not found.`);
@@ -550,7 +550,7 @@ describe('split headings recursively', () => {
           return wasEnabled;
         }
       },
-      input: { pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 

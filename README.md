@@ -7,6 +7,14 @@
 
 This [Obsidian](https://obsidian.md/) plugin extends the core [`Note composer`](https://help.obsidian.md/plugins/note-composer) plugin fixing some bugs and adding additional features.
 
+## Finding a setting
+
+The settings tab opens as a short list of pages — `Merge`, `Split/extract`, `Swap`, `Smart cut & paste`, `Frontmatter`, `Title`, `Include/exclude`, the folder pages and `UI` — rather than one long scroll through every setting the plugin has. Click a page to open it; the ones that cover two related things are split into subheadings inside, so merge settings live under `Merge` → `Merge file` / `Merge folder`, and the path filters under `Include/exclude` → `Paths` / `Commands`.
+
+Where a page has a **template**, that template comes first, with the settings that shape what it produces underneath it.
+
+Obsidian's own settings search reaches inside the pages: type a setting's name into the search box at the top of the settings window and picking the result opens the page it lives on.
+
 ## Relative links
 
 If you use `Merge current file with another file...`, `Extract current selection...`, `Extract this heading...` from the note with relative links, the core plugin moves those links as is, which leads to broken links you have to fix manually.
@@ -172,7 +180,7 @@ until you complete or cancel it. The notice carries buttons — **Move marked se
 each enabled only while it applies to the active note, so you can drive the whole move from the notice
 without opening the command palette.
 
-The **Smart cut & paste** settings group lets you tailor this notice:
+The **Smart cut & paste** settings page lets you tailor this notice:
 
 - **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
   moving, and cancelling purely through the commands (and their hotkeys). Nothing is shown when a
@@ -489,7 +497,7 @@ The `Merge current folder contents into a single file...` command (also on a fol
 
 **Notes and sub-folders are ordered naturally**: every run of digits in a name counts as one number, so a folder tree numbered `1.`, `1.1`, `1.1.1`, `2.`, … `10.`, `30.` merges in that order instead of the text order that puts `30.` before `5.` (and `1.10` before `1.2`). The rule is general rather than an index-prefix parser — every numeric run participates, at the position it appears — so a name with no digits in it sorts alphabetically exactly as it always did.
 
-Five settings under `Merge folders` shape the result:
+Five settings under `Merge` → `Merge folder` shape the result:
 
 - **Merge folder into file note name** names the merged note. Leave it empty to keep naming it after the folder. It accepts `{{folderName}}`, `{{folderPath}}`, `{{parentFolder}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}`, so every merge can produce e.g. `Docs summary.md`. The note is always created next to the folder, and a colliding name is de-duplicated.
 - **Should convert folders to headings when merging a folder** mirrors the folder hierarchy as headings. A direct sub-folder becomes `# Name`, its own child `## Name`, and so on; notes directly inside the merged folder get no heading, since the merged note already stands for that folder. Every sub-folder is headed, including a completely empty one — the merged outline mirrors the whole tree, so an empty folder is still part of it. Two note-less cases are left out instead, because nothing of either was merged: a folder holding only attachments (and everything under it), and a folder whose notes exist but are all excluded. Each merged note's own headings are demoted to match, so the outline stays well-formed. This is the exact opposite of `Split note by headings recursively...`, which turns a heading hierarchy into a folder tree — split a note into a tree and merge it back and the levels agree. Markdown only defines six heading levels, so a folder more than six deep gets a `#######`-and-longer line that Obsidian shows as plain text rather than a heading; the level is still written out in full, because clamping everything to `######` made a folder and its own descendants indistinguishable.
@@ -513,7 +521,7 @@ Select two or more notes in the file explorer, right-click, and choose `Merge th
 
 ## Include/exclude paths
 
-The **Include paths** and **Exclude paths** settings (under `Include/exclude paths`) decide which notes and folders this plugin will *touch*. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`. (Where the commands are *offered* is a separate setting — see [Command include/exclude paths](#command-includeexclude-paths).)
+The **Include paths** and **Exclude paths** settings (under `Include/exclude` → `Paths`) decide which notes and folders this plugin will *touch*. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`. (Where the commands are *offered* is a separate setting — see [Command include/exclude paths](#command-includeexclude-paths).)
 
 The two forms match differently, and the difference is the thing worth knowing:
 
@@ -530,11 +538,11 @@ The plugin's commands are still offered on an ignored path and only pop an "igno
 
 ## Command include/exclude paths
 
-**Command include paths** and **Command exclude paths** (under `Command include/exclude paths`) decide where this plugin's commands are *offered*. A path listed in `Command exclude paths` — or, when `Command include paths` is not empty, any path outside it — has the commands hidden entirely: they disappear from the command palette and from the editor, file, and folder context menus, so you cannot trigger them there at all.
+**Command include paths** and **Command exclude paths** (under `Include/exclude` → `Commands`) decide where this plugin's commands are *offered*. A path listed in `Command exclude paths` — or, when `Command include paths` is not empty, any path outside it — has the commands hidden entirely: they disappear from the command palette and from the editor, file, and folder context menus, so you cannot trigger them there at all.
 
-This is a **second, independent** filter, and that is the point of it. The `Include/exclude paths` box above decides what is off-limits as *content* — never a picker entry, never a merge/split target or source, never moved by a folder operation — while this one decides only whether the commands *show up*. So you can hide the commands in a folder you still merge into, or keep the commands handy in a folder that must never be merged. Excluding a path there no longer hides its commands: list it here as well if that is what you want.
+This is a **second, independent** filter, and that is the point of it. The `Paths` box above decides what is off-limits as *content* — never a picker entry, never a merge/split target or source, never moved by a folder operation — while this one decides only whether the commands *show up*. So you can hide the commands in a folder you still merge into, or keep the commands handy in a folder that must never be merged. Excluding a path there no longer hides its commands: list it here as well if that is what you want.
 
-Both boxes take exactly the same entries as `Include/exclude paths` — one per line, each a path string or a `/regular expression/`, matching by the same two rules described above. Leave them both empty (the default) and no command is ever hidden.
+Both boxes take exactly the same entries as the `Paths` ones — one per line, each a path string or a `/regular expression/`, matching by the same two rules described above. Leave them both empty (the default) and no command is ever hidden.
 
 If you had **Should block commands on excluded paths** turned on before, your `Include paths` and `Exclude paths` entries were copied into these two boxes when you upgraded, so nothing changed for you.
 

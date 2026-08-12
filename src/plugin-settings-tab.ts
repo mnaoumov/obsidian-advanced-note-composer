@@ -1,4 +1,7 @@
-import type { SettingDefinitionItem } from 'obsidian';
+import type {
+  SettingDefinitionItem,
+  SettingDefinitionPage
+} from 'obsidian';
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import { getDebugController } from 'obsidian-dev-utils/debug';
@@ -22,6 +25,24 @@ import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language-component
 
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
+}
+
+interface PluginSettingsTabSettingPageParams {
+  /**
+   * The one-line summary shown under the page name on the navigable entry, which is all the user sees of
+   * the page before opening it.
+   */
+  readonly desc: string;
+
+  /**
+   * The groups or rows the page holds.
+   */
+  readonly items: SettingDefinitionItem[];
+
+  /**
+   * The page name, shown both on the entry and as the page title.
+   */
+  readonly name: string;
 }
 
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
@@ -89,62 +110,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Default frontmatter merge strategy to use when merging notes. Can be changed in the merge/split modal dialog.');
-              f.createEl('br');
-              f.appendText('When merging frontmatter values from note A to note B:');
-              f.createEl('br');
-              appendCodeBlock(f, 'Merge and prefer new values');
-              f.appendText(' - copy values from A to B that were not in B yet, and overwrite existing values in B with values from A.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Merge and prefer original values');
-              f.appendText(' - copy values from A to B that were not in B yet, and keep existing values in B.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Keep original frontmatter');
-              f.appendText(' - keep existing values in B, and ignore values from A.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Replace with new frontmatter');
-              f.appendText(' - remove existing values in B, and copy values from A to B.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Preserve both original and new frontmatter');
-              f.appendText(' - copies new frontmatter from A into a separate frontmatter key in B.');
-            }),
-            name: 'Frontmatter merge strategy',
-            render: (setting) => {
-              setting.addDropdown((dropdown) => {
-                dropdown.addOptions({
-                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
-                  [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
-                  [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
-                  [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
-                  [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
-                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
-                });
-                this.bind({ propertyName: 'defaultFrontmatterMergeStrategy', valueComponent: dropdown });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When merging, if the destination note (note B) has no ');
-              appendCodeBlock(f, 'title');
-              f.appendText(' property, use the ');
-              appendCodeBlock(f, 'title');
-              f.appendText(' from the merged-in note (note A) instead of leaving it empty.');
-              f.createEl('br');
-              f.appendText('When the destination note already has a ');
-              appendCodeBlock(f, 'title');
-              f.appendText(', it is always kept.');
-            }),
-            name: 'Should use source title when destination has none',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldUseSourceTitleWhenTargetHasNoTitle', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
               f.appendText('Whether to run ');
               f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
               f.appendText(' on the destination file after merging/splitting.');
@@ -158,246 +123,393 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           })
         ]
       }),
-      this.settingGroupEx({
-        heading: 'Title',
+      this.settingPage({
+        desc: 'Merging pours content into a destination and removes what it came from. Merging a file pours the note you started from into the note you pick, then deletes it; merging a folder pours the folder\'s notes into a single new note. The destination is always the one that survives.',
+        items: [
+          this.settingGroupEx({
+            heading: 'Merge file',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Template to use when merging notes.');
+                  f.createEl('br');
+                  addAvailableTokens(f);
+                }),
+                name: 'Merge template',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({
+                      propertyName: 'mergeTemplate',
+                      shouldResetSettingWhenComponentIsEmpty: true,
+                      shouldShowPlaceholderForDefaultValues: false,
+                      valueComponent: codeHighlighter
+                    });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Whether to open the note after merge.',
+                name: 'Should open note after merge',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldOpenNoteAfterMerge', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Whether to ask before merging notes.',
+                name: 'Should ask before merging',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldAskBeforeMerging', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'When merging a folder, also move and merge items whose path is excluded/ignored in the plugin settings, instead of skipping them. When off (the default), excluded items are skipped and reported in a notice.',
+                name: 'Should always merge excluded items',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldAlwaysMergeExcludedItems', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('When ');
+                  appendCodeBlock(f, 'Merge current file with another file...');
+                  f.appendText(' merges a note away, whether the attachments that note owns follow into the destination note\'s attachment folder.');
+                  f.createEl('br');
+                  f.appendText('The destination honors your vault\'s attachment settings, including ');
+                  /**
+                  HACK: see the TSDoc for {@link EMPTY} for motivation.
+                  */
+                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+                  f.appendText(' when it is installed.');
+                  f.createEl('br');
+                  f.appendText(
+                    'An attachment moves when the merged note references it and no other note does, or when it sits in an attachment folder belonging to that note alone. A shared attachment stays where it is.'
+                  );
+                  f.createEl('br');
+                  f.appendText('Also applies to ');
+                  appendCodeBlock(f, 'Merge these files into one file...');
+                  f.appendText('.');
+                }),
+                name: 'Should move attachments when merging a file',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFile', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          }),
+          this.settingGroupEx({
+            heading: 'Merge folder',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('The name to give the note created by ');
+                  appendCodeBlock(f, 'Merge folder contents into a single file...');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to name it after the merged folder, e.g. ');
+                  appendCodeBlock(f, 'Docs.md');
+                  f.appendText(' for the folder ');
+                  appendCodeBlock(f, 'Docs');
+                  f.appendText('. The note is always created next to the folder, and a colliding name is de-duplicated.');
+                  f.createEl('br');
+                  f.appendText('Available tokens:');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, '{{folderName}}');
+                  f.appendText(' / ');
+                  appendCodeBlock(f, '{{folderPath}}');
+                  f.appendText(' - the merged folder\'s name / path.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, '{{parentFolder}}');
+                  f.appendText(' - the merged folder\'s parent folder name.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, '{{date:FORMAT}}');
+                  f.appendText(', e.g. ');
+                  appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+                }),
+                name: 'Merge folder into file note name',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({ propertyName: 'mergeFolderIntoFileNoteNameTemplate', valueComponent: codeHighlighter });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Default setting for whether to include child folders into the merge folder modal. Can be changed in the merge folders modal dialog.',
+                name: 'Should include child folders when merging folders',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldIncludeChildFoldersWhenMergingByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Default setting for whether to include parent folders into the merge folder modal. Can be changed in the merge folders modal dialog.',
+                name: 'Should include parent folders when merging folders',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldIncludeParentFoldersWhenMergingByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('What happens to the folders left empty once ');
+                  appendCodeBlock(f, 'Merge folder contents into a single file...');
+                  f.appendText(' has merged their notes away.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Delete');
+                  f.appendText(' - remove the merged folder and each sub-folder that ended up empty. A folder still holding files is always kept.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Delete sub-folders only');
+                  f.appendText(' - keep the merged folder itself, even once it is empty, and remove every emptied folder under it, however deep.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Delete with empty parents');
+                  f.appendText(' - the same as ');
+                  appendCodeBlock(f, 'Delete');
+                  f.appendText(', and also remove any parent folder the deletion leaves empty.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Keep');
+                  f.appendText(' - leave every folder in place.');
+                  f.createEl('br');
+                  f.appendText('Folders are removed after the merge is committed, so a cancelled merge never deletes anything.');
+                }),
+                name: 'Empty folders after merging a folder',
+                render: (setting) => {
+                  setting.addDropdown((dropdown) => {
+                    dropdown.addOptions({
+                      [EmptyFolderBehaviorAfterMergingFolder.Delete]: 'Delete',
+                      [EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly]: 'Delete sub-folders only',
+                      [EmptyFolderBehaviorAfterMergingFolder.DeleteWithEmptyParents]: 'Delete with empty parents',
+                      [EmptyFolderBehaviorAfterMergingFolder.Keep]: 'Keep'
+                    });
+                    this.bind({ propertyName: 'emptyFolderBehaviorAfterMergingFolder', valueComponent: dropdown });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('When ');
+                  appendCodeBlock(f, 'Merge folder contents into a single file...');
+                  f.appendText(' merges the folder\'s notes away, whether their attachments follow into the merged note\'s attachment folder.');
+                  f.createEl('br');
+                  f.appendText('The destination honors your vault\'s attachment settings, including ');
+                  /**
+                  HACK: see the TSDoc for {@link EMPTY} for motivation.
+                  */
+                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+                  f.appendText(' when it is installed.');
+                  f.createEl('br');
+                  f.appendText('An attachment moves when one of the merged notes references it, or when it already sits where that note\'s attachments belong.');
+                  f.createEl('br');
+                  f.appendText('When disabled, attachments stay where they are, which also keeps their folders from being emptied.');
+                }),
+                name: 'Should move attachments when merging a folder',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFolder', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Files whose name ends with one of these extensions are treated as attachments, not notes, so a merge never inlines their contents.');
+                  f.createEl('br');
+                  f.appendText('Insert one extension per line, written out in full including the leading dot. For example, ');
+                  appendCodeBlock(f, '.excalidraw.md');
+                  f.appendText(' covers ');
+                  appendCodeBlock(f, 'sketch.excalidraw.md');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to treat every markdown file as a note.');
+                }),
+                name: 'Attachment extensions',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'attachmentExtensions', valueComponent: multipleText });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('When ');
+                  appendCodeBlock(f, 'Merge folder contents into a single file...');
+                  f.appendText(' pulls in notes from sub-folders, whether each sub-folder becomes a heading in the merged note.');
+                  f.createEl('br');
+                  f.appendText('The heading level is the sub-folder\'s depth below the merged folder: a direct sub-folder becomes ');
+                  appendCodeBlock(f, '# Name');
+                  f.appendText(', its own child ');
+                  appendCodeBlock(f, '## Name');
+                  f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
+                  f.createEl('br');
+                  f.appendText(
+                    'Every sub-folder is headed, including a completely empty one, so the merged outline mirrors the whole tree. Two note-less cases are left out instead: a folder holding only attachments, and a folder whose notes are all excluded - nothing of either was merged, so neither gets a heading.'
+                  );
+                  f.createEl('br');
+                  f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
+                  appendCodeBlock(f, 'Split note by headings recursively...');
+                  f.appendText(', which turns a heading hierarchy into a folder tree.');
+                  f.createEl('br');
+                  f.appendText('Markdown defines only six heading levels. A folder deeper than six still gets its full level, e.g. ');
+                  appendCodeBlock(f, '####### Name');
+                  f.appendText(', which Obsidian shows as plain text rather than a heading — the depth stays readable, whereas stopping at ');
+                  appendCodeBlock(f, '######');
+                  f.appendText(' made a folder and its own descendants indistinguishable.');
+                }),
+                name: 'Should convert folders to headings when merging a folder',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldConvertFoldersToHeadingsWhenMergingFolder', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Where the merged note is created.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, 'Beside the folder');
+                  f.appendText(' - in the merged folder\'s own parent, next to the folder itself.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, 'Inside the folder');
+                  f.appendText(' - in the merged folder itself, so the folder is left holding only the merged note.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, 'Default location for new notes');
+                  f.appendText(' - wherever Obsidian would put a new note, per its own setting.');
+                  f.createEl('br');
+                  f.appendText('A colliding name is de-duplicated in every case.');
+                  f.createEl('br');
+                  f.appendText(
+                    'Note that with '
+                  );
+                  appendCodeBlock(f, 'Inside the folder');
+                  f.appendText(
+                    ' the merged folder is no longer empty afterwards, so it is not removed even when '
+                  );
+                  appendCodeBlock(f, 'Empty folder behavior after merging a folder');
+                  f.appendText(' would otherwise delete it. Its emptied sub-folders are still cleaned up.');
+                }),
+                name: 'Merge folder into file location',
+                render: (setting) => {
+                  setting.addDropdown((dropdown) => {
+                    dropdown.addOptions({
+                      /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                      [MergeFolderIntoFileLocation.BesideFolder]: 'Beside the folder',
+                      [MergeFolderIntoFileLocation.InsideFolder]: 'Inside the folder',
+                      [MergeFolderIntoFileLocation.DefaultNewNoteLocation]: 'Default location for new notes'
+                      /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+                    });
+                    this.bind({ propertyName: 'mergeFolderIntoFileLocation', valueComponent: dropdown });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to open the merged note once ');
+                  appendCodeBlock(f, 'Merge current folder contents into a single file...');
+                  f.appendText(' finishes.');
+                  f.createEl('br');
+                  f.appendText('The note is opened once, at the very end. The merged notes themselves are never opened, whatever ');
+                  appendCodeBlock(f, 'Should open note after merge');
+                  f.appendText(' says.');
+                }),
+                name: 'Should open the merged note after merging folder contents into a single file',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldOpenNoteAfterMergingFolderIntoFile', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to open the first note of the destination folder once ');
+                  appendCodeBlock(f, 'Merge current folder with another folder...');
+                  f.appendText(' finishes.');
+                  f.createEl('br');
+                  f.appendText(
+                    'The first note is the one the file explorer shows first: the destination folder\'s own notes, ordered naturally, and only if it holds none, the first note of its first sub-folder. Notes that were already there count too. Nothing is opened if the destination holds no note at all.'
+                  );
+                }),
+                name: 'Should open the first note after merging folders',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldOpenFirstNoteAfterMergingFolder', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          })
+        ],
+        name: 'Merge'
+      }),
+      this.settingPage({
+        desc: 'Splitting and extracting take part of a note out into another note, leaving a link, an embed, or nothing behind.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Whether to replace invalid characters in the title.');
+              f.appendText('The name to give the new note inside the folder created by ');
+              appendCodeBlock(f, 'Should split into folder');
+              f.appendText('. It has no effect while that setting is off.');
               f.createEl('br');
-              f.appendText('If disabled, the error will be shown for invalid titles.');
-            }),
-            name: 'Should replace invalid characters',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({
-                  onChanged: () => {
-                    // Only the replacement-string row reads this value, through its `disabled` predicate.
-                    this.refreshDomState();
-                  },
-                  propertyName: 'shouldReplaceInvalidTitleCharacters',
-                  valueComponent: toggle
-                });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('String to replace invalid characters with.');
+              f.appendText('Leave empty to name the note after its folder, e.g. ');
+              appendCodeBlock(f, '<folder>/<note>/<note>.md');
+              f.appendText('. Set it to ');
+              appendCodeBlock(f, 'Overview');
+              f.appendText(' to get ');
+              appendCodeBlock(f, '<folder>/<note>/Overview.md');
+              f.appendText(' for every split instead.');
               f.createEl('br');
-              f.appendText('Leave blank to remove invalid characters.');
-            }),
-            disabled: () => !this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters,
-            name: 'Replacement string',
-            render: (setting) => {
-              setting.addText((text) => {
-                this.bind({
-                  propertyName: 'replacement',
-                  shouldResetSettingWhenComponentIsEmpty: false,
-                  valueComponent: text
-                });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('How a name is rewritten before it is turned into a file name, so you can define your own replacements ');
-              f.appendText('instead of relying on the single replacement string above.');
-              f.createEl('br');
-              f.appendText('Leave empty to use the name as it was typed.');
-              f.createEl('br');
-              f.appendText('Available tokens:');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, '{{rawString}}');
-              f.appendText(' - the name as it was typed, before any other clean-up.');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, '{{date:FORMAT}}');
+              f.appendText('The name the note would have had is kept as an alias and/or a frontmatter title, as configured by ');
+              appendCodeBlock(f, 'Should add invalid title to note alias');
               f.appendText(' and ');
-              appendCodeBlock(f, '{{time:FORMAT}}');
+              appendCodeBlock(f, 'Frontmatter title mode');
+              f.appendText(', so links to it keep resolving.');
               f.createEl('br');
-              f.appendText('With ');
-              f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
-              f.appendText(' installed, the same values are available as ');
-              appendCodeBlock(f, 'TOKENS.rawString');
-              f.appendText(', which is how you write a mapping:');
+              f.appendText('Tokens are resolved against the new note before it is moved, so ');
+              appendCodeBlock(f, '{{newTitle}}');
+              f.appendText(' is the folder name.');
               f.createEl('br');
-              appendCodeBlock(f, '<% TOKENS.rawString.replaceAll(": ", " - ") %>');
-              f.createEl('br');
-              f.appendText('turns ');
-              appendCodeBlock(f, 'A: B');
-              f.appendText(' into ');
-              appendCodeBlock(f, 'A - B');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('No note has to be open for that: ');
-              appendCodeBlock(f, 'tp.file');
-              f.appendText(' reports on the note you have open, or on the last one you opened or edited when you have none.');
-              f.createEl('br');
-              f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
-              appendCodeBlock(f, 'Create folder with notes...');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Characters the rewrite leaves invalid are handled by ');
-              appendCodeBlock(f, 'Should replace invalid characters');
-              f.appendText(' above: turn it off to have such names refused instead of replaced.');
+              addAvailableTokens(f, false);
             }),
-            name: 'Name transform template',
+            name: 'Split into folder note name',
             render: (setting) => {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'nameTransformTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'Whether to add invalid title to the note alias.',
-            name: 'Should add invalid title to note aliases',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAddInvalidTitleToNoteAlias', valueComponent: toggle });
+                this.bind({ propertyName: 'splitIntoFolderNoteNameTemplate', valueComponent: codeHighlighter });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('How to handle the title property in the frontmatter.');
+              f.appendText('Template to use when splitting notes into a new file.');
               f.createEl('br');
-              appendCodeBlock(f, 'None');
-              f.appendText(' - do not add the title property to the frontmatter.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Use for invalid title only');
-              f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Use always');
-              f.appendText(' - add the title property to the frontmatter always.');
-            }),
-            name: 'Frontmatter title mode',
-            render: (setting) => {
-              setting.addDropdown((dropdown) => {
-                dropdown.addOptions({
-                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [FrontmatterTitleMode.None]: 'None',
-                  [FrontmatterTitleMode.UseForInvalidTitleOnly]: 'Use for invalid title only',
-                  [FrontmatterTitleMode.UseAlways]: 'Use always'
-                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
-                });
-                this.bind({ propertyName: 'frontmatterTitleMode', valueComponent: dropdown });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Default setting for whether to treat title as path. Can be changed in the merge/split modal dialog.');
-              f.createEl('br');
-              f.appendText('If enabled, the title ');
-              appendCodeBlock(f, 'foo/bar/baz');
-              f.appendText(' will be treated as ');
-              appendCodeBlock(f, 'foo/bar/baz.md');
-              f.appendText(' path.');
-              f.createEl('br');
-              f.appendText('If disabled, the title ');
-              appendCodeBlock(f, 'foo/bar/baz');
-              f.appendText(' will be treated as ');
-              appendCodeBlock(f, 'foo_bar_baz.md');
-              f.appendText(' path.');
-              f.createEl('br');
-              f.appendText('When using ');
-              appendCodeBlock(f, 'Split note by headings/content');
-              f.appendText(' commands, the setting will be treated as disabled.');
-            }),
-            name: 'Should treat title as path',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldTreatTitleAsPathByDefault', valueComponent: toggle });
-              });
-            }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Merge',
-        items: [
-          this.settingEx({
-            desc: 'Whether to open the note after merge.',
-            name: 'Should open note after merge',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldOpenNoteAfterMerge', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'Whether to ask before merging notes.',
-            name: 'Should ask before merging',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAskBeforeMerging', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'When merging a folder, also move and merge items whose path is excluded/ignored in the plugin settings, instead of skipping them. When off (the default), excluded items are skipped and reported in a notice.',
-            name: 'Should always merge excluded items',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAlwaysMergeExcludedItems', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When ');
-              appendCodeBlock(f, 'Merge current file with another file...');
-              f.appendText(' merges a note away, whether the attachments that note owns follow into the destination note\'s attachment folder.');
-              f.createEl('br');
-              f.appendText('The destination honors your vault\'s attachment settings, including ');
-              /**
-              HACK: see the TSDoc for {@link EMPTY} for motivation.
-              */
-              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
-              f.appendText(' when it is installed.');
-              f.createEl('br');
-              f.appendText(
-                'An attachment moves when the merged note references it and no other note does, or when it sits in an attachment folder belonging to that note alone. A shared attachment stays where it is.'
-              );
-              f.createEl('br');
-              f.appendText('Also applies to ');
-              appendCodeBlock(f, 'Merge these files into one file...');
-              f.appendText('.');
-            }),
-            name: 'Should move attachments when merging a file',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFile', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Template to use when merging notes.');
+              f.appendText('Leave empty to reuse ');
+              appendCodeBlock(f, 'Merge template');
+              f.appendText(' setting.');
               f.createEl('br');
               addAvailableTokens(f);
             }),
-            name: 'Merge template',
+            name: 'Split template',
             render: (setting) => {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({
-                  propertyName: 'mergeTemplate',
-                  shouldResetSettingWhenComponentIsEmpty: true,
-                  shouldShowPlaceholderForDefaultValues: false,
-                  valueComponent: codeHighlighter
-                });
+                this.bind({ propertyName: 'splitTemplate', valueComponent: codeHighlighter });
               });
             }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Split/extract',
-        items: [
+          }),
           this.settingEx({
             desc: 'Whether to ask before splitting notes.',
             name: 'Should ask before splitting',
@@ -436,40 +548,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldSplitIntoFolder', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('The name to give the new note inside the folder created by ');
-              appendCodeBlock(f, 'Should split into folder');
-              f.appendText('. It has no effect while that setting is off.');
-              f.createEl('br');
-              f.appendText('Leave empty to name the note after its folder, e.g. ');
-              appendCodeBlock(f, '<folder>/<note>/<note>.md');
-              f.appendText('. Set it to ');
-              appendCodeBlock(f, 'Overview');
-              f.appendText(' to get ');
-              appendCodeBlock(f, '<folder>/<note>/Overview.md');
-              f.appendText(' for every split instead.');
-              f.createEl('br');
-              f.appendText('The name the note would have had is kept as an alias and/or a frontmatter title, as configured by ');
-              appendCodeBlock(f, 'Should add invalid title to note alias');
-              f.appendText(' and ');
-              appendCodeBlock(f, 'Frontmatter title mode');
-              f.appendText(', so links to it keep resolving.');
-              f.createEl('br');
-              f.appendText('Tokens are resolved against the new note before it is moved, so ');
-              appendCodeBlock(f, '{{newTitle}}');
-              f.appendText(' is the folder name.');
-              f.createEl('br');
-              addAvailableTokens(f, false);
-            }),
-            name: 'Split into folder note name',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'splitIntoFolderNoteNameTemplate', valueComponent: codeHighlighter });
               });
             }
           }),
@@ -586,38 +664,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             }
           }),
           this.settingEx({
-            desc: 'Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.',
-            name: 'Should include frontmatter when splitting',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeFrontmatterWhenSplittingByDefault', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When the extracted selection lies entirely inside the note\'s properties, extract it as ');
-              f.appendText('properties: they are merged into the destination note\'s own properties through the ');
-              appendCodeBlock(f, 'Frontmatter merge strategy');
-              f.appendText(', instead of being pasted into its body as raw text.');
-              f.createEl('br');
-              f.appendText('Every property line the selection touches is taken in full, together with the property it belongs to, ');
-              f.appendText('so selecting two ');
-              appendCodeBlock(f, 'aliases');
-              f.appendText(' values moves them across as ');
-              appendCodeBlock(f, 'aliases');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Smart cut & paste moves are unaffected: they insert at the cursor you place in the note\'s body.');
-            }),
-            name: 'Should extract a properties selection as properties',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldExtractFrontmatterSelectionAsProperties', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
             desc: createFragment((f) => {
               f.appendText('Default setting for whether to allow split into unresolved path. Can be changed in the split modal dialog.');
               f.createEl('br');
@@ -658,24 +704,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             }
           }),
           this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Template to use when splitting notes into a new file.');
-              f.createEl('br');
-              f.appendText('Leave empty to reuse ');
-              appendCodeBlock(f, 'Merge template');
-              f.appendText(' setting.');
-              f.createEl('br');
-              addAvailableTokens(f);
-            }),
-            name: 'Split template',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'splitTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
             desc: 'Template to use when splitting notes to existing file.',
             name: 'Split to existing file template',
             render: (setting) => {
@@ -697,631 +725,671 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           })
-        ]
+        ],
+        name: 'Split/extract'
       }),
-      this.settingGroupEx({
-        heading: 'Swap',
+      this.settingPage({
+        desc: 'Swapping exchanges two files or two folders, each taking the other\'s place.',
         items: [
-          this.settingEx({
-            desc: 'Whether to show a confirmation dialog before swapping files or folders.',
-            name: 'Should ask before swapping',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAskBeforeSwapping', valueComponent: toggle });
-              });
-            }
+          this.settingGroupEx({
+            heading: 'Swap file',
+            items: [
+              this.settingEx({
+                desc: 'Whether to show a confirmation dialog before swapping files or folders.',
+                name: 'Should ask before swapping',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldAskBeforeSwapping', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          }),
+          this.settingGroupEx({
+            heading: 'Swap folders',
+            items: [
+              this.settingEx({
+                desc: 'Default setting for whether to include child folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
+                name: 'Should include child folders when swapping folders',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldIncludeChildFoldersWhenSwappingByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Default setting for whether to include parent folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
+                name: 'Should include parent folders when swapping folders',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldIncludeParentFoldersWhenSwappingByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Default setting for whether to swap entire folder structure. Can be changed in the swap folders modal dialog.');
+                  f.createEl('br');
+                  f.appendText('If enabled, the entire folder structure will be swapped.');
+                  f.createEl('br');
+                  f.appendText('If disabled, only the top-level files of the folders will be swapped.');
+                }),
+                name: 'Should swap entire folder structure',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
           })
-        ]
+        ],
+        name: 'Swap'
       }),
-      this.settingGroupEx({
-        heading: 'Smart cut & paste',
+      this.settingPage({
+        desc: 'Mark a selection in one note, then move it to the cursor, the top, or the bottom of another note.',
+        items: [
+          this.settingGroupEx({
+            heading: 'Notice',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to show the notice after you run ');
+                  appendCodeBlock(f, 'Mark selection to move');
+                  f.appendText('. The notice reminds you a selection is marked and offers buttons to move or cancel it.');
+                  f.createEl('br');
+                  f.appendText('When disabled, no notice is shown; you drive the move and cancel purely through the commands (and their hotkeys).');
+                }),
+                name: 'Should show smart cut & paste notice',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowSmartCutNotice', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('How a finished smart cut & paste move tells you where the marked selection landed.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Select moved content');
+                  f.appendText(' - select the moved text in the target note.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Notice');
+                  f.appendText(' - put the cursor on the moved text without selecting it, and show a notice instead.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Select moved content and notice');
+                  f.appendText(' - do both.');
+                  f.createEl('br');
+                  f.appendText(
+                    'A selection in the target note looks exactly like the highlight on a selection that is still marked and waiting to be moved, so the two states are hard to tell apart — especially while the notes are locked. The notice modes remove that ambiguity; the cursor still travels to the moved text either way.'
+                  );
+                  f.createEl('br');
+                  f.appendText('This applies only when the move jumps at all: with the jump turned off for the direction, neither the cursor nor a notice moves.');
+                }),
+                name: 'Smart cut & paste completion feedback',
+                render: (setting) => {
+                  setting.addDropdown((dropdown) => {
+                    dropdown.addOptions({
+                      /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                      [SmartCutAndPasteCompletionFeedback.SelectMovedContent]: 'Select moved content',
+                      [SmartCutAndPasteCompletionFeedback.Notice]: 'Notice',
+                      [SmartCutAndPasteCompletionFeedback.SelectMovedContentAndNotice]: 'Select moved content and notice'
+                      /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+                    });
+                    this.bind({ propertyName: 'smartCutAndPasteCompletionFeedback', valueComponent: dropdown });
+                  });
+                }
+              })
+            ]
+          }),
+          this.settingGroupEx({
+            heading: 'At cursor',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Template to use when pasting a marked selection at the cursor (');
+                  appendCodeBlock(f, 'Move marked selection here');
+                  f.appendText(' and ');
+                  appendCodeBlock(f, 'at cursor');
+                  f.appendText(').');
+                  f.createEl('br');
+                  f.appendText('It is also used by ');
+                  appendCodeBlock(f, 'to top of file');
+                  f.appendText(' and ');
+                  appendCodeBlock(f, 'to bottom of file');
+                  f.appendText(', unless the direction has its own template below.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to reuse ');
+                  appendCodeBlock(f, 'Split template');
+                  f.appendText(' setting.');
+                  f.createEl('br');
+                  addAvailableTokens(f);
+                }),
+                name: 'Smart cut & paste template',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to show the ');
+                  appendCodeBlock(f, 'Move marked selection at cursor');
+                  f.appendText(' button in the smart cut & paste notice.');
+                  f.createEl('br');
+                  f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+                }),
+                /**
+                HACK: see the TSDoc for {@link EMPTY} for motivation.
+                */
+                name: `${EMPTY}Should show move at cursor button`,
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          }),
+          this.settingGroupEx({
+            heading: 'To top of file',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Template to use when pasting a marked selection via ');
+                  appendCodeBlock(f, 'Move marked selection to top of file');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to reuse ');
+                  appendCodeBlock(f, 'Smart cut & paste template');
+                  f.appendText(' setting.');
+                  f.createEl('br');
+                  addAvailableTokens(f);
+                }),
+                name: 'Smart cut & paste template (to top of file)',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({ propertyName: 'smartCutAndPasteToTopTemplate', valueComponent: codeHighlighter });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to show the ');
+                  appendCodeBlock(f, 'Move marked selection to top of file');
+                  f.appendText(' button in the smart cut & paste notice.');
+                  f.createEl('br');
+                  f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+                }),
+                name: 'Should show move to top of file button',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowMoveToTopButton', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether the cursor follows the marked selection after ');
+                  appendCodeBlock(f, 'Move marked selection to top of file');
+                  f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
+                  appendCodeBlock(f, 'Smart cut & paste completion feedback');
+                  f.appendText(' above.');
+                  f.createEl('br');
+                  f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
+                }),
+                name: 'Should jump to content moved to top of file',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldJumpToMovedContentToTop', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          }),
+          this.settingGroupEx({
+            heading: 'To bottom of file',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Template to use when pasting a marked selection via ');
+                  appendCodeBlock(f, 'Move marked selection to bottom of file');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to reuse ');
+                  appendCodeBlock(f, 'Smart cut & paste template');
+                  f.appendText(' setting.');
+                  f.createEl('br');
+                  addAvailableTokens(f);
+                }),
+                name: 'Smart cut & paste template (to bottom of file)',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({ propertyName: 'smartCutAndPasteToBottomTemplate', valueComponent: codeHighlighter });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to show the ');
+                  appendCodeBlock(f, 'Move marked selection to bottom of file');
+                  f.appendText(' button in the smart cut & paste notice.');
+                  f.createEl('br');
+                  f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+                }),
+                name: 'Should show move to bottom of file button',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowMoveToBottomButton', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether the cursor follows the marked selection after ');
+                  appendCodeBlock(f, 'Move marked selection to bottom of file');
+                  f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
+                  appendCodeBlock(f, 'Smart cut & paste completion feedback');
+                  f.appendText(' above.');
+                  f.createEl('br');
+                  f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
+                  f.createEl('br');
+                  f.appendText(
+                    'There is no such setting for a move at the cursor: it always jumps, since inserting text at the cursor and then leaving the cursor elsewhere makes no sense.'
+                  );
+                }),
+                name: 'Should jump to content moved to bottom of file',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldJumpToMovedContentToBottom', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
+          })
+        ],
+        name: 'Smart cut & paste'
+      }),
+      this.settingPage({
+        desc: 'How properties are carried across when notes are merged, split, or extracted.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Whether to show the notice after you run ');
-              appendCodeBlock(f, 'Mark selection to move');
-              f.appendText('. The notice reminds you a selection is marked and offers buttons to move or cancel it.');
+              f.appendText('Default frontmatter merge strategy to use when merging notes. Can be changed in the merge/split modal dialog.');
               f.createEl('br');
-              f.appendText('When disabled, no notice is shown; you drive the move and cancel purely through the commands (and their hotkeys).');
+              f.appendText('When merging frontmatter values from note A to note B:');
+              f.createEl('br');
+              appendCodeBlock(f, 'Merge and prefer new values');
+              f.appendText(' - copy values from A to B that were not in B yet, and overwrite existing values in B with values from A.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Merge and prefer original values');
+              f.appendText(' - copy values from A to B that were not in B yet, and keep existing values in B.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Keep original frontmatter');
+              f.appendText(' - keep existing values in B, and ignore values from A.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Replace with new frontmatter');
+              f.appendText(' - remove existing values in B, and copy values from A to B.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Preserve both original and new frontmatter');
+              f.appendText(' - copies new frontmatter from A into a separate frontmatter key in B.');
             }),
-            name: 'Should show smart cut & paste notice',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldShowSmartCutNotice', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether to show the ');
-              appendCodeBlock(f, 'Move marked selection to top of file');
-              f.appendText(' button in the smart cut & paste notice.');
-              f.createEl('br');
-              f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
-            }),
-            name: 'Should show move to top of file button',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldShowMoveToTopButton', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether to show the ');
-              appendCodeBlock(f, 'Move marked selection to bottom of file');
-              f.appendText(' button in the smart cut & paste notice.');
-              f.createEl('br');
-              f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
-            }),
-            name: 'Should show move to bottom of file button',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldShowMoveToBottomButton', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether to show the ');
-              appendCodeBlock(f, 'Move marked selection at cursor');
-              f.appendText(' button in the smart cut & paste notice.');
-              f.createEl('br');
-              f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
-            }),
-            /**
-            HACK: see the TSDoc for {@link EMPTY} for motivation.
-            */
-            name: `${EMPTY}Should show move at cursor button`,
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldShowMoveAtCursorButton', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether the cursor follows the marked selection after ');
-              appendCodeBlock(f, 'Move marked selection to top of file');
-              f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
-              appendCodeBlock(f, 'Smart cut & paste completion feedback');
-              f.appendText(' below.');
-              f.createEl('br');
-              f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
-            }),
-            name: 'Should jump to content moved to top of file',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldJumpToMovedContentToTop', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether the cursor follows the marked selection after ');
-              appendCodeBlock(f, 'Move marked selection to bottom of file');
-              f.appendText(', landing on the moved text where it ends up. How that landing is shown is up to ');
-              appendCodeBlock(f, 'Smart cut & paste completion feedback');
-              f.appendText(' below.');
-              f.createEl('br');
-              f.appendText('When disabled, the cursor stays where the selection was cut from, so you can move text out of the way without losing your place.');
-              f.createEl('br');
-              f.appendText(
-                'There is no such setting for a move at the cursor: it always jumps, since inserting text at the cursor and then leaving the cursor elsewhere makes no sense.'
-              );
-            }),
-            name: 'Should jump to content moved to bottom of file',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldJumpToMovedContentToBottom', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('How a finished smart cut & paste move tells you where the marked selection landed.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Select moved content');
-              f.appendText(' - select the moved text in the target note.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Notice');
-              f.appendText(' - put the cursor on the moved text without selecting it, and show a notice instead.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Select moved content and notice');
-              f.appendText(' - do both.');
-              f.createEl('br');
-              f.appendText(
-                'A selection in the target note looks exactly like the highlight on a selection that is still marked and waiting to be moved, so the two states are hard to tell apart — especially while the notes are locked. The notice modes remove that ambiguity; the cursor still travels to the moved text either way.'
-              );
-              f.createEl('br');
-              f.appendText('This applies only when the move jumps at all: with the jump turned off for the direction, neither the cursor nor a notice moves.');
-            }),
-            name: 'Smart cut & paste completion feedback',
+            name: 'Frontmatter merge strategy',
             render: (setting) => {
               setting.addDropdown((dropdown) => {
                 dropdown.addOptions({
                   /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [SmartCutAndPasteCompletionFeedback.SelectMovedContent]: 'Select moved content',
-                  [SmartCutAndPasteCompletionFeedback.Notice]: 'Notice',
-                  [SmartCutAndPasteCompletionFeedback.SelectMovedContentAndNotice]: 'Select moved content and notice'
+                  [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
+                  [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
+                  [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
+                  [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
+                  [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
                   /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
                 });
-                this.bind({ propertyName: 'smartCutAndPasteCompletionFeedback', valueComponent: dropdown });
+                this.bind({ propertyName: 'defaultFrontmatterMergeStrategy', valueComponent: dropdown });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Template to use when pasting a marked selection at the cursor (');
-              appendCodeBlock(f, 'Move marked selection here');
-              f.appendText(' and ');
-              appendCodeBlock(f, 'at cursor');
-              f.appendText(').');
+              f.appendText('How to handle the title property in the frontmatter.');
               f.createEl('br');
-              f.appendText('It is also used by ');
-              appendCodeBlock(f, 'to top of file');
-              f.appendText(' and ');
-              appendCodeBlock(f, 'to bottom of file');
-              f.appendText(', unless the direction has its own template below.');
+              appendCodeBlock(f, 'None');
+              f.appendText(' - do not add the title property to the frontmatter.');
               f.createEl('br');
-              f.appendText('Leave empty to reuse ');
-              appendCodeBlock(f, 'Split template');
-              f.appendText(' setting.');
+              appendCodeBlock(f, 'Use for invalid title only');
+              f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
               f.createEl('br');
-              addAvailableTokens(f);
+              appendCodeBlock(f, 'Use always');
+              f.appendText(' - add the title property to the frontmatter always.');
             }),
-            name: 'Smart cut & paste template',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'smartCutAndPasteTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Template to use when pasting a marked selection via ');
-              appendCodeBlock(f, 'Move marked selection to top of file');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Leave empty to reuse ');
-              appendCodeBlock(f, 'Smart cut & paste template');
-              f.appendText(' setting.');
-              f.createEl('br');
-              addAvailableTokens(f);
-            }),
-            name: 'Smart cut & paste template (to top of file)',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'smartCutAndPasteToTopTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Template to use when pasting a marked selection via ');
-              appendCodeBlock(f, 'Move marked selection to bottom of file');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Leave empty to reuse ');
-              appendCodeBlock(f, 'Smart cut & paste template');
-              f.appendText(' setting.');
-              f.createEl('br');
-              addAvailableTokens(f);
-            }),
-            name: 'Smart cut & paste template (to bottom of file)',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'smartCutAndPasteToBottomTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Include/exclude paths',
-        items: [
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('In merge/split dialog include notes from the following paths');
-              f.createEl('br');
-              f.appendText('Insert each path on a new line');
-              f.createEl('br');
-              f.appendText('You can use path string or ');
-              appendCodeBlock(f, '/regular expression/');
-              f.createEl('br');
-              appendPathFormsDesc(f);
-              f.createEl('br');
-              f.appendText('If the setting is empty, all notes are included');
-            }),
-            name: 'Include paths',
-            render: (setting) => {
-              setting.addMultipleText((multipleText) => {
-                this.bind({ propertyName: 'includePaths', valueComponent: multipleText });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('In merge/split dialog exclude notes from the following paths');
-              f.createEl('br');
-              f.appendText('Insert each path on a new line');
-              f.createEl('br');
-              f.appendText('You can use path string or ');
-              appendCodeBlock(f, '/regular expression/');
-              f.createEl('br');
-              appendPathFormsDesc(f);
-              f.createEl('br');
-              f.appendText('If the setting is empty, no notes are excluded');
-              f.createEl('br');
-              f.appendText(
-                'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the '
-              );
-              appendCodeBlock(f, 'Command include/exclude paths');
-              f.appendText(' settings below, which only decide whether the commands are offered at all');
-              f.createEl('br');
-              f.appendText('This is how to protect your attachment folder when ');
-              /**
-              HACK: see the TSDoc for {@link EMPTY} for motivation.
-              */
-              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
-              f.appendText(
-                ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
-              );
-              appendCodeBlock(f, 'Files & Links > Default location for new attachments');
-              f.appendText(' is recognized');
-            }),
-            name: 'Exclude paths',
-            render: (setting) => {
-              setting.addMultipleText((multipleText) => {
-                this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
-              });
-            }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Command include/exclude paths',
-        items: [
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Offer Advanced Note Composer commands only on notes and folders from the following paths');
-              f.createEl('br');
-              f.appendText('Insert each path on a new line');
-              f.createEl('br');
-              f.appendText('You can use path string or ');
-              appendCodeBlock(f, '/regular expression/');
-              f.createEl('br');
-              appendPathFormsDesc(f);
-              f.createEl('br');
-              f.appendText('If the setting is empty, the commands are offered everywhere');
-            }),
-            name: 'Command include paths',
-            render: (setting) => {
-              setting.addMultipleText((multipleText) => {
-                this.bind({ propertyName: 'commandIncludePaths', valueComponent: multipleText });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Hide Advanced Note Composer commands on notes and folders from the following paths');
-              f.createEl('br');
-              f.appendText('Insert each path on a new line');
-              f.createEl('br');
-              f.appendText('You can use path string or ');
-              appendCodeBlock(f, '/regular expression/');
-              f.createEl('br');
-              appendPathFormsDesc(f);
-              f.createEl('br');
-              f.appendText('If the setting is empty, no commands are hidden');
-              f.createEl('br');
-              f.appendText(
-                'A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from '
-              );
-              appendCodeBlock(f, 'Include/exclude paths');
-              f.appendText(
-                ' on purpose: a path excluded there is still refused as a merge/split target and never moved, but its commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
-              );
-            }),
-            name: 'Command exclude paths',
-            render: (setting) => {
-              setting.addMultipleText((multipleText) => {
-                this.bind({ propertyName: 'commandExcludePaths', valueComponent: multipleText });
-              });
-            }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Merge folders',
-        items: [
-          this.settingEx({
-            desc: 'Default setting for whether to include child folders into the merge folder modal. Can be changed in the merge folders modal dialog.',
-            name: 'Should include child folders when merging folders',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeChildFoldersWhenMergingByDefault', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'Default setting for whether to include parent folders into the merge folder modal. Can be changed in the merge folders modal dialog.',
-            name: 'Should include parent folders when merging folders',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeParentFoldersWhenMergingByDefault', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('What happens to the folders left empty once ');
-              appendCodeBlock(f, 'Merge folder contents into a single file...');
-              f.appendText(' has merged their notes away.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Delete');
-              f.appendText(' - remove the merged folder and each sub-folder that ended up empty. A folder still holding files is always kept.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Delete sub-folders only');
-              f.appendText(' - keep the merged folder itself, even once it is empty, and remove every emptied folder under it, however deep.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Delete with empty parents');
-              f.appendText(' - the same as ');
-              appendCodeBlock(f, 'Delete');
-              f.appendText(', and also remove any parent folder the deletion leaves empty.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Keep');
-              f.appendText(' - leave every folder in place.');
-              f.createEl('br');
-              f.appendText('Folders are removed after the merge is committed, so a cancelled merge never deletes anything.');
-            }),
-            name: 'Empty folders after merging a folder',
+            name: 'Frontmatter title mode',
             render: (setting) => {
               setting.addDropdown((dropdown) => {
                 dropdown.addOptions({
-                  [EmptyFolderBehaviorAfterMergingFolder.Delete]: 'Delete',
-                  [EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly]: 'Delete sub-folders only',
-                  [EmptyFolderBehaviorAfterMergingFolder.DeleteWithEmptyParents]: 'Delete with empty parents',
-                  [EmptyFolderBehaviorAfterMergingFolder.Keep]: 'Keep'
+                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                  [FrontmatterTitleMode.None]: 'None',
+                  [FrontmatterTitleMode.UseForInvalidTitleOnly]: 'Use for invalid title only',
+                  [FrontmatterTitleMode.UseAlways]: 'Use always'
+                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
                 });
-                this.bind({ propertyName: 'emptyFolderBehaviorAfterMergingFolder', valueComponent: dropdown });
+                this.bind({ propertyName: 'frontmatterTitleMode', valueComponent: dropdown });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('When ');
-              appendCodeBlock(f, 'Merge folder contents into a single file...');
-              f.appendText(' merges the folder\'s notes away, whether their attachments follow into the merged note\'s attachment folder.');
+              f.appendText('When merging, if the destination note (note B) has no ');
+              appendCodeBlock(f, 'title');
+              f.appendText(' property, use the ');
+              appendCodeBlock(f, 'title');
+              f.appendText(' from the merged-in note (note A) instead of leaving it empty.');
               f.createEl('br');
-              f.appendText('The destination honors your vault\'s attachment settings, including ');
-              /**
-              HACK: see the TSDoc for {@link EMPTY} for motivation.
-              */
-              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
-              f.appendText(' when it is installed.');
-              f.createEl('br');
-              f.appendText('An attachment moves when one of the merged notes references it, or when it already sits where that note\'s attachments belong.');
-              f.createEl('br');
-              f.appendText('When disabled, attachments stay where they are, which also keeps their folders from being emptied.');
+              f.appendText('When the destination note already has a ');
+              appendCodeBlock(f, 'title');
+              f.appendText(', it is always kept.');
             }),
-            name: 'Should move attachments when merging a folder',
+            name: 'Should use source title when destination has none',
             render: (setting) => {
               setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldMoveAttachmentsWhenMergingFolder', valueComponent: toggle });
+                this.bind({ propertyName: 'shouldUseSourceTitleWhenTargetHasNoTitle', valueComponent: toggle });
               });
             }
           }),
           this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Files whose name ends with one of these extensions are treated as attachments, not notes, so a merge never inlines their contents.');
-              f.createEl('br');
-              f.appendText('Insert one extension per line, written out in full including the leading dot. For example, ');
-              appendCodeBlock(f, '.excalidraw.md');
-              f.appendText(' covers ');
-              appendCodeBlock(f, 'sketch.excalidraw.md');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Leave empty to treat every markdown file as a note.');
-            }),
-            name: 'Attachment extensions',
-            render: (setting) => {
-              setting.addMultipleText((multipleText) => {
-                this.bind({ propertyName: 'attachmentExtensions', valueComponent: multipleText });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When ');
-              appendCodeBlock(f, 'Merge folder contents into a single file...');
-              f.appendText(' pulls in notes from sub-folders, whether each sub-folder becomes a heading in the merged note.');
-              f.createEl('br');
-              f.appendText('The heading level is the sub-folder\'s depth below the merged folder: a direct sub-folder becomes ');
-              appendCodeBlock(f, '# Name');
-              f.appendText(', its own child ');
-              appendCodeBlock(f, '## Name');
-              f.appendText(', and so on. Notes directly inside the merged folder get no heading.');
-              f.createEl('br');
-              f.appendText(
-                'Every sub-folder is headed, including a completely empty one, so the merged outline mirrors the whole tree. Two note-less cases are left out instead: a folder holding only attachments, and a folder whose notes are all excluded - nothing of either was merged, so neither gets a heading.'
-              );
-              f.createEl('br');
-              f.appendText('Each merged note\'s own headings are demoted to match, so the merged outline stays well-formed. This is the exact opposite of ');
-              appendCodeBlock(f, 'Split note by headings recursively...');
-              f.appendText(', which turns a heading hierarchy into a folder tree.');
-              f.createEl('br');
-              f.appendText('Markdown defines only six heading levels. A folder deeper than six still gets its full level, e.g. ');
-              appendCodeBlock(f, '####### Name');
-              f.appendText(', which Obsidian shows as plain text rather than a heading — the depth stays readable, whereas stopping at ');
-              appendCodeBlock(f, '######');
-              f.appendText(' made a folder and its own descendants indistinguishable.');
-            }),
-            name: 'Should convert folders to headings when merging a folder',
+            desc: 'Whether to add invalid title to the note alias.',
+            name: 'Should add invalid title to note aliases',
             render: (setting) => {
               setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldConvertFoldersToHeadingsWhenMergingFolder', valueComponent: toggle });
+                this.bind({ propertyName: 'shouldAddInvalidTitleToNoteAlias', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: 'Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.',
+            name: 'Should include frontmatter when splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldIncludeFrontmatterWhenSplittingByDefault', valueComponent: toggle });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('The name to give the note created by ');
-              appendCodeBlock(f, 'Merge folder contents into a single file...');
+              f.appendText('When the extracted selection lies entirely inside the note\'s properties, extract it as ');
+              f.appendText('properties: they are merged into the destination note\'s own properties through the ');
+              appendCodeBlock(f, 'Frontmatter merge strategy');
+              f.appendText(', instead of being pasted into its body as raw text.');
+              f.createEl('br');
+              f.appendText('Every property line the selection touches is taken in full, together with the property it belongs to, ');
+              f.appendText('so selecting two ');
+              appendCodeBlock(f, 'aliases');
+              f.appendText(' values moves them across as ');
+              appendCodeBlock(f, 'aliases');
               f.appendText('.');
               f.createEl('br');
-              f.appendText('Leave empty to name it after the merged folder, e.g. ');
-              appendCodeBlock(f, 'Docs.md');
-              f.appendText(' for the folder ');
-              appendCodeBlock(f, 'Docs');
-              f.appendText('. The note is always created next to the folder, and a colliding name is de-duplicated.');
+              f.appendText('Smart cut & paste moves are unaffected: they insert at the cursor you place in the note\'s body.');
+            }),
+            name: 'Should extract a properties selection as properties',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldExtractFrontmatterSelectionAsProperties', valueComponent: toggle });
+              });
+            }
+          })
+        ],
+        name: 'Frontmatter'
+      }),
+      this.settingPage({
+        desc: 'How a name you type becomes the file name of the note it creates.',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('How a name is rewritten before it is turned into a file name, so you can define your own replacements ');
+              f.appendText('instead of relying on the single replacement string below.');
+              f.createEl('br');
+              f.appendText('Leave empty to use the name as it was typed.');
               f.createEl('br');
               f.appendText('Available tokens:');
               f.createEl('br');
               f.appendText('- ');
-              appendCodeBlock(f, '{{folderName}}');
-              f.appendText(' / ');
-              appendCodeBlock(f, '{{folderPath}}');
-              f.appendText(' - the merged folder\'s name / path.');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, '{{parentFolder}}');
-              f.appendText(' - the merged folder\'s parent folder name.');
+              appendCodeBlock(f, '{{rawString}}');
+              f.appendText(' - the name as it was typed, before any other clean-up.');
               f.createEl('br');
               f.appendText('- ');
               appendCodeBlock(f, '{{date:FORMAT}}');
-              f.appendText(', e.g. ');
-              appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+              f.appendText(' and ');
+              appendCodeBlock(f, '{{time:FORMAT}}');
+              f.createEl('br');
+              f.appendText('With ');
+              f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+              f.appendText(' installed, the same values are available as ');
+              appendCodeBlock(f, 'TOKENS.rawString');
+              f.appendText(', which is how you write a mapping:');
+              f.createEl('br');
+              appendCodeBlock(f, '<% TOKENS.rawString.replaceAll(": ", " - ") %>');
+              f.createEl('br');
+              f.appendText('turns ');
+              appendCodeBlock(f, 'A: B');
+              f.appendText(' into ');
+              appendCodeBlock(f, 'A - B');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('No note has to be open for that: ');
+              appendCodeBlock(f, 'tp.file');
+              f.appendText(' reports on the note you have open, or on the last one you opened or edited when you have none.');
+              f.createEl('br');
+              f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
+              appendCodeBlock(f, 'Create folder with notes...');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Characters the rewrite leaves invalid are handled by ');
+              appendCodeBlock(f, 'Should replace invalid characters');
+              f.appendText(' below: turn it off to have such names refused instead of replaced.');
             }),
-            name: 'Merge folder into file note name',
+            name: 'Name transform template',
             render: (setting) => {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'mergeFolderIntoFileNoteNameTemplate', valueComponent: codeHighlighter });
+                this.bind({ propertyName: 'nameTransformTemplate', valueComponent: codeHighlighter });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Where the merged note is created.');
+              f.appendText('Whether to replace invalid characters in the title.');
               f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, 'Beside the folder');
-              f.appendText(' - in the merged folder\'s own parent, next to the folder itself.');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, 'Inside the folder');
-              f.appendText(' - in the merged folder itself, so the folder is left holding only the merged note.');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, 'Default location for new notes');
-              f.appendText(' - wherever Obsidian would put a new note, per its own setting.');
-              f.createEl('br');
-              f.appendText('A colliding name is de-duplicated in every case.');
-              f.createEl('br');
-              f.appendText(
-                'Note that with '
-              );
-              appendCodeBlock(f, 'Inside the folder');
-              f.appendText(
-                ' the merged folder is no longer empty afterwards, so it is not removed even when '
-              );
-              appendCodeBlock(f, 'Empty folder behavior after merging a folder');
-              f.appendText(' would otherwise delete it. Its emptied sub-folders are still cleaned up.');
+              f.appendText('If disabled, the error will be shown for invalid titles.');
             }),
-            name: 'Merge folder into file location',
+            name: 'Should replace invalid characters',
             render: (setting) => {
-              setting.addDropdown((dropdown) => {
-                dropdown.addOptions({
-                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [MergeFolderIntoFileLocation.BesideFolder]: 'Beside the folder',
-                  [MergeFolderIntoFileLocation.InsideFolder]: 'Inside the folder',
-                  [MergeFolderIntoFileLocation.DefaultNewNoteLocation]: 'Default location for new notes'
-                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+              setting.addToggle((toggle) => {
+                this.bind({
+                  onChanged: () => {
+                    // Only the replacement-string row reads this value, through its `disabled` predicate.
+                    this.refreshDomState();
+                  },
+                  propertyName: 'shouldReplaceInvalidTitleCharacters',
+                  valueComponent: toggle
                 });
-                this.bind({ propertyName: 'mergeFolderIntoFileLocation', valueComponent: dropdown });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Whether to open the merged note once ');
-              appendCodeBlock(f, 'Merge current folder contents into a single file...');
-              f.appendText(' finishes.');
+              f.appendText('String to replace invalid characters with.');
               f.createEl('br');
-              f.appendText('The note is opened once, at the very end. The merged notes themselves are never opened, whatever ');
-              appendCodeBlock(f, 'Should open note after merge');
-              f.appendText(' says.');
+              f.appendText('Leave blank to remove invalid characters.');
             }),
-            name: 'Should open the merged note after merging folder contents into a single file',
+            disabled: () => !this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters,
+            name: 'Replacement string',
             render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldOpenNoteAfterMergingFolderIntoFile', valueComponent: toggle });
+              setting.addText((text) => {
+                this.bind({
+                  propertyName: 'replacement',
+                  shouldResetSettingWhenComponentIsEmpty: false,
+                  valueComponent: text
+                });
               });
             }
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Whether to open the first note of the destination folder once ');
-              appendCodeBlock(f, 'Merge current folder with another folder...');
-              f.appendText(' finishes.');
+              f.appendText('Default setting for whether to treat title as path. Can be changed in the merge/split modal dialog.');
               f.createEl('br');
-              f.appendText(
-                'The first note is the one the file explorer shows first: the destination folder\'s own notes, ordered naturally, and only if it holds none, the first note of its first sub-folder. Notes that were already there count too. Nothing is opened if the destination holds no note at all.'
-              );
+              f.appendText('If enabled, the title ');
+              appendCodeBlock(f, 'foo/bar/baz');
+              f.appendText(' will be treated as ');
+              appendCodeBlock(f, 'foo/bar/baz.md');
+              f.appendText(' path.');
+              f.createEl('br');
+              f.appendText('If disabled, the title ');
+              appendCodeBlock(f, 'foo/bar/baz');
+              f.appendText(' will be treated as ');
+              appendCodeBlock(f, 'foo_bar_baz.md');
+              f.appendText(' path.');
+              f.createEl('br');
+              f.appendText('When using ');
+              appendCodeBlock(f, 'Split note by headings/content');
+              f.appendText(' commands, the setting will be treated as disabled.');
             }),
-            name: 'Should open the first note after merging folders',
+            name: 'Should treat title as path',
             render: (setting) => {
               setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldOpenFirstNoteAfterMergingFolder', valueComponent: toggle });
+                this.bind({ propertyName: 'shouldTreatTitleAsPathByDefault', valueComponent: toggle });
               });
             }
           })
-        ]
+        ],
+        name: 'Title'
       }),
-      this.settingGroupEx({
-        heading: 'Swap folders',
+      this.settingPage({
+        desc: 'Which paths this plugin works on, and where its commands are offered at all.',
         items: [
-          this.settingEx({
-            desc: 'Default setting for whether to include child folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
-            name: 'Should include child folders when swapping folders',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeChildFoldersWhenSwappingByDefault', valueComponent: toggle });
-              });
-            }
+          this.settingGroupEx({
+            heading: 'Paths',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('In merge/split dialog include notes from the following paths');
+                  f.createEl('br');
+                  f.appendText('Insert each path on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use path string or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.createEl('br');
+                  appendPathFormsDesc(f);
+                  f.createEl('br');
+                  f.appendText('If the setting is empty, all notes are included');
+                }),
+                name: 'Include paths',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'includePaths', valueComponent: multipleText });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('In merge/split dialog exclude notes from the following paths');
+                  f.createEl('br');
+                  f.appendText('Insert each path on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use path string or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.createEl('br');
+                  appendPathFormsDesc(f);
+                  f.createEl('br');
+                  f.appendText('If the setting is empty, no notes are excluded');
+                  f.createEl('br');
+                  f.appendText(
+                    'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the '
+                  );
+                  appendCodeBlock(f, 'Command include/exclude paths');
+                  f.appendText(' settings below, which only decide whether the commands are offered at all');
+                  f.createEl('br');
+                  f.appendText('This is how to protect your attachment folder when ');
+                  /**
+                  HACK: see the TSDoc for {@link EMPTY} for motivation.
+                  */
+                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+                  f.appendText(
+                    ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
+                  );
+                  appendCodeBlock(f, 'Files & Links > Default location for new attachments');
+                  f.appendText(' is recognized');
+                }),
+                name: 'Exclude paths',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
+                  });
+                }
+              })
+            ]
           }),
-          this.settingEx({
-            desc: 'Default setting for whether to include parent folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
-            name: 'Should include parent folders when swapping folders',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeParentFoldersWhenSwappingByDefault', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Default setting for whether to swap entire folder structure. Can be changed in the swap folders modal dialog.');
-              f.createEl('br');
-              f.appendText('If enabled, the entire folder structure will be swapped.');
-              f.createEl('br');
-              f.appendText('If disabled, only the top-level files of the folders will be swapped.');
-            }),
-            name: 'Should swap entire folder structure',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
-              });
-            }
+          this.settingGroupEx({
+            heading: 'Commands',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Offer Advanced Note Composer commands only on notes and folders from the following paths');
+                  f.createEl('br');
+                  f.appendText('Insert each path on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use path string or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.createEl('br');
+                  appendPathFormsDesc(f);
+                  f.createEl('br');
+                  f.appendText('If the setting is empty, the commands are offered everywhere');
+                }),
+                name: 'Command include paths',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'commandIncludePaths', valueComponent: multipleText });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Hide Advanced Note Composer commands on notes and folders from the following paths');
+                  f.createEl('br');
+                  f.appendText('Insert each path on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use path string or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.createEl('br');
+                  appendPathFormsDesc(f);
+                  f.createEl('br');
+                  f.appendText('If the setting is empty, no commands are hidden');
+                  f.createEl('br');
+                  f.appendText(
+                    'A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from '
+                  );
+                  appendCodeBlock(f, 'Include/exclude paths');
+                  f.appendText(
+                    ' on purpose: a path excluded there is still refused as a merge/split target and never moved, but its commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
+                  );
+                }),
+                name: 'Command exclude paths',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'commandExcludePaths', valueComponent: multipleText });
+                  });
+                }
+              })
+            ]
           })
-        ]
+        ],
+        name: 'Include/exclude'
       }),
-      this.settingGroupEx({
-        heading: 'Move/flatten folders',
+      this.settingPage({
+        desc: 'Moving a folder into another one, and flattening a folder into its parent.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -1345,10 +1413,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           })
-        ]
+        ],
+        name: 'Move/flatten folders'
       }),
-      this.settingGroupEx({
-        heading: 'Create folder with notes',
+      this.settingPage({
+        desc: 'The folder that Create folder with notes creates, and the notes placed inside it.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -1507,10 +1576,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           })
-        ]
+        ],
+        name: 'Create folder with notes'
       }),
-      this.settingGroupEx({
-        heading: 'Folder note',
+      this.settingPage({
+        desc: 'Where this vault keeps the note that describes a folder, and what a rename or a reorder writes into it.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -1627,10 +1697,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           })
-        ]
+        ],
+        name: 'Folder note'
       }),
-      this.settingGroupEx({
-        heading: 'Reorder',
+      this.settingPage({
+        desc: 'How renumbered folders and notes are named, and what a reorder writes into them.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -1657,21 +1728,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
                 this.bind({ propertyName: 'reorderedFolderNameTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether a reorder also offers the folder\'s notes, and not only its folders.');
-              f.createEl('br');
-              f.appendText('This seeds the ');
-              appendCodeBlock(f, 'Include files');
-              f.appendText(' checkbox in the reorder dialog, where the choice is actually made. Folders and files are always numbered as two separate sequences, because the file explorer sorts folders above files.');
-            }),
-            name: 'Should include files when reordering by default',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeFilesWhenReorderingByDefault', valueComponent: toggle });
               });
             }
           }),
@@ -1706,11 +1762,27 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'reorderedFileTitleTemplate', valueComponent: codeHighlighter });
               });
             }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether a reorder also offers the folder\'s notes, and not only its folders.');
+              f.createEl('br');
+              f.appendText('This seeds the ');
+              appendCodeBlock(f, 'Include files');
+              f.appendText(' checkbox in the reorder dialog, where the choice is actually made. Folders and files are always numbered as two separate sequences, because the file explorer sorts folders above files.');
+            }),
+            name: 'Should include files when reordering by default',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldIncludeFilesWhenReorderingByDefault', valueComponent: toggle });
+              });
+            }
           })
-        ]
+        ],
+        name: 'Reorder'
       }),
-      this.settingGroupEx({
-        heading: 'UI',
+      this.settingPage({
+        desc: 'Menus, notices, and the instruction bar at the bottom of the modal dialogs.',
         items: [
           this.settingEx({
             desc: 'Whether to add commands to the submenu.',
@@ -1755,9 +1827,29 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           })
-        ]
+        ],
+        name: 'UI'
       })
     ];
+  }
+
+  /**
+   * Builds a navigable sub-page — the declarative counterpart of {@link PluginSettingsTab.settingGroupEx}
+   * for a whole section.
+   *
+   * Obsidian 1.13 has no collapsible groups and its groups do not nest
+   * (`SettingGroupItem = SettingDefinition | SettingDefinitionPage`), so a page is what gives this tab both
+   * of the things issues #221 and #224/#225/#226 asked for: the tab opens as a short list of entries
+   * instead of one long scroll, and a page holding groups IS the two-level hierarchy the subheadings need.
+   *
+   * @param params - The page params.
+   * @returns The page definition.
+   */
+  private settingPage(params: PluginSettingsTabSettingPageParams): SettingDefinitionPage {
+    return {
+      ...params,
+      type: 'page'
+    };
   }
 }
 

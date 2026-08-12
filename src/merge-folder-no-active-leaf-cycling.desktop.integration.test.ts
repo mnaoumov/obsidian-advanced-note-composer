@@ -6,6 +6,8 @@ import {
   it
 } from 'vitest';
 
+import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
+
 // Desktop-only: this is a folder-merge (file-move) flow. It runs desktop-only, matching the plugin's
 // Established integration convention (no Android emulator wired for it). File-move suites can hit the
 // Documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run in one
@@ -31,7 +33,7 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
 describe('folder merge does not cycle the active leaf (issue #106)', () => {
   it('opens no merged target note even when "Should open note after merge" is on', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, mergeTimeoutInMilliseconds, noteCount, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, mergeTimeoutInMilliseconds, noteCount, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 300;
         const SOURCE_FOLDER = 'cyc-src';
         const TARGET_FOLDER = 'cyc-tgt';
@@ -128,8 +130,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
             throw new Error('Settings tab was not found.');
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const item = [...tab.containerEl.querySelectorAll('.setting-item')]
-            .find((el) => el.querySelector('.setting-item-name')?.textContent === settingName);
+          const item = await findSettingItem({ app, name: settingName, settingTab: tab });
           const toggle = item?.querySelector('.checkbox-container');
           if (!(toggle instanceof HTMLElement)) {
             throw new TypeError(`"${settingName}" toggle was not found.`);
@@ -142,7 +143,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
       },
-      input: { mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, noteCount: NOTE_COUNT, pluginId: PLUGIN_ID },
+      input: { findSettingItem: findSettingItemInObsidian, mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, noteCount: NOTE_COUNT, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
