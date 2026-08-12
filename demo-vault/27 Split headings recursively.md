@@ -36,6 +36,9 @@ Two things this command does *not* care about:
 
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
 
+Want only one section restructured instead of the whole note? That is
+[[32 Split heading recursively]].
+
 ## Right-click with a selection
 
 Select some text first and right-click it: this command is **not** in the menu (issue #188). A
