@@ -272,6 +272,11 @@ export class PluginSettings {
    * conditional one is just as easy. (The separator carries its space: replacing a bare `:` in `A: B`
    * would leave `A -  B`, which only survives because folder names collapse whitespace runs.)
    *
+   * A Templater run needs a note to report on through `tp.file.*`, and it does NOT have to be an open one
+   * (issue #218): the open note is used when there is one, otherwise the note last open, otherwise the note
+   * last written. Only a vault holding no note at all refuses. Before that, a configured template made every
+   * folder command — which has no note of its own to offer — fail whenever nothing was focused.
+   *
    * A TEMPLATE rather than a `FROM => TO` mapping list, for the reason the rest of this plugin's decisions
    * are templates: a list can only ever express the substitutions someone already thought of, while one
    * escape hatch covers every mapping anyone will ask for. It is also why Templater is required for anything

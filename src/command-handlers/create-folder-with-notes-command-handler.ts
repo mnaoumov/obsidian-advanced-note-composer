@@ -871,8 +871,9 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   /**
    * Runs the `Name transform template` over a name (issue #196).
    *
-   * The Templater context is left to the active note: this command creates a folder rather than working on
-   * an existing note, so it has none of its own to offer.
+   * This command creates a folder rather than working on an existing note, so it has none of its own to
+   * offer as the Templater context — the shared fallback chain finds one, and no longer insists that a note
+   * be open to do it (issue #218).
    *
    * @param rawString - The name to transform.
    * @returns The transformed name.

@@ -66,8 +66,8 @@ export async function normalizeTypedFolderNameWithTransform(params: NormalizeTyp
   return normalizeTypedFolderName({
     rawName: await applyNameTransform({
       app,
-      // The Templater context is left to the active note: these commands work on a folder, so they have no
-      // Note of their own to offer.
+      // These commands work on a folder, so they have no note of their own to offer — the Templater context
+      // Is left to the shared fallback chain, which does not require one to be open (issue #218).
       contextFile: null,
       rawString: rawName,
       template: settings.nameTransformTemplate
