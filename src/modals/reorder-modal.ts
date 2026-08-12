@@ -161,19 +161,61 @@ const DEPTH_INDENT_IN_PIXELS = 20;
  */
 const DROP_AFTER_HEIGHT_FRACTION = 0.5;
 
+const DRAG_HANDLE_ICON_ID = 'lucide-grip-vertical';
 const DRAG_OVER_AFTER_CLASS = 'advanced-note-composer-reorder-drag-over-after';
 const DRAG_OVER_BEFORE_CLASS = 'advanced-note-composer-reorder-drag-over-before';
+
+/**
+ * The `Draggable.type` our rows advertise to Obsidian's drag manager. Every other drag in the app — a
+ * file from the explorer, a link from an editor — carries a different type, so this string is the whole
+ * of the "is this one of ours?" test.
+ */
+const REORDER_DRAGGABLE_TYPE = 'advanced-note-composer-reorder-row';
+
+/**
+ * The shape of `Draggable` this modal actually reads. Declared structurally rather than imported from
+ * `obsidian-typings` so the narrowing below needs no cast: a real `Draggable` is assignable to it.
+ */
+interface ReorderDraggableCandidate {
+  readonly source?: unknown;
+  readonly type: string;
+}
+
+/**
+ * What a dragged row carries in its `Draggable.source`.
+ *
+ * The identity travels WITH the drag rather than in a field on the modal. That is not a stylistic
+ * preference: the field version (`draggedRowId`) was cleared at the top of the drop handler and then read
+ * again by the same handler's group check, so every drop bailed out and dragging never moved anything
+ * (issue #231). A value that is handed to the handler cannot be cleared out from under it.
+ */
+interface ReorderDragSource {
+  readonly groupKey: string;
+  readonly rowId: number;
+}
 
 interface ReorderModalConstructorParams {
   readonly app: App;
   readonly openParams: DidConfirmReorderModalParams;
   readonly promiseResolve: PromiseResolve<boolean>;
 }
+
+interface ReorderModalHandleDropParams {
+  readonly dragSource: ReorderDragSource;
+  readonly event: DragEvent;
+
+  /**
+   * Whether this is the hover pass (`dragenter`/`dragover`) rather than the drop itself.
+   */
+  readonly isOver: boolean;
+
+  readonly itemEl: HTMLElement;
+  readonly row: ReorderModalRow;
+}
 /* v8 ignore stop */
 
 /* v8 ignore start -- ReorderModal is an internal UI class tested through the real app (integration). */
 class ReorderModal extends Modal {
-  private draggedRowId: null | number = null;
   private isConfirmed = false;
   private listEl: HTMLElement | null = null;
   private readonly params: DidConfirmReorderModalParams;
@@ -250,34 +292,28 @@ class ReorderModal extends Modal {
     this.close();
   }
 
-  private handleDragOver(event: DragEvent, row: ReorderModalRow, itemEl: HTMLElement): void {
-    if (this.draggedRowId === null || !this.isSameGroupAsDragged(row)) {
+  /**
+   * Handles both passes Obsidian's drag manager makes over a row: the hover pass, which only draws the
+   * insertion line, and the drop pass, which performs the move.
+   *
+   * @param params - The parameters.
+   */
+  private handleDrop(params: ReorderModalHandleDropParams): void {
+    const isAfter = this.checkIsAfter(params.event, params.itemEl);
+    this.clearDropIndicators();
+
+    if (params.isOver) {
+      params.itemEl.addClass(isAfter ? DRAG_OVER_AFTER_CLASS : DRAG_OVER_BEFORE_CLASS);
       return;
     }
 
-    // Only a `preventDefault`ed dragover accepts a drop; leaving it alone is what refuses a row from
-    // Another group.
-    event.preventDefault();
-    this.clearDropIndicators();
-    itemEl.addClass(this.checkIsAfter(event, itemEl) ? DRAG_OVER_AFTER_CLASS : DRAG_OVER_BEFORE_CLASS);
-  }
-
-  private handleDrop(event: DragEvent, row: ReorderModalRow, itemEl: HTMLElement): void {
-    event.preventDefault();
-    this.clearDropIndicators();
-    const draggedRowId = this.draggedRowId;
-    this.draggedRowId = null;
-    if (draggedRowId === null || !this.isSameGroupAsDragged(row) || draggedRowId === row.id) {
+    if (params.dragSource.rowId === params.row.id) {
       return;
     }
 
-    if (this.params.model.didMoveTo({ id: draggedRowId, isAfter: this.checkIsAfter(event, itemEl), targetId: row.id })) {
+    if (this.params.model.didMoveTo({ id: params.dragSource.rowId, isAfter, targetId: params.row.id })) {
       this.renderList();
     }
-  }
-
-  private isSameGroupAsDragged(row: ReorderModalRow): boolean {
-    return this.params.model.buildRows().find((candidate) => candidate.id === this.draggedRowId)?.groupKey === row.groupKey;
   }
 
   private move(id: number, delta: number): void {
@@ -310,23 +346,37 @@ class ReorderModal extends Modal {
     const itemEl = listEl.createDiv('advanced-note-composer-reorder-item');
     itemEl.dataset['rowLabel'] = row.dataLabel;
     itemEl.style.marginInlineStart = `${(row.depth * DEPTH_INDENT_IN_PIXELS).toString()}px`;
-    itemEl.draggable = true;
-    itemEl.addEventListener('dragstart', () => {
-      this.draggedRowId = row.id;
+
+    // Obsidian's own drag manager rather than hand-rolled `dragstart`/`dragover`/`drop` listeners: it
+    // Marks the element draggable, seeds the drag data store (an empty one is what Obsidian guards
+    // Against for its own drags), registers `dragenter` alongside `dragover`, applies the `dropEffect`,
+    // And draws the ghost — so a reorder drag looks and behaves like every other drag in the app.
+    const dragSource: ReorderDragSource = { groupKey: row.groupKey, rowId: row.id };
+    this.app.dragManager.handleDrag(itemEl, () => ({
+      icon: DRAG_HANDLE_ICON_ID,
+      source: dragSource,
+      title: row.label,
+      type: REORDER_DRAGGABLE_TYPE
+    }));
+    this.app.dragManager.handleDrop(itemEl, (event, draggable, isOver) => {
+      const droppedSource = toReorderDragSource(draggable);
+      // Refusing by returning `null` leaves the event un-`preventDefault`ed, which is what declines a row
+      // From another group — and a file dragged in from the explorer — instead of accepting it.
+      if (droppedSource?.groupKey !== row.groupKey) {
+        return null;
+      }
+
+      this.handleDrop({ dragSource: droppedSource, event, isOver, itemEl, row });
+      return { action: null, dropEffect: 'move' };
     });
-    itemEl.addEventListener('dragover', (event) => {
-      this.handleDragOver(event, row, itemEl);
-    });
-    itemEl.addEventListener('drop', (event) => {
-      this.handleDrop(event, row, itemEl);
-    });
+    // A drag abandoned outside any row ends without a drop, so the last insertion line has to be cleared
+    // Here; `dragend` fires on the row the drag started from.
     itemEl.addEventListener('dragend', () => {
-      this.draggedRowId = null;
       this.clearDropIndicators();
     });
 
     itemEl.createSpan({ cls: 'advanced-note-composer-reorder-handle' }, (handleEl) => {
-      setIcon(handleEl, 'lucide-grip-vertical');
+      setIcon(handleEl, DRAG_HANDLE_ICON_ID);
     });
     if (row.indexLabel !== null) {
       itemEl.createSpan({ cls: 'advanced-note-composer-reorder-index', text: row.indexLabel });
@@ -359,8 +409,10 @@ class ReorderModal extends Modal {
  * folder listing without either shape leaking into it.
  *
  * Rows can be moved with the arrow buttons or by dragging, deliberately BOTH: the arrows are the only path
- * that works by touch and the only one a click-driven integration test can drive, while dragging is what
- * makes a twenty-item list bearable. A drag never crosses a group.
+ * that works by touch, while dragging is what makes a twenty-item list bearable. A drag never crosses a
+ * group. Both paths are integration-tested — issue #231 shipped a drag that never moved anything because
+ * only the arrows were, so "a click-driven test cannot drive this" is a reason to write the drag test, not
+ * a reason to leave the interaction uncovered.
  *
  * Minimizable (issue #201): checking what actually sits in a folder before confirming the new order means
  * getting the modal out of the way first.
@@ -373,5 +425,31 @@ export async function didConfirmReorderModal(params: DidConfirmReorderModalParam
   return await new Promise<boolean>((promiseResolve) => {
     openMinimizableModal(new ReorderModal({ app: params.app, openParams: params, promiseResolve }));
   });
+}
+
+/**
+ * Reads a row's identity back off whatever Obsidian's drag manager reports as being dragged.
+ *
+ * @param draggable - The dragged item, which is anything the app can drag — a file, a link, one of our
+ * rows.
+ * @returns The dragged row's identity, or `null` for any drag that did not start on one of our rows.
+ */
+function toReorderDragSource(draggable: ReorderDraggableCandidate): null | ReorderDragSource {
+  if (draggable.type !== REORDER_DRAGGABLE_TYPE) {
+    return null;
+  }
+
+  const source = draggable.source;
+  if (typeof source !== 'object' || source === null || !('groupKey' in source) || !('rowId' in source)) {
+    return null;
+  }
+
+  const groupKey = source.groupKey;
+  const rowId = source.rowId;
+  if (typeof groupKey !== 'string' || typeof rowId !== 'number') {
+    return null;
+  }
+
+  return { groupKey, rowId };
 }
 /* v8 ignore stop */
