@@ -249,7 +249,8 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 
     this.registerValidator('reorderedFolderNameTemplate', validateReorderedFolderNameTemplate);
     this.registerValidator('reorderedFileNameTemplate', validateReorderedFileNameTemplate);
-    this.registerValidator('folderNoteTitleTemplate', validateFolderNoteTitleTemplate);
+    this.registerValidator('folderNoteTitleTemplate', validateFolderNotePropertyTemplate);
+    this.registerValidator('folderNoteAliasesTemplate', validateFolderNotePropertyTemplate);
     this.registerValidator('reorderedFileTitleTemplate', validateReorderedFileTitleTemplate);
 
     // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
@@ -394,22 +395,24 @@ function validateCreateFolderNameTemplate(value: string): MaybeReturn<string> {
 }
 
 /**
- * Validates the `folderNoteTitleTemplate` setting (issue #216).
+ * Validates a template that writes a PROPERTY of a folder note — `folderNoteTitleTemplate` (issue #216) and
+ * `folderNoteAliasesTemplate` (issue #217). Both describe the same folder from the same vocabulary, so they
+ * are judged by the same rules.
  *
- * Unlike the name templates this one may be EMPTY — that is how the `title` property is left alone, which
- * is why there is no separate toggle beside it.
+ * Unlike the name templates these may be EMPTY — that is how each property is left alone, which is why
+ * there is no separate toggle beside either.
  *
  * @param value - The template as typed.
  * @returns The error message, or nothing when the template is valid.
  */
-function validateFolderNoteTitleTemplate(value: string): MaybeReturn<string> {
+function validateFolderNotePropertyTemplate(value: string): MaybeReturn<string> {
   if (!value) {
     return;
   }
 
   const typedOnlyKey = findTokenKey(value, REORDER_TYPED_NAME_TOKEN_KEYS);
   if (typedOnlyKey) {
-    return `{{${typedOnlyKey}}} cannot be used here, because a reorder has no typed name`;
+    return `{{${typedOnlyKey}}} cannot be used here, because the property describes the folder rather than what was typed`;
   }
 
   const unknownKey = findUnknownCreateFolderTokenKey(value);

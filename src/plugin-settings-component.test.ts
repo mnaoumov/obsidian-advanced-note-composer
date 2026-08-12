@@ -626,15 +626,38 @@ describe('PluginSettingsComponent', () => {
         expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{parentFolder}}: {{folderName}}')).toBeUndefined();
       });
 
-      it('should reject the typed name, which a reorder never has', async () => {
+      it('should reject the typed name, which describes nothing about the folder', async () => {
         const component = createComponent();
         expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{rawFolderName}}'))
-          .toBe('{{rawFolderName}} cannot be used here, because a reorder has no typed name');
+          .toBe('{{rawFolderName}} cannot be used here, because the property describes the folder rather than what was typed');
       });
 
       it('should reject an unknown token', async () => {
         const component = createComponent();
         expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{nope}}')).toBe('Unknown token {{nope}}');
+      });
+    });
+
+    describe('folderNoteAliasesTemplate validator (issue #217)', () => {
+      it('should accept the default template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '{{safeFolderName}}')).toBeUndefined();
+      });
+
+      it('should accept an empty template, which is how the property is left alone', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '')).toBeUndefined();
+      });
+
+      it('should reject the typed name, which describes nothing about the folder', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '{{rawFolderName}}'))
+          .toBe('{{rawFolderName}} cannot be used here, because the property describes the folder rather than what was typed');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '{{nope}}')).toBe('Unknown token {{nope}}');
       });
     });
 

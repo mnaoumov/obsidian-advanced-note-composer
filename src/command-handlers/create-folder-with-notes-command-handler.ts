@@ -50,6 +50,10 @@ import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
 import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../templater.ts';
+import {
+  normalizeTypedFolderNameWithTransform,
+  validateTypedFolderName as validateTypedFolderNameValue
+} from '../typed-folder-name.ts';
 
 /**
  * Which name a {@link RenameRequest} is about. An enum rather than a nullable note index so a request
@@ -597,12 +601,13 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * @returns The normalized name.
    */
   private async normalizeFolderName(rawFolderName: string): Promise<string> {
-    const settings = this.pluginSettingsComponent.settings;
-    return normalizeTypedFolderName({
-      rawName: await this.transformName(rawFolderName),
-      replacement: settings.replacement,
-      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
-      shouldTitleCase: settings.shouldTitleCaseCreatedFolderName
+    return await normalizeTypedFolderNameWithTransform({
+      app: this.app,
+      rawName: rawFolderName,
+      settings: this.pluginSettingsComponent.settings,
+      // This prompt names a folder that does not exist yet, so the typed text is all there is and the
+      // Setting decides. `Rename folder...` opts out instead — it seeds the prompt with an existing name.
+      shouldTitleCase: this.pluginSettingsComponent.settings.shouldTitleCaseCreatedFolderName
     });
   }
 
@@ -882,36 +887,18 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   }
 
   /**
-   * Validates what was typed into the prompt, in the terms the user typed it.
-   *
-   * A broken `Name transform template` is reported HERE rather than being allowed to escape (issue #196):
-   * the prompt is the one place that can say what went wrong and re-ask with the typed text intact, and
-   * every later use of the template runs on a name this validator already accepted.
+   * Validates what was typed into the folder-name prompt, in the terms the user typed it.
    *
    * @param value - The typed name.
    * @returns The error message, or nothing when the name is usable.
    */
   private async validateTypedFolderName(value: string): Promise<MaybeReturn<string>> {
-    let normalizedName: string;
-    try {
-      normalizedName = await this.normalizeFolderName(value);
-    } catch (error) {
-      /* v8 ignore next 3 -- the transform is the only thing here that throws, and it throws nothing else. */
-      if (!(error instanceof NameTransformError)) {
-        throw error;
-      }
-      return error.message;
-    }
-
-    if (!normalizedName) {
-      return 'Folder name cannot be empty';
-    }
-
-    // Only reachable with `Should replace invalid title characters` off, which leaves the characters in
-    // Place for the user to fix — the same choice the reporter's own plugin makes.
-    if (new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(normalizedName)) {
-      return 'Folder name contains invalid characters';
-    }
+    return await validateTypedFolderNameValue({
+      app: this.app,
+      rawName: value,
+      settings: this.pluginSettingsComponent.settings,
+      shouldTitleCase: this.pluginSettingsComponent.settings.shouldTitleCaseCreatedFolderName
+    });
   }
 
   /**
