@@ -32,7 +32,7 @@ interface SettingsCarrier {
   settings: CreateFolderSettings;
 }
 
-describe('create folder with notes... (issues #191, #194, #195)', () => {
+describe('create folder with notes... (issues #191, #194, #195, #219)', () => {
   it('creates in Obsidian\'s default new-note location, normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
@@ -303,6 +303,157 @@ describe('create folder with notes... (issues #191, #194, #195)', () => {
     expect(result.isStillOpenAfterEmptySubmit).toBe(true);
     // Typing reports too — the message must follow the input, not wait for another submit.
     expect(result.callCountAfterTyping).toBeGreaterThan(result.callCountAfterEmptySubmit);
+    expect(result.isPromptClosedAfterCancel).toBe(true);
+    // Cancel after a VALID name: the prompt is the only thing this test is allowed to have touched.
+    expect(result.matchingFolderPaths).toEqual([]);
+  });
+
+  it('paints the red invalid outline only once Create is clicked on an empty name, never on open (issue #219)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { waitUntil }, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        // Already normalized, so a folder appearing under this exact name is unambiguous evidence that
+        // Cancel did not create anything.
+        const TYPED_NAME = 'Prompt Outline Probe';
+
+        try {
+          app.commands.executeCommandById(`${pluginId}:create-folder-with-notes`);
+
+          await waitUntil({
+            message: 'folder name prompt did not open',
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+          });
+
+          const nameInput = requirePromptInput();
+          /*
+           * The modal opens INVALID by design: it validates the empty value on open, so that OK refuses.
+           * Waiting for that computed error is what makes an outline-free reading meaningful.
+           * A wait for the input element alone would only prove that the reading was taken too early.
+           */
+          await waitUntil({
+            message: 'the empty folder name never became invalid',
+            predicate: () => nameInput.validity.customError
+          });
+
+          // The box shadow is transitioned, so a single reading can catch an interpolated color.
+          // Two equal consecutive readings mean the transition has settled.
+          let previousBoxShadow = '';
+          await waitUntil({
+            message: 'the input box shadow never settled after the prompt opened',
+            predicate: () => {
+              const currentBoxShadow = getBoxShadow();
+              const isSettled = currentBoxShadow === previousBoxShadow;
+              previousBoxShadow = currentBoxShadow;
+              return isSettled;
+            }
+          });
+
+          const errorColor = getErrorColor();
+          const boxShadowOnOpen = getBoxShadow();
+
+          // The reporter's whole complaint is the red arriving before this click; here is where it belongs.
+          requirePromptElement('.ok-button').click();
+          // A throwing wait would discard the on-open reading, which is the one the issue is about.
+          try {
+            await waitUntil({
+              message: 'the invalid outline never appeared after an empty Create',
+              predicate: () => getBoxShadow().includes(errorColor)
+            });
+          } catch {
+            // Diagnostics are returned below.
+          }
+          const boxShadowAfterEmptySubmit = getBoxShadow();
+          const isStillOpenAfterEmptySubmit = document.querySelector('.prompt-modal .text-box') !== null;
+
+          // Typing a valid name clears it again, so the outline tracks the value rather than latching on.
+          nameInput.value = TYPED_NAME;
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'the typed folder name never became valid',
+            predicate: () => nameInput.checkValidity()
+          });
+          let previousValidBoxShadow = '';
+          await waitUntil({
+            message: 'the input box shadow never settled after a valid name was typed',
+            predicate: () => {
+              const currentBoxShadow = getBoxShadow();
+              const isSettled = currentBoxShadow === previousValidBoxShadow;
+              previousValidBoxShadow = currentBoxShadow;
+              return isSettled;
+            }
+          });
+          const boxShadowAfterValidName = getBoxShadow();
+
+          requirePromptElement('.cancel-button').click();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          return {
+            boxShadowAfterEmptySubmit,
+            boxShadowAfterValidName,
+            boxShadowOnOpen,
+            errorColor,
+            isPromptClosedAfterCancel: document.querySelector('.prompt-modal .text-box') === null,
+            isStillOpenAfterEmptySubmit,
+            matchingFolderPaths: app.vault.getAllFolders().filter((folder) => folder.name === TYPED_NAME).map((folder) => folder.path)
+          };
+        } finally {
+          closePromptIfOpen();
+        }
+
+        function closePromptIfOpen(): void {
+          const cancelButton = document.querySelector('.prompt-modal .cancel-button');
+          if (cancelButton instanceof HTMLElement) {
+            cancelButton.click();
+          }
+        }
+
+        function getBoxShadow(): string {
+          const nameInput = requirePromptInput();
+          return nameInput.win.getComputedStyle(nameInput).boxShadow;
+        }
+
+        function getErrorColor(): string {
+          /*
+           * The stylesheet paints `var(--text-error)` while a computed box shadow carries a resolved color.
+           * A throwaway probe resolves the variable in the same document, in the same serialization.
+           */
+          const nameInput = requirePromptInput();
+          const probeEl = nameInput.doc.body.createDiv();
+          probeEl.setCssProps({ color: 'var(--text-error)' });
+          const errorColor = nameInput.win.getComputedStyle(probeEl).color;
+          probeEl.remove();
+          return errorColor;
+        }
+
+        function requirePromptElement(selector: string): HTMLElement {
+          const element = document.querySelector(`.prompt-modal ${selector}`);
+          if (!(element instanceof HTMLElement)) {
+            throw new TypeError(`No folder name prompt element matching ${selector}.`);
+          }
+          return element;
+        }
+
+        function requirePromptInput(): HTMLInputElement {
+          const element = requirePromptElement('.text-box');
+          if (!element.instanceOf(HTMLInputElement)) {
+            throw new TypeError('No folder name prompt input.');
+          }
+          return element;
+        }
+      },
+      input: { pluginId: PLUGIN_ID }
+    });
+
+    // The probe resolved something, so the assertions below are comparing against a real color.
+    expect(result.errorColor).not.toBe('');
+    // Issue #219: opening the prompt paints no red — this is the assertion the whole item is about.
+    // `not.toBe('none')` would be wrong: the input is focused on open, so the theme paints its own ring.
+    expect(result.boxShadowOnOpen).not.toContain(result.errorColor);
+    // ...but the rule itself is unchanged, so an empty Create still refuses AND still says so in red.
+    expect(result.boxShadowAfterEmptySubmit).toContain(result.errorColor);
+    expect(result.isStillOpenAfterEmptySubmit).toBe(true);
+    // The outline follows the value rather than latching on once shown.
+    expect(result.boxShadowAfterValidName).not.toContain(result.errorColor);
     expect(result.isPromptClosedAfterCancel).toBe(true);
     // Cancel after a VALID name: the prompt is the only thing this test is allowed to have touched.
     expect(result.matchingFolderPaths).toEqual([]);
