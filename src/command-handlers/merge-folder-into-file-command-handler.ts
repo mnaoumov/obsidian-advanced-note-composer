@@ -311,7 +311,8 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     }
 
     // A folder merge has no note of its own to offer Templater as context (issue #196), so the
-    // `Name transform template` falls back to whatever note is open.
+    // `Name transform template` falls back to the shared chain — the open note, else the note last open,
+    // Else the note last written (issue #218; before it, no open note meant this merge refused outright).
     const fixedNoteName = await transformAndFixFileName({
       app: this.app,
       contextFile: null,

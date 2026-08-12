@@ -231,6 +231,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendCodeBlock(f, 'A - B');
               f.appendText('.');
               f.createEl('br');
+              f.appendText('No note has to be open for that: ');
+              appendCodeBlock(f, 'tp.file');
+              f.appendText(' reports on the note you have open, or on the last one you opened or edited when you have none.');
+              f.createEl('br');
               f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
               appendCodeBlock(f, 'Create folder with notes...');
               f.appendText('.');

@@ -21,6 +21,10 @@ import {
   transformAndFixFileName
 } from './name-transform.ts';
 
+interface CreateAppOverrides {
+  files: Record<string, string>;
+}
+
 interface FixOverrides {
   fileName: string;
   nameTransformTemplate?: string;
@@ -31,6 +35,12 @@ interface TemplaterMock {
   createRunningConfig: Mock;
   parseTemplate: Mock;
 }
+
+/**
+ * A modification time later than the mock's own default of `0`, for the tests that pin which note the
+ * newest-note fallback picks.
+ */
+const LATER_MTIME = 1000;
 
 const MAPPING_TEMPLATE = '<% TOKENS.rawString.replaceAll(": ", " - ") %>';
 
@@ -65,13 +75,73 @@ describe('applyNameTransform', () => {
       .rejects.toThrow('Name transform template uses Templater syntax, but the Templater plugin is not installed');
   });
 
-  it('should refuse templater syntax when there is no note to run it against', async () => {
-    const app = createApp();
+  it('should refuse templater syntax only when the vault holds no note at all (issue #218)', async () => {
+    const app = createApp({ files: {} });
     installTemplater(app);
+    installRecentFiles(app, []);
     vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
 
     await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
-      .rejects.toThrow('Name transform template uses Templater syntax, which needs an open note as its context');
+      .rejects.toThrow('Name transform template uses Templater syntax, which needs a note as its context, and this vault has none');
+  });
+
+  it('should fall back to the most recently opened note when nothing is open (issue #218)', async () => {
+    // A folder command has no note of its own to offer, so before #218 a configured template refused it
+    // Outright whenever the user had nothing focused.
+    const app = createApp({ files: { 'newest.md': 'newest', 'recent.md': 'recent' } });
+    const templater = installTemplater(app);
+    templater.parseTemplate.mockResolvedValue('A - B');
+    touch(app, 'newest.md', LATER_MTIME);
+    installRecentFiles(app, ['recent.md']);
+    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+
+    await applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE });
+
+    // The recently-opened note wins over the newer one: it is the note the user was actually looking at.
+    expect(templater.createRunningConfig).toHaveBeenCalledWith(undefined, getFile(app, 'recent.md'), RUN_MODE_DYNAMIC_PROCESSOR);
+  });
+
+  it('should skip a recent path that no longer resolves, and anything that is not a note', async () => {
+    const app = createApp({ files: { 'attachment.pdf': 'pdf', 'still-here.md': 'still here' } });
+    const templater = installTemplater(app);
+    templater.parseTemplate.mockResolvedValue('A - B');
+    installRecentFiles(app, ['deleted.md', 'attachment.pdf', 'still-here.md']);
+    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+
+    await applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE });
+
+    expect(templater.createRunningConfig).toHaveBeenCalledWith(undefined, getFile(app, 'still-here.md'), RUN_MODE_DYNAMIC_PROCESSOR);
+  });
+
+  it('should fall back to the newest note when the recent list offers nothing', async () => {
+    // The vault where no note was ever OPENED — a fresh install — still has notes to report on.
+    const app = createApp({ files: { 'newest.md': 'newest', 'older.md': 'older' } });
+    const templater = installTemplater(app);
+    templater.parseTemplate.mockResolvedValue('A - B');
+    touch(app, 'newest.md', LATER_MTIME);
+    installRecentFiles(app, []);
+    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+
+    await applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE });
+
+    expect(templater.createRunningConfig).toHaveBeenCalledWith(undefined, getFile(app, 'newest.md'), RUN_MODE_DYNAMIC_PROCESSOR);
+  });
+
+  it('should break a modification-time tie on the path, so the same vault always picks the same note', async () => {
+    // `Create folder with notes...` writes its notes in the same millisecond by the handful. The vault is
+    // Seeded in REVERSE path order, so picking `a.md` can only be the tie-break and not the walk order.
+    // eslint-disable-next-line perfectionist/sort-objects -- The unsorted order IS the fixture: the mock vault walks its files in insertion order.
+    const app = createApp({ files: { 'b.md': 'b', 'a.md': 'a' } });
+    const templater = installTemplater(app);
+    templater.parseTemplate.mockResolvedValue('A - B');
+    touch(app, 'a.md', LATER_MTIME);
+    touch(app, 'b.md', LATER_MTIME);
+    installRecentFiles(app, []);
+    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
+
+    await applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE });
+
+    expect(templater.createRunningConfig).toHaveBeenCalledWith(undefined, getFile(app, 'a.md'), RUN_MODE_DYNAMIC_PROCESSOR);
   });
 
   it('should run templater with the TOKENS prelude and trim what comes back', async () => {
@@ -136,9 +206,10 @@ describe('applyNameTransform', () => {
     await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
       .rejects.toBeInstanceOf(NameTransformError);
 
-    installTemplater(app);
-    vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
-    await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
+    const emptyVaultApp = createApp({ files: {} });
+    installTemplater(emptyVaultApp);
+    vi.spyOn(emptyVaultApp.workspace, 'getActiveFile').mockReturnValue(null);
+    await expect(applyNameTransform({ app: emptyVaultApp, contextFile: null, rawString: 'A: B', template: MAPPING_TEMPLATE }))
       .rejects.toBeInstanceOf(NameTransformError);
   });
 });
@@ -172,11 +243,14 @@ describe('transformAndFixFileName', () => {
   });
 });
 
-function createApp(): AppOriginal {
-  const app = App.createConfigured__({ files: { 'note.md': 'note' } }).asOriginalType__();
+function createApp(overrides?: CreateAppOverrides): AppOriginal {
+  const app = App.createConfigured__({ files: overrides?.files ?? { 'note.md': 'note' } }).asOriginalType__();
   // `plugins` is not part of the mock's surface, so it is assigned outright — with no plugin installed by
   // Default, which is the "Templater is missing" case.
   castTo<GenericObject>(app)['plugins'] = { plugins: {} };
+  // Neither is `getRecentFiles`, which the Templater-context fallback chain consults whenever no note is
+  // Open (issue #218) — stubbed empty for every test, so only the tests that care about it say so.
+  installRecentFiles(app, []);
   return app;
 }
 
@@ -194,6 +268,10 @@ async function fix(app: AppOriginal, overrides: FixOverrides): Promise<string> {
 
 function getFile(app: AppOriginal, path: string): TFile {
   return ensureNonNullable(app.vault.getFileByPath(path));
+}
+
+function installRecentFiles(app: AppOriginal, paths: readonly string[]): void {
+  castTo<GenericObject>(app.workspace)['getRecentFiles'] = vi.fn().mockReturnValue([...paths]);
 }
 
 function installTemplater(app: AppOriginal): TemplaterMock {
@@ -214,4 +292,8 @@ function installTemplater(app: AppOriginal): TemplaterMock {
     }
   };
   return templaterMock;
+}
+
+function touch(app: AppOriginal, path: string, mtime: number): void {
+  getFile(app, path).stat.mtime = mtime;
 }

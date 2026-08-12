@@ -50,6 +50,13 @@ With that set, typing `A: B` creates `A - B`. Conditional mappings are ordinary 
 can handle as many characters as you like. Templater is only needed for the logic — a template made purely
 of `{{tokens}}` works on its own.
 
+**You do not need a note open.** A Templater run has to report on some note through `tp.file`, so the plugin
+uses the one you have open, and when you have none, the last note you opened, or failing that the last one
+you edited. Only a vault with no notes in it at all has nothing to offer, and that is the one case the
+template is refused. This matters for the commands that work on a *folder* — `Create folder with notes...`
+and `Merge folder contents into a single file...` — which have no note of their own and used to refuse
+outright whenever nothing was focused.
+
 **The template must produce a single line — chain your replacements, do not write one per line.** Each
 command emits its own result, so two commands on two lines produce a two-line name, which no file name can
 be; the operation is refused with a message saying so rather than creating something mangled. Handle several

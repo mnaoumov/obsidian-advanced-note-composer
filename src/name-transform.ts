@@ -3,6 +3,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
+
 import type { NameTransformTokens } from './template-tokens.ts';
 
 import { fixFileName } from './filename-validation.ts';
@@ -24,17 +26,26 @@ const TEMPLATER_COMMAND_START = '<%';
 const LINE_BREAK_REG_EXP = /\r\n|[\r\n]/;
 
 /**
+ * How far down Obsidian's recent list {@link resolveTemplaterContextFile} looks for a note that still exists.
+ * Obsidian's own default is `10`; a handful more costs nothing here, since the search stops at the first path
+ * that resolves and only runs when no note is open at all.
+ */
+const RECENT_FILE_PATHS_MAX_COUNT = 50;
+
+/**
  * Parameters for {@link applyNameTransform}.
  */
 export interface ApplyNameTransformParams {
   readonly app: App;
 
   /**
-   * The note the Templater run reports on through `tp.file.*`, or `null` to fall back to the active note.
+   * The note the Templater run reports on through `tp.file.*`, or `null` to let
+   * {@link resolveTemplaterContextFile} find one.
    *
    * Not optional decoration: Templater reads `target_file.basename` / `target_file.stat` EAGERLY while
    * building its function object, so a run with no file at all throws before the template is even parsed.
-   * A flow that has an obvious note (a split's source) passes it; the rest fall back to whatever is open.
+   * A flow that has an obvious note (a split's source) passes it; the rest get the shared fallback chain,
+   * which no longer requires a note to be OPEN (issue #218).
    */
   readonly contextFile: null | TFile;
 
@@ -166,9 +177,9 @@ export async function applyNameTransform(params: ApplyNameTransformParams): Prom
     throw new NameTransformError('Name transform template uses Templater syntax, but the Templater plugin is not installed');
   }
 
-  const targetFile = contextFile ?? app.workspace.getActiveFile();
+  const targetFile = resolveTemplaterContextFile(app, contextFile);
   if (!targetFile) {
-    throw new NameTransformError('Name transform template uses Templater syntax, which needs an open note as its context');
+    throw new NameTransformError('Name transform template uses Templater syntax, which needs a note as its context, and this vault has none');
   }
 
   const runningConfig = templaterPlugin.templater.create_running_config(undefined, targetFile, TEMPLATER_RUN_MODE_DYNAMIC_PROCESSOR);
@@ -251,6 +262,103 @@ function ensureSingleLineName(name: string): string {
       + ' A note name must be a single line. Chain the replacements into one expression'
       + ' instead of writing one command per line.'
   );
+}
+
+/**
+ * The newest note in the vault by modification time — the last note the user actually wrote in, when
+ * Obsidian's recent list has nothing left to offer.
+ *
+ * A vault that has never had a note opened (a fresh install, an Obsidian launched straight into the file
+ * explorer) has an EMPTY recent list, so without this step {@link applyNameTransform} would still refuse in
+ * a vault full of notes. Ties break on the path so that two notes written in the same millisecond — which
+ * `Create folder with notes...` produces by the handful — cannot make the same run pick differently twice.
+ *
+ * @param app - The app.
+ * @returns The newest note, or `null` in a vault with no note at all.
+ */
+function resolveMostRecentlyModifiedNote(app: App): null | TFile {
+  let newestNote: null | TFile = null;
+  for (const note of app.vault.getMarkdownFiles()) {
+    if (!newestNote || note.stat.mtime > newestNote.stat.mtime || (note.stat.mtime === newestNote.stat.mtime && note.path < newestNote.path)) {
+      newestNote = note;
+    }
+  }
+
+  return newestNote;
+}
+
+/**
+ * The most recently opened note that still exists — the note the user was looking at before they closed
+ * everything, which is the closest thing to an active note there is when nothing is open.
+ *
+ * Obsidian's recent list is paths, not files, so an entry can name a note that has since been deleted or
+ * renamed; the first one that still resolves wins. It is filtered by {@link isMarkdownFile} rather than
+ * trusted to the `show*` options, because an image or a PDF is not a note and `tp.file.*` reporting on one
+ * would be nonsense.
+ *
+ * Deliberately NOT `getRecentPaths` from `recent-suggestions.ts`, despite the overlap: that function leads
+ * with the plugin's own recorded operation TARGETS, which are destinations and are often folders. "A folder
+ * I merged into" is not "a note I was looking at".
+ *
+ * @param app - The app.
+ * @returns The note, or `null` when the recent list is empty or nothing in it resolves.
+ */
+function resolveMostRecentlyOpenedNote(app: App): null | TFile {
+  const recentPaths = app.workspace.getRecentFiles({
+    maxCount: RECENT_FILE_PATHS_MAX_COUNT,
+    showCanvas: false,
+    showImages: false,
+    showMarkdown: true,
+    showNonAttachments: false,
+    showNonImageAttachments: false
+  });
+
+  for (const path of recentPaths) {
+    const note = app.vault.getFileByPath(path);
+    if (note && isMarkdownFile(note)) {
+      return note;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves the note the Templater run reports on through `tp.file.*` (issue #218).
+ *
+ * Templater insists on a file — it reads `target_file.basename`/`.stat` EAGERLY (see `templater.ts`) — but
+ * the commands that need this transform most are the folder ones, which have no note of their own, so
+ * requiring an OPEN note made a configured `Name transform template` refuse every folder command whenever
+ * the user had no note focused. That was issue #218, reported twice over: as a validator message in
+ * `Create folder with notes...`'s name prompt and as a notice from
+ * `Merge folder contents into a single file...`, both of them this one refusal.
+ *
+ * So a file is found rather than demanded, in falling order of how much it has to do with the user: the
+ * caller's own subject, the open note, the note last open, the note last written. The refusal survives only
+ * for a vault holding no note at all, where there is genuinely nothing to hand over.
+ *
+ * **The fallbacks are not a new class of silent wrongness.** The context here has ALWAYS been "whatever note
+ * happens to be open", which for a command operating on a folder is exactly as arbitrary as "the note you
+ * last had open" — and the reporter's own template (`<% TOKENS.rawString.replaceAll(": ", " - ") %>`) never
+ * touches `tp.file.*` at all, which is the usual shape: Templater is the expression evaluator, and the file
+ * it insists on is incidental. One chain shared by every call site is also why this is not a per-command
+ * anchor (the folder merge offering one of its merged notes, a rename offering the folder note): that would
+ * make the same template report a different `tp.file.title` depending on which command ran it.
+ *
+ * The fallback note is read, never written, so it is deliberately NOT filtered through `isPathIgnored` — this
+ * module takes no settings, and a note excluded from being an operation's target is still a note.
+ *
+ * @param app - The app.
+ * @param contextFile - The caller's own note, when it has one.
+ * @returns The note to run the template against, or `null` when the vault has none.
+ */
+function resolveTemplaterContextFile(app: App, contextFile: null | TFile): null | TFile {
+  // The active file is taken as it comes, `isMarkdownFile` unchecked: with a canvas focused it is what the
+  // Run has always reported on, and narrowing that now would be a second, unasked-for change.
+  return contextFile
+    ?? app.workspace.getActiveFile()
+    ?? resolveMostRecentlyOpenedNote(app)
+    ?? resolveMostRecentlyModifiedNote(app);
 }
 
 function toMessage(error: unknown): string {
