@@ -23,6 +23,7 @@ import { MoveFolderCommandHandler } from './command-handlers/move-folder-command
 import { MoveMarkedSelectionHereEditorCommandHandler } from './command-handlers/move-marked-selection-here-editor-command-handler.ts';
 import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './command-handlers/move-marked-selection-to-edge-editor-command-handler.ts';
 import { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
+import { RenameFolderCommandHandler } from './command-handlers/rename-folder-command-handler.ts';
 import { RenameHeadingEditorCommandHandler } from './command-handlers/rename-heading-editor-command-handler.ts';
 import { ReorderChildFoldersCommandHandler } from './command-handlers/reorder-child-folders-command-handler.ts';
 import { ReorderHeadingsEditorCommandHandler } from './command-handlers/reorder-headings-editor-command-handler.ts';
@@ -312,6 +313,12 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       new CreateFolderWithNotesCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new RenameFolderCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,

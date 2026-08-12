@@ -197,6 +197,23 @@ export class PluginSettings {
    * is lazy — it would stop at the inner `}}`. Nothing nests, so the token grammar is untouched.
    */
   /**
+   * The alias a rename writes into the renamed FOLDER's folder note (issue #217).
+   *
+   * `{{safeFolderName}}` is the new folder name WITHOUT its index — which is what `Create folder with
+   * notes...` already writes as the alias, so a folder created and then renamed ends up with the alias it
+   * would have had if it had been created under the new name. `{{folderName}}` is the same name WITH the
+   * index, for a vault whose aliases carry the number too.
+   *
+   * The rendered alias REPLACES the one the old name rendered and nothing else, so hand-written aliases
+   * survive a rename. An EMPTY template leaves the property alone entirely; that is the opt-out, so no
+   * separate toggle exists.
+   *
+   * A reorder does not write aliases and still does not: with this default the alias carries no index, so a
+   * renumber would not change it anyway.
+   */
+  public folderNoteAliasesTemplate = '{{safeFolderName}}';
+
+  /**
    * Where this vault keeps its folder notes (issue #216 / issue #217's thread).
    *
    * `Auto` reads the installed `folder-notes` plugin at every use rather than copying its values here — a
@@ -217,11 +234,15 @@ export class PluginSettings {
   public folderNoteNameTemplate = '{{folderName}}';
 
   /**
-   * The `title` property a reorder writes into a renumbered FOLDER's folder note (issue #216).
+   * The `title` property written into a FOLDER's folder note — by a reorder that renumbered it (issue #216)
+   * and by a rename that renamed it (issue #217).
    *
    * `{{folderName}}` is the new folder name WITH its index — which is exactly what the reporter's own
    * plugin writes — while `{{safeFolderName}}` is the same name without it, so a vault whose titles differ
    * from its folder names can say how.
+   *
+   * ONE setting for both operations rather than one each: they write the same property of the same note, so
+   * two templates could only ever disagree, and whichever command ran last would win.
    *
    * An EMPTY template leaves the property alone entirely; that is the opt-out, so no separate toggle
    * exists.

@@ -1571,6 +1571,57 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'folderNoteNameTemplate', valueComponent: codeHighlighter });
               });
             }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The ');
+              appendCodeBlock(f, 'title');
+              f.appendText(' property to write into the folder note of a folder that a reorder renumbered or ');
+              appendCodeBlock(f, 'Rename folder...');
+              f.appendText(' renamed.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{folderName}}');
+              f.appendText(' is the new folder name with its number, ');
+              appendCodeBlock(f, '{{safeFolderName}}');
+              f.appendText(' the same name without it.');
+              f.createEl('br');
+              f.appendText('One template for both, because they write the same property of the same note.');
+              f.createEl('br');
+              f.appendText('Leave empty to leave the property alone.');
+              f.createEl('br');
+              addReorderFolderTokens(f);
+            }),
+            name: 'Folder note title template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'folderNoteTitleTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('The alias ');
+              appendCodeBlock(f, 'Rename folder...');
+              f.appendText(' writes into the renamed folder\'s folder note.');
+              f.createEl('br');
+              f.appendText('It REPLACES the alias the old name rendered and nothing else, so aliases you wrote by hand survive the rename.');
+              f.createEl('br');
+              f.appendText('A reorder never writes aliases. With the default ');
+              appendCodeBlock(f, '{{safeFolderName}}');
+              f.appendText(' the alias carries no number, so renumbering would not change it anyway.');
+              f.createEl('br');
+              f.appendText('Leave empty to leave the property alone.');
+              f.createEl('br');
+              addReorderFolderTokens(f);
+            }),
+            name: 'Folder note aliases template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'folderNoteAliasesTemplate', valueComponent: codeHighlighter });
+              });
+            }
           })
         ]
       }),
@@ -1602,29 +1653,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
                 this.bind({ propertyName: 'reorderedFolderNameTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('The ');
-              appendCodeBlock(f, 'title');
-              f.appendText(' property to write into a renumbered folder\'s folder note.');
-              f.createEl('br');
-              appendCodeBlock(f, '{{folderName}}');
-              f.appendText(' is the new folder name with its number, ');
-              appendCodeBlock(f, '{{safeFolderName}}');
-              f.appendText(' the same name without it.');
-              f.createEl('br');
-              f.appendText('Leave empty to leave the property alone.');
-              f.createEl('br');
-              addReorderFolderTokens(f);
-            }),
-            name: 'Reordered folder title template',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'folderNoteTitleTemplate', valueComponent: codeHighlighter });
               });
             }
           }),

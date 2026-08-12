@@ -442,7 +442,21 @@ Nothing about the `1.` prefix shape is hard-coded. **Reordered folder name templ
 
 Reading an existing number back uses the same template, so what writes the names and what recognizes them can never disagree. `{{safeFolderName}}` (or `{{safeName}}` for a note) is the name without its number, and both templates must contain it and `{{index}}` — otherwise renumbering would drop the name, or have no number to rewrite.
 
-**Reordered folder title template** (default `{{folderName}}`) is what goes into the folder note's `title`: `{{folderName}}` is the new name **with** its number, `{{safeFolderName}}` the same name without it. Leave it empty to leave the property alone. **Reordered file title template** is the same thing for notes and is **empty by default**, so a reordered note is renamed and nothing else until you fill it in. Only `title` is ever written — `aliases` and everything else are left as they are.
+**Folder note title template** (default `{{folderName}}`, under `Folder note` in the settings) is what goes into the folder note's `title`: `{{folderName}}` is the new name **with** its number, `{{safeFolderName}}` the same name without it. Leave it empty to leave the property alone. It is shared with `Rename folder...`, because both write the same property of the same note. **Reordered file title template** is the same thing for notes and is **empty by default**, so a reordered note is renamed and nothing else until you fill it in. A reorder writes only `title` — `aliases` and everything else are left as they are.
+
+## Rename folder
+
+The `Rename folder...` command (also on a folder's right-click menu) renames a folder and, in the same operation, keeps its [folder note](#folder-note) in step: the note's own file name, its `title` property and its `aliases`. This is the counterpart to reordering — a reorder changes a folder's **number**, a rename changes its **name** — and the two write the folder note through the same settings, so they can never disagree about what a folder note should say.
+
+Type the new name into the prompt and press `Rename`. The name is refused if it would be empty or if it still contains invalid characters (with **Should replace invalid title characters** off), exactly as when creating a folder. If a sibling is already called that, the new name is de-duplicated into `Beta 1` and the properties describe the folder that actually exists.
+
+**The folder keeps its number.** The prompt is seeded with the name **without** its index, so renaming `1. Alpha` to `Beta` gives you `1. Beta` and a folder never silently drops out of the sequence it is numbered into. A folder that never had a number simply takes the name you typed. The number is recognized and rewritten through **Reordered folder name template**, so it follows whatever scheme that setting describes.
+
+**Aliases are swapped, not rewritten.** **Folder note aliases template** (default `{{safeFolderName}}`, under `Folder note` in the settings) renders the alias the new name deserves; the entry the **old** name rendered is replaced where it stood, and every other alias — the ones you wrote by hand — is left exactly as it was. If the old entry is not there, the new alias is simply added. Leave the template empty to leave `aliases` alone entirely. The default matches what `Create folder with notes...` already writes, so a folder created and then renamed ends up with the alias it would have had if you had created it under the new name.
+
+Unlike a plain Obsidian rename, this is the whole operation in **one reversible, resource-locked transaction**: the folder, the folder note's name and both properties move together, and cancelling it — or an external change — rolls all of them back at once. Links are updated by the underlying rename, as always. Obsidian's own rename is untouched: only this command syncs the properties.
+
+A folder whose path is ignored by the plugin's [include/exclude paths](#includeexclude-paths) is refused with a notice, and the vault root is never offered — it has no name of its own to change.
 
 ## Folder note
 
@@ -456,7 +470,9 @@ Several commands need to know which note **describes** a folder — the one whos
 
 That plugin's third option — keeping every folder note in one central folder — has no equivalent here, and `Auto` falls back when it is set: with the notes pooled, which note belongs to a folder no longer follows from the folder's path.
 
-When the folder note is named after its folder, renumbering the folder renames the note with it — otherwise `1. Alpha/1. Alpha.md` would become `3. Alpha/1. Alpha.md`, which by that very rule is no longer a folder note. A fixed name like `!` needs no rename and gets none.
+When the folder note is named after its folder, renumbering or renaming the folder renames the note with it — otherwise `1. Alpha/1. Alpha.md` would become `3. Alpha/1. Alpha.md`, which by that very rule is no longer a folder note. A fixed name like `!` needs no rename and gets none.
+
+Two more settings live here, and both take the same tokens as the reorder templates. **Folder note title template** is the `title` a reorder or a [rename](#rename-folder) writes; **Folder note aliases template** is the alias a [rename](#rename-folder) writes. Either one left empty leaves its property alone.
 
 ## Merge folder contents into a single file
 
