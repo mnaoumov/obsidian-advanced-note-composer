@@ -161,7 +161,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${originalBasename}` : originalBasename);
     const folderPath = getAvailableFolderPath(this.app, desiredFolderPath);
     await createFolderSafe(this.app, folderPath);
-    const noteBasename = this.resolveNoteBasenameInOwnFolder(file);
+    const noteBasename = this.resolveNoteBasenameInOwnFolder(file, folderPath);
     // The folder was just created and is therefore empty, so the note can never collide inside it.
     await this.app.fileManager.renameFile(file, normalizePath(`${folderPath}/${noteBasename}.md`));
     return noteBasename === originalBasename ? null : noteBasename;
@@ -198,10 +198,17 @@ export class SplitItemSelector extends ItemSelectorBase {
    * The `Name transform template` deliberately does NOT run here (issue #196): `{{newTitle}}` is the note
    * whose name the transform already produced, so running it again would apply the rewrite twice.
    *
+   * The folder-flavored tokens (`{{folderName}}`, `{{index}}`, ... — issue #227) are pointed at
+   * `folderPath` explicitly, because at this moment the note has NOT been renamed into that folder yet:
+   * left to resolve against the note's own parent they would name the folder ABOVE the one being created,
+   * which is never what a note-name template inside it means. `{{parentFolder}}` is deliberately left
+   * alone and still names that folder above — it is a shipped token in a shipped template.
+   *
    * @param file - The just-created note, before it is moved into its folder.
+   * @param folderPath - The folder the note is about to be moved into.
    * @returns The base name to give the note inside its folder, without the `.md` extension.
    */
-  private resolveNoteBasenameInOwnFolder(file: TFile): string {
+  private resolveNoteBasenameInOwnFolder(file: TFile, folderPath: string): string {
     const template = this.pluginSettingsComponent.settings.splitIntoFolderNoteNameTemplate;
     if (!template) {
       return file.basename;
@@ -209,6 +216,8 @@ export class SplitItemSelector extends ItemSelectorBase {
 
     const resolved = resolveTemplateTokens({
       content: '',
+      folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
+      folderPath,
       sourceFile: this.sourceFile,
       targetFile: file,
       template

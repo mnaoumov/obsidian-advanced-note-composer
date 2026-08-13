@@ -224,7 +224,8 @@ The **Smart cut & paste** settings page lets you tailor this notice:
   differently from an ordinary split into a new note. It is *also* the template `to top of file` and
   `to bottom of file` use, unless you give that direction its own template below. Supports the same tokens
   as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`, `{{newPath}}`,
-  `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`). Leave it empty to
+  `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`, `{{time:FORMAT}}`,
+  plus the folder tokens described under [Split into folder](#split-into-folder)). Leave it empty to
   reuse the **Split template** (which itself falls back to the **Merge template**), preserving the previous
   behavior.
 - **Smart cut & paste template (to top of file)** / **Smart cut & paste template (to bottom of file)**
@@ -305,7 +306,37 @@ Notes:
 
 Turn on **Should split into folder** (under `Split/extract` in the settings) to have every split or extract that creates a **new** note place it inside a brand-new folder named after the note. The note lands at `<folder>/<note>/<note>.md` instead of `<folder>/<note>.md`, keeping each extracted note tidily grouped with its own folder (handy when you later add attachments or child notes next to it). The folder name is de-duplicated if one already exists, links/footnotes are fixed exactly as for an ordinary split, and splitting/extracting into an **existing** note is unaffected. When the setting is off (the default), behavior is unchanged.
 
-**Split into folder note name** (right below it) decides what the note inside that folder is called. Leave it empty — the default — and the note keeps the folder's name (`<folder>/<note>/<note>.md`). Set it to a constant such as `Overview` and every folder split produces `<folder>/<note>/Overview.md` instead, so all your split-created notes are named consistently. It accepts the same `{{...}}` tokens as the templates (`{{newTitle}}` is the folder name, so `{{newTitle}} index` gives `<folder>/<note>/<note> index.md`), except `{{content}}`, which is meaningless in a file name. The name the note would otherwise have had is not lost: it is recorded as an alias and/or a frontmatter `title` exactly as any other adjusted title is, per **Should add invalid title to note alias** and **Frontmatter title mode** — so links written by that name keep resolving. The setting has no effect while **Should split into folder** is off.
+### Folder tokens in the note templates
+
+The tokens of `Create folder with notes...` work in every note template too — **Merge template**, **Split template**, the **Smart cut & paste** templates and **Split into folder note name** — so a template written for one can be pasted into the other. They name **the folder the new note ends up in**, which with **Should split into folder** on is the folder the split just created:
+
+| Token | What it is |
+| --- | --- |
+| `{{folderName}}` | that folder's name, exactly as it ended up (de-duplication included) |
+| `{{folderPath}}` | its full vault path |
+| `{{safeFolderName}}` | its name **without** its number |
+| `{{index}}` | that number — empty when the folder has none; `{{index:000}}` zero-pads it |
+| `{{parentFolderPath}}` | the same folder's path, so a template that says `{{parentFolder}}` / `{{parentFolderPath}}` reads consistently |
+
+`{{safeFolderName}}` and `{{index}}` read the number back through **Reordered folder name template**, the same setting `Rename folder...` and the reorder commands use — so however you write your numbering (`1. Alpha`, `Alpha (1)`, zero-padded), all of them agree about what a numbered name is. A folder that template could not have produced simply has no index, and `{{safeFolderName}}` is its whole name.
+
+So splitting a selection into a new note named `3. Design` with **Should split into folder** on, and a **Split template** of:
+
+```text
+---
+title: {{folderName}}
+aliases: [{{safeFolderName}}]
+part: {{index}}
+---
+
+{{content}}
+```
+
+gives you `3. Design/3. Design.md` carrying `title: 3. Design`, `aliases: [Design]` and `part: 3`.
+
+Two tokens of that vocabulary are deliberately **not** available here, and using them is reported as an unknown token: `{{rawFolderName}}` (a split has no folder-name prompt — what you type names the note) and `{{file}}` (it declares several notes, and a split writes one).
+
+**Split into folder note name** (right below it) decides what the note inside that folder is called. Leave it empty — the default — and the note keeps the folder's name (`<folder>/<note>/<note>.md`). Set it to a constant such as `Overview` and every folder split produces `<folder>/<note>/Overview.md` instead, so all your split-created notes are named consistently. It accepts the same `{{...}}` tokens as the templates (`{{newTitle}}` is the folder name, so `{{newTitle}} index` gives `<folder>/<note>/<note> index.md`), except `{{content}}`, which is meaningless in a file name. The folder tokens above name the folder being created — `{{index:00}} {{safeFolderName}}` inside a folder called `7. Beta` gives `7. Beta/07 Beta.md` — while `{{parentFolder}}` is resolved before the note moves and so still names the folder *above* the new one. The name the note would otherwise have had is not lost: it is recorded as an alias and/or a frontmatter `title` exactly as any other adjusted title is, per **Should add invalid title to note alias** and **Frontmatter title mode** — so links written by that name keep resolving. The setting has no effect while **Should split into folder** is off.
 
 ## Split headings automatically
 

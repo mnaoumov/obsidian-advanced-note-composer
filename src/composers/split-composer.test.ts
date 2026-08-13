@@ -208,6 +208,7 @@ function createPluginSettingsComponentStub(
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
+      reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldApplyTextAfterExtractionToSameFile: false,
       shouldExtractFrontmatterSelectionAsProperties: true,
       shouldFixFootnotesByDefault: false,

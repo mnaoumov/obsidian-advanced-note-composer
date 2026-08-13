@@ -21,12 +21,12 @@ import {
   BASE_TOKEN_KEYS,
   ReorderItemKind
 } from './reorder-items.ts';
+import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
   resolveNameTransformTokens,
-  resolveReorderedFileTemplateTokens,
-  TEMPLATE_TOKEN_REG_EXP
+  resolveReorderedFileTemplateTokens
 } from './template-tokens.ts';
 
 /**

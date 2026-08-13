@@ -112,6 +112,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
         mergeTemplate: '{{content}}',
+        reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,

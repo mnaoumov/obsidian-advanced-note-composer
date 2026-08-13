@@ -113,6 +113,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
+      reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,
       shouldMoveAttachmentsWhenMergingFile: false,

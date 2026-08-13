@@ -267,6 +267,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(options?.isPathIgnored ?? false),
+        reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: options?.shouldAddCommandsToSubmenu ?? true,
         shouldAskBeforeSplitting: options?.shouldAskBeforeSplitting ?? false,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options?.shouldBlockCommandOnPath ?? false),

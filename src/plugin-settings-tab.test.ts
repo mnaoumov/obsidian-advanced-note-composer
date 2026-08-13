@@ -326,6 +326,26 @@ describe('PluginSettingsTab', () => {
     ]);
   });
 
+  // Issue #227: every template that resolves the note-flavored vocabulary now also resolves the
+  // `Create folder with notes...` folder tokens, so each of their descriptions has to say so — a token
+  // Nobody knows about is a token nobody uses.
+  it('should list the folder tokens in every note template description', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    for (const name of ['Merge template', 'Split template', 'Smart cut & paste template', 'Split into folder note name']) {
+      const desc = findDesc(name);
+      expect(desc).toContain('{{folderName}}');
+      expect(desc).toContain('{{safeFolderName}}');
+      expect(desc).toContain('{{index}}');
+      expect(desc).toContain('{{parentFolderPath}}');
+      // The two the vocabulary deliberately does not carry over are named as unavailable, rather than
+      // Left to fail at split time.
+      expect(desc).toContain('{{rawFolderName}}');
+      expect(desc).toContain('are not available');
+    }
+  });
+
   it('should explain the path-string and regular-expression forms in the include/exclude path descriptions', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);

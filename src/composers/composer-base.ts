@@ -524,6 +524,10 @@ export abstract class ComposerBase {
   private applyTemplate(targetContentToInsert: string): string {
     return resolveTemplateTokens({
       content: targetContentToInsert,
+      // What `{{safeFolderName}}` / `{{index}}` read the target's folder number back through (issue #227).
+      // The target note is where it is going to stay by now, so its own parent is the folder those tokens
+      // Name and no override is needed.
+      folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
       sourceFile: this.sourceFile,
       targetFile: this.targetFile,
       template: this.getTemplate()

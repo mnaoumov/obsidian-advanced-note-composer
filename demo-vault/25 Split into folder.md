@@ -34,6 +34,27 @@ new note before it moves — so `{{newTitle}}` is the folder name and `{{newTitl
 `My second extract/My second extract index.md`. Leave the field empty to go back to naming the note
 after its folder.
 
+## Naming the folder in your template
+
+The folder tokens of `Create folder with notes...` work in **Split template** too, naming the folder
+the split just created — see [[14 Templates]]. The button below sets a split template that stamps that
+folder's name and its number onto every extracted note; extract into a note named `3. Design` and the
+produced note carries `title: 3. Design`, `aliases: [Design]` and `part: 3`.
+
+```code-button
+---
+caption: Set a folder-aware split template, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { splitTemplate: '---\ntitle: {{folderName}}\naliases: [{{safeFolderName}}]\npart: {{index}}\n---\n\n{{content}}' });
+```
+
+```code-button
+---
+caption: Restore the default (empty) split template, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { splitTemplate: '' });
+```
+
 ---
 
 Select me and extract me into a brand-new note. With **Should split into folder** on, a new folder is
