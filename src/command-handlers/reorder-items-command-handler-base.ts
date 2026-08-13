@@ -36,8 +36,8 @@ import type {
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import {
-  resolveFolderNote,
-  resolveFolderNoteConfig
+  resolveFolderNoteConfig,
+  resolveFolderNoteFromSettings
 } from '../folder-note.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { didConfirmReorderModal } from '../modals/reorder-modal.ts';
@@ -217,6 +217,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         preposition: 'in',
         shouldLinkSource: false,
         sourcePathOrAbstractFile: `${renamedItems.length.toString()} item(s)`,
@@ -285,11 +286,10 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
         continue;
       }
 
-      const folderNote = resolveFolderNote({
+      const folderNote = resolveFolderNoteFromSettings({
         app: this.app,
         folder: plannedItem.folder,
-        location: settings.folderNoteLocation,
-        nameTemplate: settings.folderNoteNameTemplate
+        settings
       });
       if (folderNote) {
         folderNotesByOldPath.set(plannedItem.item.oldPath, folderNote);
@@ -404,6 +404,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: parentFolder,
           verb: 'Reordering the contents of'
         }),
@@ -462,12 +463,10 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       return plannedItem.file;
     }
 
-    const settings = this.pluginSettingsComponent.settings;
-    return resolveFolderNote({
+    return resolveFolderNoteFromSettings({
       app: this.app,
       folder: plannedItem.folder,
-      location: settings.folderNoteLocation,
-      nameTemplate: settings.folderNoteNameTemplate
+      settings: this.pluginSettingsComponent.settings
     });
   }
 

@@ -283,6 +283,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: folder,
           targetPathOrAbstractFile: parentFolder,
           verb: 'Flattening folder'
@@ -326,6 +327,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: folder,
         suffix: `, promoting ${String(itemsToMove.length)} item(s)`,
         targetPathOrAbstractFile: parentFolder,

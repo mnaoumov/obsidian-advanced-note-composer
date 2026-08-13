@@ -292,6 +292,7 @@ export class SplitComposer extends ComposerBase {
           content: this.isSameNoteMove()
             ? await buildOperationNoticeContent({
               app: this.app,
+              pluginSettingsComponent: this.pluginSettingsComponent,
               sourcePathOrAbstractFile: this.sourceFile.path,
               verb: 'Moved the extracted content within note'
             })
@@ -439,7 +440,11 @@ export class SplitComposer extends ComposerBase {
         // A completion notice like the ones `buildOperationNoticeContent` builds, so its link reveals the
         // Destination in the file explorer the same way (issue #232). No jump action: the cursor is already
         // On the moved content by the time this notice is shown.
-        f.append(await renderOperationNoticeLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        f.append(await renderOperationNoticeLink({
+          app: this.app,
+          pathOrAbstractFile: this.targetFile.path,
+          pluginSettingsComponent: this.pluginSettingsComponent
+        }));
         f.appendText('.');
       })
     );

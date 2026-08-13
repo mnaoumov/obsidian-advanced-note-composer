@@ -235,6 +235,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
           verb: run.progressVerb
         }),
@@ -283,6 +284,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: file,
         suffix: ` into ${String(createdNotes.length)} note(s)`,
         verb: run.completionVerb

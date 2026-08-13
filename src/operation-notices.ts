@@ -17,12 +17,16 @@ import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import {
   getAbstractFileOrNull,
-  isFile
+  isFile,
+  isFolder
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+
+import { resolveFolderNoteFromSettings } from './folder-note.ts';
+import { openFileAfterOperation } from './open-after-operation.ts';
 
 /**
  * Parameters for {@link buildOperationNoticeContent}.
@@ -50,6 +54,11 @@ export interface BuildOperationNoticeContentParams {
   // `this: void` because it is a standalone callback, never a method of these params — which is also what
   // Lets it be destructured and handed on without tripping `unbound-method`.
   onTargetLinkClick?(this: void): Promise<void>;
+
+  /**
+   * Read on click, to answer which note is a folder's folder note.
+   */
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 
   /**
    * The word joining the source to the target. `into` fits every merge/split/move; a swap reads `with`.
@@ -110,6 +119,11 @@ export interface RenderOperationNoticeLinkParams {
   onClick?(this: void): Promise<void>;
 
   readonly pathOrAbstractFile: PathOrAbstractFile;
+
+  /**
+   * Read on click, to answer which note is a folder's folder note.
+   */
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 /**
@@ -163,6 +177,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     app,
     isLoading,
     onTargetLinkClick,
+    pluginSettingsComponent,
     preposition,
     shouldLinkSource,
     sourcePathOrAbstractFile,
@@ -174,7 +189,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
   return createFragmentAsync(async (fragmentEl) => {
     fragmentEl.appendText(`${verb} `);
     if (shouldLinkSource ?? true) {
-      fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile }));
+      fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile, pluginSettingsComponent }));
     } else {
       // Deliberately NOT `getPath()`: that resolves the path against the vault, and the whole reason this
       // Branch exists is that the source is already gone from it.
@@ -185,7 +200,8 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
       fragmentEl.append(await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
         app,
         onClick: onTargetLinkClick,
-        pathOrAbstractFile: targetPathOrAbstractFile
+        pathOrAbstractFile: targetPathOrAbstractFile,
+        pluginSettingsComponent
       })));
     }
     if (suffix !== undefined) {
@@ -203,33 +219,54 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
  * Renders the clickable link an operation notice names a file or folder with.
  *
  * Everything about the link itself is dev-utils' {@link renderInternalLink} — a real rendered wikilink whose
- * click Obsidian's own handler turns into an open. What is added here is the REVEAL: clicking a notice's file
- * link also highlights that file in the file explorer (issue #232), which is what the folder branch of
- * `renderInternalLink` has always done for folders (a folder cannot be opened, so revealing is all its click
- * has ever meant). Applying it to files too is what makes the two read consistently, and it lands on every
- * notice this module builds rather than on the one the issue was filed about.
+ * click Obsidian's own handler turns into an open. What is added here is the half each branch is missing:
  *
- * Deliberately no `preventDefault` — the reveal is layered ON TOP of Obsidian's open, never instead of it.
- * A path that does not resolve to a file is not revealed: a folder's click is dev-utils' to own, and an
- * unresolved note has nothing to reveal (clicking one CREATES it, which is the behavior
- * {@link BuildOperationNoticeContentParams.shouldLinkSource} exists to keep notices away from).
+ * - A FILE link also REVEALS the file in the file explorer (issue #232) — what dev-utils' folder branch has
+ *   always done, which is what makes the two read consistently.
+ * - A FOLDER link also OPENS that folder's FOLDER NOTE (issue #234), so the click lands the user in a
+ *   document instead of leaving them in the explorer. Which note that is, is the plugin's own `Folder note`
+ *   settings' answer — the same one `Rename folder...` and the reorder commands keep in step.
+ *
+ * Both land on every notice this module builds rather than on the one operation each issue was filed about.
+ *
+ * Deliberately no `preventDefault` — each addition is layered ON TOP of what the click already did, never
+ * instead of it, so the folder stays highlighted while its note opens. A path that does not resolve gets
+ * neither: an unresolved note has nothing to reveal (clicking one CREATES it, which is the behavior
+ * {@link BuildOperationNoticeContentParams.shouldLinkSource} exists to keep notices away from), and a folder
+ * WITHOUT a folder note opens nothing at all rather than creating one — `resolveFolderNoteFromSettings`
+ * answers `null` for it, which is exactly the reveal-only behavior #234 improves on.
  *
  * @param params - The parameters.
  * @returns A {@link Promise} resolving to the rendered anchor.
  */
 export async function renderOperationNoticeLink(params: RenderOperationNoticeLinkParams): Promise<HTMLAnchorElement> {
-  const { app, onClick, pathOrAbstractFile } = params;
+  const {
+    app,
+    onClick,
+    pathOrAbstractFile,
+    pluginSettingsComponent
+  } = params;
   const aEl = await renderInternalLink({ app, pathOrAbstractFile });
 
   aEl.addEventListener('click', () => {
     // Resolved HERE rather than at render time, on purpose. A notice outlives the operation that showed it,
     // So the vault it is read against is the one at CLICK time — a destination renamed in between still
-    // Reveals the right item. It also keeps rendering a notice free of any vault lookup of its own.
+    // Reveals the right item, and a folder note written after the notice appeared is still found. It also
+    // Keeps rendering a notice free of any vault lookup of its own.
     const abstractFile = getAbstractFileOrNull({ app, pathOrFile: pathOrAbstractFile });
-    // Folders already reveal — that IS dev-utils' folder branch, which owns their click entirely — so only
-    // A real file needs one added here, and a path that no longer resolves needs none at all.
+    // Folders already reveal — that IS dev-utils' folder branch, which owns the reveal half of their click
+    // — so only a real file needs one added here, and a path that no longer resolves needs none at all.
     if (isFile(abstractFile)) {
       app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(abstractFile);
+    }
+
+    if (isFolder(abstractFile)) {
+      const folderNote = resolveFolderNoteFromSettings({ app, folder: abstractFile, settings: pluginSettingsComponent.settings });
+      if (folderNote) {
+        // A DOM listener cannot await. `invokeAsyncSafely` also outlives the handler, which the open needs:
+        // It settles before opening, for the click that lands right as the operation finishes writing.
+        invokeAsyncSafely(() => openFileAfterOperation({ app, file: folderNote }));
+      }
     }
 
     if (onClick) {

@@ -131,6 +131,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
           verb: 'Renaming heading in note'
         }),
@@ -173,6 +174,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: file,
         suffix: updatedLinkCount > 0 ? ` and updated ${String(updatedLinkCount)} link(s)` : '',
         verb: `Renamed heading "${oldHeading}" to "${newHeading}" in note`

@@ -108,6 +108,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
           verb: 'Reordering headings in note'
         }),
@@ -138,6 +139,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: file,
         verb: 'Reordered headings in note'
       }),

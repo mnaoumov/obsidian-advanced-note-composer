@@ -31,8 +31,8 @@ import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { swapDerivedAlias } from '../folder-note-aliases.ts';
 import {
-  resolveFolderNote,
-  resolveFolderNoteConfig
+  resolveFolderNoteConfig,
+  resolveFolderNoteFromSettings
 } from '../folder-note.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { parseNumberedName } from '../numbered-name.ts';
@@ -161,6 +161,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         shouldLinkSource: false,
         sourcePathOrAbstractFile: plan.oldFolderPath,
         targetPathOrAbstractFile: plan.newFolderPath,
@@ -292,6 +293,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: plan.oldFolderPath,
           targetPathOrAbstractFile: plan.newFolderPath,
           verb: 'Renaming folder'
@@ -378,12 +380,10 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
    * @returns The note, or `null` when this folder has none (or this vault has no folder notes at all).
    */
   private resolveFolderNote(folder: TFolder): null | TFile {
-    const settings = this.pluginSettingsComponent.settings;
-    return resolveFolderNote({
+    return resolveFolderNoteFromSettings({
       app: this.app,
       folder,
-      location: settings.folderNoteLocation,
-      nameTemplate: settings.folderNoteNameTemplate
+      settings: this.pluginSettingsComponent.settings
     });
   }
 

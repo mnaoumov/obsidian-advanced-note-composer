@@ -43,7 +43,9 @@ and then renamed ends up with the alias it would have had if you had created it 
 ## Which note is the folder note
 
 Several commands need to know which note **describes** a folder — the one whose properties a reorder or
-a rename keeps in step. **Folder note location** (under `Folder note` in the settings) answers that:
+a rename keeps in step, and the one a folder name in an
+[operation notice](<../10 UI/33 Operation notices.md>) opens when you click it. **Folder note location**
+(under `Folder note` in the settings) answers that:
 
 - `Auto` (the default)
   - reads the installed [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin every

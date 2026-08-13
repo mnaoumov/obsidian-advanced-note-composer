@@ -306,6 +306,7 @@ export abstract class ComposerBase {
     return buildOperationNoticeContent(normalizeOptionalProperties<BuildOperationNoticeContentParams>({
       app: this.app,
       onTargetLinkClick: this.getTargetLinkClickAction(),
+      pluginSettingsComponent: this.pluginSettingsComponent,
       shouldLinkSource,
       sourcePathOrAbstractFile: this.sourceFile.path,
       targetPathOrAbstractFile: this.targetFile.path,
@@ -326,6 +327,7 @@ export abstract class ComposerBase {
     return buildOperationNoticeContent({
       app: this.app,
       isLoading: true,
+      pluginSettingsComponent: this.pluginSettingsComponent,
       sourcePathOrAbstractFile: this.sourceFile.path,
       targetPathOrAbstractFile: this.targetFile.path,
       verb: `${verb} note`

@@ -8,6 +8,10 @@
  * single file (issue #212) and a folder merged into another folder (issue #215) — and they had drifted into
  * two copies of the same four lines before the last two arrived.
  *
+ * A fifth caller opens on DEMAND rather than at the end of a flow: clicking a folder in an operation notice
+ * opens that folder's folder note (issue #234, `operation-notices.ts`). It wants the same settle for the same
+ * reason — the click can land milliseconds after the operation stopped writing.
+ *
  * The settle delay is the part worth centralizing: the open runs immediately after a transaction that has
  * just created, rewritten and trashed notes, and opening into the middle of Obsidian's own reaction to that
  * showed the note before its metadata caught up.
@@ -47,8 +51,9 @@ export interface OpenFileAfterOperationParams {
 /**
  * Opens the file an operation produced in the active leaf, once the vault has settled.
  *
- * Call this only for a COMPLETED operation — a cancelled or rolled-back one must leave the user where they
- * were, and every caller therefore sits after its transaction has committed.
+ * An operation calls this only once COMPLETED — a cancelled or rolled-back one must leave the user where
+ * they were, so every such caller sits after its transaction has committed. The notice-link click above is
+ * not an operation and carries no such rule: it opens what the USER asked for, whenever they ask.
  *
  * @param params - The app and the file to open.
  * @returns A {@link Promise} that resolves once the file is open.

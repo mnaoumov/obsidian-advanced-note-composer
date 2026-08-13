@@ -222,6 +222,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         preposition: 'with',
         shouldLinkSource: false,
         sourcePathOrAbstractFile: sourceFolder.path,
