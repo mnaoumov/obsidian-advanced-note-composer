@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 5.9.1
+
+- docs: make the demo vault the documentation, in the standard layout
+- feat(demo-vault): migrate to obsidian-dev-utils 93.3.1 and adopt the authoring convention
+- test(merge-suites): stop the folder-merge suites dying on the 30 s CDP cap
+- test(modals): pin the modal keyboard paths and drop the dead Escape handlers
+- docs(agents): record the #230 synchronous nesting gate in the flatten-items notes
+- fix(flatten-folder): keep judging the nesting rule under an attachment plugin (#230)
+- feat(split): add a `Create`/`Merge` switch to the split/extract picker (#227)
+- feat(templates): resolve the `Create folder with notes` folder tokens in the note templates (#227)
+- feat(smart-cut): mark a whole heading for smart cut & paste (#229)
+- feat(split): add `Split heading recursively...` scoped to the cursor's heading (#228)
+- fix(prompt): show the red invalid outline only after Create is clicked (#219)
+- feat(settings): reorganize the settings tab into pages (#220-#226)
+- fix(name-transform): find a templater context note instead of demanding an open one
+- feat: re #217
+- fix(reorder): drag a row and it actually moves
+
 ## 5.9.0
 
 - chore: update libs
