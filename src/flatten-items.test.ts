@@ -16,6 +16,7 @@ import {
 } from 'vitest';
 
 import {
+  canFlattenModeBeDistinctSync,
   collectFlattenItems,
   collectFlattenItemsSyncOrNull,
   isFlattenModeDistinct
@@ -26,6 +27,23 @@ const ATTACHMENT_EXTENSIONS = ['.excalidraw.md'];
 
 let app: AppOriginal;
 let excludedPaths: string[] = [];
+
+/**
+ * Asks {@link canFlattenModeBeDistinctSync} about a folder, with the inputs `canExecuteFolder` hands it.
+ *
+ * @param folderPath - The folder being flattened.
+ * @param mode - The mode to judge.
+ * @returns Whether the mode may still move something a simpler one would not.
+ */
+function canBeDistinctSync(folderPath: string, mode: FlattenMode): boolean {
+  return canFlattenModeBeDistinctSync({
+    app,
+    attachmentExtensions: ATTACHMENT_EXTENSIONS,
+    folder: getFolder(folderPath),
+    isPathIgnored,
+    mode
+  });
+}
 
 async function collectPaths(folderPath: string, mode: FlattenMode): Promise<string[]> {
   const items = await collectFlattenItems({
@@ -121,6 +139,94 @@ function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (noteP
 
   app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
 }
+
+/**
+ * Issue #230: the same question as `isFlattenModeDistinct`, asked where the items cannot be collected —
+ * i.e. in a vault where an attachment-location plugin owns the resolution. Each answer is a NECESSARY
+ * condition: `false` proves the variant is a duplicate whatever the resolution turns out to be, `true` only
+ * means the collection still has the last word.
+ */
+describe('canFlattenModeBeDistinctSync', () => {
+  it('should always allow AllChildren, since nothing is simpler', () => {
+    initApp({ 'parent/a/sub/deep.md': 'deep' });
+
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllChildren)).toBe(true);
+  });
+
+  it('should refuse both folder-only modes when there is no child folder at all', () => {
+    initApp({ 'parent/a/note.md': 'note' });
+
+    expect(canBeDistinctSync('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should refuse only the recursive mode when a child folder nests nothing', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep'
+    });
+
+    // The reported case. `ChildFoldersOnly` stays possible: a folder resolved asynchronously as an
+    // Attachment folder would be left behind and make it differ from `Flatten folder...`.
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+  });
+
+  it('should allow the recursive mode as soon as a child folder nests', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deeper/deepest.md': 'deepest'
+    });
+
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+  });
+
+  it('should refuse the recursive mode when the nested folder is excluded', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deep.md': 'deep',
+      'parent/a/sub/hidden/buried.md': 'buried'
+    });
+    excludePaths('parent/a/sub/hidden');
+
+    // Exclusion is synchronous, so it counts here: the only nesting is one the flatten would never promote.
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should refuse the recursive mode when the folder that nests is itself excluded', () => {
+    initApp({
+      'parent/a/hidden/deeper/buried.md': 'buried',
+      'parent/a/note.md': 'note'
+    });
+    excludePaths('parent/a/hidden');
+
+    // An excluded folder takes its whole subtree with it, so what it nests is out of reach too.
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should refuse the recursive mode when the nested folder is the configured attachment folder', () => {
+    initApp({
+      'parent/a/sub/assets/pic.png': 'PIC',
+      'parent/a/sub/deep.md': 'deep'
+    }, './assets');
+
+    // The other synchronous skip: `parent/a/sub/assets` holds the attachments of `parent/a/sub/deep.md`,
+    // Which stays inside `sub` as it is promoted.
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+  });
+
+  it('should keep allowing the recursive mode when only an asynchronous resolution could rule it out', () => {
+    initApp({
+      'parent/a/note.md': 'note',
+      'parent/a/sub/deeper/deepest.md': 'deepest'
+    });
+    stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+
+    // Necessary, not sufficient: whether `parent/a/sub/deeper` is somebody's attachment folder is exactly
+    // What this cannot know, so it defers to the collection rather than guessing.
+    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+  });
+});
 
 describe('collectFlattenItems', () => {
   describe('AllChildren', () => {

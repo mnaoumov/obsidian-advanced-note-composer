@@ -15,6 +15,15 @@ import {
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-duplicate-entries.desktop.integration.test.ts`.
 const PLUGIN_NAME = 'Advanced Note Composer';
 
+/**
+ * The subset of `obsidian-dev-utils`' extended-resolution parameters the stub below reads.
+ */
+interface ExtendedAttachmentParams {
+  readonly attachmentFileBaseName: string;
+  readonly attachmentFileExtension: string;
+  readonly notePathOrFile: null | string;
+}
+
 interface MenuItemLike {
   dom?: HTMLElement;
 
@@ -35,6 +44,11 @@ interface MenuProbe {
   flatWithFileTitles: string[];
   nestedFoldersOnlyTitles: string[];
   nestedWithFileTitles: string[];
+}
+
+interface PluginOwnedMenuProbe {
+  flatTitles: string[];
+  nestedTitles: string[];
 }
 
 /**
@@ -161,6 +175,141 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
     // The middle variant is still a duplicate here; the recursive one is not.
     expect(result.nestedFoldersOnlyTitles).toStrictEqual([
       'Flatten folder...',
+      'Flatten folder recursively (all folders at any depth)...'
+    ]);
+  });
+
+  /*
+   * Issue #230: the same reporter met the recursive entry again, this time with Custom Attachment Location
+   * installed. A plugin owning the attachment resolution makes the collector answer `null`, which used to
+   * offer every variant unconditionally — so the rule above simply did not apply in their vault. How deep
+   * the folders go is not the attachment question, and it is answered from the folder itself.
+   */
+  it('keeps judging the nesting rule while an attachment-location plugin owns the resolution (issue #230)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, obsidianModule, pluginName }): Promise<PluginOwnedMenuProbe> {
+        const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
+        const hasOwnGetAvailablePathForAttachments = Object.hasOwn(app.vault, 'getAvailablePathForAttachments');
+        const originalGetAvailablePathForAttachments = app.vault.getAvailablePathForAttachments;
+
+        try {
+          app.vault.setConfig('attachmentFolderPath', './');
+          stubAttachmentLocationPlugin();
+
+          await trashIfExists('t444-flat');
+          await trashIfExists('t444-nested');
+
+          // The reporter's vault: a note of its own plus one child folder that nests nothing. A note has to
+          // Be in there — with none, no attachment folder is resolved and the collector answers
+          // Synchronously after all.
+          await app.vault.createFolder('t444-flat');
+          await app.vault.create('t444-flat/t444-note.md', 'body');
+          await app.vault.createFolder('t444-flat/t444-sub');
+          await app.vault.create('t444-flat/t444-sub/t444-deep.md', 'deep body');
+
+          // The control, one level deeper: the recursive entry is judged, not suppressed.
+          await app.vault.createFolder('t444-nested');
+          await app.vault.create('t444-nested/t444-note2.md', 'body');
+          await app.vault.createFolder('t444-nested/t444-sub2');
+          await app.vault.createFolder('t444-nested/t444-sub2/t444-deeper');
+          await app.vault.create('t444-nested/t444-sub2/t444-deeper/t444-deepest.md', 'deepest body');
+
+          return {
+            flatTitles: collectFlattenTitles(getFolder('t444-flat')),
+            nestedTitles: collectFlattenTitles(getFolder('t444-nested'))
+          };
+        } finally {
+          app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
+          if (hasOwnGetAvailablePathForAttachments) {
+            app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
+          } else {
+            // The real member lives on `Vault.prototype`; the stub only shadowed it on the instance, so the
+            // Instance property has to go rather than be overwritten with a copy.
+            Reflect.deleteProperty(app.vault, 'getAvailablePathForAttachments');
+          }
+        }
+
+        /**
+         * Builds the folder context menu and returns the titles of the plugin's flatten entries.
+         *
+         * With the submenu setting ON the plugin's items are nested, so the whole section's rendered text
+         * is searched rather than only the top-level item titles.
+         *
+         * @param targetFolder - The folder to build the menu for.
+         * @returns The flatten entry titles found, in menu order.
+         */
+        function collectFlattenTitles(targetFolder: TFolder): string[] {
+          const menu = new obsidianModule.Menu();
+          app.workspace.trigger('file-menu', menu, targetFolder, 'file-explorer-context-menu');
+          const sectionText = (menu as MenuLike).items
+            .filter((item) => item.section === pluginName)
+            .map((item) => item.dom?.textContent ?? '')
+            .join('\n');
+          (menu as MenuLike).hide();
+
+          return [
+            'Flatten folder...',
+            'Flatten folder (child folders only)...',
+            'Flatten folder recursively (all folders at any depth)...'
+          ].filter((title) => sectionText.includes(title));
+        }
+
+        function getFolder(path: string): TFolder {
+          const folder = app.vault.getFolderByPath(path);
+          if (!folder) {
+            throw new Error(`${path} was not created.`);
+          }
+          return folder;
+        }
+
+        /**
+         * Derives the folder from the note's own folder, the shape Custom Attachment Location produces for
+         * its default `./@` setting.
+         *
+         * @param parameters - The extended-resolution parameters.
+         * @returns The resolved attachment file path.
+         */
+        function resolveExtendedAttachmentPath(parameters: ExtendedAttachmentParams): Promise<string> {
+          const notePath = typeof parameters.notePathOrFile === 'string' ? parameters.notePathOrFile : '';
+          const noteFolderPath = notePath.replace(/\/[^/]+$/, '');
+          return Promise.resolve(`${noteFolderPath}/@/${parameters.attachmentFileBaseName}.${parameters.attachmentFileExtension}`);
+        }
+
+        /**
+         * Models Custom Attachment Location: the `extended` member it hangs on Obsidian's
+         * `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the native
+         * resolution, and its mere PRESENCE is what says the resolution is owned elsewhere. Installed on the
+         * INSTANCE — the real member lives on `Vault.prototype`.
+         */
+        function stubAttachmentLocationPlugin(): void {
+          // `bind` keeps the real call signature, so the native resolution still works for anything that
+          // Invokes it — only the `extended` member beside it is new.
+          const patched = originalGetAvailablePathForAttachments.bind(app.vault);
+          Object.assign(patched, { extended: resolveExtendedAttachmentPath });
+          app.vault.getAvailablePathForAttachments = patched;
+        }
+
+        async function trashIfExists(path: string): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+      },
+      input: { pluginName: PLUGIN_NAME },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // The reported case. Before the fix this listed all three: the plugin's ownership of the attachment
+    // Resolution was taken to mean nothing at all could be judged.
+    expect(result.flatTitles).toStrictEqual([
+      'Flatten folder...',
+      'Flatten folder (child folders only)...'
+    ]);
+    // One nested folder brings it back, exactly as in a vault without such a plugin.
+    expect(result.nestedTitles).toStrictEqual([
+      'Flatten folder...',
+      'Flatten folder (child folders only)...',
       'Flatten folder recursively (all folders at any depth)...'
     ]);
   });

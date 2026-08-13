@@ -68,8 +68,10 @@ settings, or one holding the attachments of a note that stays behind, is never p
 not bring the recursive command back by itself.
 
 If you run an attachment-location plugin such as Custom Attachment Location, where a note's attachment
-folder is that plugin's answer rather than a setting, none of this can be worked out while the menu is
-being built - so all three commands stay listed and tell you afterwards if nothing would move. Your
-vault's `Default location for new attachments` is ignored in that case on purpose: the plugin keeps it
-pointed at whatever folder it last resolved for the note you have open, which used to make an ordinary
-folder look like an attachment folder and take two of the commands away.
+folder is that plugin's answer rather than a setting, *that* half cannot be worked out while the menu
+is being built - so `Flatten folder (child folders only)...` stays listed and tells you afterwards if
+nothing would move. Whether anything nests is not an attachment question, so it is answered as usual
+and `Flatten folder recursively (all folders at any depth)...` still steps aside on a folder like
+`Nested`. Your vault's `Default location for new attachments` is ignored in that case on purpose: the
+plugin keeps it pointed at whatever folder it last resolved for the note you have open, which used to
+make an ordinary folder look like an attachment folder and take two of the commands away.

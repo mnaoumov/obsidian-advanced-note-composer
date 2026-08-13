@@ -10,7 +10,6 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
@@ -24,6 +23,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { getAvailablePathForAbstractFile } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import {
+  canFlattenModeBeDistinctSync,
   collectFlattenItems,
   collectFlattenItemsSyncOrNull,
   isFlattenModeDistinct
@@ -189,10 +189,13 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
       return false;
     }
-    if (this.flattenMode !== FlattenMode.AllChildren && folder.children.every((child) => !isFolder(child))) {
-      // Cheapest answer first: a folder-only mode needs at least one child folder — and a descendant folder
-      // Implies one, so the same check covers the recursive mode. It also spares the subtree walk below on
-      // Every folder-menu open.
+    const collectFlattenItemsParams = this.buildCollectFlattenItemsParams(folder);
+    /*
+     * Cheapest answer first, and the only one available in every vault: what the FOLDER TREE alone rules
+     * out. A folder-only mode needs a child folder, and the recursive one needs a nesting child folder
+     * (issue #230). It also spares the subtree walk below on every folder-menu open.
+     */
+    if (!canFlattenModeBeDistinctSync(collectFlattenItemsParams)) {
       return false;
     }
     /*
@@ -203,10 +206,10 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
      *
      * `null` means an attachment-location plugin (Custom Attachment Location and friends) owns the
      * resolution and it is genuinely asynchronous, which Obsidian's synchronous menu / `checkCallback` pass
-     * cannot wait for. There the original behavior stands verbatim: the command is offered, and
-     * `executeFolder` says so with a notice rather than silently doing nothing.
+     * cannot wait for. There the original behavior stands verbatim for everything the gate above could not
+     * already settle: the command is offered, and `executeFolder` says so with a notice rather than
+     * silently doing nothing.
      */
-    const collectFlattenItemsParams = this.buildCollectFlattenItemsParams(folder);
     const itemsToMove = collectFlattenItemsSyncOrNull(collectFlattenItemsParams);
     if (!itemsToMove) {
       return true;
