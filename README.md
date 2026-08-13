@@ -5,668 +5,90 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-advanced-note-composer/total)](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases)
 [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-advanced-note-composer)
 
-This [Obsidian](https://obsidian.md/) plugin extends the core [`Note composer`](https://help.obsidian.md/plugins/note-composer) plugin fixing some bugs and adding additional features.
-
-## Finding a setting
-
-The settings tab opens as a short list of pages — `Merge`, `Split/extract`, `Swap`, `Smart cut & paste`, `Frontmatter`, `Title`, `Include/exclude`, the folder pages and `UI` — rather than one long scroll through every setting the plugin has. Click a page to open it; the ones that cover two related things are split into subheadings inside, so merge settings live under `Merge` → `Merge file` / `Merge folder`, and the path filters under `Include/exclude` → `Paths` / `Commands`.
-
-Where a page has a **template**, that template comes first, with the settings that shape what it produces underneath it.
-
-Obsidian's own settings search reaches inside the pages: type a setting's name into the search box at the top of the settings window and picking the result opens the page it lives on.
-
-## Relative links
-
-If you use `Merge current file with another file...`, `Extract current selection...`, `Extract this heading...` from the note with relative links, the core plugin moves those links as is, which leads to broken links you have to fix manually.
-
-The current plugin adjusts such links and makes them valid.
-
-## Invalid titles
-
-Sometimes when you extract selection or heading, the chosen title is invalid
-
-```md
-# Title with invalid characters *\<>:|?#^[]"
-```
-
-The core plugin will show an error when you try to extract such heading.
-
-The current plugin allows to replace/remove such invalid characters.
-
-If those invalid characters were used intentionally, the plugin allows to add the invalid title
-
-- to the note alias (to be able to access it from the `Quick switcher`).
-- to the frontmatter title key.
-
-### Your own replacements
-
-One **Replacement string** for every invalid character is a blunt instrument: it turns `Report: Q1` into
-`Report_ Q1` whether or not that is what you wanted. **Name transform template** lets you say what each
-character should become instead. It rewrites the name *before* the invalid characters are dealt with, and
-it applies everywhere a name becomes a file name — split and extract targets, the merged note name, and
-`Create folder with notes...`.
-
-`{{rawString}}` is the name as you typed it. With
-[Templater](https://silentvoid13.github.io/Templater/) installed the same value is available as
-`TOKENS.rawString`, which is what lets you write a real mapping:
-
-```text
-<% TOKENS.rawString.replaceAll(": ", " - ") %>
-```
-
-With that set, typing `A: B` creates `A - B`. Conditional mappings are ordinary JavaScript, so one template
-can handle as many characters as you like. Templater is only needed for the logic — a template made purely
-of `{{tokens}}` works on its own.
-
-**You do not need a note open.** A Templater run has to report on some note through `tp.file`, so the plugin
-uses the one you have open, and when you have none, the last note you opened, or failing that the last one
-you edited. Only a vault with no notes in it at all has nothing to offer, and that is the one case the
-template is refused. This matters for the commands that work on a *folder* — `Create folder with notes...`
-and `Merge folder contents into a single file...` — which have no note of their own and used to refuse
-outright whenever nothing was focused.
-
-**The template must produce a single line — chain your replacements, do not write one per line.** Each
-command emits its own result, so two commands on two lines produce a two-line name, which no file name can
-be; the operation is refused with a message saying so rather than creating something mangled. Handle several
-characters in one expression:
-
-```text
-<% TOKENS.rawString.replaceAll(": ", " - ").replaceAll("?", "_") %>
-```
-
-Characters your template does **not** map are still governed by **Should replace invalid characters**: leave
-it on and they take the **Replacement string** as before, or turn it off and a name that still contains them
-is refused rather than silently rewritten — so nothing is replaced except what you asked for.
-
-A broken template is reported where you can see it: the `Create folder with notes...` prompt shows the error
-and asks again, and the other commands stop rather than create a note under a name you did not intend.
-
-## Treat title as path
-
-`Treat title as path` option converts titles that contain `/` into paths.
-
-For example, when we invoke `Extract this heading...` command for `## a / b / c / d`:
-
-If `Treat title as path` option is
-
-- **enabled** - the split file will be `a/b/c/d.md`. Leading and trailing spaces are trimmed.
-- **disabled** - the split file will be `a _ b _ c _ d.md`. Spaces are preserved. `/` is replaced with `_` (or another replacement string as per settings).
-
-## Extract between horizontal rules
-
-The core plugin can only extract a heading's section or an explicit selection. When you keep a long note
-divided by horizontal rules (`---`, `***`, `___`, and their spaced/longer variants such as `- - -`), the
-**`Extract between horizontal rules...`** command extracts the block **between the rules closest to the
-cursor** in one step — no manual selection, which is especially handy on mobile.
-
-- The note's start and end act as implicit boundaries: with the cursor above the first rule it extracts
-  from the note start to that rule; below the last rule, from that rule to the note end.
-- The bounding rules themselves stay in place — only the content between them is moved.
-- If the cursor is on a rule line, the block *below* that rule is extracted.
-- The command is unavailable in a note that contains no horizontal rules.
-
-It runs the same extraction workflow as the other `Extract …` commands (target picker, relative-link
-fixing, footnotes, frontmatter, templating, and the *Text after extraction* residual). Horizontal rules are
-detected via Obsidian's own parser, so `---` inside a code block and the frontmatter delimiters are never
-mistaken for a rule.
-
-## Extract properties as properties
-
-Selecting a couple of values inside a note's properties (its frontmatter) and running
-`Extract current selection...` used to paste those raw YAML lines into the destination note's **body**,
-where they are just text. With **`Should extract a properties selection as properties`** (on by default),
-a selection that lies entirely inside the properties block is instead merged into the destination note's
-own properties, through the same `Frontmatter merge strategy` every other merge uses.
-
-The selection is a set of **values**, not whole properties, so the property each value belongs to is carried
-across with it: selecting two `aliases` values
-
-```yaml
----
-aliases:
-  - alpha
-  - bravo
-  - charlie
-tags:
-  - keep
----
-```
-
-adds `alpha` and `bravo` to the destination's own `aliases`, and leaves the source with `charlie` and its
-`tags` intact.
-
-- Every property line the selection touches is taken **in full**, so a selection that starts halfway through
-  a value still moves that whole value.
-- A property left with no values of its own is removed from the source too, rather than being left dangling.
-- Everything the selection did not touch is kept byte for byte — comments, key order, quoting and
-  indentation style all survive.
-- `Text after extraction` is not applied: a link or an embed is not valid YAML.
-- Anything else falls back to the previous behavior — a selection that reaches out of the properties block,
-  or lines that do not parse into properties, is extracted as raw text.
-- Smart cut & paste moves are unaffected: they insert at the cursor you place in the note's body.
-- Extracting a note's properties into that same note is refused — they are already there.
-
-## Move selection to another note (smart cut & paste)
-
-The core `Extract current selection...` command moves a selection into another note in one step, always
-appending/prepending it to that note. This plugin adds a decoupled, two-step **move** that lets you drop
-the selection at an exact cursor position in any note (including the same note), while still running the
-full extraction workflow (relative-link fixing, footnotes, frontmatter, templating).
-
-Commands (each appears as **`Smart cut & paste: …`** in the command palette):
-
-- **`Mark selection to move`** — available when there is a selection. Records the selection and its note,
-  and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
-  unchanged — nothing is removed yet. Enable **Should lock all notes when marking selection** to lock *every*
-  note (not just the source) while a mark is held, so you must finish the extraction before editing anything.
-- **`Mark heading to move`** — available when the cursor is inside a heading's section, with nothing
-  selected. Marks that whole heading — the heading line, its body, and every sub-heading nested under it —
-  exactly as if you had selected it by hand, so right-clicking anywhere inside a heading is all it takes. It
-  then behaves like any other mark: every move, paste and swap below works on it unchanged. (With text
-  selected, use `Mark selection to move` instead — the item leaves the right-click menu, though the command
-  and its hotkey keep working.)
-- **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
-  cursor in the current note, using your default settings, as a single reversible operation. If you have
-  text selected in the target when you run it, the moved text **replaces that selection** (like pasting over
-  a selection); with no selection, it is inserted at the cursor.
-- **`Move marked selection here (advanced)...`** — same, but first prompts for the frontmatter merge
-  strategy, whether to fix footnotes / include frontmatter, and the text to leave in place of the moved
-  text (see **Text after extraction** below).
-- **`Move marked selection to top of file`** / **`Move marked selection to bottom of file`** — available
-  once something is marked. Move the marked selection to the top (just after any frontmatter) or bottom of
-  the current note, regardless of the cursor position. These ship with **no default hotkeys** — bind your
-  own in Obsidian's *Hotkeys* settings (for example `Shift+Enter` / `Enter`) for quick keyboard extraction.
-- **`Cancel move`** — available once something is marked. Discards the mark and unlocks the note(s)
-  without moving anything. The built-in `Unlock active note` command (available on any locked note), or
-  right-clicking a note's lock indicator, cancels the whole pending move the same way.
-
-While a selection is marked, a persistent **Smart cut & paste** notice reminds you that a move is pending
-until you complete or cancel it. The notice carries buttons — **Move marked selection to top of file**,
-**Move marked selection to bottom of file**, **Move marked selection at cursor**, and **Cancel move** —
-each enabled only while it applies to the active note, so you can drive the whole move from the notice
-without opening the command palette.
-
-When the mark came from **`Mark heading to move`**, the notice carries two more buttons — **Split heading
-recursively...** and **Reorder headings...** — so you can restructure the heading you just marked instead of
-moving it, without hunting for the command. They are shown only for a heading mark (a marked selection has no
-heading to act on), and **Reorder headings...** only while the marked note has headings that can be
-reordered. Clicking either one **cancels the mark first**: both rewrite the note the mark keeps locked, so the
-mark has to be released before they can run. The note is then re-opened with the cursor back on the marked
-heading, and the ordinary command takes over from there.
-
-The **Smart cut & paste** settings page lets you tailor this notice:
-
-- **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
-  moving, and cancelling purely through the commands (and their hotkeys). Nothing is shown when a
-  selection is marked.
-- **Should show move to top of file button** / **Should show move to bottom of file button** /
-  **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
-  tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
-  hotkey you assigned to it keeps working.
-- **Should show split heading recursively button** / **Should show reorder headings button** — the same for
-  the two buttons a heading mark adds. Both are on by default and, like the move buttons, hiding one leaves
-  its command (and hotkey) untouched.
-- **Should jump to content moved to top of file** / **Should jump to content moved to bottom of file**
-  (both on by default) — whether the cursor follows the marked selection to where it lands. Turn one off
-  when you use that move to get text *out of the way*: the cursor then stays where the selection was cut
-  from, so you keep your place. There is deliberately no such setting for `Move marked selection here` /
-  `at cursor` — inserting text at the cursor and then leaving the cursor somewhere else makes no sense,
-  so that move always jumps.
-- **Smart cut & paste completion feedback** (`Select moved content` by default) — how a finished move
-  shows you where the marked selection landed. `Select moved content` selects the moved text (the
-  original behavior). `Notice` puts the cursor on the moved text *without* selecting it and shows a
-  notice instead — useful because a selection in the target looks exactly like the highlight on a
-  selection that is still marked and waiting to be moved, which is hard to tell apart, especially while
-  the notes are locked. `Select moved content and notice` does both. The cursor travels either way; this
-  only changes how the landing is shown, and none of it happens when the move's jump is turned off above.
-- **Smart cut & paste template** — the template applied to the pasted text when you move a marked selection
-  at the cursor (`Move marked selection here` / `at cursor`), so a smart-cut paste can be formatted
-  differently from an ordinary split into a new note. It is *also* the template `to top of file` and
-  `to bottom of file` use, unless you give that direction its own template below. Supports the same tokens
-  as the other templates (`{{content}}`, `{{fromTitle}}`, `{{fromPath}}`, `{{newTitle}}`, `{{newPath}}`,
-  `{{fromParentFolder}}`, `{{newParentFolder}}` / `{{parentFolder}}`, `{{date:FORMAT}}`, `{{time:FORMAT}}`,
-  plus the folder tokens described under [Split into folder](#split-into-folder)). Leave it empty to
-  reuse the **Split template** (which itself falls back to the **Merge template**), preserving the previous
-  behavior.
-- **Smart cut & paste template (to top of file)** / **Smart cut & paste template (to bottom of file)**
-  (both empty by default) — per-direction overrides, so a move to the top can be formatted differently from
-  a move to the bottom or at the cursor. This is what makes something like "always leave a blank line after
-  the frontmatter, but only when moving to the top" expressible. Leave one empty to keep using
-  **Smart cut & paste template** for that direction — which is exactly the behavior before these settings
-  existed, so an existing configuration is unaffected. The full resolution order is:
-
-  ```text
-  at cursor  →  Smart cut & paste template                                              →  Split → Merge
-  to top     →  Smart cut & paste template (to top of file)    → Smart cut & paste template → Split → Merge
-  to bottom  →  Smart cut & paste template (to bottom of file) → Smart cut & paste template → Split → Merge
-  ```
-
-  There is deliberately no separate template for `at cursor`: **Smart cut & paste template** *is* its
-  template, and simultaneously the fallback for the other two.
-
-The captured selection is also **persistently highlighted in the source note** so you always see exactly
-what will be moved. This applies both while a smart-cut selection is marked and while an `Extract …` /
-split picker is open (the selection stays highlighted while you choose the target). The highlight clears
-when the operation completes or is cancelled.
-
-Notes:
-
-- **Switch to smart cut from the split picker.** Because splitting and smart cut share the same setup, the
-  `Extract …` picker shows a **Switch to smart cut & paste** button (or press `Alt+S`) that switches to smart
-  cut & paste instead of splitting: the picker closes, your selection is marked to move, and the note
-  highlighted in the picker opens so you can position the cursor and paste. The same **Switch to smart cut &
-  paste** button also appears on the split confirmation dialog (when *Ask before splitting* is on), so you
-  can switch after the target is chosen.
-
-- **Change target from a confirmation dialog.** **Every** confirmation dialog shows a working **Change
-  target** button (or press `Alt+C`), so you can redirect an operation without cancelling and re-triggering
-  it. Where the operation already asked you to pick a target, the button reopens that picker — for the split
-  and merge-file pickers it is preselected with your previous choice. Where the target was decided *for* you,
-  the button opens a folder picker and the dialog re-renders around your choice:
-
-  | Operation | What **Change target** picks |
-  | --- | --- |
-  | Split / extract, merge file, merge folder, swap file, swap folder, move folder | the original target picker, reopened |
-  | `Extract this heading...`, `Split note by headings` | the split target picker, which these normally skip — seeded with the heading |
-  | `Flatten folder` (all variants) | the folder the children are promoted into, instead of the folder's own parent |
-  | `Create folder with notes...` | the folder the new folder is created in; the name, numbering and note previews are all recomputed for it |
-  | `Merge folder into single file` | the folder the merged note lands in, overriding *Merge folder into file location* for this run only |
-  | `Split note by headings recursively`, `Split heading recursively` | the folder the produced tree is rooted in |
-
-  Dismissing the folder picker means "never mind": you go back to the same confirmation dialog with the
-  target unchanged, rather than losing the operation.
-
-- **Rename from the create-folder confirmation dialog.** `Create folder with notes...` adds a **`Rename`**
-  button beside the folder name and beside every note it is about to create, so a name can be corrected
-  without cancelling and starting over. Each half can be turned off on its own — **Should show rename button
-  for the created folder** and **Should show rename button for created notes** — for a vault whose templates
-  already produce the names you want. See
-  [Create folder with notes](#create-folder-with-notes).
-
-- **Switch to split/extract from the notice.** The reverse switch: the **Switch to split/extract** button on
-  the Smart cut & paste notice (or the `Smart cut & paste: Switch to split/extract` command) re-opens the
-  source note with the selection restored and opens the split/extract picker, so you can search for a target
-  and split into it with the full option set.
-
-- The move only removes the text from the source note when you run the paste, so footnotes, links, and
-  frontmatter are still resolved from the intact source.
-- When the target is the same note as the source, `Move marked selection here` is unavailable while the
-  cursor is inside the marked selection (and the top/bottom commands are unavailable when the top would
-  land inside a selection that spans the note's frontmatter).
-- **Same-note extraction from the picker.** The `Extract current selection...` / `Extract this heading...`
-  pickers also offer the *current* note as a target, so you can extract a selection to the top or
-  bottom of the same note: press `Enter` (bottom) or `Shift+Enter` (top) on the current note in the picker.
-  Extracting into the note you are already in is a merge into an existing note, so flip the picker's
-  switch to **Merge** first — see [Create or merge when splitting](#create-or-merge-when-splitting).
-- **Same-note moves and *Text after extraction*.** The **Text after extraction** setting decides what is
-  left in place of the extracted text (a link to the target note, an embed, or nothing). When you move
-  within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
-  moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
-  setting to same-note moves anyway, or override it per move in the advanced command.
-
-## Create or merge when splitting
-
-Every split or extract does one of two things with the target you pick: it **creates** a new note, or it
-**merges** the extracted content into a note that already exists. A switch at the top of the picker says
-which, instead of leaving you to infer it from what you typed:
-
-- **Create** — type a name (complete a path with `Tab` on any suggestion) and the note is created there.
-  The list still shows your notes, but only as path autocomplete: `Enter` always creates.
-- **Merge** — pick one of the notes offered and the extracted content is merged into it. Nothing that
-  would create a note is offered at all: no `Enter to create` row and no unresolved links.
-
-**Default split target mode** (under `Split/extract` in the settings) decides which one the picker opens
-in; it defaults to `Create`. `Alt+M` flips the switch from the keyboard, and `Mod+Enter` still forces a
-creation from whatever you typed — it moves the switch to `Create` as it does so, so the switch is never
-telling you one thing while the picker does another.
-
-Two of the picker's options only mean something while a note is being created, so `Merge` greys them out:
-**Treat title as path** (`Alt+2`) and **Allow split into unresolved path** (`Alt+6`). Your choices come
-back the moment you switch to `Create`.
-
-## Split into folder
-
-Turn on **Should split into folder** (under `Split/extract` in the settings) to have every split or extract that creates a **new** note place it inside a brand-new folder named after the note. The note lands at `<folder>/<note>/<note>.md` instead of `<folder>/<note>.md`, keeping each extracted note tidily grouped with its own folder (handy when you later add attachments or child notes next to it). The folder name is de-duplicated if one already exists, links/footnotes are fixed exactly as for an ordinary split, and splitting/extracting into an **existing** note is unaffected. When the setting is off (the default), behavior is unchanged.
-
-### Folder tokens in the note templates
-
-The tokens of `Create folder with notes...` work in every note template too — **Merge template**, **Split template**, the **Smart cut & paste** templates and **Split into folder note name** — so a template written for one can be pasted into the other. They name **the folder the new note ends up in**, which with **Should split into folder** on is the folder the split just created:
-
-| Token | What it is |
-| --- | --- |
-| `{{folderName}}` | that folder's name, exactly as it ended up (de-duplication included) |
-| `{{folderPath}}` | its full vault path |
-| `{{safeFolderName}}` | its name **without** its number |
-| `{{index}}` | that number — empty when the folder has none; `{{index:000}}` zero-pads it |
-| `{{parentFolderPath}}` | the same folder's path, so a template that says `{{parentFolder}}` / `{{parentFolderPath}}` reads consistently |
-
-`{{safeFolderName}}` and `{{index}}` read the number back through **Reordered folder name template**, the same setting `Rename folder...` and the reorder commands use — so however you write your numbering (`1. Alpha`, `Alpha (1)`, zero-padded), all of them agree about what a numbered name is. A folder that template could not have produced simply has no index, and `{{safeFolderName}}` is its whole name.
-
-So splitting a selection into a new note named `3. Design` with **Should split into folder** on, and a **Split template** of:
-
-```text
----
-title: {{folderName}}
-aliases: [{{safeFolderName}}]
-part: {{index}}
----
-
-{{content}}
-```
-
-gives you `3. Design/3. Design.md` carrying `title: 3. Design`, `aliases: [Design]` and `part: 3`.
-
-Two tokens of that vocabulary are deliberately **not** available here, and using them is reported as an unknown token: `{{rawFolderName}}` (a split has no folder-name prompt — what you type names the note) and `{{file}}` (it declares several notes, and a split writes one).
-
-**Split into folder note name** (right below it) decides what the note inside that folder is called. Leave it empty — the default — and the note keeps the folder's name (`<folder>/<note>/<note>.md`). Set it to a constant such as `Overview` and every folder split produces `<folder>/<note>/Overview.md` instead, so all your split-created notes are named consistently. It accepts the same `{{...}}` tokens as the templates (`{{newTitle}}` is the folder name, so `{{newTitle}} index` gives `<folder>/<note>/<note> index.md`), except `{{content}}`, which is meaningless in a file name. The folder tokens above name the folder being created — `{{index:00}} {{safeFolderName}}` inside a folder called `7. Beta` gives `7. Beta/07 Beta.md` — while `{{parentFolder}}` is resolved before the note moves and so still names the folder *above* the new one. The name the note would otherwise have had is not lost: it is recorded as an alias and/or a frontmatter `title` exactly as any other adjusted title is, per **Should add invalid title to note alias** and **Frontmatter title mode** — so links written by that name keep resolving. The setting has no effect while **Should split into folder** is off.
-
-## Split headings automatically
-
-Turn on **Should split headings automatically** (under `Split/extract` in the settings) to make heading-driven splits run immediately, with no target picker and no confirmation dialog. It covers `Split note by headings - H1`…`H6`, their `content` variants, and `Extract this heading...`; each new note is named after the heading it came from. Combine it with **Should split into folder** to get exactly one folder per heading, named after that heading. When the setting is off (the default), these commands keep asking, as configured by **Should ask before splitting** — and that setting still governs ordinary, manually-targeted splits either way.
-
-## Split headings recursively
-
-The `Split note by headings recursively...` command turns a note's whole heading hierarchy into a folder tree in one go: every heading becomes a folder named after it, containing a note of the same name, and a sub-heading becomes a folder inside its parent's folder. A note with `# A`, `## B`, `### C` and `## D` therefore yields `A/A.md`, `A/B/B.md`, `A/B/C/C.md` and `A/D/D.md`. Each note keeps its own heading and body text, while the sections nested under it move into their own notes — and the usual **Text after extraction** residual is left behind, so each note links down to its children and the tree stays navigable. Anything before the first heading stays in the original note, which links to the top-level notes.
-
-Every note it creates is wrapped in the **Split template** (which falls back to the **Merge template**), exactly like an ordinary split into a new note — so you control what appears in each of them. The template is applied to a note only once its own sub-headings have moved into their own notes, which is what keeps it out of the notes below: a template that writes something *after* `{{content}}` (a footer, a backlink, a `---` rule) sits under the note's last heading, so applying it any earlier would carry that text into the last child instead of leaving it where it belongs. `{{fromTitle}}` / `{{fromPath}}` therefore name the note directly above in the tree, not the note the command was invoked on. That original note is left as it is — it is the source, not a note the split produced — so it keeps whatever preceded the first heading plus the links down to the top-level notes.
-
-Unlike `Split note by headings - H<n>`, this command is not tied to a level or to where your cursor is: it starts at the shallowest heading the note actually has and works its way down, so a note that jumps straight from `#` to `###` still nests correctly. It also builds the folder tree regardless of the **Should split into folder** setting — a recursive split without folders could not express a hierarchy — while that setting keeps governing ordinary splits as before. Because this restructures the whole note at once, it asks for confirmation once, up front, listing every note it is about to create (as configured by **Should ask before splitting**); the individual splits then run without further prompting.
-
-By default the tree is built next to the note you split. Turn on **Should split recursively into the default new note folder** (under `Split/extract` in the settings) to have it built in Obsidian's own `Default location for new notes` instead — the same place `Extract selection` puts its note. Only the *top* of the tree moves there; everything below it still nests under its parent, so the hierarchy is preserved rather than flattened:
-
-```text
-Obsidian: Default location for new notes = Inbox
-Source: Notes/Source.md   (# A / ## B / ### C / ## D)
-
-setting off (the default)      setting on
-  Notes/A/A.md                   Inbox/A/A.md
-  Notes/A/B/B.md                 Inbox/A/B/B.md
-  Notes/A/B/C/C.md               Inbox/A/B/C/C.md
-  Notes/A/D/D.md                 Inbox/A/D/D.md
-```
-
-The note you split is never moved — it stays where it is and links down into the new tree. The setting affects no other command, and it has no visible effect while Obsidian's own setting is `Same folder as current file`, since that resolves to the very location the setting replaces.
-
-To restructure a single section instead of the whole note, see [Split heading recursively](#split-heading-recursively) below.
-
-## Split heading recursively
-
-`Split heading recursively...` is the same operation scoped to **one** heading: the heading your cursor is in becomes a folder holding a note of its own name, its sub-headings nest inside it exactly as above, and **every other heading in the note is left alone**. Use it when only one section of a note has outgrown it and the rest should stay put.
-
-Which heading it acts on is the one **enclosing the cursor**, the same rule `Extract this heading...` follows — so it works from anywhere inside the heading's body, not only from the `#` line, and right-clicking inside a heading's section is all the "pick this heading" the command needs. It is in the editor's right-click menu and in the command palette, and (like the other heading commands) it steps out of the right-click menu while text is selected.
-
-Given a note of `## A`, `## B` (with `### B1` and `### B2` under it) and `## C`, running it with the cursor anywhere in `B` produces:
-
-```text
-B/
-  B.md
-  B1/
-    B1.md
-  B2/
-    B2.md
-```
-
-`A` and `C` are still in the original note, unchanged, and `B` is replaced by the usual **Text after extraction** residual that links down into the new tree. A heading with no sub-headings is still a valid target — it simply produces `<heading>/<heading>.md`, which is exactly what the whole-note command does when it reaches a leaf.
-
-Everything else matches `Split note by headings recursively...`: it builds the folder tree regardless of **Should split into folder**, wraps every note it creates in the **Split template**, asks for confirmation once up front as configured by **Should ask before splitting** (the dialog names the heading and lists only the notes that heading will produce, with `Change target` picking the folder the produced tree is rooted in), and honors **Should split recursively into the default new note folder** for that root.
-
-## Which commands the editor menu offers
-
-Right-clicking with text selected offers the commands that act on a **selection**; the ones that act on a heading or on the whole note step aside. Concretely, `Extract this heading...`, `Split heading recursively...` and `Split note by headings recursively...` are not in the editor menu while a selection is active — `Extract current selection...` is the one you want there. Drop the selection and they are back.
-
-This only affects the editor's right-click menu. The commands stay available in the command palette and through any hotkey you assigned, selection or not, so nothing you can do today stops working.
-
-Two related rules are unchanged: `Split note by headings - H<n>` (and its `content` variant) is offered whenever the cursor or selection sits anywhere inside a heading of that level, and `Extract this heading...` — with nothing selected — works from anywhere inside a heading's section, not just from the heading line itself. `Split heading recursively...` resolves its heading the same way.
-
-## Flatten folder
-
-Flattening moves children of the chosen folder up one level, so they become siblings of that folder. Folders keep their internal structure (they are moved as a whole, not collapsed), links are updated automatically, and any name that would collide with an existing sibling is de-duplicated. The source folder is left in place; delete it manually if you no longer need it.
-
-*What* moves is decided when you invoke the command, so there is nothing to configure. Three commands, each on a folder's right-click menu and in the command palette:
-
-| Command | What it promotes |
-| --- | --- |
-| `Flatten folder...` | Every direct child — notes, attachments **and** sub-folders — moves up one level, leaving the folder empty. |
-| `Flatten folder (child folders only)...` | Only the direct child folders move up. The folder keeps its own files and the attachment folder holding their attachments, so the folder itself stays intact. |
-| `Flatten folder recursively (all folders at any depth)...` | Every folder at any depth under the chosen folder moves up to that folder's own level, so a whole sub-tree lands as one row of siblings. Each moved folder keeps its own files, and attachment folders stay with the notes they belong to. |
-
-`Flatten folder...` kept the command id it has always had, so any hotkey you bound to it still works and still does exactly what it did before; the two other commands start unbound.
-
-Because a flatten has no picker to review, it asks for confirmation first and lists every item it is about to move — including the de-duplicated name a colliding item will end up with. A nested item is listed by its path under the flattened folder, so two promoted folders that share a name are still told apart. Both the folder and its destination are clickable links that reveal that folder in the file explorer (the destination is always the folder's own parent, shown as `/` when that is the vault root). Turn **Should ask before flattening a folder** off, or tick `Don't ask again` in the dialog, to flatten straight away.
-
-Attachments need no special handling in `Flatten folder...`: because every direct child moves, an attachment sitting beside a note travels with it and an attachment sub-folder moves as a whole, so embeds keep resolving. Attachments kept in a central attachment folder live outside the flattened folder and correctly stay where they are.
-
-The two folder-only commands do have to be careful, because notes are staying behind. A child folder is left where it is when it holds the attachments of a note that is *not* moving with it, as resolved by Obsidian's own attachment-folder setting — which means an attachment-location plugin such as Custom Attachment Location is honoured too.
-
-A child folder is also left where it is in two more cases, both decided without resolving anything:
-
-- **You excluded it** (see [Include/exclude paths](#includeexclude-paths)). This is the one that always works, whatever decides where your attachments go.
-- **It matches your vault's `Files & Links > Default location for new attachments`** — either a folder whose path is that fixed location, or a folder named after the sub-folder of a `./assets`-style setting and sitting beside at least one note. A folder you merely *named* `assets` next to no note at all is promoted like any other. This check is skipped entirely when an attachment-location plugin is installed, because the setting is then that plugin's working value rather than your answer — see below.
-
-That is also why the two folder-only commands hide themselves when everything they could promote falls into one of those cases: there would be nothing to move.
-
-In a vault running an attachment-location plugin such as Custom Attachment Location, resolving a note's attachment folder is up to that plugin and cannot be answered while the menu is being built. Only your **exclusions** are consulted there; if anything else could still move, the commands stay listed and tell you nothing would move if you run one — subject to the nesting rule below, which needs no attachment resolution and applies in every vault. Your vault's `Default location for new attachments` is deliberately *not* consulted in such a vault: Custom Attachment Location keeps that setting pointed at the folder it last worked out for the note you currently have open, so reading it would make an ordinary folder — often the one you had just created — look like an attachment folder and quietly remove the two commands until you opened a different note.
-
-`Flatten folder...` differs on purpose: it empties the folder, so no note stays behind for an attachment folder to be kept beside, and every direct child moves. Only your exclusions hold it back there.
-
-### Why you sometimes see fewer than three commands
-
-A command also hides itself when it would move **exactly what a simpler one of the three moves** — two entries promising the same result are just noise, and the simpler one is the one kept. Two shapes produce that:
-
-- **Nothing is nested.** If no sub-folder of the folder you right-clicked holds a sub-folder of its own, `Flatten folder recursively (all folders at any depth)...` can only move the same folders `Flatten folder (child folders only)...` moves, so it is not offered. Nest one folder and it comes back.
-- **The folder holds nothing but folders.** With no file staying behind, `Flatten folder (child folders only)...` moves exactly what `Flatten folder...` moves, so it steps aside — `Flatten folder...` is the one that keeps its entry, since it is the command your existing hotkey is bound to.
-
-The comparison is against what would *really* move, not against the shape of the folder tree: a nested folder that is excluded, or that holds a staying note's attachments, is never promoted, so it does not bring the recursive command back on its own. In a vault where an attachment-location plugin owns the resolution, the second of those cannot be worked out while the menu is being built — so `Flatten folder (child folders only)...` stays listed there whenever anything could still move. The **nesting** rule needs no such resolution and still applies: if nothing under the folder nests, `Flatten folder recursively (all folders at any depth)...` is not offered, plugin or no plugin.
-
-## Move folder to…
-
-The `Move folder to...` command (also on a folder's right-click menu) moves the chosen folder into another folder you pick from a suggester. The picker respects the plugin's ignored paths and never offers the folder's own subtree or its current parent (moving there would be a no-op). Links are updated automatically and a name collision in the destination is de-duplicated.
-
-After you pick a destination, a confirmation dialog shows the folder and where it is going; `Change target` sends you back to the picker. Both the source and the destination are clickable links that reveal that folder in the file explorer (the vault root is shown as `/`). Turn **Should ask before moving a folder** (under `Move/flatten folders` in the settings) off, or tick `Don't ask again` in the dialog, to move as soon as you pick a destination.
-
-## Create folder with notes
-
-The `Create folder with notes...` command (also on a folder's right-click menu) creates **a folder and the notes inside it** in one step. From the folder menu the new folder goes into the folder you right-clicked; from the command palette it goes into your vault's `Files & Links > Default location for new notes` — all three of its modes are honoured, so `Same folder as current file` puts it beside the note you have open, and with no note open it lands in the vault root. There is nothing to configure and nothing to pick: right-click a folder when you want it somewhere else. A prompt then asks for the folder name, and what you type is cleaned up before anything is created: the **Name transform template** rewrites it first (see [Your own replacements](#your-own-replacements)), surrounding whitespace and leading/trailing dots are dropped, runs of whitespace collapse to a single space, invalid characters are replaced per **Should replace invalid title characters** / **Replacement**, and the name is capitalized — the first letter of each word upper-cased and the rest lower-cased, except a word that is already entirely upper-case, so `api TEST` becomes `Api TEST`. Turn **Should capitalize the created folder name** off to keep your capitalization. A name that ends up empty is refused and the prompt asks again.
-
-Two templates under `Create folder with notes` decide the rest:
-
-- **Create folder name template** names the folder. The default `{{index}}. {{safeFolderName}}` numbers it after its siblings, so typing `notes` next to `1. Alpha` and `3. Beta` gives `4. Notes`. `{{index}}` is `1 + the highest number already in use`, so a gap is never backfilled and a deleted folder never causes a collision; which siblings count is derived from this very template, so changing the separator changes both halves at once. `{{index:000}}` zero-pads to the width of the mask. Leave `{{index}}` out to stop numbering altogether.
-- **Create folder content template** decides the notes. Leave it empty for a single empty note named after the folder. To create several, start each one with `{{file}}` at the beginning of its own line, followed by the note name — everything up to the next `{{file}}` line is that note's content, and the first note declared is the one that opens (turn **Should open note after creating folder** off to stay where you are). A note name with no extension gets `.md`.
-
-Both templates accept `{{index}}`, `{{rawFolderName}}` (exactly what you typed), `{{safeFolderName}}` (the cleaned-up name, **without** the number), `{{parentFolder}}`, `{{parentFolderPath}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}`. The content template also accepts `{{folderName}}` and `{{folderPath}}` — the folder's real final name and path, number and any de-duplication suffix included. That distinction is the point: `{{folderName}}` is `2. Api TEST`, `{{safeFolderName}}` is `Api TEST`, so a note can carry one as its title and the other as an alias. They are rejected in the name template, which is what produces them.
-
-```text
-{{file}} !.md
----
-title: "{{folderName}}"
-aliases:
-  - {{safeFolderName}}
----
-
-- [ ] refine
-{{file}} {{safeFolderName}}.md
-# {{folderName}}
-```
-
-With **Should run templater on destination file** on, every created note is handed to [Templater](https://github.com/SilentVoid13/Templater) — and because the plugin's own tokens are substituted first, they are available to Templater code as well. They are also bound to a `TOKENS` object, so `<% TOKENS.safeFolderName %>` and `<% TOKENS.index + 1 %>` both work, and a name containing a quote cannot break the expression. `TOKENS` is declared before everything else in the note, so it can be used in the note's own frontmatter too; the note on disk never holds that declaration, which is what keeps `tp.frontmatter` reporting real properties. A template pulled in with `tp.file.include(...)` is parsed separately and does not see `TOKENS`; pass what it needs through the note's own properties instead. A template that declares its own `TOKENS` will fail to run.
-
-That is what lets one typed name become several `aliases` entries — typing `A - B` here gives two:
-
-```text
-{{file}} !.md
----
-aliases: <% JSON.stringify(TOKENS.rawFolderName.split(' - ')) %>
----
-# <% TOKENS.folderName %>
-```
-
-To *write* the properties instead of printing them — letting Obsidian own the YAML, so a part containing a `:` or a quote is still formatted correctly and existing properties are merged rather than replaced — call `processFrontMatter` directly:
-
-```text
-{{file}} !.md
-<%*
-await app.fileManager.processFrontMatter(tp.config.target_file, (fm) => {
-  fm.aliases = TOKENS.rawFolderName.split(' - ');
-});
--%>
-# <% TOKENS.folderName %>
-```
-
-That plain call needs care in Templater generally: wherever Templater *rewrites a whole note* from what it read before your code ran — creating a note from a template, or replacing the templates in a file — the rendered text lands on top of your write and the properties are lost, which is why `tp.hooks.on_all_templates_executed` exists. (Inserting a template into a note you already have open is unaffected, because that writes through the editor; so is writing properties to some *other* file.) `Create folder with notes...` is a rewriting flow, but the plugin owns that write and keeps whatever properties the template set while it ran, so the plain call is enough here — the hook still works if you prefer it. The note's own text always comes from the render, so a template that rewrites its body mid-run keeps the rendered version.
-
-Turn **Should ask before creating a folder** (off by default) on to see a confirmation dialog first — it shows the cleaned-up folder name and every note about to be created, which is the one place the difference between what you typed and what you get is visible beforehand. The whole creation runs in one reversible, resource-locked transaction, so a cancellation or a failure leaves no half-built folder behind.
-
-Because that dialog is where the difference is visible, it is also where you can fix it: a **`Rename`** button sits beside the folder name and beside every note, each opening a prompt seeded with the name it is about.
-
-- Renaming the **folder** rebuilds the whole preview around the new name — the number is recounted, the de-duplication redone, and every note named from `{{safeFolderName}}` follows along. What you type goes through the same cleaning as the original prompt, **Name transform template** included.
-- Renaming a **note** changes that row only, and the name **sticks**: rename the folder afterwards, or send the folder somewhere else with `Change target`, and your name is still there. Its content still comes from the template — only the name is yours.
-
-A note name is refused if it would be empty, if it still contains invalid characters (with **Should replace invalid title characters** off), or if another note in the same folder is already called that — so the preview can never show two notes the vault would silently number apart. Dismissing a rename prompt means "never mind": the dialog comes back exactly as it was.
-
-Neither button is compulsory: **Should show rename button for the created folder** and **Should show rename button for created notes** turn them off independently. Turn the notes one off when the names in **Create folder content template** are already the names you want — the dialog still previews every note, but the previewed names are final. The folder one is worth keeping longer, since that name is the one you typed and the numbering and title rules rewrite it. Both are on by default and do nothing while **Should ask before creating a folder** is off, because without the dialog there is no button.
-
-## Reorder folders
-
-The `Reorder sibling folders...` and `Reorder child folders...` commands (both also on a folder's right-click menu) put a folder's contents in the order **you** choose and renumber them to match, rewriting the number in each folder's name and in its folder note's `title` property.
-
-The two commands differ only in which row they reorder:
-
-- **`Reorder sibling folders...`** reorders the folder you right-clicked **among its siblings** — every child folder of its parent. This is also the only way to reorder your **top-level** folders, since the vault root has no right-click menu of its own: right-click any folder at the root and all of them are offered.
-- **`Reorder child folders...`** reorders what is **inside** the folder you right-clicked. From the command palette it uses your vault's `Files & Links > Default location for new notes`, exactly as `Create folder with notes...` does.
-
-A dialog lists the items with their numbers stripped off, each badged with the number it **will** get. Drag a row, or move it with the arrow buttons; the badges update as you go, so the dialog is the preview and there is no second confirmation. On `Reorder`, the **whole sequence** is renumbered from 1 — not only the row you moved — which is what keeps the numbering contiguous, and a folder that never had a number simply gains one. Everything happens in one reversible, resource-locked transaction: cancel it, or change something externally, and the names and properties roll back together.
-
-Tick **Include files** to renumber the folder's own notes as well. Folders and notes are always **two independent sequences**, each numbered from 1, because the file explorer always sorts folders above files — a single merged numbering could never be displayed in the order it claims. The box starts from **Should include files when reordering by default** (off), so reordering subfolders never silently renames the notes beside them. A file's extension is never touched.
-
-Items whose path is ignored by the plugin's [include/exclude paths](#includeexclude-paths) are left out of the dialog entirely, so a reorder neither renames nor renumbers around them.
-
-### The numbering is yours
-
-Nothing about the `1.` prefix shape is hard-coded. **Reordered folder name template** and **Reordered file name template** (under `Reorder` in the settings) decide it, and they are separate from **Create folder name template** on purpose, so reordering can follow a different scheme from creating:
-
-- the separator is ordinary text — `{{index}} {{safeFolderName}}` drops the period, `{{index}}-{{safeFolderName}}` changes it;
-- `{{index:000}}` zero-pads to the width of the mask, giving `007. Notes`;
-- the number does not have to come first — `{{safeFolderName}} ({{index}})` works just as well.
-
-Reading an existing number back uses the same template, so what writes the names and what recognizes them can never disagree. `{{safeFolderName}}` (or `{{safeName}}` for a note) is the name without its number, and both templates must contain it and `{{index}}` — otherwise renumbering would drop the name, or have no number to rewrite.
-
-**Folder note title template** (default `{{folderName}}`, under `Folder note` in the settings) is what goes into the folder note's `title`: `{{folderName}}` is the new name **with** its number, `{{safeFolderName}}` the same name without it. Leave it empty to leave the property alone. It is shared with `Rename folder...`, because both write the same property of the same note. **Reordered file title template** is the same thing for notes and is **empty by default**, so a reordered note is renamed and nothing else until you fill it in. A reorder writes only `title` — `aliases` and everything else are left as they are.
-
-## Rename folder
-
-The `Rename folder...` command (also on a folder's right-click menu) renames a folder and, in the same operation, keeps its [folder note](#folder-note) in step: the note's own file name, its `title` property and its `aliases`. This is the counterpart to reordering — a reorder changes a folder's **number**, a rename changes its **name** — and the two write the folder note through the same settings, so they can never disagree about what a folder note should say.
-
-Type the new name into the prompt and press `Rename`. The name is refused if it would be empty or if it still contains invalid characters (with **Should replace invalid title characters** off), exactly as when creating a folder. If a sibling is already called that, the new name is de-duplicated into `Beta 1` and the properties describe the folder that actually exists.
-
-**The folder keeps its number.** The prompt is seeded with the name **without** its index, so renaming `1. Alpha` to `Beta` gives you `1. Beta` and a folder never silently drops out of the sequence it is numbered into. A folder that never had a number simply takes the name you typed. The number is recognized and rewritten through **Reordered folder name template**, so it follows whatever scheme that setting describes.
-
-**Aliases are swapped, not rewritten.** **Folder note aliases template** (default `{{safeFolderName}}`, under `Folder note` in the settings) renders the alias the new name deserves; the entry the **old** name rendered is replaced where it stood, and every other alias — the ones you wrote by hand — is left exactly as it was. If the old entry is not there, the new alias is simply added. Leave the template empty to leave `aliases` alone entirely. The default matches what `Create folder with notes...` already writes, so a folder created and then renamed ends up with the alias it would have had if you had created it under the new name.
-
-Unlike a plain Obsidian rename, this is the whole operation in **one reversible, resource-locked transaction**: the folder, the folder note's name and both properties move together, and cancelling it — or an external change — rolls all of them back at once. Links are updated by the underlying rename, as always. Obsidian's own rename is untouched: only this command syncs the properties.
-
-A folder whose path is ignored by the plugin's [include/exclude paths](#includeexclude-paths) is refused with a notice, and the vault root is never offered — it has no name of its own to change.
-
-## Folder note
-
-Several commands need to know which note **describes** a folder — the one whose properties a reorder or rename keeps in step. **Folder note location** (under `Folder note` in the settings) answers that:
-
-- **`Auto`** (the default) reads the installed [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin every time, so reconfiguring that plugin needs no change here. Without it, `Auto` means a note named after its folder, inside it (`alpha/bravo/charlie/charlie.md`).
-- **`Inside the folder`** and **`Beside the folder`** say it yourself. The second is the `alpha/bravo/charlie.md` layout, whose point is that `[[alpha/bravo/charlie]]` links to a folder with no special syntax.
-- **`This vault has no folder notes`** turns the whole idea off; no properties are ever rewritten.
-
-**Folder note name template** names it when you have chosen a location yourself: `{{folderName}}` names it after its folder, while a literal like `!` or `index` gives every folder note the same name.
-
-That plugin's third option — keeping every folder note in one central folder — has no equivalent here, and `Auto` falls back when it is set: with the notes pooled, which note belongs to a folder no longer follows from the folder's path.
-
-When the folder note is named after its folder, renumbering or renaming the folder renames the note with it — otherwise `1. Alpha/1. Alpha.md` would become `3. Alpha/1. Alpha.md`, which by that very rule is no longer a folder note. A fixed name like `!` needs no rename and gets none.
-
-Two more settings live here, and both take the same tokens as the reorder templates. **Folder note title template** is the `title` a reorder or a [rename](#rename-folder) writes; **Folder note aliases template** is the alias a [rename](#rename-folder) writes. Either one left empty leaves its property alone.
-
-## Merge folder contents into a single file
-
-The `Merge current folder contents into a single file...` command (also on a folder's right-click menu) concatenates **every note inside a folder** — recursively, a folder's own notes first and then each sub-folder's — into **one brand-new note** named after the folder and placed next to it. This is distinct from `Merge current folder with another folder...`, which mirrors the folder's structure into another folder; here everything collapses into a single file. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The whole batch runs in one reversible, resource-locked transaction (cancel or an external change rolls everything back), the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on.
-
-**The command is only offered where it has something to do**: a folder holding fewer than two mergeable notes — one note, or none at all — does not get the entry in its right-click menu or in the command palette, since merging a lone note into a new note would only reproduce it under the folder's name. Attachments and sub-folders do not count towards the two; what counts is exactly what would be merged, so a folder holding one note plus an Excalidraw drawing is still a one-note folder, and a folder whose second note lives three levels down is not.
-
-**Notes and sub-folders are ordered naturally**: every run of digits in a name counts as one number, so a folder tree numbered `1.`, `1.1`, `1.1.1`, `2.`, … `10.`, `30.` merges in that order instead of the text order that puts `30.` before `5.` (and `1.10` before `1.2`). The rule is general rather than an index-prefix parser — every numeric run participates, at the position it appears — so a name with no digits in it sorts alphabetically exactly as it always did.
-
-Five settings under `Merge` → `Merge folder` shape the result:
-
-- **Merge folder into file note name** names the merged note. Leave it empty to keep naming it after the folder. It accepts `{{folderName}}`, `{{folderPath}}`, `{{parentFolder}}`, `{{date:FORMAT}}` and `{{time:FORMAT}}`, so every merge can produce e.g. `Docs summary.md`. The note is always created next to the folder, and a colliding name is de-duplicated.
-- **Should convert folders to headings when merging a folder** mirrors the folder hierarchy as headings. A direct sub-folder becomes `# Name`, its own child `## Name`, and so on; notes directly inside the merged folder get no heading, since the merged note already stands for that folder. Every sub-folder is headed, including a completely empty one — the merged outline mirrors the whole tree, so an empty folder is still part of it. Two note-less cases are left out instead, because nothing of either was merged: a folder holding only attachments (and everything under it), and a folder whose notes exist but are all excluded. Each merged note's own headings are demoted to match, so the outline stays well-formed. This is the exact opposite of `Split note by headings recursively...`, which turns a heading hierarchy into a folder tree — split a note into a tree and merge it back and the levels agree. Markdown only defines six heading levels, so a folder more than six deep gets a `#######`-and-longer line that Obsidian shows as plain text rather than a heading; the level is still written out in full, because clamping everything to `######` made a folder and its own descendants indistinguishable.
-- **Should move attachments when merging a folder** (on by default) carries the merged notes' attachments into the merged note's attachment folder, so nothing is stranded in a folder that is about to disappear. The destination comes from your vault's own attachment settings, which means [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is honored when you have it installed. An attachment moves when one of the merged notes references it, or when it already sits where that note's attachments belong. Turn it off to leave attachments exactly where they are.
-- **Should open the merged note after merging folder contents into a single file** (off by default) puts you in the note the merge produced, so you can see what it looks like. It opens once, at the very end — after the note has taken its final name and the emptied folders are gone. The merged notes themselves are never opened on the way, whatever **Should open note after merge** says: that would flicker the active tab through every one of them.
-- **Empty folders after merging a folder** decides what happens to the folders the merge empties: `Delete` (the default) removes the merged folder and every emptied sub-folder, `Delete sub-folders only` keeps the merged folder itself — even once it is empty — while removing every emptied folder under it however deep, `Delete with empty parents` is `Delete` plus any parent the deletion leaves empty, and `Keep` leaves everything in place. A folder still holding files is always kept, and nothing is deleted if the merge is cancelled.
-
-The other folder merge — `Merge current folder with another folder...` — has its own switch in the same group: **Should open the first note after merging folders** (off by default) opens the first note of the destination folder once the merge lands, so you end up where everything went. "First" is what the file explorer shows first: the destination folder's own notes, ordered naturally, and only if it holds none, the first note of its first sub-folder. Notes that were already in the destination count too — the point is where the folder starts, not which note the merge happened to process first — and a destination holding no note at all simply opens nothing. Like its sibling above, it opens exactly one note, once the whole merge has landed.
-
-Markdown files that are really attachments are never merged: **Attachment extensions** (default `.excalidraw.md`) lists the extensions that mark them — written out in full, leading dot included — so an Excalidraw drawing — stored as `sketch.excalidraw.md` — keeps its raw payload out of the merged note and is relocated with the other attachments instead. The same applies to `Merge current folder with another folder...`: a drawing is moved into the destination folder like any other attachment (de-duplicated if one of the same name is already there) rather than merged into it.
-
-## Attachments when merging files
-
-**Should move attachments when merging a file** (under `Merge`, on by default) makes the attachments a note owns follow it when `Merge current file with another file...` merges that note away — otherwise they would be left behind in a folder the note no longer lives in. It applies to `Merge these files into one file...` too.
-
-An attachment moves when the merged note references it and **no other note does**; an attachment several notes share belongs to none of them and stays where it is. The destination comes from your vault's own attachment settings, which means [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is honored when you have it installed — this plugin never computes attachment paths itself. Attachments move inside the merge's own transaction, so cancelling the merge puts them back.
-
-## Merge multiple selected files
-
-Select two or more notes in the file explorer, right-click, and choose `Merge these files into one file...` to merge them all into a single target note at once (instead of merging one pair at a time). You pick the target from a suggester — your existing notes, with the selected notes excluded; to combine into a fresh note, create an empty note first and pick it. Each selected note is run through the same merge pipeline as a single-file merge (**Merge template**, **frontmatter merge strategy**, footnote fixing, link/backlink updates), the whole batch runs in one reversible, resource-locked transaction, the merged source notes are deleted, and notes whose path is excluded/ignored are skipped and reported — unless **Should always merge excluded items** is on. The item appears only when two or more markdown notes are selected.
-
-## Include/exclude paths
-
-The **Include paths** and **Exclude paths** settings (under `Include/exclude` → `Paths`) decide which notes and folders this plugin will *touch*. `Include paths` restricts it to the listed paths — leave it empty and everything is included. `Exclude paths` marks the listed paths as ignored — leave it empty and nothing is excluded. Put one entry per line; each entry is either a path string or a `/regular expression/`. (Where the commands are *offered* is a separate setting — see [Command include/exclude paths](#command-includeexclude-paths).)
-
-The two forms match differently, and the difference is the thing worth knowing:
-
-- A **path string** matches that note or folder **and everything inside it**. So `Inbox` covers `Inbox`, `Inbox/note.md` and `Inbox/sub/deep.md` alike. This is what you want most of the time.
-- A **`/regular expression/`** is tested against the path exactly as written, with no subtree rule bolted on. That is how you match a folder *without* its contents: `/^Inbox$/` matches the `Inbox` folder itself and none of the notes in it. Likewise `/^Inbox\/[^/]+\.md$/` matches the notes directly inside `Inbox` but not the folder and not anything deeper.
-
-A `/regular expression/` that does not parse is reported under the setting as `Invalid regular expression: …`, and while it is there **the whole list is ignored** — so a single broken entry stops the other entries in that box from matching until you fix it. Half-typed values are fine: nothing happens while you type, the message only tells you the entry as it stands is not usable yet.
-
-Ignored paths are skipped by the pickers, and the folder/file batch commands (`Merge current folder contents into a single file...`, `Merge these files into one file...`) skip and report ignored notes — unless **Should always merge excluded items** is on.
-
-An ignored path is also never **moved**. A flatten leaves an excluded item exactly where it is, contents included, and hides its command entirely when that leaves nothing to move. This is the reliable way to protect your attachment folder from [Flatten folder](#flatten-folder) when a plugin such as Custom Attachment Location decides where attachments go: it derives each folder from the note — potentially from the note's name, its properties, the date, or even a prompt — so there is no way to work backwards from a folder to "this is an attachment folder", and your vault's own `Files & Links > Default location for new attachments` is not a usable substitute there (that plugin keeps it pointed at whatever it last resolved). Excluding the folder says it directly. Without such a plugin, that setting is recognized on its own.
-
-The plugin's commands are still offered on an ignored path and only pop an "ignored in the plugin settings" notice when you trigger one. Hiding them is a separate setting with its own paths — see below.
-
-## Command include/exclude paths
-
-**Command include paths** and **Command exclude paths** (under `Include/exclude` → `Commands`) decide where this plugin's commands are *offered*. A path listed in `Command exclude paths` — or, when `Command include paths` is not empty, any path outside it — has the commands hidden entirely: they disappear from the command palette and from the editor, file, and folder context menus, so you cannot trigger them there at all.
-
-This is a **second, independent** filter, and that is the point of it. The `Paths` box above decides what is off-limits as *content* — never a picker entry, never a merge/split target or source, never moved by a folder operation — while this one decides only whether the commands *show up*. So you can hide the commands in a folder you still merge into, or keep the commands handy in a folder that must never be merged. Excluding a path there no longer hides its commands: list it here as well if that is what you want.
-
-Both boxes take exactly the same entries as the `Paths` ones — one per line, each a path string or a `/regular expression/`, matching by the same two rules described above. Leave them both empty (the default) and no command is ever hidden.
-
-If you had **Should block commands on excluded paths** turned on before, your `Include paths` and `Exclude paths` entries were copied into these two boxes when you upgraded, so nothing changed for you.
-
-## Operation notices
-
-Every operation this plugin runs reports itself: a notice while it is running — so you know when not to touch Obsidian — and a notice naming what it did once it finished. It covers merging, splitting and extracting, swapping, moving and flattening folders, renaming a heading, and reordering headings alike. The running notice appears only once an operation has been going for half a second, so quick ones never flash one up.
-
-Turn **Should show operation notices** off (under `UI`) to silence both. Refusals and errors — "this path is ignored in the plugin settings" and the like — are always shown whatever this is set to.
-
-One thing to know before turning it off: the running notice is what carries the operation's `Cancel` button, so hiding it hides that too. A long operation can still be cancelled by right-clicking the note's lock indicator and unlocking it.
-
-Two related settings are deliberately separate and unaffected by this one: **Should show smart cut & paste notice**, which controls the *interactive* marked-selection notice (turning it off removes its buttons, not just information), and **Smart cut & paste completion feedback**, which already decides how a finished move announces itself.
-
-## Minimizing dialogs
-
-Every confirmation dialog this plugin opens — plus the `Extract …` (split) picker and the `Move marked selection here (advanced)…` / `Reorder headings` option dialogs — can be **minimized** to a small floating bar so you can peek at the notes involved without dismissing the dialog. The bar has two buttons:
-
-- **Restore** — reopens the dialog where you left off.
-- **Cancel** — closes the dialog. For an operation that locks its note while the dialog is open (an extract/split or a merge), cancelling this way also **unlocks the note and cancels the operation** — the same effect as the built-in `Unlock active note` command or right-clicking the note's lock indicator, but reachable directly from the minimized bar.
-
-Clicking the dimmed background behind such a dialog **minimizes it** rather than cancelling the operation, so a stray click while you go and look at something does not throw away the pending command. To actually cancel, use `Escape`, the dialog's own **Cancel** button, or the ✕ on the minimized bar.
-
-The initial `Merge …` and `Swap …` pickers are deliberately **not** minimizable and are still dismissed by a background click: no target has been chosen yet, so there is nothing to park, and leaving one parked risks forgetting which note the operation was started from.
+Obsidian's core [`Note composer`](https://help.obsidian.md/plugins/note-composer) moves text between
+notes, but it moves it bluntly: relative links come out pointing at nothing, a heading whose title
+contains a character a file name cannot hold is refused outright, and extracted text is always
+appended to the target — you never get to say where it lands. This
+[Obsidian](https://obsidian.md/) plugin fixes those, and then goes considerably further: whole
+folders can be merged, split, flattened, reordered and renamed; a note's heading hierarchy can become
+a folder tree; and a selection can be marked in one note and dropped at an exact cursor position in
+another.
 
 ## Demo vault
 
-A demo vault with usage examples ships with every release. You can access it via any of the following:
+**The documentation is an interactive demo vault.** Every feature has a note that explains what it
+does and why you would want it, and walks you through it step by step — most of them with a button
+that sets the relevant setting for you so you can try it immediately.
+
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub
+with nothing installed.
+
+A copy of the vault ships with every release. You can access it via any of the following:
 
 1. Running the **Advanced Note Composer: Open demo vault** command.
-2. Downloading `advanced-note-composer-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases).
+2. Downloading `advanced-note-composer-demo-vault-<version>.zip` (`<version>` is the release version)
+   from the [Releases](https://github.com/mnaoumov/obsidian-advanced-note-composer/releases).
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
+
+## What it does
+
+- **Merge** — a note into another, a folder into a folder, several selected notes at once, or a whole
+  folder tree down into one file, with frontmatter reconciled by a strategy you choose and
+  attachments carried along.
+  [Merge file](<./demo-vault/01 Merge file.md>) ·
+  [Merge folder](<./demo-vault/02 Merge folder.md>) ·
+  [Merge folder into single file](<./demo-vault/23 Merge folder into single file.md>) ·
+  [Merge multiple files](<./demo-vault/24 Merge multiple files.md>) ·
+  [Frontmatter merge strategy](<./demo-vault/13 Frontmatter merge strategy.md>)
+- **Extract** — a selection, a heading and everything under it, the block between two horizontal
+  rules, or everything before or after the cursor — leaving a link, an embed, or nothing behind.
+  [Extract selection](<./demo-vault/03 Extract selection.md>) ·
+  [Extract heading](<./demo-vault/04 Extract heading.md>) ·
+  [Extract between horizontal rules](<./demo-vault/16 Extract between horizontal rules.md>) ·
+  [Text after extraction](<./demo-vault/05 Text after extraction.md>)
+- **Split** — by heading level, or recursively, turning a whole note's heading hierarchy (or one
+  section of it) into a folder tree. The picker says up front whether you are creating a note or
+  merging into an existing one.
+  [Split by headings](<./demo-vault/06 Split by headings.md>) ·
+  [Split into folder](<./demo-vault/25 Split into folder.md>) ·
+  [Split headings recursively](<./demo-vault/27 Split headings recursively.md>) ·
+  [Create or merge when splitting](<./demo-vault/33 Create or merge when splitting.md>)
+- **Swap** — two files, two folders, or two selections trade places in one reversible operation.
+  [Swap file](<./demo-vault/07 Swap file.md>) ·
+  [Swap folder](<./demo-vault/08 Swap folder.md>) ·
+  [Swap selections](<./demo-vault/20 Swap selections.md>)
+- **Folder operations** — flatten a folder into its parent, move one somewhere else, create a folder
+  and its notes from a template, reorder folders and renumber them, or rename one and keep its folder
+  note in step.
+  [Flatten folder](<./demo-vault/17 Flatten folder.md>) ·
+  [Move folder to](<./demo-vault/18 Move folder to.md>) ·
+  [Create folder with notes](<./demo-vault/29 Create folder with notes.md>) ·
+  [Reorder folders](<./demo-vault/30 Reorder folders.md>) ·
+  [Rename folder](<./demo-vault/31 Rename folder.md>)
+- **Smart cut & paste** — mark a selection or a whole heading, then drop it at an exact cursor
+  position in any note, including the one you took it from.
+  [Smart cut and paste](<./demo-vault/09 Smart cut and paste.md>)
+- **Titles, links and frontmatter** — relative links are rewritten so they keep resolving, invalid
+  title characters are cleaned up (or mapped by a template of your own) instead of refused, a title
+  containing `/` can become a real path, and merged or split content can be wrapped in a template.
+  [Relative links](<./demo-vault/10 Relative links.md>) ·
+  [Invalid titles](<./demo-vault/11 Invalid titles.md>) ·
+  [Treat title as path](<./demo-vault/12 Treat title as path.md>) ·
+  [Templates](<./demo-vault/14 Templates.md>)
+- **Headings** — reorder a note's sections, or rename a heading and have its backlinks follow.
+  [Reorder headings](<./demo-vault/19 Reorder headings.md>) ·
+  [Rename heading](<./demo-vault/22 Rename heading.md>)
+- **Include / exclude paths** — two independent filters: what the plugin may touch, and where its
+  commands are offered at all.
+  [Block commands on excluded paths](<./demo-vault/21 Block commands on excluded paths.md>)
+- **UI** — every dialog can be minimized, and every one of them can be pointed at a different target
+  without cancelling the operation;
+  operations report what they are doing; and the settings tab is a short list of pages rather than one
+  long scroll.
+  [Minimizing dialogs](<./demo-vault/15 Minimizing dialogs.md>) ·
+  [Operation notices](<./demo-vault/28 Operation notices.md>) ·
+  [Change target](<./demo-vault/34 Change target.md>) ·
+  [Finding a setting](<./demo-vault/35 Finding a setting.md>)
 
 ## Installation
 
@@ -691,6 +113,14 @@ window.DEBUG.enable('advanced-note-composer');
 ```
 
 For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
+
+## Changelog
+
+All notable changes to this project will be documented in the [CHANGELOG](./CHANGELOG.md).
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set up.
 
 ## Support
 
