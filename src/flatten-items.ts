@@ -172,8 +172,7 @@ const FLATTEN_MODE_SYNC_DISTINCTNESS_CHECKS: Record<FlattenMode, (folder: TFolde
    * point, because in a vault running an attachment-location plugin this is the ONLY thing that can be
    * judged while the menu is being built (issue #230).
    */
-  [FlattenMode.AllFoldersRecursively]: (folder, context) =>
-    folder.children.some((child) => isFolder(child) && !isSkippedFolder(child, context) && hasAnyCandidateFolder(child, context)),
+  [FlattenMode.AllFoldersRecursively]: (folder, context) => folder.children.some((child) => isFolder(child) && !isSkippedFolder(child, context) && hasAnyCandidateFolder(child, context)),
   /*
    * `ChildFoldersOnly` differs from `AllChildren` by what it LEAVES behind, and a protected folder is one of
    * the things that can be left — so an unresolved attachment folder can still turn this one into a
