@@ -2,7 +2,8 @@
   // Scoped markdownlint config for the demo vault. Only one default rule is incompatible with what
   // These notes do; every other rule applies, as it does to the rest of the documentation.
   "config": {
-    // `Rename heading backlinks.md` deliberately keeps Obsidian `[[wikilinks]]` -- they are the
+    // `Materials/16 Rename heading/Rename heading backlinks.md` deliberately keeps Obsidian
+    // `[[wikilinks]]` -- they are the
     // Backlinks the heading rename rewrites -- and markdownlint parses one as an undefined shortcut
     // Reference link.
     "MD052": false,
