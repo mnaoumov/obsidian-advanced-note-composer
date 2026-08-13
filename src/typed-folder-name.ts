@@ -1,8 +1,6 @@
 import type { App } from 'obsidian';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import type { PluginSettings } from './plugin-settings.ts';
-
 import { normalizeTypedFolderName } from './create-folder-name.ts';
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import {
@@ -22,10 +20,9 @@ export interface NormalizeTypedFolderNameWithTransformParams {
   readonly rawName: string;
 
   /**
-   * Exactly the settings a typed folder name is normalized by — a `Pick` rather than the whole object, so a
-   * caller holding the deep-readonly settings can pass them straight in.
+   * Exactly the settings a typed folder name is normalized by.
    */
-  readonly settings: Pick<PluginSettings, 'nameTransformTemplate' | 'replacement' | 'shouldReplaceInvalidTitleCharacters'>;
+  readonly settings: TypedFolderNameSettings;
 
   /**
    * Whether the Title Case pass runs. A decision of the CALLER's rather than of the setting, because the two
@@ -35,6 +32,29 @@ export interface NormalizeTypedFolderNameWithTransformParams {
    * `iOS` into `Ios` merely because the prompt was confirmed.
    */
   readonly shouldTitleCase: boolean;
+}
+
+/**
+ * The settings a typed folder name is normalized by.
+ *
+ * Declared structurally rather than as the whole `PluginSettings`: it is what normalization actually reads,
+ * and a caller holding the deep-readonly settings can pass them straight in.
+ */
+export interface TypedFolderNameSettings {
+  /**
+   * The `nameTransformTemplate` setting.
+   */
+  readonly nameTransformTemplate: string;
+
+  /**
+   * The `replacement` setting.
+   */
+  readonly replacement: string;
+
+  /**
+   * The `shouldReplaceInvalidTitleCharacters` setting.
+   */
+  readonly shouldReplaceInvalidTitleCharacters: boolean;
 }
 
 /**

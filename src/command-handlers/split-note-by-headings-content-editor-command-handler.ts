@@ -110,6 +110,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
           verb: `Splitting note by H${String(this.headingLevel)} heading content in`
         }),
@@ -185,6 +186,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
       showOperationCompletionNotice({
         content: await buildOperationNoticeContent({
           app: this.app,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
           suffix: ` into ${String(splitCount)} note(s)`,
           verb: 'Split note'

@@ -103,6 +103,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: sourcePath,
           targetPathOrAbstractFile: targetFolder,
           verb: 'Moving folder'
@@ -140,6 +141,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         shouldLinkSource: false,
         sourcePathOrAbstractFile: sourcePath,
         targetPathOrAbstractFile: targetPath,

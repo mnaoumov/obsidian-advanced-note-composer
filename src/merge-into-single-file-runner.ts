@@ -315,6 +315,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app,
+        pluginSettingsComponent,
         sourcePathOrAbstractFile: targetFile.path,
         verb: `Merged ${String(mergedCount)} note(s) into`
       }),

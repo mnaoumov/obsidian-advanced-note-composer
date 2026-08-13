@@ -5,6 +5,9 @@ children, moving it somewhere else, creating one already filled with notes, and 
 sequence of folders in order. Each runs as one reversible, resource-locked transaction, and each keeps
 the folder's own folder note in step.
 
+Each also reports what it did in a notice whose folder name is clickable: clicking it highlights the folder
+and opens that folder note — see [33 Operation notices](<../10 UI/33 Operation notices.md>).
+
 | Note | What it covers |
 | --- | --- |
 | [20 Flatten folder](<./20 Flatten folder.md>) | Promoting a folder's children up one level — three variants, and why you sometimes see fewer |

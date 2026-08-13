@@ -86,6 +86,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           preposition: 'with',
           sourcePathOrAbstractFile: sourcePath,
           targetPathOrAbstractFile: targetPath,
@@ -132,6 +133,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         preposition: 'with',
         sourcePathOrAbstractFile: sourcePath,
         targetPathOrAbstractFile: targetPath,

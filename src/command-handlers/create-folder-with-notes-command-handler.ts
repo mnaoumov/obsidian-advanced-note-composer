@@ -345,6 +345,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
         preposition: 'in',
         sourcePathOrAbstractFile: plan.folderPath,
         suffix: `, with ${String(createdFiles.length)} note(s)`,
@@ -550,6 +551,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         buildOperationNoticeContent({
           app: this.app,
           isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
           preposition: 'in',
           // The folder does not exist yet, so it is plain text: an internal link to a missing path renders
           // Unresolved, and clicking one CREATES it.

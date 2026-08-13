@@ -24,6 +24,25 @@ export interface FolderNoteConfig {
 }
 
 /**
+ * The two settings that answer which note is a folder's folder note.
+ *
+ * Declared structurally rather than as the whole `PluginSettings`: it is what every folder-note caller
+ * actually needs, it keeps them off settings that have nothing to do with folder notes, and a caller holding
+ * the deep-readonly settings can pass them straight in.
+ */
+export interface FolderNoteSettings {
+  /**
+   * The `folderNoteLocation` setting.
+   */
+  readonly folderNoteLocation: FolderNoteLocation;
+
+  /**
+   * The `folderNoteNameTemplate` setting.
+   */
+  readonly folderNoteNameTemplate: string;
+}
+
+/**
  * Parameters for {@link resolveFolderNoteConfig}.
  */
 export interface ResolveFolderNoteConfigParams {
@@ -38,6 +57,23 @@ export interface ResolveFolderNoteConfigParams {
    * The `folderNoteNameTemplate` setting.
    */
   readonly nameTemplate: string;
+}
+
+/**
+ * Parameters for {@link resolveFolderNoteFromSettings}.
+ */
+export interface ResolveFolderNoteFromSettingsParams {
+  readonly app: App;
+
+  /**
+   * The folder whose folder note is wanted.
+   */
+  readonly folder: TFolder;
+
+  /**
+   * The settings that say which note is a folder's folder note.
+   */
+  readonly settings: FolderNoteSettings;
 }
 
 /**
@@ -138,6 +174,31 @@ export function resolveFolderNoteConfig(params: ResolveFolderNoteConfigParams): 
   }
 
   return readFolderNotesPluginConfig(app) ?? FALLBACK_FOLDER_NOTE_CONFIG;
+}
+
+/**
+ * Finds a folder's folder note using the plugin's own `Folder note` settings.
+ *
+ * The settings-reading half of {@link resolveFolderNote}, which is what every caller outside this module's
+ * own tests actually wants: the two values are always read together and always from the same place, and
+ * spelling that pair out at each call site is how one of them ends up read from somewhere else.
+ *
+ * @param params - The folder and the settings.
+ * @returns The folder note, or `null` when this folder has none — see {@link resolveFolderNote}.
+ */
+export function resolveFolderNoteFromSettings(params: ResolveFolderNoteFromSettingsParams): null | TFile {
+  const {
+    app,
+    folder,
+    settings
+  } = params;
+
+  return resolveFolderNote({
+    app,
+    folder,
+    location: settings.folderNoteLocation,
+    nameTemplate: settings.folderNoteNameTemplate
+  });
 }
 
 /**

@@ -1,18 +1,21 @@
 import type {
   App,
   TFile,
-  TFolder
+  TFolder,
+  WorkspaceLeaf
 } from 'obsidian';
 import type {
   PluginNoticeComponent,
   PluginNoticeComponentDelayedNotice
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { Mock } from 'vitest';
 
 import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import {
   getAbstractFileOrNull,
-  isFile
+  isFile,
+  isFolder
 } from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -34,11 +37,15 @@ import {
   showOperationPermanentProgressNotice,
   showOperationProgressNotice
 } from './operation-notices.ts';
-import { PluginSettings } from './plugin-settings.ts';
+import {
+  FolderNoteLocation,
+  PluginSettings
+} from './plugin-settings.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   getAbstractFileOrNull: vi.fn(),
-  isFile: vi.fn()
+  isFile: vi.fn(),
+  isFolder: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
@@ -47,19 +54,38 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 
 const mockGetAbstractFileOrNull = vi.mocked(getAbstractFileOrNull);
 const mockIsFile = vi.mocked(isFile);
+const mockIsFolder = vi.mocked(isFolder);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 const app = strictProxy<App>({});
+const pluginSettingsComponent = createPluginSettingsComponent(true);
+const folderNoteSettingsComponent = createFolderNoteSettingsComponent();
+// `name` as well as `path`: the folder-note name template resolves `{{folderName}}` off it.
+const folder = strictProxy<TFolder>({ name: 'charlie', path: 'charlie' });
 
 interface ClickLinkParams {
   readonly app: App;
   onClick?(this: void): Promise<void>;
   readonly path: string;
+
+  /**
+   * Only the folder branch reads it, so every file-side case leaves it at the default.
+   *
+   * @default the module-level component
+   */
+  readonly pluginSettingsComponent?: PluginSettingsComponent;
 }
 
 interface ClickLinkResult {
   readonly aEl: HTMLAnchorElement;
   readonly wasDefaultPrevented: boolean;
+}
+
+interface FolderClickApp {
+  readonly app: App;
+  readonly getFileByPath: Mock;
+  readonly openFile: Mock;
+  readonly revealInFolder: Mock;
 }
 
 /**
@@ -69,11 +95,16 @@ interface ClickLinkResult {
  * @returns The rendered anchor and whether the click's default was prevented.
  */
 async function clickLink(params: ClickLinkParams): Promise<ClickLinkResult> {
-  const { app: linkApp, onClick, path } = params;
+  const {
+    app: linkApp,
+    onClick,
+    path
+  } = params;
   const aEl = await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
     app: linkApp,
     onClick,
-    pathOrAbstractFile: path
+    pathOrAbstractFile: path,
+    pluginSettingsComponent: params.pluginSettingsComponent ?? pluginSettingsComponent
   }));
   // `cancelable` so `defaultPrevented` means something — a non-cancelable event reports `false` no matter
   // What the listener did, which would make the assertion vacuous.
@@ -82,12 +113,52 @@ async function clickLink(params: ClickLinkParams): Promise<ClickLinkResult> {
   return { aEl, wasDefaultPrevented: $event.defaultPrevented };
 }
 
+/**
+ * Builds the app a FOLDER link's click reads: the file explorer it must not reveal through a second time,
+ * the vault the folder note is looked up in, and the leaf it is opened into.
+ *
+ * @param folderNote - The note `vault.getFileByPath` answers with, or `null` for a folder that has none.
+ * @returns The app and the three spies the assertions read.
+ */
+function createAppForFolderClick(folderNote: null | TFile): FolderClickApp {
+  const getFileByPath = vi.fn().mockReturnValue(folderNote);
+  const openFile = vi.fn().mockResolvedValue(undefined);
+  const revealInFolder = vi.fn();
+  const folderApp = strictProxy<App>({
+    internalPlugins: strictProxy<App['internalPlugins']>({
+      getEnabledPluginById: vi.fn().mockReturnValue({ revealInFolder })
+    }),
+    vault: strictProxy<App['vault']>({ getFileByPath }),
+    workspace: strictProxy<App['workspace']>({
+      getLeaf: vi.fn().mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile }))
+    })
+  });
+  return {
+    app: folderApp,
+    getFileByPath,
+    openFile,
+    revealInFolder
+  };
+}
+
 function createAppWithFileExplorer(revealInFolder: () => void): App {
   return strictProxy<App>({
     internalPlugins: strictProxy<App['internalPlugins']>({
       getEnabledPluginById: vi.fn().mockReturnValue({ revealInFolder })
     })
   });
+}
+
+/**
+ * A settings component naming folder notes explicitly, so the folder cases never take the `Auto` branch —
+ * that one reads the installed `folder-notes` plugin, which a `strictProxy` app has no `plugins` for.
+ *
+ * @returns The component.
+ */
+function createFolderNoteSettingsComponent(): PluginSettingsComponent {
+  const settings = new PluginSettings();
+  settings.folderNoteLocation = FolderNoteLocation.InsideFolder;
+  return strictProxy<PluginSettingsComponent>({ settings });
 }
 
 function createPluginSettingsComponent(shouldShowOperationNotices: boolean): PluginSettingsComponent {
@@ -107,6 +178,10 @@ function emptyContent(): Promise<DocumentFragment> {
 }
 
 beforeEach(() => {
+  // Reset rather than left standing: nothing here restores mocks between tests, so a folder case's `true`
+  // Would otherwise send a later file case down the folder branch.
+  mockIsFile.mockReturnValue(false);
+  mockIsFolder.mockReturnValue(false);
   mockRenderInternalLink.mockImplementation((params) => {
     const path = typeof params.pathOrAbstractFile === 'string' ? params.pathOrAbstractFile : params.pathOrAbstractFile.path;
     return Promise.resolve(createEl('a', { text: `[${path}]` }));
@@ -117,6 +192,7 @@ describe('buildOperationNoticeContent', () => {
   it('should render the source alone when there is no target', async () => {
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       sourcePathOrAbstractFile: 'alpha.md',
       verb: 'Flattened folder'
     });
@@ -127,6 +203,7 @@ describe('buildOperationNoticeContent', () => {
   it('should render the source and the target joined by the default preposition', async () => {
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       sourcePathOrAbstractFile: 'alpha.md',
       targetPathOrAbstractFile: 'bravo.md',
       verb: 'Merged note'
@@ -138,6 +215,7 @@ describe('buildOperationNoticeContent', () => {
   it('should honor a custom preposition', async () => {
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       preposition: 'with',
       sourcePathOrAbstractFile: 'alpha.md',
       targetPathOrAbstractFile: 'bravo.md',
@@ -150,6 +228,7 @@ describe('buildOperationNoticeContent', () => {
   it('should append the suffix before the terminating period', async () => {
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       sourcePathOrAbstractFile: 'alpha.md',
       suffix: ' and updated 3 links',
       verb: 'Renamed heading in'
@@ -161,6 +240,7 @@ describe('buildOperationNoticeContent', () => {
   it('should render a consumed source as plain text rather than a link that would recreate it', async () => {
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       shouldLinkSource: false,
       sourcePathOrAbstractFile: 'alpha.md',
       targetPathOrAbstractFile: 'bravo.md',
@@ -175,6 +255,7 @@ describe('buildOperationNoticeContent', () => {
 
     const fragment = await buildOperationNoticeContent({
       app,
+      pluginSettingsComponent,
       shouldLinkSource: false,
       sourcePathOrAbstractFile: sourceFile,
       verb: 'Merged note'
@@ -187,6 +268,7 @@ describe('buildOperationNoticeContent', () => {
     const fragment = await buildOperationNoticeContent({
       app,
       isLoading: true,
+      pluginSettingsComponent,
       sourcePathOrAbstractFile: 'alpha.md',
       targetPathOrAbstractFile: 'bravo.md',
       verb: 'Merging note'
@@ -219,14 +301,56 @@ describe('renderOperationNoticeLink', () => {
   });
 
   it('should reveal nothing for a folder, whose click dev-utils already owns', async () => {
-    const revealInFolder = vi.fn();
-    mockGetAbstractFileOrNull.mockReturnValue(strictProxy<TFolder>({ path: 'charlie' }));
+    mockGetAbstractFileOrNull.mockReturnValue(folder);
     mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockReturnValue(true);
+    const { app: folderApp, revealInFolder } = createAppForFolderClick(null);
 
-    await clickLink({ app: createAppWithFileExplorer(revealInFolder), path: 'charlie' });
+    await clickLink({ app: folderApp, path: 'charlie', pluginSettingsComponent: folderNoteSettingsComponent });
 
     // Revealing again here would be a SECOND reveal on the same click, not a missing one.
     expect(revealInFolder).not.toHaveBeenCalled();
+  });
+
+  it('should open the folder note of a folder on click', async () => {
+    mockGetAbstractFileOrNull.mockReturnValue(folder);
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockReturnValue(true);
+    const folderNote = strictProxy<TFile>({ path: 'charlie/charlie.md' });
+    const {
+      app: folderApp,
+      getFileByPath,
+      openFile
+    } = createAppForFolderClick(folderNote);
+
+    const { wasDefaultPrevented } = await clickLink({ app: folderApp, path: 'charlie', pluginSettingsComponent: folderNoteSettingsComponent });
+
+    // Named from the folder-note SETTINGS, which is the plugin's own answer to which note describes a
+    // Folder — the same one `Rename folder...` keeps in step.
+    expect(getFileByPath).toHaveBeenCalledExactlyOnceWith('charlie/charlie.md');
+    // Fired through `invokeAsyncSafely` behind the settle delay, so it is in flight rather than awaited.
+    await vi.waitFor(() => {
+      expect(openFile).toHaveBeenCalledExactlyOnceWith(folderNote, { active: true });
+    });
+    // The open is layered on top of dev-utils' reveal, which keeps its own `preventDefault`: the folder
+    // Stays highlighted while its note opens.
+    expect(wasDefaultPrevented).toBe(false);
+  });
+
+  it('should open nothing for a folder that has no folder note', async () => {
+    mockGetAbstractFileOrNull.mockReturnValue(folder);
+    mockIsFile.mockReturnValue(false);
+    mockIsFolder.mockReturnValue(true);
+    // `null` is every "this vault has no folder notes" case at once — the location turned off, a template
+    // Naming a note that was never written. Reveal-only is what it must fall back to, and nothing may be
+    // CREATED on the way to finding out.
+    const { app: folderApp, openFile } = createAppForFolderClick(null);
+
+    await clickLink({ app: folderApp, path: 'charlie', pluginSettingsComponent: folderNoteSettingsComponent });
+
+    // Asserted without waiting on purpose: the resolution is synchronous, so a missing note schedules no
+    // Open at all rather than one that has yet to run.
+    expect(openFile).not.toHaveBeenCalled();
   });
 
   it('should reveal nothing when the path no longer resolves', async () => {
