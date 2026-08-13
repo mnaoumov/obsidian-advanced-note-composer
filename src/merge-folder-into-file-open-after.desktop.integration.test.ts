@@ -1,6 +1,10 @@
-import type { TFile } from 'obsidian';
+import type { EventRef } from 'obsidian';
 
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  ContextId,
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
@@ -8,156 +12,212 @@ import {
   it
 } from 'vitest';
 
+import {
+  findSettingsComponentInObsidian,
+  startActivationRecorderInObsidian,
+  trashIfExistsInObsidian
+} from './merge-suite-in-obsidian.ts';
+import { describeStall } from './merge-suite-stall.ts';
+
 // Desktop-only: this is a folder-contents merge (file-delete) flow, matching the plugin's established
-// Integration convention. File-move/delete suites can hit the documented headless rename wall when several
-// Run in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
+// Integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-open-after.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
-// Same budget as `merge-folder-no-active-leaf-cycling`: the assertion is about WHETHER the merged note is
-// Opened, never about how fast, so a loaded machine must not be able to fail it.
+// The assertion is about WHETHER the merged note is opened, never about how fast, so a loaded machine must
+// Not be able to fail it. Each phase below is its own short eval and the waiting is done from Node, so this
+// Budget is the one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap.
 const MERGE_TIMEOUT_IN_MILLISECONDS = 90_000;
-const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
+// Above the sum of the budgets used below, so a genuine stall reports the NAMED poll timeout rather than
+// Losing the race to a bare vitest timeout.
+const TEST_TIMEOUT_IN_MILLISECONDS = 180_000;
+const RENDER_DELAY_IN_MILLISECONDS = 400;
+const SOURCE_FOLDER = 'open-after-src';
+const MERGED_NOTE_PATH = 'open-after-src.md';
+const NO_FILE = '<no file>';
 
-interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MergeSettings;
-}
-
+/**
+ * The settings this suite drives.
+ */
 interface MergeSettings {
+  /**
+   * `Delete`, so the emptied folder disappearing is the post-commit signal.
+   */
   emptyFolderBehaviorAfterMergingFolder: string;
+
+  /**
+   * Off, so the merge runs without a confirmation dialog.
+   */
   shouldAskBeforeMerging: boolean;
+
+  /**
+   * The feature under test (issue #212).
+   */
   shouldOpenNoteAfterMergingFolderIntoFile: boolean;
 }
 
-interface SettingsCarrier {
-  editAndSave(editor: (settings: MergeSettings) => void): Promise<void>;
-  settings: MergeSettings;
+/**
+ * What the suite's evals hand to each other, on `window` in the Obsidian process.
+ */
+interface SuiteContext {
+  /**
+   * The recorder's registration, so cleanup can take it back off.
+   */
+  eventRef?: EventRef;
+
+  /**
+   * The settings as they were, to restore in the shared vault.
+   */
+  originalSettings?: MergeSettings;
+
+  /**
+   * Every path the active leaf visited since the recorder was installed.
+   */
+  recording?: string[];
 }
 
 describe('merge folder contents into a single file opens the merged note (issue #212)', () => {
   it('opens the merged note exactly once when the setting is on', async () => {
-    const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, mergeTimeoutInMilliseconds, obsidianModule, pluginId }) {
-        const RENDER_DELAY_IN_MILLISECONDS = 400;
-        const SOURCE_FOLDER = 'open-after-src';
-        const MERGED_NOTE_PATH = 'open-after-src.md';
+    const contextId = new ContextId<SuiteContext>();
+    const vaultPath = getTemporaryVault().path;
 
-        const settingsComponent = findSettingsComponent();
-        const original = { ...settingsComponent.settings };
-        // Every note the merge activates, so a per-note open coming back (issue #106) shows up as MORE than
-        // One entry: both sources merge into the SAME target, so cycling would activate it once per note.
-        const openedMergedNote: string[] = [];
-        let eventRef: unknown = null;
-        try {
+    try {
+      await evalInObsidian({
+        async callback({ app, context, findSettingsComponent, pluginId }) {
+          const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
+          context.originalSettings = {
+            emptyFolderBehaviorAfterMergingFolder: settingsComponent.settings.emptyFolderBehaviorAfterMergingFolder,
+            shouldAskBeforeMerging: settingsComponent.settings.shouldAskBeforeMerging,
+            shouldOpenNoteAfterMergingFolderIntoFile: settingsComponent.settings.shouldOpenNoteAfterMergingFolderIntoFile
+          };
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMerging = false;
             settings.shouldOpenNoteAfterMergingFolderIntoFile = true;
             // The emptied folder disappearing is the post-commit signal; the open runs after that.
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
           });
+        },
+        contextId,
+        input: { findSettingsComponent: findSettingsComponentInObsidian, pluginId: PLUGIN_ID },
+        vaultPath
+      });
 
-          await trashIfExists(SOURCE_FOLDER);
-          await trashIfExists(MERGED_NOTE_PATH);
+      await evalInObsidian({
+        async callback({ app, mergedNotePath, sourceFolder, trashIfExists }) {
+          await trashIfExists({ app, path: sourceFolder });
+          await trashIfExists({ app, path: mergedNotePath });
 
-          await app.vault.createFolder(SOURCE_FOLDER);
-          const alpha = await app.vault.create(`${SOURCE_FOLDER}/alpha.md`, 'alpha body');
-          await app.vault.create(`${SOURCE_FOLDER}/beta.md`, 'beta body');
+          await app.vault.createFolder(sourceFolder);
+          await app.vault.create(`${sourceFolder}/alpha.md`, 'alpha body');
+          await app.vault.create(`${sourceFolder}/beta.md`, 'beta body');
+        },
+        input: { mergedNotePath: MERGED_NOTE_PATH, sourceFolder: SOURCE_FOLDER, trashIfExists: trashIfExistsInObsidian },
+        vaultPath
+      });
 
+      await evalInObsidian({
+        async callback({ app, context, lib: { waitUntil }, noFile, obsidianModule, sourceFolder, startActivationRecorder }) {
           // The folder command resolves its folder from the ACTIVE file's parent, and this is also what
           // Makes the starting point a note OTHER than the merged one.
-          await openFile(alpha);
-
-          eventRef = app.workspace.on('active-leaf-change', () => {
-            const activePath = app.workspace.getActiveFile()?.path;
-            if (activePath === MERGED_NOTE_PATH) {
-              openedMergedNote.push(activePath);
-            }
-          });
-
-          app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`);
-
+          const alpha = app.vault.getAbstractFileByPath(`${sourceFolder}/alpha.md`);
+          if (!(alpha instanceof obsidianModule.TFile)) {
+            throw new TypeError('The source note was not created.');
+          }
+          await app.workspace.getLeaf(false).openFile(alpha);
           await waitUntil({
-            message: 'merged single file was not created',
-            predicate: () => app.vault.getAbstractFileByPath(MERGED_NOTE_PATH) !== null,
-            timeoutInMilliseconds: mergeTimeoutInMilliseconds
+            message: `editor for ${alpha.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === alpha.path
           });
-          await waitUntil({
-            message: 'the emptied folder was not deleted, so the merge had not committed',
-            predicate: () => app.vault.getAbstractFileByPath(SOURCE_FOLDER) === null,
-            timeoutInMilliseconds: mergeTimeoutInMilliseconds
-          });
-          await waitUntil({
-            message: 'the merged note was never opened',
-            predicate: () => app.workspace.getActiveFile()?.path === MERGED_NOTE_PATH,
-            timeoutInMilliseconds: mergeTimeoutInMilliseconds
-          });
+
+          context.recording = [];
+          context.eventRef = startActivationRecorder({ app, noFile, recording: context.recording });
+        },
+        contextId,
+        input: { noFile: NO_FILE, sourceFolder: SOURCE_FOLDER, startActivationRecorder: startActivationRecorderInObsidian },
+        vaultPath
+      });
+
+      // The merge is kicked off and then polled from NODE, each poll its own sub-second eval, so the budget
+      // Above is enforceable instead of being cut short by the CDP cap.
+      const wasCommandStarted = await evalInObsidian({
+        callback: ({ app, pluginId }) => app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`),
+        input: { pluginId: PLUGIN_ID },
+        vaultPath
+      });
+      // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the waits
+      // Below would blame a slow merge for a merge that was never allowed to start.
+      expect(wasCommandStarted).toBe(true);
+
+      const mergeStatus = await pollInObsidian({
+        input: { mergedNotePath: MERGED_NOTE_PATH, sourceFolder: SOURCE_FOLDER },
+        poll: ({ app, mergedNotePath, sourceFolder }) => ({
+          mergedNoteCreated: app.vault.getAbstractFileByPath(mergedNotePath) !== null,
+          sourceGone: app.vault.getAbstractFileByPath(sourceFolder) === null
+        }),
+        timeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the emptied folder was not deleted, so the merge had not committed',
+        until: (status) => status.mergedNoteCreated && status.sourceGone,
+        vaultPath
+      }).catch(async (error: unknown) => {
+        throw await describeStall({ error, paths: [MERGED_NOTE_PATH, SOURCE_FOLDER], vaultPath });
+      });
+
+      await pollInObsidian({
+        poll: ({ app }) => ({ activePath: app.workspace.getActiveFile()?.path ?? null }),
+        timeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the merged note was never opened',
+        until: (status) => status.activePath === MERGED_NOTE_PATH,
+        vaultPath
+      }).catch(async (error: unknown) => {
+        throw await describeStall({ error, paths: [MERGED_NOTE_PATH], vaultPath });
+      });
+
+      const { activePath, recording } = await evalInObsidian({
+        async callback({ app, context, renderDelayInMilliseconds }) {
           // Long enough for a second, unwanted open to show up in the recorder before it is read.
-          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          await sleep(renderDelayInMilliseconds);
+          return { activePath: app.workspace.getActiveFile()?.path ?? null, recording: [...context.recording ?? []] };
+        },
+        contextId,
+        input: { renderDelayInMilliseconds: RENDER_DELAY_IN_MILLISECONDS },
+        vaultPath
+      });
 
-          return {
-            activePath: app.workspace.getActiveFile()?.path ?? null,
-            openedMergedNoteCount: openedMergedNote.length
-          };
-        } finally {
-          if (eventRef) {
-            app.workspace.offref(eventRef as Parameters<typeof app.workspace.offref>[0]);
+      // The merge actually ran, and the user ends up in the note it produced...
+      expect(mergeStatus.mergedNoteCreated).toBe(true);
+      expect(activePath).toBe(MERGED_NOTE_PATH);
+      // ...having been taken there exactly once. More than one activation would be issue #106 all over again:
+      // Both sources merge into this same note, so a per-note open would activate it once per merged note.
+      expect(recording.filter((activation) => activation === MERGED_NOTE_PATH)).toHaveLength(1);
+    } finally {
+      await evalInObsidian({
+        async callback({ app, context, findSettingsComponent, mergedNotePath, pluginId, sourceFolder, trashIfExists }) {
+          if (context.eventRef) {
+            app.workspace.offref(context.eventRef);
           }
           // The merged note lands at the vault root, which the whole aggregate shares.
-          await trashIfExists(MERGED_NOTE_PATH);
-          await trashIfExists(SOURCE_FOLDER);
-          await settingsComponent.editAndSave((settings) => {
-            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
-            settings.shouldOpenNoteAfterMergingFolderIntoFile = original.shouldOpenNoteAfterMergingFolderIntoFile;
-            settings.emptyFolderBehaviorAfterMergingFolder = original.emptyFolderBehaviorAfterMergingFolder;
-          });
-        }
-
-        function findSettingsComponent(): SettingsCarrier {
-          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
-          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
-          while (queue.length > 0) {
-            const node = queue.shift();
-            if (!node) {
-              continue;
-            }
-            if (isSettingsComponent(node)) {
-              return node;
-            }
-            if (node._children) {
-              queue.push(...node._children);
-            }
+          await trashIfExists({ app, path: mergedNotePath });
+          await trashIfExists({ app, path: sourceFolder });
+          const { originalSettings } = context;
+          if (originalSettings) {
+            const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
+            await settingsComponent.editAndSave((settings) => {
+              settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
+              settings.shouldOpenNoteAfterMergingFolderIntoFile = originalSettings.shouldOpenNoteAfterMergingFolderIntoFile;
+              settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
+            });
           }
-          throw new Error('Settings component was not found.');
-        }
-
-        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldAskBeforeMerging === 'boolean';
-        }
-
-        async function openFile(file: TFile): Promise<void> {
-          await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({
-            message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
-          });
-        }
-
-        async function trashIfExists(path: string): Promise<void> {
-          const existing = app.vault.getAbstractFileByPath(path);
-          if (existing) {
-            await app.fileManager.trashFile(existing);
-          }
-        }
-      },
-      input: { mergeTimeoutInMilliseconds: MERGE_TIMEOUT_IN_MILLISECONDS, pluginId: PLUGIN_ID },
-      vaultPath: getTemporaryVault().path
-    });
-
-    // The user ends up in the note the merge produced...
-    expect(result.activePath).toBe('open-after-src.md');
-    // ...having been taken there exactly once. More than one activation would be issue #106 all over again:
-    // Both sources merge into this same note, so a per-note open would activate it once per merged note.
-    expect(result.openedMergedNoteCount).toBe(1);
+        },
+        contextId,
+        input: {
+          findSettingsComponent: findSettingsComponentInObsidian,
+          mergedNotePath: MERGED_NOTE_PATH,
+          pluginId: PLUGIN_ID,
+          sourceFolder: SOURCE_FOLDER,
+          trashIfExists: trashIfExistsInObsidian
+        },
+        vaultPath
+      });
+      await contextId.dispose(vaultPath);
+    }
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
