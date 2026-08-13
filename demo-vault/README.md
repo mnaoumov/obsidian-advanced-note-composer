@@ -1,3 +1,5 @@
+# Advanced Note Composer demo vault
+
 This is an [Obsidian](https://obsidian.md/) vault demonstrating features of the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-advanced-note-composer) plugin.
 
 ## Opening this vault

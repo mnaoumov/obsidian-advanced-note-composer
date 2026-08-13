@@ -1,12 +1,13 @@
 {
-  // Scoped markdownlint config for the demo vault. The notes are an Obsidian
-  // vault, so two default rules are inherently incompatible and disabled here;
-  // every other rule still applies so the notes stay clean.
+  // Scoped markdownlint config for the demo vault. Only one default rule is incompatible with what
+  // These notes do; every other rule applies, as it does to the rest of the documentation.
   "config": {
-    // Notes intentionally open with a `[Docs](...)` link, not a heading.
-    "MD041": false,
-    // `[[wikilinks]]` are Obsidian's native link syntax; markdownlint parses
-    // them as undefined shortcut reference links.
-    "MD052": false
+    // `Rename heading backlinks.md` deliberately keeps Obsidian `[[wikilinks]]` -- they are the
+    // Backlinks the heading rename rewrites -- and markdownlint parses one as an undefined shortcut
+    // Reference link.
+    "MD052": false,
+    // A `title` in frontmatter is an Obsidian PROPERTY, not the document title, so it must not
+    // Count as the note's top-level heading -- otherwise the required `# H1` reads as a second one.
+    "MD025": { "front_matter_title": "" }
   }
 }

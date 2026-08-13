@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Rename heading
 
 Rename a heading and update **every link that points to it across the vault** - including a link
@@ -13,7 +11,7 @@ reference the heading are left untouched.
 
 1. Put the cursor on the `## Second Concept` heading line below.
 2. Run `Rename heading...` and enter `New Concept`.
-3. The heading is renamed **and** the links in [[Rename heading backlinks]] are rewritten:
+3. The heading is renamed **and** the links in [Rename heading backlinks](<./Rename heading backlinks.md>) are rewritten:
    - `[[22 Rename heading#Second Concept#Definition]]` becomes
      `[[22 Rename heading#New Concept#Definition]]`
    - `[[22 Rename heading#Second Concept]]` becomes `[[22 Rename heading#New Concept]]`

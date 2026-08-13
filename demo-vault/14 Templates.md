@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Templates
 
 Merged and split content can be wrapped in a **template**. Templates support tokens that are
@@ -28,15 +26,15 @@ in** - which with **Should split into folder** on is the folder the split just c
   the same folder.
 
 `{{rawFolderName}}` and `{{file}}` are **not** available here: a split has no folder-name prompt, and
-it writes one note rather than several. See [[29 Create folder with notes]] for the command those two
-belong to, and [[25 Split into folder]] for the setting that gives a split a folder of its own.
+it writes one note rather than several. See [29 Create folder with notes](<./29 Create folder with notes.md>) for the command those two
+belong to, and [25 Split into folder](<./25 Split into folder.md>) for the setting that gives a split a folder of its own.
 
 There are three base template settings: **Merge template**, **Split template**, and
 **Smart cut & paste template**. Empty templates fall back up the chain:
 smart cut and paste falls back to split, which falls back to merge.
 
 Smart cut and paste can also be templated **per direction** - see
-[[09 Smart cut and paste]].
+[09 Smart cut and paste](<./09 Smart cut and paste.md>).
 
 ## Try it
 

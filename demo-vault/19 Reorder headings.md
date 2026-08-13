@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Reorder headings
 
 Reorder a note's **headings at any level** without cutting and pasting. The dialog shows the whole

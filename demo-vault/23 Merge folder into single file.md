@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Merge folder contents into a single file
 
 Concatenate **every note inside a folder** (recursively - a folder's own notes first, then each
@@ -9,11 +7,11 @@ another folder - here everything collapses into a single file.
 
 ## Try it
 
-1. Open any note inside the `Merge into single file` folder - for example [[Intro]].
+1. Open any note inside the `Merge into single file` folder - for example [Intro](<./Merge into single file/Intro.md>).
 2. Run `Merge current folder contents into a single file...` (also on the folder's right-click menu).
 3. Confirm the dialog.
 
-The notes [[Intro]], [[Part 1]], and the nested [[Part 2]] are combined into a new
+The notes [Intro](<./Merge into single file/Intro.md>), [Part 1](<./Merge into single file/Part 1.md>), and the nested [Part 2](<./Merge into single file/Nested/Part 2.md>) are combined into a new
 `Merge into single file.md` note next to the folder. Each note is run through the same merge pipeline
 as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing,
 and link/backlink updates all apply. The source notes are deleted once merged.
@@ -26,8 +24,8 @@ it compares `3` against `5` and `1` against `2` character by character.
 
 Run the merge on the `Merge index order` folder and read the result top to bottom:
 
-1. [[1. Overview]], [[5. Middle]], [[30. Appendix]] - the folder's own notes, in index order.
-2. Then the `1. Chapters` sub-folder: [[1.1 First]], [[1.2 Second]], [[1.10 Tenth]].
+1. [1. Overview](<./Merge index order/1. Overview.md>), [5. Middle](<./Merge index order/5. Middle.md>), [30. Appendix](<./Merge index order/30. Appendix.md>) - the folder's own notes, in index order.
+2. Then the `1. Chapters` sub-folder: [1.1 First](<./Merge index order/1. Chapters/1.1 First.md>), [1.2 Second](<./Merge index order/1. Chapters/1.2 Second.md>), [1.10 Tenth](<./Merge index order/1. Chapters/1.10 Tenth.md>).
 
 The rule is general, not an index-prefix parser: **every** run of digits in a name counts as one
 number, wherever it sits. A name with no digits in it sorts alphabetically exactly as before.
@@ -49,7 +47,7 @@ at `Merge into single file summary.md`. It takes `{{folderName}}`, `{{folderPath
 ## Turn sub-folders into headings
 
 Turn on **Should convert folders to headings when merging a folder** and run the merge again. The
-nested `Nested` folder becomes a `# Nested` heading in the merged note, and [[Part 2]]'s own headings
+nested `Nested` folder becomes a `# Nested` heading in the merged note, and [Part 2](<./Merge into single file/Nested/Part 2.md>)'s own headings
 are demoted one level so they nest under it instead of competing with it. A folder one level deeper
 would become `##`, and so on.
 
@@ -62,8 +60,9 @@ Markdown only defines six heading levels, so a folder more than six deep gets a 
 line, which Obsidian renders as plain text rather than a heading. The full depth is still written out
 — stopping at `######` would make a folder and its own descendants look like siblings.
 
-This is the exact opposite of `Split note by headings recursively...` (see [[27 Split headings
-recursively]]): split a note into a folder tree and merge it back, and the heading levels agree.
+This is the exact opposite of `Split note by headings recursively...` (see
+[27 Split headings recursively](<./27 Split headings recursively.md>)): split a note into a folder
+tree and merge it back, and the heading levels agree.
 
 ## See the merged note
 

@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Extract between horizontal rules
 
 Extract the block of content **between the horizontal rules closest to the cursor** into its own

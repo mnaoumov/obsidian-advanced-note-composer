@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer#invalid-titles)
-
 # Invalid titles
 
 Headings can contain characters that are illegal in file names. The core plugin refuses to

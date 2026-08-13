@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Split into folder
 
 When a split or extract creates a **new** note, optionally wrap it in a brand-new folder named after
@@ -26,8 +24,8 @@ overrides that, so every folder split produces the same note name.
 3. It now lands at `My second extract/Overview.md` — the folder still carries the name you typed, the
    note inside it is always `Overview`.
 
-The name you typed is not lost: it is added as an alias and a frontmatter `title`, so `[[My second
-extract]]` still resolves.
+The name you typed is not lost: it is added as an alias and a frontmatter `title`, so
+`[[My second extract]]` still resolves.
 
 The field takes the same `{{...}}` tokens as the templates (except `{{content}}`), resolved against the
 new note before it moves — so `{{newTitle}}` is the folder name and `{{newTitle}} index` yields
@@ -37,7 +35,7 @@ after its folder.
 ## Naming the folder in your template
 
 The folder tokens of `Create folder with notes...` work in **Split template** too, naming the folder
-the split just created — see [[14 Templates]]. The button below sets a split template that stamps that
+the split just created — see [14 Templates](<./14 Templates.md>). The button below sets a split template that stamps that
 folder's name and its number onto every extracted note; extract into a note named `3. Design` and the
 produced note carries `title: 3. Design`, `aliases: [Design]` and `part: 3`.
 

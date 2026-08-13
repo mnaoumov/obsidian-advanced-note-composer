@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Operation notices
 
 Every operation this plugin runs tells you about itself: a notice **while it is running**, so you know

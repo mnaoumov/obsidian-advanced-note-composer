@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Block commands on excluded paths
 
 Advanced Note Composer has **two independent path filters**, and knowing which is which is the whole

@@ -1,12 +1,10 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Swap folder
 
 Exchange two folders - either their entire structures or just the top-level notes.
 
 ## Try it
 
-1. Open [[Note A]] inside `Swap examples/Folder A`.
+1. Open [Note A](<./Merge multiple files/Note A.md>) inside `Swap examples/Folder A`.
 2. Run `Swap folder with...`.
 3. Pick `Folder B`.
 4. A confirmation dialog asks you to confirm the swap - click **Swap** (or **Change target** to pick a

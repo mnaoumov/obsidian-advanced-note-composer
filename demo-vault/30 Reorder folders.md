@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Reorder folders
 
 Put a folder's contents in the order **you** choose, and renumber them to match — the number in each

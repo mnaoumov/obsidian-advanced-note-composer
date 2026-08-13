@@ -1,8 +1,6 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Split heading recursively
 
-[[27 Split headings recursively]] restructures the *whole* note. This command does the same thing to
+[27 Split headings recursively](<./27 Split headings recursively.md>) restructures the *whole* note. This command does the same thing to
 **one** heading — the one your cursor is in — and leaves every other heading exactly where it is. Use it
 when a single section has outgrown its note and the rest should stay put.
 

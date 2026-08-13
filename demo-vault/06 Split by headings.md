@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Split by headings
 
 Break one note into many, one per heading of a chosen level.

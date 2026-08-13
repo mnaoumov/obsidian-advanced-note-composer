@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Create folder with notes
 
 Create a folder **and the notes inside it** in one step. A prompt asks for the folder name, cleans up
