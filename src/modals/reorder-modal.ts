@@ -226,10 +226,11 @@ class ReorderModal extends Modal {
     this.params = params.openParams;
     this.promiseResolve = params.promiseResolve;
 
-    this.scope.register([], 'Escape', () => {
-      this.close();
-      return false;
-    });
+    // No `Escape` registration, deliberately: Obsidian's own `Modal` already closes on `Escape` AND
+    // `preventDefault`s it, so registering one here is dead code — established by mutation (deleting it
+    // Left every assertion in `reorder-modal-escape.desktop.integration.test.ts` green), not by
+    // Reading. Do not re-add it; what cancelling has to get right lives in `onClose` below, and that IS
+    // Covered.
   }
 
   public override onClose(): void {
