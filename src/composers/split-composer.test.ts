@@ -37,6 +37,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { Selection } from './composer-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
+import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
@@ -44,6 +45,7 @@ import {
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
+import { revealInsertedContent } from '../reveal-inserted-content.ts';
 import {
   getSelections,
   padEdgeMoveTemplate,
@@ -126,6 +128,23 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
+// Kept REAL, only wrapped, so the notice content still renders exactly as it does in production — the spy is
+// Just how the test reaches the `onTargetLinkClick` the composer handed over (issue #232).
+vi.mock('../operation-notices.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../operation-notices.ts')>();
+  return {
+    ...original,
+    buildOperationNoticeContent: vi.fn(original.buildOperationNoticeContent)
+  };
+});
+
+// `revealInsertedContent` polls a live workspace for a MarkdownView; what this suite asserts is that the
+// Composer asks for the right thing, not that the poll works (its locator has its own suite).
+vi.mock('../reveal-inserted-content.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../reveal-inserted-content.ts')>()),
+  revealInsertedContent: vi.fn().mockResolvedValue(undefined)
 }));
 
 let app: AppOriginal;
@@ -926,7 +945,7 @@ describe('splitFile move mode', () => {
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(targetEditor.setCursor).not.toHaveBeenCalled();
-    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the moved content'));
+    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the inserted content'));
   });
 
   it('places a collapsed cursor and shows a notice instead of selecting, in Notice feedback mode (issue #176)', async () => {
@@ -1124,7 +1143,7 @@ describe('splitFile move mode', () => {
     await composer.splitFile();
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
-    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the moved content'));
+    expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the inserted content'));
   });
 });
 
@@ -1689,6 +1708,14 @@ describe('splitFile frontmatter-only extract', () => {
     expect(targetBody).toContain('target body');
   });
 
+  it('should offer the notice link no jump, having written no body to jump to (issue #232)', async () => {
+    await createFrontmatterSourceComposer({ editor: createEditorDouble() }).splitFile();
+
+    // The properties were merged into the destination's own frontmatter, so there is no inserted region;
+    // The link keeps its plain open-the-note behavior rather than jumping somewhere arbitrary.
+    expect(getTargetLinkClickAction()).toBeUndefined();
+  });
+
   it('should rewrite the source frontmatter with what is left', async () => {
     const editor = createEditorDouble();
     await createFrontmatterSourceComposer({ editor }).splitFile();
@@ -1744,3 +1771,52 @@ describe('splitFile frontmatter-only extract', () => {
     expect(editor.replaceSelection).not.toHaveBeenCalled();
   });
 });
+
+/*
+ * Issue #232: the destination link of an extract's completion notice used to open the note at its top,
+ * leaving the reporter to hunt for what they had just extracted. It now carries an action that lands them on
+ * it — reusing the very pair the smart cut & paste jump of issues #144/#175 already records.
+ */
+describe('splitFile completion notice link', () => {
+  it('should hand the notice an action that jumps to the extracted content', async () => {
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 16, startOffset: 0 }],
+      editor: createEditorDouble(),
+      isNewTargetFile: false,
+      selectedText: 'EXTRACTED-CONTENT',
+      settingsOverrides: {
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+        mergeTemplate: '{{content}}',
+        textAfterExtractionMode: TextAfterExtractionMode.None
+      }
+    });
+
+    await composer.splitFile();
+    await ensureNonNullable(getTargetLinkClickAction())();
+
+    // Read off the recorded call rather than matched with `objectContaining`: pretty-format probes every
+    // Property of a mismatch, and a `strictProxy` TFile throws on the first unmocked one.
+    const revealParams = ensureNonNullable(vi.mocked(revealInsertedContent).mock.lastCall)[0];
+    // The DESTINATION note, and the exact string that was written into it — not a heading anchor, which
+    // Only `Extract this heading...` could ever have supplied.
+    expect(vi.mocked(revealInsertedContent)).toHaveBeenCalledOnce();
+    expect(revealParams.file).toBe(getTargetFile());
+    expect(revealParams.insertedContent).toBe('EXTRACTED-CONTENT');
+    expect(revealParams.insertedContentOffset).toBe('target body'.length);
+  });
+});
+
+/**
+ * Reads back the action the composer handed to its COMPLETION notice for the destination link.
+ *
+ * The progress notice builds its content through the same function, so the call is picked by
+ * `isLoading` rather than by position — a delayed progress notice that did resolve its content would
+ * otherwise be mistaken for the completion one.
+ *
+ * @returns The action, or `undefined` when none was offered.
+ */
+function getTargetLinkClickAction(): (() => Promise<void>) | undefined {
+  const calls = [...vi.mocked(buildOperationNoticeContent).mock.calls].reverse();
+  const completionCall = calls.find(([callParams]) => !(callParams.isLoading ?? false));
+  return ensureNonNullable(completionCall)[0].onTargetLinkClick;
+}

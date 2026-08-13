@@ -17,7 +17,10 @@ import {
 } from 'obsidian';
 import { noop } from 'obsidian-dev-utils/function';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
+import {
+  extractDefaultExportInterop,
+  normalizeOptionalProperties
+} from 'obsidian-dev-utils/object-utils';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import {
   editLinks,
@@ -37,6 +40,7 @@ import type {
   ExtractFrontmatterResult,
   Frontmatter
 } from '../frontmatter-merge.ts';
+import type { BuildOperationNoticeContentParams } from '../operation-notices.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { demoteHeadings } from '../folder-headings.ts';
@@ -203,6 +207,36 @@ export abstract class ComposerBase {
    * operation owns its own transaction via {@link runLockedTransaction}.
    */
   protected readonly injectedVaultTransaction: null | VaultTransaction;
+
+  /**
+   * The exact content string this operation wrote into the target note, captured by
+   * {@link insertContent} so the target can afterwards be scrolled to the inserted region rather than to
+   * its top — the cursor a move flow leaves behind (issue #144), and where the completion notice's
+   * destination link lands (issue #232).
+   *
+   * Recorded on BOTH insert paths: the token replacement of a move, and the ordinary append/prepend of an
+   * extract/merge. It used to be the token path only, back when the move flow was the only thing that
+   * needed to find its own output.
+   *
+   * Stays `null` only when nothing was inserted yet.
+   */
+  protected insertedContent: null | string = null;
+
+  /**
+   * Where {@link insertedContent} starts in the target note's content, captured by {@link insertContent}.
+   *
+   * Searching the target for `insertedContent` finds its FIRST occurrence, which is the inserted text only
+   * when nothing identical precedes it — so moving `test` to the BOTTOM of a note that already said
+   * `This is a test` landed the cursor on that earlier copy, while the same move to the top looked
+   * correct (issue #175). The offset pins the region exactly: the token is unique, and the append/prepend
+   * path knows the offset it spliced at.
+   *
+   * Stays `null` when the content was written by a route that cannot name one offset — the heading-aware
+   * merge, which interleaves the inserted note under matching headings. Then only the string search
+   * applies.
+   */
+  protected insertedContentOffset: null | number = null;
+
   protected readonly insertMode: InsertMode;
 
   /**
@@ -211,25 +245,6 @@ export abstract class ComposerBase {
    */
   protected readonly insertToken: null | string;
   protected readonly isNewTargetFile: boolean;
-
-  /**
-   * The exact content string that replaced {@link insertToken} in the target note, captured by
-   * {@link insertContent} so a move flow can select the moved region after re-opening the target
-   * (issue #144). Stays `null` for the append/prepend flow (no token).
-   */
-  protected movedContent: null | string = null;
-
-  /**
-   * Where {@link movedContent} starts in the target note's content, captured by {@link insertContent}
-   * from the position of the {@link insertToken} it replaced.
-   *
-   * Searching the target for `movedContent` finds its FIRST occurrence, which is the moved text only
-   * when nothing identical precedes it — so moving `test` to the BOTTOM of a note that already said
-   * `This is a test` landed the cursor on that earlier copy, while the same move to the top looked
-   * correct (issue #175). The token is unique, so the offset it occupied pins the moved region exactly.
-   * Stays `null` for the append/prepend flow (no token).
-   */
-  protected movedContentOffset: null | number = null;
 
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -288,13 +303,14 @@ export abstract class ComposerBase {
    * @returns A {@link Promise} resolving to the notice content fragment.
    */
   protected buildCompletionContent(verb: string, shouldLinkSource: boolean): Promise<DocumentFragment> {
-    return buildOperationNoticeContent({
+    return buildOperationNoticeContent(normalizeOptionalProperties<BuildOperationNoticeContentParams>({
       app: this.app,
+      onTargetLinkClick: this.getTargetLinkClickAction(),
       shouldLinkSource,
       sourcePathOrAbstractFile: this.sourceFile.path,
       targetPathOrAbstractFile: this.targetFile.path,
       verb: `${verb} note`
-    });
+    }));
   }
 
   /**
@@ -410,6 +426,22 @@ export abstract class ComposerBase {
   }
 
   protected abstract getSelections(): Promise<Selection[]>;
+
+  /**
+   * What clicking the DESTINATION link of this operation's completion notice should do on top of opening
+   * the note (issue #232).
+   *
+   * `undefined` — the base answer — leaves the link behaving exactly as it always has: Obsidian opens the
+   * destination, and {@link buildOperationNoticeContent} reveals it in the file explorer. {@link SplitComposer}
+   * overrides it to additionally land the user on the content that was just extracted, which is the whole
+   * point of the issue; a merge relocates the source note WHOLE, so "where did it go" is answered by opening
+   * the note and there is nothing narrower to jump to.
+   *
+   * @returns The extra click action, or `undefined` for none.
+   */
+  protected getTargetLinkClickAction(): (() => Promise<void>) | undefined {
+    return undefined;
+  }
 
   protected abstract getTemplate(): string;
 
@@ -672,11 +704,16 @@ export abstract class ComposerBase {
       // The moved region afterwards rather than the first string that happens to look like it
       // (issue #175). The replacement is a function so a `$&`/`$'` sequence inside the moved text is
       // Inserted literally instead of being expanded as a replacement pattern.
-      this.movedContent = contentToInsert;
-      this.movedContentOffset = existingContent.indexOf(this.insertToken);
+      this.insertedContent = contentToInsert;
+      this.insertedContentOffset = existingContent.indexOf(this.insertToken);
       return existingContent.replace(this.insertToken, () => contentToInsert);
     }
     const offset = resolveInsertOffset(existingContent, this.insertMode);
+    // The ordinary extract/merge append (or prepend) knows its own splice point exactly, so it records the
+    // Same pair the move flow does — that is what lets the completion notice's destination link land on
+    // The extracted content instead of at the top of the note (issue #232).
+    this.insertedContent = contentToInsert;
+    this.insertedContentOffset = offset;
     return `${existingContent.slice(0, offset)}${contentToInsert}${existingContent.slice(offset)}`;
   }
 
@@ -693,6 +730,16 @@ export abstract class ComposerBase {
       await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent({ contentToInsert: targetContentToInsert, existingContent: targetFileContent }));
       return;
     }
+
+    // The heading-aware merge interleaves the inserted note under whichever headings the target already
+    // Has, so there is no single splice offset to record — only the string, which the locator falls back
+    // To searching for. The exact string will NOT be found (`wrapText` below trims each section and
+    // Re-applies the template around it), but its TRIMMED form still is whenever the note stayed one
+    // Block — which is the locator's documented last-resort fallback. A merge that really did split the
+    // Content across headings matches nothing and leaves the destination link opening the note at its
+    // Top, exactly as it did before issue #232.
+    this.insertedContent = targetContentToInsert;
+    this.insertedContentOffset = null;
 
     // VaultTransaction.process takes a synchronous content provider, but building the heading-merged
     // Content is async (parseMarkdownHeadingDocument), so compute it first and apply it via modify,

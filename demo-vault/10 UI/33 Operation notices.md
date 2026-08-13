@@ -15,9 +15,21 @@ never flash one up - and it is the notice that carries the operation's **Cancel*
    quick ones.
 2. Watch the bottom-right corner. When it finishes you get a notice like
    `Flattened folder Demo into /, promoting 3 item(s).` - the note and folder names in it are clickable.
-3. Open `Settings -> Advanced Note Composer -> UI` and turn **Should show operation notices** off.
-4. Run the same operation again. It does exactly the same thing, silently.
-5. Turn the setting back on.
+3. Click one. The note opens **and** is highlighted in the file explorer, so you can see where it lives.
+4. Open `Settings -> Advanced Note Composer -> UI` and turn **Should show operation notices** off.
+5. Run the same operation again. It does exactly the same thing, silently.
+6. Turn the setting back on.
+
+## Clicking a notice
+
+The names in a notice are links, and clicking one does two things: it opens the note and it **highlights it
+in the file explorer** - the same thing a folder name in a notice has always done, since revealing is all
+clicking a folder can mean.
+
+An **extract** goes one step further. Clicking the destination of `Split note A into B` puts you *on the
+content you just extracted*, selected and scrolled into view, instead of at the top of `B` - which is the
+point when you extracted three lines into the bottom of a long note. Nothing to configure; it is what the
+link does.
 
 ## Good to know
 
