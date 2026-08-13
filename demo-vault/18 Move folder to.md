@@ -20,5 +20,8 @@ constraints above exclude), so a common destination is one keystroke away.
 
 The link from [Points here](<./Points here.md>) to [Movable note](<./Move example/Movable note.md>) keeps resolving after the folder moves.
 
+In the dialog, both the source and the destination are clickable links that reveal that folder in the
+file explorer (the vault root shows as `/`).
+
 Tick `Don't ask again` in the dialog, or turn off **Should ask before moving a folder** under
 `Move/flatten folders` in the settings, to move as soon as you pick a destination.

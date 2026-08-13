@@ -36,8 +36,47 @@ opt-out for `title`, and is shared with the reorder commands.
 name, so a vault numbering its folders `007. Notes` or `Notes (7)` renames just as happily as one using
 the plain `1. Notes`. A folder that never had a number simply takes the name you typed.
 
+The default alias template matches what
+[29 Create folder with notes](<./29 Create folder with notes.md>) already writes, so a folder created
+and then renamed ends up with the alias it would have had if you had created it under the new name.
+
+## Which note is the folder note
+
+Several commands need to know which note **describes** a folder — the one whose properties a reorder or
+a rename keeps in step. **Folder note location** (under `Folder note` in the settings) answers that:
+
+- `Auto` (the default)
+  - reads the installed [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin every
+    time, so reconfiguring that plugin needs no change here. Without it, `Auto` means a note named
+    after its folder, inside it (`alpha/bravo/charlie/charlie.md`).
+- `Inside the folder` / `Beside the folder`
+  - say it yourself. The second is the `alpha/bravo/charlie.md` layout, whose point is that a link to
+    `alpha/bravo/charlie` reaches a folder with no special syntax.
+- `This vault has no folder notes`
+  - turns the whole idea off; no properties are ever rewritten.
+
+**Folder note name template** names it when you have chosen a location yourself: `{{folderName}}` names
+it after its folder, while a literal like `!` or `index` gives every folder note the same name. That is
+why this vault's `Rename example` folders use `!`.
+
+That plugin's third option — keeping every folder note in one central folder — has no equivalent here,
+and `Auto` falls back when it is set: with the notes pooled, which note belongs to a folder no longer
+follows from the folder's path.
+
+When the folder note is named after its folder, renumbering or renaming the folder renames the note
+with it — otherwise `1. Alpha/1. Alpha.md` would become `3. Alpha/1. Alpha.md`, which by that very rule
+is no longer a folder note. A fixed name like `!` needs no rename and gets none.
+
 ## What a plain rename does not do
 
 Obsidian's own rename is untouched — only this command syncs the properties. This one also runs the whole
 change inside a single resource-locked transaction: the folder, the note's name and both properties move
-together, and cancelling rolls all of them back at once.
+together, and cancelling rolls all of them back at once. Links are updated by the underlying rename, as
+always.
+
+The new name is refused if it would be empty or if it still contains invalid characters (with **Should
+replace invalid title characters** off), exactly as when creating a folder. If a sibling is already
+called that, the name is de-duplicated into `Beta 1` and the properties describe the folder that
+actually exists. A folder whose path is
+[ignored](<./21 Block commands on excluded paths.md>) is refused with a notice, and the vault root is
+never offered — it has no name of its own to change.

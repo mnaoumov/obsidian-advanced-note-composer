@@ -40,6 +40,11 @@ caption: Open the first note after merging folders, then reload
 await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenFirstNoteAfterMergingFolder: true });
 ```
 
+A markdown file that is really an attachment — an Excalidraw drawing stored as `sketch.excalidraw.md`,
+per **Attachment extensions** — is moved into the destination like any other attachment rather than
+merged into a note. See
+[23 Merge folder into single file](<./23 Merge folder into single file.md>).
+
 ## Excluded items
 
 By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and

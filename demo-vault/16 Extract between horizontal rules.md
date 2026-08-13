@@ -30,3 +30,16 @@ cursor is here. The rules above and below it remain behind.
 
 Closing paragraph below the last rule. With the cursor here, everything from the last rule to the end of
 the note is extracted.
+
+## Good to know
+
+- The bounding rules themselves stay in place
+  - only the content between them moves.
+- With the cursor **on** a rule line
+  - the block *below* that rule is extracted.
+- In a note with no horizontal rules
+  - the command is not offered at all.
+
+It runs the same extraction workflow as every other `Extract ...` command — the target picker,
+relative-link fixing, footnotes, frontmatter, templating, and the residual left behind by
+[05 Text after extraction](<./05 Text after extraction.md>).

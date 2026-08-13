@@ -10,7 +10,8 @@ never flash one up - and it is the notice that carries the operation's **Cancel*
 
 ## Try it
 
-1. Run any operation from another note in this vault - `[[17 Flatten folder]]` and `[[07 Swap file]]` are
+1. Run any operation from another note in this vault -
+   [17 Flatten folder](<./17 Flatten folder.md>) and [07 Swap file](<./07 Swap file.md>) are
    quick ones.
 2. Watch the bottom-right corner. When it finishes you get a notice like
    `Flattened folder Demo into /, promoting 3 item(s).` - the note and folder names in it are clickable.
@@ -27,4 +28,4 @@ never flash one up - and it is the notice that carries the operation's **Cancel*
 - Two related settings are separate on purpose: **Should show smart cut & paste notice** controls the
   *interactive* marked-selection notice (turning it off removes its buttons, not just information), and
   **Smart cut & paste completion feedback** already decides how a finished move announces itself - see
-  `[[09 Smart cut and paste]]`.
+  [09 Smart cut and paste](<./09 Smart cut and paste.md>).

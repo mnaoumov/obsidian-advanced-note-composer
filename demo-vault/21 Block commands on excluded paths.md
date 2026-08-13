@@ -44,3 +44,28 @@ If a line is not a valid regular expression, the setting says `Invalid regular e
    the other way round: the commands are offered *only* inside that folder and hidden everywhere else.
 
 Clear all four boxes when you are done to put the vault back to its default state.
+
+## An excluded path is never moved
+
+Exclusion is not only about pickers: an excluded item is never **moved** either. A flatten leaves it
+exactly where it is, contents included, and hides its command entirely when that leaves nothing to
+move — see [17 Flatten folder](<./17 Flatten folder.md>).
+
+That is the reliable way to protect your attachment folder from a flatten in a vault where a plugin
+such as [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location)
+decides where attachments go. Such a plugin derives each folder from the note — possibly from its
+name, its properties, the date, or a prompt — so there is no working backwards from a folder to "this
+is an attachment folder", and your vault's own `Default location for new attachments` is not a usable
+substitute there. Excluding the folder says it directly. Without such a plugin, that setting is
+recognized on its own.
+
+The batch commands — [`Merge current folder contents into a single file...`](<./23 Merge folder into single file.md>)
+and [`Merge these files into one file...`](<./24 Merge multiple files.md>) — skip an ignored note and
+report it, unless **Should always merge excluded items** is on.
+
+## Upgrading from the old single toggle
+
+These used to be one list plus a **Should block commands on excluded paths** switch, which could not
+express "hide the commands here, but still let me merge into it". If you had that switch on, your
+`Include paths` and `Exclude paths` entries were copied into the two command boxes when you upgraded,
+so nothing changed for you.

@@ -84,12 +84,19 @@ await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenNoteAfte
 
 **Should move attachments when merging a folder** (on by default) carries the merged notes' attachments
 into the merged note's attachment folder, so nothing is stranded in a folder that is about to
-disappear. The destination comes from your vault's own attachment settings, so a custom attachment
-location is honored.
+disappear. The destination comes from your vault's own attachment settings, so
+[Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is
+honored when you have it installed. An attachment moves when one of the merged notes references it, or
+when it already sits where that note's attachments belong. Turn the setting off to leave attachments
+exactly where they are.
 
 Markdown files that are really attachments are never merged - **Attachment extensions**
 (default `.excalidraw.md`) lists them, written out in full with the leading dot, so an Excalidraw
-drawing stored as `sketch.excalidraw.md` keeps its raw payload out of the merged note.
+drawing stored as `sketch.excalidraw.md` keeps its raw payload out of the merged note and is relocated
+with the other attachments instead. The same applies to
+[`Merge current folder with another folder...`](<./02 Merge folder.md>): a drawing is moved into the
+destination folder like any other attachment — de-duplicated if one of the same name is already
+there — rather than merged into it.
 
 ## Emptied folders
 

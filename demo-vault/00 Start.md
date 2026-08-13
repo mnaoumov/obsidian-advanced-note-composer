@@ -65,3 +65,5 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 
 - [15 Minimizing dialogs](<./15 Minimizing dialogs.md>)
 - [28 Operation notices](<./28 Operation notices.md>)
+- [34 Change target](<./34 Change target.md>)
+- [35 Finding a setting](<./35 Finding a setting.md>)

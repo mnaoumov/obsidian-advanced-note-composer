@@ -34,6 +34,22 @@ Two things this command does *not* care about:
 
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
 
+## What each produced note is wrapped in
+
+Every note the command creates goes through the **Split template** (which itself falls back to the
+**Merge template**), exactly like an ordinary split into a new note — see
+[14 Templates](<./14 Templates.md>).
+
+The template is applied to a note only **once its own sub-headings have moved out**. That ordering is
+what keeps it out of the notes below: a template that writes something *after* `{{content}}` — a
+footer, a backlink, a `---` rule — sits under the note's last heading, so applying it any earlier
+would carry that text into the last child instead of leaving it where it belongs. `{{fromTitle}}` and
+`{{fromPath}}` therefore name the note directly **above in the tree**, not the note you invoked the
+command on.
+
+That original note is left as it is — it is the source, not something the split produced — so it keeps
+whatever preceded the first heading, plus the links down to the top-level notes.
+
 Want only one section restructured instead of the whole note? That is
 [32 Split heading recursively](<./32 Split heading recursively.md>).
 

@@ -13,6 +13,8 @@ extracting into an **existing** note is unaffected.
    after it — and the link left behind here still resolves.
 
 If a folder with that name already exists, the new folder name is de-duplicated (`My extract 1`, …).
+Links and footnotes are fixed exactly as for an ordinary split — the folder changes where the note
+lands, nothing else about the operation.
 
 ## Predefine the note name
 
@@ -27,10 +29,15 @@ overrides that, so every folder split produces the same note name.
 The name you typed is not lost: it is added as an alias and a frontmatter `title`, so
 `[[My second extract]]` still resolves.
 
-The field takes the same `{{...}}` tokens as the templates (except `{{content}}`), resolved against the
-new note before it moves — so `{{newTitle}}` is the folder name and `{{newTitle}} index` yields
-`My second extract/My second extract index.md`. Leave the field empty to go back to naming the note
-after its folder.
+The field takes the same `{{...}}` tokens as the templates (except `{{content}}`, which is meaningless
+in a file name), resolved against the new note before it moves — so `{{newTitle}}` is the folder name
+and `{{newTitle}} index` yields `My second extract/My second extract index.md`. Leave the field empty
+to go back to naming the note after its folder.
+
+The folder tokens name the folder **being created**, so `{{index:00}} {{safeFolderName}}` inside a
+folder called `7. Beta` gives `7. Beta/07 Beta.md`, while `{{parentFolder}}` is resolved before the
+note moves and so still names the folder *above* the new one. The whole field does nothing while
+**Should split into folder** is off.
 
 ## Naming the folder in your template
 

@@ -14,6 +14,9 @@ after the heading it came from.
    `##` section left in this note is extracted in one go, each into its own heading-named folder —
    still without a single prompt.
 
+It covers `Split note by headings - H1` through `H6`, their `content` variants, and
+`Extract this heading...`.
+
 Leave the setting off (the default) and these commands keep asking, as configured by **Should ask
 before splitting**. That setting still governs ordinary splits, where you pick the target yourself,
 whichever way this one is set.

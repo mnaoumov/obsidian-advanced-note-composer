@@ -15,6 +15,32 @@ even in the same note - as a single reversible operation.
 Changed your mind? Run `Smart cut & paste: Cancel move`, or click **Cancel move** in the
 notice - the mark is discarded and the note unlocked.
 
+## The commands
+
+Each appears as `Smart cut & paste: ...` in the command palette.
+
+- `Mark selection to move`
+  - available with a selection. Records it and locks its note so the marked region cannot drift.
+    Nothing is removed yet.
+- `Mark heading to move`
+  - available with the cursor inside a heading's section and nothing selected. Marks the whole
+    heading — see below.
+- `Move marked selection here`
+  - moves the mark to the cursor, using your default settings. With text selected in the target, the
+    moved text **replaces that selection**, like pasting over one.
+- `Move marked selection here (advanced)...`
+  - the same, but first prompts for the frontmatter merge strategy, whether to fix footnotes and
+    include frontmatter, and the text to leave behind (see
+    [05 Text after extraction](<./05 Text after extraction.md>)).
+- `Move marked selection to top of file` / `... to bottom of file`
+  - move the mark to just after any frontmatter, or to the end, regardless of the cursor.
+- `Cancel move`
+  - discards the mark and unlocks the note(s). The built-in `Unlock active note` command, and
+    right-clicking a note's lock indicator, cancel the pending move the same way.
+
+The move only removes the text from the source note when you run the paste, so footnotes, links and
+frontmatter are still resolved from the intact source.
+
 ## Mark a whole heading
 
 `Smart cut & paste: Mark heading to move` marks the heading your cursor is in - the heading line, its
@@ -143,6 +169,19 @@ caption: Set a distinct template per move direction, then reload
 await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteTemplate: '\n\n> pasted at cursor\n\n{{content}}', smartCutAndPasteToBottomTemplate: '\n\n> pasted at the bottom\n\n{{content}}', smartCutAndPasteToTopTemplate: '\n\n> pasted at the top\n\n{{content}}\n' });
 ```
 
+An empty template falls back up the chain, so an existing configuration keeps behaving as it did
+before the per-direction settings existed:
+
+```text
+at cursor  ->  Smart cut & paste template                                              ->  Split -> Merge
+to top     ->  Smart cut & paste template (to top of file)    -> Smart cut & paste template -> Split -> Merge
+to bottom  ->  Smart cut & paste template (to bottom of file) -> Smart cut & paste template -> Split -> Merge
+```
+
+There is deliberately no separate template for `at cursor`: **Smart cut & paste template** *is* its
+template, and simultaneously the fallback for the other two. All of them take the same tokens as the
+other templates — see [14 Templates](<./14 Templates.md>).
+
 Clear one override and that direction goes back to using **Smart cut & paste template**.
 
 ```code-button
@@ -164,3 +203,44 @@ caption: Lock all notes while marking, then reload
 ---
 await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldLockAllNotesWhenMarkingSelection: true });
 ```
+
+## Tailoring the notice
+
+The persistent notice can be trimmed down, or turned off entirely. Hiding a button never unregisters
+its command, so any hotkey you assigned to it keeps working.
+
+- **Should show smart cut & paste notice**
+  - turn the whole notice off and drive marking, moving and cancelling through the commands alone.
+- **Should show move to top of file button** / **... to bottom of file button** / **... at cursor
+  button**
+  - hide any of the three move buttons you do not use. **Cancel move** is always shown.
+- **Should show split heading recursively button** / **Should show reorder headings button**
+  - the same for the two buttons a *heading* mark adds, both on by default.
+
+## Switching between smart cut and split
+
+Splitting and smart cut share the same setup, so you can change your mind in either direction without
+starting over.
+
+- The `Extract ...` picker carries a **Switch to smart cut & paste** button (or `Alt+S`)
+  - the picker closes, your selection is marked to move, and the note highlighted in the picker opens
+    so you can position the cursor and paste. The same button is on the split confirmation dialog,
+    so you can switch after the target is chosen.
+- The notice carries a **Switch to split/extract** button
+  - also the `Smart cut & paste: Switch to split/extract` command. It re-opens the source note with
+    the selection restored and opens the split/extract picker, so you can search for a target and
+    split into it with the full option set.
+
+## Moving within one note
+
+The captured selection is **persistently highlighted in the source note**, so you always see exactly
+what will move — both while a mark is held and while an `Extract ...` picker is open. The highlight
+clears when the operation completes or is cancelled.
+
+- `Move marked selection here` is unavailable while the cursor is inside the marked selection
+  - and the top/bottom commands are unavailable when the top would land inside a selection that spans
+    the note's frontmatter.
+- **Text after extraction** is skipped for a same-note move
+  - a link or embed pointing at the note itself is meaningless, so the moved text is simply removed.
+    Enable **Apply text after extraction to the same file** to apply the setting anyway, or override
+    it per move in the advanced command.

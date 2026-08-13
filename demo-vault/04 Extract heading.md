@@ -18,6 +18,21 @@ Select some text first and right-click it: `Extract this heading...` is **not** 
 you get. Click once to drop the selection and the heading command is back — still from anywhere inside
 the section.
 
+The same rule governs the other two whole-note commands, so with a selection active the editor menu
+offers only what acts on a selection. Three commands step aside:
+
+- `Extract this heading...`
+- [`Split heading recursively...`](<./32 Split heading recursively.md>)
+- [`Split note by headings recursively...`](<./27 Split headings recursively.md>)
+
+This affects the **editor's right-click menu only**. All three stay in the command palette and on any
+hotkey you assigned, selection or not — nothing you can do today stops working.
+
+Two related rules are unchanged: `Split note by headings - H<n>` (and its `content` variant) is offered
+whenever the cursor or selection sits anywhere inside a heading of that level, and `Extract this
+heading...` — with nothing selected — works from anywhere inside a heading's section rather than only
+from the heading line. `Split heading recursively...` resolves its heading the same way.
+
 ## Ideas worth their own note
 
 This whole section - heading and body - becomes a separate note. Put your cursor right here, on this

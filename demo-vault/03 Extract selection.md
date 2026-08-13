@@ -23,6 +23,10 @@ to *link*, a link to the new note is left here in my place.
   the cursor into another note.
 - Or run `Extract after cursor...` to move everything below it.
 
+A selection made inside a note's **properties** is a special case: it is merged into the destination's
+own properties rather than pasted into its body — see
+[13 Frontmatter merge strategy](<./13 Frontmatter merge strategy.md>).
+
 ## Same-note extraction
 
 The picker also offers the **current** note as a target: press `Enter` to send the

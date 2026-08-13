@@ -34,3 +34,11 @@ await require('/demoSetup.ts').changeSettingsAndReload(app, { textAfterExtractio
 ---
 
 Extract me into a new note and see what replaces me, based on the mode you chose above.
+
+## Moving within the same note
+
+A link or an embed pointing at the note you are already in says nothing, so a **same-note** move
+ignores the setting and simply removes the moved text. Turn on **Apply text after extraction to the
+same file** to apply it anyway, or override it for one move with
+`Move marked selection here (advanced)...` — see
+[09 Smart cut and paste](<./09 Smart cut and paste.md>).

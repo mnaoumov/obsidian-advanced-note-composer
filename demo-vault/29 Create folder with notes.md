@@ -37,6 +37,14 @@ name. The default is:
 - `{{rawFolderName}}`
   - exactly what you typed, untouched.
 
+Both templates also accept `{{parentFolder}}`, `{{parentFolderPath}}`, `{{date:FORMAT}}` and
+`{{time:FORMAT}}`. `{{folderName}}` and `{{folderPath}}` are for the **content** template only — they
+are the folder's real final name and path, number and de-duplication suffix included, which the name
+template is the thing that produces, so using them there is rejected.
+
+Turn **Should capitalize the created folder name** off to keep your own capitalization. A name that
+cleans up to nothing at all is refused, and the prompt simply asks again.
+
 ## Several notes at once
 
 **Create folder content template** decides what goes inside. Empty means one empty note named after
@@ -57,7 +65,11 @@ aliases:
 # {{folderName}}
 ```
 
-That produces two notes, and the **first one declared** is the one that opens.
+That produces two notes, and the **first one declared** is the one that opens — turn **Should open
+note after creating folder** off to stay where you are. A note name with no extension gets `.md`.
+
+The whole creation runs as one reversible, resource-locked transaction, so a cancellation or a failure
+never leaves a half-built folder behind.
 
 Note the two spellings side by side: `{{folderName}}` is the folder's real final name **with** the
 number (`2. Api TEST X_y`), while `{{safeFolderName}}` is the same name **without** it

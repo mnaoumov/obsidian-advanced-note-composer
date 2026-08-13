@@ -17,9 +17,19 @@ any name collision with an existing sibling is de-duplicated.
 The link from [Note one](<./Flatten example/Note one.md>) to [Note two](<./Flatten example/Note two.md>) keeps resolving after the move, and `Nested` travels
 with its own note inside it.
 
-The dialog is there because this command has no picker to review before it acts. Tick
-`Don't ask again` in it, or turn off **Should ask before flattening a folder** under
-`Move/flatten folders` in the settings, to flatten straight away.
+The dialog is there because this command has no picker to review before it acts. It lists a nested
+item by its path under the flattened folder, so two promoted folders sharing a name are still told
+apart, and both the folder and its destination are clickable links that reveal it in the file explorer
+(the vault root shows as `/`). Tick `Don't ask again` in it, or turn off **Should ask before
+flattening a folder** under `Move/flatten folders` in the settings, to flatten straight away.
+
+The source folder is left in place, empty — delete it yourself if you no longer want it.
+
+Attachments need no special handling in `Flatten folder...`: every direct child moves, so an
+attachment beside a note travels with it and an attachment subfolder moves as a whole, and embeds keep
+resolving. Attachments kept in a central folder live outside the flattened folder and correctly stay
+where they are. Only the two folder-only commands have to be careful, because notes stay behind — see
+below.
 
 ## Send the children somewhere else
 
