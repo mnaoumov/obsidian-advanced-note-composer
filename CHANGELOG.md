@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 5.9.2
+
+- fix(demo-vault): stop committing the app.json settings obsidian-dev-utils owns
+- feat(notices): land the extract notice link on the extracted content and reveal the file
+
 ## 5.9.1
 
 - docs: make the demo vault the documentation, in the standard layout
