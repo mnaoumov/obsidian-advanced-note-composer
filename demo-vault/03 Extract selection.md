@@ -8,10 +8,11 @@ Pull part of a note out into another note. Three commands cover the common cases
 
 1. Select the paragraph below the horizontal rule.
 2. Run `Extract current selection...`.
-3. Choose an existing note or type a new name, then confirm.
+3. Type a new name (the switch at the top says `Create`), then confirm.
 
 What is left behind (a link, an embed, or nothing) is controlled by
-[[05 Text after extraction]].
+[[05 Text after extraction]]. Whether the target is created or merged into is
+[[33 Create or merge when splitting|the switch at the top of the picker]].
 
 ---
 
@@ -27,4 +28,6 @@ to *link*, a link to the new note is left here in my place.
 ## Same-note extraction
 
 The picker also offers the **current** note as a target: press `Enter` to send the
-selection to the bottom, or `Shift+Enter` to send it to the top.
+selection to the bottom, or `Shift+Enter` to send it to the top. Sending it into the note
+you are already in is a merge into an existing note, so flip the switch to `Merge` first —
+see [[33 Create or merge when splitting]].

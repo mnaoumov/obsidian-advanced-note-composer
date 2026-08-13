@@ -39,7 +39,10 @@ import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts'
 import { InsertMode } from '../insert-mode.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { NameTransformError } from '../name-transform.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  FrontmatterMergeStrategy,
+  SplitTargetMode
+} from '../plugin-settings.ts';
 import { prepareForSplitFile } from './split-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
@@ -177,6 +180,7 @@ vi.mock('../headings.ts', () => ({
 }));
 
 interface MockPluginOptions {
+  readonly defaultSplitTargetMode?: SplitTargetMode;
   readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
@@ -202,8 +206,10 @@ const pluginNoticeComponent = strictProxy<PluginNoticeComponent>({ showNotice: c
  * The subset of the item selector's constructor params these tests assert are threaded through.
  */
 interface CapturedSplitItemSelectorParams {
+  readonly isModifier: boolean;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldForceSplitIntoFolder: boolean;
+  readonly splitTargetMode: SplitTargetMode;
 }
 
 let capturedSplitItemSelectorParams: CapturedSplitItemSelectorParams | null = null;
@@ -289,6 +295,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
     editAndSave: vi.fn().mockResolvedValue(undefined),
     settings: strictProxy({
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      defaultSplitTargetMode: options?.defaultSplitTargetMode ?? SplitTargetMode.Create,
       isPathIgnored: vi.fn().mockReturnValue(false),
       shouldAllowOnlyCurrentFolderByDefault: options?.shouldAllowOnlyCurrentFolderByDefault ?? false,
       shouldAllowSplitIntoUnresolvedPathByDefault: true,
@@ -561,6 +568,22 @@ describe('prepareForSplitFile', () => {
     });
 
     expect(capturedSplitItemSelectorParams?.shouldForceSplitIntoFolder).toBe(true);
+  });
+
+  it('should create the target of a heading-driven split whatever the default mode is', async () => {
+    const sourceFile = createMockFile('folder/source.md');
+    const editor = createMockEditor();
+    const resourceLockComponent = createMockResourceLockComponent();
+    const app = createMockApp();
+    // `Merge` as the DEFAULT is what makes this meaningful: the picker never opens for a heading-driven
+    // Split, so it must still name a brand-new note after the heading (issue #227).
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ defaultSplitTargetMode: SplitTargetMode.Merge, shouldAskBeforeSplitting: false });
+
+    await prepareForSplitFile({ app, editor, heading: 'Heading', pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+    expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+    // The switch replaced the held-`Mod` rule on this path, so the flag is no longer what decides it.
+    expect(capturedSplitItemSelectorParams?.isModifier).toBe(false);
   });
 
   it('should not force the folder split for an ordinary heading-driven split', async () => {

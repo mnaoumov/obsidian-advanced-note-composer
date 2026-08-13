@@ -17,7 +17,10 @@ import type {
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { fixFileName } from '../filename-validation.ts';
 import { transformAndFixFileName } from '../name-transform.ts';
-import { FrontmatterTitleMode } from '../plugin-settings.ts';
+import {
+  FrontmatterTitleMode,
+  SplitTargetMode
+} from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
@@ -32,6 +35,14 @@ interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructor
   readonly shouldTreatTitleAsPath: boolean;
 
   /**
+   * Whether this split CREATES its target note or MERGES into an existing one (issue #227). It is the
+   * picker's switch, and it replaced the implicit `isModifier`-or-nothing-typed rule that used to decide
+   * the same fork — which is why `SplitItemSelector` is the one selector that does not read
+   * {@link ItemSelectorBaseConstructorParams.isModifier}.
+   */
+  readonly splitTargetMode: SplitTargetMode;
+
+  /**
    * Creates the new note in THIS folder, whatever `shouldAllowOnlyCurrentFolder` would otherwise have
    * resolved to. Set by the recursive split when the user changed the target of its root pass (issue #205),
    * which is the only way to state a destination that is neither "beside the source" nor Obsidian's default
@@ -44,6 +55,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
   private readonly shouldForceSplitIntoFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
+  private readonly splitTargetMode: SplitTargetMode;
   private readonly targetParentFolderOverride: null | TFolder;
 
   public constructor(params: SplitItemSelectorConstructorParams) {
@@ -51,40 +63,40 @@ export class SplitItemSelector extends ItemSelectorBase {
     this.shouldAllowOnlyCurrentFolder = params.shouldAllowOnlyCurrentFolder;
     this.shouldForceSplitIntoFolder = params.shouldForceSplitIntoFolder ?? false;
     this.shouldTreatTitleAsPath = params.shouldTreatTitleAsPath;
+    this.splitTargetMode = params.splitTargetMode;
     this.targetParentFolderOverride = params.targetParentFolderOverride ?? null;
   }
 
   public override async selectItem(): Promise<SelectItemResult> {
-    if (this.isModifier || !this.item) {
-      const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
-      if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
-        return {
-          isNewTargetFile: false,
-          targetFile: existingFile
-        };
+    if (this.splitTargetMode === SplitTargetMode.Merge) {
+      const targetFile = this.resolveExistingTargetFile();
+      // The picker offers nothing creatable in this mode — no `Enter to create` row, no unresolved links —
+      // So an item without a file behind it cannot be chosen. Refusing rather than falling through to the
+      // Create branch is what keeps an explicit `Merge` from quietly creating a note nobody asked for.
+      if (!targetFile) {
+        throw new Error('File not found');
       }
 
       return {
-        isNewTargetFile: true,
-        targetFile: await this.createNewMarkdownFileFromLinktext(this.inputValue)
+        isNewTargetFile: false,
+        targetFile
       };
     }
 
-    if (this.item.type === 'unresolved') {
+    if (this.item?.type === 'unresolved') {
       return {
         isNewTargetFile: true,
         targetFile: await this.createNewMarkdownFileFromLinktext(this.item.linktext ?? '')
       };
     }
 
-    if (this.item.type === 'file' || this.item.type === 'alias') {
-      if (!this.item.file) {
-        throw new Error('File not found');
-      }
-
+    const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
+    // An IGNORED note is absent from the suggestions, so typing its exact name is the only way to reach it
+    // — which is why `Create` still resolves to it rather than making a numbered duplicate beside it.
+    if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
       return {
         isNewTargetFile: false,
-        targetFile: this.item.file
+        targetFile: existingFile
       };
     }
 
@@ -165,6 +177,27 @@ export class SplitItemSelector extends ItemSelectorBase {
     // The folder was just created and is therefore empty, so the note can never collide inside it.
     await this.app.fileManager.renameFile(file, normalizePath(`${folderPath}/${noteBasename}.md`));
     return noteBasename === originalBasename ? null : noteBasename;
+  }
+
+  /**
+   * The existing note a `Merge` split writes into, or `null` when the chosen item has none.
+   *
+   * A bookmark carries its path rather than a `file` (`SuggestModalBase` offers bookmarked notes in the
+   * split picker too), so it is resolved the same way `MergeItemSelector` resolves it — before the switch
+   * existed, choosing a bookmarked note here silently created a note named after the typed query instead.
+   *
+   * @returns The existing target note, or `null` when the item does not name one.
+   */
+  private resolveExistingTargetFile(): null | TFile {
+    if (this.item?.file) {
+      return this.item.file;
+    }
+
+    if (this.item?.type === 'bookmark' && this.item.item?.type === 'file') {
+      return this.app.vault.getFileByPath(this.item.item.path ?? '');
+    }
+
+    return null;
   }
 
   /**

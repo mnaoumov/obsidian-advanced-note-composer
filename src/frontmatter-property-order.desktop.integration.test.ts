@@ -128,6 +128,16 @@ describe('property order when extracting a property value (issue #187)', () => {
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('No split picker input.');
           }
+          // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
+          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
+          if (!(modeToggle instanceof HTMLElement)) {
+            throw new TypeError('No create/merge switch in the split picker.');
+          }
+          if (!modeToggle.classList.contains('is-enabled')) {
+            modeToggle.click();
+          }
+
           input.value = query;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({

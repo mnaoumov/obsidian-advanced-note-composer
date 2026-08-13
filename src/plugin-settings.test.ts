@@ -12,6 +12,7 @@ import {
   MergeFolderIntoFileLocation,
   PluginSettings,
   SmartCutAndPasteMoveKind,
+  SplitTargetMode,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
 
@@ -111,6 +112,9 @@ describe('PluginSettings', () => {
     expect(settings.commandExcludePaths).toEqual([]);
     expect(settings.commandIncludePaths).toEqual([]);
     expect(settings.defaultFrontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
+    // `Create` is the common extract-to-a-new-note case and what the picker did before the switch existed
+    // Whenever the typed name matched nothing (issue #227), so the new key needs no legacy converter.
+    expect(settings.defaultSplitTargetMode).toBe(SplitTargetMode.Create);
     expect(settings.frontmatterTitleMode).toBe(FrontmatterTitleMode.UseForInvalidTitleOnly);
     // `BesideFolder` IS the pre-#178 behavior, which is what makes the new setting need no legacy converter.
     expect(settings.mergeFolderIntoFileLocation).toBe(MergeFolderIntoFileLocation.BesideFolder);

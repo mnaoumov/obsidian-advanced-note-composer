@@ -19,7 +19,10 @@ import type { Item } from '../modals/suggest-modal-base.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
-import { FrontmatterTitleMode } from '../plugin-settings.ts';
+import {
+  FrontmatterTitleMode,
+  SplitTargetMode
+} from '../plugin-settings.ts';
 import { SplitItemSelector } from './split-item-selector.ts';
 
 function mockItem(partial: Record<string, unknown>): Item {
@@ -37,6 +40,10 @@ vi.mock('../plugin-settings.ts', () => ({
     None: 'None',
     UseAlways: 'UseAlways',
     UseForInvalidTitleOnly: 'UseForInvalidTitleOnly'
+  },
+  SplitTargetMode: {
+    Create: 'Create',
+    Merge: 'Merge'
   }
 }));
 
@@ -75,7 +82,8 @@ function createMockApp(): App {
         exists: vi.fn().mockResolvedValue(false)
       }),
       createFolder: vi.fn().mockResolvedValue(null),
-      getAbstractFileByPath: vi.fn().mockReturnValue(null)
+      getAbstractFileByPath: vi.fn().mockReturnValue(null),
+      getFileByPath: vi.fn().mockReturnValue(null)
     })
   });
 }
@@ -111,7 +119,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
 
 describe('SplitItemSelector', () => {
   describe('selectItem', () => {
-    it('should create new file when isModifier is true', async () => {
+    it('should create new file in create mode even when an existing note is highlighted', async () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source', 'source.md');
@@ -119,17 +127,162 @@ describe('SplitItemSelector', () => {
       const selector = new SplitItemSelector({
         app,
         inputValue: 'new note',
-        isModifier: true,
-        item: strictProxy<Item>({ type: 'file' }),
+        isModifier: false,
+        item: strictProxy<Item>({ file: createMockFile('existing', 'folder/existing.md'), type: 'file' }),
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
 
       expect(result.isNewTargetFile).toBe(true);
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalled();
+    });
+
+    it('should ignore isModifier, which the create/merge switch replaced', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+      const existingFile = createMockFile('existing', 'folder/existing.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new note',
+        isModifier: true,
+        item: strictProxy<Item>({ file: existingFile, type: 'file' }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      const result = await selector.selectItem();
+
+      expect(result.isNewTargetFile).toBe(false);
+      expect(result.targetFile).toBe(existingFile);
+    });
+
+    it('should return the bookmarked note in merge mode', async () => {
+      const bookmarkedFile = createMockFile('bookmarked', 'folder/bookmarked.md');
+      const app = createMockApp();
+      vi.mocked(app.vault.getFileByPath).mockReturnValue(bookmarkedFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: '',
+        isModifier: false,
+        item: mockItem({
+          item: { path: 'folder/bookmarked.md', type: 'file' },
+          type: 'bookmark'
+        }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      const result = await selector.selectItem();
+
+      expect(result.isNewTargetFile).toBe(false);
+      expect(result.targetFile).toBe(bookmarkedFile);
+    });
+
+    it('should use an empty path when a bookmark item has none', async () => {
+      const bookmarkedFile = createMockFile('bookmarked', 'folder/bookmarked.md');
+      const app = createMockApp();
+      vi.mocked(app.vault.getFileByPath).mockReturnValue(bookmarkedFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: '',
+        isModifier: false,
+        item: mockItem({
+          item: { type: 'file' },
+          type: 'bookmark'
+        }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.getFileByPath).toHaveBeenCalledWith('');
+    });
+
+    it('should throw in merge mode when the bookmarked note no longer exists', async () => {
+      const app = createMockApp();
+      vi.mocked(app.vault.getFileByPath).mockReturnValue(null);
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: '',
+        isModifier: false,
+        item: mockItem({
+          item: { path: 'folder/gone.md', type: 'file' },
+          type: 'bookmark'
+        }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      await expect(selector.selectItem()).rejects.toThrow('File not found');
+    });
+
+    it('should throw in merge mode when nothing is selected', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new note',
+        isModifier: false,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      await expect(selector.selectItem()).rejects.toThrow('File not found');
+    });
+
+    it('should throw in merge mode when an unresolved link is selected', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent();
+      const sourceFile = createMockFile('source', 'source.md');
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'unresolved-link',
+        isModifier: false,
+        item: mockItem({ linktext: 'unresolved-link', type: 'unresolved' }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
+      });
+
+      await expect(selector.selectItem()).rejects.toThrow('File not found');
     });
 
     it('should create new file when item is null', async () => {
@@ -145,7 +298,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
@@ -171,7 +325,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
@@ -197,7 +352,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
@@ -219,7 +375,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
@@ -245,7 +402,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
       });
 
       const result = await selector.selectItem();
@@ -272,7 +430,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
       });
 
       const result = await selector.selectItem();
@@ -295,7 +454,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
       });
 
       await expect(selector.selectItem()).rejects.toThrow('File not found');
@@ -315,7 +475,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Merge
       });
 
       await expect(selector.selectItem()).rejects.toThrow('File not found');
@@ -337,7 +498,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       const result = await selector.selectItem();
@@ -362,7 +524,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -390,7 +553,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -416,7 +580,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -442,7 +607,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -468,7 +634,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -494,7 +661,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -520,7 +688,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -546,7 +715,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -572,7 +742,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await expect(selector.selectItem()).rejects.toThrow('Invalid frontmatter title mode: InvalidMode');
@@ -603,6 +774,7 @@ describe('SplitItemSelector', () => {
         shouldAllowOnlyCurrentFolder: true,
         shouldTreatTitleAsPath: true,
         sourceFile,
+        splitTargetMode: SplitTargetMode.Create,
         targetParentFolderOverride: strictProxy<TFolder>({
           getParentPrefix: vi.fn().mockReturnValue('picked/')
         })
@@ -637,7 +809,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: true,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -667,7 +840,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: true,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -703,7 +877,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -728,7 +903,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -757,7 +933,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: false,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -784,7 +961,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -813,7 +991,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -842,7 +1021,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -871,7 +1051,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -900,7 +1081,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -929,7 +1111,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -958,7 +1141,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -987,7 +1171,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1016,7 +1201,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1043,7 +1229,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1073,7 +1260,8 @@ describe('SplitItemSelector', () => {
         shouldAllowOnlyCurrentFolder: false,
         shouldForceSplitIntoFolder: true,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1102,7 +1290,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1129,7 +1318,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile
+        sourceFile,
+        splitTargetMode: SplitTargetMode.Create
       });
 
       await selector.selectItem();
@@ -1177,7 +1367,8 @@ describe('SplitItemSelector', () => {
         pluginSettingsComponent,
         shouldAllowOnlyCurrentFolder: false,
         shouldTreatTitleAsPath: true,
-        sourceFile: createMockFile('source', 'source.md')
+        sourceFile: createMockFile('source', 'source.md'),
+        splitTargetMode: SplitTargetMode.Create
       });
 
       return { app, newFile, selector };
