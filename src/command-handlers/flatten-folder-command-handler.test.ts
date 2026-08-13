@@ -610,11 +610,14 @@ describe('FlattenFolderCommandHandler', () => {
     it('should keep offering a folder-only mode when an attachment-location plugin owns the resolution (issue #185)', () => {
       initApp({
         'parent/a/note.md': 'note',
-        'parent/a/note/pic.png': 'PIC'
+        'parent/a/note/deeper/pic.png': 'PIC'
       });
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
       // The resolution is genuinely asynchronous now, so a synchronous menu pass cannot know the answer.
       // Behavior is unchanged there: the command is offered and `executeFolder` explains with a notice.
+      // The attachment folder nests, so what the recursive variant may promote is not settled by the shape
+      // Of the tree either (issue #230) — leaving the attachment question the only open one, which is what
+      // This test is about.
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -776,7 +779,9 @@ describe('FlattenFolderCommandHandler', () => {
 
     it('should keep offering the folder-only modes when only the configured attachment folder says otherwise, under an attachment-location plugin (issue #213)', () => {
       initApp({
-        'parent/a/assets/pic.png': 'PIC',
+        // The attachment folder nests, so the recursive variant is not settled by the shape of the tree
+        // Either (issue #230) and the configured folder stays the only thing that could refuse it.
+        'parent/a/assets/deeper/pic.png': 'PIC',
         'parent/a/note.md': 'note'
       }, './assets');
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
@@ -795,7 +800,10 @@ describe('FlattenFolderCommandHandler', () => {
     it('should keep offering the folder-only modes when a plugin parks an absolute path inside a candidate folder (issue #213)', () => {
       initApp({
         'parent/a/note.md': 'note',
-        'parent/a/sub/deep.md': 'deep'
+        'parent/a/sub/deep.md': 'deep',
+        // Nested, so the recursive variant is judged on the parked path alone rather than on the shape of
+        // The tree (issue #230).
+        'parent/a/sub/deeper/deepest.md': 'deepest'
       });
       stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
       // The reporter's vault verbatim: the path Custom Attachment Location last resolved for the note it
@@ -880,14 +888,32 @@ describe('FlattenFolderCommandHandler', () => {
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
 
-    it('should keep offering every mode when an attachment-location plugin owns the resolution', () => {
+    it('should still refuse the recursive mode under an attachment-location plugin when nothing nests (issue #230)', () => {
       initApp({
         'parent/a/note.md': 'note',
         'parent/a/sub/deep.md': 'deep'
       });
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
-      // The collector cannot answer synchronously, so nothing can be called a duplicate: the permissive
-      // Behavior of issue #185 is unchanged.
+      /*
+       * The reporter's vault: Custom Attachment Location installed, so the collector cannot answer
+       * synchronously — which used to offer every variant unconditionally and brought the recursive entry
+       * back on exactly the folder issue #210 had removed it from. How deep the folders go is not the
+       * attachment question, and it is answered from the folder alone; only `ChildFoldersOnly` stays
+       * permissive, since an attachment folder resolved asynchronously can still make it differ from
+       * `Flatten folder...`.
+       */
+      expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
+      expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
+    });
+
+    it('should keep offering the recursive mode under an attachment-location plugin as soon as a child folder nests (issue #230)', () => {
+      initApp({
+        'parent/a/note.md': 'note',
+        'parent/a/sub/deeper/deepest.md': 'deepest'
+      });
+      stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
+      // Judged, not suppressed: the shape rules the entry out above and back in here, while the attachment
+      // Question stays as unanswerable as ever.
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });

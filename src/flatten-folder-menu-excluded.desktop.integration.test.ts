@@ -103,19 +103,25 @@ describe('flatten folder menu with an excluded or configured attachment folder (
 
           // 2. Configured: the only child folder is named after Obsidian's own `attachmentFolderPath`, with
           // No exclusion configured for it at all. Since issue #213 that setting is not consulted here at
-          // All, so this shape keeps its entries — it is the pin on that withdrawal.
+          // All, so this shape keeps its entries — it is the pin on that withdrawal. It nests one deeper so
+          // That the setting stays the only thing that could take the recursive entry away (issue #230).
           await app.vault.createFolder('t366-configured');
           await app.vault.createFolder('t366-configured/t366-cfg-assets');
           await app.vault.createBinary('t366-configured/t366-cfg-assets/t366-pic2.png', new ArrayBuffer(4));
+          await app.vault.createFolder('t366-configured/t366-cfg-assets/t366-deeper2');
+          await app.vault.create('t366-configured/t366-cfg-assets/t366-deeper2/t366-deep2.md', 'deep body');
           await app.vault.create('t366-configured/t366-note2.md', 'See ![[t366-pic2.png]].');
 
-          // 3. The control: the same shape plus an ordinary child folder, which the commands CAN promote.
+          // 3. The control: the same shape plus an ordinary child folder, which the commands CAN promote —
+          // Nesting for the same reason as above.
           await app.vault.createFolder('t366-control');
           await app.vault.createFolder('t366-control/t366-cfg-assets');
           await app.vault.createBinary('t366-control/t366-cfg-assets/t366-pic3.png', new ArrayBuffer(4));
           await app.vault.create('t366-control/t366-note3.md', 'See ![[t366-pic3.png]].');
           await app.vault.createFolder('t366-control/t366-sub');
           await app.vault.create('t366-control/t366-sub/t366-deep.md', 'deep body');
+          await app.vault.createFolder('t366-control/t366-sub/t366-deeper3');
+          await app.vault.create('t366-control/t366-sub/t366-deeper3/t366-deep3.md', 'deep body');
 
           await settingsComponent.editAndSave((settings) => {
             settings.excludePaths = ['t366-excluded/t366-excluded-assets'];
@@ -246,10 +252,8 @@ describe('flatten folder menu with an excluded or configured attachment folder (
       'Flatten folder (child folders only)...',
       'Flatten folder recursively (all folders at any depth)...'
     ]);
-    // One ordinary child folder is enough to bring both folder-only entries back. The recursive entry
-    // Survives issue #210's duplicate rule here even though `t366-sub` holds no folder of its own: an
-    // Attachment-location plugin owns the resolution, so the collector cannot answer synchronously and
-    // Nothing can be judged a duplicate — the permissive behavior of issue #185, unchanged.
+    // One ordinary child folder is enough to bring both folder-only entries back, and `t366-sub` nests, so
+    // The recursive entry survives issue #210's duplicate rule as well.
     expect(result.controlTitles).toStrictEqual([
       'Flatten folder...',
       'Flatten folder (child folders only)...',

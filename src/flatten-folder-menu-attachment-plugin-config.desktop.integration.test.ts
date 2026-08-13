@@ -75,11 +75,15 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           await trashIfExists('t423-parked-elsewhere');
 
           // 1. The reported shape: an ordinary folder with an ordinary child folder holding its own note —
-          // Nothing about it is an attachment folder.
+          // Nothing about it is an attachment folder. The child folder nests one deeper so that the parked
+          // Path is the only thing that could take the recursive entry away (issue #230 answers the nesting
+          // Question from the tree, plugin or not).
           await app.vault.createFolder('t423-parked');
           await app.vault.create('t423-parked/t423-stays.md', 'the note that stays behind');
           await app.vault.createFolder('t423-parked/t423-created');
           await app.vault.create('t423-parked/t423-created/t423-new.md', 'the note the command created');
+          await app.vault.createFolder('t423-parked/t423-created/t423-deeper');
+          await app.vault.create('t423-parked/t423-created/t423-deeper/t423-deepest.md', 'the nested note');
 
           // 2. The same, to be probed while the parked path names something unrelated — so a passing test
           // Cannot be explained by the setting simply being ignored for this folder in particular.
@@ -87,6 +91,8 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           await app.vault.create('t423-parked-elsewhere/t423-stays2.md', 'the note that stays behind');
           await app.vault.createFolder('t423-parked-elsewhere/t423-created2');
           await app.vault.create('t423-parked-elsewhere/t423-created2/t423-new2.md', 'the note the command created');
+          await app.vault.createFolder('t423-parked-elsewhere/t423-created2/t423-deeper2');
+          await app.vault.create('t423-parked-elsewhere/t423-created2/t423-deeper2/t423-deepest2.md', 'the nested note');
 
           // What CAL leaves behind once the just-created note is the active one: an absolute path INSIDE
           // The folder the command created.
@@ -184,7 +190,8 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
      * `t423-created`, and with it the only thing either folder-only variant could have promoted.
      *
      * All three entries, not two: with a plugin owning the resolution the collector answers `null`, so
-     * issue #210's duplicate rule judges nothing and the recursive entry is offered as well.
+     * issue #210's duplicate rule judges nothing it would need the collection for — and the child folder
+     * here nests, which is the one half that IS judged without it (issue #230).
      */
     expect(result.parkedAncestorTitles).toStrictEqual([
       'Flatten folder...',

@@ -20,6 +20,12 @@ import {
 import { FlattenMode } from './plugin-settings.ts';
 
 /**
+ * Parameters for {@link canFlattenModeBeDistinctSync} — the same inputs a collection would be given, since
+ * it stands in for one.
+ */
+export type CanFlattenModeBeDistinctSyncParams = CollectFlattenItemsParams;
+
+/**
  * Parameters for {@link collectFlattenItems}.
  */
 export interface CollectFlattenItemsParams {
@@ -144,6 +150,40 @@ const FLATTEN_MODE_DISTINCTNESS_CHECKS: Record<FlattenMode, (params: IsFlattenMo
 };
 
 /**
+ * The same question as {@link FLATTEN_MODE_DISTINCTNESS_CHECKS}, asked where the items cannot be collected
+ * synchronously — so each entry is a NECESSARY condition, never a sufficient one: `false` proves the mode is
+ * a duplicate, `true` only means it may not be (issue #230).
+ *
+ * That asymmetry is what makes it sound. The asynchronous part of a collection is
+ * {@link isProtectedFolder}, which only ever REMOVES candidates — so a shape that cannot produce a
+ * difference once the synchronous skips are applied cannot produce one afterwards either.
+ *
+ * Keyed by the enum for the same reason as {@link FLATTEN_MODE_DISTINCTNESS_CHECKS}: a new member must be a
+ * compile error rather than a variant silently treated as always-possibly-distinct.
+ */
+const FLATTEN_MODE_SYNC_DISTINCTNESS_CHECKS: Record<FlattenMode, (folder: TFolder, context: FlattenContext) => boolean> = {
+  // Never a duplicate — there is nothing simpler for it to repeat.
+  [FlattenMode.AllChildren]: () => true,
+  /*
+   * The recursive mode is distinct exactly when it collects a folder DEEPER than a direct child, and depth
+   * is a property of the tree rather than of any attachment resolution: a depth-2 folder is only collected
+   * when its own parent was, so both have to survive the synchronous skips. With no such pair there is
+   * nothing for {@link isProtectedFolder} to leave behind, whoever owns the resolution — which is the whole
+   * point, because in a vault running an attachment-location plugin this is the ONLY thing that can be
+   * judged while the menu is being built (issue #230).
+   */
+  [FlattenMode.AllFoldersRecursively]: (folder, context) =>
+    folder.children.some((child) => isFolder(child) && !isSkippedFolder(child, context) && hasAnyCandidateFolder(child, context)),
+  /*
+   * `ChildFoldersOnly` differs from `AllChildren` by what it LEAVES behind, and a protected folder is one of
+   * the things that can be left — so an unresolved attachment folder can still turn this one into a
+   * difference. Nothing can be ruled out synchronously beyond the shared "has a child folder at all", which
+   * `hasAnyCandidateFolder` already answers for both folder-only modes.
+   */
+  [FlattenMode.ChildFoldersOnly]: (folder, context) => hasAnyCandidateFolder(folder, context)
+};
+
+/**
  * The parsed configuration that recognizes nothing — the vault root and the plain `.`/`./` mode both land
  * here.
  */
@@ -155,6 +195,27 @@ const NO_ATTACHMENT_FOLDER_CONFIG: AttachmentFolderConfig = { absolutePath: null
 interface NoteAttachmentFolder {
   readonly attachmentFolderPath: string;
   readonly notePath: string;
+}
+
+/**
+ * Whether the mode could still move something a simpler variant would not — the question of
+ * {@link isFlattenModeDistinct} asked from the FOLDER alone, without collecting anything (issue #230).
+ *
+ * It exists because {@link collectFlattenItemsSyncOrNull} can answer `null`, and a `null` used to mean every
+ * variant was offered: the duplicate rule of issue #210 simply did not run in a vault where an
+ * attachment-location plugin owns the resolution, so `Flatten folder recursively (all folders at any
+ * depth)...` came back on folders whose sub-folders nest nothing. Only the ATTACHMENT question is
+ * asynchronous there; how deep the folders go is not, and this answers that half.
+ *
+ * `false` is a proof and `true` is a maybe — see {@link FLATTEN_MODE_SYNC_DISTINCTNESS_CHECKS} for why that
+ * direction is the sound one. So it is a gate, never a verdict: where the items CAN be collected,
+ * {@link isFlattenModeDistinct} still has the last word.
+ *
+ * @param params - The parameters.
+ * @returns Whether the mode may still be distinct.
+ */
+export function canFlattenModeBeDistinctSync(params: CanFlattenModeBeDistinctSyncParams): boolean {
+  return FLATTEN_MODE_SYNC_DISTINCTNESS_CHECKS[params.mode](params.folder, buildFlattenContext(params));
 }
 
 /**
