@@ -1,6 +1,7 @@
 import type {
   App,
-  Notice
+  Notice,
+  TFile
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
@@ -9,12 +10,19 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import type { ActiveEditorCommandHandlerBase } from './command-handlers/active-editor-command-handler-base.ts';
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import type { MoveMarkedSelectionEditorCommandHandlerBase } from './command-handlers/move-marked-selection-editor-command-handler-base.ts';
 import type { OpenSplitModalCommandHandler } from './command-handlers/open-split-modal-command-handler.ts';
 import type { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
-import type { MoveSelectionBuffer } from './move-selection-buffer.ts';
+import type {
+  MarkedHeading,
+  MoveSelectionBuffer
+} from './move-selection-buffer.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+
+import { hasReorderableSiblings } from './heading-sections.ts';
+import { reopenMarkedSourceNote } from './marked-source-handoff.ts';
 
 /**
  * Parameters for creating a {@link MoveNoticeComponent}.
@@ -28,7 +36,35 @@ export interface MoveNoticeComponentConstructorParams {
   readonly moveToTopHandler: MoveMarkedSelectionEditorCommandHandlerBase;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  /**
+   * Backs the marked-heading notice's `Reorder headings...` action. Unregistered as a command here — the
+   * notice drives it directly, exactly like {@link swapMarkedSelectionHandler}.
+   */
+  readonly reorderHeadingsHandler: ActiveEditorCommandHandlerBase;
+
+  /**
+   * Backs the marked-heading notice's `Split heading recursively...` action — the EXISTING recursive-split
+   * command (issue #228), reused rather than reimplemented.
+   */
+  readonly splitHeadingRecursivelyHandler: ActiveEditorCommandHandlerBase;
   readonly swapMarkedSelectionHandler: SwapMarkedSelectionEditorCommandHandler;
+}
+
+/**
+ * Parameters for {@link MoveNoticeComponent.showNotice}.
+ */
+export interface MoveNoticeComponentShowNoticeParams {
+  /**
+   * The heading being marked, or `null` for a plain selection mark. Passed in rather than read back from
+   * {@link MoveSelectionBuffer}, because the notice is built BEFORE the mark is recorded there.
+   */
+  readonly markedHeading: MarkedHeading | null;
+
+  /**
+   * The note being marked, whose headings decide whether `Reorder headings...` has anything to reorder.
+   */
+  readonly sourceFile: TFile;
 }
 
 /**
@@ -58,6 +94,9 @@ interface MoveNoticeButtonDefinition {
  * `Switch to split/extract` button, up to three configurable move buttons, a `Swap with selection`
  * button (swaps the marked selection with the active editor's current selection), and an always-shown
  * `Cancel move` button. Button state is refreshed whenever the active leaf or the editor selection changes.
+ *
+ * A mark made by `Mark heading to move` (issue #229) additionally offers `Split heading recursively...` and
+ * `Reorder headings...` — both configurable, both driving the EXISTING command against the marked heading.
  */
 export class MoveNoticeComponent extends AllWindowsEventComponent {
   private buttons: MoveNoticeButton[] | null = null;
@@ -69,6 +108,8 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   private openSplitModalCommandHandler: null | OpenSplitModalCommandHandler = null;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly reorderHeadingsHandler: ActiveEditorCommandHandlerBase;
+  private readonly splitHeadingRecursivelyHandler: ActiveEditorCommandHandlerBase;
   private readonly swapMarkedSelectionHandler: SwapMarkedSelectionEditorCommandHandler;
 
   public constructor(params: MoveNoticeComponentConstructorParams) {
@@ -80,6 +121,8 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     this.moveToTopHandler = params.moveToTopHandler;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.reorderHeadingsHandler = params.reorderHeadingsHandler;
+    this.splitHeadingRecursivelyHandler = params.splitHeadingRecursivelyHandler;
     this.swapMarkedSelectionHandler = params.swapMarkedSelectionHandler;
   }
 
@@ -135,9 +178,10 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
    * `Smart cut & paste` settings; switching to split/extract and cancelling are always shown. When the
    * notice itself is disabled (`shouldShowSmartCutNotice` is off), nothing is shown and `null` is returned.
    *
+   * @param params - The parameters.
    * @returns The shown notice, or `null` when the notice is disabled via settings.
    */
-  public showNotice(): Notice | null {
+  public showNotice(params: MoveNoticeComponentShowNoticeParams): Notice | null {
     if (!this.pluginSettingsComponent.settings.shouldShowSmartCutNotice) {
       this.buttons = null;
       return null;
@@ -147,7 +191,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     const message = createFragment((f) => {
       f.appendText('Smart cut & paste: selection marked to move.');
       const buttonContainerEl = f.createDiv('advanced-note-composer-move-notice-buttons');
-      for (const definition of this.getButtonDefinitions()) {
+      for (const definition of this.getButtonDefinitions(params.markedHeading, params.sourceFile)) {
         const component = new ButtonComponent(buttonContainerEl)
           .setButtonText(definition.label)
           .onClick(() => {
@@ -170,7 +214,16 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     return notice;
   }
 
-  private getButtonDefinitions(): MoveNoticeButtonDefinition[] {
+  /**
+   * Builds the notice's button definitions. Takes the heading and note positionally rather than as a params
+   * bag, because a bag shared with {@link showNotice} would have to be named after each of them
+   * (`obsidian-dev-utils/params-options-name-match`).
+   *
+   * @param markedHeading - The heading being marked, or `null` for a plain selection mark.
+   * @param sourceFile - The note being marked.
+   * @returns The button definitions, in the order they are shown.
+   */
+  private getButtonDefinitions(markedHeading: MarkedHeading | null, sourceFile: TFile): MoveNoticeButtonDefinition[] {
     const settings = this.pluginSettingsComponent.settings;
     const definitions: MoveNoticeButtonDefinition[] = [
       {
@@ -212,6 +265,36 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       });
     }
 
+    /*
+     * The two heading-only actions (issue #229): offered only for a mark made by `Mark heading to move`,
+     * because both act on a HEADING, which a plain selection mark does not have. Each hands the note over to
+     * the existing command — see `runOnMarkedHeading`.
+     */
+    if (markedHeading) {
+      if (settings.shouldShowSplitHeadingRecursivelyButton) {
+        definitions.push({
+          // A leaf heading is deliberately still offered: it produces `X/X.md`, exactly what the command
+          // Does at a leaf when driven from the menu.
+          getIsEnabled: null,
+          label: 'Split heading recursively...',
+          onClick: (): void => {
+            invokeAsyncSafely(() => this.runOnMarkedHeading(this.splitHeadingRecursivelyHandler));
+          }
+        });
+      }
+      if (settings.shouldShowReorderHeadingsButton) {
+        definitions.push({
+          // Enablement is read off the MARKED note, not the active editor (unlike the move buttons): this
+          // Button acts on the source note wherever the user happens to be.
+          getIsEnabled: () => hasReorderableSiblings(this.app.metadataCache.getFileCache(sourceFile)?.headings ?? []),
+          label: 'Reorder headings...',
+          onClick: (): void => {
+            invokeAsyncSafely(() => this.runOnMarkedHeading(this.reorderHeadingsHandler));
+          }
+        });
+      }
+    }
+
     definitions.push({
       getIsEnabled: () => this.swapMarkedSelectionHandler.canExecuteInActiveEditor(),
       label: 'Swap with selection',
@@ -227,5 +310,32 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     });
 
     return definitions;
+  }
+
+  /**
+   * Runs one of the heading-only actions against the marked heading: releases the mark (the operation writes
+   * to the note the mark keeps mutation-blocked), re-opens the source note, puts the cursor on the marked
+   * heading — which is how the existing cursor-driven commands learn WHICH heading to act on — and runs the
+   * handler. A no-op when the mark is not a heading mark or its note is gone.
+   *
+   * @param handler - The command handler to run against the marked heading.
+   */
+  private async runOnMarkedHeading(handler: ActiveEditorCommandHandlerBase): Promise<void> {
+    const markedHeading = this.moveSelectionBuffer.get()?.markedHeading;
+    if (!markedHeading) {
+      return;
+    }
+
+    const view = await reopenMarkedSourceNote({
+      app: this.app,
+      moveSelectionBuffer: this.moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+    if (!view) {
+      return;
+    }
+
+    view.editor.setCursor({ ch: 0, line: markedHeading.line });
+    await handler.executeInActiveEditor();
   }
 }

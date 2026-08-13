@@ -505,7 +505,22 @@ export class PluginSettings {
    */
   public shouldShowRenameButtonForCreatedNotes = true;
 
+  /**
+   * Whether the smart cut & paste notice offers a `Reorder headings...` button while a HEADING is marked
+   * (issue #229). Only a heading mark ever shows it — a plain selection mark has no heading to act on — and
+   * the `Reorder headings...` command stays available regardless.
+   */
+  public shouldShowReorderHeadingsButton = true;
+
   public shouldShowSmartCutNotice = true;
+
+  /**
+   * Whether the smart cut & paste notice offers a `Split heading recursively...` button while a HEADING is
+   * marked (issue #229). Like {@link shouldShowReorderHeadingsButton}, it is a heading-mark-only button and
+   * the command it drives stays available regardless.
+   */
+  public shouldShowSplitHeadingRecursivelyButton = true;
+
   public shouldSplitHeadingsAutomatically = false;
   public shouldSplitIntoFolder = false;
 

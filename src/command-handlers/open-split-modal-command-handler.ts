@@ -1,12 +1,13 @@
 import type { App } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { MarkdownView } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { GlobalCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/global-command-handler';
 
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { ExtractCurrentSelectionEditorCommandHandler } from './extract-current-selection-editor-command-handler.ts';
+
+import { reopenMarkedSourceNote } from '../marked-source-handoff.ts';
 
 interface OpenSplitModalCommandHandlerConstructorParams {
   readonly app: App;
@@ -52,31 +53,22 @@ export class OpenSplitModalCommandHandler extends GlobalCommandHandler {
       return;
     }
 
-    const sourceFile = this.app.vault.getFileByPath(marked.sourceFile.path);
-    if (!sourceFile) {
-      this.pluginNoticeComponent.showNotice('The note the selection was marked in no longer exists.');
-      this.moveSelectionBuffer.clear();
-      return;
-    }
-
-    // Snapshot the marked selection before clearing the buffer (which drops the mark).
+    // Snapshot the marked selection before the handoff clears the buffer (which drops the mark).
     const capturedSelections = marked.capturedSelections;
 
-    // Release the held source-note lock (and hide the notice + remove the highlight) before the split
-    // Flow runs — `prepareForSplitFile` takes its own lock on the source note, which would otherwise
-    // Conflict with the mark's lock.
-    this.moveSelectionBuffer.clear();
-
-    // Re-open the source note as the active editor and restore the marked selection, so the reused
-    // `Extract current selection` flow sees exactly the text that was marked.
-    const leaf = this.app.workspace.getLeaf(false);
-    await leaf.openFile(sourceFile, { active: true });
-
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view || view.file?.path !== sourceFile.path) {
+    // Releases the held source-note lock (hiding the notice + removing the highlight) and re-opens the
+    // Source note — `prepareForSplitFile` takes its own lock on it, which would otherwise conflict.
+    const view = await reopenMarkedSourceNote({
+      app: this.app,
+      moveSelectionBuffer: this.moveSelectionBuffer,
+      pluginNoticeComponent: this.pluginNoticeComponent
+    });
+    if (!view) {
       return;
     }
 
+    // Restore the marked selection, so the reused `Extract current selection` flow sees exactly the text
+    // That was marked.
     view.editor.setSelections(capturedSelections.map((selection) => ({
       anchor: view.editor.offsetToPos(selection.startOffset),
       head: view.editor.offsetToPos(selection.endOffset)

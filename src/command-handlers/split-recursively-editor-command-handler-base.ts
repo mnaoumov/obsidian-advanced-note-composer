@@ -14,7 +14,6 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -47,6 +46,7 @@ import {
   showOperationProgressNotice
 } from '../operation-notices.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
+import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 /**
  * What one invocation of a recursive split is going to do, as resolved by the subclass from the cursor and
@@ -180,8 +180,7 @@ const PREVIEW_INDENT = ' '.repeat(PREVIEW_INDENT_WIDTH);
  * itself, and the deferred split-template pass — leaving subclasses only {@link resolveRun}: WHICH headings
  * the root pass extracts, and what the dialog and notices call the operation.
  */
-export abstract class SplitRecursivelyEditorCommandHandlerBase extends EditorCommandHandler {
-  protected readonly app: App;
+export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -190,7 +189,6 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends EditorCom
   public constructor(params: SplitRecursivelyEditorCommandHandlerBaseConstructorParams) {
     super(params);
 
-    this.app = params.app;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;

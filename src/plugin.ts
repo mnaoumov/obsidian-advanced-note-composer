@@ -14,6 +14,7 @@ import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './command-han
 import { ExtractCurrentSelectionEditorCommandHandler } from './command-handlers/extract-current-selection-editor-command-handler.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './command-handlers/extract-this-heading-editor-command-handler.ts';
 import { FlattenFolderCommandHandler } from './command-handlers/flatten-folder-command-handler.ts';
+import { MarkHeadingToMoveEditorCommandHandler } from './command-handlers/mark-heading-to-move-editor-command-handler.ts';
 import { MarkSelectionToMoveEditorCommandHandler } from './command-handlers/mark-selection-to-move-editor-command-handler.ts';
 import { MarkSelectionToSwapEditorCommandHandler } from './command-handlers/mark-selection-to-swap-editor-command-handler.ts';
 import { MergeFileCommandHandler } from './command-handlers/merge-file-command-handler.ts';
@@ -141,6 +142,24 @@ export class Plugin extends PluginBase {
         moveSelectionBuffer,
         pluginNoticeComponent: this.pluginNoticeComponent
       });
+    // The two heading-only notice buttons drive these EXISTING commands (issues #228/#229) rather than
+    // Reimplementing them, so they are built the same way: one unregistered instance for the notice, and a
+    // Separate registered one below.
+    const buildSplitHeadingRecursivelyEditorCommandHandler = (): SplitHeadingRecursivelyEditorCommandHandler =>
+      new SplitHeadingRecursivelyEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      });
+    const buildReorderHeadingsEditorCommandHandler = (): ReorderHeadingsEditorCommandHandler =>
+      new ReorderHeadingsEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      });
 
     const moveAtCursorHandler = buildMoveAtCursorHandler(false);
     const moveToTopHandler = buildMoveToEdgeHandler(InsertMode.Prepend);
@@ -167,6 +186,8 @@ export class Plugin extends PluginBase {
         moveToTopHandler,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
+        reorderHeadingsHandler: buildReorderHeadingsEditorCommandHandler(),
+        splitHeadingRecursivelyHandler: buildSplitHeadingRecursivelyEditorCommandHandler(),
         swapMarkedSelectionHandler
       })
     );
@@ -242,6 +263,17 @@ export class Plugin extends PluginBase {
         selectionHighlightComponent
       }),
       new MarkSelectionToMoveEditorCommandHandler({
+        app: this.app,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
+      // The same mark, scoped to the heading the cursor is in — heading line, body and everything nested
+      // Under it (issue #229).
+      new MarkHeadingToMoveEditorCommandHandler({
         app: this.app,
         moveNoticeComponent,
         moveSelectionBuffer,
@@ -331,12 +363,7 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent
       }),
-      new ReorderHeadingsEditorCommandHandler({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent,
-        resourceLockComponent
-      }),
+      buildReorderHeadingsEditorCommandHandler(),
       new ReorderSiblingFoldersCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
@@ -364,13 +391,7 @@ export class Plugin extends PluginBase {
       }),
       // The same recursion scoped to the heading the cursor is in, leaving the note's other headings
       // Intact (issue #228).
-      new SplitHeadingRecursivelyEditorCommandHandler({
-        app: this.app,
-        consoleDebugComponent: this.consoleDebugComponent,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent,
-        resourceLockComponent
-      }),
+      buildSplitHeadingRecursivelyEditorCommandHandler(),
       ...HEADING_LEVELS.flatMap((headingLevel) => [
         new SplitNoteByHeadingsEditorCommandHandler({
           app: this.app,

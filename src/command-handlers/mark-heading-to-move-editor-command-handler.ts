@@ -16,10 +16,13 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
-import { getSelections } from '../composers/split-composer.ts';
+import {
+  getEnclosingHeadingLine,
+  getSelectionUnderHeading
+} from '../composers/composer-base.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
 
-interface MarkSelectionToMoveEditorCommandHandlerConstructorParams {
+interface MarkHeadingToMoveEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
@@ -29,7 +32,17 @@ interface MarkSelectionToMoveEditorCommandHandlerConstructorParams {
   readonly selectionHighlightComponent: SelectionHighlightComponent;
 }
 
-export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandler {
+/**
+ * `Smart cut & paste: Mark heading to move` (issue #229) — the smart cut & paste mark applied to a whole
+ * heading section instead of a hand-made selection: the heading line, its body, and everything nested under
+ * it are marked, locked and highlighted exactly as a marked selection is, and every move/paste target the
+ * notice offers works on them unchanged.
+ *
+ * The heading is the one ENCLOSING the cursor (issue #143), the same rule `Extract this heading...` and
+ * `Split heading recursively...` use — which is what makes right-clicking anywhere inside a heading's section
+ * the entry point the issue asked for, with no UI surface of its own.
+ */
+export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
   private readonly moveNoticeComponent: MoveNoticeComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
@@ -38,20 +51,20 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
   private readonly resourceLockComponent: ResourceLockComponent;
   private readonly selectionHighlightComponent: SelectionHighlightComponent;
 
-  public constructor(params: MarkSelectionToMoveEditorCommandHandlerConstructorParams) {
+  public constructor(params: MarkHeadingToMoveEditorCommandHandlerConstructorParams) {
     super({
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-scissors',
-      id: 'mark-selection-to-move',
-      name: 'Smart cut & paste: Mark selection to move'
+      id: 'mark-heading-to-move',
+      name: 'Smart cut & paste: Mark heading to move'
     });
 
     this.app = params.app;
     this.moveNoticeComponent = params.moveNoticeComponent;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
-    this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
     this.selectionHighlightComponent = params.selectionHighlightComponent;
   }
 
@@ -59,7 +72,15 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
       return false;
     }
-    return editor.somethingSelected();
+    const file = context.file;
+    if (!file) {
+      return false;
+    }
+    const headingLine = getEnclosingHeadingLine({ app: this.app, cursorLine: editor.getCursor().line, file });
+    if (headingLine === null) {
+      return false;
+    }
+    return getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
   }
 
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
@@ -70,7 +91,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
-          f.appendText('You cannot move a selection from file ');
+          f.appendText('You cannot move a heading from file ');
           f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
           f.appendText(' because it is ignored in the plugin settings.');
         })
@@ -78,14 +99,36 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
       return;
     }
 
+    /*
+     * Re-resolved here rather than remembered from `canExecuteEditor`: the gate runs whenever Obsidian builds
+     * a menu or checks the palette, so a cursor moved in between would otherwise mark a heading the user has
+     * already left.
+     */
+    const headingLine = getEnclosingHeadingLine({ app: this.app, cursorLine: editor.getCursor().line, file });
+    if (headingLine === null) {
+      return;
+    }
+    const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine });
+    if (!headingInfo) {
+      return;
+    }
+
+    // The section's own bounds — heading line through its last nested line — which is the same range
+    // `Extract this heading...` extracts.
+    const startOffset = editor.posToOffset(headingInfo.start);
+    const endOffset = editor.posToOffset(headingInfo.end);
+
     markSelectionToMove({
       app: this.app,
-      capturedSelections: getSelections(editor),
-      markedHeading: null,
+      capturedSelections: [{ endOffset, startOffset }],
+      markedHeading: {
+        line: headingLine,
+        text: headingInfo.heading
+      },
       moveNoticeComponent: this.moveNoticeComponent,
       moveSelectionBuffer: this.moveSelectionBuffer,
       resourceLockComponent: this.resourceLockComponent,
-      selectedText: editor.getSelection(),
+      selectedText: editor.getRange(headingInfo.start, headingInfo.end),
       selectionHighlightComponent: this.selectionHighlightComponent,
       shouldLockAllNotes: this.pluginSettingsComponent.settings.shouldLockAllNotesWhenMarkingSelection,
       sourceFile: file
@@ -96,7 +139,13 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToEditorMenu(): boolean {
-    return true;
+  protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, context);
+    /*
+     * Hidden only while a selection is active (issue #188), where `Mark selection to move` is the command the
+     * user means — the same rule `Extract this heading...` and the recursive splits follow. The palette
+     * command and any hotkey keep working with a selection active.
+     */
+    return !editor.somethingSelected();
   }
 }

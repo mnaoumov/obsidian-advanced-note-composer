@@ -78,6 +78,7 @@ function markSelection(sourceFile: TFile, capturedSelections: Selection[] = [{ e
     capturedSelections,
     highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
+    markedHeading: null,
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'selected',
     sourceFile,

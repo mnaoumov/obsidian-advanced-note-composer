@@ -90,6 +90,7 @@ function mark(context: TestContext, shouldLockAllNotes = false): void {
   markSelectionToMove({
     app: context.app,
     capturedSelections: CAPTURED_SELECTIONS,
+    markedHeading: null,
     moveNoticeComponent: context.moveNoticeComponent,
     moveSelectionBuffer: context.moveSelectionBuffer,
     resourceLockComponent: context.resourceLockComponent,

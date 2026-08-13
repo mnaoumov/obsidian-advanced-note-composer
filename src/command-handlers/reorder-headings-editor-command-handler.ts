@@ -9,7 +9,6 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -27,6 +26,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 interface ReorderHeadingsEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -41,21 +41,20 @@ interface ReorderHeadingsEditorCommandHandlerConstructorParams {
  * same-parent siblings; on confirm the note is rewritten with the sections in the chosen order, nested
  * subheadings preserved, inside a reversible resource-locked transaction.
  */
-export class ReorderHeadingsEditorCommandHandler extends EditorCommandHandler {
-  private readonly app: App;
+export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHandlerBase {
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: ReorderHeadingsEditorCommandHandlerConstructorParams) {
     super({
+      app: params.app,
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-list-ordered',
       id: 'reorder-headings',
       name: 'Reorder headings...'
     });
 
-    this.app = params.app;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
