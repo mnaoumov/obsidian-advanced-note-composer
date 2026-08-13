@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Split headings recursively
 
 `Split note by headings - H2` extracts one level. This command extracts *all* of them, and keeps the
@@ -37,7 +35,7 @@ Two things this command does *not* care about:
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
 
 Want only one section restructured instead of the whole note? That is
-[[32 Split heading recursively]].
+[32 Split heading recursively](<./32 Split heading recursively.md>).
 
 ## Right-click with a selection
 

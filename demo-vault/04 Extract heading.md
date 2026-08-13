@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Extract heading
 
 Extract a heading **and everything under it** into its own note, named after the heading.
@@ -24,8 +22,8 @@ the section.
 
 This whole section - heading and body - becomes a separate note. Put your cursor right here, on this
 body line, and the extraction still grabs the entire section. The heading text becomes the new note's
-title, so invalid characters and slashes matter here (see [[11 Invalid titles]] and
-[[12 Treat title as path]]).
+title, so invalid characters and slashes matter here (see [11 Invalid titles](<./11 Invalid titles.md>) and
+[12 Treat title as path](<./12 Treat title as path.md>)).
 
 ## Another section
 

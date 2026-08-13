@@ -1,3 +1,5 @@
+# Deepest note
+
 This note lives two levels down, in `Nested/Deeper`.
 
 Run `Flatten folder...` or `Flatten folder (child folders only)...` and `Deeper` travels inside

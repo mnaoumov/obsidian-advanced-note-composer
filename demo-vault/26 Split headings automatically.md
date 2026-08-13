@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Split headings automatically
 
 Heading-driven splits normally still ask you something: `Extract this heading...` opens the target

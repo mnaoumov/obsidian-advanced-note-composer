@@ -1,9 +1,7 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Swap selections
 
 Exchange two pieces of selected text in one step - within one note or across two notes. This is the
-text-level counterpart to [[07 Swap file]] (whole notes) and [[08 Swap folder]] (whole folders).
+text-level counterpart to [07 Swap file](<./07 Swap file.md>) (whole notes) and [08 Swap folder](<./08 Swap folder.md>) (whole folders).
 
 ## Try it (within one note)
 

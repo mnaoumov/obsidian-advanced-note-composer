@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Rename folder
 
 Rename a folder and keep its folder note in step — the note's own file name, its `title` property and its

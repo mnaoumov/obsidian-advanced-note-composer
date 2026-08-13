@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer#treat-title-as-path)
-
 # Treat title as path
 
 A heading that contains `/` can become a **nested path** instead of a file with underscores.

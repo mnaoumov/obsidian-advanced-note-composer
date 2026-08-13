@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer#minimizing-dialogs)
-
 # Minimizing dialogs
 
 Every **confirmation** dialog this plugin opens - plus the `Extract ...` (split) picker and the

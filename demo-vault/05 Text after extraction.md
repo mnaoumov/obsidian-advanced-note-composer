@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer#move-selection-to-another-note-smart-cut--paste)
-
 # Text after extraction
 
 When you extract a selection, something can be left in its place: a **link** to the new

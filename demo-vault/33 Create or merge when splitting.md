@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer)
-
 # Create or merge when splitting
 
 Every split or extract does one of two things with the target you pick: it **creates** a new note, or it
@@ -8,7 +6,7 @@ which — before, you had to infer it from what you happened to type.
 
 ## Try it
 
-There is a note next door called [[Split merge target]]. It already exists, which is what makes the two modes
+There is a note next door called [Split merge target](<./Split merge target.md>). It already exists, which is what makes the two modes
 tell different stories about the same typed name.
 
 1. Select the line below the horizontal rule.
@@ -32,7 +30,7 @@ Extract me twice — once in each mode — and watch the same name mean two diff
 | The current note | not offered | offered, per `Should offer the current note when splitting` |
 
 That last row is worth knowing: extracting into the note you are already in — the `Enter` / `Shift+Enter`
-same-note move of [[03 Extract selection]] — is a merge into an existing note, so it lives in `Merge`.
+same-note move of [03 Extract selection](<./03 Extract selection.md>) — is a merge into an existing note, so it lives in `Merge`.
 
 ## Keys and defaults
 

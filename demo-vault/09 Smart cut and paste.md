@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-advanced-note-composer#move-selection-to-another-note-smart-cut--paste)
-
 # Smart cut and paste
 
 A decoupled, two-step **move**: mark a selection, then drop it exactly where you want -
