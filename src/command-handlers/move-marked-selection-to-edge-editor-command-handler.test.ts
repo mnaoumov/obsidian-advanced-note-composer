@@ -94,6 +94,7 @@ function createMarkedBuffer(sourceFile: TFile, capturedSelections: Selection[]):
     capturedSelections,
     highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
+    markedHeading: null,
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
     sourceFile,

@@ -7,6 +7,7 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 import type { Selection } from './composers/composer-base.ts';
 import type { MoveNoticeComponent } from './move-notice-component.ts';
 import type {
+  MarkedHeading,
   MarkedSelection,
   MoveSelectionBuffer
 } from './move-selection-buffer.ts';
@@ -18,6 +19,12 @@ import type { SelectionHighlightComponent } from './selection-highlight-componen
 export interface MarkSelectionToMoveParams {
   readonly app: App;
   readonly capturedSelections: Selection[];
+
+  /**
+   * The heading being marked, or `null` when a plain selection is being marked. Only `Mark heading to move`
+   * passes one (issue #229).
+   */
+  readonly markedHeading: MarkedHeading | null;
   readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -63,7 +70,12 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
     shouldReleaseOnAbort: true
   });
 
-  const notice = params.moveNoticeComponent.showNotice();
+  const notice = params.moveNoticeComponent.showNotice({
+    // The notice is built here, BEFORE the mark below reaches the buffer, so the heading has to be handed
+    // To it rather than read back from there — the heading-only buttons would otherwise never appear.
+    markedHeading: params.markedHeading,
+    sourceFile: params.sourceFile
+  });
   const highlight = params.selectionHighlightComponent.addHighlight(params.sourceFile, params.capturedSelections);
 
   const markedSelection: MarkedSelection = {
@@ -71,6 +83,7 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
     capturedSelections: params.capturedSelections,
     highlight,
     lock,
+    markedHeading: params.markedHeading,
     notice,
     selectedText: params.selectedText,
     sourceFile: params.sourceFile,

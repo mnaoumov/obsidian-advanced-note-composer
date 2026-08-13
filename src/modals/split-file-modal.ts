@@ -589,6 +589,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       markSelectionToMove({
         app: params.app,
         capturedSelections,
+        // What is switched over is a split's captured SELECTION, so the mark is a plain one even when the
+        // Split itself was heading-driven.
+        markedHeading: null,
         moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
         moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
         resourceLockComponent: params.resourceLockComponent,
@@ -666,6 +669,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       markSelectionToMove({
         app: params.app,
         capturedSelections,
+        // What is switched over is a split's captured SELECTION, so the mark is a plain one even when the
+        // Split itself was heading-driven.
+        markedHeading: null,
         moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
         moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
         resourceLockComponent: params.resourceLockComponent,

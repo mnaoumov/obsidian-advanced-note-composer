@@ -809,6 +809,44 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               }),
               this.settingEx({
                 desc: createFragment((f) => {
+                  f.appendText('Whether to show the ');
+                  appendCodeBlock(f, 'Split heading recursively...');
+                  f.appendText(' button in the smart cut & paste notice.');
+                  f.createEl('br');
+                  f.appendText('Shown only while a heading is marked via ');
+                  appendCodeBlock(f, 'Mark heading to move');
+                  f.appendText(' - a marked selection has no heading to split. Clicking it cancels the mark, since the split rewrites the note the mark keeps locked.');
+                  f.createEl('br');
+                  f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+                }),
+                name: 'Should show split heading recursively button',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowSplitHeadingRecursivelyButton', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to show the ');
+                  appendCodeBlock(f, 'Reorder headings...');
+                  f.appendText(' button in the smart cut & paste notice.');
+                  f.createEl('br');
+                  f.appendText('Shown only while a heading is marked via ');
+                  appendCodeBlock(f, 'Mark heading to move');
+                  f.appendText(', and only when the marked note has headings that can be reordered. Clicking it cancels the mark, since the reorder rewrites the note the mark keeps locked.');
+                  f.createEl('br');
+                  f.appendText('The command stays available regardless, so any hotkey you assigned to it keeps working.');
+                }),
+                name: 'Should show reorder headings button',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldShowReorderHeadingsButton', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
                   f.appendText('How a finished smart cut & paste move tells you where the marked selection landed.');
                   f.createEl('br');
                   appendCodeBlock(f, 'Select moved content');

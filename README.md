@@ -159,6 +159,12 @@ Commands (each appears as **`Smart cut & paste: …`** in the command palette):
   and locks that note (blocking edits) so the marked region cannot drift before you move it. The note stays
   unchanged — nothing is removed yet. Enable **Should lock all notes when marking selection** to lock *every*
   note (not just the source) while a mark is held, so you must finish the extraction before editing anything.
+- **`Mark heading to move`** — available when the cursor is inside a heading's section, with nothing
+  selected. Marks that whole heading — the heading line, its body, and every sub-heading nested under it —
+  exactly as if you had selected it by hand, so right-clicking anywhere inside a heading is all it takes. It
+  then behaves like any other mark: every move, paste and swap below works on it unchanged. (With text
+  selected, use `Mark selection to move` instead — the item leaves the right-click menu, though the command
+  and its hotkey keep working.)
 - **`Move marked selection here`** — available once something is marked. Moves the marked selection to the
   cursor in the current note, using your default settings, as a single reversible operation. If you have
   text selected in the target when you run it, the moved text **replaces that selection** (like pasting over
@@ -180,6 +186,14 @@ until you complete or cancel it. The notice carries buttons — **Move marked se
 each enabled only while it applies to the active note, so you can drive the whole move from the notice
 without opening the command palette.
 
+When the mark came from **`Mark heading to move`**, the notice carries two more buttons — **Split heading
+recursively...** and **Reorder headings...** — so you can restructure the heading you just marked instead of
+moving it, without hunting for the command. They are shown only for a heading mark (a marked selection has no
+heading to act on), and **Reorder headings...** only while the marked note has headings that can be
+reordered. Clicking either one **cancels the mark first**: both rewrite the note the mark keeps locked, so the
+mark has to be released before they can run. The note is then re-opened with the cursor back on the marked
+heading, and the ordinary command takes over from there.
+
 The **Smart cut & paste** settings page lets you tailor this notice:
 
 - **Should show smart cut & paste notice** — turn the whole notice off if you prefer to drive marking,
@@ -189,6 +203,9 @@ The **Smart cut & paste** settings page lets you tailor this notice:
   **Should show move at cursor button** — hide any of the three move buttons you do not use, leaving a
   tidier notice. **Cancel move** is always shown. Hiding a button never unregisters its command, so any
   hotkey you assigned to it keeps working.
+- **Should show split heading recursively button** / **Should show reorder headings button** — the same for
+  the two buttons a heading mark adds. Both are on by default and, like the move buttons, hiding one leaves
+  its command (and hotkey) untouched.
 - **Should jump to content moved to top of file** / **Should jump to content moved to bottom of file**
   (both on by default) — whether the cursor follows the marked selection to where it lands. Turn one off
   when you use that move to get text *out of the way*: the cursor then stays where the selection was cut

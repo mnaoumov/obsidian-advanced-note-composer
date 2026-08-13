@@ -7,6 +7,23 @@ import type {
 import type { Selection } from './composers/composer-base.ts';
 
 /**
+ * The heading a mark was made from, when it came from `Mark heading to move` (issue #229) rather than from a
+ * plain selection. It is what lets the marked-selection notice offer the heading-only actions and tell them
+ * WHICH heading to act on.
+ */
+export interface MarkedHeading {
+  /**
+   * The line the heading starts on, in the source note.
+   */
+  readonly line: number;
+
+  /**
+   * The heading's text, used to name the heading in the notice's actions.
+   */
+  readonly text: string;
+}
+
+/**
  * A selection marked by the `Mark selection to move` command, held until it is moved
  * (`Move marked selection here`) or the move is cancelled (`Cancel move`).
  */
@@ -34,6 +51,12 @@ export interface MarkedSelection {
    * The held source-note lock, disposed by {@link MoveSelectionBuffer.clear}.
    */
   readonly lock: Disposable;
+
+  /**
+   * The heading this mark covers, or `null` when a plain selection was marked. Only a heading mark can offer
+   * the notice's heading-only actions, which need a heading to act on.
+   */
+  readonly markedHeading: MarkedHeading | null;
 
   /**
    * The permanent notice reminding the user a selection is marked, hidden by {@link MoveSelectionBuffer.clear}.

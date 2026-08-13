@@ -43,6 +43,7 @@ function createMarkedBuffer(): MoveSelectionBuffer {
     capturedSelections: [{ endOffset: 1, startOffset: 0 }],
     highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
+    markedHeading: null,
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'text',
     sourceFile: strictProxy<TFile>({ path: 'source.md' }),

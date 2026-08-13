@@ -187,8 +187,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
 
     // Caret in the heading's body with nothing selected: the heading commands are offered, and both
     // `Extract this heading...` and `Split heading recursively...` work from the body rather than only
-    // the `#` line (issue #143) — which is what makes right-clicking a section the entry point for
-    // issue #228, with no menu surface of its own.
+    // The `#` line (issue #143) — which is what makes right-clicking a section the entry point for
+    // Issue #228, with no menu surface of its own.
     expect(result.caretInBody.isRecursiveSplitInMenu).toBe(true);
     expect(result.caretInBody.isScopedSplitInMenu).toBe(true);
     expect(result.caretInBody.isExtractThisHeadingInMenu).toBe(true);

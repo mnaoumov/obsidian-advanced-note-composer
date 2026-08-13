@@ -23,6 +23,7 @@ function createMarkedSelection(overrides: Partial<MarkedSelection> = {}): Marked
     capturedSelections: [{ endOffset: 10, startOffset: 5 }],
     highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
+    markedHeading: null,
     notice: strictProxy<Notice>({ hide: vi.fn() }),
     selectedText: 'marked text',
     sourceFile: strictProxy<TFile>({ path: 'source.md' }),

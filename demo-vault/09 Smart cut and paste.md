@@ -17,6 +17,42 @@ even in the same note - as a single reversible operation.
 Changed your mind? Run `Smart cut & paste: Cancel move`, or click **Cancel move** in the
 notice - the mark is discarded and the note unlocked.
 
+## Mark a whole heading
+
+`Smart cut & paste: Mark heading to move` marks the heading your cursor is in - the heading line, its
+body, and everything nested under it - so you never have to select a section by hand. Put the cursor
+anywhere inside **Section to move** below (its body counts, not only the `#` line), run the command, and
+every move above works on the whole section unchanged. With text selected the item leaves the right-click
+menu, because that is what `Mark selection to move` is for.
+
+While a *heading* is marked, the notice carries two extra buttons - **Split heading recursively...** and
+**Reorder headings...** - so you can restructure the heading you just marked instead of moving it. Both
+cancel the mark first: each rewrites the note the mark keeps locked. The block below hides them. Manual
+equivalent: toggle **Should show split heading recursively button** and **Should show reorder headings
+button** in **Settings → Advanced Note Composer**.
+
+```code-button
+---
+caption: Hide the two heading buttons in the notice, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldShowReorderHeadingsButton: false, shouldShowSplitHeadingRecursivelyButton: false });
+```
+
+```code-button
+---
+caption: Show them again, then reload
+---
+await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldShowReorderHeadingsButton: true, shouldShowSplitHeadingRecursivelyButton: true });
+```
+
+### Section to move
+
+Put the cursor in this paragraph and mark the heading: this text and the sub-heading below travel with it.
+
+#### Nested under it
+
+Nested content moves too - the mark covers the whole subtree, exactly like `Extract this heading...`.
+
 ## Swap instead of move
 
 The persistent notice also has a **Swap with selection** button. Instead of moving the marked
