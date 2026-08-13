@@ -158,6 +158,20 @@ export enum SmartCutAndPasteMoveKind {
   ToTop = 'ToTop'
 }
 
+/**
+ * What the split/extract picker does with the target it resolves (issue #227): create a brand-new note, or
+ * merge the extracted content into an existing one.
+ *
+ * Both halves already existed — `SplitItemSelector` created a note when the input named nothing (or `Mod`
+ * was held) and merged into the picked file otherwise — but nothing on screen said which was about to
+ * happen. The mode makes that fork EXPLICIT: it drives the picker's switch, which suggestions are offered,
+ * and which branch the selector takes.
+ */
+export enum SplitTargetMode {
+  Create = 'Create',
+  Merge = 'Merge'
+}
+
 export enum TextAfterExtractionMode {
   EmbedNewFile = 'embed',
   LinkToNewFile = 'link',
@@ -176,6 +190,17 @@ export class PluginSettings {
   public attachmentExtensions: string[] = ['.excalidraw.md'];
 
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
+
+  /**
+   * Which mode the split/extract picker opens in (issue #227). The switch above the picker's input flips it
+   * per invocation; this is only where it starts.
+   *
+   * Defaults to {@link SplitTargetMode.Create}, which is the common extract-to-a-new-note case and what the
+   * picker did before the switch existed whenever the typed name matched nothing. No
+   * `registerLegacySettingsConverter` is needed: the key is new, and an absent key already resolves to
+   * `Create`.
+   */
+  public defaultSplitTargetMode = SplitTargetMode.Create;
 
   /**
    * What happens to the folders a folder merge empties. Defaults to deleting them: once every note is

@@ -53,6 +53,12 @@ describe('same-note extract via the split picker', () => {
           await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
+          // Extracting into the note you are already in is a MERGE into an existing note, so since the
+          // Create/merge switch made the mode explicit (issue #227) the picker offers the source note in
+          // `Merge` mode only - `Create` would make a second note named after the query instead.
+          switchToMergeMode();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('No split picker input.');
@@ -61,6 +67,16 @@ describe('same-note extract via the split picker', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename)) });
           return [...document.querySelectorAll('.suggestion-title')].map((el) => el.textContent);
+        }
+
+        function switchToMergeMode(): void {
+          const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
+          if (!(modeToggle instanceof HTMLElement)) {
+            throw new TypeError('No create/merge switch in the split picker.');
+          }
+          if (!modeToggle.classList.contains('is-enabled')) {
+            modeToggle.click();
+          }
         }
 
         function dispatchSelectSuggestion(shouldPrependToTop: boolean): void {

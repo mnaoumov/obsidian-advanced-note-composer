@@ -1,4 +1,7 @@
-import type { TFolder } from 'obsidian';
+import type {
+  TFolder,
+  ToggleComponent
+} from 'obsidian';
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -7,7 +10,7 @@ import {
   App,
   ButtonComponent,
   Editor,
-  Keymap,
+  Setting,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
@@ -41,7 +44,10 @@ import {
   openConfirmDialogModal,
   openMinimizableModal
 } from '../open-minimizable-modal.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  FrontmatterMergeStrategy,
+  SplitTargetMode
+} from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
@@ -201,7 +207,6 @@ interface SplitFileModalSplitResult {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly inputValue: string;
   readonly insertMode: InsertMode;
-  readonly isModifier: boolean;
   readonly item: Item | null;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -209,6 +214,13 @@ interface SplitFileModalSplitResult {
   readonly shouldIncludeFrontmatter: boolean;
   readonly shouldMergeHeadings: boolean;
   readonly shouldTreatTitleAsPath: boolean;
+
+  /**
+   * Whether the user asked to CREATE the target note or to MERGE into an existing one (issue #227). It
+   * replaced the `Mod`-held flag this result used to carry: `Mod+Enter` now flips the switch to
+   * {@link SplitTargetMode.Create} and chooses, so the switch can never disagree with what happens.
+   */
+  readonly splitTargetMode: SplitTargetMode;
 }
 
 /**
@@ -232,8 +244,12 @@ class SplitFileModal extends SuggestModalBase {
   private shouldIncludeFrontmatter: boolean;
   private shouldMergeHeadings: boolean;
   private shouldTreatTitleAsPath: boolean;
+  private splitTargetMode: SplitTargetMode;
+  private splitTargetModeSetting?: Setting;
+  private splitTargetModeToggle?: ToggleComponent;
   private treatTitleAsPathCheckboxEl?: HTMLInputElement;
   private treatTitleAsPathCheckboxElValue?: boolean;
+  private unresolvedPathCheckboxEl?: HTMLInputElement;
 
   public constructor(params: SplitFileModalConstructorParams) {
     super(params);
@@ -248,18 +264,13 @@ class SplitFileModal extends SuggestModalBase {
     this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
+    this.splitTargetMode = this.pluginSettingsComponent.settings.defaultSplitTargetMode;
 
-    this.allowCreateNewFile = true;
-    // The split picker offers the current note so a selection can be extracted to its top/bottom
-    // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery. Issue #184 asked for it to
-    // Go away, so it is a setting rather than a removal: it is the only route to a same-note top/bottom
-    // Extraction, which "Switch to smart cut & paste" does NOT replace (that moves to an arbitrary cursor
-    // Position instead).
-    this.shouldAllowSameFile = this.pluginSettingsComponent.settings.shouldOfferCurrentNoteWhenSplitting;
-    this.shouldShowUnresolved = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
+
+    this.applySplitTargetMode();
 
     this.setPlaceholder('Select file to split into...');
 
@@ -275,6 +286,7 @@ class SplitFileModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
+    this.renderSplitTargetModeSwitch();
     this.renderSwitchToSmartCutButton();
   }
 
@@ -290,15 +302,34 @@ class SplitFileModal extends SuggestModalBase {
       frontmatterMergeStrategy: this.frontmatterMergeStrategy,
       inputValue: this.inputEl.value,
       insertMode: getInsertModeFromEvent($event),
-      isModifier: Keymap.isModifier($event, 'Mod'),
       item,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: this.shouldFixFootnotes,
       shouldIncludeFrontmatter: this.shouldIncludeFrontmatter,
       shouldMergeHeadings: this.shouldMergeHeadings,
-      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath
+      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
+      splitTargetMode: this.splitTargetMode
     });
+  }
+
+  /**
+   * Applies everything the {@link SplitTargetMode} decides about the suggestion list.
+   *
+   * `Merge` offers only notes that already exist: no `Enter to create` row, and no unresolved links (an
+   * unresolved link is a note that does not exist yet, so choosing one would CREATE). `Create` never offers
+   * the source note, because extracting into it is a merge into an existing note by another name.
+   */
+  private applySplitTargetMode(): void {
+    const isCreate = this.splitTargetMode === SplitTargetMode.Create;
+    this.allowCreateNewFile = isCreate;
+    // The split picker offers the current note so a selection can be extracted to its top/bottom
+    // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery. Issue #184 asked for it to
+    // Go away, so it is a setting rather than a removal: it is the only route to a same-note top/bottom
+    // Extraction, which "Switch to smart cut & paste" does NOT replace (that moves to an arbitrary cursor
+    // Position instead).
+    this.shouldAllowSameFile = !isCreate && this.pluginSettingsComponent.settings.shouldOfferCurrentNoteWhenSplitting;
+    this.shouldShowUnresolved = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
   }
 
   private async buildInstructions(): Promise<void> {
@@ -311,7 +342,12 @@ class SplitFileModal extends SuggestModalBase {
       key: 'Enter',
       modifiers: ['Mod'],
       onKey: ($event) => {
-        this.selectActiveSuggestion($event);
+        // The switch must never disagree with what is about to happen, so forcing a creation MOVES it
+        // Rather than overriding it behind the user's back (issue #227).
+        this.setSplitTargetMode(SplitTargetMode.Create);
+        // Deliberately NOT `selectActiveSuggestion`: forcing a creation is about what was TYPED, and in
+        // `Merge` mode there is no creatable suggestion to select — the list offers only existing notes.
+        this.selectSuggestion(null, $event);
         return false;
       },
       purpose: 'to create new'
@@ -332,6 +368,16 @@ class SplitFileModal extends SuggestModalBase {
         return false;
       },
       purpose: 'to dismiss'
+    });
+
+    builder.addKeyboardCommand({
+      key: 'm',
+      modifiers: ['Alt'],
+      onKey: () => {
+        this.setSplitTargetMode(this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create);
+        return false;
+      },
+      purpose: 'to switch between create and merge'
     });
 
     if (this.canSwitchToSmartCut) {
@@ -369,6 +415,7 @@ class SplitFileModal extends SuggestModalBase {
         this.treatTitleAsPathCheckboxEl = checkboxEl;
         this.treatTitleAsPathCheckboxElValue = this.shouldTreatTitleAsPath;
         checkboxEl.checked = this.shouldTreatTitleAsPath;
+        this.refreshOptionCheckboxStates();
       },
       purpose: 'Treat title as path'
     });
@@ -391,17 +438,7 @@ class SplitFileModal extends SuggestModalBase {
       onChange: (isChecked: boolean) => {
         this.shouldAllowOnlyCurrentFolder = isChecked;
         this.updateSuggestions();
-        if (this.treatTitleAsPathCheckboxEl !== undefined && this.treatTitleAsPathCheckboxElValue !== undefined) {
-          if (this.shouldAllowOnlyCurrentFolder) {
-            this.treatTitleAsPathCheckboxEl.checked = false;
-            this.treatTitleAsPathCheckboxEl.disabled = true;
-            this.shouldTreatTitleAsPath = false;
-          } else {
-            this.treatTitleAsPathCheckboxEl.checked = this.treatTitleAsPathCheckboxElValue;
-            this.treatTitleAsPathCheckboxEl.disabled = false;
-            this.shouldTreatTitleAsPath = this.treatTitleAsPathCheckboxElValue;
-          }
-        }
+        this.refreshOptionCheckboxStates();
       },
       onInit: (checkboxEl) => {
         checkboxEl.checked = this.shouldAllowOnlyCurrentFolder;
@@ -427,11 +464,13 @@ class SplitFileModal extends SuggestModalBase {
       modifiers: ['Alt'],
       onChange: (isChecked: boolean) => {
         this.shouldAllowSplitIntoUnresolvedPath = isChecked;
-        this.shouldShowUnresolved = isChecked;
+        this.applySplitTargetMode();
         this.updateSuggestions();
       },
       onInit: (checkboxEl) => {
+        this.unresolvedPathCheckboxEl = checkboxEl;
         checkboxEl.checked = this.shouldAllowSplitIntoUnresolvedPath;
+        this.refreshOptionCheckboxStates();
       },
       purpose: 'Allow split into unresolved path'
     });
@@ -476,6 +515,63 @@ class SplitFileModal extends SuggestModalBase {
   }
 
   /**
+   * The ONE place that decides whether an option checkbox is available, so its two reasons to be disabled
+   * cannot disagree.
+   *
+   * `Treat title as path` is off-limits while `Allow only current folder` pins the destination, and both it
+   * and `Allow split into unresolved path` are off-limits in `Merge` mode, where nothing is created and
+   * neither has anything to act on. The remembered value is restored when the checkbox becomes available
+   * again, so disabling it never silently discards the user's choice.
+   */
+  private refreshOptionCheckboxStates(): void {
+    const isCreate = this.splitTargetMode === SplitTargetMode.Create;
+
+    if (this.treatTitleAsPathCheckboxEl !== undefined && this.treatTitleAsPathCheckboxElValue !== undefined) {
+      const isTreatTitleAsPathAvailable = isCreate && !this.shouldAllowOnlyCurrentFolder;
+      this.shouldTreatTitleAsPath = isTreatTitleAsPathAvailable && this.treatTitleAsPathCheckboxElValue;
+      this.treatTitleAsPathCheckboxEl.checked = this.shouldTreatTitleAsPath;
+      this.treatTitleAsPathCheckboxEl.disabled = !isTreatTitleAsPathAvailable;
+    }
+
+    if (this.unresolvedPathCheckboxEl !== undefined) {
+      this.unresolvedPathCheckboxEl.checked = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
+      this.unresolvedPathCheckboxEl.disabled = !isCreate;
+    }
+  }
+
+  /**
+   * Names the switch after what it is about to DO rather than after the toggle it is — a row reading
+   * `Create a new note` states the outcome, where a static `Merge` label would leave the off position
+   * unlabelled and put the reader back to inferring it.
+   */
+  private refreshSplitTargetModeSwitch(): void {
+    this.splitTargetModeSetting?.setName(this.splitTargetMode === SplitTargetMode.Create ? 'Create a new note' : 'Merge into an existing note');
+  }
+
+  /**
+   * Adds the `Create` / `Merge` switch above the picker's input (issue #227), so what the picker is about
+   * to do is stated rather than inferred from what was typed.
+   *
+   * It is prepended to `modalEl` because the input is the first thing in it, and the reporter's own
+   * mock-up puts the switch above the input.
+   */
+  private renderSplitTargetModeSwitch(): void {
+    const switchContainerEl = createDiv('advanced-note-composer-split-target-mode');
+    this.modalEl.prepend(switchContainerEl);
+    this.splitTargetModeSetting = new Setting(switchContainerEl)
+      .setDesc('Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)')
+      .addToggle((toggle) => {
+        this.splitTargetModeToggle = toggle;
+        toggle
+          .setValue(this.splitTargetMode === SplitTargetMode.Merge)
+          .onChange((value) => {
+            this.setSplitTargetMode(value ? SplitTargetMode.Merge : SplitTargetMode.Create);
+          });
+      });
+    this.refreshSplitTargetModeSwitch();
+  }
+
+  /**
    * Adds a "Switch to smart cut & paste" button below the picker (mirroring the `Alt+S` shortcut). The
    * button is always shown but disabled when switching is unavailable.
    */
@@ -488,6 +584,26 @@ class SplitFileModal extends SuggestModalBase {
       .onClick(() => {
         this.switchToSmartCut();
       });
+  }
+
+  /**
+   * The ONE way the mode changes, whichever surface asked for it — the switch, `Alt+M`, or `Mod+Enter`
+   * forcing a creation. It re-derives the suggestion list, the option checkboxes and the switch itself
+   * together, so no two of them can report a different mode.
+   *
+   * @param splitTargetMode - The mode to switch to.
+   */
+  private setSplitTargetMode(splitTargetMode: SplitTargetMode): void {
+    if (this.splitTargetMode === splitTargetMode) {
+      return;
+    }
+
+    this.splitTargetMode = splitTargetMode;
+    this.applySplitTargetMode();
+    this.refreshOptionCheckboxStates();
+    this.refreshSplitTargetModeSwitch();
+    this.splitTargetModeToggle?.setValue(splitTargetMode === SplitTargetMode.Merge);
+    this.updateSuggestions();
   }
 
   /**
@@ -558,14 +674,16 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
         inputValue: heading,
         insertMode: InsertMode.Append,
-        isModifier: false,
         item: null,
         shouldAllowOnlyCurrentFolder: params.shouldAllowOnlyCurrentFolderOverride ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
         shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
         shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
         shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
         shouldMergeHeadings: params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
-        shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault
+        shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault,
+        // A heading-driven split names a BRAND-NEW note after its heading, which is what this pass has
+        // Always done - so it is a `Create` whatever the picker's default mode is (it never opens).
+        splitTargetMode: SplitTargetMode.Create
       }
       : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
         const modal = new SplitFileModal({
@@ -806,7 +924,9 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
     return await new SplitItemSelector({
       app: prepareParams.app,
       inputValue: splitFileModalResult.inputValue,
-      isModifier: splitFileModalResult.isModifier,
+      // The `Create`/`Merge` switch replaced the held-`Mod` rule on this path, so the selector reads
+      // `splitTargetMode` instead; the base still carries the flag for `MergeItemSelector`.
+      isModifier: false,
       item: splitFileModalResult.item,
       pluginSettingsComponent: prepareParams.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
@@ -815,6 +935,7 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
       shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,
       /* v8 ignore stop */
       sourceFile: prepareParams.sourceFile,
+      splitTargetMode: splitFileModalResult.splitTargetMode,
       targetParentFolderOverride: resolveTargetParentFolderOverride(prepareParams, isPickerStillSkipped)
     }).selectItem();
   } catch (error) {

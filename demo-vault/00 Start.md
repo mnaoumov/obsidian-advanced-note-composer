@@ -27,6 +27,7 @@ Welcome to the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-adv
 - [[26 Split headings automatically]]
 - [[27 Split headings recursively]]
 - [[32 Split heading recursively]]
+- [[33 Create or merge when splitting]]
 
 ## Swap
 

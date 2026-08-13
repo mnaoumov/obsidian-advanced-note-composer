@@ -13,6 +13,19 @@
   margin-top: var(--size-4-2);
 }
 
+// The split/extract picker's `Create` / `Merge` switch (issue #227). It is prepended to the modal element,
+// Above the prompt input, so it needs the padding the input's own container provides and no top border of
+// Its own - the row is part of the prompt, not a section above it.
+.advanced-note-composer-split-target-mode {
+  padding: var(--size-4-2) var(--size-4-3) 0;
+
+  .setting-item {
+    border-top: none;
+    padding-bottom: var(--size-4-1);
+    padding-top: 0;
+  }
+}
+
 // One name plus its `Rename` button in the `Create folder with notes...` confirmation (issue #200). The
 // Dialog body renders into the modal's own content element, outside the plugin-scoped container, so these
 // Are styled at the top level like the notice buttons above.

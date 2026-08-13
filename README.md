@@ -294,13 +294,35 @@ Notes:
   cursor is inside the marked selection (and the top/bottom commands are unavailable when the top would
   land inside a selection that spans the note's frontmatter).
 - **Same-note extraction from the picker.** The `Extract current selection...` / `Extract this heading...`
-  pickers now also offer the *current* note as a target, so you can extract a selection to the top or
+  pickers also offer the *current* note as a target, so you can extract a selection to the top or
   bottom of the same note: press `Enter` (bottom) or `Shift+Enter` (top) on the current note in the picker.
+  Extracting into the note you are already in is a merge into an existing note, so flip the picker's
+  switch to **Merge** first — see [Create or merge when splitting](#create-or-merge-when-splitting).
 - **Same-note moves and *Text after extraction*.** The **Text after extraction** setting decides what is
   left in place of the extracted text (a link to the target note, an embed, or nothing). When you move
   within the *same* note, a link/embed pointing at the note itself is meaningless, so by default the
   moved text is simply removed. Enable **Apply text after extraction to the same file** to apply the
   setting to same-note moves anyway, or override it per move in the advanced command.
+
+## Create or merge when splitting
+
+Every split or extract does one of two things with the target you pick: it **creates** a new note, or it
+**merges** the extracted content into a note that already exists. A switch at the top of the picker says
+which, instead of leaving you to infer it from what you typed:
+
+- **Create** — type a name (complete a path with `Tab` on any suggestion) and the note is created there.
+  The list still shows your notes, but only as path autocomplete: `Enter` always creates.
+- **Merge** — pick one of the notes offered and the extracted content is merged into it. Nothing that
+  would create a note is offered at all: no `Enter to create` row and no unresolved links.
+
+**Default split target mode** (under `Split/extract` in the settings) decides which one the picker opens
+in; it defaults to `Create`. `Alt+M` flips the switch from the keyboard, and `Mod+Enter` still forces a
+creation from whatever you typed — it moves the switch to `Create` as it does so, so the switch is never
+telling you one thing while the picker does another.
+
+Two of the picker's options only mean something while a note is being created, so `Merge` greys them out:
+**Treat title as path** (`Alt+2`) and **Allow split into unresolved path** (`Alt+6`). Your choices come
+back the moment you switch to `Create`.
 
 ## Split into folder
 

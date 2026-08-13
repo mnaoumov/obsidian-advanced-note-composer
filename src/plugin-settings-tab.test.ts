@@ -39,7 +39,8 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
   FolderNoteLocation,
-  MergeFolderIntoFileLocation
+  MergeFolderIntoFileLocation,
+  SplitTargetMode
 } from './plugin-settings.ts';
 
 const PLUGIN_ID = 'test-plugin-id';
@@ -324,6 +325,18 @@ describe('PluginSettingsTab', () => {
       MergeFolderIntoFileLocation.InsideFolder,
       MergeFolderIntoFileLocation.DefaultNewNoteLocation
     ]);
+  });
+
+  // Issue #227: the split/extract picker's `Create`/`Merge` switch starts in the mode this setting names,
+  // And `Create` is what the picker did before the switch existed whenever the typed name matched nothing.
+  it('should offer both split target modes, defaulting to create', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const mode = dropdowns.find((dropdown) => dropdown.name === 'Default split target mode');
+    const options = [...(mode?.component.selectEl.options ?? [])].map((option) => option.value);
+    expect(options).toStrictEqual([SplitTargetMode.Create, SplitTargetMode.Merge]);
+    expect(mode?.component.getValue()).toBe(SplitTargetMode.Create);
   });
 
   // Issue #227: every template that resolves the note-flavored vocabulary now also resolves the

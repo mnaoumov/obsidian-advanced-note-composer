@@ -19,6 +19,7 @@ import {
   FrontmatterTitleMode,
   MergeFolderIntoFileLocation,
   SmartCutAndPasteCompletionFeedback,
+  SplitTargetMode,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language-component.ts';
@@ -697,11 +698,48 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText('Turn this off to only ever pick another note. Note that ');
               appendCodeBlock(f, 'Switch to smart cut & paste');
               f.appendText(' is not a replacement: it moves the selection to the cursor, not to the top or bottom of the note.');
+              f.createEl('br');
+              f.appendText('Extracting into the note you are already in is a merge into an existing note, so the picker offers it while its switch says ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' — see ');
+              appendCodeBlock(f, 'Default split target mode');
+              f.appendText(' below.');
             }),
             name: 'Should offer the current note when splitting',
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldOfferCurrentNoteWhenSplitting', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Which mode the split/extract picker opens in.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' creates a new note from the name you type, at the path you type or complete with ');
+              appendCodeBlock(f, 'Tab');
+              f.appendText('.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' merges the extracted content into the existing note you pick, and offers nothing that would create one.');
+              f.createEl('br');
+              f.appendText('The switch above the picker flips it for a single run, as does ');
+              appendCodeBlock(f, 'Alt+M');
+              f.appendText('; ');
+              appendCodeBlock(f, 'Mod+Enter');
+              f.appendText(' moves it to ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' and chooses.');
+            }),
+            name: 'Default split target mode',
+            render: (setting) => {
+              setting.addDropdown((dropdown) => {
+                dropdown.addOptions({
+                  [SplitTargetMode.Create]: 'Create',
+                  [SplitTargetMode.Merge]: 'Merge'
+                });
+                this.bind({ propertyName: 'defaultSplitTargetMode', valueComponent: dropdown });
               });
             }
           }),
