@@ -98,6 +98,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       frontmatterTitleMode: FrontmatterTitleMode.UseForInvalidTitleOnly,
       isPathIgnored: vi.fn().mockReturnValue(false),
       nameTransformTemplate: '',
+      reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       replacement: '_',
       shouldAddInvalidTitleToNoteAlias: true,
       shouldReplaceInvalidTitleCharacters: true,
@@ -1141,6 +1142,13 @@ describe('SplitItemSelector', () => {
   describe('splitIntoFolderNoteNameTemplate', () => {
     interface CreateSelectorOptions {
       readonly inputValue?: string;
+
+      /**
+       * The base name of the note the picker creates, which is also the name its own folder takes. A
+       * numbered one is what gives `{{index}}` / `{{safeFolderName}}` something to read (issue #227).
+       */
+      readonly newFileBasename?: string;
+
       readonly settingsOverrides?: SettingsOverrides;
     }
 
@@ -1151,7 +1159,8 @@ describe('SplitItemSelector', () => {
     }
 
     function createSelector(options: CreateSelectorOptions = {}): CreateSelectorResult {
-      const newFile = createMockFile('new-file', 'folder/new-file.md');
+      const newFileBasename = options.newFileBasename ?? 'new-file';
+      const newFile = createMockFile(newFileBasename, `folder/${newFileBasename}.md`);
       const app = createMockApp();
       vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
       const pluginSettingsComponent = createMockPluginSettingsComponent({
@@ -1205,6 +1214,28 @@ describe('SplitItemSelector', () => {
       await selector.selectItem();
 
       expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/From source.md');
+    });
+
+    // Issue #227. The note has not been renamed into its folder yet at this point, so a folder token left
+    // To resolve against the note's own parent would name `folder` — the folder ABOVE the one being
+    // Created, which is never what a name for a note inside it means.
+    it('should resolve the folder tokens against the folder being created, not the note\'s current parent', async () => {
+      const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '{{folderName}} notes' } });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/new-file/new-file notes.md');
+    });
+
+    it('should read the index and un-numbered name of the folder being created', async () => {
+      const { app, newFile, selector } = createSelector({
+        newFileBasename: '7. Beta',
+        settingsOverrides: { splitIntoFolderNoteNameTemplate: '{{index:00}} {{safeFolderName}}' }
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.renameFile).toHaveBeenCalledWith(newFile, 'folder/7. Beta/07 Beta.md');
     });
 
     it('should trim a trailing markdown extension from the resolved name', async () => {

@@ -480,7 +480,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('Tokens are resolved against the new note before it is moved, so ');
               appendCodeBlock(f, '{{newTitle}}');
-              f.appendText(' is the folder name.');
+              f.appendText(' is the folder name, and ');
+              appendCodeBlock(f, '{{parentFolder}}');
+              f.appendText(' is still the folder ABOVE the one being created — the folder tokens below name the new folder itself.');
               f.createEl('br');
               addAvailableTokens(f, false);
             }),
@@ -1925,6 +1927,10 @@ function addAvailableTokens(f: DocumentFragment, shouldIncludeContentToken = tru
   appendCodeBlock(f, '{{date:FORMAT}}');
   f.appendText(', e.g. ');
   appendCodeBlock(f, '{{date:YYYY-MM-DD}}');
+  f.appendText(' — and ');
+  appendCodeBlock(f, '{{time:FORMAT}}');
+  f.createEl('br');
+  addTargetFolderTokens(f);
 }
 
 /**
@@ -1969,6 +1975,38 @@ function addReorderFolderTokens(f: DocumentFragment): void {
   f.appendText(' is the folder name without the number. ');
   appendCodeBlock(f, '{{folderName}}');
   f.appendText(' is the new name with it, and is available in the title template only — the name template is what produces it.');
+}
+
+/**
+ * Lists the folder-flavored tokens the note templates share with the `Create folder with notes...` ones
+ * (issue #227), and says which folder they name here.
+ *
+ * A block of its own under {@link addAvailableTokens} rather than more entries in its list: what makes them
+ * usable is knowing WHICH folder they describe, which is a sentence, not a bullet.
+ *
+ * @param f - The fragment to append to.
+ */
+function addTargetFolderTokens(f: DocumentFragment): void {
+  f.appendText('The tokens of ');
+  appendCodeBlock(f, 'Create folder with notes...');
+  f.appendText(' work here too, naming the folder the new note ends up in — which with ');
+  appendCodeBlock(f, 'Split into folder');
+  f.appendText(' on is the folder the split just created:');
+  f.createEl('br');
+  addTokenList(f, ['{{folderName}}', '{{folderPath}}', '{{safeFolderName}}', '{{index}}', '{{parentFolderPath}}']);
+  appendCodeBlock(f, '{{safeFolderName}}');
+  f.appendText(' is that folder\'s name without its number and ');
+  appendCodeBlock(f, '{{index}}');
+  f.appendText(' is the number itself (empty when the folder has none), both read back through ');
+  appendCodeBlock(f, 'Reordered folder name template');
+  f.appendText(' — so ');
+  appendCodeBlock(f, '{{index:000}}');
+  f.appendText(' zero-pads here as it does there.');
+  f.createEl('br');
+  appendCodeBlock(f, '{{rawFolderName}}');
+  f.appendText(' and ');
+  appendCodeBlock(f, '{{file}}');
+  f.appendText(' are not available: there is no folder-name prompt to have typed, and a split writes one note.');
 }
 
 function addTokenList(f: DocumentFragment, tokens: readonly string[]): void {

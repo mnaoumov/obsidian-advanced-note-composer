@@ -268,6 +268,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
      */
     await applySplitTemplateToNotes({
       app: this.app,
+      folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
       notes: createdNotes,
       resourceLockComponent: this.resourceLockComponent,
       template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)

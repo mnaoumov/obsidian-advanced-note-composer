@@ -3,7 +3,7 @@ import {
   getMandatoryNamedGroup
 } from 'obsidian-dev-utils/reg-exp';
 
-import { TEMPLATE_TOKEN_REG_EXP } from './template-tokens.ts';
+import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 
 /**
  * Parameters for {@link buildNumberedNameRegExp}.

@@ -112,6 +112,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         mergeFolderIntoFileNoteNameTemplate: '',
         mergeTemplate: '{{content}}',
         nameTransformTemplate: '',
+        reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,

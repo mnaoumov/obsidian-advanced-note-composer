@@ -25,6 +25,12 @@ import {
 const PARENT_PATH = 'Parent.md';
 const NOTE_PATH = 'Parent/Child.md';
 
+/**
+ * The shipped `reorderedFolderNameTemplate` default, which is what `{{safeFolderName}}` / `{{index}}` read
+ * a produced note's folder number back through (issue #227).
+ */
+const FOLDER_NAME_TEMPLATE = '{{index}}. {{safeFolderName}}';
+
 let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
 
@@ -52,6 +58,7 @@ afterEach(() => {
 async function apply(template: string, notePath = NOTE_PATH): Promise<void> {
   await applySplitTemplateToNotes({
     app,
+    folderNameTemplate: FOLDER_NAME_TEMPLATE,
     notes: [{ file: getFile(notePath), sourceFile: getFile(PARENT_PATH) }],
     resourceLockComponent,
     template
@@ -86,6 +93,7 @@ describe('applySplitTemplateToNotes', () => {
   it('should template every note it is given', async () => {
     await applySplitTemplateToNotes({
       app,
+      folderNameTemplate: FOLDER_NAME_TEMPLATE,
       notes: [
         { file: getFile(NOTE_PATH), sourceFile: getFile(PARENT_PATH) },
         { file: getFile(PARENT_PATH), sourceFile: getFile(NOTE_PATH) }
@@ -96,6 +104,14 @@ describe('applySplitTemplateToNotes', () => {
 
     expect(await read()).toBe('## Child\n\nchild body\n\nfrom Parent');
     expect(await read(PARENT_PATH)).toBe('parent body\n\nfrom Child');
+  });
+
+  // Issue #227: a recursive split's produced note sits in the folder the run built for it, so the folder
+  // Tokens name that folder — which is the whole point of giving the split template this vocabulary.
+  it('should resolve the folder tokens against each produced note\'s own folder', async () => {
+    await apply('# {{folderName}}\n\nin {{folderPath}}\n\n{{content}}');
+
+    expect(await read()).toBe('# Parent\n\nin Parent\n\n## Child\n\nchild body');
   });
 
   it('should keep the note\'s own frontmatter block when the template has none', async () => {

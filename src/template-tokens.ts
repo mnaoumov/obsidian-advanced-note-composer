@@ -5,16 +5,21 @@ import type {
 
 import { moment as moment_ } from 'obsidian';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
+import { basename } from 'obsidian-dev-utils/path';
 import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
 import { replaceAll } from 'obsidian-dev-utils/string';
 
-/**
- * Matches a single `{{Key}}` / `{{Key:Format}}` template placeholder. Shared by
- * {@link resolveTemplateTokens} and by the settings validators, so both agree on what counts as a token.
- */
-export const TEMPLATE_TOKEN_REG_EXP = /{{(?<Key>.+?)(?::(?<Format>.+?))?}}/g;
+import { parseNumberedName } from './numbered-name.ts';
+import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 
 type TokenResolver = (key: string, format: string | undefined) => string;
+
+/**
+ * The token a folder's own name is written with, i.e. what {@link parseNumberedName} reads an existing
+ * folder name back through. The same string as `BASE_TOKEN_KEYS[ReorderItemKind.Folder]`, spelled out here
+ * rather than imported: `reorder-items.ts` imports THIS module, so importing it back would be a cycle.
+ */
+const FOLDER_BASE_TOKEN_KEY = 'safeFolderName';
 
 const moment = extractDefaultExportInterop(moment_);
 
@@ -186,6 +191,31 @@ interface ResolveTemplateTokensParams {
   readonly content: string;
 
   /**
+   * The template `{{safeFolderName}}` and `{{index}}` read the folder's number back through — the same
+   * `reorderedFolderNameTemplate` that `Rename folder...` reads an existing folder's number with, so the
+   * two can never disagree about what a numbered name looks like (issue #227).
+   *
+   * Omitted (or empty) means the folder is treated as unnumbered: `{{safeFolderName}}` is the whole name and
+   * `{{index}}` is empty.
+   */
+  readonly folderNameTemplate?: string;
+
+  /**
+   * The folder `{{folderName}}` / `{{folderPath}}` / `{{parentFolderPath}}` / `{{safeFolderName}}` /
+   * `{{index}}` describe, overriding the target note's own parent (issue #227).
+   *
+   * Only one caller needs it, and it is the reason the override exists: `splitIntoFolderNoteNameTemplate` is
+   * resolved INSIDE `moveIntoOwnFolder`, after the new folder has been created but before the note has been
+   * renamed into it — so the note's parent is still the folder ABOVE, and the folder these tokens should be
+   * naming is the one being created.
+   *
+   * `{{parentFolder}}` / `{{newParentFolder}}` deliberately do NOT follow it: they are shipped tokens whose
+   * documented value is the note's parent at the moment the template is resolved, and quietly moving them
+   * one level down would rewrite what an existing `Split into folder note name template` produces.
+   */
+  readonly folderPath?: string;
+
+  /**
    * The source note. Backs `{{fromPath}}` / `{{fromTitle}}` / `{{fromParentFolder}}`.
    */
   readonly sourceFile: TFile;
@@ -200,6 +230,21 @@ interface ResolveTemplateTokensParams {
    * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
    */
   readonly template: string;
+}
+
+/**
+ * The folder the note-flavored vocabulary's folder tokens name, already resolved (issue #227).
+ */
+interface TargetFolderTokens {
+  readonly folderName: string;
+  readonly folderPath: string;
+
+  /**
+   * The number the folder's name carries, or `null` when it carries none — which is what makes
+   * `{{index}}` empty rather than a made-up `0`.
+   */
+  readonly index: null | number;
+  readonly safeFolderName: string;
 }
 
 /**
@@ -368,13 +413,37 @@ export function resolveReorderedFileTemplateTokens(params: ResolveReorderedFileT
  * Resolves the template tokens (`{{content}}`, `{{fromTitle}}`, `{{parentFolder}}`, ...) inside a
  * template string. See {@link ResolveTemplateTokensParams} for the token semantics.
  *
+ * Since issue #227 the folder-flavored keys of the `Create folder with notes...` vocabulary resolve here
+ * too, so a template written for that command can be pasted into `Split template` unchanged — see
+ * {@link resolveTargetFolderTokens} for which folder they name and why two of that command's keys are
+ * deliberately still unknown here.
+ *
  * @param params - The template and the notes its tokens are resolved against.
  * @returns The template with every token replaced by its value.
  */
 export function resolveTemplateTokens(params: ResolveTemplateTokensParams): string {
   const { content, sourceFile, targetFile, template } = params;
+
+  // Resolved ON DEMAND, and memoized for the second folder token in the same template. A template with no
+  // Folder token must not read the target note's folder or build a numbering pattern at all — the folder
+  // Keys are an addition to a vocabulary every merge and split already resolves, so paying for them
+  // Unconditionally would make every template that predates them do work it has no use for.
+  let folderTokens: null | TargetFolderTokens = null;
+
+  function getFolderTokens(): TargetFolderTokens {
+    folderTokens ??= resolveTargetFolderTokens(params);
+    return folderTokens;
+  }
+
   return replaceTemplateTokens(template, (key, format) => {
     switch (key.toLowerCase()) {
+      case 'folderName'.toLowerCase(): {
+        return getFolderTokens().folderName;
+      }
+      case 'folderPath'.toLowerCase():
+      case 'parentFolderPath'.toLowerCase(): {
+        return getFolderTokens().folderPath;
+      }
       case 'fromParentFolder'.toLowerCase(): {
         return getParentFolderName(sourceFile);
       }
@@ -394,8 +463,17 @@ export function resolveTemplateTokens(params: ResolveTemplateTokensParams): stri
       case 'newTitle'.toLowerCase(): {
         return targetFile.basename;
       }
+      case 'safeFolderName'.toLowerCase(): {
+        return getFolderTokens().safeFolderName;
+      }
       case 'content': {
         return content;
+      }
+      case 'index': {
+        // An unnumbered folder has no number to render, and none to pad either — `{{index:000}}` over
+        // Nothing would be `000`, a number the folder does not carry.
+        const { index } = getFolderTokens();
+        return index === null ? '' : formatIndex(index, format);
       }
       default: {
         return resolveDateTimeToken(key, format);
@@ -418,6 +496,10 @@ function formatIndex(index: number, format: string | undefined): string {
 
 function getParentFolderName(file: TFile): string {
   return file.parent?.name ?? '';
+}
+
+function getParentFolderPath(file: TFile): string {
+  return file.parent?.path ?? '';
 }
 
 function replaceTemplateTokens(template: string, tokenResolver: TokenResolver): string {
@@ -455,4 +537,44 @@ function resolveDateTimeToken(key: string, format: string | undefined): string {
       throw new Error(`Invalid template key: ${key}`);
     }
   }
+}
+
+/**
+ * Resolves the folder the note-flavored vocabulary's folder tokens describe (issue #227).
+ *
+ * **That folder is the target note's OWN folder** — which, for a split with `Split into folder` on, is
+ * precisely the folder the split just created, and for every other flow is simply the folder the note landed
+ * in. One rule, no mode. `{{folderPath}}` and `{{parentFolderPath}}` are the same string for that reason, as
+ * are `{{folderName}}` and `{{parentFolder}}` everywhere the caller passes no
+ * {@link ResolveTemplateTokensParams.folderPath} override; the aliases exist so a template written against
+ * the `Create folder with notes...` vocabulary reads the same when pasted into `Split template`.
+ *
+ * Two keys of that vocabulary are deliberately NOT resolved here and keep throwing as unknown:
+ * `{{rawFolderName}}`, because a split has no folder-name prompt (the typed string names the NOTE), and
+ * `{{file}}`, because it is a marker declaring MULTIPLE notes while a split writes one.
+ *
+ * The vault root is left exactly as the vault reports it — an empty `name`, a `/` `path` — matching
+ * {@link resolveFolderTemplateTokens} and {@link resolveCreateFolderTemplateTokens}, which both read those
+ * properties raw.
+ *
+ * @param params - The resolve parameters.
+ * @returns The folder tokens' values, with `index` `null` when the folder carries no number.
+ */
+function resolveTargetFolderTokens(params: ResolveTemplateTokensParams): TargetFolderTokens {
+  const { folderNameTemplate, folderPath, targetFile } = params;
+  const folderName = folderPath === undefined ? getParentFolderName(targetFile) : basename(folderPath);
+  const { baseName, index } = parseNumberedName({
+    baseTokenKey: FOLDER_BASE_TOKEN_KEY,
+    name: folderName,
+    // An absent template describes no numbered name at all, so `parseNumberedName` reports the name whole
+    // With no index — which IS "this folder is not numbered".
+    nameTemplate: folderNameTemplate ?? ''
+  });
+
+  return {
+    folderName,
+    folderPath: folderPath ?? getParentFolderPath(targetFile),
+    index,
+    safeFolderName: baseName
+  };
 }

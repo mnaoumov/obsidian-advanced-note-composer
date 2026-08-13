@@ -106,6 +106,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
+      reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldAlwaysMergeExcludedItems: false,
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,

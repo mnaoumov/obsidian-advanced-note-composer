@@ -30,6 +30,13 @@ export interface ApplySplitTemplateToNotesParams {
   readonly app: App;
 
   /**
+   * What `{{safeFolderName}}` / `{{index}}` read each produced note's folder number back through — the
+   * `reorderedFolderNameTemplate` setting (issue #227). Threaded in rather than read here, because this
+   * module takes no settings; its caller already resolves `template` from them.
+   */
+  readonly folderNameTemplate: string;
+
+  /**
    * The notes to template, each paired with the note it was split out of.
    */
   readonly notes: readonly SplitTemplateNote[];
@@ -53,6 +60,7 @@ export interface SplitTemplateNote {
 
 interface ApplySplitTemplateToNoteParams {
   readonly app: App;
+  readonly folderNameTemplate: string;
   readonly note: SplitTemplateNote;
   readonly resourceLockComponent: ResourceLockComponent;
   readonly template: string;
@@ -73,6 +81,7 @@ interface ApplySplitTemplateToNoteParams {
 export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNotesParams): Promise<void> {
   const {
     app,
+    folderNameTemplate,
     notes,
     resourceLockComponent,
     template
@@ -86,6 +95,7 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
   for (const note of notes) {
     await applySplitTemplateToNote({
       app,
+      folderNameTemplate,
       note,
       resourceLockComponent,
       template
@@ -104,6 +114,7 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
 async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams): Promise<void> {
   const {
     app,
+    folderNameTemplate,
     note,
     resourceLockComponent,
     template
@@ -123,6 +134,7 @@ async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams):
 
       const templatedContent = resolveTemplateTokens({
         content: body,
+        folderNameTemplate,
         sourceFile: note.sourceFile,
         targetFile: note.file,
         template
