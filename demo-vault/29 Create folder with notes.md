@@ -29,10 +29,13 @@ name. The default is:
 {{index}}. {{safeFolderName}}
 ```
 
-- `{{index}}` — one more than the highest number already used by a sibling. `{{index:000}}` pads it to
-  `001`. Remove the token to stop numbering.
-- `{{safeFolderName}}` — what you typed, cleaned up, **without** the number.
-- `{{rawFolderName}}` — exactly what you typed, untouched.
+- `{{index}}`
+  - one more than the highest number already used by a sibling. `{{index:000}}` pads it to `001`.
+    Remove the token to stop numbering.
+- `{{safeFolderName}}`
+  - what you typed, cleaned up, **without** the number.
+- `{{rawFolderName}}`
+  - exactly what you typed, untouched.
 
 ## Several notes at once
 

@@ -15,9 +15,11 @@ chosen yet, so there is nothing to park.
    background** - a click outside parks the dialog instead of cancelling the operation.
 3. Browse your notes; the operation stays paused in the floating bar.
 4. Use the bar's buttons:
-   - **Restore** - reopen the dialog where you left off.
-   - **Cancel** - close the dialog. For an operation that locked its note (an extract, split,
-     or merge), cancelling this way also **unlocks the note** and cancels the operation.
+   - **Restore**
+     - reopen the dialog where you left off.
+   - **Cancel**
+     - close the dialog. For an operation that locked its note (an extract, split, or merge),
+       cancelling this way also **unlocks the note** and cancels the operation.
 
 Clicking outside used to throw the whole pending operation away. It now minimizes, so a stray
 click costs you nothing: only `Escape`, the dialog's own **Cancel**, or the bar's **Cancel**

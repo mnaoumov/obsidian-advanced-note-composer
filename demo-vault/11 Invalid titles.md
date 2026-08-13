@@ -55,10 +55,12 @@ await require('/demoSetup.ts').changeSettingsAndReload(app, { nameTransformTempl
 
 ## Settings
 
-- **Frontmatter title mode** - `None`, `UseAlways`, or `UseForInvalidTitleOnly`.
-- **Should add invalid title to note aliases** - keep the original title reachable from the
-  Quick switcher.
-- **Name transform template** - your own replacements, applied before anything else.
+- **Frontmatter title mode**
+  - `None`, `UseAlways`, or `UseForInvalidTitleOnly`.
+- **Should add invalid title to note aliases**
+  - keep the original title reachable from the Quick switcher.
+- **Name transform template**
+  - your own replacements, applied before anything else.
 
 The block below switches to always writing a frontmatter `title`. Manual equivalent: set **Frontmatter title mode** to
 `UseAlways` in **Settings → Advanced Note Composer**.

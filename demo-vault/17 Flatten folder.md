@@ -36,15 +36,17 @@ dialog, so a change of mind costs nothing.
 flatten above, then right-click `Flatten example` in the file explorer and pick one of the other two
 (they are in the command palette as well, acting on the folder of the note you have open).
 
-- `Flatten folder...` - what the walkthrough above describes: everything moves, and `Flatten example`
-  is left empty.
-- `Flatten folder (child folders only)...` - only `Nested` moves. [Note one](<./Flatten example/Note one.md>) and [Note two](<./Flatten example/Note two.md>) stay
-  put, so `Flatten example` survives intact. If those notes had an attachment folder inside `Flatten
-  example`, it would stay too - it holds the attachments of notes that are not going anywhere.
-- `Flatten folder recursively (all folders at any depth)...` - `Nested` **and** its own `Deeper`
-  subfolder both land beside `Flatten example`, so a whole tree of folders collapses into one row of
-  siblings. Each keeps the notes directly inside it: [Deep note](<./Flatten example/Nested/Deep note.md>) stays in `Nested`,
-  [Deepest note](<./Flatten example/Nested/Deeper/Deepest note.md>) in `Deeper`.
+- `Flatten folder...`
+  - what the walkthrough above describes: everything moves, and `Flatten example` is left empty.
+- `Flatten folder (child folders only)...`
+  - only `Nested` moves. [Note one](<./Flatten example/Note one.md>) and [Note two](<./Flatten example/Note two.md>) stay
+    put, so `Flatten example` survives intact. If those notes had an attachment folder inside `Flatten
+    example`, it would stay too - it holds the attachments of notes that are not going anywhere.
+- `Flatten folder recursively (all folders at any depth)...`
+  - `Nested` **and** its own `Deeper` subfolder both land beside `Flatten example`, so a whole tree of
+    folders collapses into one row of siblings. Each keeps the notes directly inside it:
+    [Deep note](<./Flatten example/Nested/Deep note.md>) stays in `Nested`,
+    [Deepest note](<./Flatten example/Nested/Deeper/Deepest note.md>) in `Deeper`.
 
 `Flatten folder...` kept the command id it has always had, so a hotkey bound to it keeps working; the
 two others start unbound.
