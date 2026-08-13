@@ -10,9 +10,15 @@ import type {
 import type { PathOrAbstractFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { ValueProvider } from 'obsidian-dev-utils/value-provider';
 
+import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import {
+  getAbstractFileOrNull,
+  isFile
+} from 'obsidian-dev-utils/obsidian/file-system';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
@@ -31,6 +37,19 @@ export interface BuildOperationNoticeContentParams {
    * @default `false`
    */
   readonly isLoading?: boolean;
+
+  /**
+   * What clicking the TARGET link should do on top of opening the note and revealing it (issue #232).
+   *
+   * Supplied by the extract/split flow to land the user on the content it just wrote; every other
+   * operation omits it and the link behaves as it always has. Invoked through `invokeAsyncSafely`, since a
+   * DOM click listener cannot await.
+   *
+   * @default `undefined`
+   */
+  // `this: void` because it is a standalone callback, never a method of these params — which is also what
+  // Lets it be destructured and handed on without tripping `unbound-method`.
+  onTargetLinkClick?(this: void): Promise<void>;
 
   /**
    * The word joining the source to the target. `into` fits every merge/split/move; a swap reads `with`.
@@ -74,6 +93,23 @@ export interface BuildOperationNoticeContentParams {
    * The verb phrase opening the notice — `Merging note` while it runs, `Merged note` once it is done.
    */
   readonly verb: string;
+}
+
+/**
+ * Parameters for {@link renderOperationNoticeLink}.
+ */
+export interface RenderOperationNoticeLinkParams {
+  readonly app: App;
+
+  /**
+   * What to run on click, on top of the open and the reveal.
+   *
+   * @default `undefined`
+   */
+  // See {@link BuildOperationNoticeContentParams.onTargetLinkClick} for why `this: void`.
+  onClick?(this: void): Promise<void>;
+
+  readonly pathOrAbstractFile: PathOrAbstractFile;
 }
 
 /**
@@ -126,6 +162,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
   const {
     app,
     isLoading,
+    onTargetLinkClick,
     preposition,
     shouldLinkSource,
     sourcePathOrAbstractFile,
@@ -137,7 +174,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
   return createFragmentAsync(async (fragmentEl) => {
     fragmentEl.appendText(`${verb} `);
     if (shouldLinkSource ?? true) {
-      fragmentEl.append(await renderInternalLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile }));
+      fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile }));
     } else {
       // Deliberately NOT `getPath()`: that resolves the path against the vault, and the whole reason this
       // Branch exists is that the source is already gone from it.
@@ -145,7 +182,11 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     }
     if (targetPathOrAbstractFile !== undefined) {
       fragmentEl.appendText(` ${preposition ?? 'into'} `);
-      fragmentEl.append(await renderInternalLink({ app, pathOrAbstractFile: targetPathOrAbstractFile }));
+      fragmentEl.append(await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
+        app,
+        onClick: onTargetLinkClick,
+        pathOrAbstractFile: targetPathOrAbstractFile
+      })));
     }
     if (suffix !== undefined) {
       fragmentEl.appendText(suffix);
@@ -156,6 +197,48 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     }
     fragmentEl.appendText('.');
   });
+}
+
+/**
+ * Renders the clickable link an operation notice names a file or folder with.
+ *
+ * Everything about the link itself is dev-utils' {@link renderInternalLink} — a real rendered wikilink whose
+ * click Obsidian's own handler turns into an open. What is added here is the REVEAL: clicking a notice's file
+ * link also highlights that file in the file explorer (issue #232), which is what the folder branch of
+ * `renderInternalLink` has always done for folders (a folder cannot be opened, so revealing is all its click
+ * has ever meant). Applying it to files too is what makes the two read consistently, and it lands on every
+ * notice this module builds rather than on the one the issue was filed about.
+ *
+ * Deliberately no `preventDefault` — the reveal is layered ON TOP of Obsidian's open, never instead of it.
+ * A path that does not resolve to a file is not revealed: a folder's click is dev-utils' to own, and an
+ * unresolved note has nothing to reveal (clicking one CREATES it, which is the behavior
+ * {@link BuildOperationNoticeContentParams.shouldLinkSource} exists to keep notices away from).
+ *
+ * @param params - The parameters.
+ * @returns A {@link Promise} resolving to the rendered anchor.
+ */
+export async function renderOperationNoticeLink(params: RenderOperationNoticeLinkParams): Promise<HTMLAnchorElement> {
+  const { app, onClick, pathOrAbstractFile } = params;
+  const aEl = await renderInternalLink({ app, pathOrAbstractFile });
+
+  aEl.addEventListener('click', () => {
+    // Resolved HERE rather than at render time, on purpose. A notice outlives the operation that showed it,
+    // So the vault it is read against is the one at CLICK time — a destination renamed in between still
+    // Reveals the right item. It also keeps rendering a notice free of any vault lookup of its own.
+    const abstractFile = getAbstractFileOrNull({ app, pathOrFile: pathOrAbstractFile });
+    // Folders already reveal — that IS dev-utils' folder branch, which owns their click entirely — so only
+    // A real file needs one added here, and a path that no longer resolves needs none at all.
+    if (isFile(abstractFile)) {
+      app.internalPlugins.getEnabledPluginById(InternalPluginName.FileExplorer)?.revealInFolder(abstractFile);
+    }
+
+    if (onClick) {
+      // A DOM listener cannot await, and the jump has to outlive this handler: it polls for the very view
+      // Obsidian's own handler is still opening.
+      invokeAsyncSafely(onClick);
+    }
+  });
+  return aEl;
 }
 
 /**

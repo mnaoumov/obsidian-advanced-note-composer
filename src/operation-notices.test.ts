@@ -1,13 +1,19 @@
 import type {
   App,
-  TFile
+  TFile,
+  TFolder
 } from 'obsidian';
 import type {
   PluginNoticeComponent,
   PluginNoticeComponentDelayedNotice
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
+import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import {
+  getAbstractFileOrNull,
+  isFile
+} from 'obsidian-dev-utils/obsidian/file-system';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -18,23 +24,71 @@ import {
   vi
 } from 'vitest';
 
+import type { RenderOperationNoticeLinkParams } from './operation-notices.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import {
   buildOperationNoticeContent,
+  renderOperationNoticeLink,
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice,
   showOperationProgressNotice
 } from './operation-notices.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
+vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
+  getAbstractFileOrNull: vi.fn(),
+  isFile: vi.fn()
+}));
+
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
 }));
 
+const mockGetAbstractFileOrNull = vi.mocked(getAbstractFileOrNull);
+const mockIsFile = vi.mocked(isFile);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 const app = strictProxy<App>({});
+
+interface ClickLinkParams {
+  readonly app: App;
+  onClick?(this: void): Promise<void>;
+  readonly path: string;
+}
+
+interface ClickLinkResult {
+  readonly aEl: HTMLAnchorElement;
+  readonly wasDefaultPrevented: boolean;
+}
+
+/**
+ * Renders one notice link and clicks it.
+ *
+ * @param params - The parameters.
+ * @returns The rendered anchor and whether the click's default was prevented.
+ */
+async function clickLink(params: ClickLinkParams): Promise<ClickLinkResult> {
+  const { app: linkApp, onClick, path } = params;
+  const aEl = await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
+    app: linkApp,
+    onClick,
+    pathOrAbstractFile: path
+  }));
+  // `cancelable` so `defaultPrevented` means something — a non-cancelable event reports `false` no matter
+  // What the listener did, which would make the assertion vacuous.
+  const $event = new MouseEvent('click', { cancelable: true });
+  aEl.dispatchEvent($event);
+  return { aEl, wasDefaultPrevented: $event.defaultPrevented };
+}
+
+function createAppWithFileExplorer(revealInFolder: () => void): App {
+  return strictProxy<App>({
+    internalPlugins: strictProxy<App['internalPlugins']>({
+      getEnabledPluginById: vi.fn().mockReturnValue({ revealInFolder })
+    })
+  });
+}
 
 function createPluginSettingsComponent(shouldShowOperationNotices: boolean): PluginSettingsComponent {
   const settings = new PluginSettings();
@@ -140,6 +194,74 @@ describe('buildOperationNoticeContent', () => {
 
     expect(fragment.textContent).toBe('Merging note [alpha.md] into [bravo.md]');
     expect(fragment.querySelector('.is-loading')).not.toBeNull();
+  });
+});
+
+/*
+ * Issue #232: a notice's file link opens the note (Obsidian's own handler, on the anchor
+ * `renderInternalLink` produced) and ALSO highlights it in the file explorer. The reveal is what the reporter
+ * asked for "to stay consistent with #234" — a folder link has always revealed, because revealing is the only
+ * thing clicking a folder can mean.
+ */
+describe('renderOperationNoticeLink', () => {
+  it('should reveal the file in the explorer on click, without preventing the open', async () => {
+    const revealInFolder = vi.fn();
+    const file = strictProxy<TFile>({ path: 'alpha.md' });
+    mockGetAbstractFileOrNull.mockReturnValue(file);
+    mockIsFile.mockReturnValue(true);
+
+    const { aEl, wasDefaultPrevented } = await clickLink({ app: createAppWithFileExplorer(revealInFolder), path: 'alpha.md' });
+
+    expect(revealInFolder).toHaveBeenCalledExactlyOnceWith(file);
+    // No `preventDefault`: the reveal is layered ON TOP of Obsidian's open, never instead of it.
+    expect(wasDefaultPrevented).toBe(false);
+    expect(aEl.textContent).toBe('[alpha.md]');
+  });
+
+  it('should reveal nothing for a folder, whose click dev-utils already owns', async () => {
+    const revealInFolder = vi.fn();
+    mockGetAbstractFileOrNull.mockReturnValue(strictProxy<TFolder>({ path: 'charlie' }));
+    mockIsFile.mockReturnValue(false);
+
+    await clickLink({ app: createAppWithFileExplorer(revealInFolder), path: 'charlie' });
+
+    // Revealing again here would be a SECOND reveal on the same click, not a missing one.
+    expect(revealInFolder).not.toHaveBeenCalled();
+  });
+
+  it('should reveal nothing when the path no longer resolves', async () => {
+    const revealInFolder = vi.fn();
+    // Resolved at CLICK time, so a destination trashed since the notice was shown simply has nothing to
+    // Reveal — and must not be recreated on the way to finding that out.
+    mockGetAbstractFileOrNull.mockReturnValue(null);
+    mockIsFile.mockReturnValue(false);
+
+    await clickLink({ app: createAppWithFileExplorer(revealInFolder), path: 'gone.md' });
+
+    expect(revealInFolder).not.toHaveBeenCalled();
+  });
+
+  it('should survive the file explorer being disabled', async () => {
+    mockGetAbstractFileOrNull.mockReturnValue(strictProxy<TFile>({ path: 'alpha.md' }));
+    mockIsFile.mockReturnValue(true);
+    const appWithoutFileExplorer = strictProxy<App>({
+      internalPlugins: strictProxy<App['internalPlugins']>({ getEnabledPluginById: vi.fn().mockReturnValue(null) })
+    });
+
+    await expect(clickLink({ app: appWithoutFileExplorer, path: 'alpha.md' })).resolves.toBeDefined();
+  });
+
+  it('should run the extra click action', async () => {
+    mockGetAbstractFileOrNull.mockReturnValue(strictProxy<TFile>({ path: 'alpha.md' }));
+    mockIsFile.mockReturnValue(true);
+    const onClick = vi.fn().mockResolvedValue(undefined);
+
+    await clickLink({ app: createAppWithFileExplorer(vi.fn()), onClick, path: 'alpha.md' });
+
+    // Fired through `invokeAsyncSafely`, so it is in flight rather than awaited by the DOM listener.
+    await vi.waitFor(() => {
+      expect(onClick).toHaveBeenCalledOnce();
+    });
   });
 });
 

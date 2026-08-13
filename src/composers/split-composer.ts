@@ -1,6 +1,5 @@
 import type {
   Editor,
-  EditorPosition,
   EditorSelection,
   Pos
 } from 'obsidian';
@@ -9,10 +8,10 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { FrontmatterSelectionExtraction } from '../frontmatter-selection.ts';
+import type { InsertedContentRange } from '../reveal-inserted-content.ts';
 import type {
   ComposerBaseConstructorParamsBase,
   ComposerBaseUpdateEditorSelectionsParams,
@@ -25,6 +24,7 @@ import { createMoveToken } from '../move-token.ts';
 import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
   buildOperationNoticeContent,
+  renderOperationNoticeLink,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
@@ -34,6 +34,11 @@ import {
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
+import {
+  POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS,
+  pollForInsertedContent,
+  revealInsertedContent
+} from '../reveal-inserted-content.ts';
 import {
   ComposerBase,
   resolveInsertOffset
@@ -108,15 +113,6 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 interface SplitComposerIsRangeOverlappingCapturedSelectionParams {
   readonly endOffset: number;
   readonly startOffset: number;
-}
-
-/**
- * The editor positions the moved content occupies in the target note, with the template's own
- * leading/trailing whitespace already trimmed off.
- */
-interface SplitComposerMovedContentRange {
-  readonly endPos: EditorPosition;
-  readonly startPos: EditorPosition;
 }
 
 export class SplitComposer extends ComposerBase {
@@ -335,6 +331,40 @@ export class SplitComposer extends ComposerBase {
     return this.capturedSelections;
   }
 
+  /**
+   * Lands the user ON the extracted content when the completion notice's destination link is clicked,
+   * instead of at the top of the destination note (issue #232).
+   *
+   * Reading the pair here rather than inside the closure is safe and deliberate: the completion notice is
+   * built only after the transaction has committed, so both are already final.
+   *
+   * No action is offered when the insert route recorded no content — the frontmatter-only extract merges
+   * properties rather than writing a body, so there is no body region to jump to and the link keeps its
+   * plain open-the-note behavior.
+   *
+   * @returns The click action, or `undefined` when there is nothing to jump to.
+   */
+  protected override getTargetLinkClickAction(): (() => Promise<void>) | undefined {
+    const insertedContent = this.insertedContent;
+    if (insertedContent === null) {
+      return undefined;
+    }
+
+    const insertedContentOffset = this.insertedContentOffset;
+    return async (): Promise<void> => {
+      await revealInsertedContent({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        file: this.targetFile,
+        insertedContent,
+        insertedContentOffset,
+        // The click hands the open to Obsidian and returns, so this poll has to outlast the open itself,
+        // Not just the editor load the default budget assumes.
+        timeoutInMilliseconds: POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS
+      });
+    };
+  }
+
   protected override getTemplate(): string {
     // An explicit override wins over every setting: the caller is taking templating over entirely (the
     // Recursive split defers it — see `applySplitTemplateToNotes`), so it is not padded either.
@@ -384,7 +414,7 @@ export class SplitComposer extends ComposerBase {
    * @param editor - The target note's editor.
    * @param range - Where the moved content sits in that editor.
    */
-  private async applyMovedContentFeedback(editor: Editor, range: SplitComposerMovedContentRange): Promise<void> {
+  private async applyMovedContentFeedback(editor: Editor, range: InsertedContentRange): Promise<void> {
     const feedback = this.pluginSettingsComponent.settings.smartCutAndPasteCompletionFeedback;
     const shouldSelect = feedback !== SmartCutAndPasteCompletionFeedback.Notice;
 
@@ -406,7 +436,10 @@ export class SplitComposer extends ComposerBase {
     this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('Moved the marked selection into ');
-        f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
+        // A completion notice like the ones `buildOperationNoticeContent` builds, so its link reveals the
+        // Destination in the file explorer the same way (issue #232). No jump action: the cursor is already
+        // On the moved content by the time this notice is shown.
+        f.append(await renderOperationNoticeLink({ app: this.app, pathOrAbstractFile: this.targetFile.path }));
         f.appendText('.');
       })
     );
@@ -562,14 +595,6 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
-   * Resolves the {@link SplitComposerMovedContentRange} the moved content occupies in `editor`, or
-   * `null` when it cannot be located there (yet).
-   *
-   * @param editor - The target note's editor.
-   * @param movedContent - The exact string that replaced the insert token.
-   * @returns The range, or `null`.
-   */
-  /**
    * Resolves the configured template, before any padding — the documented fallback chain, unchanged.
    *
    * Split out of {@link SplitComposer.getTemplate} only so the chain stays one readable cascade of early
@@ -627,57 +652,6 @@ export class SplitComposer extends ComposerBase {
     });
   }
 
-  private resolveMovedContentRange(editor: Editor, movedContent: string): null | SplitComposerMovedContentRange {
-    const editorValue = editor.getValue();
-    const startOffset = this.resolveMovedTextStartOffset(editorValue, movedContent);
-    if (startOffset === null) {
-      return null;
-    }
-
-    // Clamp to the document, mirroring `computeHighlightRangesForFile`: the editor is read live, so it
-    // Can be a revision behind the content the offsets were computed against.
-    const endOffset = Math.min(startOffset + movedContent.trim().length, editorValue.length);
-    return {
-      endPos: editor.offsetToPos(endOffset),
-      startPos: editor.offsetToPos(startOffset)
-    };
-  }
-
-  /**
-   * Resolves where the moved TEXT starts in `editorValue` — the template's own leading whitespace
-   * already skipped, so the cursor lands on the text rather than on the blank lines wrapping it.
-   *
-   * @param editorValue - The target editor's current content.
-   * @param movedContent - The exact string that replaced the insert token.
-   * @returns The offset, or `null` when the moved content cannot be located.
-   */
-  private resolveMovedTextStartOffset(editorValue: string, movedContent: string): null | number {
-    const leadingWhitespaceLength = movedContent.length - movedContent.trimStart().length;
-
-    // The offset the unique insert token occupied pins the moved region exactly, so it is the only
-    // Candidate that cannot pick the wrong copy (issue #175). Trusted only when the editor really does
-    // Hold the moved content there — a later write (the frontmatter merge) can shift the body under it.
-    if (this.movedContentOffset !== null && editorValue.startsWith(movedContent, this.movedContentOffset)) {
-      return this.movedContentOffset + leadingWhitespaceLength;
-    }
-
-    // Fallbacks for a shifted body. Both take the FIRST occurrence, so on a note that already contains
-    // The same text they can land on the earlier copy — a last resort, never the primary path.
-    const index = editorValue.indexOf(movedContent);
-    if (index !== -1) {
-      return index + leadingWhitespaceLength;
-    }
-
-    const trimmedContent = movedContent.trim();
-    if (trimmedContent === '') {
-      // Whitespace-only move: `indexOf('')` would answer 0 and send the cursor to the top of the note.
-      return null;
-    }
-
-    const trimmedIndex = editorValue.indexOf(trimmedContent);
-    return trimmedIndex === -1 ? null : trimmedIndex;
-  }
-
   /**
    * Scrolls the active source view to the current cursor line (preserving the cursor), so that after
    * the source note is reopened the user lands where the extraction happened instead of at the top.
@@ -700,36 +674,28 @@ export class SplitComposer extends ComposerBase {
    * reports the move the way {@link PluginSettings.smartCutAndPasteCompletionFeedback} asks for
    * (issue #176).
    *
-   * The re-opened editor needs a moment to load its content and apply its own default cursor, so this
-   * polls for the moved content rather than guessing a fixed delay. A no-op when the target view never
-   * shows up or the content cannot be located — logged rather than passed over in silence, since that
-   * is exactly the failure a user reports as "the cursor did not jump" (issue #175).
+   * The finding half lives in `reveal-inserted-content.ts`, shared with the completion notice's
+   * destination link (issue #232); what stays here is the part that is specific to a smart cut & paste —
+   * the `smartCutAndPasteCompletionFeedback` setting deciding whether the moved text is left selected and
+   * whether a notice says so. A no-op when the target view never shows up or the content cannot be
+   * located, which {@link pollForInsertedContent} logs rather than passing over in silence.
    */
+  /* v8 ignore start -- polls a live Obsidian workspace; verified via integration. */
   private async revealMovedContentInTarget(): Promise<void> {
-    const POLL_INTERVAL_IN_MILLISECONDS = 50;
-    const POLL_TIMEOUT_IN_MILLISECONDS = 2000;
-    const movedContent = ensureNonNullable(this.movedContent);
-
-    for (let elapsed = 0; elapsed <= POLL_TIMEOUT_IN_MILLISECONDS; elapsed += POLL_INTERVAL_IN_MILLISECONDS) {
-      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      // The active view must be the TARGET note: the open above is asynchronous, and applying an offset
-      // To whatever note happens to be showing would select arbitrary text in the wrong file. A view
-      // Still loading (no file yet) simply fails the check and is retried on the next poll.
-      if (view?.file?.path === this.targetFile.path) {
-        const range = this.resolveMovedContentRange(view.editor, movedContent);
-        if (range) {
-          await this.applyMovedContentFeedback(view.editor, range);
-          return;
-        }
-      }
-
-      await sleep(POLL_INTERVAL_IN_MILLISECONDS);
+    const located = await pollForInsertedContent({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      file: this.targetFile,
+      insertedContent: ensureNonNullable(this.insertedContent),
+      insertedContentOffset: this.insertedContentOffset
+    });
+    if (!located) {
+      return;
     }
 
-    this.consoleDebugComponent.consoleDebug(
-      `Could not locate the moved content in ${this.targetFile.path} to jump to it: ${JSON.stringify(movedContent)} at offset ${String(this.movedContentOffset)}`
-    );
+    await this.applyMovedContentFeedback(located.editor, located.range);
   }
+  /* v8 ignore stop */
 }
 
 export function getSelections(editor: Editor): Selection[] {

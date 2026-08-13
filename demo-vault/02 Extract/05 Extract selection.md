@@ -12,6 +12,10 @@ What is left behind (a link, an embed, or nothing) is controlled by
 [07 Text after extraction](<../02 Extract/07 Text after extraction.md>). Whether the target is created or merged into is
 [the switch at the top of the picker](<../03 Split/10 Create or merge when splitting.md>).
 
+The notice that reports the extract names the destination. Click it and you land **on the extracted content**
+in that note - not at its top - and the note is highlighted in the file explorer. See
+[33 Operation notices](<../10 UI/33 Operation notices.md>).
+
 ---
 
 Select me and extract me into a brand-new note. Because **Text after extraction** defaults
