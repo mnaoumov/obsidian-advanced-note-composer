@@ -246,16 +246,34 @@ describe('merge folder contents into a single file does not cycle the active lea
         vaultPath
       });
 
-      // The merge is kicked off and then polled from NODE, each poll its own sub-second eval, so the budget
-      // Above is enforceable instead of being cut short by the CDP cap.
-      const wasCommandStarted = await evalInObsidian({
-        callback: ({ app, pluginId }) => app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`),
-        input: { pluginId: PLUGIN_ID },
+      /*
+       * The merge is kicked off and then polled from NODE, each poll its own sub-second eval, so the budget
+       * Above is enforceable instead of being cut short by the CDP cap.
+       *
+       * The setting is read back in the SAME eval, immediately before the command runs (object properties
+       * Evaluate in source order, so the read happens first). `confirmMergeFolderIntoFile` awaits a bare
+       * Promise only a human resolves when `shouldAskBeforeMerging` is on, so a merge that starts with it
+       * True does not run slowly - it never finishes at all, and the 90 s wait below would report a stalled
+       * Merge for a merge that is sitting on a dialog. The aggregate shares one Obsidian and one `data.json`,
+       * And `PluginSettingsComponent.onExternalSettingsChange` RELOADS the settings from that file, so an
+       * In-memory `false` written here is not by itself a guarantee that it is still `false` a moment later
+       * (every confirmed dialog writes the setting back, and the dialog's `shouldAskAgain` defaults to true).
+       * Reading it back turns that from a 90 s mystery into an immediate, self-describing failure (T470).
+       */
+      const commandStart = await evalInObsidian({
+        callback({ app, findSettingsComponent, pluginId }) {
+          return {
+            shouldAskBeforeMerging: findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' }).settings.shouldAskBeforeMerging,
+            wasCommandStarted: app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`)
+          };
+        },
+        input: { findSettingsComponent: findSettingsComponentInObsidian, pluginId: PLUGIN_ID },
         vaultPath
       });
+      expect(commandStart.shouldAskBeforeMerging).toBe(false);
       // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the wait
       // Below would blame a slow merge for a merge that was never allowed to start.
-      expect(wasCommandStarted).toBe(true);
+      expect(commandStart.wasCommandStarted).toBe(true);
 
       await pollInObsidian({
         input: { mergedNotePath: MERGED_NOTE_PATH, sourceFolder: SOURCE_FOLDER },
