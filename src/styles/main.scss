@@ -16,8 +16,18 @@
 // The split/extract picker's `Create` / `Merge` switch (issue #227). It is prepended to the modal element,
 // Above the prompt input, so it needs the padding the input's own container provides and no top border of
 // Its own - the row is part of the prompt, not a section above it.
+//
+// The RIGHT padding reserves the corner the minimize button occupies (issue #236). This picker is opened
+// Minimizable, and that button is positioned absolutely at the top right of the same modal element, inset by
+// `--size-4-2` plus a `--size-4-9` allowance for Obsidian's native close button - which a `SuggestModal` does
+// Not have. So the corner looks empty while the button is really sitting in it, and the switch rendered
+// Underneath it. The third term is the button's own box (26px in Obsidian 1.13.7), leaving the row's content
+// Just clear of it at every width.
 .advanced-note-composer-split-target-mode {
-  padding: var(--size-4-2) var(--size-4-3) 0;
+  padding-bottom: 0;
+  padding-left: var(--size-4-3);
+  padding-right: calc(var(--size-4-2) + var(--size-4-9) + var(--size-4-8));
+  padding-top: var(--size-4-2);
 
   .setting-item {
     border-top: none;
