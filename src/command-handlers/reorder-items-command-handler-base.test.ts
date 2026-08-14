@@ -12,6 +12,7 @@ import type { MockInstance } from 'vitest';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
@@ -33,7 +34,6 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { ReorderItemsCommandHandlerParams } from './reorder-items-command-handler-base.ts';
 
 import { didConfirmReorderModal } from '../modals/reorder-modal.ts';
-import { FolderNoteLocation } from '../plugin-settings.ts';
 import { ReorderChildFoldersCommandHandler } from './reorder-child-folders-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './reorder-sibling-folders-command-handler.ts';
 

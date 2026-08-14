@@ -22,6 +22,7 @@ import {
 import { getDebugController } from 'obsidian-dev-utils/debug';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -38,7 +39,6 @@ import type { PluginSettings } from './plugin-settings.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
-  FolderNoteLocation,
   MergeFolderIntoFileLocation,
   SplitTargetMode
 } from './plugin-settings.ts';

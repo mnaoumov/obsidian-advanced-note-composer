@@ -36,7 +36,7 @@ import type {
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import {
-  resolveFolderNoteConfig,
+  resolveFolderNoteConfigFromSettings,
   resolveFolderNoteFromSettings
 } from '../folder-note.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
@@ -58,7 +58,6 @@ import {
 } from '../reorder-items.ts';
 import {
   resolveCreateFolderTemplateTokens,
-  resolveFolderTemplateTokens,
   resolveReorderedFileTemplateTokens
 } from '../template-tokens.ts';
 
@@ -359,7 +358,12 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     folderNotesByOldPath: ReadonlyMap<string, TFile>,
     vaultTransaction: VaultTransaction
   ): Promise<void> {
-    const settings = this.pluginSettingsComponent.settings;
+    // Resolved once for the whole reorder rather than per folder: it is the same two settings (and, under
+    // `Auto`, the same installed plugin) every time round the loop.
+    const config = resolveFolderNoteConfigFromSettings({
+      app: this.app,
+      settings: this.pluginSettingsComponent.settings
+    });
 
     for (const plannedItem of plan) {
       const folderNote = folderNotesByOldPath.get(plannedItem.item.oldPath);
@@ -369,17 +373,12 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
 
       const folder = plannedItem.folder;
 
-      const config = resolveFolderNoteConfig({
-        app: this.app,
-        location: settings.folderNoteLocation,
-        nameTemplate: settings.folderNoteNameTemplate
-      });
       // The note's own path is LIVE: an inside-the-folder note moved with its folder's rename, and a
       // `Folder notes` install with `syncFolderName` on may already have renamed it outright.
       const noteParentPath = ensureNonNullable(folderNote.parent).path;
-      // Never empty: `collectFolderNotes` only recorded this note because the same template resolved to a
-      // Name, and the only token it can carry is the folder's own name.
-      const newNoteName = resolveFolderTemplateTokens({ sourceFolder: folder, template: config.nameTemplate }).trim();
+      // Never empty: `collectFolderNotes` only recorded this note because the same name resolved to one, and
+      // The only token it can carry is the folder's own name.
+      const newNoteName = config.resolveName(folder).trim();
       const newNotePath = normalizePath(join(noteParentPath, `${newNoteName}.${folderNote.extension}`));
       if (newNotePath === folderNote.path) {
         continue;

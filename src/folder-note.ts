@@ -1,27 +1,35 @@
+/**
+ * @file
+ *
+ * This plugin's `Folder note` SETTINGS, expressed as `obsidian-dev-utils`' folder-note parameters.
+ *
+ * The folder-note concept itself — where a folder's note lives, how the installed `folder-notes` plugin is
+ * read under `Auto`, which file that resolves to — moved into `obsidian-dev-utils/obsidian/folder-note` in
+ * 94.2.0 (G52/G61: it is not this plugin's to own, and `renderInternalLink` needed the same answer). What is
+ * left here is the only half that IS this plugin's: two settings, and the token vocabulary their name
+ * template is written in.
+ *
+ * The mapping is one-way and tiny by design — a caller that needs a folder note asks through here rather
+ * than assembling the pair itself, which is how one of the two settings ends up read from somewhere else.
+ */
+
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
+import type {
+  FolderNoteConfig,
+  FolderNoteLocation
+} from 'obsidian-dev-utils/obsidian/folder-note';
+import type { RenderInternalLinkFolderNoteOptions } from 'obsidian-dev-utils/obsidian/markdown';
 
-import { normalizePath } from 'obsidian';
-import { join } from 'obsidian-dev-utils/path';
+import {
+  resolveFolderNote,
+  resolveFolderNoteConfig
+} from 'obsidian-dev-utils/obsidian/folder-note';
 
-import { FolderNoteLocation } from './plugin-settings.ts';
 import { resolveFolderTemplateTokens } from './template-tokens.ts';
-
-/**
- * A folder-note setup with {@link FolderNoteLocation.Auto} already resolved to a concrete answer.
- */
-export interface FolderNoteConfig {
-  readonly location: FolderNoteLocation.InsideFolder | FolderNoteLocation.None | FolderNoteLocation.ParentFolder;
-
-  /**
-   * The note's name template, in THIS plugin's token vocabulary — `{{folderName}}` names the note after its
-   * folder, a literal like `!` or `index` gives every folder note the same name.
-   */
-  readonly nameTemplate: string;
-}
 
 /**
  * The two settings that answer which note is a folder's folder note.
@@ -43,20 +51,15 @@ export interface FolderNoteSettings {
 }
 
 /**
- * Parameters for {@link resolveFolderNoteConfig}.
+ * Parameters for {@link resolveFolderNoteConfigFromSettings}.
  */
-export interface ResolveFolderNoteConfigParams {
+export interface ResolveFolderNoteConfigFromSettingsParams {
   readonly app: App;
 
   /**
-   * The `folderNoteLocation` setting.
+   * The settings that say which note is a folder's folder note.
    */
-  readonly location: FolderNoteLocation;
-
-  /**
-   * The `folderNoteNameTemplate` setting.
-   */
-  readonly nameTemplate: string;
+  readonly settings: FolderNoteSettings;
 }
 
 /**
@@ -66,7 +69,8 @@ export interface ResolveFolderNoteFromSettingsParams {
   readonly app: App;
 
   /**
-   * The folder whose folder note is wanted.
+   * The folder whose folder note is wanted. Read AFTER any rename: the note is named from the folder's
+   * CURRENT name, and a `folder-notes` install with `syncFolderName` on will have renamed it already.
    */
   readonly folder: TFolder;
 
@@ -77,114 +81,59 @@ export interface ResolveFolderNoteFromSettingsParams {
 }
 
 /**
- * Parameters for {@link resolveFolderNote}.
- */
-export interface ResolveFolderNoteParams {
-  readonly app: App;
-
-  /**
-   * The folder whose folder note is wanted. Read AFTER any rename: the note is named from the folder's
-   * CURRENT name, and a `folder-notes` install with `syncFolderName` on will have renamed it already.
-   */
-  readonly folder: TFolder;
-
-  /**
-   * The `folderNoteLocation` setting.
-   */
-  readonly location: FolderNoteLocation;
-
-  /**
-   * The `folderNoteNameTemplate` setting.
-   */
-  readonly nameTemplate: string;
-}
-
-const FOLDER_NOTES_FOLDER_NAME_TOKEN_REG_EXP = /\{\{folder_name\}\}/gi;
-const FOLDER_NOTES_PLUGIN_ID = 'folder-notes';
-
-/**
- * What {@link FolderNoteLocation.Auto} falls back to: the layout every folder-note plugin supports, and the
- * one `folder-notes` itself ships as its default.
- */
-const FALLBACK_FOLDER_NOTE_CONFIG: FolderNoteConfig = {
-  location: FolderNoteLocation.InsideFolder,
-  nameTemplate: '{{folderName}}'
-};
-
-const MARKDOWN_EXTENSION = '.md';
-
-/**
- * Finds a folder's folder note — the one note whose properties describe the folder itself, and therefore
- * the only note a folder rename or renumber may rewrite (issue #216).
+ * Translates the plugin's `Folder note` settings into the bag dev-utils resolves a folder note with — the
+ * same bag `renderInternalLink` takes for a FOLDER link, which is why this is options and not an already
+ * resolved config.
  *
- * @param params - The folder and the folder-note settings.
- * @returns The folder note, or `null` when the vault has no folder notes, the folder is the vault root
- * (nothing can sit beside it), or the note simply does not exist.
+ * **Both settings are read LAZILY** — the location through a getter, the name through the callback — so the
+ * bag can be built when a notice is RENDERED while the settings behind it are read when the folder note is
+ * actually resolved. That matters twice over: a notice outlives the operation that showed it, so the answer
+ * must be the one the settings give at CLICK time; and building the bag then costs nothing to a link that
+ * names a FILE, which never resolves a folder note at all.
+ *
+ * `extensions` and `isHidden` are deliberately left at their defaults: this plugin has no setting for either,
+ * and under `Auto` — the default — dev-utils takes the installed `folder-notes` plugin's answer whole, which
+ * includes both.
+ *
+ * @param settings - The settings that say which note is a folder's folder note.
+ * @returns The options.
  */
-export function resolveFolderNote(params: ResolveFolderNoteParams): null | TFile {
-  const {
-    app,
-    folder,
-    location,
-    nameTemplate
-  } = params;
-
-  const config = resolveFolderNoteConfig({ app, location, nameTemplate });
-  if (config.location === FolderNoteLocation.None) {
-    return null;
-  }
-
-  const parentFolderPath = config.location === FolderNoteLocation.ParentFolder ? folder.parent?.path : folder.path;
-  if (parentFolderPath === undefined) {
-    return null;
-  }
-
-  const noteName = resolveFolderTemplateTokens({ sourceFolder: folder, template: config.nameTemplate }).trim();
-  if (!noteName) {
-    return null;
-  }
-
-  return app.vault.getFileByPath(normalizePath(join(parentFolderPath, `${noteName}${MARKDOWN_EXTENSION}`)));
+export function buildFolderNoteOptions(settings: FolderNoteSettings): RenderInternalLinkFolderNoteOptions {
+  return {
+    get location(): FolderNoteLocation {
+      return settings.folderNoteLocation;
+    },
+    // The name is a TEMPLATE here, in this plugin's own token vocabulary, where dev-utils takes a callback:
+    // It has no vocabulary to impose, and rendering the template is exactly what this module exists for.
+    // Ignored under `Auto`, which names the note the way the installed plugin does.
+    resolveName: (folder: TFolder): string => resolveFolderTemplateTokens({ sourceFolder: folder, template: settings.folderNoteNameTemplate })
+  };
 }
 
 /**
- * Resolves {@link FolderNoteLocation.Auto} into a concrete folder-note setup.
+ * Resolves the plugin's `Folder note` settings into a concrete folder-note setup.
  *
- * `Auto` reads the installed `folder-notes` plugin **at every use rather than copying its values into this
- * plugin's own `data.json`** — a copy would silently go stale the moment that plugin is reconfigured, and
- * it would need a settings migration to seed. Anything else is the user's explicit choice and the other
- * plugin is not consulted at all.
+ * Wanted by the flows that RENAME a folder note rather than merely find it: they name the note the folder
+ * will have after the rename, which is {@link FolderNoteConfig.resolveName} applied to the renamed folder.
  *
- * `folder-notes`' `vaultFolder` storage (every folder note in one central folder) has no counterpart here
- * and falls back rather than guessing: with the notes pooled, the note belonging to a folder is no longer
- * derivable from that folder's path alone.
- *
- * @param params - The settings and the app to read the other plugin from.
+ * @param params - The app and the settings.
  * @returns The resolved setup.
  */
-export function resolveFolderNoteConfig(params: ResolveFolderNoteConfigParams): FolderNoteConfig {
-  const {
-    app,
-    location,
-    nameTemplate
-  } = params;
-
-  if (location !== FolderNoteLocation.Auto) {
-    return { location, nameTemplate };
-  }
-
-  return readFolderNotesPluginConfig(app) ?? FALLBACK_FOLDER_NOTE_CONFIG;
+export function resolveFolderNoteConfigFromSettings(params: ResolveFolderNoteConfigFromSettingsParams): FolderNoteConfig {
+  const { app, settings } = params;
+  return resolveFolderNoteConfig({ app, ...buildFolderNoteOptions(settings) });
 }
 
 /**
- * Finds a folder's folder note using the plugin's own `Folder note` settings.
+ * Finds a folder's folder note using the plugin's own `Folder note` settings — the one note whose properties
+ * describe the folder itself, and therefore the only note a folder rename or renumber may rewrite (issue
+ * #216).
  *
- * The settings-reading half of {@link resolveFolderNote}, which is what every caller outside this module's
- * own tests actually wants: the two values are always read together and always from the same place, and
- * spelling that pair out at each call site is how one of them ends up read from somewhere else.
+ * Never creates: a folder with no folder note answers `null`, and so does a vault whose folder notes are
+ * turned off entirely.
  *
  * @param params - The folder and the settings.
- * @returns The folder note, or `null` when this folder has none — see {@link resolveFolderNote}.
+ * @returns The folder note, or `null` when this folder has none.
  */
 export function resolveFolderNoteFromSettings(params: ResolveFolderNoteFromSettingsParams): null | TFile {
   const {
@@ -195,71 +144,7 @@ export function resolveFolderNoteFromSettings(params: ResolveFolderNoteFromSetti
 
   return resolveFolderNote({
     app,
-    folder,
-    location: settings.folderNoteLocation,
-    nameTemplate: settings.folderNoteNameTemplate
+    config: resolveFolderNoteConfigFromSettings({ app, settings }),
+    folder
   });
-}
-
-/**
- * Reads the installed `folder-notes` plugin's own configuration, if it is installed and configured the way
- * it documents.
- *
- * Every value is read as `unknown` and checked, rather than asserted into a shape: this is another
- * plugin's private settings object, so a version that renames or drops a key must degrade to the fallback
- * instead of throwing inside a reorder.
- *
- * @param app - The Obsidian application instance.
- * @returns The configuration, or `null` when the plugin is absent, not configured, or set to a storage
- * location with no counterpart here.
- */
-function readFolderNotesPluginConfig(app: App): FolderNoteConfig | null {
-  const folderNotesPlugin = app.plugins.plugins[FOLDER_NOTES_PLUGIN_ID];
-  // Narrowed with `in` rather than asserted into a shape: that keeps every value below typed `unknown`,
-  // Which is exactly what a foreign plugin's private settings are.
-  if (!folderNotesPlugin || !('settings' in folderNotesPlugin)) {
-    return null;
-  }
-
-  const folderNotesSettings = folderNotesPlugin.settings;
-  if (typeof folderNotesSettings !== 'object' || folderNotesSettings === null) {
-    return null;
-  }
-
-  const location = toFolderNoteLocation('storageLocation' in folderNotesSettings ? folderNotesSettings.storageLocation : null);
-  if (!location) {
-    return null;
-  }
-
-  const folderNoteName = 'folderNoteName' in folderNotesSettings ? folderNotesSettings.folderNoteName : null;
-  if (typeof folderNoteName !== 'string' || !folderNoteName) {
-    return null;
-  }
-
-  return {
-    location,
-    // Their template language has exactly one token; every other character is a literal, so translating it
-    // Is the whole of the translation.
-    nameTemplate: folderNoteName.replaceAll(FOLDER_NOTES_FOLDER_NAME_TOKEN_REG_EXP, '{{folderName}}')
-  };
-}
-
-/**
- * Maps `folder-notes`' `storageLocation` onto this plugin's own location.
- *
- * @param storageLocation - The value read out of that plugin's settings.
- * @returns The location, or `null` for `vaultFolder` and for anything that is not one of its values.
- */
-function toFolderNoteLocation(storageLocation: unknown): FolderNoteConfig['location'] | null {
-  switch (storageLocation) {
-    case 'insideFolder': {
-      return FolderNoteLocation.InsideFolder;
-    }
-    case 'parentFolder': {
-      return FolderNoteLocation.ParentFolder;
-    }
-    default: {
-      return null;
-    }
-  }
 }

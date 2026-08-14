@@ -1,3 +1,4 @@
+import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
 
 export enum Action {
@@ -42,39 +43,6 @@ export enum FlattenMode {
   AllChildren = 'AllChildren',
   AllFoldersRecursively = 'AllFoldersRecursively',
   ChildFoldersOnly = 'ChildFoldersOnly'
-}
-
-/**
- * Where a folder's folder note lives (issue #217's thread) — the one note whose properties describe the
- * folder itself, and therefore the only note a folder rename or renumber may rewrite.
- *
- * The three concrete members are the shapes the folder-note ecosystem actually uses:
- * `charlie/charlie.md` and `charlie/index.md` are both `InsideFolder` (they differ only in the NAME
- * template, which is why the name is a template and not a fourth member), while `charlie.md` beside the
- * folder is `ParentFolder` — whose whole point is that `[[alpha/bravo/charlie]]` links to a folder with no
- * special syntax.
- */
-export enum FolderNoteLocation {
-  /**
-   * Take the answer from the installed `folder-notes` plugin, falling back to a note named after its
-   * folder, inside it. The default, and resolved LIVE rather than copied — see `folder-note.ts`.
-   */
-  Auto = 'Auto',
-
-  /**
-   * `alpha/bravo/charlie/<name>.md`.
-   */
-  InsideFolder = 'InsideFolder',
-
-  /**
-   * The vault has no folder notes — nothing is resolved and no properties are ever rewritten.
-   */
-  None = 'None',
-
-  /**
-   * `alpha/bravo/<name>.md`, beside the folder rather than inside it.
-   */
-  ParentFolder = 'ParentFolder'
 }
 
 export enum FrontmatterMergeStrategy {
@@ -244,6 +212,15 @@ export class PluginSettings {
    * `Auto` reads the installed `folder-notes` plugin at every use rather than copying its values here — a
    * copy would go stale the moment that plugin is reconfigured — and falls back to a note named after its
    * folder, inside it, when that plugin is absent or set to a storage location with no counterpart here.
+   *
+   * `obsidian-dev-utils`' own {@link FolderNoteLocation}, NOT a plugin-local enum of the same name: the
+   * library owns the folder-note concept since 94.2.0, and its four members are the four this plugin had
+   * declared. The move needs **no** `registerLegacySettingsConverter` because the member VALUES are
+   * byte-identical (`Auto` / `InsideFolder` / `None` / `ParentFolder`), so every already-persisted
+   * `data.json` value is still a valid member — the same reasoning that let
+   * {@link EmptyFolderBehaviorAfterMergingFolder} reuse `EmptyFolderBehavior`'s values. The difference is
+   * the conclusion: that enum stays local because it has a member dev-utils cannot express, and this one has
+   * nothing of its own left to keep.
    *
    * @default {@link FolderNoteLocation.Auto}
    */

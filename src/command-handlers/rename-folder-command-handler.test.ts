@@ -13,6 +13,7 @@ import type { MockInstance } from 'vitest';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import {
   requestResourceUnlockForPath,
@@ -33,7 +34,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type { RenameFolderCommandHandlerConstructorParams } from './rename-folder-command-handler.ts';
 
-import { FolderNoteLocation } from '../plugin-settings.ts';
 import { RenameFolderCommandHandler } from './rename-folder-command-handler.ts';
 
 interface HandlerContext {
