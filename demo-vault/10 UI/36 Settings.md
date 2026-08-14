@@ -86,6 +86,9 @@ the thing that does it. To find a setting by its display name instead, see
   - run heading splits with no picker and no confirmation.
 - `shouldSplitRecursivelyIntoDefaultNewNoteFolder`
   - root a recursive split's folder tree in Obsidian's own default new-note folder.
+- `shouldMoveAttachmentsWhenSplitting`
+  - carry the attachments the extracted text references into the new note's attachment folder. One the
+    text left behind still references stays put.
 - `shouldOpenTargetNoteAfterSplit`
   - open the note a split produced.
 

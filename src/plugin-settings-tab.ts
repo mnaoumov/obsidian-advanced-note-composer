@@ -789,6 +789,34 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldKeepHeadingsWhenSplittingContent', valueComponent: toggle });
               });
             }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether the attachments the extracted text references follow it into the new note\'s attachment folder.');
+              f.createEl('br');
+              f.appendText('The destination honors your vault\'s attachment settings, including ');
+              /**
+              HACK: see the TSDoc for {@link EMPTY} for motivation.
+              */
+              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+              f.appendText(' when it is installed.');
+              f.createEl('br');
+              f.appendText(
+                'An attachment moves only when the extracted text is the only thing referencing it. One referenced by the text left behind, or by any other note, stays where it is.'
+              );
+              f.createEl('br');
+              f.appendText('Applies to every split and extract command, including ');
+              appendCodeBlock(f, 'Split heading recursively...');
+              f.appendText(', ');
+              appendCodeBlock(f, 'Split note by headings recursively...');
+              f.appendText(' — where each created note gets its own attachment folder — and the smart cut & paste moves into another note.');
+            }),
+            name: 'Should move attachments when splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldMoveAttachmentsWhenSplitting', valueComponent: toggle });
+              });
+            }
           })
         ],
         name: 'Split/extract'
