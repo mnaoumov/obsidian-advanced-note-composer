@@ -34,6 +34,13 @@ keep in step - see [24 Rename folder](<../06 Folder operations/24 Rename folder.
 hidden in the explorer, or that has no folder note at all, highlights the folder instead; nothing is ever
 created by clicking.
 
+An operation that creates SEVERAL notes - splitting a note by its headings, or splitting a heading
+recursively - also **names what it created**, after the count: `Split heading in Source into 7 note(s):
+Chapter 1.` Only the notes at the top of what it produced are named, at most three of them and then
+`and 4 more`, because a recursive split can turn one heading into a whole folder tree and no corner notice
+could list it. The rest are never lost: a split leaves a link to every note it produced in the note it
+split, so the **source** name - still the first link in the notice - is the index of the whole run.
+
 An **extract** goes one step further. Clicking the destination of `Split note A into B` puts you *on the
 content you just extracted*, selected and scrolled into view, instead of at the top of `B` - which is the
 point when you extracted three lines into the bottom of a long note. Nothing to configure; it is what the

@@ -1,7 +1,8 @@
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -114,7 +115,9 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
-    let splitCount = 0;
+    // Collected rather than counted: the completion notice names the notes it created, in the order they
+    // Were created (issue #235), and their number is the count it always reported.
+    const createdFiles: TFile[] = [];
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
@@ -165,19 +168,20 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
           targetFile: result.targetFile
         });
         await composer.splitFile();
-        splitCount++;
+        createdFiles.push(result.targetFile);
       }
     } finally {
       progressNotice?.[Symbol.dispose]();
     }
 
-    if (splitCount > 0) {
+    if (createdFiles.length > 0) {
       showOperationCompletionNotice({
         content: await buildOperationNoticeContent({
           app: this.app,
+          createdPathsOrAbstractFiles: createdFiles,
           pluginSettingsComponent: this.pluginSettingsComponent,
           sourcePathOrAbstractFile: file,
-          suffix: ` into ${String(splitCount)} note(s)`,
+          suffix: ` into ${String(createdFiles.length)} note(s)`,
           verb: 'Split note'
         }),
         pluginNoticeComponent: this.pluginNoticeComponent,

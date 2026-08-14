@@ -681,7 +681,40 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     // The second pass splits the note the first pass produced, not the original note.
     expect(MockSplitComposer.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     expect(mockPrepareForSplitFile.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
-    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 2 note(s).');
+    // The notice names the ROOT note only (issue #235): the grandchild is counted, and reached from inside
+    // The note it was split out of.
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 2 note(s): [A/A.md].');
+  });
+
+  it('should name every note the root pass produced, not the notes those were split into (issue #235)', async () => {
+    const params = createMockParams();
+    const handler = toTestable(new SplitNoteByHeadingsRecursivelyEditorCommandHandler(params));
+    const file = createMockFile();
+    const firstChildFile = createMockFile('A/A.md');
+    const secondChildFile = createMockFile('C/C.md');
+    const grandChildFile = createMockFile('A/B/B.md');
+
+    // Two H1s, the first of them holding an H2 — so the run produces two ROOT notes and one below them.
+    scriptCaches(
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B'), createHeading(1, 4, 'C')]),
+      createCache([createHeading(1, 0, 'A'), createHeading(2, 2, 'B'), createHeading(1, 4, 'C')]),
+      createCache([createHeading(1, 4, 'C')]),
+      createCache([]),
+      createCache([createHeading(2, 2, 'B')]),
+      createCache([])
+    );
+    mockPrepareForSplitFile
+      .mockResolvedValueOnce(createSplitResult(firstChildFile))
+      .mockResolvedValueOnce(createSplitResult(secondChildFile))
+      .mockResolvedValueOnce(createSplitResult(grandChildFile));
+    setActiveEditor(params.app, createMockEditor());
+    useRealFragments();
+
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
+
+    expect(MockSplitComposer).toHaveBeenCalledTimes(3);
+    // Both roots are named; `A/B/B.md` is only counted, because a deep tree cannot be listed in a notice.
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 3 note(s): [A/A.md], [C/C.md].');
   });
 
   it('should defer the split template to every produced note, paired with the note it came out of (issue #172)', async () => {
@@ -749,7 +782,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
     expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([[childFile.path, file.path]]);
-    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s).');
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s): [A/A.md].');
   });
 
   it('should reopen the note the command was invoked on once the recursion finishes', async () => {

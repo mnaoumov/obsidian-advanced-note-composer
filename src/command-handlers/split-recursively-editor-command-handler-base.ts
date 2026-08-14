@@ -284,6 +284,14 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
+        /*
+         * The notes the ROOT pass produced, which is what the notice names (issue #235) — the notes split
+         * out of THEM are counted by the suffix and reached from inside them, because each pass leaves a
+         * residual link to its children in the note it split. A whole tree of links in a corner notice
+         * would be unreadable, and `Split heading recursively...` produces exactly one root note anyway,
+         * which is the case the issue was filed about.
+         */
+        createdPathsOrAbstractFiles: createdNotes.filter((note) => note.sourceFile === file).map((note) => note.file),
         pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: file,
         suffix: ` into ${String(createdNotes.length)} note(s)`,

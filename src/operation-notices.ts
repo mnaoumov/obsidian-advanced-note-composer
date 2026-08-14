@@ -22,10 +22,31 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { buildFolderNoteOptions } from './folder-note.ts';
 
 /**
+ * How many of an operation's created notes a notice names before it stops and counts the rest (issue #235).
+ *
+ * A notice is one line in the corner of the screen that hides itself again, so the list has to stay
+ * readable at a glance; three names plus ` and N more` still says WHAT was created and HOW MUCH, while a
+ * batch split of thirty headings would otherwise fill the screen with links.
+ */
+export const MAX_LINKED_CREATED_NOTES = 3;
+
+/**
  * Parameters for {@link buildOperationNoticeContent}.
  */
 export interface BuildOperationNoticeContentParams {
   readonly app: App;
+
+  /**
+   * The notes the operation CREATED at its TOP level, named as links after the {@link suffix} (issue #235).
+   *
+   * Top level, not every note produced: a recursive split turns one heading tree into a folder tree of
+   * arbitrarily many notes, and naming all of them would make the notice unreadable — the total is what
+   * {@link suffix} already states, and every deeper note is reachable from the ones named here. At most
+   * {@link MAX_LINKED_CREATED_NOTES} are linked; the rest are counted as ` and N more`.
+   *
+   * @default `undefined`
+   */
+  readonly createdPathsOrAbstractFiles?: readonly PathOrAbstractFile[];
 
   /**
    * Whether the operation is still running. When `true` the content ends with the `is-loading` spinner
@@ -159,10 +180,18 @@ export interface ShowOperationProgressNoticeParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
+interface AppendCreatedNoteLinksParams {
+  readonly app: App;
+  readonly createdPathsOrAbstractFiles: readonly PathOrAbstractFile[];
+  readonly fragmentEl: DocumentFragment;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
 /**
- * Builds the content shared by every operation notice: `<verb> <source>[ <preposition> <target>][suffix]`,
- * with both paths rendered as clickable internal links, closed either by the `is-loading` spinner (a
- * progress notice) or by a period (a completion notice).
+ * Builds the content shared by every operation notice:
+ * `<verb> <source>[ <preposition> <target>][suffix][: <created notes>]`, with every path rendered as a
+ * clickable internal link, closed either by the `is-loading` spinner (a progress notice) or by a period (a
+ * completion notice).
  *
  * @param params - The parameters.
  * @returns A {@link Promise} resolving to the notice content fragment.
@@ -170,6 +199,7 @@ export interface ShowOperationProgressNoticeParams {
 export function buildOperationNoticeContent(params: BuildOperationNoticeContentParams): Promise<DocumentFragment> {
   const {
     app,
+    createdPathsOrAbstractFiles,
     isLoading,
     onTargetLinkClick,
     pluginSettingsComponent,
@@ -204,6 +234,12 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     if (suffix !== undefined) {
       fragmentEl.appendText(suffix);
     }
+    await appendCreatedNoteLinks({
+      app,
+      createdPathsOrAbstractFiles: createdPathsOrAbstractFiles ?? [],
+      fragmentEl,
+      pluginSettingsComponent
+    });
     if (isLoading ?? false) {
       fragmentEl.createDiv('is-loading');
       return;
@@ -321,4 +357,52 @@ export function showOperationProgressNotice(params: ShowOperationProgressNoticeP
     return null;
   }
   return pluginNoticeComponent.showNoticeAfterDelay(normalizeOptionalProperties<PluginNoticeComponentShowNoticeAfterDelayParams>({ abortController, content }));
+}
+
+/**
+ * Names the notes an operation created, as links, after everything else the notice says (issue #235).
+ *
+ * A batch split used to end at its source link, which is the note the user was already looking at — so the
+ * notice reported a restructuring without offering a way into any of its output. The names are appended
+ * rather than made the notice's subject because the source link is not wrong: a split leaves a residual
+ * link to every note it produced in the note it split, so the source IS the index, and this list is the
+ * shortcut past it.
+ *
+ * @param params - The parameters.
+ */
+async function appendCreatedNoteLinks(params: AppendCreatedNoteLinksParams): Promise<void> {
+  const {
+    app,
+    createdPathsOrAbstractFiles,
+    fragmentEl,
+    pluginSettingsComponent
+  } = params;
+
+  /*
+   * Deduped by path, and here rather than at the callers: two headings with the same text split into the
+   * same note, so a batch split can legitimately hand the same destination in twice — and a notice naming
+   * it twice reads as though the operation created two notes.
+   */
+  const uniquePaths = [
+    ...new Set(
+      createdPathsOrAbstractFiles.map((pathOrAbstractFile) => typeof pathOrAbstractFile === 'string' ? pathOrAbstractFile : pathOrAbstractFile.path)
+    )
+  ];
+  if (uniquePaths.length === 0) {
+    return;
+  }
+
+  fragmentEl.appendText(': ');
+  const linkedPaths = uniquePaths.slice(0, MAX_LINKED_CREATED_NOTES);
+  for (const [index, path] of linkedPaths.entries()) {
+    if (index > 0) {
+      fragmentEl.appendText(', ');
+    }
+    fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: path, pluginSettingsComponent }));
+  }
+
+  const restCount = uniquePaths.length - linkedPaths.length;
+  if (restCount > 0) {
+    fragmentEl.appendText(` and ${String(restCount)} more`);
+  }
 }
