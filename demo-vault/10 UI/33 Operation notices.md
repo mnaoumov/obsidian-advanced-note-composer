@@ -16,7 +16,7 @@ never flash one up - and it is the notice that carries the operation's **Cancel*
 2. Watch the bottom-right corner. When it finishes you get a notice like
    `Flattened folder Demo into /, promoting 3 item(s).` - the note and folder names in it are clickable.
 3. Click one. The note opens **and** is highlighted in the file explorer, so you can see where it lives.
-   Click a folder name instead and the folder is highlighted while its folder note opens.
+   Click a folder name instead and that folder's folder note opens - and is the highlighted one.
 4. Open `Settings -> Advanced Note Composer -> UI` and turn **Should show operation notices** off.
 5. Run the same operation again. It does exactly the same thing, silently.
 6. Turn the setting back on.
@@ -26,11 +26,13 @@ never flash one up - and it is the notice that carries the operation's **Cancel*
 The names in a notice are links, and clicking one does two things: it opens the note and it **highlights it
 in the file explorer**.
 
-A **folder** name does the mirror image: it highlights the folder *and* opens that folder's **folder note**,
-so the click leaves you in a document rather than in the explorer. Which note that is comes from
-**Folder note location** and **Folder note name template**, the same settings a rename and a reorder keep in
-step - see [24 Rename folder](<../06 Folder operations/24 Rename folder.md>). A folder that has no folder
-note simply highlights, exactly as before; nothing is ever created by clicking.
+A **folder** name does the same thing one step removed: a folder cannot be opened, so the click opens that
+folder's **folder note** and highlights *the note*, leaving you in a document rather than in the explorer.
+The folder is still on screen - highlighting a note expands the folder holding it. Which note that is comes
+from **Folder note location** and **Folder note name template**, the same settings a rename and a reorder
+keep in step - see [24 Rename folder](<../06 Folder operations/24 Rename folder.md>). A folder whose note is
+hidden in the explorer, or that has no folder note at all, highlights the folder instead; nothing is ever
+created by clicking.
 
 An **extract** goes one step further. Clicking the destination of `Split note A into B` puts you *on the
 content you just extracted*, selected and scrolled into view, instead of at the top of `B` - which is the

@@ -5,6 +5,7 @@ import type {
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import { getDebugController } from 'obsidian-dev-utils/debug';
+import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { EMPTY } from 'obsidian-dev-utils/string';
@@ -14,7 +15,6 @@ import type { PluginSettings } from './plugin-settings.ts';
 import {
   Action,
   EmptyFolderBehaviorAfterMergingFolder,
-  FolderNoteLocation,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   MergeFolderIntoFileLocation,

@@ -51,7 +51,11 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
+// Partial rather than a bare factory: `plugin-settings.ts` reaches dev-utils' folder-note module, which
+// Imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
+// `undefined` and the whole suite fails to load.
+vi.mock(import('obsidian-dev-utils/obsidian/file-system'), async (importOriginal) => ({
+  ...await importOriginal(),
   isMarkdownFile: vi.fn()
 }));
 

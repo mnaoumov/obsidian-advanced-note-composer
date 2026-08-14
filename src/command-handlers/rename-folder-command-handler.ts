@@ -31,7 +31,7 @@ import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { swapDerivedAlias } from '../folder-note-aliases.ts';
 import {
-  resolveFolderNoteConfig,
+  resolveFolderNoteConfigFromSettings,
   resolveFolderNoteFromSettings
 } from '../folder-note.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
@@ -46,10 +46,7 @@ import {
   BASE_TOKEN_KEYS,
   ReorderItemKind
 } from '../reorder-items.ts';
-import {
-  resolveCreateFolderTemplateTokens,
-  resolveFolderTemplateTokens
-} from '../template-tokens.ts';
+import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import {
   normalizeTypedFolderNameWithTransform,
   validateTypedFolderName
@@ -352,19 +349,17 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
    * @param vaultTransaction - The transaction owning the operation.
    */
   private async renameFolderNote(folder: TFolder, folderNote: TFile, vaultTransaction: VaultTransaction): Promise<void> {
-    const settings = this.pluginSettingsComponent.settings;
-    const config = resolveFolderNoteConfig({
+    const config = resolveFolderNoteConfigFromSettings({
       app: this.app,
-      location: settings.folderNoteLocation,
-      nameTemplate: settings.folderNoteNameTemplate
+      settings: this.pluginSettingsComponent.settings
     });
 
     // The note's own path is LIVE: an inside-the-folder note moved with its folder's rename, and a
     // `Folder notes` install with `syncFolderName` on may already have renamed it outright.
     const noteParentPath = ensureNonNullable(folderNote.parent).path;
-    // Never empty: the note was found because this same template resolved to a name, and the only token it
-    // Can carry is the folder's own name.
-    const newNoteName = resolveFolderTemplateTokens({ sourceFolder: folder, template: config.nameTemplate }).trim();
+    // Never empty: the note was found because this same name resolved to one, and the only token it can
+    // Carry is the folder's own name.
+    const newNoteName = config.resolveName(folder).trim();
     const newNotePath = normalizePath(join(noteParentPath, `${newNoteName}.${folderNote.extension}`));
     if (newNotePath === folderNote.path) {
       return;

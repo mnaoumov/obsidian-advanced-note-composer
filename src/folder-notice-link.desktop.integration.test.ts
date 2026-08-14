@@ -22,14 +22,16 @@ interface MenuLike {
 
 /*
  * Issue #234: a folder name in an operation notice only highlighted the folder in the file explorer, leaving
- * the reporter in the explorer rather than in a document. Clicking it must now ALSO open that folder's folder
- * note — while the folder stays highlighted, since the ask was "also", not "instead".
+ * the reporter in the explorer rather than in a document. Clicking it must now open that folder's folder
+ * note, and highlight THAT — the reveal follows what the click opens, which is `obsidian-dev-utils`' own
+ * behavior since 94.2.0 (it falls back to highlighting the folder when the note is hidden, or when the folder
+ * has no note at all).
  *
  * Driven through `Rename folder...` because it is the folder operation whose target survives the operation
  * AND carries a folder note it keeps in step, so the notice's link names a folder that really has one.
  */
 describe('folder operation notice link (issue #234)', () => {
-  it('opens the folder note and keeps the folder highlighted when clicked', async () => {
+  it('opens the folder note and highlights it when clicked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule }) {
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if every wait times out.
@@ -138,15 +140,19 @@ describe('folder operation notice link (issue #234)', () => {
           // Reported alongside the active file so a failure says WHICH thing went wrong: an empty editor is
           // The open having raced the rename, a populated control note is the click having done nothing.
           editorValueAfterClick: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue() ?? '',
+          // Every item under this run's root carrying the class the explorer marks a reveal with, so a
+          // Failed assertion says WHAT was highlighted instead of merely that the expected thing was not.
+          explorerMarks: [...activeDocument.querySelectorAll<HTMLElement>('[data-path]')]
+            .filter((el) => (el.dataset['path'] ?? '').startsWith(ROOT) && el.className.includes('has-focus'))
+            .map((el) => `${el.dataset['path'] ?? ''} :: ${el.className}`),
           folderNoteExists: app.vault.getFileByPath(NEW_FOLDER_NOTE_PATH) !== null,
           // `getActiveViewOfType` answers `null` once a non-markdown leaf (the file explorer) is the active
           // One, which is the focus question revealing raises.
           isMarkdownViewActive: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null,
           noticeTexts: [...seenNoticeTexts],
-          // `has-focus`, NOT `is-active`: a revealed FOLDER is marked focused (and momentarily `is-flashing`),
-          // Where a revealed FILE gets `is-active` — established by dumping the explorer's own classes during
-          // This suite's first live run, since the two branches do not mark alike.
-          revealedFolderPaths: [...activeDocument.querySelectorAll<HTMLElement>('.nav-folder-title.has-focus')]
+          // `has-focus` is what the explorer marks a REVEAL with, on a file as on a folder — where
+          // `is-active` merely marks the open file and would be set by the open alone.
+          revealedPaths: [...activeDocument.querySelectorAll<HTMLElement>('.nav-folder-title.has-focus, .nav-file-title.has-focus')]
             .map((el) => el.dataset['path'] ?? ''),
           wasNoticeLinkFound: noticeLinkEl !== null
         };
@@ -224,9 +230,12 @@ describe('folder operation notice link (issue #234)', () => {
     expect({ activeFileAfterClick: result.activeFileAfterClick, editorValueAfterClick: result.editorValueAfterClick })
       .toMatchObject({ activeFileAfterClick: 'Folder notice link/1. Beta 234/1. Beta 234.md' });
 
-    // The folder stays highlighted in the explorer: the open is layered ON TOP of dev-utils' reveal, which is
-    // What "can it ALSO open the folder note" asked for.
-    expect(result.revealedFolderPaths).toContain('Folder notice link/1. Beta 234');
+    // The FOLDER NOTE is what the explorer highlights, not the folder: since `obsidian-dev-utils` 94.2.0 the
+    // Reveal follows the thing the click actually opens, and falls back to the folder only when that note is
+    // Hidden in the explorer (or the folder has none). Revealing the note expands the folder holding it, so
+    // The folder is still on screen — it is simply no longer the marked item.
+    expect({ explorerMarks: result.explorerMarks, revealedPaths: result.revealedPaths })
+      .toMatchObject({ revealedPaths: expect.arrayContaining(['Folder notice link/1. Beta 234/1. Beta 234.md']) as string[] });
 
     // And the user is left in the note rather than parked in the file explorer.
     expect(result.isMarkdownViewActive).toBe(true);
