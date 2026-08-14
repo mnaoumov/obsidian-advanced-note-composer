@@ -12,6 +12,8 @@ import {
   it
 } from 'vitest';
 
+import type { MergeSuiteStallContext } from './merge-suite-stall.ts';
+
 import {
   findSettingsComponentInObsidian,
   startActivationRecorderInObsidian,
@@ -58,7 +60,7 @@ interface MergeSettings {
 /**
  * What the suite's evals hand to each other, on `window` in the Obsidian process.
  */
-interface SuiteContext {
+interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
@@ -68,11 +70,6 @@ interface SuiteContext {
    * The settings as they were, to restore in the shared vault.
    */
   originalSettings?: MergeSettings;
-
-  /**
-   * Every path the active leaf visited since the recorder was installed.
-   */
-  recording?: string[];
 }
 
 describe('merge folder contents into a single file opens the merged note (issue #212)', () => {
@@ -158,7 +155,13 @@ describe('merge folder contents into a single file opens the merged note (issue 
         until: (status) => status.mergedNoteCreated && status.sourceGone,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [MERGED_NOTE_PATH, SOURCE_FOLDER], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [MERGED_NOTE_PATH, SOURCE_FOLDER],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       await pollInObsidian({
@@ -168,7 +171,13 @@ describe('merge folder contents into a single file opens the merged note (issue 
         until: (status) => status.activePath === MERGED_NOTE_PATH,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [MERGED_NOTE_PATH], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [MERGED_NOTE_PATH],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       const { activePath, recording } = await evalInObsidian({

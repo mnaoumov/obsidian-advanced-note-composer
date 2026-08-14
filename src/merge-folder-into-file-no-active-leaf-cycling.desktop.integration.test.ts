@@ -12,9 +12,12 @@ import {
   it
 } from 'vitest';
 
+import type { MergeSuiteStallContext } from './merge-suite-stall.ts';
+
 import {
   findSettingsComponentInObsidian,
   startActivationRecorderInObsidian,
+  startNoticeRecorderInObsidian,
   trashIfExistsInObsidian
 } from './merge-suite-in-obsidian.ts';
 import { describeStall } from './merge-suite-stall.ts';
@@ -76,21 +79,21 @@ interface MergeSettings {
 /**
  * What the suite's evals hand to each other, on `window` in the Obsidian process.
  */
-interface SuiteContext {
+interface SuiteContext extends MergeSuiteStallContext {
   /**
-   * The recorder's registration, so cleanup can take it back off.
+   * The activation recorder's registration, so cleanup can take it back off.
    */
   eventRef?: EventRef;
+
+  /**
+   * The notice recorder's observer, so cleanup can disconnect it.
+   */
+  noticeObserver?: MutationObserver;
 
   /**
    * The settings as they were, to restore in the shared vault.
    */
   originalSettings?: MergeSettings;
-
-  /**
-   * Every path the active leaf visited since the recorder was installed.
-   */
-  recording?: string[];
 }
 
 /**
@@ -215,7 +218,7 @@ describe('merge folder contents into a single file does not cycle the active lea
       }
 
       await evalInObsidian({
-        async callback({ app, context, firstNotePath, noFile, renderDelayInMilliseconds, startActivationRecorder }) {
+        async callback({ app, context, firstNotePath, noFile, renderDelayInMilliseconds, startActivationRecorder, startNoticeRecorder }) {
           if (app.workspace.getActiveFile()?.path !== firstNotePath) {
             throw new Error('The merge must be triggered from a note inside the folder.');
           }
@@ -225,13 +228,20 @@ describe('merge folder contents into a single file does not cycle the active lea
           // Recorded order that names the cause, and a filtered recording would have thrown that away.
           context.recording = [];
           context.eventRef = startActivationRecorder({ app, noFile, recording: context.recording });
+
+          // Installed BEFORE the merge is kicked off, because notices auto-hide: the aggregate-only stall
+          // This suite has (T470) reports the state at the 90 s timeout, by which point any notice that
+          // Explained it has removed itself. Only the log can still say what appeared and when.
+          context.noticeLog = [];
+          context.noticeObserver = startNoticeRecorder({ noticeLog: context.noticeLog });
         },
         contextId,
         input: {
           firstNotePath: FIRST_NOTE_PATH,
           noFile: NO_FILE,
           renderDelayInMilliseconds: RENDER_DELAY_IN_MILLISECONDS,
-          startActivationRecorder: startActivationRecorderInObsidian
+          startActivationRecorder: startActivationRecorderInObsidian,
+          startNoticeRecorder: startNoticeRecorderInObsidian
         },
         vaultPath
       });
@@ -258,7 +268,13 @@ describe('merge folder contents into a single file does not cycle the active lea
         until: (status) => status.mergedNoteCreated && status.sourceGone,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [MERGED_NOTE_PATH, SOURCE_FOLDER], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [MERGED_NOTE_PATH, SOURCE_FOLDER],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       const result = await evalInObsidian({
@@ -313,6 +329,9 @@ describe('merge folder contents into a single file does not cycle the active lea
           if (context.eventRef) {
             app.workspace.offref(context.eventRef);
           }
+          // The aggregate shares one Obsidian, so an observer left connected would keep collecting every
+          // Later suite's notices into a context nobody reads.
+          context.noticeObserver?.disconnect();
           // The merged note and the hub land at the vault root, which the whole aggregate shares.
           await trashIfExists({ app, path: mergedNotePath });
           await trashIfExists({ app, path: sourceFolder });
