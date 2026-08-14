@@ -433,7 +433,9 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     expect(MockSplitComposer).toHaveBeenCalledTimes(2);
     expect(MockSplitComposer.mock.calls[0]?.[0].sourceFile).toBe(file);
     expect(MockSplitComposer.mock.calls[1]?.[0].sourceFile).toBe(childFile);
-    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 2 note(s).');
+    // The notice names the ROOT note only (issue #235): the grandchild is counted, and reached from inside
+    // The note it was split out of.
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 2 note(s): [test/B/B.md].');
   });
 
   it('should extract the chosen heading rather than the first one in the note', async () => {
@@ -468,7 +470,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
-    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 1 note(s).');
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 1 note(s): [test/C/C.md].');
   });
 
   it('should not split when the up-front confirmation is cancelled', async () => {

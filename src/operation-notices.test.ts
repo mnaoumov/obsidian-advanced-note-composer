@@ -28,6 +28,7 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import {
   buildOperationNoticeContent,
+  MAX_LINKED_CREATED_NOTES,
   renderOperationNoticeLink,
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice,
@@ -211,6 +212,63 @@ describe('buildOperationNoticeContent', () => {
 
     expect(fragment.textContent).toBe('Merging note [alpha.md] into [bravo.md]');
     expect(fragment.querySelector('.is-loading')).not.toBeNull();
+  });
+
+  it('should say nothing extra when the operation created nothing to name', async () => {
+    const fragment = await buildOperationNoticeContent({
+      app,
+      createdPathsOrAbstractFiles: [],
+      pluginSettingsComponent,
+      sourcePathOrAbstractFile: 'alpha.md',
+      verb: 'Split note'
+    });
+
+    expect(fragment.textContent).toBe('Split note [alpha.md].');
+  });
+
+  it('should name the notes the operation created after the suffix (#235)', async () => {
+    const fragment = await buildOperationNoticeContent({
+      app,
+      createdPathsOrAbstractFiles: ['bravo.md'],
+      pluginSettingsComponent,
+      sourcePathOrAbstractFile: 'alpha.md',
+      suffix: ' into 1 note(s)',
+      verb: 'Split note'
+    });
+
+    // The source stays linked — a split leaves a residual link to everything it produced in the note it
+    // Split, so it is the index this list is the shortcut past.
+    expect(fragment.textContent).toBe('Split note [alpha.md] into 1 note(s): [bravo.md].');
+  });
+
+  it('should stop naming created notes at the cap and count the rest', async () => {
+    const fragment = await buildOperationNoticeContent({
+      app,
+      createdPathsOrAbstractFiles: ['bravo.md', 'charlie.md', 'delta.md', 'echo.md', 'foxtrot.md'],
+      pluginSettingsComponent,
+      sourcePathOrAbstractFile: 'alpha.md',
+      suffix: ' into 5 note(s)',
+      verb: 'Split note'
+    });
+
+    expect(MAX_LINKED_CREATED_NOTES).toBe(3);
+    expect(fragment.textContent).toBe('Split note [alpha.md] into 5 note(s): [bravo.md], [charlie.md], [delta.md] and 2 more.');
+  });
+
+  it('should name a created note once even when the operation split into it twice', async () => {
+    const createdFile = strictProxy<TFile>({ path: 'bravo.md' });
+
+    const fragment = await buildOperationNoticeContent({
+      app,
+      // Two headings with the same text split into the SAME note, so the destination is handed in twice.
+      createdPathsOrAbstractFiles: [createdFile, 'bravo.md'],
+      pluginSettingsComponent,
+      sourcePathOrAbstractFile: 'alpha.md',
+      suffix: ' into 2 note(s)',
+      verb: 'Split note'
+    });
+
+    expect(fragment.textContent).toBe('Split note [alpha.md] into 2 note(s): [bravo.md].');
   });
 });
 

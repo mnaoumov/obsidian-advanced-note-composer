@@ -485,7 +485,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
       { ch: 0, line: 3 },
       { ch: 0, line: 4 }
     );
-    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s).');
+    expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s): [test/note.md].');
   });
 
   it('should split nothing and report nothing once the progress notice is cancelled', async () => {
