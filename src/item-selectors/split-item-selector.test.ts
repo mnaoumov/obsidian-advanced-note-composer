@@ -90,12 +90,15 @@ function createMockApp(): App {
 
 function createMockFile(basename: string, path?: string, parentPath?: null | string): TFile {
   const resolvedPath = path ?? `folder/${basename}.md`;
+  const resolvedParentPath = parentPath ?? 'folder';
   return strictProxy<TFile>({
     basename,
     name: `${basename}.md`,
     parent: parentPath === null
       ? null
-      : strictProxy({ path: parentPath ?? 'folder' }),
+      // `getParentPrefix` is read since issue #238: a note picked in `Create` mode names the folder its
+      // Parent is, so any mock note can now end up being asked where it lives.
+      : strictProxy({ getParentPrefix: (): string => `${resolvedParentPath}/`, path: resolvedParentPath }),
     path: resolvedPath
   });
 }
@@ -139,7 +142,9 @@ describe('SplitItemSelector', () => {
       const result = await selector.selectItem();
 
       expect(result.isNewTargetFile).toBe(true);
-      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalled();
+      // The highlighted note is never merged into — but since issue #238 it does say WHERE the new note
+      // Goes, so the created path carries its folder.
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('/folder/new note.md', 'source.md');
     });
 
     it('should ignore isModifier, which the create/merge switch replaced', async () => {
@@ -486,7 +491,9 @@ describe('SplitItemSelector', () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source', 'source.md');
-      const item = strictProxy<Item>({
+      // Not a `strictProxy`: a `Create` now asks any chosen item which folder it names (issue #238), so it
+      // Reads `file` / `item` on a row that carries neither.
+      const item = mockItem({
         type: 'bookmark'
       });
 
@@ -784,6 +791,151 @@ describe('SplitItemSelector', () => {
 
       expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
         '/picked/new-note.md',
+        'my-folder/source.md'
+      );
+    });
+
+    // Issue #238. Picking an existing note in `Create` mode used to do nothing at all — the reporter clicked
+    // A note and their extract was created wherever Obsidian's new-file resolution put it. The row now
+    // Answers WHERE, which is the only question a named creation has left.
+    it('should create the new note in the folder of the note picked in create mode', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: strictProxy<Item>({ file: createMockFile('picked', 'picked-folder/picked.md', 'picked-folder'), type: 'file' }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'source.md'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/picked-folder/new-note.md',
+        'source.md'
+      );
+    });
+
+    it('should take the folder from a picked bookmarked note too', async () => {
+      const bookmarkedFile = createMockFile('bookmarked', 'bookmark-folder/bookmarked.md', 'bookmark-folder');
+      const app = createMockApp();
+      vi.mocked(app.vault.getFileByPath).mockReturnValue(bookmarkedFile);
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: mockItem({
+          item: { path: 'bookmark-folder/bookmarked.md', type: 'file' },
+          type: 'bookmark'
+        }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'source.md'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/bookmark-folder/new-note.md',
+        'source.md'
+      );
+    });
+
+    it('should leave an unresolved link to name its own path rather than lend its folder', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'ignored',
+        isModifier: false,
+        item: mockItem({ linktext: 'unresolved-folder/unresolved-link', type: 'unresolved' }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'source.md'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        'unresolved-folder/unresolved-link.md',
+        'source.md'
+      );
+    });
+
+    it('should prefer the folder the user was asked for over the one they merely picked', async () => {
+      // The folder prompt (issue #238) and the recursive split's changed root (issue #205) are both answers
+      // To a question the user was ASKED; a highlighted row is one they only implied.
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: strictProxy<Item>({ file: createMockFile('picked', 'picked-folder/picked.md', 'picked-folder'), type: 'file' }),
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'source.md'),
+        splitTargetMode: SplitTargetMode.Create,
+        targetParentFolderOverride: strictProxy<TFolder>({
+          getParentPrefix: vi.fn().mockReturnValue('asked-folder/')
+        })
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/asked-folder/new-note.md',
+        'source.md'
+      );
+    });
+
+    it('should prefer the picked note\'s folder over the source folder', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: strictProxy<Item>({ file: createMockFile('picked', 'picked-folder/picked.md', 'picked-folder'), type: 'file' }),
+        pluginSettingsComponent,
+        // The picker only offers the source's own folder in this mode, so the two agree in practice; the
+        // Assertion pins which one is consulted.
+        shouldAllowOnlyCurrentFolder: true,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'my-folder/source.md', 'my-folder'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/picked-folder/new-note.md',
         'my-folder/source.md'
       );
     });

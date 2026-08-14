@@ -311,6 +311,18 @@ describe('PluginSettingsTab', () => {
     expect(allNames).toContain('Should use source title when destination has none');
     expect(allNames).toContain('Should add commands to submenu');
     expect(allNames).toContain('Merge folder into file location');
+    // Issue #238: the opt-in that turns "name it, then it lands somewhere" into "name it, then say where".
+    expect(allNames).toContain('Should ask for the target folder when splitting');
+  });
+
+  // Issue #238. The prompt is opt-in on purpose: the common case is a heading-driven extract whose name is
+  // Already in the box, and a second modal on that path would cost everyone more than the bug costs anyone.
+  it('should leave the target folder prompt off by default', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const prompt = toggles.find((toggle) => toggle.name === 'Should ask for the target folder when splitting');
+    expect(prompt?.component.getValue()).toBe(false);
   });
 
   it('should offer the three merged-note locations, defaulting to the pre-#178 behavior', async () => {

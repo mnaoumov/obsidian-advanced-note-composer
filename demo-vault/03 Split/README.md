@@ -13,3 +13,4 @@ one that already exists?
 | [12 Split headings automatically](<./12 Split headings automatically.md>) | Heading splits that run with no picker and no confirmation |
 | [13 Split headings recursively](<./13 Split headings recursively.md>) | A note's whole heading hierarchy turned into a folder tree |
 | [14 Split heading recursively](<./14 Split heading recursively.md>) | The same, scoped to the one heading your cursor is in |
+| [15 Name first, then the folder](<./15 Name first, then the folder.md>) | Naming a new note before it can be placed, and what decides where it goes |
