@@ -197,12 +197,14 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
     }
     if (targetPathOrAbstractFile !== undefined) {
       fragmentEl.appendText(` ${preposition ?? 'into'} `);
-      fragmentEl.append(await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
-        app,
-        onClick: onTargetLinkClick,
-        pathOrAbstractFile: targetPathOrAbstractFile,
-        pluginSettingsComponent
-      })));
+      fragmentEl.append(
+        await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
+          app,
+          onClick: onTargetLinkClick,
+          pathOrAbstractFile: targetPathOrAbstractFile,
+          pluginSettingsComponent
+        }))
+      );
     }
     if (suffix !== undefined) {
       fragmentEl.appendText(suffix);

@@ -45,6 +45,12 @@ template is the thing that produces, so using them there is rejected.
 Turn **Should capitalize the created folder name** off to keep your own capitalization. A name that
 cleans up to nothing at all is refused, and the prompt simply asks again.
 
+Every name prompt this plugin opens — the folder name here, and the `Rename` prompts in the
+confirmation dialog below — follows your own `Editor > Spellcheck` setting. With it on, a misspelled
+word gets the red squiggle and right-clicking it offers Obsidian's usual suggestions and
+`Add to Dictionary`; with it off, nothing is checked. It is the same setting that governs the editor,
+so a name is checked exactly when your notes are.
+
 ## Several notes at once
 
 **Create folder content template** decides what goes inside. Empty means one empty note named after
