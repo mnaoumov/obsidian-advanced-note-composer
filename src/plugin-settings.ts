@@ -365,6 +365,23 @@ export class PluginSettings {
   public shouldAskBeforeMovingFolder = true;
   public shouldAskBeforeSplitting = true;
   public shouldAskBeforeSwapping = true;
+
+  /**
+   * Whether a split/extract that CREATES its note asks where to put it, right after the name is confirmed
+   * and before the confirmation dialog (issue #238).
+   *
+   * The reporter's ask was ordering — name first, path second — because without it the destination is never
+   * asked for at all: it falls out of `Should allow only current folder`, a path typed into the name box, or
+   * Obsidian's own `Default location for new notes`, which is where their extract silently landed.
+   *
+   * Defaults to `false` so the common case is untouched: a heading-driven extract seeds the box with the
+   * heading and the user presses `Enter`, and growing a second modal on that path for everyone would trade
+   * one reporter's problem for everyone else's. It applies only where there is a name to place first — the
+   * picker actually opened, and the switch says `Create` — so heading-driven passes that skip the picker and
+   * every `Merge` are unaffected.
+   */
+  public shouldAskForTargetFolderWhenSplitting = false;
+
   public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
 
   /**

@@ -36,6 +36,16 @@
   }
 }
 
+// The split/extract picker's "name it first" hint (issue #238), inserted directly under the prompt input.
+// It states the rule while the refusal is live rather than complaining after a refused `Enter`, so it is
+// Styled as a quiet note - `--text-muted`, not `--text-error` - and matches the input's own left padding so
+// It reads as belonging to the box above it.
+.advanced-note-composer-name-required-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-4-1) var(--size-4-3) 0;
+}
+
 // One name plus its `Rename` button in the `Create folder with notes...` confirmation (issue #200). The
 // Dialog body renders into the modal's own content element, outside the plugin-scoped container, so these
 // Are styled at the top level like the notice buttons above.

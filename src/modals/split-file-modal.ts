@@ -49,6 +49,7 @@ import {
   SplitTargetMode
 } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
+import { selectFolder } from './select-folder-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 interface BuildSplitConfirmContentParams {
@@ -179,6 +180,32 @@ interface SelectSplitTargetParams {
    * What the picker resolved to (or the heading-driven stand-in for it).
    */
   readonly splitFileModalResult: SplitFileModalSplitResult;
+
+  /**
+   * The folder the user chose in the folder prompt, or `null` when they were not asked (issue #238).
+   */
+  readonly targetParentFolder: null | TFolder;
+}
+
+interface SelectTargetParentFolderParams {
+  readonly abortController: AbortController;
+
+  /**
+   * Whether this pass is still running without the picker. A heading-driven split derives everything from
+   * the heading and shows no prompt at all, so it must not grow one.
+   */
+  readonly isPickerStillSkipped: boolean;
+
+  readonly params: PrepareForSplitFileParams;
+  readonly splitFileModalResult: SplitFileModalSplitResult;
+}
+
+/**
+ * The outcome of the folder prompt. A `null` RESULT means the prompt was dismissed, which is different from
+ * a result carrying a `null` folder — that one means the user was never asked.
+ */
+interface SelectTargetParentFolderResult {
+  readonly folder: null | TFolder;
 }
 
 interface SetSplitTargetModeParams {
@@ -265,6 +292,7 @@ class SplitFileModal extends SuggestModalBase {
    */
   private readonly inputValueBySplitTargetMode: Record<SplitTargetMode, string>;
   private isSelected = false;
+  private nameRequiredHintEl?: HTMLElement;
   private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
@@ -317,6 +345,11 @@ class SplitFileModal extends SuggestModalBase {
     }
   }
 
+  public override onInput(): void {
+    super.onInput();
+    this.refreshNameRequiredHint();
+  }
+
   public override onOpen(): void {
     super.onOpen();
     // The base seeded the box with the caller's value; the mode the picker OPENS in decides whether that
@@ -324,10 +357,31 @@ class SplitFileModal extends SuggestModalBase {
     this.inputEl.value = this.inputValueBySplitTargetMode[this.splitTargetMode];
     this.updateSuggestions();
     this.renderSplitTargetModeSwitch();
+    this.renderNameRequiredHint();
     this.renderSwitchToSmartCutButton();
   }
 
+  /**
+   * Refuses to choose anything while a creation has no name (issue #238).
+   *
+   * This is the ONE choke point every way of choosing goes through — `Enter`, a click on a row, and
+   * `Mod+Enter` (which flips the switch to `Create` and then calls this) — so the rule cannot be reached
+   * around. Without it an empty box was accepted and quietly became `Untitled` in whatever folder Obsidian's
+   * new-file resolution picked, which is the reporter's "I chose a folder and it defaulted".
+   *
+   * `Merge` is deliberately not gated: it chooses a note that already exists, and its empty box is a search
+   * that simply has not narrowed anything down yet.
+   *
+   * @param value - The chosen suggestion, or `null` for a creation from what was typed.
+   * @param $event - The event that chose it.
+   */
   public override selectSuggestion(value: Item | null, $event: KeyboardEvent | MouseEvent): void {
+    if (this.isNameMissing()) {
+      // The hint is already on screen (it tracks the same condition); refreshing keeps them in step if the
+      // Box was changed without an `input` event.
+      this.refreshNameRequiredHint();
+      return;
+    }
     this.isSelected = true;
     super.selectSuggestion(value, $event);
   }
@@ -556,6 +610,33 @@ class SplitFileModal extends SuggestModalBase {
   }
 
   /**
+   * Whether the picker is being asked to create a note that has not been named (issue #238).
+   *
+   * The trimmed value is what counts: a box holding only spaces names nothing, and `fixFileName` would have
+   * turned it into `Untitled` just as an empty one does.
+   *
+   * @returns Whether a name is still missing.
+   */
+  private isNameMissing(): boolean {
+    return this.splitTargetMode === SplitTargetMode.Create && !this.inputEl.value.trim();
+  }
+
+  /**
+   * Shows the hint exactly while the refusal is live, so the rule is visible BEFORE the user tries to
+   * choose rather than as a complaint afterwards.
+   *
+   * `show()` / `hide()` rather than `toggleVisibility`: that one sets `visibility`, which leaves the hint's
+   * blank line holding a gap under the box in the far more common case where there IS a name.
+   */
+  private refreshNameRequiredHint(): void {
+    if (this.isNameMissing()) {
+      this.nameRequiredHintEl?.show();
+      return;
+    }
+    this.nameRequiredHintEl?.hide();
+  }
+
+  /**
    * The ONE place that decides whether an option checkbox is available, so its two reasons to be disabled
    * cannot disagree.
    *
@@ -587,6 +668,28 @@ class SplitFileModal extends SuggestModalBase {
    */
   private refreshSplitTargetModeSwitch(): void {
     this.splitTargetModeSetting?.setName(this.splitTargetMode === SplitTargetMode.Create ? 'Create a new note' : 'Merge into an existing note');
+  }
+
+  /**
+   * Adds the "name it first" hint directly under the box (issue #238).
+   *
+   * It sits under the input rather than with the keyboard instructions at the bottom because it is about
+   * the box: the reporter's whole complaint is that nothing said a name was needed before a destination
+   * could be chosen.
+   */
+  private renderNameRequiredHint(): void {
+    const hintEl = createDiv({
+      cls: 'advanced-note-composer-name-required-hint',
+      text: 'Type a name for the new note. Until it has one, there is nothing to create and nowhere to put it.'
+    });
+    const inputContainerEl = this.inputEl.parentElement;
+    if (inputContainerEl) {
+      inputContainerEl.after(hintEl);
+    } else {
+      this.modalEl.prepend(hintEl);
+    }
+    this.nameRequiredHintEl = hintEl;
+    this.refreshNameRequiredHint();
   }
 
   /**
@@ -656,6 +759,7 @@ class SplitFileModal extends SuggestModalBase {
       this.inputEl.value = this.inputValueBySplitTargetMode[splitTargetMode];
     }
     this.applySplitTargetMode();
+    this.refreshNameRequiredHint();
     this.refreshOptionCheckboxStates();
     this.refreshSplitTargetModeSwitch();
     this.splitTargetModeToggle?.setValue(splitTargetMode === SplitTargetMode.Merge);
@@ -783,11 +887,29 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       return null;
     }
 
+    // Name first, path second (issue #238): once the name is settled, ASK where the note goes instead of
+    // Letting the destination fall out of a setting, a typed path, or Obsidian's default new-note location.
+    const targetParentFolderResult = await selectTargetParentFolder({
+      abortController,
+      isPickerStillSkipped: shouldSkipModalThisPass,
+      params,
+      splitFileModalResult
+    });
+
+    if (!targetParentFolderResult) {
+      // The folder prompt was dismissed. That is "never mind, let me fix the name", not "abandon the
+      // Operation" — so the picker reopens holding what was typed, exactly like "Change target" does.
+      pickerSeed = splitFileModalResult.inputValue;
+      isPickerSeedNewNoteName = true;
+      continue;
+    }
+
     const selectItemResult = await selectSplitTarget({
       heading,
       isPickerStillSkipped: shouldSkipModalThisPass,
       params,
-      splitFileModalResult
+      splitFileModalResult,
+      targetParentFolder: targetParentFolderResult.folder
     });
     if (!selectItemResult) {
       return null;
@@ -1001,7 +1123,9 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
       /* v8 ignore stop */
       sourceFile: prepareParams.sourceFile,
       splitTargetMode: splitFileModalResult.splitTargetMode,
-      targetParentFolderOverride: resolveTargetParentFolderOverride(prepareParams, isPickerStillSkipped)
+      // The folder the user was just ASKED for outranks the caller's override: it is the more recent, and
+      // The more explicit, answer to the same question (issue #238).
+      targetParentFolderOverride: params.targetParentFolder ?? resolveTargetParentFolderOverride(prepareParams, isPickerStillSkipped)
     }).selectItem();
   } catch (error) {
     if (!(error instanceof NameTransformError)) {
@@ -1010,6 +1134,56 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
     prepareParams.pluginNoticeComponent.showNotice(error.message);
     return null;
   }
+}
+
+/**
+ * Asks where a newly created split/extract note goes, once it has a name (issue #238).
+ *
+ * The reporter's ask was ordering: without this the destination is never asked for at all — it falls out of
+ * `Allow only current folder`, a path typed into the name box, or Obsidian's own `Default location for new
+ * notes`, which is where their extract silently landed. Asking is opt-in
+ * (`shouldAskForTargetFolderWhenSplitting`) because the common case is a heading-driven extract where the
+ * name is already in the box and `Enter` is the whole interaction; a second modal on that path would be a
+ * bigger regression than the bug.
+ *
+ * Two more conditions, both about there being a name to place at all: a pass that skipped the picker
+ * (`shouldSkipModal`) never asks the user anything, and a `Merge` chooses a note that already exists, so it
+ * has no folder to choose.
+ *
+ * It is a function of its own rather than an `if` in the loop so `prepareForSplitFile` stays under the
+ * complexity limit.
+ *
+ * @param params - The prepare parameters, the picker's result, and whether the picker is still skipped.
+ * @returns The chosen folder wrapped in a result (a `null` folder means the user was never asked), or
+ * `null` when the prompt was dismissed — which sends the caller back to the picker rather than out.
+ */
+async function selectTargetParentFolder(params: SelectTargetParentFolderParams): Promise<null | SelectTargetParentFolderResult> {
+  const prepareParams = params.params;
+  const { settings } = prepareParams.pluginSettingsComponent;
+
+  if (
+    params.isPickerStillSkipped
+    || params.splitFileModalResult.splitTargetMode !== SplitTargetMode.Create
+    || !settings.shouldAskForTargetFolderWhenSplitting
+  ) {
+    return { folder: null };
+  }
+
+  const folder = await selectFolder({
+    // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
+    // Just as it closes the picker the user came from.
+    abortController: params.abortController,
+    app: prepareParams.app,
+    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path),
+    placeholder: 'Select folder to create the new note in...',
+    pluginSettingsComponent: prepareParams.pluginSettingsComponent
+  });
+
+  if (!folder) {
+    return null;
+  }
+
+  return { folder };
 }
 
 /**

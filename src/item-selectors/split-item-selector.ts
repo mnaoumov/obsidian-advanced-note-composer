@@ -278,17 +278,49 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   /**
+   * The folder named by the note the user picked in the picker, or `null` when they picked nothing that
+   * names one (issue #238).
+   *
+   * A `Create` picks nothing to WRITE into — the target is built from what was typed — so before this the
+   * chosen row was read only by the `unresolved` branch and otherwise silently discarded. That is how the
+   * reporter's "choose a folder" step did nothing: they clicked `B/Note` and the note was created wherever
+   * Obsidian's new-file resolution put it. A picked row now answers WHERE, which is the only question a
+   * `Create` still has left once the name is typed.
+   *
+   * `Mod+Enter` and the `Enter to create` row both choose with no item at all, so forcing a creation keeps
+   * resolving exactly as it did. An UNRESOLVED link is left alone for a different reason: it already
+   * carries the path it names, so it has no folder to lend.
+   *
+   * @returns The picked note's folder, or `null`.
+   */
+  private resolvePickedParentFolder(): null | TFolder {
+    if (this.item?.type === 'unresolved') {
+      return null;
+    }
+    return this.resolveExistingTargetFile()?.parent ?? null;
+  }
+
+  /**
    * The linktext prefix that decides which folder the new note is created in.
    *
    * An explicit override wins over everything: it is the only way to name a folder that is neither the
    * source's own (`shouldAllowOnlyCurrentFolder`) nor whatever Obsidian's new-file resolution picks from an
-   * empty prefix. Without one, the original two-way choice stands unchanged.
+   * empty prefix. Below it sits the folder of the note the user picked in the picker (issue #238), and only
+   * then the original two-way choice, unchanged.
+   *
+   * The order matters: the override is the answer to a question the user was ASKED (the folder prompt, or
+   * the recursive split's changed root — issue #205), while a picked row is a folder they merely implied,
+   * so an explicit answer must not be overridden by an implicit one.
    *
    * @returns The prefix to prepend to the file name, or an empty string to let Obsidian resolve the folder.
    */
   private resolveTargetFolderPrefix(): string {
     if (this.targetParentFolderOverride) {
       return `/${this.targetParentFolderOverride.getParentPrefix()}`;
+    }
+    const pickedParentFolder = this.resolvePickedParentFolder();
+    if (pickedParentFolder) {
+      return `/${pickedParentFolder.getParentPrefix()}`;
     }
     return this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
   }

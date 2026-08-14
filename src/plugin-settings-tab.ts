@@ -714,6 +714,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('Whether you are asked WHERE to put a new note once you have named it, instead of the destination falling out of ');
+              appendCodeBlock(f, 'Should allow only current folder');
+              f.appendText(', a path typed into the name box, or Obsidian\'s ');
+              appendCodeBlock(f, 'Default location for new notes');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('The folder picker opens after the name is confirmed and before the confirmation dialog. Dismissing it takes you back to the name you typed, not out of the operation.');
+              f.createEl('br');
+              f.appendText('Only applies while a note is being CREATED: the picker has to have opened at all, and its switch has to say ');
+              appendCodeBlock(f, 'Create');
+              f.appendText('. Heading-driven splits that run without the picker are unaffected, and so is every ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(', which chooses a note that already exists.');
+              f.createEl('br');
+              f.appendText('Picking an existing note in the list already puts the new note in THAT note\'s folder, with no extra prompt.');
+            }),
+            name: 'Should ask for the target folder when splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldAskForTargetFolderWhenSplitting', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Which mode the split/extract picker opens in.');
               f.createEl('br');
               appendCodeBlock(f, 'Create');

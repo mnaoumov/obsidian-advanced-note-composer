@@ -60,6 +60,8 @@ the thing that does it. To find a setting by its display name instead, see
   - show a confirmation dialog before a split runs.
 - `shouldOfferCurrentNoteWhenSplitting`
   - offer the note you are in as a target, for a same-note extraction.
+- `shouldAskForTargetFolderWhenSplitting`
+  - once a new note is named, ask which folder to create it in — see [15 Name first, then the folder](<../03 Split/15 Name first, then the folder.md>).
 - `shouldAllowSplitIntoUnresolvedPathByDefault`
   - offer unresolved links as split targets.
 - `shouldAllowOnlyCurrentFolderByDefault`

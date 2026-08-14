@@ -43,6 +43,7 @@ import {
   FrontmatterMergeStrategy,
   SplitTargetMode
 } from '../plugin-settings.ts';
+import { selectFolder } from './select-folder-modal.ts';
 import { prepareForSplitFile } from './split-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
@@ -179,10 +180,17 @@ vi.mock('../headings.ts', () => ({
   extractHeading: vi.fn().mockReturnValue('Test Heading')
 }));
 
+vi.mock('./select-folder-modal.ts', () => ({
+  selectFolder: vi.fn()
+}));
+
+const mockSelectFolder = vi.mocked(selectFolder);
+
 interface MockPluginOptions {
   readonly defaultSplitTargetMode?: SplitTargetMode;
   readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
+  readonly shouldAskForTargetFolderWhenSplitting?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
 }
 
@@ -210,6 +218,7 @@ interface CapturedSplitItemSelectorParams {
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldForceSplitIntoFolder: boolean;
   readonly splitTargetMode: SplitTargetMode;
+  readonly targetParentFolderOverride: null | TFolder;
 }
 
 let capturedSplitItemSelectorParams: CapturedSplitItemSelectorParams | null = null;
@@ -300,6 +309,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldAllowOnlyCurrentFolderByDefault: options?.shouldAllowOnlyCurrentFolderByDefault ?? false,
       shouldAllowSplitIntoUnresolvedPathByDefault: true,
       shouldAskBeforeSplitting,
+      shouldAskForTargetFolderWhenSplitting: options?.shouldAskForTargetFolderWhenSplitting ?? false,
       shouldFixFootnotesByDefault: true,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldLockAllNotesWhenMarkingSelection: false,
@@ -346,6 +356,7 @@ describe('prepareForSplitFile', () => {
     shouldAutoSelect = false;
     shouldAutoSwitchToSmartCut = false;
     mockShowNotice.mockClear();
+    mockSelectFolder.mockReset();
   });
 
   afterEach(() => {
@@ -746,6 +757,109 @@ describe('prepareForSplitFile', () => {
     expect(lockedPaths).toContain(mockTargetFile);
     expect(resourceLockComponent.unlockForPath).toHaveBeenCalledWith(sourceFile);
     expect(resourceLockComponent.unlockForPath).toHaveBeenCalledWith(mockTargetFile);
+  });
+
+  // Issue #238. Name first, path second: once the name is settled the flow ASKS where the note goes,
+  // Instead of the destination falling out of a setting, a typed path, or Obsidian's default new-note
+  // Location - which is where the reporter's extract silently landed.
+  describe('the target folder prompt', () => {
+    const pickedFolder = strictProxy<TFolder>({ getParentPrefix: () => 'picked-folder/', path: 'picked-folder' });
+
+    it('should not ask when the setting is off', async () => {
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBeNull();
+    });
+
+    it('should ask once the name is chosen and hand the folder to the item selector', async () => {
+      shouldAutoSelect = true;
+      mockSelectFolder.mockResolvedValue(pickedFolder);
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false, shouldAskForTargetFolderWhenSplitting: true });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).toHaveBeenCalledTimes(1);
+      expect(mockSelectFolder.mock.calls[0]?.[0]?.placeholder).toBe('Select folder to create the new note in...');
+      // The source note is locked for the whole setup flow, so an unlock request has to close this prompt.
+      expect(mockSelectFolder.mock.calls[0]?.[0]?.abortController).toBeInstanceOf(AbortController);
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(pickedFolder);
+    });
+
+    it('should not ask when the picker never opened', async () => {
+      // A heading-driven split derives everything from the heading and asks the user nothing, so it must
+      // Not grow a prompt of its own.
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false, shouldAskForTargetFolderWhenSplitting: true });
+
+      const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+    });
+
+    it('should not ask when merging into an existing note', async () => {
+      // A `Merge` writes into a note that already exists, so there is no folder left to choose.
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldAskBeforeSplitting: false,
+        shouldAskForTargetFolderWhenSplitting: true
+      });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Merge);
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+    });
+
+    it('should reopen the picker when the folder prompt is dismissed', async () => {
+      // Dismissing is "never mind, let me fix the name", not "abandon the operation" — so the flow goes
+      // Back to the picker and asks again, rather than returning null.
+      shouldAutoSelect = true;
+      mockSelectFolder.mockResolvedValueOnce(null).mockResolvedValueOnce(pickedFolder);
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: false, shouldAskForTargetFolderWhenSplitting: true });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).toHaveBeenCalledTimes(2);
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(pickedFolder);
+    });
   });
 
   it('should cancel and unlock when the lock is aborted while the modal is open', async () => {

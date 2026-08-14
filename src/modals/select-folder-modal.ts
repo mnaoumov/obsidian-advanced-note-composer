@@ -30,6 +30,14 @@ import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
  * Parameters for {@link selectFolder}.
  */
 export interface SelectFolderParams {
+  /**
+   * An optional controller that closes this picker when aborted. Only the flows that already hold a lock
+   * when they ask — the split/extract folder prompt (issue #238), which runs inside a setup flow that has
+   * the source note locked — need it; an unlock request must close this prompt exactly as it closes the
+   * picker the user came from.
+   */
+  readonly abortController?: AbortController;
+
   readonly app: App;
 
   /**
@@ -119,6 +127,6 @@ class SelectFolderModal extends FuzzySuggestModal<TFolder> {
  */
 export async function selectFolder(params: SelectFolderParams): Promise<null | TFolder> {
   return await new Promise<null | TFolder>((promiseResolve) => {
-    openModal(new SelectFolderModal({ ...params, promiseResolve }));
+    openModal(new SelectFolderModal({ ...params, promiseResolve }), params.abortController);
   });
 }
