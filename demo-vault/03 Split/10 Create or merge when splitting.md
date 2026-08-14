@@ -41,3 +41,15 @@ same-note move of [05 Extract selection](<../02 Extract/05 Extract selection.md>
   opens in. It defaults to `Create`.
 - `Treat title as path` (`Alt+2`) and `Allow split into unresolved path` (`Alt+6`) only mean something
   while a note is being created, so `Merge` greys them out and gives your choices back on the way out.
+
+## The box is remembered per mode
+
+The two modes ask for different things — a name to invent, or a note to find — so each keeps its own text.
+
+- Extracting a heading seeds the box with the heading name. That name belongs to `Create`: flip to `Merge`
+  and the box is **empty**, ready for you to search, instead of holding a name you have to erase first.
+- Flip back and the heading name is there again — and so is anything you typed over it, because each mode
+  gives back what **you** last left in it rather than re-seeding on top of your own typing.
+- `Mod+Enter` is the exception, and deliberately so: it says "what I just typed is a new note's name", so
+  that text travels with the switch into `Create` instead of being swapped out.
+- If your `Default split target mode` is `Merge`, the picker opens empty for the same reason.

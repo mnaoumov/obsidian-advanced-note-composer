@@ -181,6 +181,17 @@ interface SelectSplitTargetParams {
   readonly splitFileModalResult: SplitFileModalSplitResult;
 }
 
+interface SetSplitTargetModeParams {
+  /**
+   * Whether the text currently in the box MOVES into the mode being switched to instead of being replaced by
+   * what that mode last held. Only `Mod+Enter` sets it: forcing a creation says the text just typed IS the
+   * new note's name, so restoring `Create`'s remembered value would create a note named after something the
+   * user typed in another mode entirely.
+   */
+  readonly shouldCarryOverInputValue: boolean;
+  readonly splitTargetMode: SplitTargetMode;
+}
+
 interface ShouldSkipSplitConfirmationParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly shouldSkipConfirmation: boolean;
@@ -194,6 +205,15 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
    */
   readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
+
+  /**
+   * Whether {@link SuggestModalBaseConstructorParams.initialInputValue} NAMES a note to create — the heading
+   * a heading-driven split is about to make a note out of — rather than a target that was already chosen
+   * (issue #237). A name to create has no business seeding a `Merge` search, which picks an EXISTING note; a
+   * previously-chosen target (the confirmation dialog's `Change target`) is exactly what a merge search
+   * wants, so it seeds both modes.
+   */
+  readonly isInitialInputValueNewNoteName: boolean;
   readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
 }
 
@@ -237,6 +257,13 @@ class SplitFileModal extends SuggestModalBase {
   private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
+
+  /**
+   * What the box held the last time each mode was on screen (issue #237). The two modes ask for different
+   * things — a name to create versus a search for an existing note — so one of them remembering the other's
+   * text is text the user has to erase before they can get on with it.
+   */
+  private readonly inputValueBySplitTargetMode: Record<SplitTargetMode, string>;
   private isSelected = false;
   private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
@@ -266,6 +293,12 @@ class SplitFileModal extends SuggestModalBase {
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     this.splitTargetMode = this.pluginSettingsComponent.settings.defaultSplitTargetMode;
 
+    const initialInputValue = params.initialInputValue ?? '';
+    this.inputValueBySplitTargetMode = {
+      [SplitTargetMode.Create]: initialInputValue,
+      [SplitTargetMode.Merge]: params.isInitialInputValueNewNoteName ? '' : initialInputValue
+    };
+
     this.shouldShowNonImageAttachments = false;
     this.shouldShowImages = false;
     this.shouldShowNonAttachments = false;
@@ -286,6 +319,10 @@ class SplitFileModal extends SuggestModalBase {
 
   public override onOpen(): void {
     super.onOpen();
+    // The base seeded the box with the caller's value; the mode the picker OPENS in decides whether that
+    // Value belongs there at all (issue #237) — a `Merge` default must not open holding a heading name.
+    this.inputEl.value = this.inputValueBySplitTargetMode[this.splitTargetMode];
+    this.updateSuggestions();
     this.renderSplitTargetModeSwitch();
     this.renderSwitchToSmartCutButton();
   }
@@ -343,8 +380,9 @@ class SplitFileModal extends SuggestModalBase {
       modifiers: ['Mod'],
       onKey: ($event) => {
         // The switch must never disagree with what is about to happen, so forcing a creation MOVES it
-        // Rather than overriding it behind the user's back (issue #227).
-        this.setSplitTargetMode(SplitTargetMode.Create);
+        // Rather than overriding it behind the user's back (issue #227). What was typed is the name to
+        // Create, so it moves with the switch instead of being swapped for `Create`'s remembered text.
+        this.setSplitTargetMode({ shouldCarryOverInputValue: true, splitTargetMode: SplitTargetMode.Create });
         // Deliberately NOT `selectActiveSuggestion`: forcing a creation is about what was TYPED, and in
         // `Merge` mode there is no creatable suggestion to select — the list offers only existing notes.
         this.selectSuggestion(null, $event);
@@ -374,7 +412,10 @@ class SplitFileModal extends SuggestModalBase {
       key: 'm',
       modifiers: ['Alt'],
       onKey: () => {
-        this.setSplitTargetMode(this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create);
+        this.setSplitTargetMode({
+          shouldCarryOverInputValue: false,
+          splitTargetMode: this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create
+        });
         return false;
       },
       purpose: 'to switch between create and merge'
@@ -565,7 +606,10 @@ class SplitFileModal extends SuggestModalBase {
         toggle
           .setValue(this.splitTargetMode === SplitTargetMode.Merge)
           .onChange((value) => {
-            this.setSplitTargetMode(value ? SplitTargetMode.Merge : SplitTargetMode.Create);
+            this.setSplitTargetMode({
+              shouldCarryOverInputValue: false,
+              splitTargetMode: value ? SplitTargetMode.Merge : SplitTargetMode.Create
+            });
           });
       });
     this.refreshSplitTargetModeSwitch();
@@ -588,17 +632,29 @@ class SplitFileModal extends SuggestModalBase {
 
   /**
    * The ONE way the mode changes, whichever surface asked for it — the switch, `Alt+M`, or `Mod+Enter`
-   * forcing a creation. It re-derives the suggestion list, the option checkboxes and the switch itself
-   * together, so no two of them can report a different mode.
+   * forcing a creation. It re-derives the suggestion list, the option checkboxes, the box and the switch
+   * itself together, so no two of them can report a different mode.
    *
-   * @param splitTargetMode - The mode to switch to.
+   * The box is remembered PER MODE (issue #237): the outgoing mode keeps what was typed in it, and the
+   * incoming mode gets back what IT last held. So a heading name — which seeds `Create` to name a new note —
+   * is gone the moment `Merge` is on screen, and back the moment `Create` is, without ever overwriting a
+   * name the user typed themselves.
+   *
+   * @param params - The mode to switch to, and whether the typed text moves with it.
    */
-  private setSplitTargetMode(splitTargetMode: SplitTargetMode): void {
+  private setSplitTargetMode(params: SetSplitTargetModeParams): void {
+    const { shouldCarryOverInputValue, splitTargetMode } = params;
     if (this.splitTargetMode === splitTargetMode) {
       return;
     }
 
+    this.inputValueBySplitTargetMode[this.splitTargetMode] = this.inputEl.value;
     this.splitTargetMode = splitTargetMode;
+    if (shouldCarryOverInputValue) {
+      this.inputValueBySplitTargetMode[splitTargetMode] = this.inputEl.value;
+    } else {
+      this.inputEl.value = this.inputValueBySplitTargetMode[splitTargetMode];
+    }
     this.applySplitTargetMode();
     this.refreshOptionCheckboxStates();
     this.refreshSplitTargetModeSwitch();
@@ -662,11 +718,16 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   // The user confirms the split, cancels, or switches to smart cut. `pickerSeed` seeds the picker input:
   // The heading initially, then the previously-chosen target's query when the picker is reopened.
   let pickerSeed = heading;
+  // What KIND of seed that is, which is what decides whether it belongs in `Merge` too (issue #237). The
+  // Heading names a note to CREATE; the previously-chosen target the reopened picker is seeded with is a
+  // Real target, so that one seeds both modes.
+  let isPickerSeedNewNoteName = true;
 
   for (;;) {
     // Capture the picker seed in a per-iteration const so the modal-opening closure does not close over
     // The mutable `pickerSeed` (reassigned below on "Change target").
     const currentSeed = pickerSeed;
+    const isCurrentSeedNewNoteName = isPickerSeedNewNoteName;
 
     const splitFileModalResult: null | SplitFileModalResult = shouldSkipModalThisPass
       ? {
@@ -690,6 +751,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
           ...params,
           canSwitchToSmartCut,
           initialInputValue: currentSeed,
+          isInitialInputValueNewNoteName: isCurrentSeedNewNoteName,
           promiseResolve
         });
         openMinimizableModal(modal, abortController);
@@ -776,6 +838,9 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         await trashSafe(params.app, prepareForSplitFileResult.targetFile);
       }
       pickerSeed = splitFileModalResult.inputValue;
+      // The seed is now the target the user already chose, not a name to create — so it seeds a `Merge`
+      // Search too (issue #237).
+      isPickerSeedNewNoteName = false;
       // A heading-driven split skipped the picker on the first pass; asking to change the target is asking
       // For that picker, so the next pass shows it seeded with the heading (issue #205).
       shouldSkipModalThisPass = false;
