@@ -30,9 +30,9 @@
  * handed in through `evalInObsidian`'s `input`, so an import or a module-scope constant referenced from a
  * body would throw a `ReferenceError` in the renderer.
  *
- * Three of them are plugin-agnostic — `trashIfExistsInObsidian`, `startActivationRecorderInObsidian` and
- * `captureStallDiagnosticsInObsidian` say nothing about this plugin — so they belong in
- * `obsidian-integration-testing`'s injected `lib` bag eventually (G52/G61). They are local for now for the
+ * Four of them are plugin-agnostic — `trashIfExistsInObsidian`, `startActivationRecorderInObsidian`,
+ * `startNoticeRecorderInObsidian` and `captureStallDiagnosticsInObsidian` say nothing about this plugin —
+ * so they belong in `obsidian-integration-testing`'s injected `lib` bag eventually (G52/G61). They are local for now for the
  * same reason `natural-sort.ts` is: extracting them is a cross-repo change (G55) that would have blocked
  * the fix they were written for.
  */
@@ -103,6 +103,22 @@ export interface FindSettingsComponentInObsidianParams {
 }
 
 /**
+ * A notice as it appeared, together with when it appeared. The timestamp is what makes the log more than a
+ * list: a notice logged 200 ms after the merge started and one logged at 89 s are different stories.
+ */
+export interface NoticeLogEntryInObsidian {
+  /**
+   * Milliseconds since the recorder was installed.
+   */
+  readonly atMilliseconds: number;
+
+  /**
+   * The notice's text, truncated.
+   */
+  readonly text: string;
+}
+
+/**
  * The part of the plugin's settings component these suites drive.
  */
 export interface SettingsCarrier<Settings extends object> {
@@ -139,6 +155,16 @@ export interface StartActivationRecorderInObsidianParams {
    * The array to append to. It lives in the suite's `ContextId`, so it survives between evals.
    */
   readonly recording: string[];
+}
+
+/**
+ * Params for {@link startNoticeRecorderInObsidian}.
+ */
+export interface StartNoticeRecorderInObsidianParams {
+  /**
+   * The log to append to. It lives in the suite's `ContextId`, so it survives between evals.
+   */
+  readonly noticeLog: NoticeLogEntryInObsidian[];
 }
 
 /**
@@ -271,6 +297,47 @@ export function startActivationRecorderInObsidian(params: StartActivationRecorde
   return app.workspace.on('active-leaf-change', () => {
     recording.push(app.workspace.getActiveFile()?.path ?? noFile);
   });
+}
+
+/**
+ * Records EVERY notice as it APPEARS, rather than reading the ones still standing when a suite gives up.
+ *
+ * A notice auto-hides after ~5 s, so by the time a 90 s wait times out the notice that explains the stall —
+ * an error notice from an aborted merge, a progress notice that came and went — is long gone from the DOM.
+ * A snapshot taken at the timeout can only ever see a notice that is still up; this sees the ones that
+ * mattered a minute earlier, in order, with their timings.
+ *
+ * Observed on `activeDocument.body` rather than `document`: in a serialized closure the latter is reliably
+ * empty of notices.
+ *
+ * @param params - The params.
+ * @returns The observer, to be stashed in the suite's context and disconnected on cleanup.
+ */
+export function startNoticeRecorderInObsidian(params: StartNoticeRecorderInObsidianParams): MutationObserver {
+  const { noticeLog } = params;
+  const TEXT_LIMIT = 200;
+  const ELEMENT_NODE_TYPE = 1;
+  const startedAtMilliseconds = Date.now();
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const addedNode of mutation.addedNodes) {
+        // The notice container itself is added on the first notice, so a subtree query is needed as well as
+        // The node's own match - otherwise the very first notice of a run is the one that goes unrecorded.
+        if (addedNode.nodeType !== ELEMENT_NODE_TYPE) {
+          continue;
+        }
+
+        const addedElement = addedNode as Element;
+        const notices = addedElement.matches('.notice') ? [addedElement] : [...addedElement.querySelectorAll('.notice')];
+        for (const notice of notices) {
+          noticeLog.push({ atMilliseconds: Date.now() - startedAtMilliseconds, text: notice.textContent.slice(0, TEXT_LIMIT) });
+        }
+      }
+    }
+  });
+  observer.observe(activeDocument.body, { childList: true, subtree: true });
+  return observer;
 }
 
 /**

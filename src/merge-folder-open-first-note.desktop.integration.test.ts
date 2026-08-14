@@ -12,6 +12,8 @@ import {
   it
 } from 'vitest';
 
+import type { MergeSuiteStallContext } from './merge-suite-stall.ts';
+
 import {
   chooseFolderInPickerInObsidian,
   findSettingsComponentInObsidian,
@@ -58,7 +60,7 @@ interface MergeSettings {
 /**
  * What the suite's evals hand to each other, on `window` in the Obsidian process.
  */
-interface SuiteContext {
+interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
@@ -68,11 +70,6 @@ interface SuiteContext {
    * The settings as they were, to restore in the shared vault.
    */
   originalSettings?: MergeSettings;
-
-  /**
-   * Every path the active leaf visited since the recorder was installed.
-   */
-  recording?: string[];
 }
 
 describe('folder merge opens the first note of the destination folder (issue #215)', () => {
@@ -179,7 +176,13 @@ describe('folder merge opens the first note of the destination folder (issue #21
         until: (status) => status.sourceGone,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [SOURCE_FOLDER, TARGET_FOLDER], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [SOURCE_FOLDER, TARGET_FOLDER],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       await pollInObsidian({
@@ -189,7 +192,13 @@ describe('folder merge opens the first note of the destination folder (issue #21
         until: (status) => status.activePath === EXPECTED_FIRST_NOTE_PATH,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [EXPECTED_FIRST_NOTE_PATH, TARGET_FOLDER], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [EXPECTED_FIRST_NOTE_PATH, TARGET_FOLDER],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       const { activePath, recording } = await evalInObsidian({

@@ -12,6 +12,8 @@ import {
   it
 } from 'vitest';
 
+import type { MergeSuiteStallContext } from './merge-suite-stall.ts';
+
 import {
   chooseFolderInPickerInObsidian,
   startActivationRecorderInObsidian,
@@ -53,16 +55,11 @@ const NO_FILE = '<no file>';
  * What the suite's evals hand to each other. It lives on `window` in the Obsidian process for as long as the
  * {@link ContextId} does, which is what lets the recorder installed by one eval be read by another.
  */
-interface SuiteContext {
+interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
   eventRef?: EventRef;
-
-  /**
-   * Every path the active leaf visited since the recorder was installed.
-   */
-  recording?: string[];
 }
 
 describe('folder merge does not cycle the active leaf (issue #106)', () => {
@@ -222,7 +219,13 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         until: (status) => status.sourceGone,
         vaultPath
       }).catch(async (error: unknown) => {
-        throw await describeStall({ error, paths: [SOURCE_FOLDER, TARGET_FOLDER], vaultPath });
+        throw await describeStall({
+          contextId,
+          error,
+          paths: [SOURCE_FOLDER, TARGET_FOLDER],
+          pluginId: PLUGIN_ID,
+          vaultPath
+        });
       });
 
       const { recording } = await evalInObsidian({
