@@ -32,7 +32,7 @@ interface SettingsCarrier {
   settings: CreateFolderSettings;
 }
 
-describe('create folder with notes... (issues #191, #194, #195, #219)', () => {
+describe('create folder with notes... (issues #191, #194, #195, #219, #233)', () => {
   it('creates in Obsidian\'s default new-note location, normalizes the typed name, numbers it after its siblings, and fills the folder from the template', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
@@ -457,5 +457,83 @@ describe('create folder with notes... (issues #191, #194, #195, #219)', () => {
     expect(result.isPromptClosedAfterCancel).toBe(true);
     // Cancel after a VALID name: the prompt is the only thing this test is allowed to have touched.
     expect(result.matchingFolderPaths).toEqual([]);
+  });
+
+  it('spell-checks the folder name prompt, following the vault\'s own Editor > Spellcheck setting (issue #233)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { waitUntil }, pluginId }) {
+        const originalSpellcheck = app.vault.getConfig('spellcheck');
+
+        try {
+          /*
+           * Read in both directions: the defect is a hardcoded `spellcheck="false"`, so a single
+           * reading with the setting ON could be indistinguishable from a vault whose default happens
+           * to match. Only the pair proves the input FOLLOWS the setting.
+           */
+          const spellcheckWhenEnabled = await readPromptSpellcheckAttribute(true);
+          const spellcheckWhenDisabled = await readPromptSpellcheckAttribute(false);
+
+          return {
+            spellcheckWhenDisabled,
+            spellcheckWhenEnabled
+          };
+        } finally {
+          app.vault.setConfig('spellcheck', originalSpellcheck);
+        }
+
+        async function readPromptSpellcheckAttribute(isSpellcheckEnabled: boolean): Promise<null | string> {
+          app.vault.setConfig('spellcheck', isSpellcheckEnabled);
+          app.commands.executeCommandById(`${pluginId}:create-folder-with-notes`);
+
+          await waitUntil({
+            message: 'folder name prompt did not open',
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+          });
+
+          /*
+           * The ATTRIBUTE, not the `spellcheck` IDL property: the forced value the fix removes is an
+           * `inputEl.setAttribute('spellcheck', 'false')` in Obsidian's own `AbstractTextComponent`
+           * constructor, and the attribute is what Obsidian itself writes when it inline-renames a file.
+           */
+          const spellcheckAttribute = requirePromptInput().getAttribute('spellcheck');
+
+          requirePromptElement('.cancel-button').click();
+          /*
+           * The next reading opens the prompt again, so the previous one has to be gone first —
+           * otherwise the second reading is the FIRST prompt's element, taken before its setting
+           * applied.
+           */
+          await waitUntil({
+            message: 'the folder name prompt did not close',
+            predicate: () => document.querySelector('.prompt-modal .text-box') === null
+          });
+
+          return spellcheckAttribute;
+        }
+
+        function requirePromptElement(selector: string): HTMLElement {
+          const element = document.querySelector(`.prompt-modal ${selector}`);
+          if (!(element instanceof HTMLElement)) {
+            throw new TypeError(`No folder name prompt element matching ${selector}.`);
+          }
+          return element;
+        }
+
+        function requirePromptInput(): HTMLInputElement {
+          const element = requirePromptElement('.text-box');
+          if (!element.instanceOf(HTMLInputElement)) {
+            throw new TypeError('No folder name prompt input.');
+          }
+          return element;
+        }
+      },
+      input: { pluginId: PLUGIN_ID }
+    });
+
+    // Issue #233: the input is spell-checked rather than carrying the `spellcheck="false"` every
+    // `TextComponent` is born with — the red squiggle and its right-click suggestions come from this.
+    expect(result.spellcheckWhenEnabled).toBe('true');
+    // ...and turning the vault setting off turns it off again, which is what makes it the user's choice.
+    expect(result.spellcheckWhenDisabled).toBe('false');
   });
 });
