@@ -19,6 +19,8 @@ interface NavigationResult {
   readonly mergeSubheadings: string[];
   readonly onOpen: string[];
   readonly pageDescription: null | string;
+  readonly swapRows: string[];
+  readonly swapSubheadings: string[];
 }
 
 // Issues #220-#226 turned the tab from sixteen stacked headers into a short list of pages. This is the
@@ -59,10 +61,29 @@ describe('settings page navigation', () => {
 
         // Scoped to the page on screen: Obsidian keeps the page it came from in the DOM underneath, so a
         // Modal-wide query would also return the top-level headings.
-        const mergeSubheadings = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-group') ?? [])]
-          .map((group) => group.querySelector(':scope .setting-item-name')?.textContent ?? '')
-          .filter((heading) => heading !== '');
+        const mergeSubheadings = collectSubheadings();
         const mergeFolderRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
+          .map((el) => el.textContent)
+          .filter((name) => name !== '');
+
+        app.setting.closePage();
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        // Issue #241: the other half of the comparison — a page that deliberately has NO subheadings.
+        const swapEntry = findRow('Swap');
+        if (!swapEntry) {
+          throw new Error('The `Swap` page entry was not found.');
+        }
+
+        swapEntry.click();
+        await waitUntil({
+          message: 'the `Swap` page did not open',
+          predicate: () => findRow('Should ask before swapping') !== null
+        });
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        const swapSubheadings = collectSubheadings();
+        const swapRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
           .map((el) => el.textContent)
           .filter((name) => name !== '');
 
@@ -70,7 +91,18 @@ describe('settings page navigation', () => {
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
         app.setting.close();
 
-        return { mergeFolderRows, mergeSubheadings, onOpen, pageDescription };
+        return { mergeFolderRows, mergeSubheadings, onOpen, pageDescription, swapRows, swapSubheadings };
+
+        // A heading is a `.setting-item-heading` inside the page's `.setting-group`, NOT the group itself:
+        // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
+        // (verified against the rendered `Swap` page), so counting groups reports a heading a flat page
+        // Does not have — it returned the first ROW's name. Both pages are measured with this one
+        // Function, which is what keeps the empty `Swap` result from passing vacuously on a dead selector.
+        function collectSubheadings(): string[] {
+          return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-heading .setting-item-name') ?? [])]
+            .map((el) => el.textContent)
+            .filter((heading) => heading !== '');
+        }
 
         function findRow(name: string): HTMLElement | null {
           const rows = [...(getModalEl()?.querySelectorAll<HTMLElement>(':scope .setting-item') ?? [])];
@@ -91,8 +123,9 @@ describe('settings page navigation', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // Issue #221: the tab opens showing the entries, not eighty rows. `Merge folders` and `Swap folders`
-    // Are gone as top-level headers — they are subheadings of `Merge` and `Swap` now (issues #224/#226).
+    // Issue #221: the tab opens showing the entries, not eighty rows. `Merge folders` is gone as a
+    // Top-level header — it is a subheading of `Merge` now (issues #224/#240). `Swap` had the same
+    // Treatment from issue #226 and lost it again to issue #241: its four rows are flat on its page.
     expect(result.onOpen).toContain('Merge');
     expect(result.onOpen).toContain('Frontmatter');
     expect(result.onOpen).toContain('Include/exclude');
@@ -123,5 +156,16 @@ describe('settings page navigation', () => {
     // Ones is now under the header that names its own command.
     const firstMergeFolderWithFolderRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge current folder with another folder') + 1];
     expect(firstMergeFolderWithFolderRow).toBe('Should include child folders when merging folders');
+
+    // Issue #241: `Swap` renders its four rows with no subheading at all — the shared confirmation row
+    // Belonged under neither of the two issue #226 had put there. Asserted in real Obsidian because the
+    // Unit test can only pin the DECLARED tree, and a page's rows are not in the DOM until it is opened.
+    expect(result.swapSubheadings).toEqual([]);
+    expect(result.swapRows).toEqual([
+      'Should ask before swapping',
+      'Should include child folders when swapping folders',
+      'Should include parent folders when swapping folders',
+      'Should swap entire folder structure'
+    ]);
   });
 });

@@ -223,8 +223,10 @@ describe('PluginSettingsTab', () => {
       // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
       'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file'],
       'Split/extract': [],
-      // Issue #226.
-      'Swap': ['Swap file', 'Swap folders'],
+      // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
+      // Shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
+      // The folder rows name their own target type — so the headings only mislabelled the first row.
+      'Swap': [],
       'Title': [],
       'UI': []
     });
@@ -241,8 +243,6 @@ describe('PluginSettingsTab', () => {
       'Merge file',
       'Merge folder contents into a single file',
       'Merge current folder with another folder',
-      'Swap file',
-      'Swap folders',
       'Notice',
       'At cursor',
       'To top of file',
@@ -287,6 +287,20 @@ describe('PluginSettingsTab', () => {
       'Should add invalid title to note aliases',
       'Should include frontmatter when splitting',
       'Should extract a properties selection as properties'
+    ]);
+  });
+
+  // Issue #241: the four swap rows sit directly on the page. The subheading assertion above proves the
+  // Groups are gone; this one proves the rows survived the flattening in their original order, so a row
+  // Added later cannot quietly bring a heading back with it.
+  it('should list the swap settings flat on their page', async () => {
+    const tab = await createSettingsTab();
+
+    expect(collectContainers(tab).get('Swap')).toEqual([
+      'Should ask before swapping',
+      'Should include child folders when swapping folders',
+      'Should include parent folders when swapping folders',
+      'Should swap entire folder structure'
     ]);
   });
 
