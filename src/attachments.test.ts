@@ -13,8 +13,11 @@ import {
   it
 } from 'vitest';
 
+import type { Selection } from './composers/composer-base.ts';
+
 import {
   collectAttachmentsOwnedByNote,
+  collectAttachmentsReferencedBySelections,
   collectAttachmentsToRelocate,
   relocateAttachments,
   resolveAttachmentDestination
@@ -106,6 +109,129 @@ describe('collectAttachmentsOwnedByNote', () => {
     const attachments = collectAttachmentsOwnedByNote({ app, attachmentExtensions: [], noteFile: getFile('Docs/note.md') });
 
     expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/a.png', 'Docs/b.png']);
+  });
+});
+
+describe('collectAttachmentsReferencedBySelections', () => {
+  function collect(notePath: string, selections: Selection[], attachmentExtensions: string[] = []): string[] {
+    return collectAttachmentsReferencedBySelections({
+      app,
+      attachmentExtensions,
+      selections,
+      sourceFile: getFile(notePath)
+    }).map((attachment) => attachment.file.path);
+  }
+
+  it('should collect an attachment the extracted range embeds', () => {
+    const content = '# A\n![[img.png]]\n\n# B\nplain';
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': content
+    });
+
+    const attachments = collectAttachmentsReferencedBySelections({
+      app,
+      attachmentExtensions: [],
+      selections: [{ endOffset: content.indexOf('# B'), startOffset: 0 }],
+      sourceFile: getFile('Docs/note.md')
+    });
+
+    expect(attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/img.png']);
+    // The extracted text is what referenced it, so the source note is where it came FROM.
+    expect(attachments[0]?.ownerNoteFile.path).toBe('Docs/note.md');
+  });
+
+  it('should leave an attachment the text left behind still references', () => {
+    // The whole point of the sole-referencer rule: moving this one would break the heading that stays.
+    const content = '# A\n![[img.png]]\n\n# B\n![[img.png]]';
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': content
+    });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.indexOf('# B'), startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should leave an attachment another note also references', () => {
+    const content = '# A\n![[img.png]]';
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/x.md': content,
+      'Docs/y.md': '![[img.png]]'
+    });
+
+    expect(collect('Docs/x.md', [{ endOffset: content.length, startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should leave an attachment whose reference straddles the selection boundary', () => {
+    // Half an embed is not extracted, so the note keeps pointing at the file.
+    const content = '# A\n![[img.png]]';
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': content
+    });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.length - 3, startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should never collect a link to an ordinary note', () => {
+    const content = '[[other]]';
+    initApp({
+      'Docs/other.md': 'body',
+      'Docs/zeta.md': content
+    });
+
+    expect(collect('Docs/zeta.md', [{ endOffset: content.length, startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should collect a markdown-shaped attachment the extracted range embeds', () => {
+    // The note sorts after the drawing on purpose: the mock resolves a link when the note is created.
+    const content = '![[sketch.excalidraw]]';
+    initApp({
+      'Docs/sketch.excalidraw.md': 'drawing',
+      'Docs/zeta.md': content
+    });
+
+    expect(collect('Docs/zeta.md', [{ endOffset: content.length, startOffset: 0 }], ['.excalidraw.md'])).toEqual(['Docs/sketch.excalidraw.md']);
+  });
+
+  it('should ignore a link that resolves to nothing', () => {
+    const content = '![[missing.png]]';
+    initApp({ 'Docs/note.md': content });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.length, startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should collect an attachment a plain link points at, not only an embed', () => {
+    // A heading that merely links its PDF owns it just as much as one that embeds an image.
+    const content = '[[doc.pdf]]';
+    initApp({
+      'Docs/doc.pdf': 'PDF',
+      'Docs/note.md': content
+    });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.length, startOffset: 0 }])).toEqual(['Docs/doc.pdf']);
+  });
+
+  it('should collect nothing when the selection references nothing', () => {
+    const content = '# A\nplain\n\n# B\n![[img.png]]';
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': content
+    });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.indexOf('# B'), startOffset: 0 }])).toEqual([]);
+  });
+
+  it('should return the attachments in path order', () => {
+    const content = '![[b.png]]\n![[a.png]]';
+    initApp({
+      'Docs/a.png': 'A',
+      'Docs/b.png': 'B',
+      'Docs/note.md': content
+    });
+
+    expect(collect('Docs/note.md', [{ endOffset: content.length, startOffset: 0 }])).toEqual(['Docs/a.png', 'Docs/b.png']);
   });
 });
 

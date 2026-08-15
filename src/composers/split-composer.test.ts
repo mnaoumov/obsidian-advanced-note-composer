@@ -36,6 +36,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type { Selection } from './composer-base.ts';
 
+import { relocateAttachments } from '../attachments.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
@@ -94,6 +95,16 @@ interface OptionalComposerParams {
   readonly templateOverride?: string;
 }
 
+/**
+ * One {@link relocateAttachments} move, flattened to paths so a failure names the files rather than dumping
+ * two `TFile` objects.
+ */
+interface RelocationSummary {
+  readonly attachment: string;
+  readonly newNoteFile: string;
+  readonly oldNoteFile: string;
+}
+
 interface SameNoteComposerParams {
   readonly capturedSelections: Selection[];
   readonly insertMode: InsertMode;
@@ -139,6 +150,15 @@ vi.mock('../operation-notices.ts', async (importOriginal) => {
     buildOperationNoticeContent: vi.fn(original.buildOperationNoticeContent)
   };
 });
+
+// Only the RENAME is stubbed (it has its own suite in `attachments.test.ts`, against the real vault, and
+// The end-to-end move is pinned by `split-attachments.desktop.integration.test.ts`). The COLLECTION stays
+// Real, so what these tests assert is the composer's own job: which attachments the extracted range owns
+// And which notes they move between (issue #239).
+vi.mock('../attachments.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../attachments.ts')>()),
+  relocateAttachments: vi.fn().mockResolvedValue(undefined)
+}));
 
 // `revealInsertedContent` polls a live workspace for a MarkdownView; what this suite asserts is that the
 // Composer asks for the right thing, not that the poll works (its locator has its own suite).
@@ -224,6 +244,7 @@ function createPluginSettingsComponentStub(
 ): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
     settings: strictProxy<PluginSettings>({
+      attachmentExtensions: [],
       defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
@@ -233,6 +254,9 @@ function createPluginSettingsComponentStub(
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldMergeHeadingsByDefault: false,
+      // The shipped default, so every test in this suite runs the collection the way a user does. The
+      // Fixture notes reference nothing, so it collects nothing and no relocation is attempted.
+      shouldMoveAttachmentsWhenSplitting: true,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldShowOperationNotices: true,
@@ -1144,6 +1168,87 @@ describe('splitFile move mode', () => {
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the inserted content'));
+  });
+});
+
+describe('splitFile attachments (issue #239)', () => {
+  // `![[img.png]]` is 12 characters, so [0, 12) is the extracted range and `tail` is what stays behind.
+  const EMBED_END_OFFSET = 12;
+
+  beforeEach(async () => {
+    vi.mocked(relocateAttachments).mockClear();
+    await app.vault.create('img.png', 'PIC');
+    await app.vault.modify(getSourceFile(), '![[img.png]] tail');
+  });
+
+  function getLastRelocations(): RelocationSummary[] {
+    const [params] = vi.mocked(relocateAttachments).mock.lastCall ?? [];
+    return (params?.relocations ?? []).map((relocation) => ({
+      attachment: relocation.attachment.path,
+      newNoteFile: relocation.newNoteFile.path,
+      oldNoteFile: relocation.oldNoteFile.path
+    }));
+  }
+
+  it('should carry an attachment the extracted range references into the target note', async () => {
+    await createComposer({
+      capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+      selectedText: '![[img.png]]'
+    }).splitFile();
+
+    expect(getLastRelocations()).toEqual([{
+      attachment: 'img.png',
+      newNoteFile: 'target.md',
+      oldNoteFile: 'source.md'
+    }]);
+  });
+
+  it('should leave an attachment the text left behind still references', async () => {
+    await app.vault.modify(getSourceFile(), '![[img.png]] ![[img.png]]');
+
+    await createComposer({
+      capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+      selectedText: '![[img.png]]'
+    }).splitFile();
+
+    expect(relocateAttachments).not.toHaveBeenCalled();
+  });
+
+  it('should relocate nothing when the setting is off', async () => {
+    await createComposer({
+      capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+      selectedText: '![[img.png]]',
+      settingsOverrides: { shouldMoveAttachmentsWhenSplitting: false }
+    }).splitFile();
+
+    expect(relocateAttachments).not.toHaveBeenCalled();
+  });
+
+  it('should relocate nothing for a same-note extract', async () => {
+    // Source and target share one attachment folder, so there is nowhere for the attachment to go.
+    const editor = createEditorDouble();
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
+      strictProxy<MarkdownView>({ editor, file: null, setEphemeralState: vi.fn() })
+    );
+    const sourceFile = getSourceFile();
+
+    await new SplitComposer({
+      app,
+      capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+      consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+      editor,
+      insertMode: InsertMode.Append,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: createPluginNoticeComponentStub(),
+      pluginSettingsComponent: createPluginSettingsComponentStub(),
+      resourceLockComponent,
+      selectedText: '![[img.png]]',
+      sourceFile,
+      targetFile: sourceFile
+    }).splitFile();
+
+    expect(relocateAttachments).not.toHaveBeenCalled();
   });
 });
 

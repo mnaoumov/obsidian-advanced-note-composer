@@ -419,6 +419,21 @@ export class PluginSettings {
   public shouldMergeHeadingsByDefault = false;
   public shouldMoveAttachmentsWhenMergingFile = true;
   public shouldMoveAttachmentsWhenMergingFolder = true;
+
+  /**
+   * Whether the attachments an extracted range references follow it into the new note's attachment folder
+   * (issue #239) — the split-side counterpart of {@link shouldMoveAttachmentsWhenMergingFile}.
+   *
+   * ONE toggle covers every split flow (owner, 2026-08-14), unlike the merge pair: a merge collects by note
+   * or by folder — two genuinely different rules — while every split shares one, so a second toggle would
+   * gate the same behavior twice.
+   *
+   * Defaults to `true`, matching the merge pair. That is safe rather than merely symmetric because
+   * `collectAttachmentsReferencedBySelections` moves an attachment only when the extracted range is its SOLE
+   * referencer: one referenced by both the extracted heading and the text left behind stays where it is.
+   */
+  public shouldMoveAttachmentsWhenSplitting = true;
+
   public shouldOfferCurrentNoteWhenSplitting = true;
   /**
    * Whether `Merge current folder with another folder...` opens the first note of the destination folder

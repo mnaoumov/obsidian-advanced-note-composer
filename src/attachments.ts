@@ -1,11 +1,15 @@
 import type {
   App,
+  Pos,
   TFile,
   TFolder
 } from 'obsidian';
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
-import { Vault } from 'obsidian';
+import {
+  parseLinktext,
+  Vault
+} from 'obsidian';
 import {
   AttachmentPathContext,
   getAttachmentFilePath,
@@ -16,6 +20,8 @@ import {
   isMarkdownFile,
   isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
+
+import type { Selection } from './composers/composer-base.ts';
 
 import { compareNatural } from './natural-sort.ts';
 
@@ -74,6 +80,32 @@ export interface CollectAttachmentsOwnedByNoteParams {
    * The note whose attachments are collected.
    */
   readonly noteFile: TFile;
+}
+
+/**
+ * Parameters for {@link collectAttachmentsReferencedBySelections}.
+ */
+export interface CollectAttachmentsReferencedBySelectionsParams {
+  /**
+   * The Obsidian application instance.
+   */
+  readonly app: App;
+
+  /**
+   * The configured extensions that make a file an attachment, e.g. `['.excalidraw.md']`.
+   */
+  readonly attachmentExtensions: readonly string[];
+
+  /**
+   * The ranges of the source note being extracted, in the source note's own offsets.
+   */
+  readonly selections: readonly Selection[];
+
+  /**
+   * The note being split. Its attachments are the candidates; it is also the `ownerNoteFile` of every
+   * collected one, since the extracted text is what referenced them.
+   */
+  readonly sourceFile: TFile;
 }
 
 /**
@@ -181,6 +213,80 @@ export function collectAttachmentsOwnedByNote(params: CollectAttachmentsOwnedByN
       continue;
     }
     attachments.push({ file: candidate, ownerNoteFile: noteFile });
+  }
+
+  return attachments.sort((a, b) => compareNatural(a.file.path, b.file.path));
+}
+
+/**
+ * Collects the attachments the EXTRACTED PART of a note owns, so a split carries them into the new note's
+ * attachment folder (issue #239). This is the split-side counterpart of {@link collectAttachmentsOwnedByNote},
+ * and the ownership question is the reason it exists: a merge relocates a whole note, so "which attachments
+ * are the note's" is enough, while a split carves out a RANGE — the same note keeps the rest, so ownership
+ * has to be resolved per selection rather than per file.
+ *
+ * An attachment is collected when the extracted range is its SOLE referencer:
+ *
+ * - it is referenced from inside one of the selections (`embeds` and `links` alike, so an embedded image
+ *   and a plain link to a PDF are treated the same), and
+ * - nothing outside those selections references it — neither the source note's own remaining text nor any
+ *   other note in the vault.
+ *
+ * That second rule is what makes moving safe enough to be on by default: an attachment referenced by both
+ * the extracted heading and the text left behind would otherwise be moved out from under the source note,
+ * which is strictly worse than leaving it where it is. Links to ordinary notes are never collected; a
+ * markdown file that is really an attachment (one whose extension is configured, per `obsidian-dev-utils`
+ * {@link isTreatedAsAttachment}) is.
+ *
+ * Unlike {@link collectAttachmentsToRelocate} it never takes an unreferenced file sitting at a proper
+ * attachment path: a split moves no folder, so an untouched stray has nothing to do with the extracted text.
+ *
+ * @param params - The source note, its extracted ranges, the app, and the attachment extensions.
+ * @returns The attachments to relocate with their owning note, in path order.
+ */
+export function collectAttachmentsReferencedBySelections(params: CollectAttachmentsReferencedBySelectionsParams): AttachmentToRelocate[] {
+  const {
+    app,
+    attachmentExtensions,
+    selections,
+    sourceFile
+  } = params;
+
+  const cache = app.metadataCache.getFileCache(sourceFile);
+  // Embeds and links in one pass: the reported case is an embedded image, but a heading that merely LINKS
+  // To its PDF owns it just as much.
+  /* v8 ignore next 2 -- defensive ?? for a note the metadata cache has not indexed yet. */
+  const references = [...cache?.embeds ?? [], ...cache?.links ?? []];
+
+  const selectedAttachments = new Map<string, TFile>();
+  const pathsReferencedByTheRemainder = new Set<string>();
+
+  for (const reference of references) {
+    // The subpath is dropped: `![[img.png#page=2]]` points at the same file as `![[img.png]]`.
+    const linkedFile = app.metadataCache.getFirstLinkpathDest(parseLinktext(reference.link).path, sourceFile.path);
+    if (!linkedFile) {
+      continue;
+    }
+
+    if (!isSelected(reference.position, selections)) {
+      // Anything the note still points at after the extraction keeps it here, whether or not it is an
+      // Attachment — the check below only ever asks about paths, so classifying it would be wasted work.
+      pathsReferencedByTheRemainder.add(linkedFile.path);
+      continue;
+    }
+
+    if (isAttachmentFile(linkedFile, attachmentExtensions)) {
+      selectedAttachments.set(linkedFile.path, linkedFile);
+    }
+  }
+
+  const pathsReferencedByOtherNotes = collectPathsReferencedByOtherNotes(app, sourceFile);
+  const attachments: AttachmentToRelocate[] = [];
+  for (const candidate of selectedAttachments.values()) {
+    if (pathsReferencedByTheRemainder.has(candidate.path) || pathsReferencedByOtherNotes.has(candidate.path)) {
+      continue;
+    }
+    attachments.push({ file: candidate, ownerNoteFile: sourceFile });
   }
 
   return attachments.sort((a, b) => compareNatural(a.file.path, b.file.path));
@@ -349,6 +455,12 @@ function isAttachmentFile(file: TFile, attachmentExtensions: readonly string[]):
   // The markdown gate stays: a non-markdown file is an attachment whatever the configured extensions
   // Say, and only a markdown-shaped one has to prove itself against them.
   return !isMarkdownFile(file) || isTreatedAsAttachment({ attachmentExtensions, pathOrFile: file });
+}
+
+function isSelected(position: Pos, selections: readonly Selection[]): boolean {
+  // Wholly inside, matching `ComposerBase`'s own rule: a reference straddling the boundary is not part of
+  // What gets extracted, so the note keeps pointing at it.
+  return selections.some((selection) => selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset);
 }
 
 function normalizeFolderPath(folderPath: string | undefined): string {

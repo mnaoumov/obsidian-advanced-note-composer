@@ -8,9 +8,12 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import type { AttachmentToRelocate } from '../attachments.ts';
 import type { FrontmatterSelectionExtraction } from '../frontmatter-selection.ts';
+import type { LockTarget } from '../locked-transaction.ts';
 import type { InsertedContentRange } from '../reveal-inserted-content.ts';
 import type {
   ComposerBaseConstructorParamsBase,
@@ -18,6 +21,10 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import {
+  collectAttachmentsReferencedBySelections,
+  relocateAttachments
+} from '../attachments.ts';
 import { extractFrontmatterSelection } from '../frontmatter-selection.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
@@ -81,6 +88,13 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // `smartCutAndPasteMoveKind` is set.
   readonly shouldJumpToMovedContent?: boolean;
 
+  /**
+   * Whether the attachments the extracted range references follow it into the target note's attachment
+   * folder (issue #239). Defaults to the `shouldMoveAttachmentsWhenSplitting` setting, and is forced off
+   * for a same-note extract — source and target share one attachment folder, so there is nowhere to move.
+   */
+  readonly shouldMoveAttachments?: boolean;
+
   // Which smart cut & paste move this split is (mark → move here / at cursor / to top / bottom). Its
   // PRESENCE marks the split as a smart cut & paste move at all, so `getTemplate` prefers the smart cut &
   // Paste templates (the per-direction override, then the shared one, then the split → merge chain when
@@ -123,6 +137,7 @@ export class SplitComposer extends ComposerBase {
   private readonly isMultipleSplit: boolean;
   private readonly selectedText: string;
   private readonly shouldJumpToMovedContent: boolean;
+  private readonly shouldMoveAttachments: boolean;
   private readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind | undefined;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
@@ -151,6 +166,9 @@ export class SplitComposer extends ComposerBase {
     this.capturedSelections = params.capturedSelections;
     this.selectedText = params.selectedText;
     this.shouldJumpToMovedContent = params.shouldJumpToMovedContent ?? true;
+    // A same-note extract has one attachment folder for both ends, so there is nothing to relocate — and
+    // `isAtProperAttachmentPath` would refuse every move anyway.
+    this.shouldMoveAttachments = isSameFile ? false : (params.shouldMoveAttachments ?? settings.shouldMoveAttachmentsWhenSplitting);
     this.targetCursorOffset = params.targetCursorOffset ?? null;
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
     this.templateOverride = params.templateOverride;
@@ -166,6 +184,19 @@ export class SplitComposer extends ComposerBase {
     if (!await this.checkTargetFileIgnored(Action.Split)) {
       return;
     }
+
+    // Collected before the transaction so every attachment can be locked alongside the two notes: an
+    // External change to one of them must abort the split just as a change to a note does. Read off the
+    // Source note's cache while it still holds the extracted text — after the extraction those references
+    // Live in the target instead.
+    const attachmentsToRelocate = this.shouldMoveAttachments
+      ? collectAttachmentsReferencedBySelections({
+        app: this.app,
+        attachmentExtensions: this.pluginSettingsComponent.settings.attachmentExtensions,
+        selections: this.capturedSelections,
+        sourceFile: this.sourceFile
+      })
+      : [];
 
     const mtimes = this.captureFileMtimes();
     const progressNotice = this.isMultipleSplit
@@ -260,11 +291,14 @@ export class SplitComposer extends ComposerBase {
           // Reveal the cursor after the re-open. The re-open scrolls the editor to the top, leaving the
           // (correctly positioned) cursor off-screen — revealing its line brings the viewport back to it.
           this.revealCursor();
+
+          await this.relocateExtractedAttachments(attachmentsToRelocate, vaultTransaction);
         },
         injectedVaultTransaction: this.injectedVaultTransaction,
         lockTargets: [
           { mode: 'file', pathOrFile: this.sourceFile },
-          { mode: 'file', pathOrFile: this.targetFile }
+          { mode: 'file', pathOrFile: this.targetFile },
+          ...attachmentsToRelocate.map((attachment): LockTarget => ({ mode: 'file', pathOrFile: attachment.file }))
         ],
         operationName: 'Split note',
         resourceLockComponent: this.resourceLockComponent
@@ -497,6 +531,46 @@ export class SplitComposer extends ComposerBase {
 
   private isSameNoteMove(): boolean {
     return this.insertToken !== null && this.sourceFile === this.targetFile;
+  }
+
+  /**
+   * Moves the attachments the extracted range owned into the target note's attachment folder (issue #239),
+   * through the same {@link relocateAttachments} pipeline the merges use — so the per-note destination is
+   * resolved by `obsidian-dev-utils` `getAttachmentFilePath`, the function Custom Attachment Location
+   * patches, and a recursive split resolves it afresh for each note it creates.
+   *
+   * **Runs LAST, where {@link MergeComposer.mergeFile} relocates FIRST, and the asymmetry is deliberate.**
+   * A merge re-reads its whole source, so it can move the attachments while that source still exists and let
+   * the vault's own rename fix the links it is about to copy. A split has no such freedom: it extracts by
+   * editor OFFSETS captured before the operation, and a rename that rewrites a link in the source (which the
+   * relative- and absolute-path link formats do) shifts every offset after it — the captured selection would
+   * then extract the wrong range. So the extraction happens first and the attachments follow it.
+   *
+   * The {@link getCacheSafe} calls are what make that ordering work rather than merely safe: they flush the
+   * source editor's buffer to disk and re-index both notes, so the cache-driven rename sees that the TARGET
+   * now holds the links (and rewrites them) and that the SOURCE no longer does (and leaves it alone). Without
+   * them the rename works off a stale cache and rewrites the note whose buffer is still dirty.
+   *
+   * @param attachments - The attachments collected before the transaction opened.
+   * @param vaultTransaction - The transaction to route the renames through, so a rollback puts them back.
+   */
+  private async relocateExtractedAttachments(attachments: readonly AttachmentToRelocate[], vaultTransaction: VaultTransaction): Promise<void> {
+    if (attachments.length === 0) {
+      return;
+    }
+
+    await getCacheSafe(this.app, this.sourceFile);
+    await getCacheSafe(this.app, this.targetFile);
+
+    await relocateAttachments({
+      app: this.app,
+      relocations: attachments.map((attachment) => ({
+        attachment: attachment.file,
+        newNoteFile: this.targetFile,
+        oldNoteFile: attachment.ownerNoteFile
+      })),
+      vaultTransaction
+    });
   }
 
   /* v8 ignore start -- removeSelectionRange branches are defensive for various selection/range overlap cases. */
