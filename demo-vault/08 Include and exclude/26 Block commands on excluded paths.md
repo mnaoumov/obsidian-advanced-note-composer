@@ -63,7 +63,9 @@ Every merge skips an ignored note and reports it, unless **Should always merge e
 That covers the batch commands — [`Merge folder contents into a single file...`](<../01 Merge/03 Merge folder into single file.md>)
 and [`Merge these files into one file...`](<../01 Merge/04 Merge multiple files.md>) — and, since the setting
 was made to mean what it says, [`Merge current file with another file...`](<../01 Merge/01 Merge file.md>) too:
-with it on, an excluded note is offered in the destination picker and can be merged into.
+with it on, an excluded note is offered in the destination picker and can be merged into. The same now
+holds for [`Merge current folder with another folder...`](<../01 Merge/02 Merge folder.md>) — an excluded
+**folder** is offered as a destination too, so the setting reads the same on both sides.
 
 The setting decides what a merge may swallow, not where a merge is offered. A command hidden by
 **Command exclude paths** stays hidden either way.

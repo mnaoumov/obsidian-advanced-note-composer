@@ -164,7 +164,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                     'Whether a merge also moves and merges items whose path is excluded/ignored in the plugin settings, instead of skipping them. When off (the default), excluded items are skipped and reported in a notice.'
                   );
                   f.createEl('br');
-                  f.appendText('Applies to every merge command. With it on, an excluded note is offered in the destination picker as well — otherwise there is no way to merge into one.');
+                  f.appendText('Applies to every merge command. With it on, an excluded note or folder is offered in the destination picker as well — otherwise there is no way to merge into one.');
                   f.createEl('br');
                   f.appendText('Where a merge is offered in the first place is a separate question, decided by ');
                   appendCodeBlock(f, 'Command include paths');
