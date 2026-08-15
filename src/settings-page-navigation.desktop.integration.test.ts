@@ -104,13 +104,24 @@ describe('settings page navigation', () => {
     // Issue #224 asked for a description of what merging is on the expanded header.
     expect(result.pageDescription).toContain('Merging');
 
-    // Issue #224: the two subheadings, in order.
-    expect(result.mergeSubheadings).toEqual(['Merge file', 'Merge folder']);
+    // Issue #224 gave the page two subheadings; issue #240 resplit them into four, because `Merge folder`
+    // Covered two different commands and each of its rows belongs to exactly one of them.
+    expect(result.mergeSubheadings).toEqual([
+      'All merges',
+      'Merge file',
+      'Merge folder contents into a single file',
+      'Merge current folder with another folder'
+    ]);
 
     // Issue #220: the template leads its header.
-    const firstMergeFileRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge file') + 1];
-    expect(firstMergeFileRow).toBe('Merge template');
-    const firstMergeFolderRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge folder') + 1];
-    expect(firstMergeFolderRow).toBe('Merge folder into file note name');
+    const firstSharedRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('All merges') + 1];
+    expect(firstSharedRow).toBe('Merge template');
+    const firstMergeFolderIntoFileRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge folder contents into a single file') + 1];
+    expect(firstMergeFolderIntoFileRow).toBe('Merge folder into file note name');
+
+    // Issue #240: the one row of the whole-folder merge that used to sit among the into-a-single-file
+    // Ones is now under the header that names its own command.
+    const firstMergeFolderWithFolderRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge current folder with another folder') + 1];
+    expect(firstMergeFolderWithFolderRow).toBe('Should include child folders when merging folders');
   });
 });

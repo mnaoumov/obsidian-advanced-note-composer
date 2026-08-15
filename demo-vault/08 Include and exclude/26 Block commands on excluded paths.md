@@ -59,9 +59,14 @@ is an attachment folder", and your vault's own `Default location for new attachm
 substitute there. Excluding the folder says it directly. Without such a plugin, that setting is
 recognized on its own.
 
-The batch commands — [`Merge current folder contents into a single file...`](<../01 Merge/03 Merge folder into single file.md>)
-and [`Merge these files into one file...`](<../01 Merge/04 Merge multiple files.md>) — skip an ignored note and
-report it, unless **Should always merge excluded items** is on.
+Every merge skips an ignored note and reports it, unless **Should always merge excluded items** is on.
+That covers the batch commands — [`Merge folder contents into a single file...`](<../01 Merge/03 Merge folder into single file.md>)
+and [`Merge these files into one file...`](<../01 Merge/04 Merge multiple files.md>) — and, since the setting
+was made to mean what it says, [`Merge current file with another file...`](<../01 Merge/01 Merge file.md>) too:
+with it on, an excluded note is offered in the destination picker and can be merged into.
+
+The setting decides what a merge may swallow, not where a merge is offered. A command hidden by
+**Command exclude paths** stays hidden either way.
 
 ## Upgrading from the old single toggle
 
