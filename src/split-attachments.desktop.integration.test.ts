@@ -24,14 +24,14 @@ interface ComponentTreeNode {
   settings?: SplitAttachmentSettings;
 }
 
-interface SplitAttachmentSettings {
-  shouldAskBeforeSplitting: boolean;
-  shouldMoveAttachmentsWhenSplitting: boolean;
-}
-
 interface SettingsCarrier {
   editAndSave(editor: (settings: SplitAttachmentSettings) => void): Promise<void>;
   settings: SplitAttachmentSettings;
+}
+
+interface SplitAttachmentSettings {
+  shouldAskBeforeSplitting: boolean;
+  shouldMoveAttachmentsWhenSplitting: boolean;
 }
 
 describe('attachments in a split (issue #239)', () => {
