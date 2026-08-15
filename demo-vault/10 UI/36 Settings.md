@@ -216,7 +216,9 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `shouldShowOperationNotices`
   - show the running and finished notices — see [33 Operation notices](<./33 Operation notices.md>).
 - `shouldShowModalInstructions`
-  - show the keyboard-hint line at the bottom of the pickers and dialogs.
+  - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of
+    the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge`
+    switch. Turn it off and this settings page is the only place those choices are made.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
 

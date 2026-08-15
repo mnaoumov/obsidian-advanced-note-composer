@@ -187,13 +187,18 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       description: 'Drag an item, or move it with the arrows. Folders and notes are numbered separately, and every item is renumbered to match the order you leave.',
       model,
       title: `Reorder ${parentFolder.isRoot() ? '/' : parentFolder.name}`,
-      toggle: {
-        isEnabled: settings.shouldIncludeFilesWhenReorderingByDefault,
-        label: 'Include files',
-        onChanged: (isEnabled) => {
-          model.setShouldIncludeFiles(isEnabled);
+      // No checkbox when per-operation overrides are turned off (issue #242) — the settings page is then the
+      // Only place the choice is made. The model is already seeded from the same setting above, so hiding the
+      // Control cannot change what the reorder does.
+      toggle: settings.shouldShowModalInstructions
+        ? {
+          isEnabled: settings.shouldIncludeFilesWhenReorderingByDefault,
+          label: 'Include files',
+          onChanged: (isEnabled): void => {
+            model.setShouldIncludeFiles(isEnabled);
+          }
         }
-      }
+        : null
     });
     if (!isConfirmed) {
       return;

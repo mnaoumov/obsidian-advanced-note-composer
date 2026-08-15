@@ -161,7 +161,8 @@ export class PluginSettings {
 
   /**
    * Which mode the split/extract picker opens in (issue #227). The switch above the picker's input flips it
-   * per invocation; this is only where it starts.
+   * per invocation; this is only where it starts — unless {@link shouldShowModalInstructions} hides that
+   * switch (issue #242), in which case this decides the mode outright.
    *
    * Defaults to {@link SplitTargetMode.Create}, which is the common extract-to-a-new-note case and what the
    * picker did before the switch existed whenever the typed name matched nothing. No
@@ -403,9 +404,10 @@ export class PluginSettings {
    * Whether a reorder offers the folder's FILES for renumbering as well, and not only its folders
    * (issue #216).
    *
-   * Seeds the modal's `Include files` checkbox, which is where the choice is actually made — so this is a
-   * default, not a switch. It starts OFF so that reordering a folder's subfolders never silently renames
-   * the notes sitting beside them.
+   * Seeds the modal's `Include files` checkbox, which is where the choice is made while
+   * {@link shouldShowModalInstructions} offers that checkbox — and is the whole of it once that setting hides
+   * it (issue #242). It starts OFF so that reordering a folder's subfolders never silently renames the notes
+   * sitting beside them.
    */
   public shouldIncludeFilesWhenReorderingByDefault = false;
 
@@ -480,6 +482,25 @@ export class PluginSettings {
    */
   public shouldReplaceInvalidTitleCharacters = true;
   public shouldRunTemplaterOnDestinationFile = false;
+  /**
+   * Whether the modals offer the controls that override a setting for a single operation (issue #242).
+   *
+   * Covers the instruction bar of the merge/split/swap pickers, the reorder dialog's `Include files` checkbox,
+   * and the split picker's `Create` / `Merge` switch — everything that lets one run disagree with this page.
+   * Turned off, the settings page is the only place those choices are made, which is what the reporter asked
+   * for; the operations still behave exactly as the defaults say, because every control is already seeded from
+   * the setting it overrides.
+   *
+   * The property name says `ModalInstructions` because that is all it originally gated, and it keeps that name
+   * deliberately: renaming it would need a `registerLegacySettingsConverter` and would silently reset the
+   * choice of anyone who had already turned it off, for no gain the displayed name cannot deliver.
+   *
+   * Two controls are deliberately NOT covered. `Don't ask again` (and its mobile
+   * `... and don't ask again` button) WRITES a setting rather than overriding one, so hiding it would remove
+   * the in-flow way to reach this page's own value. The paste-options modal is reached only from the
+   * *advanced* `Move marked selection here` command — the plain command already runs on these settings with no
+   * UI at all — so choosing it IS the opt-in to overriding, and gating it would leave an empty dialog.
+   */
   public shouldShowModalInstructions = true;
   public shouldShowMoveAtCursorButton = true;
   public shouldShowMoveToBottomButton = true;

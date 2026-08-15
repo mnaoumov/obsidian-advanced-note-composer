@@ -356,7 +356,9 @@ class SplitFileModal extends SuggestModalBase {
     // Value belongs there at all (issue #237) — a `Merge` default must not open holding a heading name.
     this.inputEl.value = this.inputValueBySplitTargetMode[this.splitTargetMode];
     this.updateSuggestions();
-    this.renderSplitTargetModeSwitch();
+    if (this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
+      this.renderSplitTargetModeSwitch();
+    }
     this.renderNameRequiredHint();
     this.renderSwitchToSmartCutButton();
   }
@@ -462,18 +464,24 @@ class SplitFileModal extends SuggestModalBase {
       purpose: 'to dismiss'
     });
 
-    builder.addKeyboardCommand({
-      key: 'm',
-      modifiers: ['Alt'],
-      onKey: () => {
-        this.setSplitTargetMode({
-          shouldCarryOverInputValue: false,
-          splitTargetMode: this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create
-        });
-        return false;
-      },
-      purpose: 'to switch between create and merge'
-    });
+    // Registered only alongside the switch it mirrors (issue #242). Unlike an instruction-bar checkbox, whose
+    // Shortcut `SuggestModalCommandBuilder.build` skips with the bar, a keyboard command's scope registration
+    // Always runs — so leaving this in would keep an invisible way to override `defaultSplitTargetMode` after
+    // The visible one is gone.
+    if (this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
+      builder.addKeyboardCommand({
+        key: 'm',
+        modifiers: ['Alt'],
+        onKey: () => {
+          this.setSplitTargetMode({
+            shouldCarryOverInputValue: false,
+            splitTargetMode: this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create
+          });
+          return false;
+        },
+        purpose: 'to switch between create and merge'
+      });
+    }
 
     if (this.canSwitchToSmartCut) {
       builder.addKeyboardCommand({

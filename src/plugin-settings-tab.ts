@@ -1933,7 +1933,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('This seeds the ');
               appendCodeBlock(f, 'Include files');
-              f.appendText(' checkbox in the reorder dialog, where the choice is actually made. Folders and files are always numbered as two separate sequences, because the file explorer sorts folders above files.');
+              f.appendText(' checkbox in the reorder dialog, where the choice is made while that checkbox is offered — with per-operation option overrides turned off, this setting decides it outright. Folders and files are always numbered as two separate sequences, because the file explorer sorts folders above files.');
             }),
             name: 'Should include files when reordering by default',
             render: (setting) => {
@@ -1978,13 +1978,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('Whether to show the instruction bar at the bottom of the merge/split/swap modal dialogs.');
+              f.appendText('Whether the modal dialogs offer the controls that override a setting for a single operation.');
               f.createEl('br');
-              f.appendText('The instruction bar contains the checkboxes, dropdowns, and keyboard hints for toggling per-operation options.');
+              f.appendText('Covers the instruction bar at the bottom of the merge/split/swap pickers, with its checkboxes, dropdowns and keyboard hints; the ');
+              appendCodeBlock(f, 'Include files');
+              f.appendText(' checkbox in the reorder dialog; and the ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' / ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' switch above the split picker.');
               f.createEl('br');
-              f.appendText('When disabled, the modals use the configured default settings and the option-toggle keyboard shortcuts are unavailable.');
+              f.appendText('When disabled, every operation uses the configured default settings and the option-toggle keyboard shortcuts are unavailable, so this page is the only place those choices are made.');
+              f.createEl('br');
+              f.appendText('The ');
+              appendCodeBlock(f, 'Don\'t ask again');
+              f.appendText(' checkbox in the confirmation dialogs is NOT covered: it changes a setting rather than overriding one for a single operation.');
             }),
-            name: 'Should show modal instructions',
+            name: 'Should show per-operation option overrides',
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldShowModalInstructions', valueComponent: toggle });

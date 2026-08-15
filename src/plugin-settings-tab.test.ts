@@ -465,11 +465,11 @@ describe('PluginSettingsTab', () => {
     expect(() => findToggle('Should block commands on excluded paths')).toThrow();
   });
 
-  it('should render the show-modal-instructions toggle bound to its setting', async () => {
+  it('should render the per-operation-overrides toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    expect(findToggle('Should show modal instructions').getValue()).toBe(true);
+    expect(findToggle('Should show per-operation option overrides').getValue()).toBe(true);
   });
 
   it('should render the lock-all-notes toggle bound to its setting', async () => {

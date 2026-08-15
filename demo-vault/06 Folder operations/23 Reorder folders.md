@@ -45,6 +45,10 @@ folders above files — one merged numbering could never be shown in the order i
 reordering by default**, which is off, so reordering subfolders never silently renames the notes beside
 them.
 
+Prefer the settings page to be the last word? Turn
+**[Should show per-operation option overrides](<../10 UI/36 Settings.md>)** off and the checkbox is gone —
+the reorder simply does what **Should include files when reordering by default** says.
+
 ## The numbering is yours
 
 Nothing about the `1.` prefix shape is hard-coded — **Reordered folder name template** decides it:

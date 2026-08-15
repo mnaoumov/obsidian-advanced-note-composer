@@ -41,6 +41,9 @@ same-note move of [05 Extract selection](<../02 Extract/05 Extract selection.md>
   opens in. It defaults to `Create`.
 - `Treat title as path` (`Alt+2`) and `Allow split into unresolved path` (`Alt+6`) only mean something
   while a note is being created, so `Merge` greys them out and gives your choices back on the way out.
+- Turning **[Should show per-operation option overrides](<../10 UI/36 Settings.md>)** off removes the switch
+  **and** `Alt+M`, so every split opens in your `Default split target mode` and stays there. Nothing hidden
+  keeps working behind the control that is gone.
 
 ## The box is remembered per mode
 
