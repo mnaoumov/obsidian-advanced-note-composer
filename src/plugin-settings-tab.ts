@@ -861,58 +861,53 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       }),
       this.settingPage({
         desc: 'Swapping exchanges two files or two folders, each taking the other\'s place.',
+        // Issue #241 removed the `Swap file` / `Swap folders` subheadings issue #226 had given this page.
+        // `Should ask before swapping` applies to both kinds of swap, so it belonged to neither, and
+        // `Swap file` held nothing else; the three folder rows name their own target type, so the headings
+        // Carried nothing their names lack. The `Merge` page keeps its subheadings (issue #240) — there
+        // Each row genuinely belongs to exactly one command.
         items: [
-          this.settingGroupEx({
-            heading: 'Swap file',
-            items: [
-              this.settingEx({
-                desc: 'Whether to show a confirmation dialog before swapping files or folders.',
-                name: 'Should ask before swapping',
-                render: (setting) => {
-                  setting.addToggle((toggle) => {
-                    this.bind({ propertyName: 'shouldAskBeforeSwapping', valueComponent: toggle });
-                  });
-                }
-              })
-            ]
+          this.settingEx({
+            desc: 'Whether to show a confirmation dialog before swapping files or folders.',
+            name: 'Should ask before swapping',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldAskBeforeSwapping', valueComponent: toggle });
+              });
+            }
           }),
-          this.settingGroupEx({
-            heading: 'Swap folders',
-            items: [
-              this.settingEx({
-                desc: 'Default setting for whether to include child folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
-                name: 'Should include child folders when swapping folders',
-                render: (setting) => {
-                  setting.addToggle((toggle) => {
-                    this.bind({ propertyName: 'shouldIncludeChildFoldersWhenSwappingByDefault', valueComponent: toggle });
-                  });
-                }
-              }),
-              this.settingEx({
-                desc: 'Default setting for whether to include parent folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
-                name: 'Should include parent folders when swapping folders',
-                render: (setting) => {
-                  setting.addToggle((toggle) => {
-                    this.bind({ propertyName: 'shouldIncludeParentFoldersWhenSwappingByDefault', valueComponent: toggle });
-                  });
-                }
-              }),
-              this.settingEx({
-                desc: createFragment((f) => {
-                  f.appendText('Default setting for whether to swap entire folder structure. Can be changed in the swap folders modal dialog.');
-                  f.createEl('br');
-                  f.appendText('If enabled, the entire folder structure will be swapped.');
-                  f.createEl('br');
-                  f.appendText('If disabled, only the top-level files of the folders will be swapped.');
-                }),
-                name: 'Should swap entire folder structure',
-                render: (setting) => {
-                  setting.addToggle((toggle) => {
-                    this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
-                  });
-                }
-              })
-            ]
+          this.settingEx({
+            desc: 'Default setting for whether to include child folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
+            name: 'Should include child folders when swapping folders',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldIncludeChildFoldersWhenSwappingByDefault', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: 'Default setting for whether to include parent folders into the swap folder modal. Can be changed in the swap folders modal dialog.',
+            name: 'Should include parent folders when swapping folders',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldIncludeParentFoldersWhenSwappingByDefault', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Default setting for whether to swap entire folder structure. Can be changed in the swap folders modal dialog.');
+              f.createEl('br');
+              f.appendText('If enabled, the entire folder structure will be swapped.');
+              f.createEl('br');
+              f.appendText('If disabled, only the top-level files of the folders will be swapped.');
+            }),
+            name: 'Should swap entire folder structure',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
+              });
+            }
           })
         ],
         name: 'Swap'
