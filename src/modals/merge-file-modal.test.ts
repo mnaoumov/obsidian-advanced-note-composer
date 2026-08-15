@@ -200,6 +200,8 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         isPathIgnored: vi.fn().mockReturnValue(false),
         shouldAllowOnlyCurrentFolderByDefault: false,
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
+        // Read by the picker since issue #240: with it on, an excluded note is offered as a destination.
+        shouldAlwaysMergeExcludedItems: false,
         shouldAskBeforeMerging,
         shouldFixFootnotesByDefault: true,
         shouldMergeHeadingsByDefault: false,

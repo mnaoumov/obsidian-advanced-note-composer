@@ -8,9 +8,17 @@ one. The settings tab opens instead as a short list of **pages** you navigate in
 1. Open `Settings -> Advanced Note Composer`.
 2. You get a list of pages rather than a wall of settings: `Merge`, `Split/extract`, `Swap`,
    `Smart cut & paste`, `Frontmatter`, `Title`, `Include/exclude`, the folder pages, and `UI`.
-3. Click `Merge`. Inside it, the two related halves are separated by subheadings — `Merge file` and
-   `Merge folder`.
+3. Click `Merge`. Inside it, subheadings separate the settings by **which command they apply to** —
+   `All merges` for the ones every merge honors, then `Merge file`,
+   `Merge folder contents into a single file` and `Merge current folder with another folder`.
 4. Go back and try `Include/exclude`, which splits the same way into `Paths` and `Commands`.
+
+## Why a subheading names a whole command
+
+The two folder merges are different operations, and most of their settings apply to exactly one of
+them. A single `Merge folder` heading over both of them read as though the settings underneath covered
+both, so a description naming one command looked like the other command was undocumented. The heading
+now matches the command palette entry word for word, which is the thing you can check against.
 
 ## How a page is laid out
 

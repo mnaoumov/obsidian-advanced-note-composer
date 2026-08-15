@@ -215,8 +215,9 @@ describe('PluginSettingsTab', () => {
       'Frontmatter': [],
       // Issue #225.
       'Include/exclude': ['Paths', 'Commands'],
-      // Issue #224.
-      'Merge': ['Merge file', 'Merge folder'],
+      // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
+      // Six of its ten rows silently meant only the one their descriptions named.
+      'Merge': ['All merges', 'Merge file', 'Merge folder contents into a single file', 'Merge current folder with another folder'],
       'Move/flatten folders': [],
       'Reorder': [],
       // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
@@ -236,8 +237,10 @@ describe('PluginSettingsTab', () => {
     expect(headings).toEqual([
       'Common',
       'Merge/split/extract strategies',
+      'All merges',
       'Merge file',
-      'Merge folder',
+      'Merge folder contents into a single file',
+      'Merge current folder with another folder',
       'Swap file',
       'Swap folders',
       'Notice',
@@ -285,6 +288,60 @@ describe('PluginSettingsTab', () => {
       'Should include frontmatter when splitting',
       'Should extract a properties selection as properties'
     ]);
+  });
+
+  // Issue #240: the reporter read a description under `Merge folder` that named only
+  // `Merge folder contents into a single file...` and concluded the OTHER folder merge was undocumented.
+  // It was not — one header sat over both commands. Every row now belongs to the header naming the
+  // Command that reads it, and this is the assertion that keeps it that way: a row added to the wrong
+  // Group fails here rather than quietly reintroducing the ambiguity.
+  it('should split the merge page by the command each row belongs to', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    expect(containers.get('All merges')).toEqual([
+      'Merge template',
+      'Should ask before merging',
+      'Should always merge excluded items',
+      'Attachment extensions'
+    ]);
+    expect(containers.get('Merge file')).toEqual([
+      'Should open note after merge',
+      'Should move attachments when merging a file'
+    ]);
+    expect(containers.get('Merge folder contents into a single file')).toEqual([
+      'Merge folder into file note name',
+      'Merge folder into file location',
+      'Should convert folders to headings when merging a folder',
+      'Should move attachments when merging a folder',
+      'Empty folders after merging a folder',
+      'Should open the merged note after merging folder contents into a single file'
+    ]);
+    expect(containers.get('Merge current folder with another folder')).toEqual([
+      'Should include child folders when merging folders',
+      'Should include parent folders when merging folders',
+      'Should open the first note after merging folders'
+    ]);
+  });
+
+  // The half of issue #240 that a header alone cannot fix: a row under a command-named header must not
+  // Describe itself in terms of a DIFFERENT command, which is what sent the reporter looking.
+  it('should name only its own command in each folder-merge description', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const containers = collectContainers(tab);
+    for (const rowName of containers.get('Merge current folder with another folder') ?? []) {
+      // Asserted first so the negative below cannot pass vacuously on an unrendered description.
+      expect(findDesc(rowName)).not.toBe('');
+      expect(findDesc(rowName)).toContain('Merge current folder with another folder');
+      expect(findDesc(rowName)).not.toContain('Merge folder contents into a single file');
+    }
+
+    for (const rowName of containers.get('Merge folder contents into a single file') ?? []) {
+      expect(findDesc(rowName)).not.toBe('');
+      expect(findDesc(rowName)).not.toContain('Merge current folder with another folder');
+    }
   });
 
   it('should keep the folder-note location above the templates it governs', async () => {

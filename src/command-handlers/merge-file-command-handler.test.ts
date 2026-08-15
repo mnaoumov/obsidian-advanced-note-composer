@@ -102,7 +102,12 @@ function createMockFile(path = 'test/note.md'): TFile {
   return strictProxy<TFile>({ path });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): MergeFileCommandHandlerConstructorParams {
+function createMockParams(
+  isPathIgnored = false,
+  shouldAddCommandsToSubmenu = true,
+  shouldBlockCommandOnPath = false,
+  shouldAlwaysMergeExcludedItems = false
+): MergeFileCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
@@ -111,6 +116,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
+        shouldAlwaysMergeExcludedItems,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
         shouldMoveAttachmentsWhenMergingFile: true
       })
@@ -234,10 +240,37 @@ describe('MergeFileCommandHandler', () => {
       resourceLockComponent: params.resourceLockComponent,
       shouldFixFootnotes: true,
       shouldMergeHeadings: false,
+      shouldMergeIgnoredTarget: false,
       sourceFile: file,
       targetFile
     });
     expect(mockMergeFile).toHaveBeenCalled();
+  });
+
+  // Issue #240: every other merge honored `Should always merge excluded items`, so an excluded
+  // Destination was refused here alone however the setting was set. The composer defaults the flag to
+  // `false`, which is why NOT passing it looked like working code.
+  it('should let the merge into an excluded target through when excluded items are always merged', async () => {
+    const params = createMockParams(false, true, false, true);
+    const handler = toTestable(new MergeFileCommandHandler(params));
+    const file = createMockFile();
+    const targetFile = createMockFile();
+
+    mockPrepareForMergeFile.mockResolvedValue({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      insertMode: InsertMode.Append,
+      isNewTargetFile: true,
+      shouldAllowOnlyCurrentFolder: false,
+      shouldAllowSplitIntoUnresolvedPath: true,
+      shouldFixFootnotes: true,
+      shouldMergeHeadings: false,
+      targetFile
+    });
+    MockMergeComposer.prototype.mergeFile = vi.fn().mockResolvedValue(undefined);
+
+    await handler.executeFile(file);
+
+    expect(MockMergeComposer.mock.calls[0]?.[0]).toMatchObject({ shouldMergeIgnoredTarget: true });
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {

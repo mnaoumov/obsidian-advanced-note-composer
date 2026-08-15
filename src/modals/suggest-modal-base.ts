@@ -72,6 +72,14 @@ interface TraverseBookmarksParams {
 export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected allowCreateNewFile: boolean;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  /**
+   * When `true`, a note whose path is excluded/ignored in the plugin settings is still offered as a
+   * suggestion. Default `false`, and opt-in on purpose: only the merge pickers turn it on, and only while
+   * `Should always merge excluded items` is on (issue #240). A merge that is allowed to swallow excluded
+   * items has to be able to pick one as its destination, whereas the split picker has no such setting and
+   * must keep excluding them.
+   */
+  protected shouldAllowIgnoredPaths = false;
   protected shouldAllowOnlyCurrentFolder: boolean;
 
   /**
@@ -491,7 +499,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (this.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
+        if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -513,7 +521,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   /* v8 ignore start -- shouldIncludeFile has many branches tested individually but v8 can't attribute coverage across test runs. */
   private shouldIncludeFile(file: TFile): boolean {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
       return false;
     }
 

@@ -8,44 +8,62 @@ the thing that does it. To find a setting by its display name instead, see
 
 ## Merge
 
+The `Merge` page groups its settings by **which command reads them**, and so does this list. The two
+folder merges are separate operations, so a setting almost always belongs to exactly one of them.
+
+### All merges
+
 - `mergeTemplate`
   - wraps merged content. `{{content}}` is required — see [31 Templates](<../09 Titles, links and frontmatter/31 Templates.md>).
 - `shouldAskBeforeMerging`
   - show a confirmation dialog before a merge runs.
-- `shouldMergeHeadingsByDefault`
-  - merge under a matching heading in the target instead of appending, by default.
-- `shouldOpenNoteAfterMerge`
-  - open the target note once a merge lands.
-- `shouldMoveAttachmentsWhenMergingFile`
-  - carry a merged note's own attachments with it.
 - `shouldAlwaysMergeExcludedItems`
-  - merge notes on ignored paths too, instead of skipping and reporting them.
+  - merge notes on ignored paths too, instead of skipping and reporting them. With it on, an excluded
+    note is offered in the destination picker as well.
 - `attachmentExtensions`
   - markdown files that are really attachments (default `.excalidraw.md`), never merged as text.
-- `shouldUseSourceTitleWhenTargetHasNoTitle`
-  - give the merged note the source's title when the target has none of its own.
+    Splitting and flattening classify them the same way.
 
-## Merge folder
+### Merge file
 
-- `shouldIncludeChildFoldersWhenMergingByDefault`
-  - include the folder's subfolders in a folder merge.
-- `shouldIncludeParentFoldersWhenMergingByDefault`
-  - mirror the folder's parents into the destination.
-- `shouldOpenFirstNoteAfterMergingFolder`
-  - open the destination folder's first note once a folder merge lands.
-- `mergeFolderIntoFileLocation`
-  - where the note produced by `Merge folder contents into a single file` is placed.
+- `shouldOpenNoteAfterMerge`
+  - open the target note once a file merge lands. Neither folder merge opens what it merges.
+- `shouldMoveAttachmentsWhenMergingFile`
+  - carry a merged note's own attachments with it.
+
+### Merge folder contents into a single file
+
 - `mergeFolderIntoFileNoteNameTemplate`
-  - names that note. Empty means name it after the folder.
+  - names the note the merge produces. Empty means name it after the folder.
+- `mergeFolderIntoFileLocation`
+  - where that note is placed.
 - `shouldConvertFoldersToHeadingsWhenMergingFolder`
   - mirror the folder hierarchy as headings in the merged note.
 - `shouldMoveAttachmentsWhenMergingFolder`
   - carry the merged notes' attachments into the merged note's attachment folder.
-- `shouldOpenNoteAfterMergingFolderIntoFile`
-  - open the merged note at the very end.
 - `emptyFolderBehaviorAfterMergingFolder`
   - what happens to folders the merge empties: delete, delete sub-folders only, delete with empty
     parents, or keep.
+- `shouldOpenNoteAfterMergingFolderIntoFile`
+  - open the merged note at the very end.
+
+### Merge current folder with another folder
+
+- `shouldIncludeChildFoldersWhenMergingByDefault`
+  - offer the merged folder's own subfolders as destinations in the picker.
+- `shouldIncludeParentFoldersWhenMergingByDefault`
+  - offer the merged folder's own parent folders as destinations in the picker.
+- `shouldOpenFirstNoteAfterMergingFolder`
+  - open the destination folder's first note once the merge lands.
+
+### Read by merging, but living on another page
+
+- `shouldMergeHeadingsByDefault`
+  - merge under a matching heading in the target instead of appending, by default. On
+    `Merge/split/extract strategies`, because splitting reads it too.
+- `shouldUseSourceTitleWhenTargetHasNoTitle`
+  - give the merged note the source's title when the target has none of its own. On the `Frontmatter`
+    page with the rest of the property handling.
 
 ## Split and extract
 
