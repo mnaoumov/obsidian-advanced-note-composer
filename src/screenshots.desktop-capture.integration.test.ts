@@ -3,7 +3,7 @@
  *
  * Produces the desktop screenshots the community-store listing needs
  * (T461-P21), driving a staged note in a real Obsidian and writing
- * `images/screenshot-desktop-N.png`.
+ * `images/screenshots/screenshot-desktop-N.png`.
  *
  * Each shot shows a DIFFERENT capability, and each is CAPTIONED by
  * `labelScreenshot` after capture — a listing carousel shows screenshots one at
@@ -79,7 +79,7 @@ const SUBJECT_NOTE_PATH = 'Screenshots/Project plan.md';
  */
 const HEADING_LINE = 6;
 
-const IMAGES_DIRECTORY = join(process.cwd(), 'images');
+const IMAGES_DIRECTORY = join(process.cwd(), 'images', 'screenshots');
 
 beforeAll(async () => {
   const vault = getTemporaryVault();
