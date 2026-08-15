@@ -323,6 +323,45 @@ describe('ReorderChildFoldersCommandHandler', () => {
     expect(getChildFileNames('parent')).toEqual(['1. Draft.md']);
   });
 
+  it('should offer the checkbox while per-operation overrides are shown', async () => {
+    initApp({
+      'parent/Alpha/note.md': 'a',
+      'parent/Beta/note.md': 'b',
+      'parent/Draft.md': 'd'
+    });
+    const { handler } = createChildHandler();
+    let toggleLabel: null | string = null;
+    driveModal = (params): void => {
+      toggleLabel = params.toggle?.label ?? null;
+    };
+
+    await handler.executeFolder(getFolder('parent'));
+
+    expect(toggleLabel).toBe('Include files');
+  });
+
+  it('should drop the checkbox and keep the configured default when per-operation overrides are hidden', async () => {
+    initApp({
+      'parent/Alpha/note.md': 'a',
+      'parent/Beta/note.md': 'b',
+      'parent/Draft.md': 'd'
+    });
+    const { handler } = createChildHandler({
+      shouldIncludeFilesWhenReorderingByDefault: true,
+      shouldShowModalInstructions: false
+    });
+    let hasToggle = true;
+    driveModal = (params): void => {
+      hasToggle = params.toggle !== null;
+    };
+
+    await handler.executeFolder(getFolder('parent'));
+
+    expect(hasToggle).toBe(false);
+    // Hiding the control must not change what the reorder does — the seeded default still includes the files.
+    expect(getChildFileNames('parent')).toEqual(['1. Draft.md']);
+  });
+
   it('should offer the already-numbered items before the unnumbered ones, whichever order they come in', async () => {
     initApp({
       'parent/9. Beta/note.md': 'b',
@@ -575,6 +614,7 @@ function createHandlerParams(showNotice: PluginNoticeComponent['showNotice'], se
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: () => false,
         shouldIncludeFilesWhenReorderingByDefault: false,
+        shouldShowModalInstructions: true,
         shouldShowOperationNotices: true,
         ...settingsOverrides
       })
