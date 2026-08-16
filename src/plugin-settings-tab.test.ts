@@ -304,6 +304,18 @@ describe('PluginSettingsTab', () => {
     ]);
   });
 
+  // Issue #243: the lock row lived on `Split/extract`, but no split or extract reads it — the split
+  // Modal's two uses are its `switch to smart cut` paths, which mark through the same helper the two mark
+  // Commands use. It is the one row sitting FLAT on the smart cut page, above the groups, because it
+  // Governs the mark rather than any one notice or move direction.
+  it('should put the lock-all-notes row flat on the smart cut page and not on split/extract', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    expect(containers.get('Smart cut & paste')).toEqual(['Should lock all notes when marking selection']);
+    expect(containers.get('Split/extract')).not.toContain('Should lock all notes when marking selection');
+  });
+
   // Issue #240: the reporter read a description under `Merge folder` that named only
   // `Merge folder contents into a single file...` and concluded the OTHER folder merge was undocumented.
   // It was not — one header sat over both commands. Every row now belongs to the header naming the
@@ -477,6 +489,19 @@ describe('PluginSettingsTab', () => {
     renderRows(tab);
 
     expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
+  });
+
+  // Issue #243: the description named only `Mark selection to move`, while `Mark heading to move` and the
+  // Split modal's switch-to-smart-cut mark through the same helper and are locked by it just as much.
+  it('should describe the lock-all-notes row as covering every way a selection gets marked', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const desc = findDesc('Should lock all notes when marking selection');
+    expect(desc).toContain('Mark selection to move');
+    expect(desc).toContain('Mark heading to move');
+    expect(desc).toContain('Switching a split over to smart cut & paste');
+    expect(desc).toContain('only the source note is locked');
   });
 
   it('should render the always-merge-excluded-items toggle bound to its setting', async () => {

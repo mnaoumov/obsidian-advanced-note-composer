@@ -19,6 +19,8 @@ interface NavigationResult {
   readonly mergeSubheadings: string[];
   readonly onOpen: string[];
   readonly pageDescription: null | string;
+  readonly smartCutRows: string[];
+  readonly smartCutSubheadings: string[];
   readonly swapRows: string[];
   readonly swapSubheadings: string[];
 }
@@ -89,9 +91,32 @@ describe('settings page navigation', () => {
 
         app.setting.closePage();
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        // Issue #243: the third shape — a page that MIXES a flat row with groups. Neither of the two above
+        // Proves Obsidian renders such a page at all, and the unit test cannot: it only sees the declared
+        // Tree.
+        const smartCutEntry = findRow('Smart cut & paste');
+        if (!smartCutEntry) {
+          throw new Error('The `Smart cut & paste` page entry was not found.');
+        }
+
+        smartCutEntry.click();
+        await waitUntil({
+          message: 'the `Smart cut & paste` page did not open',
+          predicate: () => findRow('Should lock all notes when marking selection') !== null
+        });
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        const smartCutSubheadings = collectSubheadings();
+        const smartCutRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
+          .map((el) => el.textContent)
+          .filter((name) => name !== '');
+
+        app.setting.closePage();
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
         app.setting.close();
 
-        return { mergeFolderRows, mergeSubheadings, onOpen, pageDescription, swapRows, swapSubheadings };
+        return { mergeFolderRows, mergeSubheadings, onOpen, pageDescription, smartCutRows, smartCutSubheadings, swapRows, swapSubheadings };
 
         // A heading is a `.setting-item-heading` inside the page's `.setting-group`, NOT the group itself:
         // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
@@ -166,6 +191,18 @@ describe('settings page navigation', () => {
       'Should include child folders when swapping folders',
       'Should include parent folders when swapping folders',
       'Should swap entire folder structure'
+    ]);
+
+    // Issue #243: the lock row moved here off `Split/extract`, and it sits FLAT above the groups because
+    // It governs the mark rather than any one notice or move direction. Obsidian renders it before the
+    // First subheading — the mixed shape works, which is the whole point of asserting it here.
+    expect(result.smartCutRows[0]).toBe('Should lock all notes when marking selection');
+    expect(result.smartCutRows[1]).toBe('Notice');
+    expect(result.smartCutSubheadings).toEqual([
+      'Notice',
+      'At cursor',
+      'To top of file',
+      'To bottom of file'
     ]);
   });
 });
