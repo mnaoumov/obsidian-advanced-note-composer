@@ -195,7 +195,8 @@ await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteTo
 
 By default only the source note is locked. The block below locks **all** notes while a mark
 is pending. Manual equivalent: toggle
-**Should lock all notes when marking selection** in **Settings → Advanced Note Composer**.
+**Should lock all notes when marking selection** in
+**Settings → Advanced Note Composer → Smart cut & paste**.
 
 ```code-button
 ---

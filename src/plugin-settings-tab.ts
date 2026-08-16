@@ -689,23 +689,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('When you run ');
-              appendCodeBlock(f, 'Mark selection to move');
-              f.appendText(
-                ', whether to lock every note (blocking edits) until the move is completed or cancelled, so you must finish the extraction before editing anything.'
-              );
-              f.createEl('br');
-              f.appendText('When disabled, only the source note is locked.');
-            }),
-            name: 'Should lock all notes when marking selection',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldLockAllNotesWhenMarkingSelection', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
               f.appendText('Default setting for whether to allow split into unresolved path. Can be changed in the split modal dialog.');
               f.createEl('br');
               f.appendText('Unresolved path comes from links like ');
@@ -915,6 +898,32 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       this.settingPage({
         desc: 'Mark a selection in one note, then move it to the cursor, the top, or the bottom of another note.',
         items: [
+          // Issue #243 moved this row off the `Split/extract` page: no split or extract ever reads it —
+          // Both of the split modal's uses are its `switch to smart cut` paths, which mark the selection
+          // Through the same `markSelectionToMove()` helper the two mark commands use. It sits FLAT on the
+          // Page, above the groups, because it governs the mark itself rather than any one notice or
+          // Move direction.
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('When you run ');
+              appendCodeBlock(f, 'Mark selection to move');
+              f.appendText(' or ');
+              appendCodeBlock(f, 'Mark heading to move');
+              f.appendText(
+                ', whether to lock every note (blocking edits) until the move is completed or cancelled, so you must finish the move before editing anything.'
+              );
+              f.createEl('br');
+              f.appendText('When disabled, only the source note is locked.');
+              f.createEl('br');
+              f.appendText('Switching a split over to smart cut & paste — from the picker or from the confirmation dialog — marks the selection the same way, so it is locked the same way too.');
+            }),
+            name: 'Should lock all notes when marking selection',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldLockAllNotesWhenMarkingSelection', valueComponent: toggle });
+              });
+            }
+          }),
           this.settingGroupEx({
             heading: 'Notice',
             items: [
