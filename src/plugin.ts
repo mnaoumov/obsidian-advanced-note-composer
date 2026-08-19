@@ -7,6 +7,8 @@ import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin
 import type { Level } from './markdown-heading-document.ts';
 
 import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
+import { CreateEmptyNoteAtCursorEditorCommandHandler } from './command-handlers/create-empty-note-at-cursor-editor-command-handler.ts';
+import { CreateEmptyNoteInFolderCommandHandler } from './command-handlers/create-empty-note-in-folder-command-handler.ts';
 import { CreateFolderWithNotesCommandHandler } from './command-handlers/create-folder-with-notes-command-handler.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
@@ -251,6 +253,18 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent,
         selectionHighlightComponent
+      }),
+      new CreateEmptyNoteAtCursorEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new CreateEmptyNoteInFolderCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent
       }),
       new ExtractBetweenHorizontalRulesEditorCommandHandler({
         app: this.app,

@@ -4,23 +4,18 @@ import type {
 } from 'obsidian';
 
 import { normalizePath } from 'obsidian';
-import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
 import { createFolderSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { trimEnd } from 'obsidian-dev-utils/string';
 
-import type { Frontmatter } from '../frontmatter-merge.ts';
 import type {
   ItemSelectorBaseConstructorParams,
   SelectItemResult
 } from './item-selector-base.ts';
 
 import { getAvailableFolderPath } from '../available-folder-path.ts';
+import { createNoteFromTypedName } from '../create-note.ts';
 import { fixFileName } from '../filename-validation.ts';
-import { transformAndFixFileName } from '../name-transform.ts';
-import {
-  FrontmatterTitleMode,
-  SplitTargetMode
-} from '../plugin-settings.ts';
+import { SplitTargetMode } from '../plugin-settings.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
@@ -106,54 +101,31 @@ export class SplitItemSelector extends ItemSelectorBase {
     };
   }
 
+  /**
+   * Creates the note the picker's `Create` mode resolved to, through the shared
+   * {@link createNoteFromTypedName} so the file explorer's `Create empty note in folder...` applies exactly
+   * the same naming rules (issue #244).
+   *
+   * What stays here is what only a SPLIT has: the source note the transform and the links resolve against,
+   * the folder prefix the picker's own choices produce, and the own-folder move — whose
+   * `splitIntoFolderNoteNameTemplate` reads that source note through its tokens.
+   *
+   * @param fileName - The name as typed.
+   * @returns The created note.
+   */
   private async createNewMarkdownFileFromLinktext(fileName: string): Promise<TFile> {
-    fileName = trimEnd({ $string: fileName, suffix: '.md' });
-    const fixedFileName = `${await this.resolveFileName(fileName)}.md`;
-    const prefix = this.resolveTargetFolderPrefix();
-    const file = await this.app.fileManager.createNewMarkdownFileFromLinktext(prefix + fixedFileName, this.sourceFile.path);
-
-    const overriddenBasename = this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
-      ? await this.moveIntoOwnFolder(file)
-      : null;
-
-    /*
-     * A `splitIntoFolderNoteNameTemplate` override renames the note away from the typed name, so the
-     * typed name is recorded as an alias / frontmatter title exactly like any other changed title
-     * (issue #153) — `Foo/Overview.md` still carries `Foo`, so `[[Foo]]` keeps resolving.
-     */
-    const isInvalidTitle = (overriddenBasename ?? file.basename) !== fileName;
-
-    if (isInvalidTitle && this.pluginSettingsComponent.settings.shouldAddInvalidTitleToNoteAlias) {
-      // The note was just created, so there is no open editor to lock while its alias is added.
-      await addAlias({ alias: fileName, app: this.app, pathOrFile: file, resourceLockComponent: null });
-    }
-
-    let shouldAddTitleToFrontmatter = false;
-
-    switch (this.pluginSettingsComponent.settings.frontmatterTitleMode) {
-      case FrontmatterTitleMode.None: {
-        break;
-      }
-      case FrontmatterTitleMode.UseAlways: {
-        shouldAddTitleToFrontmatter = true;
-        break;
-      }
-      case FrontmatterTitleMode.UseForInvalidTitleOnly: {
-        shouldAddTitleToFrontmatter = isInvalidTitle;
-        break;
-      }
-      default: {
-        throw new Error(`Invalid frontmatter title mode: ${this.pluginSettingsComponent.settings.frontmatterTitleMode as string}`);
-      }
-    }
-
-    if (shouldAddTitleToFrontmatter) {
-      await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
-        frontmatter.title = fileName;
-      });
-    }
-
-    return file;
+    return await createNoteFromTypedName({
+      app: this.app,
+      contextFile: this.sourceFile,
+      fileName,
+      folderPrefix: this.resolveTargetFolderPrefix(),
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      relocateNote: this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
+        ? async (file: TFile): Promise<null | string> => await this.moveIntoOwnFolder(file)
+        : null,
+      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
+      sourcePath: this.sourceFile.path
+    });
   }
 
   /**
@@ -198,27 +170,6 @@ export class SplitItemSelector extends ItemSelectorBase {
     }
 
     return null;
-  }
-
-  /**
-   * Runs the typed target name through the `Name transform template` and then the invalid-character pass
-   * (issue #196), in that order. The split's SOURCE note is the Templater context, which is the note the
-   * user is actually working on.
-   *
-   * @param fileName - The name as typed.
-   * @returns The transformed, sanitized name.
-   */
-  private async resolveFileName(fileName: string): Promise<string> {
-    const { settings } = this.pluginSettingsComponent;
-    return await transformAndFixFileName({
-      app: this.app,
-      contextFile: this.sourceFile,
-      fileName,
-      nameTransformTemplate: settings.nameTransformTemplate,
-      replacement: settings.replacement,
-      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
-      shouldTreatTitleAsPath: this.shouldTreatTitleAsPath
-    });
   }
 
   /**

@@ -464,6 +464,58 @@ describe('splitFile', () => {
     expect(editor.replaceSelection).toHaveBeenCalledWith('');
   });
 
+  it('should write nothing into the target when the extract is empty, while still leaving the residual (issue #244)', async () => {
+    // `Create empty note at cursor...`: the note is created EMPTY and the link is left at the cursor.
+    // Running the insert anyway would wrap the template around nothing and leave its separators behind.
+    vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue('[[target]]');
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      editor,
+      selectedText: '',
+      settingsOverrides: {
+        // The shipped default, whose leading separator is exactly what would show up in an "empty" note.
+        mergeTemplate: '\n\n{{content}}',
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
+      }
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
+  });
+
+  it('should report an empty extract as a creation rather than as a split (issue #244)', async () => {
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      pluginNoticeComponent,
+      selectedText: ''
+    });
+
+    await composer.splitFile();
+
+    expect(getLastNoticeText(pluginNoticeComponent)).toContain('Created empty note');
+  });
+
+  it('should still replace its token when a MOVE has nothing to move (issue #244)', async () => {
+    // The `insertToken` half of the empty-extract guard: the token is already in the target, and only the
+    // Insert removes it — skipping that would leave the raw token sitting in the note.
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      editor,
+      insertToken: 'MOVE-TOKEN',
+      selectedText: '',
+      targetCursorOffset: 0
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).not.toContain('MOVE-TOKEN');
+  });
+
   it('should throw and roll back the target for an invalid textAfterExtractionMode', async () => {
     const editor = createEditorDouble();
     const composer = createComposer({
