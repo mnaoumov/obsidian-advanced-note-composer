@@ -11,3 +11,4 @@ its place.
 | [06 Extract heading](<./06 Extract heading.md>) | A heading and its whole section, from anywhere inside it |
 | [07 Text after extraction](<./07 Text after extraction.md>) | What replaces the text you moved: a link, an embed, or nothing |
 | [08 Extract between horizontal rules](<./08 Extract between horizontal rules.md>) | The block between the rules nearest the cursor — no selecting, which suits mobile |
+| [37 Create empty note](<./37 Create empty note.md>) | Extracting NOTHING: an empty note plus a link at the cursor, from the editor or the file explorer |

@@ -279,6 +279,13 @@ export class SplitComposer extends ComposerBase {
             // Refs and defs both remain in the same note, so they stay resolved.
             this.replaceSourceSelection();
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
+          } else if (this.isEmptyExtract()) {
+            // Nothing was extracted, so nothing is written into the target (issue #244). Running the insert
+            // Anyway would wrap the template around empty content and leave its separators behind — with the
+            // Shipped `mergeTemplate` (`\n\n{{content}}`) a note asked to be EMPTY would open holding two
+            // Blank lines. The source still gets its residual, which is the whole point of the flow: the
+            // Note is created and the link is left at the cursor.
+            this.replaceSourceSelection();
           } else {
             // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
             // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
@@ -322,15 +329,7 @@ export class SplitComposer extends ComposerBase {
       // `smartCutAndPasteCompletionFeedback` setting — reporting either here would say it twice.
       if (!this.isMultipleSplit && !this.smartCutAndPasteMoveKind) {
         showOperationCompletionNotice({
-          // A same-note extract has one side, so naming both would read `Split note A into A`.
-          content: this.isSameNoteMove()
-            ? await buildOperationNoticeContent({
-              app: this.app,
-              pluginSettingsComponent: this.pluginSettingsComponent,
-              sourcePathOrAbstractFile: this.sourceFile.path,
-              verb: 'Moved the extracted content within note'
-            })
-            : await this.buildCompletionContent('Split', true),
+          content: await this.buildSplitCompletionContent(),
           pluginNoticeComponent: this.pluginNoticeComponent,
           pluginSettingsComponent: this.pluginSettingsComponent
         });
@@ -486,6 +485,38 @@ export class SplitComposer extends ComposerBase {
     );
   }
 
+  /**
+   * The completion notice's wording, which has to name what actually happened rather than the command that
+   * was run.
+   *
+   * A same-note extract has one side, so naming both would read `Split note A into A`; an empty extract
+   * (issue #244) moved nothing anywhere, so `Split note A into B` would describe an operation that did not
+   * take place — what it did was create B.
+   *
+   * @returns The notice content.
+   */
+  private async buildSplitCompletionContent(): Promise<DocumentFragment> {
+    if (this.isSameNoteMove()) {
+      return await buildOperationNoticeContent({
+        app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        sourcePathOrAbstractFile: this.sourceFile.path,
+        verb: 'Moved the extracted content within note'
+      });
+    }
+
+    if (this.isEmptyExtract()) {
+      return await buildOperationNoticeContent({
+        app: this.app,
+        pluginSettingsComponent: this.pluginSettingsComponent,
+        sourcePathOrAbstractFile: this.targetFile.path,
+        verb: 'Created empty note'
+      });
+    }
+
+    return await this.buildCompletionContent('Split', true);
+  }
+
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
     const insertToken = ensureNonNullable(this.insertToken);
     // A pinned `targetCursorOffset` (the paste cursor) is used as-is; otherwise the offset is derived
@@ -522,6 +553,20 @@ export class SplitComposer extends ComposerBase {
         : selection
     );
     return true;
+  }
+
+  /**
+   * Whether this operation extracts nothing at all — the `Create empty note at cursor...` flow, and any
+   * other way of reaching the pipeline with an empty selection (issue #244).
+   *
+   * The `insertToken` half is not a nicety: a smart cut & paste move has ALREADY written its token into the
+   * target, and that token is removed by being replaced with the content. Skipping the insert for one of
+   * those would leave the raw token sitting in the note, so a token flow always writes, empty or not.
+   *
+   * @returns Whether there is nothing to write into the target note.
+   */
+  private isEmptyExtract(): boolean {
+    return this.insertToken === null && this.selectedText === '';
   }
 
   private isRangeOverlappingCapturedSelection(params: SplitComposerIsRangeOverlappingCapturedSelectionParams): boolean {

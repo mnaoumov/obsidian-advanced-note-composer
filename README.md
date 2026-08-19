@@ -62,11 +62,15 @@ A copy of the vault ships with every release. You can access it via any of the f
   [Merge multiple files](<./demo-vault/01 Merge/04 Merge multiple files.md>) ·
   [Frontmatter merge strategy](<./demo-vault/09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>)
 - **Extract** — a selection, a heading and everything under it, the block between two horizontal
-  rules, or everything before or after the cursor — leaving a link, an embed, or nothing behind.
+  rules, or everything before or after the cursor — leaving a link, an embed, or nothing behind. With
+  nothing selected it creates an empty note and leaves the link at the cursor, so a note you have not
+  written yet can exist without your cursor going anywhere; the file explorer's folder menu creates one
+  the same way.
   [Extract selection](<./demo-vault/02 Extract/05 Extract selection.md>) ·
   [Extract heading](<./demo-vault/02 Extract/06 Extract heading.md>) ·
   [Extract between horizontal rules](<./demo-vault/02 Extract/08 Extract between horizontal rules.md>) ·
-  [Text after extraction](<./demo-vault/02 Extract/07 Text after extraction.md>)
+  [Text after extraction](<./demo-vault/02 Extract/07 Text after extraction.md>) ·
+  [Create empty note](<./demo-vault/02 Extract/37 Create empty note.md>)
 - **Split** — by heading level, or recursively, turning a whole note's heading hierarchy (or one
   section of it) into a folder tree. The picker says up front whether you are creating a note or
   merging into an existing one.

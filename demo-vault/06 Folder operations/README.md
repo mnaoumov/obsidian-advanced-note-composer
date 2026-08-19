@@ -15,3 +15,8 @@ and opens that folder note — see [33 Operation notices](<../10 UI/33 Operation
 | [22 Create folder with notes](<./22 Create folder with notes.md>) | A folder and the notes inside it in one step, from a template |
 | [23 Reorder folders](<./23 Reorder folders.md>) | Putting sibling or child folders in your order and renumbering them |
 | [24 Rename folder](<./24 Rename folder.md>) | Renaming a folder, keeping its number, its folder note and its aliases in step |
+
+One more command lives on the same folder menu without being a folder operation: `Create empty note in
+folder...` puts a single empty note in the folder you right-clicked — the one-note counterpart of
+[22 Create folder with notes](<./22 Create folder with notes.md>), documented in
+[37 Create empty note](<../02 Extract/37 Create empty note.md>).

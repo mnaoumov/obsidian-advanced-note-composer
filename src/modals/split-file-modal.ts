@@ -72,6 +72,16 @@ interface ConfirmSplitParams {
 
 interface PrepareForSplitFileParams {
   readonly app: App;
+
+  /**
+   * Whether the picker may target an EXISTING note at all (issue #244). Defaults to `true`.
+   *
+   * `Create empty note at cursor...` passes `false`: it extracts nothing, and merging nothing into an
+   * existing note is an operation with no content and no effect. It forces {@link SplitTargetMode.Create}
+   * over the `defaultSplitTargetMode` setting, disables the picker's switch and drops its `Alt+M`.
+   */
+  readonly canMergeIntoExistingNote?: boolean;
+
   readonly editor: Editor;
   readonly heading?: string;
 
@@ -227,6 +237,12 @@ interface ShouldSkipSplitConfirmationParams {
 
 interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorParams {
   /**
+   * See {@link PrepareForSplitFileParams.canMergeIntoExistingNote}. Optional so it can arrive by simply
+   * being spread through from the prepare parameters; omitted means merging is available.
+   */
+  readonly canMergeIntoExistingNote?: boolean;
+
+  /**
    * Whether the modal offers the "switch to smart cut & paste" action (only when the caller wired the
    * marked-selection buffer and notice).
    */
@@ -281,6 +297,7 @@ interface SplitFileModalSwitchToSmartCutResult {
 
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
+  private readonly canMergeIntoExistingNote: boolean;
   private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
@@ -309,6 +326,7 @@ class SplitFileModal extends SuggestModalBase {
   public constructor(params: SplitFileModalConstructorParams) {
     super(params);
 
+    this.canMergeIntoExistingNote = params.canMergeIntoExistingNote ?? true;
     this.canSwitchToSmartCut = params.canSwitchToSmartCut;
     this.editor = params.editor;
     this.promiseResolve = params.promiseResolve;
@@ -319,7 +337,9 @@ class SplitFileModal extends SuggestModalBase {
     this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
-    this.splitTargetMode = this.pluginSettingsComponent.settings.defaultSplitTargetMode;
+    // A flow with nothing to merge opens in `Create` whatever the setting says (issue #244) — the setting
+    // Chooses between two modes, and here only one of them exists.
+    this.splitTargetMode = this.canMergeIntoExistingNote ? this.pluginSettingsComponent.settings.defaultSplitTargetMode : SplitTargetMode.Create;
 
     const initialInputValue = params.initialInputValue ?? '';
     this.inputValueBySplitTargetMode = {
@@ -467,8 +487,9 @@ class SplitFileModal extends SuggestModalBase {
     // Registered only alongside the switch it mirrors (issue #242). Unlike an instruction-bar checkbox, whose
     // Shortcut `SuggestModalCommandBuilder.build` skips with the bar, a keyboard command's scope registration
     // Always runs — so leaving this in would keep an invisible way to override `defaultSplitTargetMode` after
-    // The visible one is gone.
-    if (this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
+    // The visible one is gone. The same reasoning is why a flow that cannot merge at all drops it (issue
+    // #244): an invisible shortcut into a mode the flow forbids is worse than no shortcut.
+    if (this.canMergeIntoExistingNote && this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
       builder.addKeyboardCommand({
         key: 'm',
         modifiers: ['Alt'],
@@ -711,11 +732,18 @@ class SplitFileModal extends SuggestModalBase {
     const switchContainerEl = createDiv('advanced-note-composer-split-target-mode');
     this.modalEl.prepend(switchContainerEl);
     this.splitTargetModeSetting = new Setting(switchContainerEl)
-      .setDesc('Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)')
+      // Shown DISABLED rather than hidden when merging is unavailable (issue #244): a row that says why the
+      // Only option is a creation answers the question a missing row would raise.
+      .setDesc(
+        this.canMergeIntoExistingNote
+          ? 'Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)'
+          : 'There is nothing to merge, so this flow can only create a new note named as typed.'
+      )
       .addToggle((toggle) => {
         this.splitTargetModeToggle = toggle;
         toggle
           .setValue(this.splitTargetMode === SplitTargetMode.Merge)
+          .setDisabled(!this.canMergeIntoExistingNote)
           .onChange((value) => {
             this.setSplitTargetMode({
               shouldCarryOverInputValue: false,
@@ -756,6 +784,13 @@ class SplitFileModal extends SuggestModalBase {
   private setSplitTargetMode(params: SetSplitTargetModeParams): void {
     const { shouldCarryOverInputValue, splitTargetMode } = params;
     if (this.splitTargetMode === splitTargetMode) {
+      return;
+    }
+
+    // The ONE place the mode changes is also the one place the refusal has to live (issue #244), so a flow
+    // With nothing to merge cannot be talked into `Merge` by any surface — including a disabled toggle that
+    // Some future Obsidian version lets through.
+    if (!this.canMergeIntoExistingNote && splitTargetMode === SplitTargetMode.Merge) {
       return;
     }
 
