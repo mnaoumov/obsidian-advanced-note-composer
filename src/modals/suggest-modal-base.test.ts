@@ -28,6 +28,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { Item } from './suggest-modal-base.ts';
 
+import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 interface OnInputable {
@@ -131,6 +132,7 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy({
         isPathIgnored: vi.fn().mockReturnValue(false),
+        pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
         shouldAllowOnlyCurrentFolderByDefault: false
       })
     })

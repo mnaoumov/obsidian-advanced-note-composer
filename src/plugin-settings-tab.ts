@@ -18,6 +18,7 @@ import {
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
   MergeFolderIntoFileLocation,
+  PickerRecencyOrder,
   SmartCutAndPasteCompletionFeedback,
   SplitTargetMode,
   TextAfterExtractionMode
@@ -2062,6 +2063,35 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldShowModalInstructions', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Which of the two recencies a picker offers first when you have typed nothing.');
+              f.createEl('br');
+              appendCodeBlock(f, 'Recent targets first');
+              f.appendText(
+                ' - the destinations of completed operations, then the folder you are in. Pick this if you run several operations into the same folder without navigating there.'
+              );
+              f.createEl('br');
+              appendCodeBlock(f, 'Active file first');
+              f.appendText(
+                ' - the folder you are currently in, then the destinations of completed operations. Pick this if you navigate to where you want things to go.'
+              );
+              f.createEl('br');
+              f.appendText('Both are reasonable and the two only disagree once you have run an operation, which is why this is a choice rather than a fix.');
+            }),
+            name: 'Picker recency order',
+            render: (setting) => {
+              setting.addDropdown((dropdown) => {
+                dropdown.addOptions({
+                  /* eslint-disable perfectionist/sort-objects -- Need to keep enum order. */
+                  [PickerRecencyOrder.RecentTargetsFirst]: 'Recent targets first',
+                  [PickerRecencyOrder.ActiveFileFirst]: 'Active file first'
+                  /* eslint-enable perfectionist/sort-objects -- Need to keep enum order. */
+                });
+                this.bind({ propertyName: 'pickerRecencyOrder', valueComponent: dropdown });
               });
             }
           })

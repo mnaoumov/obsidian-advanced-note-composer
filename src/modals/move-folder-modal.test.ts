@@ -20,6 +20,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { PickerRecencyOrder } from '../plugin-settings.ts';
 import {
   isAllowedMoveTarget,
   selectTargetFolderForMove
@@ -124,7 +125,7 @@ describe('selectTargetFolderForMove', () => {
     const sourceFolder = createMockFolder('source');
     const app = createMockApp();
     const pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
-      settings: strictProxy<PluginSettings>({ shouldShowModalInstructions: true })
+      settings: strictProxy<PluginSettings>({ pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldShowModalInstructions: true })
     });
 
     const promise = selectTargetFolderForMove({ app, pluginSettingsComponent, sourceFolder });
@@ -146,6 +147,7 @@ describe('selectTargetFolderForMove', () => {
     const pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
+        pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
         shouldShowModalInstructions: true
       })
     });

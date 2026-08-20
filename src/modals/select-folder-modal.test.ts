@@ -17,6 +17,7 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { selectFolder } from './select-folder-modal.ts';
 
 function createMockApp(): AppOriginal {
@@ -33,7 +34,7 @@ function createMockApp(): AppOriginal {
 
 function createSettingsComponent(): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
-    settings: strictProxy<PluginSettings>({ shouldShowModalInstructions: true })
+    settings: strictProxy<PluginSettings>({ pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldShowModalInstructions: true })
   });
 }
 

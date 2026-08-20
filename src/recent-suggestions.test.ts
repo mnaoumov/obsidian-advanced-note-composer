@@ -18,6 +18,7 @@ import {
   vi
 } from 'vitest';
 
+import { PickerRecencyOrder } from './plugin-settings.ts';
 import {
   getRecentPaths,
   reorderSuggestionsByRecentFiles,
@@ -86,13 +87,13 @@ function suggestion<Item extends TAbstractFile>(item: Item): FuzzyMatch<Item> {
 describe('getRecentPaths', () => {
   it('should ask Obsidian for more than its own default of 10 recent files', () => {
     const app = createApp([FILE_A1.path]);
-    getRecentPaths({ app, shouldIncludeActiveFile: false });
+    getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: false });
     expect(vi.mocked(app.workspace.getRecentFiles)).toHaveBeenCalledWith(expect.objectContaining({ maxCount: EXPECTED_MAX_COUNT }));
   });
 
   it('should return the recent paths untouched when the active file is not wanted', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: false })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: false })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
   });
 
   // Obsidian's `RecentFileTracker` collects the file you just LEFT — `Workspace`'s active-leaf change
@@ -101,12 +102,12 @@ describe('getRecentPaths', () => {
   // (issue #158).
   it('should prepend the active file, which Obsidian never puts at the head of its own recent list', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_C1.path, FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: true })).toStrictEqual([FILE_C1.path, FILE_B1.path, FILE_A1.path]);
   });
 
   it('should return the recent paths untouched when there is no active file', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path]);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: true })).toStrictEqual([FILE_B1.path, FILE_A1.path]);
   });
 
   // Issue #206: a completed operation's target outranks even the active file. The two only disagree when
@@ -115,19 +116,44 @@ describe('getRecentPaths', () => {
   it('should put the recorded targets ahead of the active file and of Obsidian\'s own list', () => {
     const app = createApp([FILE_B1.path], FILE_C1);
     recordRecentTarget(FOLDER_A);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_C1.path, FILE_B1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_C1.path, FILE_B1.path]);
+  });
+
+  // Issue #248: the same reporter then found that #206's ordering means clicking into another note no
+  // Longer moves that note's folder to the top. Both orderings are reasonable, so it is a choice.
+  it('should put the active file ahead of the recorded targets when asked to', () => {
+    const app = createApp([FILE_B1.path], FILE_C1);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.ActiveFileFirst, shouldIncludeActiveFile: true }))
+      .toStrictEqual([FILE_C1.path, FOLDER_A.path, FILE_B1.path]);
+  });
+
+  it('should ignore the order when the picker does not want the active file at all', () => {
+    // A file picker excludes the active file as the operation's own source, so there is nothing for the
+    // Two orderings to disagree about.
+    const app = createApp([FILE_B1.path], FILE_C1);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.ActiveFileFirst, shouldIncludeActiveFile: false }))
+      .toStrictEqual([FOLDER_A.path, FILE_B1.path]);
+  });
+
+  it('should ignore the order when there is no active file', () => {
+    const app = createApp([FILE_B1.path]);
+    recordRecentTarget(FOLDER_A);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.ActiveFileFirst, shouldIncludeActiveFile: true }))
+      .toStrictEqual([FOLDER_A.path, FILE_B1.path]);
   });
 
   it('should put the recorded targets ahead of Obsidian\'s own list when the active file is not wanted', () => {
     const app = createApp([FILE_B1.path], FILE_C1);
     recordRecentTarget(FOLDER_A);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: false })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: false })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
   });
 
   it('should put the recorded targets first when there is no active file', () => {
     const app = createApp([FILE_B1.path]);
     recordRecentTarget(FOLDER_A);
-    expect(getRecentPaths({ app, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
+    expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst, shouldIncludeActiveFile: true })).toStrictEqual([FOLDER_A.path, FILE_B1.path]);
   });
 });
 
@@ -138,6 +164,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: 'a',
       suggestions
     });
@@ -151,6 +178,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -164,6 +192,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
       app,
       // Disallow folder C so a recent folder that fails the caller's constraint is skipped.
       isAllowedFolder: (folder) => folder !== FOLDER_C,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -187,6 +216,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
       app,
       // Folder B is the operation's source folder, as when the command is triggered on it.
       isAllowedFolder: (folder) => folder !== FOLDER_B,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -201,6 +231,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -213,6 +244,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: (folder) => folder !== FOLDER_C,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -229,6 +261,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -244,6 +277,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -257,6 +291,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
     const result = reorderSuggestionsByRecentFolders({
       app,
       isAllowedFolder: (folder) => folder !== FOLDER_D,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -271,6 +306,7 @@ describe('reorderSuggestionsByRecentFiles', () => {
     const result = reorderSuggestionsByRecentFiles({
       app,
       isAllowedFile: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: 'a',
       suggestions
     });
@@ -285,6 +321,7 @@ describe('reorderSuggestionsByRecentFiles', () => {
       app,
       // Disallow C/1.md so a recent file that fails the caller's constraint is skipped.
       isAllowedFile: (file) => file !== FILE_C1,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -302,6 +339,7 @@ describe('reorderSuggestionsByRecentFiles', () => {
     const result = reorderSuggestionsByRecentFiles({
       app,
       isAllowedFile: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });
@@ -316,6 +354,7 @@ describe('reorderSuggestionsByRecentFiles', () => {
     const result = reorderSuggestionsByRecentFiles({
       app,
       isAllowedFile: () => true,
+      pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
       query: '',
       suggestions
     });

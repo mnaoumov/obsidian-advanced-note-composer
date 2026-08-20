@@ -31,7 +31,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
 import { InsertMode } from '../insert-mode.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  FrontmatterMergeStrategy,
+  PickerRecencyOrder
+} from '../plugin-settings.ts';
 import { prepareForMergeFile } from './merge-file-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
@@ -198,6 +201,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
       settings: strictProxy({
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: vi.fn().mockReturnValue(false),
+        pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
         shouldAllowOnlyCurrentFolderByDefault: false,
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
         // Read by the picker since issue #240: with it on, an excluded note is offered as a destination.
