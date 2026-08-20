@@ -86,6 +86,7 @@ export class MergeComposer extends ComposerBase {
     const progressNotice = this.shouldShowNotice
       ? showOperationProgressNotice({
         abortController: this.abortController,
+        app: this.app,
         content: () => this.buildProgressContent('Merging'),
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent

@@ -263,6 +263,7 @@ function createPluginSettingsComponentStub(
       mergeTemplate: '{{content}}',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldApplyTextAfterExtractionToSameFile: false,
+      shouldBlockVaultDuringOperations: false,
       // The shipped default: the hand-off to Custom Attachment Location is opt-in.
       shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: false,
       shouldExtractFrontmatterSelectionAsProperties: true,

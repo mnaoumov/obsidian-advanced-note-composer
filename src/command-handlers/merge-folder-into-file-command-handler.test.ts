@@ -116,6 +116,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldAddCommandsToSubmenu: true,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldConvertFoldersToHeadingsWhenMergingFolder: false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,

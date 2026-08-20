@@ -231,6 +231,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
      * rather than one that would do nothing.
      */
     const progressNotice = showOperationProgressNotice({
+      app: this.app,
       content: () =>
         buildOperationNoticeContent({
           app: this.app,

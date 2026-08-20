@@ -149,6 +149,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeMovingFolder: false,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldShowOperationNotices: true,
         ...settingsOverrides
       })

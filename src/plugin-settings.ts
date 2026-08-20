@@ -384,6 +384,43 @@ export class PluginSettings {
   public shouldAskForTargetFolderWhenSplitting = false;
 
   /**
+   * Whether every operation reports itself — a progress notice while it runs, and a notice naming what it
+   * did once it finishes (issue #182). Covers merge, split/extract, swap, move, flatten, rename heading and
+   * reorder headings alike; refusals ("this path is ignored in the plugin settings") and errors are always
+   * shown and are NOT gated by this.
+   *
+   * Deliberately NOT folded into `shouldShowSmartCutNotice`, which gates an *interactive* notice — turning
+   * that one off removes buttons, not just information — nor into
+   * `smartCutAndPasteCompletionFeedback`, which already owns how a finished smart cut & paste announces
+   * itself (so a move is never reported twice).
+   *
+   * The progress notice is what carries the operation's Cancel button, so turning this off also removes
+   * that affordance; cancelling then goes through the lock indicator's right-click unlock, which aborts the
+   * operation just the same.
+   *
+   * Needs no `registerLegacySettingsConverter` — an existing `data.json` simply has no such key and gets
+   * `true`. Unlike the plugin's other migration-free settings, that default deliberately CHANGES behavior
+   * for an existing vault: reporting every operation IS the feature the issue asks for. Do not "fix" this
+   * later by flipping the default.
+   */
+  /**
+   * Whether an operation's progress is reported by a dialog that blocks the vault instead of by a
+   * notice (issue #247).
+   *
+   * The operations rewrite links, names, folder paths and frontmatter across many notes. A notice
+   * says so while leaving Obsidian clickable, so a second operation can be started on top of a
+   * half-applied first one. The dialog takes that away, and stays up until the work QUEUED by the
+   * operation has drained too — a command returning is not the end, because renaming a file makes
+   * other plugins queue their own link updates.
+   *
+   * Defaults to `false`. Blocking the whole vault is a strong thing to do to someone who did not ask
+   * for it, and the notice already reports the same progress and offers the same Cancel.
+   *
+   * Honors {@link shouldShowOperationNotices}: with progress reporting off, nothing is shown at all.
+   */
+  public shouldBlockVaultDuringOperations = false;
+
+  /**
    * Whether the target note is handed to the Custom Attachment Location plugin once an extract lands,
    * so that plugin collects its attachments (issue #246).
    *
@@ -401,7 +438,6 @@ export class PluginSettings {
    * its source rather than after, so the same hook there is a separate question.
    */
   public shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit = false;
-
   public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
   /**
    * Whether a selection taken entirely from the source note's frontmatter is extracted as PROPERTIES —
@@ -415,10 +451,10 @@ export class PluginSettings {
    */
   public shouldExtractFrontmatterSelectionAsProperties = true;
   public shouldFixFootnotesByDefault = true;
+
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
 
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
-
   /**
    * Whether a reorder offers the folder's FILES for renumbering as well, and not only its folders
    * (issue #216).
@@ -437,6 +473,7 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
+
   public shouldMoveAttachmentsWhenMergingFile = true;
 
   public shouldMoveAttachmentsWhenMergingFolder = true;
@@ -454,7 +491,6 @@ export class PluginSettings {
    * referencer: one referenced by both the extracted heading and the text left behind stays where it is.
    */
   public shouldMoveAttachmentsWhenSplitting = true;
-
   public shouldOfferCurrentNoteWhenSplitting = true;
   /**
    * Whether `Merge current folder with another folder...` opens the first note of the destination folder
@@ -469,13 +505,13 @@ export class PluginSettings {
    * `registerLegacySettingsConverter` — an absent key already resolves to it.
    */
   public shouldOpenFirstNoteAfterMergingFolder = false;
+
   /**
    * Whether `Create folder with notes...` opens the note it created (issue #191). Defaults to `true`,
    * matching the reporter's own plugin — the point of the command is to start writing in the new note.
    * With several notes declared, the FIRST one declared is the one opened.
    */
   public shouldOpenNoteAfterCreatingFolder = true;
-
   public shouldOpenNoteAfterMerge = false;
   /**
    * Whether `Merge folder contents into a single file...` opens the note it produced (issue #212).
@@ -523,28 +559,9 @@ export class PluginSettings {
   public shouldShowModalInstructions = true;
   public shouldShowMoveAtCursorButton = true;
   public shouldShowMoveToBottomButton = true;
+
   public shouldShowMoveToTopButton = true;
 
-  /**
-   * Whether every operation reports itself — a progress notice while it runs, and a notice naming what it
-   * did once it finishes (issue #182). Covers merge, split/extract, swap, move, flatten, rename heading and
-   * reorder headings alike; refusals ("this path is ignored in the plugin settings") and errors are always
-   * shown and are NOT gated by this.
-   *
-   * Deliberately NOT folded into `shouldShowSmartCutNotice`, which gates an *interactive* notice — turning
-   * that one off removes buttons, not just information — nor into
-   * `smartCutAndPasteCompletionFeedback`, which already owns how a finished smart cut & paste announces
-   * itself (so a move is never reported twice).
-   *
-   * The progress notice is what carries the operation's Cancel button, so turning this off also removes
-   * that affordance; cancelling then goes through the lock indicator's right-click unlock, which aborts the
-   * operation just the same.
-   *
-   * Needs no `registerLegacySettingsConverter` — an existing `data.json` simply has no such key and gets
-   * `true`. Unlike the plugin's other migration-free settings, that default deliberately CHANGES behavior
-   * for an existing vault: reporting every operation IS the feature the issue asks for. Do not "fix" this
-   * later by flipping the default.
-   */
   public shouldShowOperationNotices = true;
 
   /**

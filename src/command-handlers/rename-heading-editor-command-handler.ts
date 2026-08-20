@@ -127,6 +127,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
     let updatedLinkCount = 0;
     const progressNotice = showOperationProgressNotice({
       abortController,
+      app: this.app,
       content: () =>
         buildOperationNoticeContent({
           app: this.app,

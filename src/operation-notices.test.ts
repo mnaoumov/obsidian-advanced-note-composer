@@ -34,10 +34,17 @@ import {
   showOperationPermanentProgressNotice,
   showOperationProgressNotice
 } from './operation-notices.ts';
+import { showOperationProgressModal } from './operation-progress-modal.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
+}));
+
+// The dialog opens a real Obsidian Modal and has its own suite; what this one asserts is which of the
+// Two progress reporters the setting picks.
+vi.mock('./operation-progress-modal.ts', () => ({
+  showOperationProgressModal: vi.fn()
 }));
 
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
@@ -82,9 +89,10 @@ function createFolderNoteSettingsComponent(): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({ settings });
 }
 
-function createPluginSettingsComponent(shouldShowOperationNotices: boolean): PluginSettingsComponent {
+function createPluginSettingsComponent(shouldShowOperationNotices: boolean, shouldBlockVaultDuringOperations = false): PluginSettingsComponent {
   const settings = new PluginSettings();
   settings.shouldShowOperationNotices = shouldShowOperationNotices;
+  settings.shouldBlockVaultDuringOperations = shouldBlockVaultDuringOperations;
   return strictProxy<PluginSettingsComponent>({ settings });
 }
 
@@ -357,6 +365,7 @@ describe('showOperationProgressNotice', () => {
 
     const result = showOperationProgressNotice({
       abortController,
+      app,
       content: emptyContent,
       pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNoticeAfterDelay }),
       pluginSettingsComponent: createPluginSettingsComponent(true)
@@ -370,6 +379,7 @@ describe('showOperationProgressNotice', () => {
     const showNoticeAfterDelay = vi.fn().mockReturnValue(strictProxy<PluginNoticeComponentDelayedNotice>({}));
 
     showOperationProgressNotice({
+      app,
       content: emptyContent,
       pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNoticeAfterDelay }),
       pluginSettingsComponent: createPluginSettingsComponent(true)
@@ -383,6 +393,7 @@ describe('showOperationProgressNotice', () => {
 
     const result = showOperationProgressNotice({
       abortController: new AbortController(),
+      app,
       content: emptyContent,
       pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNoticeAfterDelay }),
       pluginSettingsComponent: createPluginSettingsComponent(false)
@@ -390,6 +401,49 @@ describe('showOperationProgressNotice', () => {
 
     expect(result).toBeNull();
     expect(showNoticeAfterDelay).not.toHaveBeenCalled();
+  });
+
+  it('should show the blocking dialog instead of a notice when asked to (issue #247)', async () => {
+    const handle = strictProxy<PluginNoticeComponentDelayedNotice>({});
+    vi.mocked(showOperationProgressModal).mockReturnValue(handle);
+    const showNoticeAfterDelay = vi.fn();
+    const settingsComponent = createPluginSettingsComponent(true, true);
+    const abortController = new AbortController();
+
+    const result = showOperationProgressNotice({
+      abortController,
+      app,
+      content: emptyContent,
+      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNoticeAfterDelay }),
+      pluginSettingsComponent: settingsComponent
+    });
+
+    expect(result).toBe(handle);
+    expect(showNoticeAfterDelay).not.toHaveBeenCalled();
+    // Field by field rather than `objectContaining`: the app is a strict proxy, and a failed deep
+    // Comparison would try to print it.
+    const params = vi.mocked(showOperationProgressModal).mock.calls[0]?.[0];
+    expect(params?.abortController).toBe(abortController);
+    expect(params?.app).toBe(app);
+    // The dialog resolves the same lazy content provider the notice would have. Identity is not the
+    // Point and would not hold: the provider builds a fresh fragment per call.
+    await expect(params?.content()).resolves.toBeInstanceOf(DocumentFragment);
+  });
+
+  it('should give the dialog its own abort controller when the operation has none', () => {
+    // The dialog always offers Cancel, so it needs something to abort even when the operation would
+    // Not have offered one.
+    vi.mocked(showOperationProgressModal).mockReturnValue(strictProxy<PluginNoticeComponentDelayedNotice>({}));
+    const settingsComponent = createPluginSettingsComponent(true, true);
+
+    showOperationProgressNotice({
+      app,
+      content: emptyContent,
+      pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNoticeAfterDelay: vi.fn() }),
+      pluginSettingsComponent: settingsComponent
+    });
+
+    expect(vi.mocked(showOperationProgressModal).mock.calls[0]?.[0].abortController).toBeInstanceOf(AbortController);
   });
 });
 

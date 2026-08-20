@@ -148,6 +148,7 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
+        shouldBlockVaultDuringOperations: false,
         shouldShowOperationNotices: true
       })
     }),

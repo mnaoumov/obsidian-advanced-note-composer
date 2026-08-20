@@ -114,6 +114,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
+      shouldBlockVaultDuringOperations: false,
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,
       shouldMoveAttachmentsWhenMergingFile: false,

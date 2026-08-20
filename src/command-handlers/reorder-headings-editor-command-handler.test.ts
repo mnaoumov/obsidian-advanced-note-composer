@@ -115,6 +115,7 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
+        shouldBlockVaultDuringOperations: false,
         shouldShowOperationNotices: true
       })
     }),

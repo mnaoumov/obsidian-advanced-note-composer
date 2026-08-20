@@ -386,6 +386,7 @@ function createHandlerParams(
         replacement: '_',
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldReplaceInvalidTitleCharacters: false,
         shouldShowOperationNotices: true,
         ...settingsOverrides

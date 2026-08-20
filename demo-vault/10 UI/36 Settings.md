@@ -107,6 +107,9 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `shouldMoveAttachmentsWhenSplitting`
   - carry the attachments the extracted text references into the new note's attachment folder. One the
     text left behind still references stays put.
+- `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit`
+  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that
+    note's attachments. Covers the shared ones the setting above deliberately leaves behind.
 - `shouldOpenTargetNoteAfterSplit`
   - open the note a split produced.
 
@@ -215,6 +218,10 @@ folder merges are separate operations, so a setting almost always belongs to exa
 
 - `shouldShowOperationNotices`
   - show the running and finished notices — see [33 Operation notices](<./33 Operation notices.md>).
+- `shouldBlockVaultDuringOperations`
+  - report progress in a dialog that blocks the vault instead of in a notice, and keep it up until the
+    link updates the operation queued have drained — see
+    [33 Operation notices](<./33 Operation notices.md>).
 - `shouldShowModalInstructions`
   - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of
     the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge`

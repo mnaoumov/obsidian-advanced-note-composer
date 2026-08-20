@@ -88,6 +88,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         isPathIgnored: () => false,
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldShowOperationNotices: true,
         ...settingsOverrides
       })
