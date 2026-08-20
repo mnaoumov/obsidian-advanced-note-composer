@@ -29,7 +29,7 @@ path** in **Settings → Advanced Note Composer**, then extract the heading agai
 
 ```code-button
 ---
-caption: Turn "treat title as path" off, then reload
+caption: Turn "treat title as path" off
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldTreatTitleAsPathByDefault: false });
+await require('/demoSetup.ts').changeSettings(app, { shouldTreatTitleAsPathByDefault: false });
 ```

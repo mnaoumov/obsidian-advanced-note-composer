@@ -18,7 +18,7 @@ equivalent: toggle **Should swap entire folder structure** in
 
 ```code-button
 ---
-caption: Swap top-level notes only, then reload
+caption: Swap top-level notes only
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldSwapEntireFolderStructureByDefault: false });
+await require('/demoSetup.ts').changeSettings(app, { shouldSwapEntireFolderStructureByDefault: false });
 ```

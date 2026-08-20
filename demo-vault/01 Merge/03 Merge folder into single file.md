@@ -75,9 +75,9 @@ says: that would flicker the active tab through every one of them.
 
 ```code-button
 ---
-caption: Open the merged note, then reload
+caption: Open the merged note
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenNoteAfterMergingFolderIntoFile: true });
+await require('/demoSetup.ts').changeSettings(app, { shouldOpenNoteAfterMergingFolderIntoFile: true });
 ```
 
 ## Attachments

@@ -18,37 +18,37 @@ different result.
 
 ```code-button
 ---
-caption: Prefer new values, then reload
+caption: Prefer new values
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { defaultFrontmatterMergeStrategy: 'MergeAndPreferNewValues' });
+await require('/demoSetup.ts').changeSettings(app, { defaultFrontmatterMergeStrategy: 'MergeAndPreferNewValues' });
 ```
 
 ```code-button
 ---
-caption: Prefer original values, then reload
+caption: Prefer original values
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { defaultFrontmatterMergeStrategy: 'MergeAndPreferOriginalValues' });
+await require('/demoSetup.ts').changeSettings(app, { defaultFrontmatterMergeStrategy: 'MergeAndPreferOriginalValues' });
 ```
 
 ```code-button
 ---
-caption: Keep original frontmatter, then reload
+caption: Keep original frontmatter
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { defaultFrontmatterMergeStrategy: 'KeepOriginalFrontmatter' });
+await require('/demoSetup.ts').changeSettings(app, { defaultFrontmatterMergeStrategy: 'KeepOriginalFrontmatter' });
 ```
 
 ```code-button
 ---
-caption: Replace with new frontmatter, then reload
+caption: Replace with new frontmatter
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { defaultFrontmatterMergeStrategy: 'ReplaceWithNewFrontmatter' });
+await require('/demoSetup.ts').changeSettings(app, { defaultFrontmatterMergeStrategy: 'ReplaceWithNewFrontmatter' });
 ```
 
 ```code-button
 ---
-caption: Preserve both, then reload
+caption: Preserve both
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { defaultFrontmatterMergeStrategy: 'PreserveBothOriginalAndNewFrontmatter' });
+await require('/demoSetup.ts').changeSettings(app, { defaultFrontmatterMergeStrategy: 'PreserveBothOriginalAndNewFrontmatter' });
 ```
 
 ## Extracting properties as properties

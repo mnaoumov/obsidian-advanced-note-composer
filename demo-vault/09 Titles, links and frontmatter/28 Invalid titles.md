@@ -64,9 +64,9 @@ template** in **Settings -> Advanced Note Composer**. Then run `Create folder wi
 
 ```code-button
 ---
-caption: Map ": " to " - ", then reload
+caption: 'Map ": " to " - "'
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { nameTransformTemplate: '<% TOKENS.rawString.replaceAll(": ", " - ") %>' });
+await require('/demoSetup.ts').changeSettings(app, { nameTransformTemplate: '<% TOKENS.rawString.replaceAll(": ", " - ") %>' });
 ```
 
 ## Settings
@@ -83,7 +83,7 @@ The block below switches to always writing a frontmatter `title`. Manual equival
 
 ```code-button
 ---
-caption: Always write a frontmatter title, then reload
+caption: Always write a frontmatter title
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { frontmatterTitleMode: 'UseAlways' });
+await require('/demoSetup.ts').changeSettings(app, { frontmatterTitleMode: 'UseAlways' });
 ```

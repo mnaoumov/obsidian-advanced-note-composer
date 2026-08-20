@@ -35,9 +35,9 @@ every one of them.
 
 ```code-button
 ---
-caption: Open the first note after merging folders, then reload
+caption: Open the first note after merging folders
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldOpenFirstNoteAfterMergingFolder: true });
+await require('/demoSetup.ts').changeSettings(app, { shouldOpenFirstNoteAfterMergingFolder: true });
 ```
 
 A markdown file that is really an attachment — an Excalidraw drawing stored as `sketch.excalidraw.md`,
@@ -54,7 +54,7 @@ excluded items** to move and merge those items too (no "ignored" notice). Manual
 
 ```code-button
 ---
-caption: Always merge excluded items, then reload
+caption: Always merge excluded items
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldAlwaysMergeExcludedItems: true });
+await require('/demoSetup.ts').changeSettings(app, { shouldAlwaysMergeExcludedItems: true });
 ```

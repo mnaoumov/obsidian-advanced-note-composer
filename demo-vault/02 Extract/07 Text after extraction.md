@@ -12,23 +12,23 @@ note, an **embed** of it, or **nothing**.
 
 ```code-button
 ---
-caption: Leave a link, then reload
+caption: Leave a link
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { textAfterExtractionMode: 'link' });
+await require('/demoSetup.ts').changeSettings(app, { textAfterExtractionMode: 'link' });
 ```
 
 ```code-button
 ---
-caption: Leave an embed, then reload
+caption: Leave an embed
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { textAfterExtractionMode: 'embed' });
+await require('/demoSetup.ts').changeSettings(app, { textAfterExtractionMode: 'embed' });
 ```
 
 ```code-button
 ---
-caption: Leave nothing, then reload
+caption: Leave nothing
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { textAfterExtractionMode: 'none' });
+await require('/demoSetup.ts').changeSettings(app, { textAfterExtractionMode: 'none' });
 ```
 
 ---

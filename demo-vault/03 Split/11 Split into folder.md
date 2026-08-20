@@ -48,16 +48,16 @@ produced note carries `title: 3. Design`, `aliases: [Design]` and `part: 3`.
 
 ```code-button
 ---
-caption: Set a folder-aware split template, then reload
+caption: Set a folder-aware split template
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { splitTemplate: '---\ntitle: {{folderName}}\naliases: [{{safeFolderName}}]\npart: {{index}}\n---\n\n{{content}}' });
+await require('/demoSetup.ts').changeSettings(app, { splitTemplate: '---\ntitle: {{folderName}}\naliases: [{{safeFolderName}}]\npart: {{index}}\n---\n\n{{content}}' });
 ```
 
 ```code-button
 ---
-caption: Restore the default (empty) split template, then reload
+caption: Restore the default (empty) split template
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { splitTemplate: '' });
+await require('/demoSetup.ts').changeSettings(app, { splitTemplate: '' });
 ```
 
 ---
