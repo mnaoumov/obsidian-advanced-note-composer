@@ -838,6 +838,30 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldMoveAttachmentsWhenSplitting', valueComponent: toggle });
               });
             }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Once the extract lands, hand the destination note to ');
+              /**
+              HACK: see the TSDoc for {@link EMPTY} for motivation.
+              */
+              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+              f.appendText(' so it collects that note\'s attachments, as if you had run its ');
+              appendCodeBlock(f, 'Collect attachments in current note');
+              f.appendText(' command yourself.');
+              f.createEl('br');
+              f.appendText(
+                'Useful because the setting above stops short: it moves an attachment only when the extracted text is the only thing referencing it. Where a SHARED attachment belongs is a question this plugin cannot answer, and that one can.'
+              );
+              f.createEl('br');
+              f.appendText('Does nothing when that plugin is not installed or is disabled.');
+            }),
+            name: 'Should collect attachments with Custom Attachment Location after splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit', valueComponent: toggle });
+              });
+            }
           })
         ],
         name: 'Split/extract'

@@ -25,6 +25,10 @@ import {
   collectAttachmentsReferencedBySelections,
   relocateAttachments
 } from '../attachments.ts';
+import {
+  checkIsCustomAttachmentLocationAvailable,
+  collectAttachmentsWithCustomAttachmentLocation
+} from '../custom-attachment-location.ts';
 import { extractFrontmatterSelection } from '../frontmatter-selection.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
@@ -315,6 +319,11 @@ export class SplitComposer extends ComposerBase {
         return;
       }
 
+      // Hung off the committed transaction rather than off a timer: by here the target note is written
+      // And its links are updated, so the other plugin reads a finished note. Deliberately AFTER the
+      // Abort check, since a rolled-back split has nothing to collect (issue #246).
+      this.collectAttachmentsWithCustomAttachmentLocation();
+
       // A batch split records nothing: `prepareForSplitFile` resolves each produced note's location from
       // The settings with no picker involved, so there is no target the user CHOSE to remember, and
       // Recording every note of a recursive run would bury the list under one operation's output (issue
@@ -515,6 +524,32 @@ export class SplitComposer extends ComposerBase {
     }
 
     return await this.buildCompletionContent('Split', true);
+  }
+
+  /**
+   * Hands the target note to the Custom Attachment Location plugin so it collects that note's
+   * attachments (issue #246).
+   *
+   * {@link relocateExtractedAttachments} above moves only the attachments the extracted range SOLELY
+   * referenced; one shared with the text left behind stays put, because where a shared attachment
+   * belongs is not a question this plugin can answer. The other plugin can, so it gets asked.
+   */
+  private collectAttachmentsWithCustomAttachmentLocation(): void {
+    if (!this.pluginSettingsComponent.settings.shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit) {
+      return;
+    }
+
+    if (!checkIsCustomAttachmentLocationAvailable(this.app)) {
+      this.consoleDebugComponent.consoleDebug(
+        'Skipped collecting attachments after the split: the Custom Attachment Location plugin is not available.'
+      );
+      return;
+    }
+
+    collectAttachmentsWithCustomAttachmentLocation({
+      abstractFiles: [this.targetFile],
+      app: this.app
+    });
   }
 
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {

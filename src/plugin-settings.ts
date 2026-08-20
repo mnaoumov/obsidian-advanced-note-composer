@@ -383,8 +383,26 @@ export class PluginSettings {
    */
   public shouldAskForTargetFolderWhenSplitting = false;
 
-  public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
+  /**
+   * Whether the target note is handed to the Custom Attachment Location plugin once an extract lands,
+   * so that plugin collects its attachments (issue #246).
+   *
+   * This exists because {@link shouldMoveAttachmentsWhenSplitting} deliberately stops short: it moves
+   * an attachment only when the extracted range is its SOLE referencer, since deciding where a SHARED
+   * attachment belongs is a question this plugin has no answer to. Custom Attachment Location does —
+   * it has a mode setting for exactly that, and a note-priority list on top — so the note is handed
+   * over instead of growing a second, worse copy of that logic here. The reporter reached the same
+   * conclusion themselves before filing.
+   *
+   * Defaults to `false`, unlike the move toggles. It reaches into another plugin and moves files as a
+   * side effect of an unrelated command, so a user who has not asked for it should see no change.
+   *
+   * Scoped to extract, which is what was asked for. Merge relocates its attachments before it reads
+   * its source rather than after, so the same hook there is a separate question.
+   */
+  public shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit = false;
 
+  public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
   /**
    * Whether a selection taken entirely from the source note's frontmatter is extracted as PROPERTIES —
    * merged into the target note's own frontmatter through the frontmatter merge strategy — instead of being
@@ -398,6 +416,7 @@ export class PluginSettings {
   public shouldExtractFrontmatterSelectionAsProperties = true;
   public shouldFixFootnotesByDefault = true;
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
+
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
 
   /**
@@ -410,7 +429,6 @@ export class PluginSettings {
    * sitting beside them.
    */
   public shouldIncludeFilesWhenReorderingByDefault = false;
-
   public shouldIncludeFrontmatterWhenSplittingByDefault = false;
   public shouldIncludeParentFoldersWhenMergingByDefault = true;
   public shouldIncludeParentFoldersWhenSwappingByDefault = true;
@@ -420,6 +438,7 @@ export class PluginSettings {
   public shouldLockAllNotesWhenMarkingSelection = false;
   public shouldMergeHeadingsByDefault = false;
   public shouldMoveAttachmentsWhenMergingFile = true;
+
   public shouldMoveAttachmentsWhenMergingFolder = true;
 
   /**
