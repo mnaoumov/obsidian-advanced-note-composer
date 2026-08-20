@@ -365,6 +365,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     // Dropped by the `getFileByPath` lookup below, exactly like a path that no longer resolves.
     const recentPaths = getRecentPaths({
       app: this.app,
+      pickerRecencyOrder: this.pluginSettingsComponent.settings.pickerRecencyOrder,
       // The active file is this operation's own source, which `shouldIncludeFile` excludes anyway.
       shouldIncludeActiveFile: false
     });

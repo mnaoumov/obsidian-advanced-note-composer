@@ -226,6 +226,10 @@ folder merges are separate operations, so a setting almost always belongs to exa
   - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of
     the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge`
     switch. Turn it off and this settings page is the only place those choices are made.
+- `pickerRecencyOrder`
+  - which recency a picker offers first when you have typed nothing: the destinations of completed
+    operations, or the folder you are currently in. They only disagree once you have run an operation
+    without navigating to where the next one should go.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
 

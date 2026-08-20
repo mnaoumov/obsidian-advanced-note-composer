@@ -6,6 +6,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { PickerRecencyOrder } from './plugin-settings.ts';
 import { getRecentTargetPaths } from './recent-targets.ts';
 
 /**
@@ -19,6 +20,11 @@ const RECENT_FILE_PATHS_MAX_COUNT = 50;
  */
 export interface GetRecentPathsParams {
   readonly app: App;
+
+  /**
+   * Which recency wins the top of the list (issue #248).
+   */
+  readonly pickerRecencyOrder: PickerRecencyOrder;
 
   /**
    * Whether the currently active file is prepended to the recent paths.
@@ -49,6 +55,11 @@ export interface ReorderSuggestionsByRecentFilesParams {
   isAllowedFile(this: void, file: TFile): boolean;
 
   /**
+   * Which recency wins the top of the list (issue #248).
+   */
+  readonly pickerRecencyOrder: PickerRecencyOrder;
+
+  /**
    * The current fuzzy query. When non-empty the suggestions are returned untouched (the fuzzy ranking
    * wins); recent files are only surfaced for the empty query.
    */
@@ -77,6 +88,11 @@ export interface ReorderSuggestionsByRecentFoldersParams {
   isAllowedFolder(this: void, folder: TFolder): boolean;
 
   /**
+   * Which recency wins the top of the list (issue #248).
+   */
+  readonly pickerRecencyOrder: PickerRecencyOrder;
+
+  /**
    * The current fuzzy query. When non-empty the suggestions are returned untouched (the fuzzy ranking
    * wins); recent folders are only surfaced for the empty query.
    */
@@ -98,6 +114,8 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
    * @returns Whether the item is an allowed target.
    */
   isAllowedItem(this: void, item: Item): boolean;
+
+  readonly pickerRecencyOrder: PickerRecencyOrder;
 
   readonly query: string;
 
@@ -130,7 +148,11 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
  * resolve, so callers de-duplicate on the resolved item.
  */
 export function getRecentPaths(params: GetRecentPathsParams): string[] {
-  const { app, shouldIncludeActiveFile } = params;
+  const {
+    app,
+    pickerRecencyOrder,
+    shouldIncludeActiveFile
+  } = params;
   const recentTargetPaths = getRecentTargetPaths();
   const recentFilePaths = app.workspace.getRecentFiles({
     maxCount: RECENT_FILE_PATHS_MAX_COUNT,
@@ -141,16 +163,18 @@ export function getRecentPaths(params: GetRecentPathsParams): string[] {
     showNonImageAttachments: true
   });
 
-  if (!shouldIncludeActiveFile) {
+  const activeFilePath = shouldIncludeActiveFile ? app.workspace.getActiveFile()?.path ?? null : null;
+  if (activeFilePath === null) {
     return [...recentTargetPaths, ...recentFilePaths];
   }
 
-  const activeFile = app.workspace.getActiveFile();
-  if (!activeFile) {
-    return [...recentTargetPaths, ...recentFilePaths];
+  // The one place the two recencies disagree, and the whole of issue #248: whichever goes first wins
+  // The top of the list.
+  if (pickerRecencyOrder === PickerRecencyOrder.ActiveFileFirst) {
+    return [activeFilePath, ...recentTargetPaths, ...recentFilePaths];
   }
 
-  return [...recentTargetPaths, activeFile.path, ...recentFilePaths];
+  return [...recentTargetPaths, activeFilePath, ...recentFilePaths];
 }
 
 /**
@@ -167,12 +191,14 @@ export function reorderSuggestionsByRecentFiles(params: ReorderSuggestionsByRece
   const {
     app,
     isAllowedFile,
+    pickerRecencyOrder,
     query,
     suggestions
   } = params;
   return reorderSuggestionsByRecentItems({
     app,
     isAllowedItem: isAllowedFile,
+    pickerRecencyOrder,
     query,
     resolveItem: (path) => app.vault.getFileByPath(path),
     // The active file is the operation's own source, which every file picker excludes anyway.
@@ -195,12 +221,14 @@ export function reorderSuggestionsByRecentFolders(params: ReorderSuggestionsByRe
   const {
     app,
     isAllowedFolder,
+    pickerRecencyOrder,
     query,
     suggestions
   } = params;
   return reorderSuggestionsByRecentItems({
     app,
     isAllowedItem: isAllowedFolder,
+    pickerRecencyOrder,
     query,
     // A recorded target is resolved as the folder itself when it IS one, and otherwise as the parent of the
     // Target file — which is how "the folder a note was merged into counts as clicked on" falls out of the
@@ -217,6 +245,7 @@ function reorderSuggestionsByRecentItems<Item extends TAbstractFile>(params: Reo
   const {
     app,
     isAllowedItem,
+    pickerRecencyOrder,
     query,
     resolveItem,
     shouldIncludeActiveFile,
@@ -226,7 +255,7 @@ function reorderSuggestionsByRecentItems<Item extends TAbstractFile>(params: Reo
     return suggestions;
   }
 
-  const recentPaths = getRecentPaths({ app, shouldIncludeActiveFile });
+  const recentPaths = getRecentPaths({ app, pickerRecencyOrder, shouldIncludeActiveFile });
   const recentItems: Item[] = [];
   const recentItemsSet = new Set<Item>();
   for (const recentPath of recentPaths) {

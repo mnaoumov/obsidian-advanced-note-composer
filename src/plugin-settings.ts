@@ -87,6 +87,33 @@ export enum MergeFolderIntoFileLocation {
 }
 
 /**
+ * Which recency a picker offers first when there is no query (issue #248).
+ *
+ * The plugin tracks two, and they disagree exactly when it matters. Issue #206 asked that a folder
+ * used as a destination be "always the top one on the list" for the operations that follow, so
+ * recorded targets were put ahead of even the active file. Issue #248 — the same reporter — then found
+ * that clicking into another note no longer moves that note's folder to the top, because the previous
+ * operation's target still outranks it.
+ *
+ * Both are reasonable, and neither is a bug, so the ordering is a choice rather than a fix.
+ * {@link RecentTargetsFirst} is what the plugin has always done and stays the default, so nothing
+ * changes for anyone who has not asked.
+ */
+export enum PickerRecencyOrder {
+  /**
+   * The folder you are currently in comes first, then the destinations of completed operations. Pick
+   * this if you navigate to where you want things to go.
+   */
+  ActiveFileFirst = 'ActiveFileFirst',
+
+  /**
+   * The destinations of completed operations come first, then the folder you are currently in. Pick
+   * this if you run several operations into the same folder without navigating there.
+   */
+  RecentTargetsFirst = 'RecentTargetsFirst'
+}
+
+/**
  * How a finished smart cut & paste move announces itself in the target note (issue #176).
  *
  * Selecting the moved text is the original behavior and stays the default, so nothing changes for an
@@ -309,6 +336,19 @@ export class PluginSettings {
    * keeps "what gets numbered" and "what counts as already numbered" from drifting apart.
    */
   public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
+  /**
+   * The name a reorder gives a renumbered FOLDER (issue #216).
+   *
+   * Deliberately NOT {@link newFolderNameTemplate}: that one names a folder being CREATED, and a vault may
+   * want reordering to follow a different scheme — so the two are separate settings that merely start from
+   * the same default.
+   */
+  /**
+   * Which recency the pickers offer first when there is no query (issue #248). See
+   * {@link PickerRecencyOrder} for why this is a choice rather than a fix.
+   */
+  public pickerRecencyOrder: PickerRecencyOrder = PickerRecencyOrder.RecentTargetsFirst;
+
   public releaseNotesShown: readonly string[] = [];
 
   /**
@@ -334,13 +374,6 @@ export class PluginSettings {
    */
   public reorderedFileTitleTemplate = '';
 
-  /**
-   * The name a reorder gives a renumbered FOLDER (issue #216).
-   *
-   * Deliberately NOT {@link newFolderNameTemplate}: that one names a folder being CREATED, and a vault may
-   * want reordering to follow a different scheme — so the two are separate settings that merely start from
-   * the same default.
-   */
   public reorderedFolderNameTemplate = '{{index}}. {{safeFolderName}}';
 
   public replacement = '_';

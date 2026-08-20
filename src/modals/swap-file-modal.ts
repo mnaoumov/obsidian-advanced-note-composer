@@ -75,6 +75,7 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     return reorderSuggestionsByRecentFiles({
       app: this.app,
       isAllowedFile: (file) => this.isAllowedTargetFile(file),
+      pickerRecencyOrder: this.pluginSettingsComponent.settings.pickerRecencyOrder,
       query,
       suggestions: super.getSuggestions(query)
     });

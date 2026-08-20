@@ -105,6 +105,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     return reorderSuggestionsByRecentFolders({
       app: this.app,
       isAllowedFolder: (folder) => this.isAllowedDestinationFolder(folder),
+      pickerRecencyOrder: this.pluginSettingsComponent.settings.pickerRecencyOrder,
       query,
       suggestions: super.getSuggestions(query)
     });

@@ -24,6 +24,7 @@ import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/s
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { openModal } from '../open-minimizable-modal.ts';
+import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
 
 /**
@@ -67,12 +68,14 @@ interface SelectFolderModalConstructorParams extends SelectFolderParams {
 class SelectFolderModal extends FuzzySuggestModal<TFolder> {
   private readonly isAllowedFolder: (this: void, folder: TFolder) => boolean;
   private isSelected = false;
+  private readonly pickerRecencyOrder: PickerRecencyOrder;
   private readonly promiseResolve: PromiseResolve<null | TFolder>;
 
   public constructor(params: SelectFolderModalConstructorParams) {
     super(params.app);
 
     this.isAllowedFolder = params.isAllowedFolder;
+    this.pickerRecencyOrder = params.pluginSettingsComponent.settings.pickerRecencyOrder;
     this.promiseResolve = params.promiseResolve;
 
     this.setPlaceholder(params.placeholder);
@@ -93,6 +96,7 @@ class SelectFolderModal extends FuzzySuggestModal<TFolder> {
     return reorderSuggestionsByRecentFolders({
       app: this.app,
       isAllowedFolder: this.isAllowedFolder,
+      pickerRecencyOrder: this.pickerRecencyOrder,
       query,
       suggestions: super.getSuggestions(query)
     });

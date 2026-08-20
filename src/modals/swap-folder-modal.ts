@@ -125,6 +125,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     return reorderSuggestionsByRecentFolders({
       app: this.app,
       isAllowedFolder: (folder) => this.isAllowedTargetFolder(folder),
+      pickerRecencyOrder: this.pluginSettingsComponent.settings.pickerRecencyOrder,
       query,
       suggestions: super.getSuggestions(query)
     });

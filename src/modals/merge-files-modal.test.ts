@@ -17,6 +17,7 @@ import {
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { selectTargetFileForMergeFiles } from './merge-files-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
@@ -50,6 +51,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy({
         isPathIgnored: vi.fn().mockReturnValue(false),
+        pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
         shouldAskBeforeMerging: options?.shouldAskBeforeMerging ?? false,
         shouldShowModalInstructions: true
       })
