@@ -37,6 +37,10 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { Selection } from './composer-base.ts';
 
 import { relocateAttachments } from '../attachments.ts';
+import {
+  checkIsCustomAttachmentLocationAvailable,
+  collectAttachmentsWithCustomAttachmentLocation
+} from '../custom-attachment-location.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
@@ -160,6 +164,15 @@ vi.mock('../attachments.ts', async (importOriginal) => ({
   relocateAttachments: vi.fn().mockResolvedValue(undefined)
 }));
 
+// The hand-off to Custom Attachment Location reaches a plugin that is not installed in a unit run, and
+// It has its own suite. What this one asserts is that the composer asks, with the right note, at the
+// Right moment (issue #246).
+vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../custom-attachment-location.ts')>()),
+  checkIsCustomAttachmentLocationAvailable: vi.fn().mockReturnValue(true),
+  collectAttachmentsWithCustomAttachmentLocation: vi.fn()
+}));
+
 // `revealInsertedContent` polls a live workspace for a MarkdownView; what this suite asserts is that the
 // Composer asks for the right thing, not that the poll works (its locator has its own suite).
 vi.mock('../reveal-inserted-content.ts', async (importOriginal) => ({
@@ -250,6 +263,8 @@ function createPluginSettingsComponentStub(
       mergeTemplate: '{{content}}',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldApplyTextAfterExtractionToSameFile: false,
+      // The shipped default: the hand-off to Custom Attachment Location is opt-in.
+      shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: false,
       shouldExtractFrontmatterSelectionAsProperties: true,
       shouldFixFootnotesByDefault: false,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
@@ -1274,6 +1289,51 @@ describe('splitFile attachments (issue #239)', () => {
     }).splitFile();
 
     expect(relocateAttachments).not.toHaveBeenCalled();
+  });
+
+  describe('collecting with Custom Attachment Location (issue #246)', () => {
+    beforeEach(() => {
+      // Calls and the stubbed availability both leak between tests otherwise, so
+      // `not.toHaveBeenCalled()` would see the previous test's call.
+      vi.mocked(collectAttachmentsWithCustomAttachmentLocation).mockClear();
+      vi.mocked(checkIsCustomAttachmentLocationAvailable).mockClear().mockReturnValue(true);
+    });
+
+    it('should hand the target note over once the extract lands', async () => {
+      await createComposer({
+        capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+        selectedText: '![[img.png]]',
+        settingsOverrides: { shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: true }
+      }).splitFile();
+
+      expect(collectAttachmentsWithCustomAttachmentLocation).toHaveBeenCalledWith({
+        abstractFiles: [getTargetFile()],
+        app
+      });
+    });
+
+    it('should hand nothing over when the setting is off', async () => {
+      await createComposer({
+        capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+        selectedText: '![[img.png]]'
+      }).splitFile();
+
+      expect(collectAttachmentsWithCustomAttachmentLocation).not.toHaveBeenCalled();
+    });
+
+    it('should note in the debug log when the other plugin is unavailable', async () => {
+      vi.mocked(checkIsCustomAttachmentLocationAvailable).mockReturnValue(false);
+      const consoleDebug = vi.fn();
+
+      await createComposer({
+        capturedSelections: [{ endOffset: EMBED_END_OFFSET, startOffset: 0 }],
+        consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug }),
+        selectedText: '![[img.png]]',
+        settingsOverrides: { shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: true }
+      }).splitFile();
+
+      expect(consoleDebug).toHaveBeenCalledWith(expect.stringContaining('Custom Attachment Location plugin is not available'));
+    });
   });
 
   it('should relocate nothing for a same-note extract', async () => {
