@@ -25,9 +25,9 @@ Manual equivalent: toggle **Should keep headings when splitting content** in
 
 ```code-button
 ---
-caption: Toggle "keep headings when splitting content" off, then reload
+caption: Toggle "keep headings when splitting content" off
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldKeepHeadingsWhenSplittingContent: false });
+await require('/demoSetup.ts').changeSettings(app, { shouldKeepHeadingsWhenSplittingContent: false });
 ```
 
 ## Apples

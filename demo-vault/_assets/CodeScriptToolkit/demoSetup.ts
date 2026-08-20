@@ -37,12 +37,23 @@ interface DemoSettingsPatch {
   textAfterExtractionMode?: string;
 }
 
-export async function changeSettingsAndReload(app: App, patch: DemoSettingsPatch): Promise<void> {
-  const dataPath = `${app.vault.configDir}/plugins/${PLUGIN_ID}/data.json`;
-  const data = JSON.parse(await app.vault.adapter.read(dataPath)) as DemoSettingsPatch;
-  Object.assign(data, patch);
-  await app.vault.adapter.write(dataPath, `${JSON.stringify(data, null, 2)}\n`);
-  window.location.reload();
+/**
+ * Applies a settings patch, live.
+ *
+ * This used to write `data.json` behind the loaded plugin and then reload the window, which was wrong
+ * twice over. It was a race the plugin wins — it saves its own in-memory settings as it unloads, over
+ * the file just written — which is exactly the reasoning the Templater helper below already spelled
+ * out for itself. And the reload took the whole window with it, so a reader lost their place and any
+ * automated click-through lost the page it was driving.
+ *
+ * `configureCommunityPlugin` routes into the plugin's own save path while it is loaded, so the change
+ * is live with no reload and no race.
+ *
+ * Manual equivalent: change the same option in **Settings -> Community plugins -> Advanced Note
+ * Composer**.
+ */
+export async function changeSettings(app: App, patch: DemoSettingsPatch): Promise<void> {
+  await configureCommunityPlugin({ app, pluginId: PLUGIN_ID, settings: patch });
 }
 
 /**
@@ -56,10 +67,9 @@ export async function setUpTemplaterExample(app: App): Promise<void> {
   new Notice('Installing Templater...');
   await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
 
-  // Deliberately NOT `changeSettingsAndReload`: writing `data.json` behind a loaded plugin's back and
-  // Then reloading is a race the plugin wins — it saves its own in-memory settings as it unloads, over
-  // The file just written. Disabling first means nothing holds stale settings while the file changes,
-  // And enabling again picks them up with no window reload at all.
+  // Disabled first rather than patched in place: this one replaces a template the plugin reads at
+  // Load time, so nothing should hold stale settings while the file changes. Enabling again picks
+  // Them up with no window reload at all.
   await disableCommunityPlugin({ app, pluginId: PLUGIN_ID });
   await configureCommunityPlugin({
     app,

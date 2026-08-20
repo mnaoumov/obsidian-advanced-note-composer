@@ -55,16 +55,16 @@ template into **Merge template** in **Settings → Advanced Note Composer**. The
 
 ```code-button
 ---
-caption: Set a dated merge template, then reload
+caption: Set a dated merge template
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { mergeTemplate: '\n\n## Merged from {{fromTitle}} ({{date:YYYY-MM-DD}})\n\n{{content}}' });
+await require('/demoSetup.ts').changeSettings(app, { mergeTemplate: '\n\n## Merged from {{fromTitle}} ({{date:YYYY-MM-DD}})\n\n{{content}}' });
 ```
 
 To restore the default, set the template back to `\n\n{{content}}`.
 
 ```code-button
 ---
-caption: Restore the default merge template, then reload
+caption: Restore the default merge template
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { mergeTemplate: '\n\n{{content}}' });
+await require('/demoSetup.ts').changeSettings(app, { mergeTemplate: '\n\n{{content}}' });
 ```

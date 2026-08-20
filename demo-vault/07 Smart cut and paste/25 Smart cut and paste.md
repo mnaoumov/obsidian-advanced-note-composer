@@ -57,16 +57,16 @@ button** in **Settings → Advanced Note Composer**.
 
 ```code-button
 ---
-caption: Hide the two heading buttons in the notice, then reload
+caption: Hide the two heading buttons in the notice
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldShowReorderHeadingsButton: false, shouldShowSplitHeadingRecursivelyButton: false });
+await require('/demoSetup.ts').changeSettings(app, { shouldShowReorderHeadingsButton: false, shouldShowSplitHeadingRecursivelyButton: false });
 ```
 
 ```code-button
 ---
-caption: Show them again, then reload
+caption: Show them again
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldShowReorderHeadingsButton: true, shouldShowSplitHeadingRecursivelyButton: true });
+await require('/demoSetup.ts').changeSettings(app, { shouldShowReorderHeadingsButton: true, shouldShowSplitHeadingRecursivelyButton: true });
 ```
 
 ### Section to move
@@ -120,9 +120,9 @@ cursor and then leaving the cursor elsewhere would make no sense.
 
 ```code-button
 ---
-caption: Stop the cursor following content moved to the top/bottom, then reload
+caption: Stop the cursor following content moved to the top/bottom
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldJumpToMovedContentToBottom: false, shouldJumpToMovedContentToTop: false });
+await require('/demoSetup.ts').changeSettings(app, { shouldJumpToMovedContentToBottom: false, shouldJumpToMovedContentToTop: false });
 ```
 
 ## A notice instead of a highlight
@@ -139,16 +139,16 @@ notice tells you the move is done.
 
 ```code-button
 ---
-caption: Report finished moves with a notice instead of a selection, then reload
+caption: Report finished moves with a notice instead of a selection
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteCompletionFeedback: 'Notice' });
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteCompletionFeedback: 'Notice' });
 ```
 
 ```code-button
 ---
-caption: Go back to selecting the moved content, then reload
+caption: Go back to selecting the moved content
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteCompletionFeedback: 'SelectMovedContent' });
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteCompletionFeedback: 'SelectMovedContent' });
 ```
 
 ## A different template per direction
@@ -164,9 +164,9 @@ Mark a paragraph and run all three moves in turn: each one arrives with its own 
 
 ```code-button
 ---
-caption: Set a distinct template per move direction, then reload
+caption: Set a distinct template per move direction
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteTemplate: '\n\n> pasted at cursor\n\n{{content}}', smartCutAndPasteToBottomTemplate: '\n\n> pasted at the bottom\n\n{{content}}', smartCutAndPasteToTopTemplate: '\n\n> pasted at the top\n\n{{content}}\n' });
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteTemplate: '\n\n> pasted at cursor\n\n{{content}}', smartCutAndPasteToBottomTemplate: '\n\n> pasted at the bottom\n\n{{content}}', smartCutAndPasteToTopTemplate: '\n\n> pasted at the top\n\n{{content}}\n' });
 ```
 
 An empty template falls back up the chain, so an existing configuration keeps behaving as it did
@@ -186,9 +186,9 @@ Clear one override and that direction goes back to using **Smart cut & paste tem
 
 ```code-button
 ---
-caption: Clear the per-direction overrides, then reload
+caption: Clear the per-direction overrides
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { smartCutAndPasteToBottomTemplate: '', smartCutAndPasteToTopTemplate: '' });
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteToBottomTemplate: '', smartCutAndPasteToTopTemplate: '' });
 ```
 
 ## Lock every note while marking
@@ -200,9 +200,9 @@ is pending. Manual equivalent: toggle
 
 ```code-button
 ---
-caption: Lock all notes while marking, then reload
+caption: Lock all notes while marking
 ---
-await require('/demoSetup.ts').changeSettingsAndReload(app, { shouldLockAllNotesWhenMarkingSelection: true });
+await require('/demoSetup.ts').changeSettings(app, { shouldLockAllNotesWhenMarkingSelection: true });
 ```
 
 ## Tailoring the notice
