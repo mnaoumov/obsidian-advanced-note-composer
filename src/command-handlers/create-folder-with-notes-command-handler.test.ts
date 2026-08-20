@@ -206,6 +206,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeCreatingFolder: false,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldOpenNoteAfterCreatingFolder: false,
         shouldReplaceInvalidTitleCharacters: true,
         shouldRunTemplaterOnDestinationFile: false,

@@ -155,6 +155,7 @@ function createMockParams(
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
+        shouldBlockVaultDuringOperations: false,
         shouldKeepHeadingsWhenSplittingContent,
         shouldShowOperationNotices: true
       })

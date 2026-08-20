@@ -181,6 +181,7 @@ function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeFlattening: false,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldShowOperationNotices: true,
         ...settingsOverrides
       })

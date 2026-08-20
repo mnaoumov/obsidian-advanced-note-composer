@@ -152,3 +152,32 @@
     }
   }
 }
+
+// The progress dialog renders as a global Modal, outside the plugin-scoped `.advanced-note-composer`
+// Container, so its bar is styled at the top level. Indeterminate on purpose: the phases that have a
+// Known total and the ones that do not are mixed, and a percentage that is partly invented is worse
+// Than no percentage.
+.advanced-note-composer-operation-progress-bar {
+  background-color: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  height: var(--size-4-2);
+  margin-top: var(--size-4-4);
+  overflow: hidden;
+
+  .advanced-note-composer-operation-progress-bar-fill {
+    animation: advanced-note-composer-operation-progress 1.2s ease-in-out infinite;
+    background-color: var(--interactive-accent);
+    height: 100%;
+    width: 40%;
+  }
+}
+
+@keyframes advanced-note-composer-operation-progress {
+  0% {
+    margin-left: -40%;
+  }
+
+  100% {
+    margin-left: 100%;
+  }
+}

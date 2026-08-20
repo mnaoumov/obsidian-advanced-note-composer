@@ -24,6 +24,7 @@ interface ComponentTreeNode {
 
 interface RecursiveSplitNoticeSettings {
   shouldAskBeforeSplitting: boolean;
+  shouldBlockVaultDuringOperations: boolean;
   shouldShowOperationNotices: boolean;
   shouldSplitRecursivelyIntoDefaultNewNoteFolder: boolean;
 }
@@ -135,6 +136,8 @@ describe('recursive split completion notice link (issue #235)', () => {
             // Which would send the run down a different path and blame the notice for it.
             settingsInEffect: {
               shouldAskBeforeSplitting: settingsComponent.settings.shouldAskBeforeSplitting,
+              // This suite asserts on the NOTICE, so the blocking dialog must be off for it to exist.
+              shouldBlockVaultDuringOperations: settingsComponent.settings.shouldBlockVaultDuringOperations,
               shouldShowOperationNotices: settingsComponent.settings.shouldShowOperationNotices,
               shouldSplitRecursivelyIntoDefaultNewNoteFolder: settingsComponent.settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder
             },
@@ -248,6 +251,7 @@ describe('recursive split completion notice link (issue #235)', () => {
       .toMatchObject({
         settingsInEffect: {
           shouldAskBeforeSplitting: false,
+          shouldBlockVaultDuringOperations: false,
           shouldShowOperationNotices: true,
           shouldSplitRecursivelyIntoDefaultNewNoteFolder: false
         },

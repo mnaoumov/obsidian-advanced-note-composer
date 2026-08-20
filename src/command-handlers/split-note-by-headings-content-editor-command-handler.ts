@@ -107,6 +107,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
     const abortController = new AbortController();
     const progressNotice = showOperationProgressNotice({
       abortController,
+      app: this.app,
       content: () =>
         buildOperationNoticeContent({
           app: this.app,

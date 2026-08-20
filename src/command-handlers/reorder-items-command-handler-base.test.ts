@@ -613,6 +613,7 @@ function createHandlerParams(showNotice: PluginNoticeComponent['showNotice'], se
         reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: () => false,
+        shouldBlockVaultDuringOperations: false,
         shouldIncludeFilesWhenReorderingByDefault: false,
         shouldShowModalInstructions: true,
         shouldShowOperationNotices: true,

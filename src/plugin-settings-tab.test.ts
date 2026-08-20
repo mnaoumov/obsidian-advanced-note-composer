@@ -694,6 +694,40 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
   });
 });
 
+// Issue #247: the blocking dialog is a way of REPORTING progress, so it means nothing with progress
+// Reporting turned off.
+describe('shouldBlockVaultDuringOperations', () => {
+  it('should enable the blocking-dialog row while operation notices are on', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    expect(isRowDisabled(tab, 'Should block the vault during operations')).toBe(false);
+  });
+
+  it('should disable the blocking-dialog row when operation notices are off', async () => {
+    const settingsComponent = await createSettingsComponent();
+    castTo<PluginSettings>(settingsComponent.settings).shouldShowOperationNotices = false;
+
+    const tab = await createSettingsTab(settingsComponent);
+    renderRows(tab);
+
+    expect(isRowDisabled(tab, 'Should block the vault during operations')).toBe(true);
+  });
+
+  it('should re-evaluate the predicates when the operation-notices toggle changes', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const refreshDomStateSpy = vi.fn();
+    tab.refreshDomState = refreshDomStateSpy;
+    findToggle('Should show operation notices').setValue(false);
+
+    await vi.waitFor(() => {
+      expect(refreshDomStateSpy).toHaveBeenCalled();
+    });
+  });
+});
+
 // Issue #214: the two rename-button rows only mean anything while the confirmation dialog is shown, so
 // They follow `shouldAskBeforeCreatingFolder` the way the replacement string follows its own toggle.
 describe('shouldAskBeforeCreatingFolder', () => {

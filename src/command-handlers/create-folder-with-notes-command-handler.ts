@@ -547,6 +547,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
 
     const progressNotice = showOperationProgressNotice({
       abortController,
+      app: this.app,
       content: () =>
         buildOperationNoticeContent({
           app: this.app,

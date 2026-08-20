@@ -207,6 +207,7 @@ export class SplitComposer extends ComposerBase {
       ? null
       : showOperationProgressNotice({
         abortController: this.abortController,
+        app: this.app,
         content: () => this.buildProgressContent('Splitting'),
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent

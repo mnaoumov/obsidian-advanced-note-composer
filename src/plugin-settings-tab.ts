@@ -2005,7 +2005,38 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             name: 'Should show operation notices',
             render: (setting) => {
               setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldShowOperationNotices', valueComponent: toggle });
+                this.bind({
+                  onChanged: () => {
+                    // The blocking-dialog row below only reads this through its `disabled` predicate.
+                    this.refreshDomState();
+                  },
+                  propertyName: 'shouldShowOperationNotices',
+                  valueComponent: toggle
+                });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Report progress in a dialog that blocks the vault instead of in a notice.');
+              f.createEl('br');
+              f.appendText(
+                'The operations rewrite links, names, folder paths and frontmatter across many notes. A notice says so while leaving Obsidian clickable, so a second operation can be started on top of a half-applied first one.'
+              );
+              f.createEl('br');
+              f.appendText(
+                'The dialog stays up until the work QUEUED by the operation has drained too, not just until the operation returns: renaming a file makes other plugins queue their own link updates, and those run afterwards.'
+              );
+              f.createEl('br');
+              f.appendText('Needs ');
+              appendCodeBlock(f, 'Should show operation notices');
+              f.appendText(' to be on, since that is what turns progress reporting on at all.');
+            }),
+            disabled: () => !this.pluginSettingsComponent.settings.shouldShowOperationNotices,
+            name: 'Should block the vault during operations',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldBlockVaultDuringOperations', valueComponent: toggle });
               });
             }
           }),

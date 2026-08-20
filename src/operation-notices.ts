@@ -16,10 +16,12 @@ import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { resolveValue } from 'obsidian-dev-utils/value-provider';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { buildFolderNoteOptions } from './folder-note.ts';
+import { showOperationProgressModal } from './operation-progress-modal.ts';
 
 /**
  * How many of an operation's created notes a notice names before it stops and counts the rest (issue #235).
@@ -171,6 +173,12 @@ export interface ShowOperationProgressNoticeParams {
    * @default `undefined`
    */
   readonly abortController?: AbortController;
+
+  /**
+   * The Obsidian application instance, needed to open the blocking dialog when the user has asked for
+   * one instead of a notice.
+   */
+  readonly app: App;
 
   /**
    * The notice content, resolved lazily only if the delay elapses.
@@ -349,6 +357,7 @@ export function showOperationPermanentProgressNotice(params: ShowOperationPerman
 export function showOperationProgressNotice(params: ShowOperationProgressNoticeParams): null | PluginNoticeComponentDelayedNotice {
   const {
     abortController,
+    app,
     content,
     pluginNoticeComponent,
     pluginSettingsComponent
@@ -356,6 +365,20 @@ export function showOperationProgressNotice(params: ShowOperationProgressNoticeP
   if (!pluginSettingsComponent.settings.shouldShowOperationNotices) {
     return null;
   }
+
+  /*
+   * The dialog answers the same contract as the delayed notice — `setContent` plus disposal — so every
+   * call site shows whichever the user asked for without knowing which it got, and keeps disposing it
+   * in its own `finally` exactly as before. That `finally` is what guarantees the vault is given back.
+   */
+  if (pluginSettingsComponent.settings.shouldBlockVaultDuringOperations) {
+    return showOperationProgressModal({
+      abortController: abortController ?? new AbortController(),
+      app,
+      content: () => resolveValue(content, {})
+    });
+  }
+
   return pluginNoticeComponent.showNoticeAfterDelay(normalizeOptionalProperties<PluginNoticeComponentShowNoticeAfterDelayParams>({ abortController, content }));
 }
 
