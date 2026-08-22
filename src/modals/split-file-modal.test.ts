@@ -33,6 +33,7 @@ import {
 
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { PluginSettings } from '../plugin-settings.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts';
 
@@ -191,6 +192,7 @@ interface MockPluginOptions {
   readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldAskForTargetFolderWhenSplitting?: boolean;
+  readonly shouldRememberLastSplitTargetMode?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
 }
 
@@ -315,6 +317,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldLockAllNotesWhenMarkingSelection: false,
       shouldMergeHeadingsByDefault: false,
       shouldOfferCurrentNoteWhenSplitting: true,
+      shouldRememberLastSplitTargetMode: options?.shouldRememberLastSplitTargetMode ?? false,
       shouldShowModalInstructions: true,
       shouldSplitHeadingsAutomatically,
       shouldTreatTitleAsPathByDefault: true
@@ -859,6 +862,114 @@ describe('prepareForSplitFile', () => {
       expect(result).not.toBeNull();
       expect(mockSelectFolder).toHaveBeenCalledTimes(2);
       expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(pickedFolder);
+    });
+  });
+
+  describe('remembering the last split target mode (issue #245)', () => {
+    // What the picker WROTE, by replaying the `editAndSave` callback against a settings stand-in. The
+    // Component mock resolves without applying the edit, so the value has to be read out of the callback.
+    async function applyRememberedMode(pluginSettingsComponent: PluginSettingsComponent): Promise<SplitTargetMode | undefined> {
+      const editAndSave = vi.mocked(pluginSettingsComponent.editAndSave);
+      const editor = editAndSave.mock.calls[0]?.[0];
+      if (!editor) {
+        return undefined;
+      }
+      const settingsToEdit = { defaultSplitTargetMode: SplitTargetMode.Create };
+      await editor(castTo<PluginSettings>(settingsToEdit));
+      return settingsToEdit.defaultSplitTargetMode;
+    }
+
+    it('should save the mode the target was chosen in', async () => {
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldRememberLastSplitTargetMode: true
+      });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(pluginSettingsComponent.editAndSave).toHaveBeenCalledTimes(1);
+      expect(await applyRememberedMode(pluginSettingsComponent)).toBe(SplitTargetMode.Merge);
+    });
+
+    it('should save nothing while the setting is off', async () => {
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({ defaultSplitTargetMode: SplitTargetMode.Merge });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
+    });
+
+    it('should save nothing when the picker never opened', async () => {
+      // A heading-driven split SYNTHESIZES `Create` for its heading-named note without ever showing a
+      // Switch, so saving it would reset a `Merge` default from a screen the user never saw.
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldRememberLastSplitTargetMode: true
+      });
+
+      const result = await prepareForSplitFile({
+        app,
+        editor,
+        heading: 'Heading',
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        shouldSkipModal: true,
+        sourceFile
+      });
+
+      expect(result).not.toBeNull();
+      expect(pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
+    });
+
+    it('should save nothing when the flow cannot merge at all', async () => {
+      // `Create empty note at cursor...` forces `Create` because it has nothing to merge (issue #244).
+      // That is the flow's constraint, not the user's answer, so it must not overwrite their `Merge`.
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldRememberLastSplitTargetMode: true
+      });
+
+      const promise = prepareForSplitFile({
+        app,
+        canMergeIntoExistingNote: false,
+        editor,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        sourceFile
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+      expect(pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
     });
   });
 

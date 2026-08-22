@@ -172,6 +172,22 @@ interface PrepareForSplitFileResult {
 
 /* v8 ignore stop */
 
+interface RememberSplitTargetModeParams {
+  /**
+   * See {@link PrepareForSplitFileParams.canMergeIntoExistingNote}, already defaulted by the caller.
+   */
+  readonly canMergeIntoExistingNote: boolean;
+
+  /**
+   * Whether this pass ran without the picker, in which case the mode below was synthesized rather than
+   * chosen.
+   */
+  readonly isPickerSkipped: boolean;
+
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly splitTargetMode: SplitTargetMode;
+}
+
 interface SelectSplitTargetParams {
   /**
    * The heading naming the new note, or an empty string when the split is not heading-driven.
@@ -930,6 +946,15 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
       return null;
     }
 
+    // A target has been chosen, so the switch's state is now the user's last answer to "create or merge?"
+    // (issue #245). Recorded here rather than after the split so "Change target" reopens in the same mode.
+    await rememberSplitTargetMode({
+      canMergeIntoExistingNote: params.canMergeIntoExistingNote ?? true,
+      isPickerSkipped: shouldSkipModalThisPass,
+      pluginSettingsComponent: params.pluginSettingsComponent,
+      splitTargetMode: splitFileModalResult.splitTargetMode
+    });
+
     // Name first, path second (issue #238): once the name is settled, ASK where the note goes instead of
     // Letting the destination fall out of a setting, a typed path, or Obsidian's default new-note location.
     const targetParentFolderResult = await selectTargetParentFolder({
@@ -1104,6 +1129,55 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
       }),
       params.abortController
     );
+  });
+}
+
+/**
+ * Writes the mode the picker was left in back to `defaultSplitTargetMode`, so the next split/extract opens
+ * where the last one did (issue #245).
+ *
+ * The reporter asked the switch to remember itself. Nothing new is persisted to do that: the mode already
+ * lives in `defaultSplitTargetMode`, which is what seeds the picker, so remembering is just deciding that
+ * the picker may write to it too. Opt-in via `shouldRememberLastSplitTargetMode`, because a hand-picked
+ * default that starts moving on its own is a worse surprise than the request is a win.
+ *
+ * It records the mode at the point the user CHOOSES A TARGET rather than when the split finishes: the
+ * switch is a property of the picker, and what it should reopen holding is what it was last set to. Two
+ * consequences, both wanted — the confirmation dialog's "Change target" reopens in the same mode instead of
+ * snapping back, and `Mod+Enter` counts as a `Create` (it MOVES the switch there before choosing, so the
+ * user did see the mode they got).
+ *
+ * Two flows produce a mode the user never chose, and neither may be remembered — remembering either would
+ * silently reset a `Merge` default from a screen that showed no switch at all:
+ * - A pass that skipped the picker SYNTHESIZES `Create` for its heading-named note.
+ * - `Create empty note at cursor...` forces `Create` because it has nothing to merge (issue #244).
+ *
+ * The write is NOT conditioned on the mode having changed. "Change target" runs this more than once per
+ * split, so an unchanged mode does re-save the same value — which is what the neighbouring
+ * `shouldAskBeforeSplitting` write already does on every confirmed split, and a settings write is far
+ * cheaper than a branch nothing can reach: the mode a unit test gets back IS the seeded setting, so an
+ * equality guard would be permanently uncovered.
+ *
+ * It is a function of its own rather than an `if` in the loop so `prepareForSplitFile` stays under the
+ * complexity limit.
+ *
+ * @param params - The settings component, the chosen mode, and the two flags that say whether the user
+ * could actually see and flip it.
+ */
+async function rememberSplitTargetMode(params: RememberSplitTargetModeParams): Promise<void> {
+  const { pluginSettingsComponent, splitTargetMode } = params;
+  const { settings } = pluginSettingsComponent;
+
+  if (
+    !settings.shouldRememberLastSplitTargetMode
+    || params.isPickerSkipped
+    || !params.canMergeIntoExistingNote
+  ) {
+    return;
+  }
+
+  await pluginSettingsComponent.editAndSave((settingsToEdit) => {
+    settingsToEdit.defaultSplitTargetMode = splitTargetMode;
   });
 }
 
