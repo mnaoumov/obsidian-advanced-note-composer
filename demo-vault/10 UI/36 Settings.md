@@ -74,6 +74,9 @@ folder merges are separate operations, so a setting almost always belongs to exa
     can be formatted as a merge.
 - `defaultSplitTargetMode`
   - whether the picker opens in `Create` or `Merge` — see [10 Create or merge when splitting](<../03 Split/10 Create or merge when splitting.md>).
+- `shouldRememberLastSplitTargetMode`
+  - let the picker save the mode you chose back into `defaultSplitTargetMode`, so it reopens where you
+    left it.
 - `shouldAskBeforeSplitting`
   - show a confirmation dialog before a split runs.
 - `shouldOfferCurrentNoteWhenSplitting`

@@ -791,6 +791,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             }
           }),
           this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether choosing a target in the picker saves the mode it was in back to ');
+              appendCodeBlock(f, 'Default split target mode');
+              f.appendText(', so the next split/extract opens where the last one left off.');
+              f.createEl('br');
+              f.appendText('Flows that show no switch never save anything: a heading-driven split that skips the picker, and ');
+              appendCodeBlock(f, 'Create empty note at cursor...');
+              f.appendText(', which has nothing to merge.');
+            }),
+            name: 'Should remember the last split target mode',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldRememberLastSplitTargetMode', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
             desc: 'Template to use when splitting notes to existing file.',
             name: 'Split to existing file template',
             render: (setting) => {
