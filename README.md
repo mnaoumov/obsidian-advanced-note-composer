@@ -105,7 +105,8 @@ A copy of the vault ships with every release. You can access it via any of the f
   [Reorder headings](<./demo-vault/04 Headings/15 Reorder headings.md>) ·
   [Rename heading](<./demo-vault/04 Headings/16 Rename heading.md>)
 - **Include / exclude paths** — two independent filters: what the plugin may touch, and where its
-  commands are offered at all.
+  commands are offered at all — the second one narrowable per command category, so a folder can lose
+  its merges and keep everything else.
   [Block commands on excluded paths](<./demo-vault/08 Include and exclude/26 Block commands on excluded paths.md>)
 - **UI** — every dialog can be minimized, and every one of them can be pointed at a different target
   without cancelling the operation;

@@ -21,6 +21,7 @@ import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { getSelectionBetweenHorizontalRules } from '../horizontal-rules.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface ExtractBetweenHorizontalRulesEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -63,7 +64,7 @@ export class ExtractBetweenHorizontalRulesEditorCommandHandler extends EditorCom
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
 

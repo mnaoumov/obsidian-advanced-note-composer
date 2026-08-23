@@ -11,7 +11,8 @@ one. The settings tab opens instead as a short list of **pages** you navigate in
 3. Click `Merge`. Inside it, subheadings separate the settings by **which command they apply to** —
    `All merges` for the ones every merge honors, then `Merge file`,
    `Merge folder contents into a single file` and `Merge current folder with another folder`.
-4. Go back and try `Include/exclude`, which splits the same way into `Paths` and `Commands`.
+4. Go back and try `Include/exclude`, which splits the same way: `Paths`, then `All commands`, then one
+   group per command category (`Merge commands`, `Split/extract commands`, and so on).
 
 ## Why a subheading names a whole command
 

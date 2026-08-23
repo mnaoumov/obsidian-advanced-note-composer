@@ -41,6 +41,7 @@ import {
 import { compareNatural } from '../natural-sort.ts';
 import { openFileAfterOperation } from '../open-after-operation.ts';
 import {
+  CommandCategory,
   EmptyFolderBehaviorAfterMergingFolder,
   MergeFolderIntoFileLocation
 } from '../plugin-settings.ts';
@@ -123,7 +124,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     super.canExecuteFolder(folder);
     // Cheapest answers first: both are a property of the folder itself, and they spare the subtree walk
     // Below on every folder-menu open.
-    if (folder.isRoot() || isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
+    if (folder.isRoot() || isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     /*

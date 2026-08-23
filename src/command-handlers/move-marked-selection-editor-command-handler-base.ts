@@ -20,7 +20,10 @@ import { isEditorCommandBlocked } from '../command-block.ts';
 import { resolveInsertOffset } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { createMoveToken } from '../move-token.ts';
-import { TextAfterExtractionMode } from '../plugin-settings.ts';
+import {
+  CommandCategory,
+  TextAfterExtractionMode
+} from '../plugin-settings.ts';
 import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 /**
@@ -98,7 +101,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const marked = this.moveSelectionBuffer.get();

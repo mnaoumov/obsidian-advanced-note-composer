@@ -20,6 +20,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { swap } from '../swapper.ts';
 
@@ -51,7 +52,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
   }
 
   protected override canExecuteFile(file: TFile): boolean {
-    return !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file);
+    return !isFileOrFolderCommandBlocked({ abstractFile: file, commandCategory: CommandCategory.Swap, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override async executeFile(file: TFile): Promise<void> {

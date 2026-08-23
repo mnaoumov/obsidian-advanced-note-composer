@@ -19,6 +19,7 @@ import type { SelectionHighlightComponent } from '../selection-highlight-compone
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface ExtractAfterCursorEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -60,7 +61,7 @@ export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler
   }
 
   protected override canExecuteEditor(_editor: Editor, context: MarkdownFileInfo): boolean {
-    return !isEditorCommandBlocked(this.pluginSettingsComponent, context);
+    return !isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {

@@ -21,6 +21,7 @@ import {
   getSelectionUnderHeading
 } from '../composers/composer-base.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface MarkHeadingToMoveEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -69,7 +70,7 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const file = context.file;

@@ -18,6 +18,7 @@ import type { SelectionHighlightComponent } from '../selection-highlight-compone
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { getSelections } from '../composers/split-composer.ts';
 import { markSelectionToMove } from '../mark-selection-to-move.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface MarkSelectionToMoveEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -56,7 +57,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     return editor.somethingSelected();
