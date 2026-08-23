@@ -750,7 +750,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(mockApplySplitTemplateToNotes).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
     // Compared as paths: the mock files are strict proxies, which a failure diff cannot serialize.
-    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([
+    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile?.path])).toEqual([
       [childFile.path, file.path],
       [grandChildFile.path, childFile.path]
     ]);
@@ -782,7 +782,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
     expect(MockSplitComposer).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
-    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile.path])).toEqual([[childFile.path, file.path]]);
+    expect(applyParams?.notes.map((note) => [note.file.path, note.sourceFile?.path])).toEqual([[childFile.path, file.path]]);
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s): [A/A.md].');
   });
 

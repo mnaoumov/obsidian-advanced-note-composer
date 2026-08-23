@@ -12,6 +12,7 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
   beforeEach,
   describe,
@@ -88,7 +89,12 @@ function createMockFile(): TFile {
   return strictProxy<TFile>({ path: 'test/note.md' });
 }
 
-function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): HandlerParams {
+function createMockParams(
+  isPathIgnored = false,
+  shouldAddCommandsToSubmenu = true,
+  shouldBlockCommandOnPath = false,
+  splitTemplate = ''
+): HandlerParams {
   return {
     app: strictProxy<App>({}),
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({
@@ -99,7 +105,8 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
-        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
+        splitTemplate
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -224,9 +231,38 @@ describe('CreateEmptyNoteAtCursorEditorCommandHandler', () => {
       shouldIncludeFrontmatter: false,
       shouldMergeHeadings: false,
       sourceFile: file,
-      targetFile
+      targetFile,
+      // No `Split template` configured, so the identity template is named — which the composer reads as
+      // "nothing to add" and leaves the created note genuinely empty (issue #244).
+      templateOverride: '{{content}}'
     });
     expect(mockSplitFile).toHaveBeenCalled();
+  });
+
+  it('should name the configured split template as the created note\'s template (issue #244)', async () => {
+    const params = createMockParams(false, true, false, '# {{newTitle}}\n\n{{content}}');
+    const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(params));
+    const targetFile = createMockFile();
+
+    mockPrepareForSplitFile.mockResolvedValue({
+      capturedSelections: [{ endOffset: 12, startOffset: 12 }],
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      insertMode: InsertMode.Append,
+      isNewTargetFile: true,
+      selectedText: '',
+      shouldAllowOnlyCurrentFolder: false,
+      shouldAllowSplitIntoUnresolvedPath: true,
+      shouldFixFootnotes: true,
+      shouldIncludeFrontmatter: false,
+      shouldMergeHeadings: false,
+      targetFile
+    });
+    MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
+
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
+
+    const composerParams = ensureNonNullable(MockSplitComposer.mock.lastCall)[0];
+    expect(composerParams.templateOverride).toBe('# {{newTitle}}\n\n{{content}}');
   });
 
   it('should return true from shouldAddToEditorMenu', () => {

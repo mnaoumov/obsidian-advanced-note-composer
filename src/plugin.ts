@@ -263,8 +263,10 @@ export class Plugin extends PluginBase {
       }),
       new CreateEmptyNoteInFolderCommandHandler({
         app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent
+        pluginSettingsComponent,
+        resourceLockComponent
       }),
       new ExtractBetweenHorizontalRulesEditorCommandHandler({
         app: this.app,

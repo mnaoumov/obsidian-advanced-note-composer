@@ -50,7 +50,10 @@ import {
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
-import { revealInsertedContent } from '../reveal-inserted-content.ts';
+import {
+  placeCaretFromEnd,
+  revealInsertedContent
+} from '../reveal-inserted-content.ts';
 import {
   getSelections,
   padEdgeMoveTemplate,
@@ -177,6 +180,7 @@ vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
 // Composer asks for the right thing, not that the poll works (its locator has its own suite).
 vi.mock('../reveal-inserted-content.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../reveal-inserted-content.ts')>()),
+  placeCaretFromEnd: vi.fn().mockResolvedValue(undefined),
   revealInsertedContent: vi.fn().mockResolvedValue(undefined)
 }));
 
@@ -500,6 +504,59 @@ describe('splitFile', () => {
 
     expect(await app.vault.adapter.read('target.md')).toBe('target body');
     expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
+  });
+
+  it('should write the NAMED template into a note created from an empty extract (issue #244)', async () => {
+    // The follow-up to the test above: naming a template is how `Create empty note at cursor...` says the
+    // Created note should be filled with the `Split template` rather than left blank.
+    vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue('[[target]]');
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      editor,
+      selectedText: '',
+      settingsOverrides: {
+        // Still the shipped default, and still NOT what gets written: only the named template is.
+        mergeTemplate: '\n\n{{content}}',
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
+      },
+      templateOverride: '# {{newTitle}}\n\n{{content}}\n\nfooter'
+    });
+
+    await composer.splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('# target\n\n\n\nfooter');
+    // The residual still goes in: creating the note and leaving a link behind is the whole flow.
+    expect(editor.replaceSelection).toHaveBeenCalledWith('[[target]]');
+  });
+
+  it('should keep writing nothing when the named template is the identity one (issue #244)', async () => {
+    // What the recursive split passes. It adds nothing, so an empty extract has nothing to write either.
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      selectedText: '',
+      templateOverride: '{{content}}'
+    });
+
+    await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+  });
+
+  it('should put the caret where the created note\'s template placed its content token (issue #244)', async () => {
+    const composer = createComposer({
+      capturedSelections: [{ endOffset: 5, startOffset: 5 }],
+      selectedText: '',
+      settingsOverrides: { shouldOpenTargetNoteAfterSplit: true },
+      templateOverride: '# {{newTitle}}\n\n{{content}}\n\nfrom [[{{fromTitle}}]]'
+    });
+
+    await composer.splitFile();
+
+    const caretParams = ensureNonNullable(vi.mocked(placeCaretFromEnd).mock.lastCall)[0];
+    expect(caretParams.tail).toBe('\n\nfrom [[source]]');
+    expect(caretParams.file.path).toBe('target.md');
   });
 
   it('should report an empty extract as a creation rather than as a split (issue #244)', async () => {

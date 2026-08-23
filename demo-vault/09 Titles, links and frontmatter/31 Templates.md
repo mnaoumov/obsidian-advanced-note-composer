@@ -43,6 +43,16 @@ There are three base template settings: **Merge template**, **Split template**, 
 **Smart cut & paste template**. Empty templates fall back up the chain:
 smart cut and paste falls back to split, which falls back to merge.
 
+### `{{content}}` in a note created from nothing
+
+**Split template** also fills the notes the two create commands make — see
+[37 Create empty note](<../02 Extract/37 Create empty note.md>). Nothing was extracted there, so
+`{{content}}` interpolates to nothing and instead marks **where the cursor goes** in the created note.
+Two differences from the chain above: an empty **Split template** does *not* fall back to **Merge
+template** (the note is simply left empty), and for `Create empty note in folder...` the `{{fromTitle}}` /
+`{{fromPath}}` / `{{fromParentFolder}}` tokens come out empty, because that note was not split out of any
+note.
+
 Smart cut and paste can also be templated **per direction** - see
 [25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>).
 

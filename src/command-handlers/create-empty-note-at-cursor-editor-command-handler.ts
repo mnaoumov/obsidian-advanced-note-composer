@@ -13,6 +13,7 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { CONTENT_ONLY_TEMPLATE } from '../apply-split-template.ts';
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
@@ -42,6 +43,10 @@ interface CreateEmptyNoteAtCursorEditorCommandHandlerConstructorParams {
  *
  * The marked-selection collaborators are deliberately not wired: `Switch to smart cut & paste` would mark an
  * empty selection to move, and there is nothing to highlight either.
+ *
+ * "Empty" is the DEFAULT rather than the promise: a configured `Split template` fills the created note, and
+ * its `{{content}}` — interpolating to nothing here — is where the caret goes when the note opens. Naming
+ * that template is also what tells the composer to write anything at all.
  */
 export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHandler {
   private readonly app: App;
@@ -121,7 +126,14 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
       shouldIncludeFrontmatter: prepareForSplitFileResult.shouldIncludeFrontmatter,
       shouldMergeHeadings: prepareForSplitFileResult.shouldMergeHeadings,
       sourceFile: file,
-      targetFile: prepareForSplitFileResult.targetFile
+      targetFile: prepareForSplitFileResult.targetFile,
+      // The created note is filled with the `Split template`, and its `{{content}}` — interpolating to
+      // Nothing, since nothing was extracted — is where the caret goes when the note opens (#244). Naming
+      // The template is also what tells the composer to write it at all; the identity template stands for
+      // "no template configured", which leaves the note genuinely empty. `Merge template` is deliberately
+      // NOT the fallback here: wrapping it around no content is what left two blank lines in a note asked
+      // To be empty.
+      templateOverride: this.pluginSettingsComponent.settings.splitTemplate || CONTENT_ONLY_TEMPLATE
     });
     await composer.splitFile();
   }

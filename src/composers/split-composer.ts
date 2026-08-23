@@ -21,10 +21,12 @@ import type {
   Selection
 } from './composer-base.ts';
 
+import { CONTENT_ONLY_TEMPLATE } from '../apply-split-template.ts';
 import {
   collectAttachmentsReferencedBySelections,
   relocateAttachments
 } from '../attachments.ts';
+import { resolveTemplateTail } from '../create-note-template.ts';
 import {
   checkIsCustomAttachmentLocationAvailable,
   collectAttachmentsWithCustomAttachmentLocation
@@ -46,6 +48,7 @@ import {
   TextAfterExtractionMode
 } from '../plugin-settings.ts';
 import {
+  placeCaretFromEnd,
   POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS,
   pollForInsertedContent,
   revealInsertedContent
@@ -121,6 +124,13 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // Recursive split, which passes the identity template so its structural passes write the extracted
   // Content untouched and the real template is applied to each produced note afterwards, once its own
   // Children are gone (issue #172 — see `applySplitTemplateToNotes`).
+  //
+  // A real override (anything but the identity template) also UN-SKIPS the empty-extract write: a caller
+  // That names a template for an extract of nothing is asking for that template to be written, which is
+  // Exactly what `Create empty note at cursor...` asks for once a `Split template` is configured (#244).
+  // The rule is deliberately tied to the override rather than to the resolved template, so an ordinary
+  // Empty extract — `Extract after cursor` with the cursor at EOF — keeps writing nothing instead of
+  // Regressing to the two blank lines the shipped `mergeTemplate` would leave around no content.
   readonly templateOverride?: string;
 
   // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
@@ -284,18 +294,22 @@ export class SplitComposer extends ComposerBase {
             // Refs and defs both remain in the same note, so they stay resolved.
             this.replaceSourceSelection();
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
-          } else if (this.isEmptyExtract()) {
-            // Nothing was extracted, so nothing is written into the target (issue #244). Running the insert
-            // Anyway would wrap the template around empty content and leave its separators behind — with the
-            // Shipped `mergeTemplate` (`\n\n{{content}}`) a note asked to be EMPTY would open holding two
-            // Blank lines. The source still gets its residual, which is the whole point of the flow: the
-            // Note is created and the link is left at the cursor.
+          } else if (this.isEmptyExtract() && !this.shouldWriteEmptyExtractTemplate()) {
+            // Nothing was extracted and no template was named for the note being created, so nothing is
+            // Written into the target (issue #244). Running the insert anyway would wrap the template around
+            // Empty content and leave its separators behind — with the shipped `mergeTemplate`
+            // (`\n\n{{content}}`) a note asked to be EMPTY would open holding two blank lines. The source
+            // Still gets its residual, which is the whole point of the flow: the note is created and the
+            // Link is left at the cursor.
             this.replaceSourceSelection();
           } else {
             // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
             // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
             // Then removes from the source along with the extracted text. The target write is a different
             // File, so it does not disturb the source editor selection.
+            //
+            // A templated empty create (#244) lands here too, with `selectedText` empty: the write is the
+            // Template itself, and `{{content}}` interpolates to nothing.
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
             this.replaceSourceSelection();
           }
@@ -357,6 +371,14 @@ export class SplitComposer extends ComposerBase {
         // Was cut from — `revealCursor` above already brought it into view.
         if (this.smartCutAndPasteMoveKind && this.shouldJumpToMovedContent) {
           await this.revealMovedContentInTarget();
+        }
+
+        // A note created from a template opens with the caret where its `{{content}}` sat (issue #244).
+        // Only reachable with `shouldOpenTargetNoteAfterSplit` on, because there is no editor to put a
+        // Caret in otherwise — leaving that setting off is the ghost-note workflow, where the point is that
+        // The cursor never moves at all.
+        if (this.shouldWriteEmptyExtractTemplate()) {
+          await this.placeCaretAtTemplateContent();
         }
       }
     } catch (error) {
@@ -615,6 +637,29 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
+   * Puts the caret where the template's `{{content}}` was, in the note this operation just created
+   * (issue #244).
+   *
+   * The template is read back through {@link SplitComposer.getTemplate} rather than from the override
+   * field, so the caret is measured against exactly the string that was written.
+   *
+   * @returns A {@link Promise} that resolves once the caret has been placed, or the poll has given up.
+   */
+  private async placeCaretAtTemplateContent(): Promise<void> {
+    await placeCaretFromEnd({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      file: this.targetFile,
+      tail: resolveTemplateTail({
+        folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
+        sourceFile: this.sourceFile,
+        targetFile: this.targetFile,
+        template: this.getTemplate()
+      })
+    });
+  }
+
+  /**
    * Moves the attachments the extracted range owned into the target note's attachment folder (issue #239),
    * through the same {@link relocateAttachments} pipeline the merges use — so the per-note destination is
    * resolved by `obsidian-dev-utils` `getAttachmentFilePath`, the function Custom Attachment Location
@@ -858,6 +903,23 @@ export class SplitComposer extends ComposerBase {
     await this.applyMovedContentFeedback(located.editor, located.range);
   }
   /* v8 ignore stop */
+
+  /**
+   * Whether this operation writes a TEMPLATE into a note it created out of nothing (issue #244).
+   *
+   * The question is asked of the OVERRIDE rather than of the resolved template, and that is what keeps the
+   * blast radius at the create commands: an ordinary empty extract — `Extract after cursor` with the cursor
+   * at the end of a note — resolves the settings chain down to `mergeTemplate` and would start writing two
+   * blank lines into a note that is supposed to be empty. Only a caller that NAMED a template gets one
+   * written. The recursive split names the identity template, which adds nothing, so it is excluded too.
+   *
+   * @returns Whether the template should be written despite there being no extracted content.
+   */
+  private shouldWriteEmptyExtractTemplate(): boolean {
+    return this.isEmptyExtract()
+      && this.templateOverride !== undefined
+      && this.templateOverride !== CONTENT_ONLY_TEMPLATE;
+  }
 }
 
 export function getSelections(editor: Editor): Selection[] {

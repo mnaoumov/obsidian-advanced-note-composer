@@ -165,6 +165,26 @@ describe('resolveTemplateTokens', () => {
     expect(resolveTemplateTokens({ content: '', sourceFile, targetFile: orphan, template: '{{parentFolder}}' })).toBe('');
   });
 
+  // Issue #244 — `Create empty note in folder...` creates a note out of nothing, so there is no note it
+  // Came FROM and the three `from` tokens have nothing to name.
+  it('should resolve the source tokens to nothing when there is no source note', () => {
+    expect(resolveTemplateTokens({
+      content: '',
+      sourceFile: null,
+      targetFile,
+      template: '[{{fromPath}}][{{fromTitle}}][{{fromParentFolder}}]'
+    })).toBe('[][][]');
+  });
+
+  it('should keep resolving the target tokens when there is no source note', () => {
+    expect(resolveTemplateTokens({
+      content: 'BODY',
+      sourceFile: null,
+      targetFile,
+      template: '{{newTitle}}: {{content}}'
+    })).toBe('Target Note: BODY');
+  });
+
   it('should format the date token with the provided format', () => {
     expect(resolve('{{date:YYYY}}')).toMatch(/^\d{4}$/);
   });
