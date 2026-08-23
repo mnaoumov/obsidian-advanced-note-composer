@@ -7,4 +7,4 @@ you still merge into, or protect a folder whose commands you want to keep.
 
 | Note | What it covers |
 | --- | --- |
-| [26 Block commands on excluded paths](<./26 Block commands on excluded paths.md>) | Both filters, the two entry forms, and what an excluded path is protected from |
+| [26 Block commands on excluded paths](<./26 Block commands on excluded paths.md>) | Both filters, the two entry forms, blocking one command category at a time, and what an excluded path is protected from |

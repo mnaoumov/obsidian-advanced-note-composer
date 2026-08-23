@@ -46,6 +46,7 @@ import {
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 
 interface MergeFolderCommandHandlerConstructorParams {
@@ -105,7 +106,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
+    return !folder.isRoot() && !isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

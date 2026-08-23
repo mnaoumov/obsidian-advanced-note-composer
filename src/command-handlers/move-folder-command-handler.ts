@@ -26,6 +26,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 
 interface BuildMoveConfirmContentParams {
@@ -70,7 +71,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
+    return !folder.isRoot() && !isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.MoveAndFlatten, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

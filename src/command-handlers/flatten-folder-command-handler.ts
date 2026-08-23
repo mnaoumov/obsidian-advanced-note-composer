@@ -38,7 +38,10 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
-import { FlattenMode } from '../plugin-settings.ts';
+import {
+  CommandCategory,
+  FlattenMode
+} from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 
 interface BuildFlattenConfirmContentParams {
@@ -186,7 +189,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     if (folder.isRoot()) {
       return false;
     }
-    if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
+    if (isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.MoveAndFlatten, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const collectFlattenItemsParams = this.buildCollectFlattenItemsParams(folder);

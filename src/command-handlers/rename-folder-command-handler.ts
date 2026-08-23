@@ -41,6 +41,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import {
   BASE_TOKEN_KEYS,
@@ -126,7 +127,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !folder.isRoot() && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
+    return !folder.isRoot() && !isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Rename, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

@@ -24,6 +24,7 @@ import {
 } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface ExtractThisHeadingEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -66,7 +67,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
 

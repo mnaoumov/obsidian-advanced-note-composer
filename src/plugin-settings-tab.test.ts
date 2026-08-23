@@ -39,6 +39,7 @@ import type { PluginSettings } from './plugin-settings.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
+  COMMAND_CATEGORIES,
   MergeFolderIntoFileLocation,
   SplitTargetMode
 } from './plugin-settings.ts';
@@ -213,8 +214,20 @@ describe('PluginSettingsTab', () => {
       'Create folder with notes': [],
       'Folder note': [],
       'Frontmatter': [],
-      // Issue #225.
-      'Include/exclude': ['Paths', 'Commands'],
+      // Issue #225, extended by issue #249: the baseline pair keeps its own group — renamed `All commands`
+      // — and every command category gets one below it, so a path can lose one category and keep the rest.
+      'Include/exclude': [
+        'Paths',
+        'All commands',
+        'Merge commands',
+        'Split/extract commands',
+        'Create commands',
+        'Smart cut & paste commands',
+        'Swap commands',
+        'Move/flatten commands',
+        'Rename commands',
+        'Reorder commands'
+      ],
       // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
       // Six of its ten rows silently meant only the one their descriptions named.
       'Merge': ['All merges', 'Merge file', 'Merge folder contents into a single file', 'Merge current folder with another folder'],
@@ -230,6 +243,20 @@ describe('PluginSettingsTab', () => {
       'Title': [],
       'UI': []
     });
+  });
+
+  // Issue #249: the enum, the settings behind it and this page have to stay in step — a category with no
+  // Group is a filter the user cannot reach, and its two settings would only ever be editable by hand.
+  it('should give every command category its own group with an include and an exclude row', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      expect(containers.get(`${commandCategory} commands`)).toEqual([
+        `${commandCategory} command include paths`,
+        `${commandCategory} command exclude paths`
+      ]);
+    }
   });
 
   it('should render every heading exactly once', async () => {
@@ -248,7 +275,15 @@ describe('PluginSettingsTab', () => {
       'To top of file',
       'To bottom of file',
       'Paths',
-      'Commands'
+      'All commands',
+      'Merge commands',
+      'Split/extract commands',
+      'Create commands',
+      'Smart cut & paste commands',
+      'Swap commands',
+      'Move/flatten commands',
+      'Rename commands',
+      'Reorder commands'
     ]);
   });
 

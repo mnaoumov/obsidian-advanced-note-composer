@@ -45,6 +45,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
@@ -269,7 +270,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    return !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder);
+    return !isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Create, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   /**

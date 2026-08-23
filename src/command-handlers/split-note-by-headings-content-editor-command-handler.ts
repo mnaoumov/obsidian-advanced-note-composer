@@ -27,6 +27,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly app: App;
@@ -63,7 +64,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
     super.canExecuteEditor(editor, context);
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const file = context.file;

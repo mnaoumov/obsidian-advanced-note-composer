@@ -264,6 +264,27 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // Validator — the silent all-or-nothing fallback above is not specific to the content filter.
     this.registerValidator('commandIncludePaths', pathsValidator);
     this.registerValidator('commandExcludePaths', pathsValidator);
+
+    // Each category's own pair (issue #249) is the same kind of list, entry forms included, so it needs
+    // The same validator. There is deliberately NO legacy-settings converter to go with them: the two
+    // Lists above keep meaning "every command", every pair below starts empty, and two empty lists block
+    // Nothing — so an existing `data.json` already expresses exactly what it expressed before.
+    this.registerValidator('createCommandIncludePaths', pathsValidator);
+    this.registerValidator('createCommandExcludePaths', pathsValidator);
+    this.registerValidator('mergeCommandIncludePaths', pathsValidator);
+    this.registerValidator('mergeCommandExcludePaths', pathsValidator);
+    this.registerValidator('moveAndFlattenCommandIncludePaths', pathsValidator);
+    this.registerValidator('moveAndFlattenCommandExcludePaths', pathsValidator);
+    this.registerValidator('renameCommandIncludePaths', pathsValidator);
+    this.registerValidator('renameCommandExcludePaths', pathsValidator);
+    this.registerValidator('reorderCommandIncludePaths', pathsValidator);
+    this.registerValidator('reorderCommandExcludePaths', pathsValidator);
+    this.registerValidator('smartCutAndPasteCommandIncludePaths', pathsValidator);
+    this.registerValidator('smartCutAndPasteCommandExcludePaths', pathsValidator);
+    this.registerValidator('splitCommandIncludePaths', pathsValidator);
+    this.registerValidator('splitCommandExcludePaths', pathsValidator);
+    this.registerValidator('swapCommandIncludePaths', pathsValidator);
+    this.registerValidator('swapCommandExcludePaths', pathsValidator);
   }
 }
 

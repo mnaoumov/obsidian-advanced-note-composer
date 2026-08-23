@@ -173,6 +173,26 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `commandIncludePaths` / `commandExcludePaths`
   - where its commands are offered — see [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>).
 
+Each command category then has its own pair, which narrows what the two above already allow. Both empty
+means the category follows them exactly.
+
+- `mergeCommandIncludePaths` / `mergeCommandExcludePaths`
+  - where the merge commands are offered.
+- `splitCommandIncludePaths` / `splitCommandExcludePaths`
+  - where the extract and split commands are offered.
+- `createCommandIncludePaths` / `createCommandExcludePaths`
+  - where the two create-empty-note commands and `Create folder with notes...` are offered.
+- `smartCutAndPasteCommandIncludePaths` / `smartCutAndPasteCommandExcludePaths`
+  - where marking a selection to move, and the three moves that paste it, are offered.
+- `swapCommandIncludePaths` / `swapCommandExcludePaths`
+  - where the swap commands are offered.
+- `moveAndFlattenCommandIncludePaths` / `moveAndFlattenCommandExcludePaths`
+  - where `Move folder...` and the three flatten commands are offered.
+- `renameCommandIncludePaths` / `renameCommandExcludePaths`
+  - where `Rename folder...` and `Rename heading` are offered.
+- `reorderCommandIncludePaths` / `reorderCommandExcludePaths`
+  - where the three reorder commands are offered.
+
 ## Move and flatten folders
 
 - `shouldAskBeforeFlattening`

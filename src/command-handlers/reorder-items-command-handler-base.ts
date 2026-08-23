@@ -48,6 +48,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { ReorderItemsModel } from '../reorder-items-model.ts';
 import {
@@ -140,7 +141,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    if (isFileOrFolderCommandBlocked(this.pluginSettingsComponent, folder)) {
+    if (isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Reorder, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
 

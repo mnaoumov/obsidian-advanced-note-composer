@@ -21,6 +21,7 @@ import {
   buildRecursiveSplitPreviewRows,
   getHeadingSubtree
 } from '../heading-split-recursion.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { SplitRecursivelyEditorCommandHandlerBase } from './split-recursively-editor-command-handler-base.ts';
 
 interface SplitHeadingRecursivelyEditorCommandHandlerConstructorParams {
@@ -57,7 +58,7 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
     super.canExecuteEditor(editor, context);
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const file = context.file;

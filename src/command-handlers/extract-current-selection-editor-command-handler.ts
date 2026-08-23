@@ -18,6 +18,7 @@ import type { SelectionHighlightComponent } from '../selection-highlight-compone
 import { isEditorCommandBlocked } from '../command-block.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 interface ExtractCurrentSelectionEditorCommandHandlerConstructorParams {
@@ -59,7 +60,7 @@ export class ExtractCurrentSelectionEditorCommandHandler extends ActiveEditorCom
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     return editor.somethingSelected();

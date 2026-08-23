@@ -12,7 +12,11 @@ import {
 } from 'vitest';
 
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettings } from './plugin-settings.ts';
+import {
+  COMMAND_CATEGORIES,
+  CommandCategory,
+  PluginSettings
+} from './plugin-settings.ts';
 
 class TestablePluginSettingsComponent extends PluginSettingsComponent {
   public async runLegacyConverters(record: GenericObject): Promise<void> {
@@ -349,8 +353,33 @@ describe('PluginSettingsComponent', () => {
 
     // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
     // Wording change fails here instead of silently degrading the setting's feedback.
-    // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator.
-    describe.each(['commandExcludePaths', 'commandIncludePaths', 'excludePaths', 'includePaths'] as const)('%s validator', (propertyName) => {
+    // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator,
+    // And so does every per-category pair below it (issue #249) — a broken regex there fails the same
+    // Silent all-or-nothing way.
+    describe.each(
+      [
+        'commandExcludePaths',
+        'commandIncludePaths',
+        'createCommandExcludePaths',
+        'createCommandIncludePaths',
+        'excludePaths',
+        'includePaths',
+        'mergeCommandExcludePaths',
+        'mergeCommandIncludePaths',
+        'moveAndFlattenCommandExcludePaths',
+        'moveAndFlattenCommandIncludePaths',
+        'renameCommandExcludePaths',
+        'renameCommandIncludePaths',
+        'reorderCommandExcludePaths',
+        'reorderCommandIncludePaths',
+        'smartCutAndPasteCommandExcludePaths',
+        'smartCutAndPasteCommandIncludePaths',
+        'splitCommandExcludePaths',
+        'splitCommandIncludePaths',
+        'swapCommandExcludePaths',
+        'swapCommandIncludePaths'
+      ] as const
+    )('%s validator', (propertyName) => {
       it('should accept an empty list', async () => {
         const component = createComponent();
         expect(await validateProperty(component, propertyName, [])).toBeUndefined();
@@ -508,8 +537,8 @@ describe('PluginSettingsComponent', () => {
 
       expect(component.settings.commandExcludePaths).toEqual(['secret']);
       // The behavior the upgraded user had before: commands hidden on the excluded path, and only there.
-      expect(component.settings.shouldBlockCommandOnPath('secret/note.md')).toBe(true);
-      expect(component.settings.shouldBlockCommandOnPath('public/note.md')).toBe(false);
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(true);
+      expect(component.settings.shouldBlockCommandOnPath('public/note.md', CommandCategory.Merge)).toBe(false);
       // The content filter is untouched by the migration.
       expect(component.settings.excludePaths).toEqual(['secret']);
     });
@@ -522,8 +551,36 @@ describe('PluginSettingsComponent', () => {
 
       expect(component.settings.commandExcludePaths).toEqual([]);
       expect(component.settings.commandIncludePaths).toEqual([]);
-      expect(component.settings.shouldBlockCommandOnPath('secret/note.md')).toBe(false);
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(false);
       expect(component.settings.isPathIgnored('secret/note.md')).toBe(true);
+    });
+
+    // Issue #249's own version of the accessor question above: the per-category pairs are getters too, so
+    // The real load pipeline is what proves they are recognized settings that survive a `data.json` rather
+    // Than values the base silently drops on the way in.
+    it('should carry a per-category list through a real load and block only that category', async () => {
+      const component = await loadComponentFromRecord({
+        mergeCommandExcludePaths: ['secret']
+      });
+
+      expect(component.settings.mergeCommandExcludePaths).toEqual(['secret']);
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(true);
+      expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Reorder)).toBe(false);
+      expect(component.settings.shouldBlockCommandOnPath('public/note.md', CommandCategory.Merge)).toBe(false);
+    });
+
+    // A `data.json` written before issue #249 has none of the sixteen keys, and must behave exactly as it
+    // Did — which is what makes the feature need no legacy-settings converter.
+    it('should leave a data.json without any category key behaving as before', async () => {
+      const component = await loadComponentFromRecord({
+        commandExcludePaths: ['secret']
+      });
+
+      expect(component.settings.mergeCommandExcludePaths).toEqual([]);
+      for (const commandCategory of COMMAND_CATEGORIES) {
+        expect(component.settings.shouldBlockCommandOnPath('secret/note.md', commandCategory)).toBe(true);
+        expect(component.settings.shouldBlockCommandOnPath('public/note.md', commandCategory)).toBe(false);
+      }
     });
   });
 

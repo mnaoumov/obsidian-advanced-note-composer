@@ -21,6 +21,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { updateHeadingBacklinks } from '../rename-heading.ts';
 
 interface RenameHeadingEditorCommandHandlerConstructorParams {
@@ -64,7 +65,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.Rename, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
 

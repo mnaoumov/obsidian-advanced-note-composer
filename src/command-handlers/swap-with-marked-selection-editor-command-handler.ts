@@ -12,6 +12,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SwapSelectionBuffer } from '../swap-selection-buffer.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import {
   canSwapWithSelection,
   swapWithSelection
@@ -53,7 +54,7 @@ export class SwapWithMarkedSelectionEditorCommandHandler extends EditorCommandHa
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked(this.pluginSettingsComponent, context)) {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.Swap, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const marked = this.swapSelectionBuffer.get();

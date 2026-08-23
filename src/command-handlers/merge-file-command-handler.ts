@@ -22,6 +22,7 @@ import { MergeComposer } from '../composers/merge-composer.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
 import { prepareForMergeFile } from '../modals/merge-file-modal.ts';
 import { selectTargetFileForMergeFiles } from '../modals/merge-files-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 
 const MIN_MERGEABLE_FILE_COUNT = 2;
 
@@ -59,7 +60,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override canExecuteFile(file: TFile): boolean {
-    return isMarkdownFile(file) && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file);
+    return isMarkdownFile(file) && !isFileOrFolderCommandBlocked({ abstractFile: file, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent });
   }
 
   protected override canExecuteFiles(files: TFile[]): boolean {
@@ -155,6 +156,6 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   private mergeableFiles(files: TFile[]): TFile[] {
-    return files.filter((file) => isMarkdownFile(file) && !isFileOrFolderCommandBlocked(this.pluginSettingsComponent, file));
+    return files.filter((file) => isMarkdownFile(file) && !isFileOrFolderCommandBlocked({ abstractFile: file, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent }));
   }
 }
