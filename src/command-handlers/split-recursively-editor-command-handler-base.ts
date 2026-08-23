@@ -181,9 +181,9 @@ const PREVIEW_INDENT = ' '.repeat(PREVIEW_INDENT_WIDTH);
  * the root pass extracts, and what the dialog and notices call the operation.
  */
 export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
-  private readonly pluginNoticeComponent: PluginNoticeComponent;
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: SplitRecursivelyEditorCommandHandlerBaseConstructorParams) {
