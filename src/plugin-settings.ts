@@ -739,6 +739,20 @@ export class PluginSettings {
    */
   public smartCutAndPasteToTopTemplate = '';
   public splitIntoFolderNoteNameTemplate = '';
+
+  /**
+   * The template a split into a BRAND-NEW note applies, falling back to {@link mergeTemplate} when empty.
+   *
+   * It also fills the note the two create commands make — `Create empty note at cursor...` and
+   * `Create empty note in folder...` (issue #244) — where `{{content}}` interpolates to nothing, since
+   * nothing was extracted, and therefore marks where the CARET goes in the created note. There the fallback
+   * to {@link mergeTemplate} deliberately does NOT apply: an empty template leaves the created note
+   * genuinely empty, because wrapping the shipped `\n\n{{content}}` around no content is what would put two
+   * blank lines in a note asked to be empty.
+   *
+   * The caret needs an editor to land in, so it is only observable when the created note actually opens —
+   * always for the folder command, and for the editor one when `shouldOpenTargetNoteAfterSplit` is on.
+   */
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;

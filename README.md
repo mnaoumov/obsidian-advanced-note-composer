@@ -65,7 +65,8 @@ A copy of the vault ships with every release. You can access it via any of the f
   rules, or everything before or after the cursor — leaving a link, an embed, or nothing behind. With
   nothing selected it creates an empty note and leaves the link at the cursor, so a note you have not
   written yet can exist without your cursor going anywhere; the file explorer's folder menu creates one
-  the same way.
+  the same way. Give it a split template and the new note is not empty at all — it comes out holding the
+  template, with the cursor where `{{content}}` was.
   [Extract selection](<./demo-vault/02 Extract/05 Extract selection.md>) ·
   [Extract heading](<./demo-vault/02 Extract/06 Extract heading.md>) ·
   [Extract between horizontal rules](<./demo-vault/02 Extract/08 Extract between horizontal rules.md>) ·

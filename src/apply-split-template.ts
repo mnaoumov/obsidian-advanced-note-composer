@@ -55,7 +55,13 @@ export interface ApplySplitTemplateToNotesParams {
  */
 export interface SplitTemplateNote {
   readonly file: TFile;
-  readonly sourceFile: TFile;
+
+  /**
+   * The note this one was split out of, or `null` when it was not split out of anything —
+   * `Create empty note in folder...` templates a note it created from scratch (issue #244), so the `from`
+   * vocabulary has nothing to name and resolves empty.
+   */
+  readonly sourceFile: null | TFile;
 }
 
 interface ApplySplitTemplateToNoteParams {

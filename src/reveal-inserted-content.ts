@@ -10,6 +10,11 @@
  * {@link ComposerBase} captures at insert time — the exact string written and the offset it went to — and
  * both have to wait for the destination's editor to actually show up before they can apply an offset to it.
  *
+ * A third flow shares only that waiting half: a note CREATED from a template opens with its caret where the
+ * template's `{{content}}` was (issue #244). It locates nothing, because there is nothing to find — the
+ * caret is arithmetic on the note's own end — so it is a sibling of the pair above rather than another
+ * caller of them.
+ *
  * The locating half is deliberately pure and separately testable: it is where issue #175 was fixed, and
  * "which of the two identical-looking copies is the one we just wrote" is not a question a DOM-coupled poll
  * loop should be answering.
@@ -60,6 +65,32 @@ export interface InsertedContentRange {
 export interface LocatedInsertedContent {
   readonly editor: Editor;
   readonly range: InsertedContentRange;
+}
+
+/**
+ * Parameters for {@link placeCaretFromEnd}.
+ */
+export interface PlaceCaretFromEndParams {
+  readonly app: App;
+
+  /**
+   * Where the give-up is reported, for the same reason {@link PollForInsertedContentParams} logs its own:
+   * "the cursor did not land where the template said" is a bug report, not an acceptable silence.
+   */
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  /**
+   * The note the caret goes into. The active view must be showing THIS file before an offset is applied to
+   * it.
+   */
+  readonly file: TFile;
+
+  /**
+   * The text the note ENDS with — everything the template wrote after its `{{content}}` token. The caret
+   * goes immediately before it, and its presence at the end of the editor is also what proves the editor
+   * has finished loading the note rather than showing an empty buffer.
+   */
+  readonly tail: string;
 }
 
 /**
@@ -134,6 +165,52 @@ export interface RevealInsertedContentParams extends PollForInsertedContentParam
    */
   readonly shouldSelect?: boolean;
 }
+
+/**
+ * Waits for a created note's editor to show up and puts the caret where its template's `{{content}}` was
+ * (issue #244).
+ *
+ * The caret is placed by measuring BACKWARDS from the end of the note, because that is the only anchor a
+ * template can promise: its frontmatter is hoisted out and merged into whatever the note already carried,
+ * so everything above `{{content}}` may have moved, while everything below it was written verbatim at the
+ * tail. The same tail doubles as the readiness signal — an editor that is up but has not yet loaded the
+ * note holds an empty buffer, and applying the arithmetic to that would silently park the caret at the top.
+ *
+ * @param params - The parameters.
+ * @returns A {@link Promise} that resolves once the caret has been placed, or the poll has given up.
+ */
+/* v8 ignore start -- polls a live Obsidian workspace for a MarkdownView; verified via integration. */
+export async function placeCaretFromEnd(params: PlaceCaretFromEndParams): Promise<void> {
+  const {
+    app,
+    consoleDebugComponent,
+    file,
+    tail
+  } = params;
+
+  for (let elapsed = 0; elapsed <= POLL_TIMEOUT_IN_MILLISECONDS; elapsed += POLL_INTERVAL_IN_MILLISECONDS) {
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    if (view?.file?.path === file.path) {
+      const { editor } = view;
+      const editorValue = editor.getValue();
+      // An editor that is up but still loading holds an empty buffer, so the tail being there is what
+      // Proves the note itself arrived.
+      if (editorValue.length > 0 && editorValue.endsWith(tail)) {
+        const position = editor.offsetToPos(editorValue.length - tail.length);
+        editor.setCursor(position);
+        editor.scrollIntoView({ from: position, to: position }, true);
+        return;
+      }
+    }
+
+    await sleep(POLL_INTERVAL_IN_MILLISECONDS);
+  }
+
+  consoleDebugComponent.consoleDebug(
+    `Could not place the caret in ${file.path}: its editor never showed up holding the templated content ending with ${JSON.stringify(tail)}.`
+  );
+}
+/* v8 ignore stop */
 
 /**
  * Waits for the destination note's editor to show up and locates the inserted content in it.

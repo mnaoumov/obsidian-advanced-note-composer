@@ -1153,7 +1153,7 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
  * - `Create empty note at cursor...` forces `Create` because it has nothing to merge (issue #244).
  *
  * The write is NOT conditioned on the mode having changed. "Change target" runs this more than once per
- * split, so an unchanged mode does re-save the same value — which is what the neighbouring
+ * split, so an unchanged mode does re-save the same value — which is what the neighboring
  * `shouldAskBeforeSplitting` write already does on every confirmed split, and a settings write is far
  * cheaper than a branch nothing can reach: the mode a unit test gets back IS the seeded setting, so an
  * equality guard would be permanently uncovered.

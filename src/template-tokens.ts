@@ -217,8 +217,13 @@ interface ResolveTemplateTokensParams {
 
   /**
    * The source note. Backs `{{fromPath}}` / `{{fromTitle}}` / `{{fromParentFolder}}`.
+   *
+   * `null` for a flow that has no source note to name — `Create empty note in folder...` creates a note
+   * out of nothing, so there is no note it came FROM (issue #244). Those three tokens then resolve to the
+   * empty string rather than throwing, exactly as `CreateNoteFromTypedNameParams.contextFile` is already
+   * nullable for the same command.
    */
-  readonly sourceFile: TFile;
+  readonly sourceFile: null | TFile;
 
   /**
    * The destination note. Backs `{{newPath}}` / `{{newTitle}}` / `{{newParentFolder}}` and the bare
@@ -444,14 +449,17 @@ export function resolveTemplateTokens(params: ResolveTemplateTokensParams): stri
       case 'parentFolderPath'.toLowerCase(): {
         return getFolderTokens().folderPath;
       }
+      // The three `from` tokens are the only ones a source note backs, and each answers for itself rather
+      // Than being resolved together up front: a shared eager read would touch the source note even for a
+      // Template that names none of them.
       case 'fromParentFolder'.toLowerCase(): {
-        return getParentFolderName(sourceFile);
+        return sourceFile ? getParentFolderName(sourceFile) : '';
       }
       case 'fromPath'.toLowerCase(): {
-        return sourceFile.path;
+        return sourceFile?.path ?? '';
       }
       case 'fromTitle'.toLowerCase(): {
-        return sourceFile.basename;
+        return sourceFile?.basename ?? '';
       }
       case 'newParentFolder'.toLowerCase():
       case 'parentFolder'.toLowerCase(): {
