@@ -37,10 +37,14 @@ interface TemplaterMock {
 }
 
 /**
- * A modification time later than the mock's own default of `0`, for the tests that pin which note the
- * newest-note fallback picks.
+ * A modification time later than the one the mock stamps on a file it creates, for the tests that pin
+ * which note the newest-note fallback picks.
+ *
+ * Far-future rather than merely non-zero: `obsidian-test-mocks` stamps a real wall-clock time, so a small
+ * absolute constant is in the past and the fallback picks the untouched note instead. It used to default
+ * to `0`, which is why `1000` read as "later" until then.
  */
-const LATER_MTIME = 1000;
+const LATER_MTIME = 4_000_000_000_000;
 
 const MAPPING_TEMPLATE = '<% TOKENS.rawString.replaceAll(": ", " - ") %>';
 

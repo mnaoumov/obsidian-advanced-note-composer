@@ -47,7 +47,6 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { FlattenMode } from './plugin-settings.ts';
 import { clearRecentTargets } from './recent-targets.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
-import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
 import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
@@ -429,9 +428,6 @@ export class Plugin extends PluginBase {
     ]);
 
     this.addChild(new TokenizedStringLanguageComponent());
-    // Pay the one-time leaf-creating cost of `registerLinkHandlers` at startup so the first
-    // Extract/split/merge confirmation dialog no longer switches the active tab (issue #102).
-    this.addChild(new RenderLinkHandlersWarmupComponent({ app: this.app }));
     this.addChild(
       new ReleaseNotesComponent({
         app: this.app,

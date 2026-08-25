@@ -27,7 +27,6 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
-import { RenderLinkHandlersWarmupComponent } from './render-link-handlers-warmup-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
 
@@ -168,10 +167,6 @@ vi.mock('./release-notes-component.ts', () => ({
   ReleaseNotesComponent: vi.fn()
 }));
 
-vi.mock('./render-link-handlers-warmup-component.ts', () => ({
-  RenderLinkHandlersWarmupComponent: vi.fn()
-}));
-
 // Since obsidian-dev-utils 93.2.0 the universal components live in a private `components` bag behind
 // PROTECTED accessors, not in `_`-prefixed backing fields — assigning the old fields silently registered
 // Nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
@@ -229,11 +224,10 @@ describe('Plugin', () => {
     expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TokenizedStringLanguageComponent).toHaveBeenCalledOnce();
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
-    expect(RenderLinkHandlersWarmupComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 7;
+    const EXPECTED_ADD_CHILD_CALLS = 6;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 
