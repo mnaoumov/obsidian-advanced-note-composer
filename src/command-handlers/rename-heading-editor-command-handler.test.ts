@@ -3,6 +3,7 @@ import type {
   Editor,
   HeadingCache,
   MarkdownFileInfo,
+  MarkdownView,
   MetadataCache,
   TFile,
   Vault
@@ -33,6 +34,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 import { runLockedTransaction } from '../locked-transaction.ts';
+import { CommandMenuPlacement } from '../plugin-settings.ts';
 import { updateHeadingBacklinks } from '../rename-heading.ts';
 import { RenameHeadingEditorCommandHandler } from './rename-heading-editor-command-handler.ts';
 
@@ -61,6 +63,7 @@ interface TestableHandler {
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
+  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -120,6 +123,7 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
@@ -355,3 +359,28 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
 }
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('RenameHeadingEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new RenameHeadingEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new RenameHeadingEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
+  });
+});

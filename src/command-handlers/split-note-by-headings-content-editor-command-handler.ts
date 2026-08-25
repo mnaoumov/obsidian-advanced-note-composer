@@ -3,6 +3,7 @@ import type {
   Editor,
   EditorPosition,
   MarkdownFileInfo,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -18,6 +19,10 @@ import type { Level } from '../markdown-heading-document.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { doesSelectionIntersectHeadingOfLevel } from '../headings.ts';
@@ -209,6 +214,17 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
 
   protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
     super.shouldAddToEditorMenu(editor, context);
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

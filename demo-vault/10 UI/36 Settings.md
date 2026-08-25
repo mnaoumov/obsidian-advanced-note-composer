@@ -193,6 +193,30 @@ means the category follows them exactly.
 - `reorderCommandIncludePaths` / `reorderCommandExcludePaths`
   - where the three reorder commands are offered.
 
+## Command menu placement
+
+Obsidian has two context menus over an open note, and they never both answer one right-click: the editor
+menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty
+margin beside it — and on the line-number gutter. Each category of commands that reaches an editor menu
+picks which of the two it appears in. `Neither` still leaves the commands in the command palette and on
+their hotkeys, which is what separates it from the exclude paths above.
+
+`Merge` and `Move/flatten` have no row here: every command in them is a file- or folder-menu command, so
+there is no editor menu for them to be placed in.
+
+- `splitCommandMenuPlacement`
+  - where the extract and split commands appear — see [38 Command menu placement](<./38 Command menu placement.md>).
+- `createCommandMenuPlacement`
+  - where `Create empty note at cursor...` appears.
+- `smartCutAndPasteCommandMenuPlacement`
+  - where marking a selection to move, and the three moves that paste it, appear.
+- `swapCommandMenuPlacement`
+  - where `Mark selection to swap` and `Swap with marked selection` appear.
+- `renameCommandMenuPlacement`
+  - where `Rename heading` appears.
+- `reorderCommandMenuPlacement`
+  - where `Reorder headings` appears.
+
 ## Move and flatten folders
 
 - `shouldAskBeforeFlattening`

@@ -55,6 +55,64 @@ export const COMMAND_CATEGORIES: readonly CommandCategory[] = [
 ];
 
 /**
+ * Which of the two context menus over a markdown editor a category's commands appear in (issue #252).
+ *
+ * Obsidian raises TWO menus there, and they are mutually exclusive by position:
+ * - the **editor menu**, from a right-click on the text, is `workspace.on('editor-menu')`;
+ * - the **viewport menu**, from a right-click on the empty margin `Readable line length` leaves beside the
+ *   text (or on the line-number gutter), is `workspace.on('markdown-viewport-menu')` — the small
+ *   `Readable line length` / `Line numbers` / `Inline title` menu.
+ *
+ * The editor menu's own handler bails when the click lands outside the editor's `contentDOM`, and readable
+ * line length puts the margin outside it, so the two never both fire for one click. The reporter of #252
+ * wanted the recursive splits demoted to the margin — "allows user to only see the recursive split when
+ * they right click the empty space" — because this plugin puts nine items in the editor menu.
+ *
+ * {@link EditorMenu} is what the plugin has always done and stays the default, so nothing changes for
+ * anyone who has not asked.
+ */
+export enum CommandMenuPlacement {
+  /**
+   * Both menus offer the category's commands.
+   */
+  Both = 'Both',
+
+  /**
+   * Only the editor menu — a right-click on the text. Today's behavior, and the default.
+   */
+  EditorMenu = 'EditorMenu',
+
+  /**
+   * Neither menu. The commands stay in the command palette and on their hotkeys, which is what separates
+   * this from the `Command include/exclude paths` filter — that one hides them everywhere.
+   */
+  Neither = 'Neither',
+
+  /**
+   * Only the viewport menu — a right-click on the readable-line-length margin or the line-number gutter.
+   */
+  ViewportMenu = 'ViewportMenu'
+}
+
+/**
+ * The {@link CommandCategory} members whose commands reach an editor context menu at all, in the order the
+ * settings tab lists them.
+ *
+ * Six of the eight. {@link CommandCategory.Merge} and {@link CommandCategory.MoveAndFlatten} are absent
+ * deliberately: every command in them is a file- or folder-menu command, with no `EditorCommandHandler`
+ * behind it, so a placement dropdown on either would control nothing. A settings row that cannot change
+ * what the user sees is worse than a missing one.
+ */
+export const EDITOR_MENU_COMMAND_CATEGORIES: readonly CommandCategory[] = [
+  CommandCategory.SplitAndExtract,
+  CommandCategory.Create,
+  CommandCategory.SmartCutAndPaste,
+  CommandCategory.Swap,
+  CommandCategory.Rename,
+  CommandCategory.Reorder
+];
+
+/**
  * What a folder merge does with the folders it empties. A plugin-local **wrapper** around the
  * `obsidian-dev-utils` `EmptyFolderBehavior`, not that enum itself, because of the fourth member: keeping the
  * merged folder while deleting the folders under it (issue #167) is a change to WHICH paths are offered to
@@ -220,6 +278,15 @@ export enum TextAfterExtractionMode {
   LinkToNewFile = 'link',
   None = 'none'
 }
+
+/**
+ * The name of one of the per-category menu-placement settings (issue #252) — the six accessors
+ * {@link EDITOR_MENU_COMMAND_CATEGORIES} implies, one per category.
+ *
+ * Derived from {@link PluginSettings} the same way {@link CommandCategoryPathsSettingName} is, so renaming
+ * an accessor breaks the settings tab at type-check time rather than at runtime.
+ */
+export type CommandCategoryMenuPlacementSettingName = Extract<keyof PluginSettings, `${string}CommandMenuPlacement`>;
 
 /**
  * The name of one of the per-category command path settings (issue #249) — the sixteen accessors
@@ -865,6 +932,19 @@ export class PluginSettings {
     this.commandCategoryPathSettings(CommandCategory.Create).includePaths = value;
   }
 
+  /**
+   * Which context menus offer the {@link CommandCategory.Create} commands (issue #252).
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get createCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.Create);
+  }
+
+  public set createCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.Create, value);
+  }
+
   public get excludePaths(): string[] {
     return this._pathSettings.excludePaths;
   }
@@ -954,6 +1034,19 @@ export class PluginSettings {
   }
 
   /**
+   * Which context menus offer the {@link CommandCategory.Rename} commands (issue #252).
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get renameCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.Rename);
+  }
+
+  public set renameCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.Rename, value);
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.Reorder} commands are not offered (issue #249) — the
    * exclude half of that category's own filter.
    */
@@ -975,6 +1068,19 @@ export class PluginSettings {
 
   public set reorderCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Reorder).includePaths = value;
+  }
+
+  /**
+   * Which context menus offer the {@link CommandCategory.Reorder} commands (issue #252).
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get reorderCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.Reorder);
+  }
+
+  public set reorderCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.Reorder, value);
   }
 
   /**
@@ -1002,6 +1108,19 @@ export class PluginSettings {
   }
 
   /**
+   * Which context menus offer the {@link CommandCategory.SmartCutAndPaste} commands (issue #252).
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get smartCutAndPasteCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.SmartCutAndPaste);
+  }
+
+  public set smartCutAndPasteCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.SmartCutAndPaste, value);
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.SplitAndExtract} commands are not offered (issue #249) —
    * the exclude half of that category's own filter.
    */
@@ -1026,6 +1145,22 @@ export class PluginSettings {
   }
 
   /**
+   * Which context menus offer the {@link CommandCategory.SplitAndExtract} commands (issue #252).
+   *
+   * This is the category the request was filed about: `Split note by headings recursively...` crowding the
+   * editor menu, wanted on the readable-line-length margin instead.
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get splitCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.SplitAndExtract);
+  }
+
+  public set splitCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.SplitAndExtract, value);
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.Swap} commands are not offered (issue #249) — the exclude
    * half of that category's own filter.
    */
@@ -1047,6 +1182,19 @@ export class PluginSettings {
 
   public set swapCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Swap).includePaths = value;
+  }
+
+  /**
+   * Which context menus offer the {@link CommandCategory.Swap} commands (issue #252).
+   *
+   * @default {@link CommandMenuPlacement.EditorMenu}
+   */
+  public get swapCommandMenuPlacement(): CommandMenuPlacement {
+    return this.commandMenuPlacement(CommandCategory.Swap);
+  }
+
+  public set swapCommandMenuPlacement(value: CommandMenuPlacement) {
+    this.commandCategoryMenuPlacements.set(CommandCategory.Swap, value);
   }
 
   /**
@@ -1082,6 +1230,31 @@ export class PluginSettings {
    */
   private readonly _commandPathSettings = new PathSettings();
   private readonly _pathSettings = new PathSettings();
+
+  /**
+   * Which menus each category's commands appear in (issue #252).
+   *
+   * Seeded for EVERY {@link CommandCategory}, not only the six in {@link EDITOR_MENU_COMMAND_CATEGORIES},
+   * so {@link commandMenuPlacement} answers for any category without a missing-key branch no test could
+   * reach. Only the six have accessors, so the other two can never hold anything but the default — and
+   * nothing reads them, because their commands never reach an editor menu to be placed in.
+   *
+   * A `Map` rather than an object literal, mirroring {@link _commandCategoryPathSettings} and keeping the
+   * key type an enum rather than a widened `string` (R2 G10k).
+   */
+  private readonly commandCategoryMenuPlacements = new Map<CommandCategory, CommandMenuPlacement>(
+    COMMAND_CATEGORIES.map((commandCategory) => [commandCategory, CommandMenuPlacement.EditorMenu])
+  );
+
+  /**
+   * Which context menus offer a command category's commands (issue #252).
+   *
+   * @param commandCategory - The category of the command asking.
+   * @returns Its {@link CommandMenuPlacement}.
+   */
+  public commandMenuPlacement(commandCategory: CommandCategory): CommandMenuPlacement {
+    return ensureNonNullable(this.commandCategoryMenuPlacements.get(commandCategory));
+  }
 
   public isPathIgnored(path: string): boolean {
     return this._pathSettings.isPathIgnored(path);

@@ -1,7 +1,8 @@
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -12,6 +13,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SwapSelectionBuffer } from '../swap-selection-buffer.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { CommandCategory } from '../plugin-settings.ts';
 import {
   canSwapWithSelection,
@@ -102,6 +107,17 @@ export class SwapWithMarkedSelectionEditorCommandHandler extends EditorCommandHa
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.Swap,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.Swap,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

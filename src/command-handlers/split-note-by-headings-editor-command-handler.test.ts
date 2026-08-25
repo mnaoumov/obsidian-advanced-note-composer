@@ -3,6 +3,7 @@ import type {
   Editor,
   HeadingCache,
   MarkdownFileInfo,
+  MarkdownView,
   MetadataCache,
   TFile
 } from 'obsidian';
@@ -35,6 +36,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import { getSelectionUnderHeading } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
+import { CommandMenuPlacement } from '../plugin-settings.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './split-note-by-headings-editor-command-handler.ts';
 
 type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
@@ -47,6 +49,7 @@ interface TestableHandler {
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
+  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -145,6 +148,7 @@ function createMockParams(headingLevel: Level, isPathIgnored = false, shouldAddC
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
@@ -535,3 +539,28 @@ function useRealFragments(): void {
     return Promise.resolve(createEl('a', { text: `[${path}]` }));
   });
 }
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('SplitNoteByHeadingsEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(createMockParams(2)));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams(2);
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
+  });
+});

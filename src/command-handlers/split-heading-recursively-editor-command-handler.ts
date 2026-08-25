@@ -3,6 +3,7 @@ import type {
   CachedMetadata,
   Editor,
   MarkdownFileInfo,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -13,6 +14,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { RecursiveSplitRun } from './split-recursively-editor-command-handler-base.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import {
   getEnclosingHeadingLine,
   getSelectionUnderHeading
@@ -111,6 +116,19 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
      * command the user means — the same rule `Extract this heading...` and the whole-note recursive split
      * follow. The palette command and any hotkey keep working with a selection active.
      */
-    return !editor.somethingSelected();
+    return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
+    // The selection gate above is about which command the user means, not about which menu was raised, so
+    // It holds here too.
+    return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

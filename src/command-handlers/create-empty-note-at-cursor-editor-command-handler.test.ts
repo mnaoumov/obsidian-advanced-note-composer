@@ -2,6 +2,7 @@ import type {
   App,
   Editor,
   MarkdownFileInfo,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -27,7 +28,10 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  CommandMenuPlacement,
+  FrontmatterMergeStrategy
+} from '../plugin-settings.ts';
 import { CreateEmptyNoteAtCursorEditorCommandHandler } from './create-empty-note-at-cursor-editor-command-handler.ts';
 
 interface TestableHandler {
@@ -38,6 +42,7 @@ interface TestableHandler {
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(): boolean;
+  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -103,6 +108,7 @@ function createMockParams(
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
@@ -288,5 +294,30 @@ describe('CreateEmptyNoteAtCursorEditorCommandHandler', () => {
   it('should allow canExecuteEditor with no selection, which is the whole point', () => {
     const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(createMockParams(false, true, false)));
     expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
+  });
+});
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('CreateEmptyNoteAtCursorEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
   });
 });

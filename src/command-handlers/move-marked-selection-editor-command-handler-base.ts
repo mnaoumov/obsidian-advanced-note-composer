@@ -1,7 +1,8 @@
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -17,6 +18,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SmartCutAndPasteMoveKind } from '../plugin-settings.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { resolveInsertOffset } from '../composers/composer-base.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { createMoveToken } from '../move-token.ts';
@@ -243,7 +248,18 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SmartCutAndPaste,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SmartCutAndPaste,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   /**
