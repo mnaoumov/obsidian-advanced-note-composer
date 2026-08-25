@@ -3,6 +3,7 @@ import type {
   Editor,
   EditorPosition,
   MarkdownFileInfo,
+  MarkdownView,
   Notice,
   TFile,
   TFolder,
@@ -36,6 +37,7 @@ import {
   getSelectionUnderHeading
 } from '../composers/composer-base.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
+import { CommandMenuPlacement } from '../plugin-settings.ts';
 import { MarkHeadingToMoveEditorCommandHandler } from './mark-heading-to-move-editor-command-handler.ts';
 
 interface HandlerParams {
@@ -63,6 +65,7 @@ interface TestableHandler {
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
   shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
+  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({
@@ -129,6 +132,7 @@ function createMockParams(options: MockParamsOptions = {}): HandlerParams {
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: options.shouldAddCommandsToSubmenu ?? true,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
@@ -297,5 +301,37 @@ describe('MarkHeadingToMoveEditorCommandHandler', () => {
   it('should reflect the submenu setting', () => {
     expect(toTestable(new MarkHeadingToMoveEditorCommandHandler(createMockParams({ shouldAddCommandsToSubmenu: true }))).shouldAddCommandToSubmenu()).toBe(true);
     expect(toTestable(new MarkHeadingToMoveEditorCommandHandler(createMockParams({ shouldAddCommandsToSubmenu: false }))).shouldAddCommandToSubmenu()).toBe(false);
+  });
+});
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('MarkHeadingToMoveEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new MarkHeadingToMoveEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new MarkHeadingToMoveEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
+  });
+
+  it('should leave the readable-line-length margin while a selection is active (issue #188)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new MarkHeadingToMoveEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor(true)), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
   });
 });

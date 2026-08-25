@@ -2,7 +2,8 @@ import type {
   App,
   Editor,
   HeadingCache,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
@@ -15,6 +16,10 @@ import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import {
   buildOperationNoticeContent,
@@ -191,6 +196,17 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.Rename,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.Rename,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

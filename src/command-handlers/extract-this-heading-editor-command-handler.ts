@@ -2,7 +2,8 @@ import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest/imple
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -18,6 +19,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import {
   getEnclosingHeadingLine,
   getSelectionUnderHeading
@@ -164,6 +169,19 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
      * Deliberately NOT in `canExecuteEditor`: the palette command and any hotkey keep working with a
      * selection active.
      */
-    return !editor.somethingSelected();
+    return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
+    // The selection gate above is about which command the user means, not about which menu was raised, so
+    // It holds here too.
+    return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

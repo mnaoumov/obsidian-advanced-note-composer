@@ -40,6 +40,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
   COMMAND_CATEGORIES,
+  EDITOR_MENU_COMMAND_CATEGORIES,
   MergeFolderIntoFileLocation,
   SplitTargetMode
 } from './plugin-settings.ts';
@@ -252,11 +253,31 @@ describe('PluginSettingsTab', () => {
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
+      /*
+       * Since issue #252 a category whose commands reach an editor menu leads with a menu-placement row.
+       * The two that have none — `Merge` and `Move/flatten`, both made up of file- and folder-menu commands
+       * — still render the two path rows alone.
+       */
+      const menuPlacementRows = EDITOR_MENU_COMMAND_CATEGORIES.includes(commandCategory)
+        ? [`${commandCategory} command menu placement`]
+        : [];
       expect(containers.get(`${commandCategory} commands`)).toEqual([
+        ...menuPlacementRows,
         `${commandCategory} command include paths`,
         `${commandCategory} command exclude paths`
       ]);
     }
+  });
+
+  it('should offer a menu-placement row for exactly the categories whose commands reach an editor menu', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    const categoriesWithMenuPlacementRow = COMMAND_CATEGORIES.filter((commandCategory) =>
+      (containers.get(`${commandCategory} commands`) ?? []).includes(`${commandCategory} command menu placement`)
+    );
+
+    expect(categoriesWithMenuPlacementRow).toEqual([...EDITOR_MENU_COMMAND_CATEGORIES].sort((a, b) => COMMAND_CATEGORIES.indexOf(a) - COMMAND_CATEGORIES.indexOf(b)));
   });
 
   it('should render every heading exactly once', async () => {

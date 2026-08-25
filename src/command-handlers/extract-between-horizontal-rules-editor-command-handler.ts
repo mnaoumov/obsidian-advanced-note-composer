@@ -1,7 +1,8 @@
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -18,6 +19,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SelectionHighlightComponent } from '../selection-highlight-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { getSelectionBetweenHorizontalRules } from '../horizontal-rules.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
@@ -147,6 +152,17 @@ export class ExtractBetweenHorizontalRulesEditorCommandHandler extends EditorCom
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

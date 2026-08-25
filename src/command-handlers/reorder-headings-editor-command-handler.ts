@@ -3,6 +3,7 @@ import type {
   Editor,
   HeadingCache,
   MarkdownFileInfo,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -14,6 +15,10 @@ import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import {
   hasReorderableSiblings,
   joinReorderedSections,
@@ -155,7 +160,18 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.Reorder,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.Reorder,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 
   private getHeadings(file: TFile): readonly HeadingCache[] {

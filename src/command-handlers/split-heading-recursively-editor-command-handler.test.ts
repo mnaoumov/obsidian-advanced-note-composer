@@ -45,6 +45,7 @@ import { SplitComposer } from '../composers/split-composer.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
+import { CommandMenuPlacement } from '../plugin-settings.ts';
 import { SplitHeadingRecursivelyEditorCommandHandler } from './split-heading-recursively-editor-command-handler.ts';
 
 /**
@@ -79,6 +80,7 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
+  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
 let capturedConfirmParams: CapturedConfirmParams | null = null;
@@ -230,6 +232,7 @@ function createMockParams(options?: MockParamsOptions): SplitHeadingRecursivelyE
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave: vi.fn().mockResolvedValue(undefined),
       settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
         isPathIgnored: vi.fn().mockReturnValue(options?.isPathIgnored ?? false),
         reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
@@ -525,3 +528,35 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
 }
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('SplitHeadingRecursivelyEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new SplitHeadingRecursivelyEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new SplitHeadingRecursivelyEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
+  });
+
+  it('should leave the readable-line-length margin while a selection is active (issue #188)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new SplitHeadingRecursivelyEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor(true)), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+});

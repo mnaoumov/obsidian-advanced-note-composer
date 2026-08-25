@@ -1,7 +1,8 @@
 import type {
   SettingDefinitionGroup,
   SettingDefinitionItem,
-  SettingDefinitionPage
+  SettingDefinitionPage,
+  SettingGroupItem
 } from 'obsidian';
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
@@ -12,6 +13,7 @@ import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin
 import { EMPTY } from 'obsidian-dev-utils/string';
 
 import type {
+  CommandCategoryMenuPlacementSettingName,
   CommandCategoryPathsSettingName,
   PluginSettings
 } from './plugin-settings.ts';
@@ -19,6 +21,7 @@ import type {
 import {
   Action,
   CommandCategory,
+  CommandMenuPlacement,
   EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
@@ -44,6 +47,16 @@ interface CommandCategorySettingGroupDefinition {
 
   readonly excludePathsPropertyName: CommandCategoryPathsSettingName;
   readonly includePathsPropertyName: CommandCategoryPathsSettingName;
+
+  /**
+   * The category's menu-placement setting (issue #252), or `undefined` for a category whose commands never
+   * reach an editor menu.
+   *
+   * Optional because two of the eight categories — `Merge` and `Move/flatten` — are made up entirely of
+   * file- and folder-menu commands, so a placement dropdown on either would control nothing. They leave it
+   * unset and their group renders the two path rows alone.
+   */
+  readonly menuPlacementPropertyName?: CommandCategoryMenuPlacementSettingName | undefined;
 }
 
 /**
@@ -63,25 +76,29 @@ const COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS: readonly CommandCategorySettin
     commandCategory: CommandCategory.SplitAndExtract,
     commandsDesc: 'Every extract command, Split note by headings... at any level, and the two recursive splits',
     excludePathsPropertyName: 'splitCommandExcludePaths',
-    includePathsPropertyName: 'splitCommandIncludePaths'
+    includePathsPropertyName: 'splitCommandIncludePaths',
+    menuPlacementPropertyName: 'splitCommandMenuPlacement'
   },
   {
     commandCategory: CommandCategory.Create,
     commandsDesc: 'Create empty note at cursor..., Create empty note in folder... and Create folder with notes...',
     excludePathsPropertyName: 'createCommandExcludePaths',
-    includePathsPropertyName: 'createCommandIncludePaths'
+    includePathsPropertyName: 'createCommandIncludePaths',
+    menuPlacementPropertyName: 'createCommandMenuPlacement'
   },
   {
     commandCategory: CommandCategory.SmartCutAndPaste,
     commandsDesc: 'Mark selection to move, Mark heading to move, and the three moves that paste a marked selection',
     excludePathsPropertyName: 'smartCutAndPasteCommandExcludePaths',
-    includePathsPropertyName: 'smartCutAndPasteCommandIncludePaths'
+    includePathsPropertyName: 'smartCutAndPasteCommandIncludePaths',
+    menuPlacementPropertyName: 'smartCutAndPasteCommandMenuPlacement'
   },
   {
     commandCategory: CommandCategory.Swap,
     commandsDesc: 'Swap current file with another file..., Swap current folder with another folder..., Mark selection to swap and Swap with marked selection',
     excludePathsPropertyName: 'swapCommandExcludePaths',
-    includePathsPropertyName: 'swapCommandIncludePaths'
+    includePathsPropertyName: 'swapCommandIncludePaths',
+    menuPlacementPropertyName: 'swapCommandMenuPlacement'
   },
   {
     commandCategory: CommandCategory.MoveAndFlatten,
@@ -93,13 +110,15 @@ const COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS: readonly CommandCategorySettin
     commandCategory: CommandCategory.Rename,
     commandsDesc: 'Rename folder... and Rename heading',
     excludePathsPropertyName: 'renameCommandExcludePaths',
-    includePathsPropertyName: 'renameCommandIncludePaths'
+    includePathsPropertyName: 'renameCommandIncludePaths',
+    menuPlacementPropertyName: 'renameCommandMenuPlacement'
   },
   {
     commandCategory: CommandCategory.Reorder,
     commandsDesc: 'Reorder headings, Reorder sibling folders and Reorder child folders',
     excludePathsPropertyName: 'reorderCommandExcludePaths',
-    includePathsPropertyName: 'reorderCommandIncludePaths'
+    includePathsPropertyName: 'reorderCommandIncludePaths',
+    menuPlacementPropertyName: 'reorderCommandMenuPlacement'
   }
 ];
 
@@ -2227,10 +2246,51 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
    */
   private commandCategorySettingGroup(definition: CommandCategorySettingGroupDefinition): SettingDefinitionGroup {
     const commandCategory = definition.commandCategory;
-    return this.settingGroupEx({
-      heading: `${commandCategory} commands`,
-      items: [
-        this.settingEx({
+    const menuPlacementPropertyName = definition.menuPlacementPropertyName;
+    const items: SettingGroupItem[] = [];
+
+    if (menuPlacementPropertyName) {
+      items.push(this.settingEx({
+        desc: createFragment((f) => {
+          f.appendText(`Which context menu offers the ${commandCategory} commands (issue #252)`);
+          f.createEl('br');
+          appendCodeBlock(f, 'Editor menu');
+          f.appendText(' - the menu you get by right-clicking the text. Where they have always been.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Readable line length margin');
+          f.appendText(' - the menu you get by right-clicking the empty space beside the text, or the line-number gutter: the one carrying ');
+          appendCodeBlock(f, 'Readable line length');
+          f.appendText('. Pick this to take these commands out of an editor menu that has grown too long.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Both');
+          f.appendText(' - offer them in either menu.');
+          f.createEl('br');
+          appendCodeBlock(f, 'Neither');
+          f.appendText(' - offer them in no context menu. Unlike the exclude paths below, they still work from the command palette and their hotkeys.');
+          f.createEl('br');
+          f.appendText(`Covers: ${definition.commandsDesc}`);
+          f.createEl('br');
+          f.appendText('The margin menu is only ever offered while editing - reading mode has no editor for these commands to act on');
+        }),
+        name: `${commandCategory} command menu placement`,
+        render: (setting) => {
+          setting.addDropdown((dropdown) => {
+            dropdown.addOptions({
+              /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+              [CommandMenuPlacement.EditorMenu]: 'Editor menu',
+              [CommandMenuPlacement.ViewportMenu]: 'Readable line length margin',
+              [CommandMenuPlacement.Both]: 'Both',
+              [CommandMenuPlacement.Neither]: 'Neither'
+              /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+            });
+            this.bind({ propertyName: menuPlacementPropertyName, valueComponent: dropdown });
+          });
+        }
+      }));
+    }
+
+    items.push(
+      this.settingEx({
           desc: createFragment((f) => {
             f.appendText(`Offer the ${commandCategory} commands only on notes and folders from the following paths`);
             f.createEl('br');
@@ -2284,7 +2344,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             });
           }
         })
-      ]
+    );
+
+    return this.settingGroupEx({
+      heading: `${commandCategory} commands`,
+      items
     });
   }
 

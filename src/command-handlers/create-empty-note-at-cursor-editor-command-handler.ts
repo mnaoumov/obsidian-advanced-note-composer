@@ -1,7 +1,8 @@
 import type {
   App,
   Editor,
-  MarkdownFileInfo
+  MarkdownFileInfo,
+  MarkdownView
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -15,6 +16,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { CONTENT_ONLY_TEMPLATE } from '../apply-split-template.ts';
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { SplitComposer } from '../composers/split-composer.ts';
 import { prepareForSplitFile } from '../modals/split-file-modal.ts';
 import { CommandCategory } from '../plugin-settings.ts';
@@ -144,6 +149,17 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
   }
 
   protected override shouldAddToEditorMenu(): boolean {
-    return true;
+    return checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.Create,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.Create,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }

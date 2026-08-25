@@ -3,6 +3,7 @@ import type {
   CachedMetadata,
   Editor,
   MarkdownFileInfo,
+  MarkdownView,
   TFile
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
@@ -13,6 +14,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { RecursiveSplitRun } from './split-recursively-editor-command-handler-base.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../command-menu-placement.ts';
 import { buildRecursiveSplitPreviewRows } from '../heading-split-recursion.ts';
 import { CommandCategory } from '../plugin-settings.ts';
 import { SplitRecursivelyEditorCommandHandlerBase } from './split-recursively-editor-command-handler-base.ts';
@@ -83,6 +88,22 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
      * Deliberately NOT in `canExecuteEditor`: unlike the level-scoped gate of issue #94, this only hides the
      * menu item, so the palette command and any hotkey keep working while a selection is active.
      */
-    return !editor.somethingSelected();
+    return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
+    /*
+     * The command issue #252 was filed about: the reporter wanted it off the editor menu and onto the empty
+     * margin `Readable line length` leaves beside the text. The selection gate above is about which command
+     * the user means rather than about which menu was raised, so it holds here too.
+     */
+    return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
+      commandCategory: CommandCategory.SplitAndExtract,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
   }
 }
