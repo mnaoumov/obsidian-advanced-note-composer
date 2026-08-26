@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 5.10.1
+
+- fix(test): stop the multi-line name-transform test reading other tests' notices
+- docs(demo-vault): unwrap the notes so Obsidian stops rendering a break per line
+
 ## 5.10.0
 
 - chore: lint
