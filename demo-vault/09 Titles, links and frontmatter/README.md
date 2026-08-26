@@ -1,9 +1,6 @@
 # Titles, links and frontmatter
 
-The parts every merge, split and extract have in common. A note that moves takes its links, its title
-and its properties with it, and each of those needs a decision: rewrite the link, clean up the title,
-reconcile the properties, wrap the result in a template. These five notes cover those decisions once,
-for all the commands.
+The parts every merge, split and extract have in common. A note that moves takes its links, its title and its properties with it, and each of those needs a decision: rewrite the link, clean up the title, reconcile the properties, wrap the result in a template. These five notes cover those decisions once, for all the commands.
 
 | Note | What it covers |
 | --- | --- |

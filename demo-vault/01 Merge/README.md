@@ -1,9 +1,6 @@
 # Merge
 
-Merging takes the content of one thing and folds it into another, then deletes what it emptied. The
-four notes here go from the simplest case — this note into that one — up to collapsing a whole folder
-tree into a single file. All of them share one pipeline, so the template, frontmatter strategy,
-footnote renumbering and link fixing you configure once apply to every one of them.
+Merging takes the content of one thing and folds it into another, then deletes what it emptied. The four notes here go from the simplest case — this note into that one — up to collapsing a whole folder tree into a single file. All of them share one pipeline, so the template, frontmatter strategy, footnote renumbering and link fixing you configure once apply to every one of them.
 
 | Note | What it covers |
 | --- | --- |

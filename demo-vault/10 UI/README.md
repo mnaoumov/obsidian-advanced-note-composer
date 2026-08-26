@@ -1,8 +1,6 @@
 # UI
 
-The parts you meet regardless of which command you ran: the dialog in front of you, the notice in the
-corner, and the settings tab you went looking in. None of them change what an operation does — they
-change how much it interrupts you while it does it.
+The parts you meet regardless of which command you ran: the dialog in front of you, the notice in the corner, and the settings tab you went looking in. None of them change what an operation does — they change how much it interrupts you while it does it.
 
 | Note | What it covers |
 | --- | --- |

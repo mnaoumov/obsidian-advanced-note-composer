@@ -1,15 +1,10 @@
 # Settings
 
-Every setting the plugin has, listed by the key it is stored under in `data.json` and grouped by the
-page it lives on in `Settings -> Advanced Note Composer`. The notes elsewhere in this vault show these
-in action; this one is the reference you scan when you know roughly what you want and need the name of
-the thing that does it. To find a setting by its display name instead, see
-[35 Finding a setting](<./35 Finding a setting.md>).
+Every setting the plugin has, listed by the key it is stored under in `data.json` and grouped by the page it lives on in `Settings -> Advanced Note Composer`. The notes elsewhere in this vault show these in action; this one is the reference you scan when you know roughly what you want and need the name of the thing that does it. To find a setting by its display name instead, see [35 Finding a setting](<./35 Finding a setting.md>).
 
 ## Merge
 
-The `Merge` page groups its settings by **which command reads them**, and so does this list. The two
-folder merges are separate operations, so a setting almost always belongs to exactly one of them.
+The `Merge` page groups its settings by **which command reads them**, and so does this list. The two folder merges are separate operations, so a setting almost always belongs to exactly one of them.
 
 ### All merges
 
@@ -18,11 +13,9 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `shouldAskBeforeMerging`
   - show a confirmation dialog before a merge runs.
 - `shouldAlwaysMergeExcludedItems`
-  - merge notes on ignored paths too, instead of skipping and reporting them. With it on, an excluded
-    note is offered in the destination picker as well.
+  - merge notes on ignored paths too, instead of skipping and reporting them. With it on, an excluded note is offered in the destination picker as well.
 - `attachmentExtensions`
-  - markdown files that are really attachments (default `.excalidraw.md`), never merged as text.
-    Splitting and flattening classify them the same way.
+  - markdown files that are really attachments (default `.excalidraw.md`), never merged as text. Splitting and flattening classify them the same way.
 
 ### Merge file
 
@@ -42,8 +35,7 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `shouldMoveAttachmentsWhenMergingFolder`
   - carry the merged notes' attachments into the merged note's attachment folder.
 - `emptyFolderBehaviorAfterMergingFolder`
-  - what happens to folders the merge empties: delete, delete sub-folders only, delete with empty
-    parents, or keep.
+  - what happens to folders the merge empties: delete, delete sub-folders only, delete with empty parents, or keep.
 - `shouldOpenNoteAfterMergingFolderIntoFile`
   - open the merged note at the very end.
 
@@ -59,24 +51,20 @@ folder merges are separate operations, so a setting almost always belongs to exa
 ### Read by merging, but living on another page
 
 - `shouldMergeHeadingsByDefault`
-  - merge under a matching heading in the target instead of appending, by default. On
-    `Merge/split/extract strategies`, because splitting reads it too.
+  - merge under a matching heading in the target instead of appending, by default. On `Merge/split/extract strategies`, because splitting reads it too.
 - `shouldUseSourceTitleWhenTargetHasNoTitle`
-  - give the merged note the source's title when the target has none of its own. On the `Frontmatter`
-    page with the rest of the property handling.
+  - give the merged note the source's title when the target has none of its own. On the `Frontmatter` page with the rest of the property handling.
 
 ## Split and extract
 
 - `splitTemplate`
   - wraps content split or extracted into a new note. Falls back to `mergeTemplate`.
 - `splitToExistingFileTemplate`
-  - which action's template applies when the target already exists, so a split into an existing note
-    can be formatted as a merge.
+  - which action's template applies when the target already exists, so a split into an existing note can be formatted as a merge.
 - `defaultSplitTargetMode`
   - whether the picker opens in `Create` or `Merge` — see [10 Create or merge when splitting](<../03 Split/10 Create or merge when splitting.md>).
 - `shouldRememberLastSplitTargetMode`
-  - let the picker save the mode you chose back into `defaultSplitTargetMode`, so it reopens where you
-    left it.
+  - let the picker save the mode you chose back into `defaultSplitTargetMode`, so it reopens where you left it.
 - `shouldAskBeforeSplitting`
   - show a confirmation dialog before a split runs.
 - `shouldOfferCurrentNoteWhenSplitting`
@@ -108,11 +96,9 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `shouldSplitRecursivelyIntoDefaultNewNoteFolder`
   - root a recursive split's folder tree in Obsidian's own default new-note folder.
 - `shouldMoveAttachmentsWhenSplitting`
-  - carry the attachments the extracted text references into the new note's attachment folder. One the
-    text left behind still references stays put.
+  - carry the attachments the extracted text references into the new note's attachment folder. One the text left behind still references stays put.
 - `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit`
-  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that
-    note's attachments. Covers the shared ones the setting above deliberately leaves behind.
+  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that note's attachments. Covers the shared ones the setting above deliberately leaves behind.
 - `shouldOpenTargetNoteAfterSplit`
   - open the note a split produced.
 
@@ -173,8 +159,7 @@ folder merges are separate operations, so a setting almost always belongs to exa
 - `commandIncludePaths` / `commandExcludePaths`
   - where its commands are offered — see [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>).
 
-Each command category then has its own pair, which narrows what the two above already allow. Both empty
-means the category follows them exactly.
+Each command category then has its own pair, which narrows what the two above already allow. Both empty means the category follows them exactly.
 
 - `mergeCommandIncludePaths` / `mergeCommandExcludePaths`
   - where the merge commands are offered.
@@ -195,14 +180,9 @@ means the category follows them exactly.
 
 ## Command menu placement
 
-Obsidian has two context menus over an open note, and they never both answer one right-click: the editor
-menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty
-margin beside it — and on the line-number gutter. Each category of commands that reaches an editor menu
-picks which of the two it appears in. `Neither` still leaves the commands in the command palette and on
-their hotkeys, which is what separates it from the exclude paths above.
+Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Each category of commands that reaches an editor menu picks which of the two it appears in. `Neither` still leaves the commands in the command palette and on their hotkeys, which is what separates it from the exclude paths above.
 
-`Merge` and `Move/flatten` have no row here: every command in them is a file- or folder-menu command, so
-there is no editor menu for them to be placed in.
+`Merge` and `Move/flatten` have no row here: every command in them is a file- or folder-menu command, so there is no editor menu for them to be placed in.
 
 - `splitCommandMenuPlacement`
   - where the extract and split commands appear — see [38 Command menu placement](<./38 Command menu placement.md>).
@@ -253,30 +233,22 @@ there is no editor menu for them to be placed in.
 ## Folder note
 
 - `folderNoteLocation`
-  - which note describes a folder: read it from the Folder notes plugin, say it yourself, or turn the
-    idea off — see [24 Rename folder](<../06 Folder operations/24 Rename folder.md>).
+  - which note describes a folder: read it from the Folder notes plugin, say it yourself, or turn the idea off — see [24 Rename folder](<../06 Folder operations/24 Rename folder.md>).
 - `folderNoteNameTemplate`
   - names the folder note when you chose the location yourself.
 - `folderNoteTitleTemplate` / `folderNoteAliasesTemplate`
-  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property
-    alone.
+  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property alone.
 
 ## UI
 
 - `shouldShowOperationNotices`
   - show the running and finished notices — see [33 Operation notices](<./33 Operation notices.md>).
 - `shouldBlockVaultDuringOperations`
-  - report progress in a dialog that blocks the vault instead of in a notice, and keep it up until the
-    link updates the operation queued have drained — see
-    [33 Operation notices](<./33 Operation notices.md>).
+  - report progress in a dialog that blocks the vault instead of in a notice, and keep it up until the link updates the operation queued have drained — see [33 Operation notices](<./33 Operation notices.md>).
 - `shouldShowModalInstructions`
-  - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of
-    the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge`
-    switch. Turn it off and this settings page is the only place those choices are made.
+  - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge` switch. Turn it off and this settings page is the only place those choices are made.
 - `pickerRecencyOrder`
-  - which recency a picker offers first when you have typed nothing: the destinations of completed
-    operations, or the folder you are currently in. They only disagree once you have run an operation
-    without navigating to where the next one should go.
+  - which recency a picker offers first when you have typed nothing: the destinations of completed operations, or the folder you are currently in. They only disagree once you have run an operation without navigating to where the next one should go.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
 

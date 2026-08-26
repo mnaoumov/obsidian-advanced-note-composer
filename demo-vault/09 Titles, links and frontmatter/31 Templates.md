@@ -1,7 +1,6 @@
 # Templates
 
-Merged and split content can be wrapped in a **template**. Templates support tokens that are
-filled in at merge/split time.
+Merged and split content can be wrapped in a **template**. Templates support tokens that are filled in at merge/split time.
 
 ## Tokens
 
@@ -12,16 +11,13 @@ filled in at merge/split time.
 - `{{newTitle}}` / `{{newPath}}`
   - the destination note's title / path.
 - `{{fromParentFolder}}` / `{{newParentFolder}}`
-  - the source / destination note's parent folder name. `{{parentFolder}}` is an alias for
-    `{{newParentFolder}}`.
+  - the source / destination note's parent folder name. `{{parentFolder}}` is an alias for `{{newParentFolder}}`.
 - `{{date:FORMAT}}` / `{{time:FORMAT}}`
-  - the current date / time, formatted with a
-    [moment.js](https://momentjs.com/docs/#/displaying/format/) format string.
+  - the current date / time, formatted with a [moment.js](https://momentjs.com/docs/#/displaying/format/) format string.
 
 ### Folder tokens
 
-The tokens of `Create folder with notes...` work here too, naming **the folder the new note ends up
-in** - which with **Should split into folder** on is the folder the split just created:
+The tokens of `Create folder with notes...` work here too, naming **the folder the new note ends up in** - which with **Should split into folder** on is the folder the split just created:
 
 - `{{folderName}}` / `{{folderPath}}`
   - that folder's name / full path.
@@ -32,36 +28,21 @@ in** - which with **Should split into folder** on is the folder the split just c
 - `{{parentFolderPath}}`
   - the same folder's path, so `{{parentFolder}}` / `{{parentFolderPath}}` name the same folder.
 
-`{{safeFolderName}}` and `{{index}}` both read the number back through **Reordered folder name
-template**, so however you write your numbering, every command agrees.
+`{{safeFolderName}}` and `{{index}}` both read the number back through **Reordered folder name template**, so however you write your numbering, every command agrees.
 
-`{{rawFolderName}}` and `{{file}}` are **not** available here: a split has no folder-name prompt, and
-it writes one note rather than several. See [22 Create folder with notes](<../06 Folder operations/22 Create folder with notes.md>) for the command those two
-belong to, and [11 Split into folder](<../03 Split/11 Split into folder.md>) for the setting that gives a split a folder of its own.
+`{{rawFolderName}}` and `{{file}}` are **not** available here: a split has no folder-name prompt, and it writes one note rather than several. See [22 Create folder with notes](<../06 Folder operations/22 Create folder with notes.md>) for the command those two belong to, and [11 Split into folder](<../03 Split/11 Split into folder.md>) for the setting that gives a split a folder of its own.
 
-There are three base template settings: **Merge template**, **Split template**, and
-**Smart cut & paste template**. Empty templates fall back up the chain:
-smart cut and paste falls back to split, which falls back to merge.
+There are three base template settings: **Merge template**, **Split template**, and **Smart cut & paste template**. Empty templates fall back up the chain: smart cut and paste falls back to split, which falls back to merge.
 
 ### `{{content}}` in a note created from nothing
 
-**Split template** also fills the notes the two create commands make — see
-[37 Create empty note](<../02 Extract/37 Create empty note.md>). Nothing was extracted there, so
-`{{content}}` interpolates to nothing and instead marks **where the cursor goes** in the created note.
-Two differences from the chain above: an empty **Split template** does *not* fall back to **Merge
-template** (the note is simply left empty), and for `Create empty note in folder...` the `{{fromTitle}}` /
-`{{fromPath}}` / `{{fromParentFolder}}` tokens come out empty, because that note was not split out of any
-note.
+**Split template** also fills the notes the two create commands make — see [37 Create empty note](<../02 Extract/37 Create empty note.md>). Nothing was extracted there, so `{{content}}` interpolates to nothing and instead marks **where the cursor goes** in the created note. Two differences from the chain above: an empty **Split template** does *not* fall back to **Merge template** (the note is simply left empty), and for `Create empty note in folder...` the `{{fromTitle}}` / `{{fromPath}}` / `{{fromParentFolder}}` tokens come out empty, because that note was not split out of any note.
 
-Smart cut and paste can also be templated **per direction** - see
-[25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>).
+Smart cut and paste can also be templated **per direction** - see [25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>).
 
 ## Try it
 
-The button below sets a **Merge template** that stamps a heading and date onto merged
-content. Manual equivalent: paste the same
-template into **Merge template** in **Settings → Advanced Note Composer**. Then run
-`Merge current file with another file...` from any note and inspect the result.
+The button below sets a **Merge template** that stamps a heading and date onto merged content. Manual equivalent: paste the same template into **Merge template** in **Settings → Advanced Note Composer**. Then run `Merge current file with another file...` from any note and inspect the result.
 
 ```code-button
 ---
