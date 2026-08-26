@@ -34,7 +34,7 @@ interface SettingsCarrier {
 describe('move folder to... (issue #73)', () => {
   it('moves the chosen folder into a target picked from the suggester and updates links', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -87,7 +87,8 @@ describe('move folder to... (issue #73)', () => {
             message: 'target folder suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'mv-dst')
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           // The folder is moved into the destination: `mv-src` now lives under `mv-dst`.
           await waitUntil({
@@ -161,7 +162,7 @@ describe('move folder to... (issue #73)', () => {
 
   it('front-loads the recently-opened folders in the picker, in recent order (issue #149)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         await trashIfExists('rf-src');
@@ -194,7 +195,8 @@ describe('move folder to... (issue #73)', () => {
         // Close the picker without moving anything (this test only checks ordering).
         const input = document.querySelector('.prompt-input');
         if (input instanceof HTMLInputElement) {
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          input.focus();
+          pressKey({ key: 'Escape' });
         }
 
         // The expectations are stated outright, NOT derived from `getRecentFiles()` the way the

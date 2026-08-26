@@ -34,7 +34,7 @@ interface SettingsCarrier {
 describe('extracting a properties selection (issue #183)', () => {
   it('should merge the selected values into the destination note\'s properties instead of its body', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'fm-extract-source.md';
         const TARGET_PATH = 'fm-extract-target.md';
@@ -133,7 +133,8 @@ describe('extracting a properties selection (issue #183)', () => {
             message: 'the destination note suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function editorValueFor(path: string): string | undefined {

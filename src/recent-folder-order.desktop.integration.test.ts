@@ -43,7 +43,7 @@ interface MenuLike {
 describe('recent folder ordering (issue #158)', () => {
   it('offers the folder of the note you are on first when the command runs on another folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const MERGE_ITEM_TITLE = 'Merge entire folder with...';
@@ -99,7 +99,8 @@ describe('recent folder ordering (issue #158)', () => {
           // Close the picker without running anything: this test only checks ordering.
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
-            input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+            input.focus();
+            pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: `the picker for "${itemTitle}" did not close`,

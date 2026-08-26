@@ -27,7 +27,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split template folder tokens (issue #227)', () => {
   it('should resolve the folder tokens against the folder the split created, numbered or not', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -101,7 +101,8 @@ describe('split template folder tokens (issue #227)', () => {
             throw new Error(`create-new suggestion for "${newNoteName}" did not appear; the picker offered ${JSON.stringify(seenTitles)}`, { cause: error });
           }
           await sleep(SETTLE_IN_MILLISECONDS);
-          inputEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          inputEl.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: `extracted note was not created at ${notePath}`,

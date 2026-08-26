@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('switch to split/extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
@@ -67,7 +67,8 @@ describe('switch to split/extract from the smart-cut notice', () => {
           input.value = target.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           // The moved text lands in the target and is removed from the source; the source edit reaches
           // The open editor buffer first, so wait for the vault file to reflect both sides.

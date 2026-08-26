@@ -16,7 +16,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('first extract does not refresh the background (issue #102)', () => {
   it('opens the split confirm dialog without transiently switching the active tab', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 500;
 
         const source = await resetFile('issue-102-source.md', 'alpha bravo charlie delta echo foxtrot\nsecond line here\nthird line here');
@@ -74,9 +74,9 @@ describe('first extract does not refresh the background (issue #102)', () => {
           const activeWhenConfirmOpen = app.workspace.getActiveFile()?.path ?? '';
 
           // Close the confirm dialog and picker.
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const backgroundTabSwitches = activeLeafChanges.filter((path) => path !== 'issue-102-source.md');

@@ -38,7 +38,7 @@ interface SettingsCarrier {
 describe('merging into an excluded target folder', () => {
   it('offers and merges into an excluded folder only while excluded items are always merged', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_FOLDER_PATH = 't504-source';
         const SOURCE_NOTE_PATH = 't504-source/t504-note.md';
@@ -111,7 +111,8 @@ describe('merging into an excluded target folder', () => {
             message: 'the excluded target folder did not appear as a suggestion',
             predicate: () => hasSuggestion(query)
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         /**
@@ -130,7 +131,8 @@ describe('merging into an excluded target folder', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isOffered = hasSuggestion(TARGET_FOLDER_PATH);
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          input.focus();
+          pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return isOffered;
         }

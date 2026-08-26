@@ -21,7 +21,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('change target from the flatten confirmation dialog (issue #205)', () => {
   it('opens the folder picker and promotes the children into the newly chosen folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeFlattening(true);
@@ -92,7 +92,8 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeFlattening(shouldAsk: boolean): Promise<boolean> {

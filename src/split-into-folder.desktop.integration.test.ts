@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split into folder', () => {
   it('should create the extracted note inside a new folder named after it, with a resolving link', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const NEW_NOTE_NAME = 'Extracted into folder';
         const NEW_NOTE_PATH = `${NEW_NOTE_NAME}/${NEW_NOTE_NAME}.md`;
@@ -52,7 +52,8 @@ describe('split into folder', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // Enter selects the active (create-new) suggestion, creating a brand-new note from the typed name.
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created inside its own folder',

@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('switch to smart cut from the split confirmation dialog', () => {
   it('marks the selection and opens the target instead of splitting', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(true);
@@ -51,13 +51,14 @@ describe('switch to smart cut from the split confirmation dialog', () => {
           input.value = target.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           // The confirmation dialog appears (with the switch button); trigger the switch via Alt+S.
           await waitUntil({ predicate: () => findSwitchButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isSwitchButtonPresent = findSwitchButton() !== null;
-          activeDocument.dispatchEvent(new KeyboardEvent('keydown', { altKey: true, bubbles: true, code: 'KeyS', key: 's' }));
+          pressKey({ key: 's', modifiers: ['Alt'] });
 
           // The mark is now active: the permanent notice shows and the target note is opened.
           await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'confirm-switch-target.md' });

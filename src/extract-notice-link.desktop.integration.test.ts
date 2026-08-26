@@ -44,7 +44,7 @@ interface SettingsCarrier {
 describe('extract completion notice link (issue #232)', () => {
   it('jumps to the extracted content and reveals the destination when clicked', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if both waits time out.
         const OPEN_TIMEOUT_IN_MILLISECONDS = 10_000;
         const SETTLE_BEFORE_CLICK_IN_MILLISECONDS = 1000;
@@ -173,7 +173,8 @@ describe('extract completion notice link (issue #232)', () => {
             message: 'the create-destination suggestion did not appear',
             predicate: () => [...activeDocument.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(basename))
           });
-          inputEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          inputEl.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

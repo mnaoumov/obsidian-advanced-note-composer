@@ -41,7 +41,7 @@ interface SplitPickerSettings {
 describe('offering the current note in the split picker (issue #184)', () => {
   it('should list the current note only when the setting is on', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_BASENAME = 'split-picker-current-source';
         const SOURCE_PATH = `${SOURCE_BASENAME}.md`;
@@ -142,7 +142,8 @@ describe('offering the current note in the split picker (issue #184)', () => {
           const titles = [...document.querySelectorAll('.suggestion-title')].map((el) => el.textContent);
           const isCurrentNoteListed = titles.some((title) => title.includes(SOURCE_BASENAME));
 
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          input.focus();
+          pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

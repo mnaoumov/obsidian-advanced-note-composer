@@ -67,7 +67,7 @@ interface TemplateSettings {
 describe('the split template on the create-empty-note commands (issue #244)', () => {
   it('fills the note created at the cursor and lands the caret at the content token', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId, splitTemplate }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId, splitTemplate }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive names: the whole aggregate run shares ONE vault.
         const SOURCE_PATH = 'create-empty-note-template-source.md';
@@ -173,7 +173,8 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
         }
 
         function pressEnter(): void {
-          getPickerInput().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          getPickerInput().focus();
+          pressKey({ key: 'Enter' });
         }
 
         function typeIntoPicker(value: string): void {

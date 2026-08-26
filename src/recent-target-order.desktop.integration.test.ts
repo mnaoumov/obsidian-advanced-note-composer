@@ -54,7 +54,7 @@ interface SettingsCarrier {
 describe('recent target ordering (issue #206)', () => {
   it('offers the folder a completed operation targeted first, ahead of the folder of the note you are on', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const MERGE_ITEM_TITLE = 'Merge entire folder with...';
         const pluginName = app.plugins.manifests[pluginId]?.name ?? '';
@@ -112,7 +112,8 @@ describe('recent target ordering (issue #206)', () => {
             message: 'target folder suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'rt-dst')
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'folder was not moved into the destination',
@@ -198,7 +199,8 @@ describe('recent target ordering (issue #206)', () => {
 
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
-            input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+            input.focus();
+            pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: 'the folder picker did not close',

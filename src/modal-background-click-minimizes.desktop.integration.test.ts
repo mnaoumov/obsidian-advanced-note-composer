@@ -55,6 +55,11 @@ interface PickerDismissResult {
   readonly wasPromptOpen: boolean;
 }
 
+interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
 interface SettingsCarrier {
   editAndSave(editor: (settings: BackgroundClickSettings) => void): Promise<void>;
   settings: BackgroundClickSettings;
@@ -63,7 +68,7 @@ interface SettingsCarrier {
 describe('modal background click', () => {
   it('should park a confirmation on the floating bar instead of cancelling the operation', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<BackgroundClickResult> {
+      async callback({ app, lib: { clickMouse, waitUntil }, obsidianModule, pluginId }): Promise<BackgroundClickResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const errors: string[] = [];
@@ -98,7 +103,7 @@ describe('modal background click', () => {
           if (!(containerEl instanceof HTMLElement)) {
             throw new TypeError('No modal container around the flatten confirmation.');
           }
-          const backgroundEl = containerEl.querySelector('.modal-bg');
+          const backgroundEl = containerEl.querySelector<HTMLElement>('.modal-bg');
           if (!backgroundEl) {
             throw new Error('No dimmed background on the flatten confirmation.');
           }
@@ -106,7 +111,8 @@ describe('modal background click', () => {
           // Obsidian registers its dismissal on this very element inside the `Modal` constructor, so this
           // Is the gesture the reporter performs. Without the wrapper's capture-phase guard it CLOSES the
           // Dialog, cancelling the flatten.
-          backgroundEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          const backgroundPoint = findOwnPoint(backgroundEl);
+          clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
           await waitUntil({ message: 'the background click did not minimize the dialog', predicate: () => document.querySelector('.minimized-modal-bar') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -153,6 +159,27 @@ describe('modal background click', () => {
           isDialogStillOpen,
           isDialogUsableAfterRestore
         };
+
+        /*
+         * Finds a point inside the element that the element itself owns. The dimmed background stretches
+         * behind the dialog, so its centre belongs to the dialog — and a trusted click hit-tests for
+         * real, unlike a dispatched one, which the target receives regardless of what covers it.
+         *
+         * @param element - The element to find an unobstructed point of.
+         * @returns The viewport coordinates of that point.
+         */
+        function findOwnPoint(element: HTMLElement): Point {
+          const STEPS = 20;
+          const rect = element.getBoundingClientRect();
+          for (let stepIndex = 1; stepIndex < STEPS; stepIndex++) {
+            const x = rect.left + rect.width * stepIndex / STEPS;
+            const y = rect.top + rect.height / 2;
+            if (document.elementFromPoint(x, y) === element) {
+              return { x, y };
+            }
+          }
+          throw new Error('every point of the dimmed background is covered');
+        }
 
         function findButton(text: string): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
@@ -223,7 +250,7 @@ describe('modal background click', () => {
 
   it('should still cancel the operation when Escape is pressed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EscapeCancelResult> {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }): Promise<EscapeCancelResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const errors: string[] = [];
@@ -254,7 +281,7 @@ describe('modal background click', () => {
 
           // A keypress is deliberate in a way a background click is not, so this half of the behavior is
           // Untouched by issue #202 and must stay that way.
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await waitUntil({ message: 'Escape did not close the flatten dialog', predicate: () => findButton('Flatten') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -347,7 +374,7 @@ describe('modal background click', () => {
 
   it('should still dismiss an initial picker when its background is clicked', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<PickerDismissResult> {
+      async callback({ app, lib: { clickMouse, waitUntil }, obsidianModule, pluginId }): Promise<PickerDismissResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const errors: string[] = [];
@@ -370,11 +397,12 @@ describe('modal background click', () => {
           // Close-on-background-click. This is the boundary that makes the #202 split deliberate rather
           // Than an oversight.
           const containerEl = document.querySelector('.prompt')?.closest('.modal-container');
-          const backgroundEl = containerEl?.querySelector('.modal-bg');
+          const backgroundEl = containerEl?.querySelector<HTMLElement>('.modal-bg');
           if (!backgroundEl) {
             throw new Error('No dimmed background on the merge picker.');
           }
-          backgroundEl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          const backgroundPoint = findOwnPoint(backgroundEl);
+          clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
           await waitUntil({ message: 'the background click did not dismiss the merge picker', predicate: () => document.querySelector('.prompt') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -397,6 +425,27 @@ describe('modal background click', () => {
           isPromptGone,
           wasPromptOpen
         };
+
+        /*
+         * Finds a point inside the element that the element itself owns. The dimmed background stretches
+         * behind the picker, so its centre belongs to the picker — and a trusted click hit-tests for
+         * real, unlike a dispatched one, which the target receives regardless of what covers it.
+         *
+         * @param element - The element to find an unobstructed point of.
+         * @returns The viewport coordinates of that point.
+         */
+        function findOwnPoint(element: HTMLElement): Point {
+          const STEPS = 20;
+          const rect = element.getBoundingClientRect();
+          for (let stepIndex = 1; stepIndex < STEPS; stepIndex++) {
+            const x = rect.left + rect.width * stepIndex / STEPS;
+            const y = rect.top + rect.height / 2;
+            if (document.elementFromPoint(x, y) === element) {
+              return { x, y };
+            }
+          }
+          throw new Error('every point of the dimmed background is covered');
+        }
 
         async function ensureMarkdownFile(path: string, content: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);

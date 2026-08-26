@@ -15,7 +15,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('change target from the merge-folder confirmation dialog', () => {
   it('reopens the folder picker and merges into the newly chosen folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
@@ -84,7 +84,8 @@ describe('change target from the merge-folder confirmation dialog', () => {
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {

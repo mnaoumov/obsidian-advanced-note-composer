@@ -233,6 +233,8 @@ async function dismissDialogs(): Promise<void> {
       const MODAL_TIMEOUT_IN_MILLISECONDS = 15_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
 
+      // `pressKey` is Electron-only and there is no `window.electron` on the phone, so this file is a
+      // Permanent exception to the trusted-input convention (see the fuller note further down).
       document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
 
       await waitUntil({
@@ -349,6 +351,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
       // Escape, never the confirm button: clicking a feature dialog's primary
       // Action would PERFORM it, and the next shot would open over a mutated vault.
+      // Dispatched rather than pressed for the same reason as above: no `window.electron` on Android.
       document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },

@@ -34,7 +34,7 @@ interface SettingsCarrier {
 describe('attachments in a merge (issue #161)', () => {
   it('moves a markdown-shaped attachment into the destination folder instead of merging it', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -100,7 +100,8 @@ describe('attachments in a merge (issue #161)', () => {
             message: 'target folder suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -152,7 +153,7 @@ describe('attachments in a merge (issue #161)', () => {
 
   it('moves the attachments a merged note owns into the destination note\'s attachment folder', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -229,7 +230,8 @@ describe('attachments in a merge (issue #161)', () => {
             message: 'target note suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

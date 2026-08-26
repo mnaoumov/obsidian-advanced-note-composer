@@ -35,7 +35,7 @@ interface SettingsCarrier {
 describe('merging into an excluded target file (issue #240)', () => {
   it('offers and merges into an excluded note only while excluded items are always merged', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 't492-source.md';
         const TARGET_PATH = 't492-excluded/t492-target.md';
@@ -102,7 +102,8 @@ describe('merging into an excluded target file (issue #240)', () => {
             message: 'the excluded target did not appear as a suggestion',
             predicate: () => hasSuggestion(query)
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         /**
@@ -121,7 +122,8 @@ describe('merging into an excluded target file (issue #240)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isOffered = hasSuggestion('t492-target');
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          input.focus();
+          pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return isOffered;
         }

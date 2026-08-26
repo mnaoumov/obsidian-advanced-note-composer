@@ -15,7 +15,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #142)', () => {
   it('preventDefaults the Enter keydown so it does not leak into the locked editor (no system beep)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
@@ -79,7 +79,8 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {

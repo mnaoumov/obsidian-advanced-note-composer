@@ -72,7 +72,7 @@ interface SettingsCarrier {
 describe('picker recency order (issue #248)', () => {
   it('leads with the last operation target or with the folder you are in, as the setting says', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<ProbeResult> {
+      async callback({ app, lib: { clickElement, pressKey, waitUntil }, obsidianModule, pluginId }): Promise<ProbeResult> {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const MOVE_ITEM_TITLE = 'Move folder to...';
         const pluginName = app.plugins.manifests[pluginId]?.name ?? '';
@@ -158,7 +158,8 @@ describe('picker recency order (issue #248)', () => {
         async function closePicker(): Promise<void> {
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
-            input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+            input.focus();
+            pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: 'the move picker did not close',
@@ -198,12 +199,12 @@ describe('picker recency order (issue #248)', () => {
           await waitForPicker();
           // Clicked rather than Enter-ed: the suggester's Enter handling is Obsidian-internal, while a
           // Click on the item is exactly what a user does and is what the modal listens for.
-          const targetSuggestion = [...document.querySelectorAll('.suggestion-item')]
+          const targetSuggestion = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]
             .find((el) => el.textContent === targetName);
           if (!targetSuggestion) {
             throw new Error(`"${targetName}" was not offered by the move picker.`);
           }
-          targetSuggestion.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          clickElement({ element: targetSuggestion });
 
           await waitUntil({
             message: 'the move did not land',

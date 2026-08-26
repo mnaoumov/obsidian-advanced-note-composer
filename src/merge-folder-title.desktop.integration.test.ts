@@ -15,7 +15,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('merge folder preserves a child note title (issue #114)', () => {
   it('keeps the title frontmatter of a moved child note merged into a folder with no colliding note', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
@@ -71,7 +71,8 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function deleteIfExists(path: string): Promise<void> {

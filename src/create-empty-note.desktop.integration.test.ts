@@ -60,7 +60,7 @@ interface SettingsCarrier {
 describe('create an empty note (issue #244)', () => {
   it('creates an EMPTY note from the cursor, leaves a link behind and never navigates away', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive names: the whole aggregate run shares ONE vault, so a generic one would make another
         // Suite's link ambiguous.
@@ -179,7 +179,8 @@ describe('create an empty note (issue #244)', () => {
         }
 
         function pressEnter(): void {
-          getPickerInput().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          getPickerInput().focus();
+          pressKey({ key: 'Enter' });
         }
 
         function typeIntoPicker(value: string): void {

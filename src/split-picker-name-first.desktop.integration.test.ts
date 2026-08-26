@@ -49,7 +49,7 @@ interface SettingsCarrier {
 describe('the split/extract picker asks for a name before a destination (issue #238)', () => {
   it('refuses to choose anything while a creation has no name, and says why', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { clickElement, pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
         // Make another suite's link ambiguous.
@@ -109,7 +109,10 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           // The reporter's step 3, verbatim: pick a note while the name is empty.
           const suggestionCount = document.querySelectorAll('.suggestion-item').length;
-          document.querySelector('.suggestion-item')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          const firstSuggestionEl = document.querySelector<HTMLElement>('.suggestion-item');
+          if (firstSuggestionEl) {
+            clickElement({ element: firstSuggestionEl });
+          }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isPickerOpenAfterClick = document.querySelector('.prompt') !== null;
 
@@ -124,7 +127,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isHintVisibleWhileBlank = isHintVisible();
 
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null
@@ -188,7 +191,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
         }
 
         function pressEnter(): void {
-          getPickerInput().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          getPickerInput().focus();
+          pressKey({ key: 'Enter' });
         }
 
         function typeIntoPicker(value: string): void {
@@ -250,7 +254,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
   it('creates the new note in the folder of the note picked in the list', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { clickElement, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'split-picker-name-first-picked-source.md';
         const FOLDER_PATH = 'split-picker-name-first-picked-folder';
@@ -312,12 +316,12 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           // ...then pick the sibling it matched. In `Create` mode that row is not a note to write into -
           // It says WHERE the new note goes.
-          const siblingRow = [...document.querySelectorAll('.suggestion-item')]
+          const siblingRow = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]
             .find((row) => row.textContent.includes(SIBLING_NAME));
           if (!siblingRow) {
             throw new Error('The sibling note was not offered in the split picker.');
           }
-          siblingRow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          clickElement({ element: siblingRow });
 
           await waitUntil({
             message: `the new note was not created at ${EXPECTED_PATH}`,

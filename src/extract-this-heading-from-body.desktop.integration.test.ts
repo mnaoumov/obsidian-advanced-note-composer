@@ -22,7 +22,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract this heading from the body (issue #143)', () => {
   it('extracts the whole heading section when the cursor sits in the heading BODY, not on the # line', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const TARGET_BASENAME = 'extracted-section';
 
@@ -64,7 +64,8 @@ describe('extract this heading from the body (issue #143)', () => {
             message: 'create-new suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(TARGET_BASENAME))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created',
