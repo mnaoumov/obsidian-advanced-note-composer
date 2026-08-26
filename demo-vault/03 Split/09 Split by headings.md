@@ -7,21 +7,13 @@ Break one note into many, one per heading of a chosen level.
 1. Run `Split note by headings - H2` from this note.
 2. Each `##` section below becomes its own note (the heading line is included).
 
-Use `Split note by headings content - H2` instead to move only the **content** under each
-heading. Whether the heading line is kept is controlled by **Should keep headings when
-splitting content**.
+Use `Split note by headings content - H2` instead to move only the **content** under each heading. Whether the heading line is kept is controlled by **Should keep headings when splitting content**.
 
 ## Smarter right-click menu
 
-The `Split note by headings - H<n>` items now appear in the editor right-click menu only when
-your cursor or selection actually sits inside a heading of that level. Right-click inside an
-`##` section below and you will see the **H2** item (and **H1**, since the section is nested
-under `# Split by headings`); right-click up in this intro paragraph — under no heading — and
-neither item shows. The same gate applies to the command palette.
+The `Split note by headings - H<n>` items now appear in the editor right-click menu only when your cursor or selection actually sits inside a heading of that level. Right-click inside an `##` section below and you will see the **H2** item (and **H1**, since the section is nested under `# Split by headings`); right-click up in this intro paragraph — under no heading — and neither item shows. The same gate applies to the command palette.
 
-The block below flips that setting for you.
-Manual equivalent: toggle **Should keep headings when splitting content** in
-**Settings → Advanced Note Composer**.
+The block below flips that setting for you. Manual equivalent: toggle **Should keep headings when splitting content** in **Settings → Advanced Note Composer**.
 
 ```code-button
 ---

@@ -1,38 +1,21 @@
 # Start here
 
-This is an [Obsidian](https://obsidian.md/) vault that documents the
-[Advanced Note Composer](https://github.com/mnaoumov/obsidian-advanced-note-composer/) plugin by
-demonstrating it. Every feature has a note that explains what it is for, and most give you a button
-that runs it for real. Read it here on GitHub, or open it in Obsidian and click things.
+This is an [Obsidian](https://obsidian.md/) vault that documents the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-advanced-note-composer/) plugin by demonstrating it. Every feature has a note that explains what it is for, and most give you a button that runs it for real. Read it here on GitHub, or open it in Obsidian and click things.
 
-Obsidian's core `Note composer` moves text between notes, but it moves it bluntly: relative links come
-out pointing at nothing, a heading whose title contains a character a file name cannot hold is refused
-outright, and extracted text is always appended to the target. This plugin fixes those, and then goes
-much further — whole folders can be merged, split, flattened, reordered and renamed, a note's heading
-hierarchy can become a folder tree, and a selection can be marked in one note and dropped at an exact
-cursor position in another.
+Obsidian's core `Note composer` moves text between notes, but it moves it bluntly: relative links come out pointing at nothing, a heading whose title contains a character a file name cannot hold is refused outright, and extracted text is always appended to the target. This plugin fixes those, and then goes much further — whole folders can be merged, split, flattened, reordered and renamed, a note's heading hierarchy can become a folder tree, and a selection can be marked in one note and dropped at an exact cursor position in another.
 
 ## Your first two minutes
 
 1. Open [01 Merge file](<./01 Merge/01 Merge file.md>).
-2. Follow its four steps: run `Merge current file with another file...`, pick `Merge target`, confirm.
-   The note's body — footnote and all — lands in the target, renumbered so it does not collide.
-3. Now open [30 Frontmatter merge strategy](<./09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>)
-   and look at the first captioned rectangle. **That is a button: click it** and it runs the code it
-   contains, here setting a merge strategy for you. The result appears below it, and the `</>` toggle
-   beside it reveals the source.
+2. Follow its four steps: run `Merge current file with another file...`, pick `Merge target`, confirm. The note's body — footnote and all — lands in the target, renumbered so it does not collide.
+3. Now open [30 Frontmatter merge strategy](<./09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>) and look at the first captioned rectangle. **That is a button: click it** and it runs the code it contains, here setting a merge strategy for you. The result appears below it, and the `</>` toggle beside it reveals the source.
 4. Merge the two example notes again and watch the frontmatter resolve differently.
 
-That is the whole model: read what a feature does, click a button to put the plugin into the state that
-shows it off, then run the command yourself. Every note also spells out the manual equivalent, so you
-never strictly need the buttons. They are powered by
-[`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault
-installs for you automatically on first open.
+That is the whole model: read what a feature does, click a button to put the plugin into the state that shows it off, then run the command yourself. Every note also spells out the manual equivalent, so you never strictly need the buttons. They are powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open.
 
 ## Work through the folders
 
-Each folder opens with a note of its own listing what is inside, so the File Explorer tells you what
-every note is for without sending you back here.
+Each folder opens with a note of its own listing what is inside, so the File Explorer tells you what every note is for without sending you back here.
 
 | Folder | What it covers |
 | --- | --- |
@@ -49,8 +32,4 @@ every note is for without sending you back here.
 
 ## Materials
 
-`Materials/` holds the notes and folders the walkthroughs operate on, one folder per note that needs
-them — `Materials/20 Flatten folder/` belongs to
-[20 Flatten folder](<./06 Folder operations/20 Flatten folder.md>). You never have to open it directly;
-each note links to what it needs. It exists so that what you see at the top level is the documentation,
-rather than a pile of example data mixed in with it.
+`Materials/` holds the notes and folders the walkthroughs operate on, one folder per note that needs them — `Materials/20 Flatten folder/` belongs to [20 Flatten folder](<./06 Folder operations/20 Flatten folder.md>). You never have to open it directly; each note links to what it needs. It exists so that what you see at the top level is the documentation, rather than a pile of example data mixed in with it.

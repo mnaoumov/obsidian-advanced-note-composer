@@ -1,9 +1,6 @@
 # Split
 
-A split is an extraction driven by the note's own structure: instead of pointing at one thing, you let
-the headings decide. It scales from one level of headings to the entire hierarchy turned into a folder
-tree, and every split has to answer the same question first — are you creating a note, or merging into
-one that already exists?
+A split is an extraction driven by the note's own structure: instead of pointing at one thing, you let the headings decide. It scales from one level of headings to the entire hierarchy turned into a folder tree, and every split has to answer the same question first — are you creating a note, or merging into one that already exists?
 
 | Note | What it covers |
 | --- | --- |

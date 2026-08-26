@@ -1,8 +1,6 @@
 # Swap
 
-Swapping exchanges two things in one reversible operation, rather than making you move one out of the
-way first. It works at three scales, and in every case both sides are locked while it runs so nothing
-can drift half-way through.
+Swapping exchanges two things in one reversible operation, rather than making you move one out of the way first. It works at three scales, and in every case both sides are locked while it runs so nothing can drift half-way through.
 
 | Note | What it covers |
 | --- | --- |

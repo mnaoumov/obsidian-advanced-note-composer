@@ -1,9 +1,6 @@
 # Extract
 
-Extracting is the opposite of merging: it takes part of a note out into a note of its own. What you
-can point at varies — a selection, a whole heading with everything under it, the block between two
-horizontal rules — but the machinery is the same, and so is the question of what to leave behind in
-its place.
+Extracting is the opposite of merging: it takes part of a note out into a note of its own. What you can point at varies — a selection, a whole heading with everything under it, the block between two horizontal rules — but the machinery is the same, and so is the question of what to leave behind in its place.
 
 | Note | What it covers |
 | --- | --- |
