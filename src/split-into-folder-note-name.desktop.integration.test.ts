@@ -20,7 +20,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('split into folder note name', () => {
   it('should name the extracted note after the template and keep the folder name as an alias', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SAVE_DELAY_IN_MILLISECONDS = 300;
         const NEW_NOTE_NAME = 'Named split';
@@ -55,7 +55,8 @@ describe('split into folder note name', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created under the configured note name',

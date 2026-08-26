@@ -36,7 +36,7 @@ interface SettingsCarrier {
 describe('change target from the create-folder confirmation dialog (issue #199)', () => {
   it('opens the parent picker and rebuilds the plan, numbering against the newly chosen parent', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ORIGINAL_PARENT = 'ctc-original';
         const PICKED_PARENT = 'ctc-picked';
@@ -145,7 +145,8 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

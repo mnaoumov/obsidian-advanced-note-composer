@@ -40,7 +40,7 @@ interface SettingsCarrier {
 describe('merge multiple selected files into one file (issue #92)', () => {
   it('merges every file selected in the explorer into the picked target via the files menu', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -120,7 +120,8 @@ describe('merge multiple selected files into one file (issue #92)', () => {
             message: 'target file suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(filePath))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

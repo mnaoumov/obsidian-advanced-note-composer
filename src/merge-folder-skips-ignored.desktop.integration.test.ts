@@ -39,7 +39,7 @@ interface SettingsCarrier {
 describe('merge folder skips ignored files (issue #72)', () => {
   it('does not create a stray empty target for an ignored file and reports it in a summary notice', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, ignoredPath, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -155,7 +155,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
             message: 'target folder suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
@@ -214,7 +215,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
 
   it('merges an excluded file too when Should always merge excluded items is on (issue #150)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, ignoredPath, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, ignoredPath, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -281,7 +282,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
             message: 'target folder suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

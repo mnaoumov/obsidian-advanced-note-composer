@@ -44,7 +44,7 @@ interface SettingsCarrier {
 describe('the split/extract picker\'s box is remembered per mode (issue #237)', () => {
   it('drops the heading name when the switch says merge, and gives it back when it says create', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'split-picker-mode-seed-source.md';
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
@@ -105,7 +105,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
           await flipSwitch();
           const valueAfterSwitchingToMergeAgain = readPickerValue();
 
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

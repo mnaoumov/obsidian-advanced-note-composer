@@ -219,7 +219,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('moves the folder when the confirmation dialog is confirmed', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
@@ -271,7 +271,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findButton(text: string): HTMLButtonElement | null {
@@ -336,7 +337,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
   it('does not move the folder when the confirmation dialog is cancelled', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
@@ -378,7 +379,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           input.value = itemPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findButton(text: string): HTMLButtonElement | null {

@@ -75,6 +75,9 @@ describe('reorder drag and drop', () => {
         // A synthetic-but-complete drag: a real `DataTransfer` carried through the same
         // Dragstart -> dragover -> drop -> dragend sequence Obsidian's drag manager listens for, so every
         // Listener the modal registers runs exactly as it does under a real pointer drag.
+        // These dispatches are a PERMANENT exception to the trusted-input convention: `sendInputEvent`
+        // Can express a pointer move or a click, but it cannot express a drag, so there is no trusted
+        // Equivalent of this sequence to convert to.
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;
           const BEFORE_FRACTION = 0.25;
@@ -236,6 +239,9 @@ describe('reorder drag and drop', () => {
           itemEl.click();
         }
 
+        // A PERMANENT exception to the trusted-input convention, as in the suite above: `sendInputEvent`
+        // Can express a pointer move or a click, but it cannot express a drag, so this sequence has no
+        // Trusted equivalent to convert to.
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;
           const BEFORE_FRACTION = 0.25;

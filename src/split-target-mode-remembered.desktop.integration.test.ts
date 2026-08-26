@@ -45,7 +45,7 @@ interface SettingsCarrier {
 describe('the split/extract picker remembers the mode it was left in (issue #245)', () => {
   it('should reopen in merge after a merge, once the setting is on', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
         // Make another suite's link ambiguous.
@@ -81,7 +81,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
             message: `no suggestion appeared for ${TARGET_BASENAME}`,
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(TARGET_BASENAME))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'the split picker did not close',
@@ -103,7 +104,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           await openPicker(reopenedEditor);
           const isSwitchOnAtSecondOpen = isSwitchOn();
 
-          document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Escape', key: 'Escape' }));
+          pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the reopened split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

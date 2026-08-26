@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('extract between horizontal rules', () => {
   it('extracts the block between the rules closest to the cursor, leaving the rules in place', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Two different rule spellings (`---` and `***`) prove Obsidian's parser tags both as thematicBreak
         // Sections, which is what the command keys off. `middle` sits between them.
@@ -66,7 +66,8 @@ describe('extract between horizontal rules', () => {
           // The suggester needs a beat to mark the matching suggestion active; dispatching Enter the
           // Instant the element appears races that and selects nothing.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'the block between the rules was not extracted to the bottom of the note',

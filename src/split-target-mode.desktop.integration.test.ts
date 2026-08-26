@@ -57,7 +57,7 @@ interface SplitTargetModeSettings {
 describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
   it('should do what the switch says, whatever the typed name would have implied', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'split-mode-source.md';
         const TARGET_BASENAME = 'split-mode-target';
@@ -196,7 +196,8 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
               predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(options.typedName))
             });
           }
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', ctrlKey: shouldForceCreate, key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter', modifiers: shouldForceCreate ? ['Mod'] : [] });
 
           await waitUntil({
             message: 'the split picker did not close',

@@ -41,7 +41,7 @@ interface SettingsCarrier {
 describe('property order when extracting a property value (issue #187)', () => {
   it('should keep the destination note\'s own property order under every merge strategy', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'fm-order-source.md';
         const TARGET_PATH = 'fm-order-target.md';
@@ -144,7 +144,8 @@ describe('property order when extracting a property value (issue #187)', () => {
             message: 'the destination note suggestion did not appear',
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
           });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

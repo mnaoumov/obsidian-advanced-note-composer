@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('change target from the split confirmation dialog', () => {
   it('reopens the picker and splits into the newly chosen target', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(true);
@@ -98,7 +98,8 @@ describe('change target from the split confirmation dialog', () => {
           input.value = basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename)) });
-          input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
+          input.focus();
+          pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
