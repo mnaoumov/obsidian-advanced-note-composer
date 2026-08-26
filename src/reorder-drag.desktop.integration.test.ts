@@ -78,6 +78,7 @@ describe('reorder drag and drop', () => {
         // These dispatches are a PERMANENT exception to the trusted-input convention: `sendInputEvent`
         // Can express a pointer move or a click, but it cannot express a drag, so there is no trusted
         // Equivalent of this sequence to convert to.
+        /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;
           const BEFORE_FRACTION = 0.25;
@@ -110,6 +111,7 @@ describe('reorder drag and drop', () => {
             typesAfterDragStart
           };
         }
+        /* eslint-enable obsidian-dev-utils/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
 
         function getRow(rowLabel: string): HTMLElement {
           const itemEl = document.querySelector(`.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(rowLabel)}"]`);
@@ -242,6 +244,7 @@ describe('reorder drag and drop', () => {
         // A PERMANENT exception to the trusted-input convention, as in the suite above: `sendInputEvent`
         // Can express a pointer move or a click, but it cannot express a drag, so this sequence has no
         // Trusted equivalent to convert to.
+        /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;
           const BEFORE_FRACTION = 0.25;
@@ -274,6 +277,7 @@ describe('reorder drag and drop', () => {
             typesAfterDragStart
           };
         }
+        /* eslint-enable obsidian-dev-utils/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
 
         function getRow(rowLabel: string): HTMLElement {
           const itemEl = document.querySelector(`.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(rowLabel)}"]`);
