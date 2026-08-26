@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## 5.10.0
+
+- chore: lint
+- chore: lint
+- test: pin that loading the plugin creates no leaf (#250)
+- docs(agents): record CommandMenuPlacement and the two editor context menus
+- feat(commands): offer each command category on the readable-line-length margin (#252)
+- chore: update libs
+- docs(readme): match the GitHub rendering on Obsidian's plugin page (#251)
+- feat(commands): narrow command blocking to one category at a time (#249)
+- feat(split): apply the split template to the create-empty-note commands (#244)
+- feat(split): remember the last used create/merge mode behind a setting
+- chore: update obsidian-dev-utils to 94.6.1
+- chore: update obsidian-dev-utils to 94.6.0
+- fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
+- feat(pickers): let the picker recency order be chosen, rather than fixed (#248)
+- feat(ui): offer a progress dialog that blocks the vault until the work is done (#247)
+- feat(split): hand an extract's destination note to Custom Attachment Location (#246)
+- test: gate the demo vault by clicking every code button
+- feat(split): create an empty note from an empty extract (#244)
+- feat(settings): move the lock-all-notes row to the smart cut & paste page (#243)
+- chore: teach cspell the advisory wording
+- chore: update libs
+- fix(merge-folder): make the excluded-items setting reach the folder picker
+- feat(settings): hide every per-operation override when the UI setting is off (#242)
+- feat(settings): flatten the swap settings page (#241)
+- docs: show the screenshots in the README
+- feat(settings): give each merge command its own settings header (#240)
+- docs: capture the community-store screenshot set
+- feat(split): carry a heading's own attachments into the note it creates
+- fix(split-picker): require a name before a new note can be placed (#238)
+- fix(split-picker): clear the heading name when the switch is set to merge (#237)
+- fix(split-picker): keep the create/merge switch clear of the minimize button (#236)
+- fix(operation-notices): name the notes a batch split created (#235)
+- refactor(folder-note): dissolve the local folder-note code onto dev-utils 94.2.0
+- test(merge-suites): make a stalled folder merge report why it stalled
+- feat(prompt): spell-check the name prompts, following the vault's Spellcheck setting (#233)
+- feat(notices): open a folder's folder note when its notice link is clicked
+
 ## 5.9.2
 
 - fix(demo-vault): stop committing the app.json settings obsidian-dev-utils owns
