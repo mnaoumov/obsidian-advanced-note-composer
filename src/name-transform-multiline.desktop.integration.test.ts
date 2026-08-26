@@ -81,6 +81,16 @@ describe('name transform producing a multi-line name (issue #203)', () => {
             predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).length === 1
           });
 
+          /*
+           * Every desktop integration test shares ONE Obsidian instance, and a notice raised by an
+           * earlier test can still be on screen here. The collection below sweeps the whole document, so
+           * without this the "no unhandled-error notice appeared" assertion fails on someone else's
+           * leftover — which is exactly how this test failed inside a release preflight while passing in
+           * isolation. Ignore the notices that already exist; element identity is stable, and the text is
+           * not a safe key because two tests can raise the same message.
+           */
+          const preExistingNoticeEls = new Set<Element>(activeDocument.querySelectorAll('.notice'));
+
           app.commands.executeCommandById(`${pluginId}:extract-this-heading`);
 
           /*
@@ -90,6 +100,9 @@ describe('name transform producing a multi-line name (issue #203)', () => {
           const noticeTexts = new Set<string>();
           for (let attempt = 0; attempt < NOTICE_POLL_ATTEMPTS; attempt++) {
             for (const noticeEl of activeDocument.querySelectorAll('.notice')) {
+              if (preExistingNoticeEls.has(noticeEl)) {
+                continue;
+              }
               const text = noticeEl.textContent;
               if (text) {
                 noticeTexts.add(text);
