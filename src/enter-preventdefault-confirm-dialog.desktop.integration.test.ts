@@ -10,6 +10,14 @@ import {
 
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
+/**
+ * Holds the keydown the capture listener saw, so its `defaultPrevented` can be read once every handler
+ * has had its turn with it.
+ */
+interface CapturedKeyboardEvent {
+  value: KeyboardEvent | null;
+}
+
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #142)', () => {
@@ -38,21 +46,37 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           await waitUntil({ predicate: () => findButton('Merge') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          // Dispatch a cancelable Enter keydown at the confirmation modal.
-          // Obsidian's Scope calls preventDefault synchronously during dispatch when the handler returns false.
-          const modalEl = document.querySelector('.mod-confirmation') ?? document.body;
-          const enterEvent = new KeyboardEvent('keydown', {
-            bubbles: true,
-            cancelable: true,
-            code: 'Enter',
-            key: 'Enter'
-          });
-          modalEl.dispatchEvent(enterEvent);
-          const wasDefaultPrevented = enterEvent.defaultPrevented;
+          /*
+           * A REAL Enter key press, not a dispatched one. The whole subject of this test is what
+           * Obsidian's `Scope` does to a genuine keystroke — a dispatched event is `isTrusted === false`
+           * and is exactly the kind of input such handling is entitled to ignore, which would leave this
+           * asserting `defaultPrevented` on an event no production code ever saw.
+           *
+           * A trusted press hands back no event object to read `defaultPrevented` from, so the flag is
+           * observed from the event's LAST stop instead: `window` in the bubble phase runs after the
+           * `document`-level handlers Obsidian registers, so what it sees is the verdict on the real key.
+           */
+          const capturedEnter: CapturedKeyboardEvent = { value: null };
+          function captureEnter(keyboardEvent: KeyboardEvent): void {
+            if (keyboardEvent.key === 'Enter') {
+              capturedEnter.value = keyboardEvent;
+            }
+          }
 
-          // Enter also confirms the merge: the source folder is deleted and its note lands in the target.
-          await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf142-src') === null });
-          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          activeWindow.addEventListener('keydown', captureEnter, { capture: true });
+          try {
+            pressKey({ key: 'Enter' });
+
+            // Enter also confirms the merge: the source folder is deleted and its note lands in the target.
+            await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf142-src') === null });
+            await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          } finally {
+            activeWindow.removeEventListener('keydown', captureEnter, { capture: true });
+          }
+
+          // Read AFTER the dispatch has finished: the event object keeps the verdict, so this sees what
+          // Every handler did to it, including a `Scope` handler that stops propagation on its way.
+          const wasDefaultPrevented = capturedEnter.value?.defaultPrevented ?? false;
 
           const isMergeCompleted = app.vault.getAbstractFileByPath('mf142-src') === null
             && app.vault.getAbstractFileByPath('mf142-tgt/note.md') !== null;
