@@ -18,7 +18,7 @@ const PLUGIN_ID = 'advanced-note-composer';
 describe('same-note extract via the split picker', () => {
   it('should offer the source note and extract the selection to its bottom (Enter) or top (Shift+Enter)', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
@@ -28,7 +28,7 @@ describe('same-note extract via the split picker', () => {
           const bottomSuggestions = await openSplitPickerForSelection(bottomFile, 6, 11);
           // While the split picker is open, the captured selection is highlighted in the source note.
           const highlightWhileExtracting = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length;
-          dispatchSelectSuggestion(false);
+          selectSuggestion(false);
           await waitUntil({ predicate: () => editorValueFor('extract-same-bottom.md')?.trimEnd().endsWith('bravo') === true });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const bottomNote = editorValueFor('extract-same-bottom.md') ?? '';
@@ -36,7 +36,7 @@ describe('same-note extract via the split picker', () => {
           // --- Shift+Enter: extract "gamma" to the TOP of the same note. ---
           const topFile = await resetFile('extract-same-top.md', 'delta epsilon gamma');
           await openSplitPickerForSelection(topFile, 14, 19);
-          dispatchSelectSuggestion(true);
+          selectSuggestion(true);
           await waitUntil({ predicate: () => wasMovedBefore('extract-same-top.md', 'gamma', 'delta') });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const topNote = editorValueFor('extract-same-top.md') ?? '';
@@ -79,19 +79,14 @@ describe('same-note extract via the split picker', () => {
           }
         }
 
-        function dispatchSelectSuggestion(shouldPrependToTop: boolean): void {
+        function selectSuggestion(shouldPrependToTop: boolean): void {
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('No split picker input.');
           }
-          input.dispatchEvent(
-            new KeyboardEvent('keydown', {
-              bubbles: true,
-              code: 'Enter',
-              key: 'Enter',
-              shiftKey: shouldPrependToTop
-            })
-          );
+          // A trusted key press goes to whatever holds DOM focus, not to the element it is aimed at.
+          input.focus();
+          pressKey({ key: 'Enter', modifiers: shouldPrependToTop ? ['Shift'] : [] });
         }
 
         function wasMovedBefore(path: string, moved: string, marker: string): boolean {
