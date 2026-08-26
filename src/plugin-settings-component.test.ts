@@ -4,6 +4,7 @@ import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugi
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -14,7 +15,9 @@ import {
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import {
   COMMAND_CATEGORIES,
+  COMMAND_MENU_PLACEMENTS,
   CommandCategory,
+  CommandMenuPlacement,
   PluginSettings
 } from './plugin-settings.ts';
 
@@ -404,6 +407,32 @@ describe('PluginSettingsComponent', () => {
         const component = createComponent();
         expect(await validateProperty(component, propertyName, ['Inbox', '/^Archive[/', '/^Drafts(/'])).toBe('Invalid regular expression: /^Archive[/');
       });
+    });
+  });
+
+  // A placement only ever reaches the settings from a dropdown that offers real members, so the validator
+  // Exists for the other way in: a hand-edited `data.json`. Without it the unknown value would reach the
+  // `assertNever` guard in `command-menu-placement.ts` and throw from inside a context-menu handler.
+  describe.each(
+    [
+      'createCommandMenuPlacement',
+      'renameCommandMenuPlacement',
+      'reorderCommandMenuPlacement',
+      'smartCutAndPasteCommandMenuPlacement',
+      'splitCommandMenuPlacement',
+      'swapCommandMenuPlacement'
+    ] as const
+  )('%s validator', (propertyName) => {
+    it('should accept every known placement', async () => {
+      const component = createComponent();
+      for (const placement of COMMAND_MENU_PLACEMENTS) {
+        expect(await validateProperty(component, propertyName, placement)).toBeUndefined();
+      }
+    });
+
+    it('should reject a placement that is not a known member', async () => {
+      const component = createComponent();
+      expect(await validateProperty(component, propertyName, castTo<CommandMenuPlacement>('bogus'))).toBe('Unknown menu placement: bogus');
     });
   });
 

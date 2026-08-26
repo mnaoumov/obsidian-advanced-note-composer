@@ -10,7 +10,9 @@ import type { CommandCategoryPathsSettingName } from './plugin-settings.ts';
 import {
   Action,
   COMMAND_CATEGORIES,
+  COMMAND_MENU_PLACEMENTS,
   CommandCategory,
+  CommandMenuPlacement,
   FlattenMode,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
@@ -130,6 +132,15 @@ describe('COMMAND_CATEGORIES', () => {
 
   it('should have one settings pair per category', () => {
     expect(COMMAND_CATEGORY_PATH_PROPERTIES.map((properties) => properties.commandCategory).sort()).toEqual([...COMMAND_CATEGORIES].sort());
+  });
+});
+
+describe('COMMAND_MENU_PLACEMENTS', () => {
+  // The list is spelled out, so this is what catches a placement added to the enum and left out of the
+  // List the validator checks against — which would make the new member the one value it rejects.
+  it('should list every CommandMenuPlacement member exactly once', () => {
+    const enumValues = Object.keys(CommandMenuPlacement).map((key) => getEnumValue(CommandMenuPlacement, key));
+    expect([...COMMAND_MENU_PLACEMENTS].sort()).toEqual(enumValues.sort());
   });
 });
 

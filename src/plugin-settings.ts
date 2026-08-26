@@ -95,6 +95,20 @@ export enum CommandMenuPlacement {
 }
 
 /**
+ * Every {@link CommandMenuPlacement}, for validating one read back out of `data.json`.
+ *
+ * Spelled out for the same reason {@link COMMAND_CATEGORIES} is, and pinned against the enum by the same
+ * kind of unit test — a member added to the enum and left out of here would quietly become the one
+ * placement the validator rejects.
+ */
+export const COMMAND_MENU_PLACEMENTS: readonly CommandMenuPlacement[] = [
+  CommandMenuPlacement.Both,
+  CommandMenuPlacement.EditorMenu,
+  CommandMenuPlacement.Neither,
+  CommandMenuPlacement.ViewportMenu
+];
+
+/**
  * The {@link CommandCategory} members whose commands reach an editor context menu at all, in the order the
  * settings tab lists them.
  *

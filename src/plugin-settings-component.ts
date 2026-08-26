@@ -5,6 +5,7 @@ import type { MaybeReturn } from 'obsidian-dev-utils/type';
 import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
 import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
+import type { CommandMenuPlacement } from './plugin-settings.ts';
 import type {
   CreateFolderTemplateTokens,
   NameTransformTokens,
@@ -14,6 +15,7 @@ import type {
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import { parseFolderContentTemplate } from './folder-content-template.ts';
 import {
+  COMMAND_MENU_PLACEMENTS,
   FrontmatterTitleMode,
   PluginSettings
 } from './plugin-settings.ts';
@@ -285,6 +287,18 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('splitCommandExcludePaths', pathsValidator);
     this.registerValidator('swapCommandIncludePaths', pathsValidator);
     this.registerValidator('swapCommandExcludePaths', pathsValidator);
+
+    // Each category's menu placement (issue #252) is an enum coming out of `data.json`, where
+    // Nothing stops a hand-edit from naming a member that does not exist. Without a validator that value
+    // Reaches `checkShouldAddCommandToEditorMenu`, whose `assertNever` guard then throws from inside a
+    // Context-menu handler — a broken menu instead of a rejected setting. The validator refuses it first,
+    // So the setting keeps its previous value and the menus keep working.
+    this.registerValidator('createCommandMenuPlacement', validateCommandMenuPlacement);
+    this.registerValidator('renameCommandMenuPlacement', validateCommandMenuPlacement);
+    this.registerValidator('reorderCommandMenuPlacement', validateCommandMenuPlacement);
+    this.registerValidator('smartCutAndPasteCommandMenuPlacement', validateCommandMenuPlacement);
+    this.registerValidator('splitCommandMenuPlacement', validateCommandMenuPlacement);
+    this.registerValidator('swapCommandMenuPlacement', validateCommandMenuPlacement);
   }
 }
 
@@ -357,6 +371,22 @@ function findUnknownTokenKey(template: string, resolveToken: (probe: string) => 
 function hasValidFileNameLiteral(template: string): boolean {
   const literal = template.replaceAll(TEMPLATE_TOKEN_REG_EXP, '');
   return !literal.includes('/') && !new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(literal);
+}
+
+/**
+ * Validates one of the per-category menu-placement settings (issue #252).
+ *
+ * The dropdown can only ever offer real members, so this guards the other way in: a `data.json` naming a
+ * placement that does not exist — hand-edited, or written by a version that had a member this one does
+ * not.
+ *
+ * @param value - The placement as stored.
+ * @returns The error message, or nothing when the placement is a known member.
+ */
+function validateCommandMenuPlacement(value: CommandMenuPlacement): MaybeReturn<string> {
+  if (!COMMAND_MENU_PLACEMENTS.includes(value)) {
+    return `Unknown menu placement: ${value}`;
+  }
 }
 
 /**
