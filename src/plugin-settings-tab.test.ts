@@ -273,9 +273,7 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
-    const categoriesWithMenuPlacementRow = COMMAND_CATEGORIES.filter((commandCategory) =>
-      (containers.get(`${commandCategory} commands`) ?? []).includes(`${commandCategory} command menu placement`)
-    );
+    const categoriesWithMenuPlacementRow = COMMAND_CATEGORIES.filter((commandCategory) => (containers.get(`${commandCategory} commands`) ?? []).includes(`${commandCategory} command menu placement`));
 
     expect(categoriesWithMenuPlacementRow).toEqual([...EDITOR_MENU_COMMAND_CATEGORIES].sort((a, b) => COMMAND_CATEGORIES.indexOf(a) - COMMAND_CATEGORIES.indexOf(b)));
   });

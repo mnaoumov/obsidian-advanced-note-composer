@@ -2291,59 +2291,59 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
 
     items.push(
       this.settingEx({
-          desc: createFragment((f) => {
-            f.appendText(`Offer the ${commandCategory} commands only on notes and folders from the following paths`);
-            f.createEl('br');
-            f.appendText(`Covers: ${definition.commandsDesc}`);
-            f.createEl('br');
-            f.appendText('Insert each path on a new line');
-            f.createEl('br');
-            f.appendText('You can use path string or ');
-            appendCodeBlock(f, '/regular expression/');
-            f.createEl('br');
-            appendPathFormsDesc(f);
-            f.createEl('br');
-            f.appendText('If the setting is empty, these commands are offered wherever ');
-            appendCodeBlock(f, 'Command include paths');
-            f.appendText(' already allows them');
-          }),
-          name: `${commandCategory} command include paths`,
-          render: (setting) => {
-            setting.addMultipleText((multipleText) => {
-              this.bind({ propertyName: definition.includePathsPropertyName, valueComponent: multipleText });
-            });
-          }
+        desc: createFragment((f) => {
+          f.appendText(`Offer the ${commandCategory} commands only on notes and folders from the following paths`);
+          f.createEl('br');
+          f.appendText(`Covers: ${definition.commandsDesc}`);
+          f.createEl('br');
+          f.appendText('Insert each path on a new line');
+          f.createEl('br');
+          f.appendText('You can use path string or ');
+          appendCodeBlock(f, '/regular expression/');
+          f.createEl('br');
+          appendPathFormsDesc(f);
+          f.createEl('br');
+          f.appendText('If the setting is empty, these commands are offered wherever ');
+          appendCodeBlock(f, 'Command include paths');
+          f.appendText(' already allows them');
         }),
-        this.settingEx({
-          desc: createFragment((f) => {
-            f.appendText(`Hide the ${commandCategory} commands on notes and folders from the following paths, leaving every other command there`);
-            f.createEl('br');
-            f.appendText(`Covers: ${definition.commandsDesc}`);
-            f.createEl('br');
-            f.appendText('Insert each path on a new line');
-            f.createEl('br');
-            f.appendText('You can use path string or ');
-            appendCodeBlock(f, '/regular expression/');
-            f.createEl('br');
-            appendPathFormsDesc(f);
-            f.createEl('br');
-            f.appendText('If the setting is empty, no ');
-            f.appendText(commandCategory);
-            f.appendText(' command is hidden beyond what ');
-            appendCodeBlock(f, 'Command exclude paths');
-            f.appendText(' already hides');
-            f.createEl('br');
-            f.appendText('A category can only narrow further, never bring back a command the ');
-            appendCodeBlock(f, 'All commands');
-            f.appendText(' pair hid. To leave one category offered on a path and hide the rest, list that path in the OTHER categories\' exclude boxes');
-          }),
-          name: `${commandCategory} command exclude paths`,
-          render: (setting) => {
-            setting.addMultipleText((multipleText) => {
-              this.bind({ propertyName: definition.excludePathsPropertyName, valueComponent: multipleText });
-            });
-          }
-        })
+        name: `${commandCategory} command include paths`,
+        render: (setting) => {
+          setting.addMultipleText((multipleText) => {
+            this.bind({ propertyName: definition.includePathsPropertyName, valueComponent: multipleText });
+          });
+        }
+      }),
+      this.settingEx({
+        desc: createFragment((f) => {
+          f.appendText(`Hide the ${commandCategory} commands on notes and folders from the following paths, leaving every other command there`);
+          f.createEl('br');
+          f.appendText(`Covers: ${definition.commandsDesc}`);
+          f.createEl('br');
+          f.appendText('Insert each path on a new line');
+          f.createEl('br');
+          f.appendText('You can use path string or ');
+          appendCodeBlock(f, '/regular expression/');
+          f.createEl('br');
+          appendPathFormsDesc(f);
+          f.createEl('br');
+          f.appendText('If the setting is empty, no ');
+          f.appendText(commandCategory);
+          f.appendText(' command is hidden beyond what ');
+          appendCodeBlock(f, 'Command exclude paths');
+          f.appendText(' already hides');
+          f.createEl('br');
+          f.appendText('A category can only narrow further, never bring back a command the ');
+          appendCodeBlock(f, 'All commands');
+          f.appendText(' pair hid. To leave one category offered on a path and hide the rest, list that path in the OTHER categories\' exclude boxes');
+        }),
+        name: `${commandCategory} command exclude paths`,
+        render: (setting) => {
+          setting.addMultipleText((multipleText) => {
+            this.bind({ propertyName: definition.excludePathsPropertyName, valueComponent: multipleText });
+          });
+        }
+      })
     );
 
     return this.settingGroupEx({
