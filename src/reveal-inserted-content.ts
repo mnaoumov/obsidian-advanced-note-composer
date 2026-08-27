@@ -65,6 +65,12 @@ export interface InsertedContentRange {
 export interface LocatedInsertedContent {
   readonly editor: Editor;
   readonly range: InsertedContentRange;
+
+  /**
+   * The view the editor belongs to, so a caller can put the user back IN it (issue #263) — focusing the
+   * editor alone does not make its leaf the active one.
+   */
+  readonly view: MarkdownView;
 }
 
 /**
@@ -240,7 +246,7 @@ export async function pollForInsertedContent(params: PollForInsertedContentParam
     if (view?.file?.path === file.path) {
       const range = resolveInsertedContentRange({ editor: view.editor, insertedContent, insertedContentOffset });
       if (range) {
-        return { editor: view.editor, range };
+        return { editor: view.editor, range, view };
       }
     }
 
@@ -333,14 +339,38 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
     return;
   }
 
-  const { editor, range } = located;
-  if (params.shouldSelect ?? true) {
-    // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
-    // Collapses the selection.
-    editor.setSelection(range.startPos, range.endPos);
-  } else {
+  const { editor, range, view } = located;
+  if (!(params.shouldSelect ?? true)) {
     editor.setCursor(range.startPos);
+    editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
+    return;
   }
+
+  // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
+  // Collapses the selection.
+  editor.setSelection(range.startPos, range.endPos);
   editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
+
+  /*
+   * Issue #263: put the FOCUS in that editor too, or a repeat click leaves the selection invisible.
+   *
+   * The selection itself was never the problem — it is re-applied on every click, which a desktop probe
+   * confirmed. What differs is where the focus is. The FIRST click opens the note, so the editor takes
+   * focus and the selection is drawn. On a repeat click the note is already open and the notice's link
+   * only REVEALS it in the file explorer, which ends up the active leaf — the editor keeps a selection
+   * nobody can see, and the reporter reads that as "the content is not highlighted any more".
+   *
+   * Harmless on the paths that do not need it: the smart cut & paste move already has the user in this
+   * editor, so this is what is already true there.
+   *
+   * TWO things had to be right, and each was found by probing rather than by reading:
+   * - `setActiveLeaf`, not `editor.focus()`. Focusing the editor does not make its leaf the ACTIVE one,
+   *   so the workspace still answers the file explorer and the highlight still is not what the user is
+   *   looking at.
+   * - DEFERRED by a tick. Obsidian's own reveal lands after this handler, so an immediate activation is
+   *   simply overwritten — the same ordering as the picker's focus in issue #262.
+   */
+  await sleep(POLL_INTERVAL_IN_MILLISECONDS);
+  params.app.workspace.setActiveLeaf(view.leaf, { focus: true });
 }
 /* v8 ignore stop */
