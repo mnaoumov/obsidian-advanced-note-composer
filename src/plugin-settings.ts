@@ -293,7 +293,7 @@ export class PluginSettings {
    * `registerLegacySettingsConverter` is needed: the key is new, and an absent key already resolves to
    * `Create`.
    *
-   * With {@link shouldRememberLastSplitTargetMode} on this value is REWRITTEN by the picker each time the
+   * This value is REWRITTEN by the picker each time the
    * user chooses a target in a mode they could see and flip (issue #245), so it reads as "where the picker
    * opens" rather than "what I set once".
    */
@@ -690,23 +690,6 @@ export class PluginSettings {
 
   public shouldOpenTargetNoteAfterSplit = false;
 
-  /**
-   * Whether choosing a target in the split/extract picker writes the mode it was in back to
-   * {@link defaultSplitTargetMode} (issue #245), so the next run opens where the last one left off.
-   *
-   * It turns that setting from a FIXED default into a starting point that MOVES; the reporter's ask was
-   * exactly that — created a note last time, open on `Create`; merged last time, open on `Merge`. Nothing
-   * new is persisted: the mode already had a home, and this only decides who writes to it.
-   *
-   * Off by default, so an existing vault behaves byte-for-byte as before and a hand-picked
-   * {@link defaultSplitTargetMode} is never rewritten behind the user's back. No
-   * `registerLegacySettingsConverter` is needed: the key is new, and an absent key already resolves to
-   * `false`.
-   *
-   * The write is deliberately NOT made by every flow that produces a mode — only by one the user could
-   * actually see and flip. See `rememberSplitTargetMode` in `split-file-modal.ts` for the guards.
-   */
-  public shouldRememberLastSplitTargetMode = false;
   /**
    * What happens to invalid characters that {@link nameTransformTemplate} did NOT handle (issue #196).
    *

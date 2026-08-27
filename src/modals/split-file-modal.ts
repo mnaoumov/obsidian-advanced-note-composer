@@ -1188,8 +1188,14 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
  *
  * The reporter asked the switch to remember itself. Nothing new is persisted to do that: the mode already
  * lives in `defaultSplitTargetMode`, which is what seeds the picker, so remembering is just deciding that
- * the picker may write to it too. Opt-in via `shouldRememberLastSplitTargetMode`, because a hand-picked
- * default that starts moving on its own is a worse surprise than the request is a win.
+ * the picker may write to it too.
+ *
+ * **Unconditional since issue #264, and the setting that used to gate it is gone.** Issue #245 shipped
+ * this opt-in, reasoning that a hand-picked default which starts moving on its own is a worse surprise
+ * than the request is a win. The reporter of #245 then filed #264 — a BUG report, against the same
+ * behavior, three weeks later — because the switch he had asked to be remembered was not being
+ * remembered. A setting he never found is not an answer to a request he made twice, and an off-by-default
+ * flag could not have reached him anyway: his `data.json` already held `false` for it.
  *
  * It records the mode at the point the user CHOOSES A TARGET rather than when the split finishes: the
  * switch is a property of the picker, and what it should reopen holding is what it was last set to. Two
@@ -1216,13 +1222,8 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
  */
 async function rememberSplitTargetMode(params: RememberSplitTargetModeParams): Promise<void> {
   const { pluginSettingsComponent, splitTargetMode } = params;
-  const { settings } = pluginSettingsComponent;
 
-  if (
-    !settings.shouldRememberLastSplitTargetMode
-    || params.isPickerSkipped
-    || !params.canMergeIntoExistingNote
-  ) {
+  if (params.isPickerSkipped || !params.canMergeIntoExistingNote) {
     return;
   }
 

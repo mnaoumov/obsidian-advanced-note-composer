@@ -64,9 +64,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `splitToExistingFileTemplate`
   - which action's template applies when the target already exists, so a split into an existing note can be formatted as a merge.
 - `defaultSplitTargetMode`
-  - whether the picker opens in `Create` or `Merge` — see [10 Create or merge when splitting](<../03 Split/10 Create or merge when splitting.md>).
-- `shouldRememberLastSplitTargetMode`
-  - let the picker save the mode you chose back into `defaultSplitTargetMode`, so it reopens where you left it.
+  - whether the picker opens in `Create` or `Merge` — see [10 Create or merge when splitting](<../03 Split/10 Create or merge when splitting.md>). The picker writes the mode you chose back here, so it reopens where you left it.
 - `shouldAskBeforeSplitting`
   - show a confirmation dialog before a split runs.
 - `shouldOfferCurrentNoteWhenSplitting`
