@@ -197,14 +197,14 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
 
   protected override shouldAddToEditorMenu(): boolean {
     return checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.Rename,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
   protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
     return checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.Rename,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

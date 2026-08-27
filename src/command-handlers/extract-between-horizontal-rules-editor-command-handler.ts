@@ -153,14 +153,14 @@ export class ExtractBetweenHorizontalRulesEditorCommandHandler extends EditorCom
 
   protected override shouldAddToEditorMenu(): boolean {
     return checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
   protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
     return checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

@@ -94,14 +94,14 @@ export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandle
 
   protected override shouldAddToEditorMenu(): boolean {
     return checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.Swap,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
   protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
     return checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.Swap,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

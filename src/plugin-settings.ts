@@ -2,57 +2,20 @@ import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import {
+  COMMAND_CATEGORIES,
+  CommandCategory
+} from './command-category.ts';
+
+export {
+  COMMAND_CATEGORIES,
+  CommandCategory
+} from './command-category.ts';
+
 export enum Action {
   Merge = 'Merge',
   Split = 'Split'
 }
-
-/**
- * The group of commands that one pair of per-category `Command include/exclude paths` settings narrows
- * (issue #249).
- *
- * Command blocking used to be all-or-nothing: a path listed in {@link PluginSettings.commandExcludePaths}
- * lost EVERY Advanced Note Composer command. The request was to block merges on a path while keeping the
- * rest of the commands there, so each command now names the category it belongs to and each category
- * carries a path filter of its own, layered on top of that un-prefixed baseline pair.
- *
- * Categories rather than the ~40 individual command ids, because that is the granularity the request was
- * written in — "merges", "reordering", "renaming folder" — and because per-id lists would mean eighty
- * settings rows. The values are the settings-tab group headings verbatim, so `data.json`, the settings UI
- * and the demo vault all name a category the same way.
- *
- * `cancel-move` and `open-split-modal` are deliberately outside every category: neither consults the
- * command filter at all today. The first has no path to check, and letting the second be blocked would be
- * a behavior change beyond what the issue asks for.
- */
-export enum CommandCategory {
-  Create = 'Create',
-  Merge = 'Merge',
-  MoveAndFlatten = 'Move/flatten',
-  Rename = 'Rename',
-  Reorder = 'Reorder',
-  SmartCutAndPaste = 'Smart cut & paste',
-  SplitAndExtract = 'Split/extract',
-  Swap = 'Swap'
-}
-
-/**
- * Every {@link CommandCategory}, in the order the settings tab lists them.
- *
- * Spelled out rather than derived from `Object.values`, which `@total-typescript/ts-reset` types as
- * `unknown[]`, and which would hide a category added without the two settings that go with it — the unit
- * test comparing this list against the enum's own keys is what turns that omission into a failure.
- */
-export const COMMAND_CATEGORIES: readonly CommandCategory[] = [
-  CommandCategory.Merge,
-  CommandCategory.SplitAndExtract,
-  CommandCategory.Create,
-  CommandCategory.SmartCutAndPaste,
-  CommandCategory.Swap,
-  CommandCategory.MoveAndFlatten,
-  CommandCategory.Rename,
-  CommandCategory.Reorder
-];
 
 /**
  * Which of the two context menus over a markdown editor a category's commands appear in (issue #252).
@@ -106,24 +69,6 @@ export const COMMAND_MENU_PLACEMENTS: readonly CommandMenuPlacement[] = [
   CommandMenuPlacement.EditorMenu,
   CommandMenuPlacement.Neither,
   CommandMenuPlacement.ViewportMenu
-];
-
-/**
- * The {@link CommandCategory} members whose commands reach an editor context menu at all, in the order the
- * settings tab lists them.
- *
- * Six of the eight. {@link CommandCategory.Merge} and {@link CommandCategory.MoveAndFlatten} are absent
- * deliberately: every command in them is a file- or folder-menu command, with no `EditorCommandHandler`
- * behind it, so a placement dropdown on either would control nothing. A settings row that cannot change
- * what the user sees is worse than a missing one.
- */
-export const EDITOR_MENU_COMMAND_CATEGORIES: readonly CommandCategory[] = [
-  CommandCategory.SplitAndExtract,
-  CommandCategory.Create,
-  CommandCategory.SmartCutAndPaste,
-  CommandCategory.Swap,
-  CommandCategory.Rename,
-  CommandCategory.Reorder
 ];
 
 /**
@@ -294,15 +239,6 @@ export enum TextAfterExtractionMode {
 }
 
 /**
- * The name of one of the per-category menu-placement settings (issue #252) — the six accessors
- * {@link EDITOR_MENU_COMMAND_CATEGORIES} implies, one per category.
- *
- * Derived from {@link PluginSettings} the same way {@link CommandCategoryPathsSettingName} is, so renaming
- * an accessor breaks the settings tab at type-check time rather than at runtime.
- */
-export type CommandCategoryMenuPlacementSettingName = Extract<keyof PluginSettings, `${string}CommandMenuPlacement`>;
-
-/**
  * The name of one of the per-category command path settings (issue #249) — the sixteen accessors
  * {@link COMMAND_CATEGORIES} implies, two per category.
  *
@@ -324,6 +260,26 @@ export class PluginSettings {
    * (issue #161).
    */
   public attachmentExtensions: string[] = ['.excalidraw.md'];
+
+  /**
+   * Which menus each COMMAND appears in (issue #252, per-command since issue #254).
+   *
+   * Keyed by command id. It stayed a `Map` through the widening — the key is now a plain `string` because
+   * a command id is one, and `menu-placeable-commands.ts` is what constrains which strings are meaningful.
+   *
+   * Deliberately NOT pre-seeded from that table, unlike the category map it replaces: importing the table
+   * here would close a cycle (it names {@link CommandCategory}, which lives in this module), and an absent
+   * key already means the default — so `data.json` also stays free of thirty entries nobody chose.
+   *
+   * The categories were the old key (issue #252). They lost that job entirely: `Split/extract` alone holds
+   * fifteen commands, and the reporter of #254 could not demote the recursive splits to the margin without
+   * taking every extract with them.
+   *
+   * Public because both writers are outside this class — the settings tab's per-command toggles, and the
+   * legacy converter that expands the six retired per-category keys into it. Read it through
+   * {@link commandMenuPlacement}, which is where an absent or hand-edited value is answered.
+   */
+  public commandMenuPlacements = new Map<string, CommandMenuPlacement>();
 
   public defaultFrontmatterMergeStrategy = FrontmatterMergeStrategy.MergeAndPreferNewValues;
 
@@ -467,7 +423,6 @@ export class PluginSettings {
    * {@link shouldReplaceInvalidTitleCharacters}.
    */
   public nameTransformTemplate = '';
-
   public newFolderContentTemplate = '';
   /**
    * The name `Create folder with notes...` gives the folder it creates (issue #191).
@@ -481,6 +436,7 @@ export class PluginSettings {
    * keeps "what gets numbered" and "what counts as already numbered" from drifting apart.
    */
   public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
+
   /**
    * The name a reorder gives a renumbered FOLDER (issue #216).
    *
@@ -520,13 +476,12 @@ export class PluginSettings {
   public reorderedFileTitleTemplate = '';
 
   public reorderedFolderNameTemplate = '{{index}}. {{safeFolderName}}';
-
   public replacement = '_';
   public shouldAddCommandsToSubmenu = true;
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
-  public shouldAllowSplitIntoUnresolvedPathByDefault = true;
 
+  public shouldAllowSplitIntoUnresolvedPathByDefault = true;
   /**
    * Whether a merge SWALLOWS items whose path is excluded/ignored in the plugin settings, instead of
    * skipping them and reporting them in a notice (issue #150).
@@ -538,6 +493,7 @@ export class PluginSettings {
    */
   public shouldAlwaysMergeExcludedItems = false;
   public shouldApplyTextAfterExtractionToSameFile = false;
+
   /**
    * Whether `Create folder with notes...` confirms before creating anything (issue #191).
    *
@@ -548,11 +504,11 @@ export class PluginSettings {
    * visible before it happens.
    */
   public shouldAskBeforeCreatingFolder = false;
-
   public shouldAskBeforeFlattening = true;
   public shouldAskBeforeMerging = true;
   public shouldAskBeforeMovingFolder = true;
   public shouldAskBeforeSplitting = true;
+
   public shouldAskBeforeSwapping = true;
 
   /**
@@ -607,7 +563,6 @@ export class PluginSettings {
    * Honors {@link shouldShowOperationNotices}: with progress reporting off, nothing is shown at all.
    */
   public shouldBlockVaultDuringOperations = false;
-
   /**
    * Whether the target note is handed to the Custom Attachment Location plugin once an extract lands,
    * so that plugin collects its attachments (issue #246).
@@ -638,10 +593,10 @@ export class PluginSettings {
    * as before, and so do the smart cut & paste moves, which insert at a token placed in the body.
    */
   public shouldExtractFrontmatterSelectionAsProperties = true;
+
   public shouldFixFootnotesByDefault = true;
 
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
-
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
   /**
    * Whether a reorder offers the folder's FILES for renumbering as well, and not only its folders
@@ -660,12 +615,12 @@ export class PluginSettings {
   public shouldJumpToMovedContentToTop = true;
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
+
   public shouldMergeHeadingsByDefault = false;
 
   public shouldMoveAttachmentsWhenMergingFile = true;
 
   public shouldMoveAttachmentsWhenMergingFolder = true;
-
   /**
    * Whether the attachments an extracted range references follow it into the new note's attachment folder
    * (issue #239) — the split-side counterpart of {@link shouldMoveAttachmentsWhenMergingFile}.
@@ -679,6 +634,7 @@ export class PluginSettings {
    * referencer: one referenced by both the extracted heading and the text left behind stays where it is.
    */
   public shouldMoveAttachmentsWhenSplitting = true;
+
   public shouldOfferCurrentNoteWhenSplitting = true;
 
   /**
@@ -713,7 +669,6 @@ export class PluginSettings {
    * `registerLegacySettingsConverter` — an absent key already resolves to it.
    */
   public shouldOpenFirstNoteAfterMergingFolder = false;
-
   /**
    * Whether `Create folder with notes...` opens the note it created (issue #191). Defaults to `true`,
    * matching the reporter's own plugin — the point of the command is to start writing in the new note.
@@ -732,6 +687,7 @@ export class PluginSettings {
    * Defaults to `false`; see {@link shouldOpenFirstNoteAfterMergingFolder} for why that needs no converter.
    */
   public shouldOpenNoteAfterMergingFolderIntoFile = false;
+
   public shouldOpenTargetNoteAfterSplit = false;
 
   /**
@@ -751,7 +707,6 @@ export class PluginSettings {
    * actually see and flip. See `rememberSplitTargetMode` in `split-file-modal.ts` for the guards.
    */
   public shouldRememberLastSplitTargetMode = false;
-
   /**
    * What happens to invalid characters that {@link nameTransformTemplate} did NOT handle (issue #196).
    *
@@ -785,6 +740,7 @@ export class PluginSettings {
    */
   public shouldShowModalInstructions = true;
   public shouldShowMoveAtCursorButton = true;
+
   public shouldShowMoveToBottomButton = true;
 
   public shouldShowMoveToTopButton = true;
@@ -838,10 +794,9 @@ export class PluginSettings {
    * the command it drives stays available regardless.
    */
   public shouldShowSplitHeadingRecursivelyButton = true;
-
   public shouldSplitHeadingsAutomatically = false;
-  public shouldSplitIntoFolder = false;
 
+  public shouldSplitIntoFolder = false;
   /**
    * Whether `Split note by headings recursively...` roots the tree it produces in Obsidian's own
    * `Default location for new notes` instead of beside the source note (issue #173).
@@ -859,6 +814,7 @@ export class PluginSettings {
    */
   public shouldSplitRecursivelyIntoDefaultNewNoteFolder = false;
   public shouldSwapEntireFolderStructureByDefault = true;
+
   /**
    * Whether `Create folder with notes...` Title Cases the typed folder name (issue #191): the first letter
    * of each word upper-cased and the rest lower-cased, EXCEPT a word that is already entirely upper-case,
@@ -869,8 +825,8 @@ export class PluginSettings {
    * characters are already governed by `shouldReplaceInvalidTitleCharacters` / `replacement`.
    */
   public shouldTitleCaseCreatedFolderName = true;
-
   public shouldTreatTitleAsPathByDefault = true;
+
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
 
   /**
@@ -898,7 +854,6 @@ export class PluginSettings {
    * Empty (the default) means "use {@link smartCutAndPasteTemplate}".
    */
   public smartCutAndPasteToBottomTemplate = '';
-
   /**
    * Optional override of {@link smartCutAndPasteTemplate} for `Move marked selection to top of file` — the
    * direction issue #162 wanted its own formatting for (a blank line after the frontmatter), which one
@@ -909,8 +864,8 @@ export class PluginSettings {
    * to all three moves. That is why these overrides need no `registerLegacySettingsConverter`.
    */
   public smartCutAndPasteToTopTemplate = '';
-  public splitIntoFolderNoteNameTemplate = '';
 
+  public splitIntoFolderNoteNameTemplate = '';
   /**
    * The template a split into a BRAND-NEW note applies, falling back to {@link mergeTemplate} when empty.
    *
@@ -926,6 +881,7 @@ export class PluginSettings {
    */
   public splitTemplate = '';
   public splitToExistingFileTemplate = Action.Split;
+
   public textAfterExtractionMode = TextAfterExtractionMode.LinkToNewFile;
 
   /**
@@ -974,19 +930,6 @@ export class PluginSettings {
 
   public set createCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Create).includePaths = value;
-  }
-
-  /**
-   * Which context menus offer the {@link CommandCategory.Create} commands (issue #252).
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get createCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.Create);
-  }
-
-  public set createCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.Create, value);
   }
 
   public get excludePaths(): string[] {
@@ -1078,19 +1021,6 @@ export class PluginSettings {
   }
 
   /**
-   * Which context menus offer the {@link CommandCategory.Rename} commands (issue #252).
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get renameCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.Rename);
-  }
-
-  public set renameCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.Rename, value);
-  }
-
-  /**
    * Paths on which the {@link CommandCategory.Reorder} commands are not offered (issue #249) — the
    * exclude half of that category's own filter.
    */
@@ -1112,19 +1042,6 @@ export class PluginSettings {
 
   public set reorderCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Reorder).includePaths = value;
-  }
-
-  /**
-   * Which context menus offer the {@link CommandCategory.Reorder} commands (issue #252).
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get reorderCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.Reorder);
-  }
-
-  public set reorderCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.Reorder, value);
   }
 
   /**
@@ -1152,19 +1069,6 @@ export class PluginSettings {
   }
 
   /**
-   * Which context menus offer the {@link CommandCategory.SmartCutAndPaste} commands (issue #252).
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get smartCutAndPasteCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.SmartCutAndPaste);
-  }
-
-  public set smartCutAndPasteCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.SmartCutAndPaste, value);
-  }
-
-  /**
    * Paths on which the {@link CommandCategory.SplitAndExtract} commands are not offered (issue #249) —
    * the exclude half of that category's own filter.
    */
@@ -1189,22 +1093,6 @@ export class PluginSettings {
   }
 
   /**
-   * Which context menus offer the {@link CommandCategory.SplitAndExtract} commands (issue #252).
-   *
-   * This is the category the request was filed about: `Split note by headings recursively...` crowding the
-   * editor menu, wanted on the readable-line-length margin instead.
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get splitCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.SplitAndExtract);
-  }
-
-  public set splitCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.SplitAndExtract, value);
-  }
-
-  /**
    * Paths on which the {@link CommandCategory.Swap} commands are not offered (issue #249) — the exclude
    * half of that category's own filter.
    */
@@ -1226,19 +1114,6 @@ export class PluginSettings {
 
   public set swapCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Swap).includePaths = value;
-  }
-
-  /**
-   * Which context menus offer the {@link CommandCategory.Swap} commands (issue #252).
-   *
-   * @default {@link CommandMenuPlacement.EditorMenu}
-   */
-  public get swapCommandMenuPlacement(): CommandMenuPlacement {
-    return this.commandMenuPlacement(CommandCategory.Swap);
-  }
-
-  public set swapCommandMenuPlacement(value: CommandMenuPlacement) {
-    this.commandCategoryMenuPlacements.set(CommandCategory.Swap, value);
   }
 
   /**
@@ -1273,31 +1148,28 @@ export class PluginSettings {
    * matters because the old blocking fired on `isPathIgnored`, which already accounted for `includePaths`.
    */
   private readonly _commandPathSettings = new PathSettings();
+
   private readonly _pathSettings = new PathSettings();
 
   /**
-   * Which menus each category's commands appear in (issue #252).
+   * Which context menus offer one command (issue #254).
    *
-   * Seeded for EVERY {@link CommandCategory}, not only the six in {@link EDITOR_MENU_COMMAND_CATEGORIES},
-   * so {@link commandMenuPlacement} answers for any category without a missing-key branch no test could
-   * reach. Only the six have accessors, so the other two can never hold anything but the default — and
-   * nothing reads them, because their commands never reach an editor menu to be placed in.
-   *
-   * A `Map` rather than an object literal, mirroring {@link _commandCategoryPathSettings} and keeping the
-   * key type an enum rather than a widened `string` (R2 G10k).
-   */
-  private readonly commandCategoryMenuPlacements = new Map<CommandCategory, CommandMenuPlacement>(
-    COMMAND_CATEGORIES.map((commandCategory) => [commandCategory, CommandMenuPlacement.EditorMenu])
-  );
-
-  /**
-   * Which context menus offer a command category's commands (issue #252).
-   *
-   * @param commandCategory - The category of the command asking.
+   * @param commandId - The id of the command asking, without the plugin-id prefix.
    * @returns Its {@link CommandMenuPlacement}.
    */
-  public commandMenuPlacement(commandCategory: CommandCategory): CommandMenuPlacement {
-    return ensureNonNullable(this.commandCategoryMenuPlacements.get(commandCategory));
+  public commandMenuPlacement(commandId: string): CommandMenuPlacement {
+    const commandMenuPlacement = this.commandMenuPlacements.get(commandId);
+    /*
+     * An absent key is a command the user has never chosen a placement for — every command until one is
+     * changed, and any command with no settings row at all. An UNKNOWN value is a hand-edited `data.json`;
+     * it is answered here rather than by a registered validator, because the placements live in one `Map`
+     * keyed by command id while a validator binds to a settings property name. This is the ONE place that
+     * decides it, so every caller downstream can treat a placement as a real member.
+     */
+    if (commandMenuPlacement === undefined || !COMMAND_MENU_PLACEMENTS.includes(commandMenuPlacement)) {
+      return CommandMenuPlacement.EditorMenu;
+    }
+    return commandMenuPlacement;
   }
 
   public isPathIgnored(path: string): boolean {

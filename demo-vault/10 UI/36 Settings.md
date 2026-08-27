@@ -182,22 +182,12 @@ Each command category then has its own pair, which narrows what the two above al
 
 ## Command menu placement
 
-Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Each category of commands that reaches an editor menu picks which of the two it appears in. `Neither` still leaves the commands in the command palette and on their hotkeys, which is what separates it from the exclude paths above.
+Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Every command that reaches an editor menu picks which of the two it appears in, on its own settings row with a toggle each. Both off still leaves the command in the command palette and on its hotkey, which is what separates it from the exclude paths above.
 
-`Merge` and `Move/flatten` have no row here: every command in them is a file- or folder-menu command, so there is no editor menu for them to be placed in.
+`Merge` and `Move/flatten` have no rows here: every command in them is a file- or folder-menu command, so there is no editor menu for them to be placed in.
 
-- `splitCommandMenuPlacement`
-  - where the extract and split commands appear — see [38 Command menu placement](<./38 Command menu placement.md>).
-- `createCommandMenuPlacement`
-  - where `Create empty note at cursor...` appears.
-- `smartCutAndPasteCommandMenuPlacement`
-  - where marking a selection to move, and the three moves that paste it, appear.
-- `swapCommandMenuPlacement`
-  - where `Mark selection to swap` and `Swap with marked selection` appear.
-- `renameCommandMenuPlacement`
-  - where `Rename heading` appears.
-- `reorderCommandMenuPlacement`
-  - where `Reorder headings` appears.
+- `commandMenuPlacements`
+  - one entry per command you have moved, keyed by command id — see [38 Command menu placement](<./38 Command menu placement.md>). A command you have not moved has no entry, and appears in the editor menu.
 
 ## Move and flatten folders
 

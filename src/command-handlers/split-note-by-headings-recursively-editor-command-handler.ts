@@ -89,7 +89,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
      * menu item, so the palette command and any hotkey keep working while a selection is active.
      */
     return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
@@ -101,7 +101,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
      * the user means rather than about which menu was raised, so it holds here too.
      */
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
