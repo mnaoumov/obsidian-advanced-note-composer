@@ -41,7 +41,7 @@ interface TestableHandler {
   readonly id: string;
   readonly name: string;
   shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(): boolean;
+  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
   shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
 }
 
@@ -83,10 +83,11 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(): Editor {
+function createMockEditor(isSomethingSelected = false): Editor {
   return strictProxy<Editor>({
     getCursor: vi.fn().mockReturnValue(CURSOR),
-    setSelection: vi.fn()
+    setSelection: vi.fn(),
+    somethingSelected: vi.fn().mockReturnValue(isSomethingSelected)
   });
 }
 
@@ -273,7 +274,23 @@ describe('CreateEmptyNoteAtCursorEditorCommandHandler', () => {
 
   it('should return true from shouldAddToEditorMenu', () => {
     const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(createMockParams()));
-    expect(handler.shouldAddToEditorMenu()).toBe(true);
+    expect(handler.shouldAddToEditorMenu(createMockEditor(), createMockContext(createMockFile()))).toBe(true);
+  });
+
+  /*
+   * Issue #265: with text selected this is not the command the user means, and it is also the one that
+   * would look like it ate the selection — it COLLAPSES the selection to the cursor before doing anything.
+   * The gate is on the MENU only; the palette command and any hotkey keep working, which is the boundary
+   * every issue-#188 gate holds to.
+   */
+  it('should stay out of the editor menu while a selection is active', () => {
+    const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToEditorMenu(createMockEditor(true), createMockContext(createMockFile()))).toBe(false);
+  });
+
+  it('should keep working from the palette while a selection is active', () => {
+    const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(createMockParams()));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
   });
 
   it('should return shouldAddCommandsToSubmenu setting value', () => {
