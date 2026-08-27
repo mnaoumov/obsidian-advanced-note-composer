@@ -35,6 +35,8 @@ A markdown file that is really an attachment — an Excalidraw drawing stored as
 
 By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and reports them in a notice, so no stray empty target is left behind. Turn on **Should always merge excluded items** to move and merge those items too (no "ignored" notice). Manual equivalent: toggle **Should always merge excluded items** in **Settings → Advanced Note Composer**.
 
+The **destination** is a separate question: an excluded folder is offered in the picker only while **Should offer excluded paths as merge destinations** is on, whatever the setting above is set to. See [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>).
+
 ```code-button
 ---
 caption: Always merge excluded items

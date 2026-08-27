@@ -169,7 +169,14 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     if (settings.shouldAlwaysMergeExcludedItems) {
       return false;
     }
-    return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
+    if (settings.isPathIgnored(sourcePath)) {
+      return true;
+    }
+    // A target path here is the SOURCE ITEM'S OWN PATH mirrored under the destination folder, so it is
+    // Excluded mostly when the destination itself is — and that destination is one the picker was allowed
+    // To offer since issue #253. Skipping every item would silently undo the pick, so the setting that
+    // Offered it clears this half too.
+    return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath);
   }
 
   private async mergeFolder(params: MergeFolderCommandHandlerMergeFolderParams): Promise<void> {
@@ -368,7 +375,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         // A folder merge must NOT open each merged note in turn — that per-file open is the "visual
         // Cycling" of issue #106 (the active tab flickers through every target note). The single-file
         // Merge keeps honoring the `shouldOpenNoteAfterMerge` setting; the batch suppresses it.
-        shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems,
+        // Mirrors {@link isMergeIgnored}: a target path here is a source item's own path under the
+        // Destination, so either opting into merging excluded items (issue #150) or into an excluded
+        // Destination (issue #253) has to let the composer write it.
+        shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems
+          || this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations,
         // Every non-note file of the folder is moved structurally below, mirroring the source layout, so
         // The per-note attachment relocation of a single-file merge would move them a second time.
         shouldMoveAttachments: false,

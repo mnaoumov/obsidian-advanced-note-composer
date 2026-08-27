@@ -106,7 +106,7 @@ function createMockParams(
   isPathIgnored = false,
   shouldAddCommandsToSubmenu = true,
   shouldBlockCommandOnPath = false,
-  shouldAlwaysMergeExcludedItems = false
+  shouldOfferExcludedPathsAsMergeDestinations = false
 ): MergeFileCommandHandlerConstructorParams {
   return {
     app: strictProxy<App>({}),
@@ -116,9 +116,9 @@ function createMockParams(
       settings: strictProxy<PluginSettings>({
         isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
         shouldAddCommandsToSubmenu,
-        shouldAlwaysMergeExcludedItems,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath),
-        shouldMoveAttachmentsWhenMergingFile: true
+        shouldMoveAttachmentsWhenMergingFile: true,
+        shouldOfferExcludedPathsAsMergeDestinations
       })
     }),
     resourceLockComponent: strictProxy<ResourceLockComponent>({})
@@ -247,10 +247,10 @@ describe('MergeFileCommandHandler', () => {
     expect(mockMergeFile).toHaveBeenCalled();
   });
 
-  // Issue #240: every other merge honored `Should always merge excluded items`, so an excluded
-  // Destination was refused here alone however the setting was set. The composer defaults the flag to
-  // `false`, which is why NOT passing it looked like working code.
-  it('should let the merge into an excluded target through when excluded items are always merged', async () => {
+  // Issue #240 made an excluded destination reachable at all; issue #253 moved the decision onto its own
+  // Setting, so what the picker was allowed to OFFER is exactly what the composer is allowed to write
+  // Into. The composer defaults the flag to `false`, which is why NOT passing it looked like working code.
+  it('should let the merge into an excluded target through when excluded destinations are offered', async () => {
     const params = createMockParams(false, true, false, true);
     const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();

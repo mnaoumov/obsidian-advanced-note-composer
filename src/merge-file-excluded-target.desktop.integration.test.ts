@@ -25,6 +25,7 @@ interface ExcludedMergeSettings {
   shouldAllowOnlyCurrentFolderByDefault: boolean;
   shouldAlwaysMergeExcludedItems: boolean;
   shouldAskBeforeMerging: boolean;
+  shouldOfferExcludedPathsAsMergeDestinations: boolean;
 }
 
 interface SettingsCarrier {
@@ -33,7 +34,7 @@ interface SettingsCarrier {
 }
 
 describe('merging into an excluded target file (issue #240)', () => {
-  it('offers and merges into an excluded note only while excluded items are always merged', async () => {
+  it('offers and merges into an excluded note only while excluded destinations are offered', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -43,6 +44,7 @@ describe('merging into an excluded target file (issue #240)', () => {
         const settingsComponent = findSettingsComponent();
         const originalExcludePaths = [...settingsComponent.settings.excludePaths];
         const isOriginalAlwaysMerge = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
+        const isOriginalOfferExcludedDestinations = settingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations;
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         const isOriginalOnlyCurrentFolder = settingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault;
 
@@ -60,12 +62,21 @@ describe('merging into an excluded target file (issue #240)', () => {
             // Nothing to do with what is under test.
             settings.shouldAllowOnlyCurrentFolderByDefault = false;
             settings.shouldAlwaysMergeExcludedItems = false;
+            settings.shouldOfferExcludedPathsAsMergeDestinations = false;
           });
 
           const isOfferedWhenOff = await didPickerOfferTarget(source);
 
+          // Issue #253's regression guard, mirrored from the folder side: merging excluded ITEMS must not
+          // Also offer an excluded DESTINATION.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAlwaysMergeExcludedItems = true;
+          });
+
+          const isOfferedWhenSwallowingOnly = await didPickerOfferTarget(source);
+
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldOfferExcludedPathsAsMergeDestinations = true;
           });
 
           const isOfferedWhenOn = await didPickerOfferTarget(source);
@@ -82,6 +93,7 @@ describe('merging into an excluded target file (issue #240)', () => {
           return {
             offeredWhenOff: isOfferedWhenOff,
             offeredWhenOn: isOfferedWhenOn,
+            offeredWhenSwallowingOnly: isOfferedWhenSwallowingOnly,
             sourceExists: app.vault.getAbstractFileByPath(SOURCE_PATH) !== null,
             targetContent: await app.vault.read(target)
           };
@@ -91,6 +103,7 @@ describe('merging into an excluded target file (issue #240)', () => {
             settings.shouldAlwaysMergeExcludedItems = isOriginalAlwaysMerge;
             settings.shouldAskBeforeMerging = isOriginalShouldAsk;
             settings.shouldAllowOnlyCurrentFolderByDefault = isOriginalOnlyCurrentFolder;
+            settings.shouldOfferExcludedPathsAsMergeDestinations = isOriginalOfferExcludedDestinations;
           });
         }
 
@@ -198,10 +211,11 @@ describe('merging into an excluded target file (issue #240)', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // With the setting off the excluded note is not offered at all — which is what made the composer's
-    // Own refusal unreachable, and the setting a half-truth.
+    // With both settings off the excluded note is not offered at all.
     expect(result.offeredWhenOff).toBe(false);
-    // With it on the excluded note is offered...
+    // Nor is it offered merely because excluded ITEMS are always merged (issue #253).
+    expect(result.offeredWhenSwallowingOnly).toBe(false);
+    // Only the setting that asks the destination question offers it...
     expect(result.offeredWhenOn).toBe(true);
     // ...and the merge actually lands in it, instead of being refused by the composer (issue #240).
     expect(result.targetContent).toContain('source body');

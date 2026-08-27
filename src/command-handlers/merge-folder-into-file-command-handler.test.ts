@@ -121,6 +121,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
         shouldMoveAttachmentsWhenMergingFolder: false,
+        shouldOfferExcludedPathsAsMergeDestinations: false,
         shouldOpenNoteAfterMerge: false,
         shouldOpenNoteAfterMergingFolderIntoFile: false,
         shouldRunTemplaterOnDestinationFile: false,

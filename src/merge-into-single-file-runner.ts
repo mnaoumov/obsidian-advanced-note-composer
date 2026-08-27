@@ -263,7 +263,9 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             resourceLockComponent,
             // The whole batch shares ONE target: a per-file open would flicker the active tab through
             // Every merged note (issue #106), and a per-file notice would spam. The batch reports once.
-            shouldMergeIgnoredTarget: settings.shouldAlwaysMergeExcludedItems,
+            // Follows the picker that chose the target (issue #253): an excluded destination the picker
+            // Was allowed to offer must not then be refused by the composer's own guard.
+            shouldMergeIgnoredTarget: settings.shouldOfferExcludedPathsAsMergeDestinations,
             // The batch relocates the attachments itself, once, before the first merge (see above), so
             // The composer's own per-note relocation would move them a second time.
             shouldMoveAttachments: false,
@@ -414,11 +416,12 @@ async function collectAttachments(params: CollectAttachmentsParams): Promise<Att
 
 function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, sourcePath: string, targetPath: string): boolean {
   const { settings } = pluginSettingsComponent;
-  // When the user opts in, excluded/ignored items are merged too (issue #150), so nothing is skipped.
-  if (settings.shouldAlwaysMergeExcludedItems) {
-    return false;
+  // Source and target are decided by their own settings since issue #253 — what a merge may swallow, and
+  // Where it may land. Mirrors `MergeFolderCommandHandler.isMergeIgnored`.
+  if (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath)) {
+    return true;
   }
-  return settings.isPathIgnored(sourcePath) || settings.isPathIgnored(targetPath);
+  return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath);
 }
 
 /**

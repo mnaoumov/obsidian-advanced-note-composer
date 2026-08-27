@@ -101,10 +101,9 @@ class MergeFileModal extends SuggestModalBase {
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
-    // An excluded note can only be merged into while the setting that allows merging excluded items is on
-    // (issue #240) — the picker filtering it out unconditionally is what made that setting unreachable for
-    // A file merge.
-    this.shouldAllowIgnoredPaths = this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems;
+    // An excluded note can only be merged into while the setting that offers excluded destinations is on
+    // (issue #253, split out of the swallow-side setting this used to read — issue #240).
+    this.shouldAllowIgnoredPaths = this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations;
 
     this.emptyStateText = 'No files found.';
     this.shouldShowNonImageAttachments = false;

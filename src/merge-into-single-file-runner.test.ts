@@ -111,6 +111,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
       shouldBlockVaultDuringOperations: false,
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,
+      shouldOfferExcludedPathsAsMergeDestinations: false,
       shouldOpenNoteAfterMerge: false,
       shouldRunTemplaterOnDestinationFile: false,
       shouldShowOperationNotices: true,
@@ -284,6 +285,67 @@ describe('mergeFilesIntoSingleFile', () => {
     expect(result.ignoredSourceFiles).toHaveLength(0);
     expect(await app.vault.adapter.read('target.md')).toContain('secret body');
     expect(await app.vault.adapter.exists('secret.md')).toBe(false);
+    expect(containsNotice(context.showNotice, 'were not merged because they are ignored')).toBe(false);
+  });
+
+  /*
+   * Issue #253: the target here is the ONE destination note the flow picked, so an excluded target is the
+   * destination question and nothing else. `Should always merge excluded items` therefore does not answer
+   * it — it is off in the first of these and on in neither.
+   */
+  it('skips every source when the target note is excluded and excluded destinations are not offered (issue #253)', async () => {
+    initApp({
+      'keep.md': 'keep body',
+      'secret/target.md': ''
+    });
+    const { consoleDebugComponent, context, pluginNoticeComponent, pluginSettingsComponent } = createContext({
+      isPathIgnored: (path) => path.startsWith('secret'),
+      shouldAlwaysMergeExcludedItems: true
+    });
+
+    const result = await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [getFile('keep.md')],
+      targetFile: getFile('secret/target.md')
+    });
+
+    expect(result.mergedCount).toBe(0);
+    expect(result.ignoredSourceFiles).toHaveLength(1);
+    expect(await app.vault.adapter.read('keep.md')).toBe('keep body');
+    expect(containsNotice(context.showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
+  it('merges into an excluded target note when excluded destinations are offered (issue #253)', async () => {
+    initApp({
+      'keep.md': 'keep body',
+      'secret/target.md': ''
+    });
+    const { consoleDebugComponent, context, pluginNoticeComponent, pluginSettingsComponent } = createContext({
+      isPathIgnored: (path) => path.startsWith('secret'),
+      shouldOfferExcludedPathsAsMergeDestinations: true
+    });
+
+    const result = await mergeFilesIntoSingleFile({
+      app,
+      consoleDebugComponent,
+      isNewTargetFile: true,
+      pluginNoticeComponent,
+      pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent,
+      sourceFiles: [getFile('keep.md')],
+      targetFile: getFile('secret/target.md')
+    });
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.ignoredSourceFiles).toHaveLength(0);
+    expect(await app.vault.adapter.read('secret/target.md')).toContain('keep body');
     expect(containsNotice(context.showNotice, 'were not merged because they are ignored')).toBe(false);
   });
 

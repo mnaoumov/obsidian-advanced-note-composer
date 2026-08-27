@@ -10,9 +10,10 @@ import {
 
 // Desktop-only: the whole point is what the REAL folder picker offers, which no unit test can see —
 // `MergeFolderModal` is `v8 ignore`d UI code.
-// This is the folder-side counterpart of `merge-file-excluded-target.desktop.integration.test.ts`: that
-// One fixed the file destination picker (issue #240) and left the folder one filtering excluded folders
-// Out unconditionally, so the setting was still a half-truth for a folder merge.
+// This is the folder-side counterpart of `merge-file-excluded-target.desktop.integration.test.ts`. Since
+// Issue #253 the destination question has its own setting, `Should offer excluded paths as merge
+// Destinations`: turning on `Should always merge excluded items` decides only what a merge SWALLOWS and
+// Must leave every merge picker filtering excluded paths, which is what the reporter of #253 saw fail.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-excluded-target.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -28,6 +29,7 @@ interface ExcludedMergeSettings {
   shouldAskBeforeMerging: boolean;
   shouldIncludeChildFoldersWhenMergingByDefault: boolean;
   shouldIncludeParentFoldersWhenMergingByDefault: boolean;
+  shouldOfferExcludedPathsAsMergeDestinations: boolean;
 }
 
 interface SettingsCarrier {
@@ -36,7 +38,7 @@ interface SettingsCarrier {
 }
 
 describe('merging into an excluded target folder', () => {
-  it('offers and merges into an excluded folder only while excluded items are always merged', async () => {
+  it('offers and merges into an excluded folder only while excluded destinations are offered', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -48,6 +50,7 @@ describe('merging into an excluded target folder', () => {
         const settingsComponent = findSettingsComponent();
         const originalExcludePaths = [...settingsComponent.settings.excludePaths];
         const isOriginalAlwaysMerge = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
+        const isOriginalOfferExcludedDestinations = settingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations;
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         const isOriginalIncludeChildFolders = settingsComponent.settings.shouldIncludeChildFoldersWhenMergingByDefault;
         const isOriginalIncludeParentFolders = settingsComponent.settings.shouldIncludeParentFoldersWhenMergingByDefault;
@@ -67,12 +70,21 @@ describe('merging into an excluded target folder', () => {
             settings.shouldIncludeChildFoldersWhenMergingByDefault = true;
             settings.shouldIncludeParentFoldersWhenMergingByDefault = true;
             settings.shouldAlwaysMergeExcludedItems = false;
+            settings.shouldOfferExcludedPathsAsMergeDestinations = false;
           });
 
           const isOfferedWhenOff = await didPickerOfferTarget(sourceNote);
 
+          // Issue #253's regression guard: opting into merging excluded ITEMS must not also offer an
+          // Excluded DESTINATION. This is the reporter's exact configuration.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAlwaysMergeExcludedItems = true;
+          });
+
+          const isOfferedWhenSwallowingOnly = await didPickerOfferTarget(sourceNote);
+
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldOfferExcludedPathsAsMergeDestinations = true;
           });
 
           const isOfferedWhenOn = await didPickerOfferTarget(sourceNote);
@@ -91,6 +103,7 @@ describe('merging into an excluded target folder', () => {
             mergedContent: mergedNote instanceof obsidianModule.TFile ? await app.vault.read(mergedNote) : null,
             offeredWhenOff: isOfferedWhenOff,
             offeredWhenOn: isOfferedWhenOn,
+            offeredWhenSwallowingOnly: isOfferedWhenSwallowingOnly,
             sourceFolderExists: app.vault.getAbstractFileByPath(SOURCE_FOLDER_PATH) !== null
           };
         } finally {
@@ -100,6 +113,7 @@ describe('merging into an excluded target folder', () => {
             settings.shouldAskBeforeMerging = isOriginalShouldAsk;
             settings.shouldIncludeChildFoldersWhenMergingByDefault = isOriginalIncludeChildFolders;
             settings.shouldIncludeParentFoldersWhenMergingByDefault = isOriginalIncludeParentFolders;
+            settings.shouldOfferExcludedPathsAsMergeDestinations = isOriginalOfferExcludedDestinations;
           });
         }
 
@@ -200,10 +214,12 @@ describe('merging into an excluded target folder', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // With the setting off the excluded folder is not offered at all, so the destination side of the
-    // Setting was unreachable for a folder merge — the same defect issue #240 fixed on the file side.
+    // With both settings off the excluded folder is not offered at all.
     expect(result.offeredWhenOff).toBe(false);
-    // With it on the excluded folder is offered...
+    // Nor is it offered merely because excluded ITEMS are always merged — issue #253, the reporter's own
+    // Configuration, and the whole reason the one setting became two.
+    expect(result.offeredWhenSwallowingOnly).toBe(false);
+    // Only the setting that actually asks the destination question offers it...
     expect(result.offeredWhenOn).toBe(true);
     // ...and the merge actually lands in it.
     expect(result.mergedContent).toContain('source body');

@@ -99,10 +99,10 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       resourceLockComponent: this.resourceLockComponent,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeHeadings: result.shouldMergeHeadings,
-      // Every other merge honors `Should always merge excluded items` (issue #150); this one did not, so
-      // An excluded destination was refused however the setting was set (issue #240). The SOURCE gate in
-      // `canExecuteFile` stays — the setting decides what a merge may swallow, not where it is offered.
-      shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems,
+      // Follows the picker that chose the target: whatever the picker was allowed to OFFER, the merge must
+      // Be allowed to land in (issue #253), or picking an excluded destination would end in a refusal.
+      // The SOURCE gate in `canExecuteFile` stays — neither setting decides where a command is offered.
+      shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations,
       sourceFile: file,
       targetFile: result.targetFile
     });

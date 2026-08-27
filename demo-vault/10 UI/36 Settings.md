@@ -13,7 +13,9 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldAskBeforeMerging`
   - show a confirmation dialog before a merge runs.
 - `shouldAlwaysMergeExcludedItems`
-  - merge notes on ignored paths too, instead of skipping and reporting them. With it on, an excluded note is offered in the destination picker as well.
+  - merge notes on ignored paths too, instead of skipping and reporting them. About what a merge picks up, and nothing else.
+- `shouldOfferExcludedPathsAsMergeDestinations`
+  - offer a note or folder on an ignored path as a merge destination, and let the merge land there. Off by default; the two exclusion settings are set independently.
 - `attachmentExtensions`
   - markdown files that are really attachments (default `.excalidraw.md`), never merged as text. Splitting and flattening classify them the same way.
 

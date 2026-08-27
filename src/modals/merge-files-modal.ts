@@ -83,10 +83,9 @@ class MergeFilesModal extends FuzzySuggestModal<TFile> {
     if (this.sourceFiles.includes(file)) {
       return false;
     }
-    // The merge itself already honors `Should always merge excluded items` for the notes it swallows
-    // (issue #150); filtering the excluded ones out of the picker regardless left the destination side of
-    // That setting unreachable (issue #240).
-    if (this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems) {
+    // Which notes a merge may swallow (`Should always merge excluded items`) and which it may be poured
+    // Into are separate settings since issue #253; this picker asks only the second.
+    if (this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations) {
       return true;
     }
     return !this.pluginSettingsComponent.settings.isPathIgnored(file.path);
