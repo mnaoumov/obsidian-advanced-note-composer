@@ -12,9 +12,13 @@ import {
 } from 'vitest';
 
 /*
- * Coverage for issue #245: the create/merge switch should reopen holding the mode it was last left in,
- * instead of always starting from `Default split target mode`. The opt-in
- * `shouldRememberLastSplitTargetMode` setting makes the picker write the chosen mode back to that setting.
+ * Coverage for issues #245 and #264: the create/merge switch reopens holding the mode it was last left
+ * in, instead of always starting from `Default split target mode` — the picker writes the chosen mode
+ * back to that setting.
+ *
+ * #245 shipped this behind an opt-in `shouldRememberLastSplitTargetMode`; #264 is the SAME reporter filing
+ * a bug because the switch he had asked to remember itself was not remembering. The setting is gone and
+ * the behavior is unconditional, which is why this suite no longer turns anything on.
  *
  * `SplitFileModal` is `v8 ignore`d, so the payoff - what the switch READS when the picker reopens - can only
  * be observed in the real app. The unit tests pin the three guards; this pins that remembering happens at
@@ -34,7 +38,6 @@ interface ComponentTreeNode {
 interface RememberedModeSettings {
   defaultSplitTargetMode: string;
   shouldAskBeforeSplitting: boolean;
-  shouldRememberLastSplitTargetMode: boolean;
 }
 
 interface SettingsCarrier {
@@ -43,7 +46,7 @@ interface SettingsCarrier {
 }
 
 describe('the split/extract picker remembers the mode it was left in (issue #245)', () => {
-  it('should reopen in merge after a merge, once the setting is on', async () => {
+  it('should reopen in merge after a merge', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -60,7 +63,6 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeSplitting = false;
-            settings.shouldRememberLastSplitTargetMode = true;
             // The baseline the reopened picker has to have MOVED away from. Read back below rather than
             // Assumed: a suite that confirmed a dialog earlier can leave this setting anywhere.
             settings.defaultSplitTargetMode = 'Create';
@@ -124,7 +126,6 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
             // Mode for every later split suite in the aggregate run.
             settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
             settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
-            settings.shouldRememberLastSplitTargetMode = original.shouldRememberLastSplitTargetMode;
           });
         }
 
@@ -147,7 +148,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldRememberLastSplitTargetMode === 'boolean';
+          return typeof node.editAndSave === 'function' && typeof node.settings?.defaultSplitTargetMode === 'string';
         }
 
         async function openPicker(editor: Editor): Promise<void> {

@@ -192,7 +192,6 @@ interface MockPluginOptions {
   readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldAskForTargetFolderWhenSplitting?: boolean;
-  readonly shouldRememberLastSplitTargetMode?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
 }
 
@@ -317,7 +316,6 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldLockAllNotesWhenMarkingSelection: false,
       shouldMergeHeadingsByDefault: false,
       shouldOfferCurrentNoteWhenSplitting: true,
-      shouldRememberLastSplitTargetMode: options?.shouldRememberLastSplitTargetMode ?? false,
       shouldShowModalInstructions: true,
       shouldSplitHeadingsAutomatically,
       shouldTreatTitleAsPathByDefault: true
@@ -865,7 +863,7 @@ describe('prepareForSplitFile', () => {
     });
   });
 
-  describe('remembering the last split target mode (issue #245)', () => {
+  describe('remembering the last split target mode (issues #245, #264)', () => {
     // What the picker WROTE, by replaying the `editAndSave` callback against a settings stand-in. The
     // Component mock resolves without applying the edit, so the value has to be read out of the callback.
     async function applyRememberedMode(pluginSettingsComponent: PluginSettingsComponent): Promise<SplitTargetMode | undefined> {
@@ -886,8 +884,7 @@ describe('prepareForSplitFile', () => {
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
-        defaultSplitTargetMode: SplitTargetMode.Merge,
-        shouldRememberLastSplitTargetMode: true
+        defaultSplitTargetMode: SplitTargetMode.Merge
       });
 
       const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
@@ -899,22 +896,6 @@ describe('prepareForSplitFile', () => {
       expect(await applyRememberedMode(pluginSettingsComponent)).toBe(SplitTargetMode.Merge);
     });
 
-    it('should save nothing while the setting is off', async () => {
-      shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
-      const editor = createMockEditor();
-      const resourceLockComponent = createMockResourceLockComponent();
-      const app = createMockApp();
-      const pluginSettingsComponent = createMockPluginSettingsComponent({ defaultSplitTargetMode: SplitTargetMode.Merge });
-
-      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
-      await vi.advanceTimersByTimeAsync(0);
-      const result = await promise;
-
-      expect(result).not.toBeNull();
-      expect(pluginSettingsComponent.editAndSave).not.toHaveBeenCalled();
-    });
-
     it('should save nothing when the picker never opened', async () => {
       // A heading-driven split SYNTHESIZES `Create` for its heading-named note without ever showing a
       // Switch, so saving it would reset a `Merge` default from a screen the user never saw.
@@ -923,8 +904,7 @@ describe('prepareForSplitFile', () => {
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
-        defaultSplitTargetMode: SplitTargetMode.Merge,
-        shouldRememberLastSplitTargetMode: true
+        defaultSplitTargetMode: SplitTargetMode.Merge
       });
 
       const result = await prepareForSplitFile({
@@ -951,8 +931,7 @@ describe('prepareForSplitFile', () => {
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
-        defaultSplitTargetMode: SplitTargetMode.Merge,
-        shouldRememberLastSplitTargetMode: true
+        defaultSplitTargetMode: SplitTargetMode.Merge
       });
 
       const promise = prepareForSplitFile({
