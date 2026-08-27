@@ -34,9 +34,10 @@ from [[{{fromTitle}}]]
 
 the new note opens with its heading written, a backlink line waiting below, and the cursor on the blank line between them — ready to type.
 
-Two things worth knowing:
+Three things worth knowing:
 
 - **An empty `Split template` still means an empty note.** It does *not* fall back to `Merge template` the way an ordinary split into a new note does; wrapping `\n\n{{content}}` around nothing would just leave two blank lines in a note you asked to be empty.
+- **It is not in the menu while you have text selected.** The command collapses the selection to the cursor before it does anything — that collapse is what keeps it from replacing the selected text with the new note's link — so a mis-click on a highlighted passage would look like it ate the selection. It still runs from the command palette and its hotkey with a selection active, exactly like the extracts that hide themselves the same way.
 - **The cursor needs the note to be open to land in.** `Create empty note in folder...` always opens what it made, so it always lands. `Create empty note at cursor...` only opens the note when `Should open target note after split` is on — with it off you still get the template, and your cursor deliberately never leaves the note you were typing in.
 
 ## The switch is fixed to `Create`

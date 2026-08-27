@@ -148,15 +148,28 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  protected override shouldAddToEditorMenu(): boolean {
-    return checkShouldAddCommandToEditorMenu({
+  protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, context);
+    /*
+     * Hidden while a selection is active (issue #265), following the rule issue #188 set for the extracts:
+     * with text selected, this is not the command the user means. Here it is also a safety rail — the
+     * command COLLAPSES the selection to the cursor before it does anything (that collapse is what keeps
+     * it from overwriting the selected text with the new note's link), so a mis-click on a highlighted
+     * passage looks like it ate the selection.
+     *
+     * Deliberately NOT in `canExecuteEditor`: the palette command and any hotkey keep working with a
+     * selection active, which is the same boundary every other #188 gate holds to.
+     */
+    return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
       commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
-  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
-    return checkShouldAddCommandToViewportMenu({
+  protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
+    // The selection gate above is about which command the user means, not about which menu was raised, so
+    // It holds here too.
+    return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
       commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
