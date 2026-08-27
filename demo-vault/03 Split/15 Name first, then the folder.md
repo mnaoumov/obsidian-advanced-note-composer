@@ -4,7 +4,9 @@ A split that **creates** a note has two questions to answer: what it is called, 
 
 ## The name is required
 
-While the switch reads `Create` and the box is empty, nothing can be chosen — not `Enter`, not a click on a row in the list — and a line under the box says so. Before, an empty box was accepted: it became a note called `Untitled`, wherever Obsidian's `Default location for new notes` happens to point.
+While the switch reads `Create` and the box is empty, `Enter` chooses nothing, and a line under the box says why. Before, an empty box was accepted: it became a note called `Untitled`, wherever Obsidian's `Default location for new notes` happens to point.
+
+**Clicking a row is the one exception.** A row names a note that already exists, so a click on it is not ambiguous the way an empty box is: the switch flips to `Merge` and the split goes into that note. It is only ever a click — `Enter` acts on whichever row happens to be highlighted, which is not something you pointed at.
 
 A box holding only spaces counts as empty, for the same reason.
 

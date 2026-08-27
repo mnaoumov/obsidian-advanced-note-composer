@@ -9,6 +9,7 @@ import type {
 } from './item-selector-base.ts';
 
 import { createNoteFromTypedName } from '../create-note.ts';
+import { resolveExistingItemFile } from '../modals/existing-item-file.ts';
 import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import { SplitTargetMode } from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
@@ -58,7 +59,7 @@ export class SplitItemSelector extends ItemSelectorBase {
 
   public override async selectItem(): Promise<SelectItemResult> {
     if (this.splitTargetMode === SplitTargetMode.Merge) {
-      const targetFile = this.resolveExistingTargetFile();
+      const targetFile = resolveExistingItemFile(this.app, this.item);
       // The picker offers nothing creatable in this mode — no `Enter to create` row, no unresolved links —
       // So an item without a file behind it cannot be chosen. Refusing rather than falling through to the
       // Create branch is what keeps an explicit `Merge` from quietly creating a note nobody asked for.
@@ -129,27 +130,6 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   /**
-   * The existing note a `Merge` split writes into, or `null` when the chosen item has none.
-   *
-   * A bookmark carries its path rather than a `file` (`SuggestModalBase` offers bookmarked notes in the
-   * split picker too), so it is resolved the same way `MergeItemSelector` resolves it — before the switch
-   * existed, choosing a bookmarked note here silently created a note named after the typed query instead.
-   *
-   * @returns The existing target note, or `null` when the item does not name one.
-   */
-  private resolveExistingTargetFile(): null | TFile {
-    if (this.item?.file) {
-      return this.item.file;
-    }
-
-    if (this.item?.type === 'bookmark' && this.item.item?.type === 'file') {
-      return this.app.vault.getFileByPath(this.item.item.path ?? '');
-    }
-
-    return null;
-  }
-
-  /**
    * The folder named by the note the user picked in the picker, or `null` when they picked nothing that
    * names one (issue #238).
    *
@@ -169,7 +149,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     if (this.item?.type === 'unresolved') {
       return null;
     }
-    return this.resolveExistingTargetFile()?.parent ?? null;
+    return resolveExistingItemFile(this.app, this.item)?.parent ?? null;
   }
 
   /**

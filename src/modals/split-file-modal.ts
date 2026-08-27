@@ -49,6 +49,7 @@ import {
   SplitTargetMode
 } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
+import { resolveExistingItemFile } from './existing-item-file.ts';
 import { selectFolder } from './select-folder-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
@@ -415,6 +416,26 @@ class SplitFileModal extends SuggestModalBase {
    */
   public override selectSuggestion(value: Item | null, $event: KeyboardEvent | MouseEvent): void {
     if (this.isNameMissing()) {
+      /*
+       * Issue #257 carved out the one case where the refusal read as a broken picker: a row that names an
+       * EXISTING note, clicked while nothing is typed. There is no ambiguity about what that means — the
+       * note is right there — so instead of ignoring the click the picker flips the switch to `Merge` and
+       * goes through with it. Every other row still refuses: the choice really would be a nameless
+       * creation.
+       *
+       * The case is not exotic. The switch is rendered only while `Should show modal instructions` is on,
+       * so the reporter could not see the mode, let alone change it, and every click did nothing at all.
+       *
+       * A MOUSE event only. `Enter` goes through here too, with whatever row happens to be highlighted —
+       * and acting on a merely-highlighted suggestion is the mistake issue #141 exists about. A click
+       * names the row it lands on; `Enter` on an empty box still means "create", and is still refused.
+       */
+      if ($event instanceof MouseEvent && this.canMergeIntoExistingNote && resolveExistingItemFile(this.app, value)) {
+        this.setSplitTargetMode({ shouldCarryOverInputValue: false, splitTargetMode: SplitTargetMode.Merge });
+        this.isSelected = true;
+        super.selectSuggestion(value, $event);
+        return;
+      }
       // The hint is already on screen (it tracks the same condition); refreshing keeps them in step if the
       // Box was changed without an `input` event.
       this.refreshNameRequiredHint();
