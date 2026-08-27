@@ -362,14 +362,17 @@ describe('shouldShowModalInstructions', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // Hidden: no switch, and `Alt+M` neither brings it back nor flips the mode behind it.
-    expect(result.withoutOverrides.hasSwitchBefore).toBe(false);
-    expect(result.withoutOverrides.hasSwitchAfter).toBe(false);
+    /*
+     * Issue #258 took the create/merge switch OUT of what this setting suppresses: it is not an override
+     * of a configured default but the picker stating what it is about to do, and hiding it left the mode
+     * neither visible nor reachable — which is how issue #257's "clicking a path does nothing" happened.
+     * So the switch, and the `Alt+M` that mirrors it, are present either way.
+     */
+    expect(result.withoutOverrides.hasSwitchBefore).toBe(true);
+    expect(result.withoutOverrides.hasSwitchAfter).toBe(true);
     expect(result.withoutOverrides.isCreateModeBefore).toBe(true);
-    expect(result.withoutOverrides.isCreateModeAfter).toBe(true);
+    expect(result.withoutOverrides.isCreateModeAfter).toBe(false);
 
-    // Sensitivity: with the overrides shown, the switch is there and the SAME `Alt+M` does flip the mode —
-    // So the pair above is pinning the gate, not a key press that never worked.
     expect(result.withOverrides.hasSwitchBefore).toBe(true);
     expect(result.withOverrides.isCreateModeBefore).toBe(true);
     expect(result.withOverrides.isCreateModeAfter).toBe(false);

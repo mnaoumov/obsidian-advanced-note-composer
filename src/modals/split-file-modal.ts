@@ -393,9 +393,14 @@ class SplitFileModal extends SuggestModalBase {
     // Value belongs there at all (issue #237) — a `Merge` default must not open holding a heading name.
     this.inputEl.value = this.inputValueBySplitTargetMode[this.splitTargetMode];
     this.updateSuggestions();
-    if (this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
-      this.renderSplitTargetModeSwitch();
-    }
+    /*
+     * Rendered UNCONDITIONALLY since issue #258 — deliberately outside what
+     * `Should show per-operation option overrides` suppresses. The other things that setting hides are
+     * overrides of a configured default for one operation; this switch is the picker saying WHAT IT IS
+     * ABOUT TO DO, and with it gone the mode was neither visible nor reachable. That is how issue #257
+     * happened: the reporter clicked row after row in a `Create` picker he had no way to know he was in.
+     */
+    this.renderSplitTargetModeSwitch();
     this.renderNameRequiredHint();
     this.renderSwitchToSmartCutButton();
   }
@@ -521,12 +526,11 @@ class SplitFileModal extends SuggestModalBase {
       purpose: 'to dismiss'
     });
 
-    // Registered only alongside the switch it mirrors (issue #242). Unlike an instruction-bar checkbox, whose
-    // Shortcut `SuggestModalCommandBuilder.build` skips with the bar, a keyboard command's scope registration
-    // Always runs — so leaving this in would keep an invisible way to override `defaultSplitTargetMode` after
-    // The visible one is gone. The same reasoning is why a flow that cannot merge at all drops it (issue
-    // #244): an invisible shortcut into a mode the flow forbids is worse than no shortcut.
-    if (this.canMergeIntoExistingNote && this.pluginSettingsComponent.settings.shouldShowModalInstructions) {
+    // Registered alongside the switch it mirrors, which since issue #258 is always on screen — so the
+    // Shortcut is too, and `SuggestModalCommandBuilder.build` only decides whether its purpose line is
+    // Printed in the instruction bar. A flow that cannot merge at all still drops it (issue #244): an
+    // Invisible shortcut into a mode the flow forbids is worse than no shortcut.
+    if (this.canMergeIntoExistingNote) {
       builder.addKeyboardCommand({
         key: 'm',
         modifiers: ['Alt'],

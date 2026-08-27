@@ -2185,19 +2185,19 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             desc: createFragment((f) => {
               f.appendText('Whether the modal dialogs offer the controls that override a setting for a single operation.');
               f.createEl('br');
-              f.appendText('Covers the instruction bar at the bottom of the merge/split/swap pickers, with its checkboxes, dropdowns and keyboard hints; the ');
+              f.appendText('Covers the instruction bar at the bottom of the merge/split/swap pickers, with its checkboxes, dropdowns and keyboard hints; and the ');
               appendCodeBlock(f, 'Include files');
-              f.appendText(' checkbox in the reorder dialog; and the ');
-              appendCodeBlock(f, 'Create');
-              f.appendText(' / ');
-              appendCodeBlock(f, 'Merge');
-              f.appendText(' switch above the split picker.');
+              f.appendText(' checkbox in the reorder dialog.');
               f.createEl('br');
               f.appendText('When disabled, every operation uses the configured default settings and the option-toggle keyboard shortcuts are unavailable, so this page is the only place those choices are made.');
               f.createEl('br');
-              f.appendText('The ');
+              f.appendText('Two things are NOT covered. The ');
               appendCodeBlock(f, 'Don\'t ask again');
-              f.appendText(' checkbox in the confirmation dialogs is NOT covered: it changes a setting rather than overriding one for a single operation.');
+              f.appendText(' checkbox in the confirmation dialogs changes a setting rather than overriding one for a single operation. The ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' / ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' switch above the split picker is always shown: it is not an override of a default but the picker stating what it is about to do, and hiding it left no way to see or change the mode.');
             }),
             name: 'Should show per-operation option overrides',
             render: (setting) => {
