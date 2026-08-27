@@ -21,6 +21,7 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { resolveTemplateTail } from '../create-note-template.ts';
 import { createNoteFromTypedName } from '../create-note.ts';
 import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
+import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import {
   NameTransformError,
   transformAndFixFileName
@@ -142,9 +143,24 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
       fileName: typedName,
       folderPrefix: `/${parentFolder.getParentPrefix()}`,
       pluginSettingsComponent: this.pluginSettingsComponent,
-      // `shouldSplitIntoFolder` is named for splitting and must not silently wrap an explorer-created note
-      // In a folder of its own — `Create folder with notes...` is the command for that.
-      relocateNote: null,
+      /*
+       * Issue #255 REVERSES the earlier reading that a setting "named for splitting" must not wrap an
+       * explorer-created note: the reporter wants exactly that, because a note wrapped in a folder named
+       * after it IS a folder note, and this is the command that would make one in a single step.
+       * `Create folder with notes...` stays the command for building a folder of SEVERAL notes.
+       *
+       * No source note exists here, so the note-name template's source-flavored tokens resolve to nothing
+       * — the same thing every other template this command applies already does with them.
+       */
+      relocateNote: this.pluginSettingsComponent.settings.shouldSplitIntoFolder
+        ? async (createdFile: TFile): Promise<null | string> =>
+          await moveIntoOwnFolder({
+            app: this.app,
+            file: createdFile,
+            pluginSettingsComponent: this.pluginSettingsComponent,
+            sourceFile: null
+          })
+        : null,
       // The destination was chosen by the right-click, so a typed `/` is a character in a name rather than a
       // Path to descend into.
       shouldTreatTitleAsPath: false,

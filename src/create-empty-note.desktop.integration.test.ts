@@ -240,13 +240,17 @@ describe('create an empty note (issue #244)', () => {
     expect(result.activePath).toBe('create-empty-note-source.md');
   });
 
-  it('creates an empty note in the folder right-clicked in the file explorer', async () => {
+  it('creates an empty note in the folder right-clicked in the file explorer, and a folder note when asked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const FOLDER_PATH = 'create-empty-note-folder';
         const NOTE_NAME = 'create-empty-note-in-folder-ghost';
         const NOTE_PATH = `${FOLDER_PATH}/${NOTE_NAME}.md`;
+        // Issue #255: with `Should split into folder` on, the same command wraps the note in a folder of
+        // Its own — which is a folder note, in one step.
+        const FOLDER_NOTE_NAME = 'create-empty-note-folder-note';
+        const FOLDER_NOTE_PATH = `${FOLDER_PATH}/${FOLDER_NOTE_NAME}/${FOLDER_NOTE_NAME}.md`;
         const MENU_ITEM_TITLE = 'Create empty note in folder...';
 
         const settingsComponent = findSettingsComponent();
@@ -258,9 +262,41 @@ describe('create an empty note (issue #244)', () => {
           });
 
           await trashIfExists(NOTE_PATH);
-          const folder = await ensureFolder(FOLDER_PATH);
+          await trashIfExists(`${FOLDER_PATH}/${FOLDER_NOTE_NAME}`);
+          await ensureFolder(FOLDER_PATH);
 
-          // The real file-explorer entry point: the workspace event the plugin registers its item on.
+          const isMenuItemPresent = await didFolderMenuOfferCreate(NOTE_NAME, NOTE_PATH);
+          const note = app.vault.getAbstractFileByPath(NOTE_PATH);
+
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldSplitIntoFolder = true;
+          });
+          await didFolderMenuOfferCreate(FOLDER_NOTE_NAME, FOLDER_NOTE_PATH);
+
+          return {
+            isFolderNoteCreated: app.vault.getAbstractFileByPath(FOLDER_NOTE_PATH) !== null,
+            // Nothing was left at the un-wrapped path, so the note really MOVED rather than being copied.
+            isFolderNoteLeftUnwrapped: app.vault.getAbstractFileByPath(`${FOLDER_PATH}/${FOLDER_NOTE_NAME}.md`) !== null,
+            isMenuItemPresent,
+            noteContent: note instanceof obsidianModule.TFile ? await app.vault.read(note) : 'MISSING'
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAddCommandsToSubmenu = original.shouldAddCommandsToSubmenu;
+            settings.shouldSplitIntoFolder = original.shouldSplitIntoFolder;
+          });
+        }
+
+        /**
+         * Drives the real file-explorer entry point — the workspace event the plugin registers its item
+         * on — and waits for the note to exist and be opened.
+         *
+         * @param name - The name to type into the prompt.
+         * @param expectedPath - Where the note is expected to land.
+         * @returns Whether the folder menu carried the command's item.
+         */
+        async function didFolderMenuOfferCreate(name: string, expectedPath: string): Promise<boolean> {
+          const folder = await ensureFolder(FOLDER_PATH);
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const menuItem = findMenuItem(menu, MENU_ITEM_TITLE);
@@ -277,27 +313,18 @@ describe('create an empty note (issue #244)', () => {
             predicate: () => document.querySelector('.prompt-modal .text-box') !== null
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          await submitName(NOTE_NAME);
+          await submitName(name);
 
           await waitUntil({
-            message: 'the empty note was never created in the folder',
-            predicate: () => app.vault.getAbstractFileByPath(NOTE_PATH) !== null
+            message: `the empty note was never created at ${expectedPath}`,
+            predicate: () => app.vault.getAbstractFileByPath(expectedPath) !== null
           });
           await waitUntil({
             message: 'the created note was never opened',
-            predicate: () => app.workspace.getActiveFile()?.path === NOTE_PATH
+            predicate: () => app.workspace.getActiveFile()?.path === expectedPath
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
-          const note = app.vault.getAbstractFileByPath(NOTE_PATH);
-          return {
-            isMenuItemPresent,
-            noteContent: note instanceof obsidianModule.TFile ? await app.vault.read(note) : 'MISSING'
-          };
-        } finally {
-          await settingsComponent.editAndSave((settings) => {
-            settings.shouldAddCommandsToSubmenu = original.shouldAddCommandsToSubmenu;
-          });
+          return isMenuItemPresent;
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -370,5 +397,9 @@ describe('create an empty note (issue #244)', () => {
     // The command really is on the file explorer's folder menu, which is where the issue asks for it.
     expect(result.isMenuItemPresent).toBe(true);
     expect(result.noteContent).toBe('');
+
+    // Issue #255: the same command, with `Should split into folder` on, makes a folder note.
+    expect(result.isFolderNoteCreated).toBe(true);
+    expect(result.isFolderNoteLeftUnwrapped).toBe(false);
   });
 });

@@ -49,6 +49,8 @@ Right-click a folder and choose `Create empty note in folder...` to create one e
 
 Your `Split template` applies here too, cursor placement included. The one difference is that this note was not split out of anything, so the `{{fromTitle}}` / `{{fromPath}}` / `{{fromParentFolder}}` tokens have no note to name and come out empty.
 
+**Should split into folder** applies here too, which is the one-step way to make a folder note: with it on, naming the note `Ghost` produces `Ghost/Ghost.md` inside the folder you right-clicked, and **Split into folder note name** renames the note inside it exactly as it does for a split — see [11 Split into folder](<../03 Split/11 Split into folder.md>).
+
 That is the single-note counterpart of [22 Create folder with notes](<../06 Folder operations/22 Create folder with notes.md>), which creates a whole folder from a template. Both apply the same naming rules: the name transform, the invalid-character replacement, and the alias or `title` property that records the name you actually typed — see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
 
 Run from the command palette instead of the folder menu, it creates the note in Obsidian's own `Default location for new notes`.

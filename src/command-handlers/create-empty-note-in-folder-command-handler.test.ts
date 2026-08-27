@@ -27,6 +27,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { applySplitTemplateToNotes } from '../apply-split-template.ts';
 import { createNoteFromTypedName } from '../create-note.ts';
+import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import { openFileAfterOperation } from '../open-after-operation.ts';
 import { showOperationCompletionNotice } from '../operation-notices.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
@@ -65,6 +66,10 @@ vi.mock('../create-note.ts', () => ({
   createNoteFromTypedName: vi.fn()
 }));
 
+vi.mock('../move-into-own-folder.ts', () => ({
+  moveIntoOwnFolder: vi.fn().mockResolvedValue(null)
+}));
+
 vi.mock('../open-after-operation.ts', () => ({
   openFileAfterOperation: vi.fn()
 }));
@@ -90,6 +95,7 @@ vi.mock('../reveal-inserted-content.ts', () => ({
 
 const mockPrompt = vi.mocked(prompt);
 const mockCreateNoteFromTypedName = vi.mocked(createNoteFromTypedName);
+const mockMoveIntoOwnFolder = vi.mocked(moveIntoOwnFolder);
 const mockOpenFileAfterOperation = vi.mocked(openFileAfterOperation);
 const mockShowOperationCompletionNotice = vi.mocked(showOperationCompletionNotice);
 const mockRecordRecentTarget = vi.mocked(recordRecentTarget);
@@ -123,6 +129,7 @@ function createHandler(settingsOverrides: Partial<PluginSettings> = {}, activeFi
       shouldAddCommandsToSubmenu: true,
       shouldBlockCommandOnPath: vi.fn().mockReturnValue(false),
       shouldReplaceInvalidTitleCharacters: true,
+      shouldSplitIntoFolder: false,
       splitTemplate: '',
       ...settingsOverrides
     })
@@ -241,8 +248,8 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
       fileName: 'Ghost',
       folderPrefix: '/Parent/',
       pluginSettingsComponent,
-      // The explorer flow never wraps the note in a folder of its own — that is `Create folder with
-      // Notes...`'s job — and a typed `/` is a character rather than a path to descend into.
+      // With `Should split into folder` off the note is created where it was asked for, and a typed
+      // `/` is a character rather than a path to descend into.
       relocateNote: null,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
@@ -250,6 +257,44 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
     expect(mockOpenFileAfterOperation).toHaveBeenCalledWith({ app, file: createdFile });
     expect(mockRecordRecentTarget).toHaveBeenCalledWith(parentFolder);
     expect(mockShowOperationCompletionNotice).toHaveBeenCalledOnce();
+  });
+
+  /*
+   * Issue #255: the explorer command honors `Should split into folder` too, which is what turns it into a
+   * one-step way to make a folder note. It used to pass `relocateNote: null` unconditionally, on the
+   * reading that a setting named for splitting should not reach an explorer creation — the reporter asked
+   * for the opposite in as many words.
+   */
+  describe('should split into folder (issue #255)', () => {
+    it('should not wrap the created note in a folder of its own while the setting is off', async () => {
+      const { handler } = createHandler({ shouldSplitIntoFolder: false });
+      mockPrompt.mockResolvedValue('Ghost');
+
+      await handler.executeFolder(createMockFolder('Parent'));
+
+      expect(mockCreateNoteFromTypedName.mock.calls[0]?.[0].relocateNote).toBeNull();
+    });
+
+    it('should hand the created note to the shared own-folder move when the setting is on', async () => {
+      const { app, handler, pluginSettingsComponent } = createHandler({ shouldSplitIntoFolder: true });
+      const createdFile = strictProxy<TFile>({ path: 'Parent/Ghost.md' });
+      mockPrompt.mockResolvedValue('Ghost');
+      mockCreateNoteFromTypedName.mockResolvedValue(createdFile);
+
+      await handler.executeFolder(createMockFolder('Parent'));
+
+      const relocateNote = mockCreateNoteFromTypedName.mock.calls[0]?.[0].relocateNote;
+      expect(relocateNote).not.toBeNull();
+      await relocateNote?.(createdFile);
+      // `sourceFile: null` is the whole difference from the split flow: there is no note this creation
+      // Came from, so the note-name template's source-flavored tokens resolve to nothing.
+      expect(mockMoveIntoOwnFolder).toHaveBeenCalledWith({
+        app,
+        file: createdFile,
+        pluginSettingsComponent,
+        sourceFile: null
+      });
+    });
   });
 
   // Issue #244's follow-up: a configured `Split template` fills the created note, and its `{{content}}`

@@ -2,6 +2,8 @@
 
 When a split or extract creates a **new** note, optionally wrap it in a brand-new folder named after the note, so it lands at `<folder>/<note>/<note>.md` instead of `<folder>/<note>.md`. Splitting or extracting into an **existing** note is unaffected.
 
+It also covers `Create empty note in folder...`, the file explorer's command — which is what makes that one a single-step way to create a folder note. See [37 Create empty note](<../02 Extract/37 Create empty note.md>).
+
 ## Try it
 
 1. Turn on **Should split into folder** in the plugin settings (under `Split/extract`).
