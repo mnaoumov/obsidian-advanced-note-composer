@@ -136,12 +136,15 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
  * The paths every picker orders by, most-recent-first: the plugin's own recorded operation targets, then
  * (optionally) the active file, then Obsidian's recently-opened files.
  *
- * Recorded targets come FIRST, ahead of even the active file (issue #206, owner's call). The reporter's ask
- * is that a destination used once is "always the top one on the list" for the operations that follow, and
- * anything below the active file's own folder would not be — the two collide exactly when the user runs a
- * second operation without first navigating into the folder the previous one landed in, which is the case
- * the request is about. Targets are file OR folder paths (see `recent-targets.ts`); a reader that cannot
- * resolve one simply skips it, which is what keeps folders out of the file pickers.
+ * The plugin's own log holds BOTH kinds of event — completed targets and opened notes — in the order they
+ * happened (issue #256), so nothing here has to rank them against each other: the head is whichever came
+ * last. #206's "a destination used once is the top one for the operations that follow" survives as far as
+ * it was ever wanted, up to the moment the user goes somewhere else. Entries are file OR folder paths (see
+ * `recent-targets.ts`); a reader that cannot resolve one simply skips it, which is what keeps folders out
+ * of the file pickers.
+ *
+ * The active file is still prepended separately, and that is not redundant: it covers the note that was
+ * already open when the plugin loaded, which no `file-open` of this session ever recorded.
  *
  * @param params - The parameters.
  * @returns The recent paths, most-recent-first. May contain duplicates and paths that no longer
@@ -168,8 +171,9 @@ export function getRecentPaths(params: GetRecentPathsParams): string[] {
     return [...recentTargetPaths, ...recentFilePaths];
   }
 
-  // The one place the two recencies disagree, and the whole of issue #248: whichever goes first wins
-  // The top of the list.
+  // Whether the folder you are looking at RIGHT NOW outranks your recent activity — the whole of issue
+  // #248. Since issue #256 the other side of this choice is a time-ordered log rather than a pile of
+  // Targets, so `RecentTargetsFirst` no longer means "a target, however old".
   if (pickerRecencyOrder === PickerRecencyOrder.ActiveFileFirst) {
     return [activeFilePath, ...recentTargetPaths, ...recentFilePaths];
   }

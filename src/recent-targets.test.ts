@@ -11,7 +11,8 @@ import {
 import {
   clearRecentTargets,
   getRecentTargetPaths,
-  recordRecentTarget
+  recordRecentTarget,
+  recordRecentVisit
 } from './recent-targets.ts';
 
 const FOLDER_A = castTo<TFolder>({ path: 'A' });
@@ -59,6 +60,43 @@ describe('recordRecentTarget', () => {
     expect(recentTargetPaths).toHaveLength(MAX_COUNT);
     expect(recentTargetPaths[0]).toBe(`Folder ${String(overflow - 1)}`);
     expect(recentTargetPaths).not.toContain('Folder 0');
+  });
+});
+
+/*
+ * Issue #256: a visit goes into the SAME log as a completed target, so the head of the list is simply
+ * whichever happened last. The reporter's exact sequence is the first test — merge into `B`, then open
+ * notes in `C` and `D`, and the picker was still offering `B` first.
+ */
+describe('recordRecentVisit', () => {
+  it('should out-rank an older target, which is the whole of the report', () => {
+    recordRecentTarget(FOLDER_B);
+    recordRecentVisit('C/Note C.md');
+    recordRecentVisit('D/Note D.md');
+
+    expect(getRecentTargetPaths()).toStrictEqual(['D/Note D.md', 'C/Note C.md', 'B']);
+  });
+
+  it('should be out-ranked in turn by a target recorded after it', () => {
+    recordRecentVisit('C/Note C.md');
+    recordRecentTarget(FOLDER_B);
+
+    // #206's guarantee, in the form it was actually wanted: first for the operations that FOLLOW it.
+    expect(getRecentTargetPaths()).toStrictEqual(['B', 'C/Note C.md']);
+  });
+
+  it('should re-head a path it already holds rather than duplicating it', () => {
+    recordRecentVisit('C/Note C.md');
+    recordRecentVisit('D/Note D.md');
+    recordRecentVisit('C/Note C.md');
+
+    expect(getRecentTargetPaths()).toStrictEqual(['C/Note C.md', 'D/Note D.md']);
+  });
+
+  it('should accept a file, not only a path', () => {
+    recordRecentVisit(castTo<TFolder>({ path: 'C/Note C.md' }));
+
+    expect(getRecentTargetPaths()).toStrictEqual(['C/Note C.md']);
   });
 });
 
