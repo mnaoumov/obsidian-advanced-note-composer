@@ -403,6 +403,19 @@ class SplitFileModal extends SuggestModalBase {
     this.renderSplitTargetModeSwitch();
     this.renderNameRequiredHint();
     this.renderSwitchToSmartCutButton();
+    /*
+     * The box owns the cursor when the picker opens (issue #262). It does not on its own: the create/merge
+     * switch is PREPENDED to `modalEl`, which makes it the first focusable thing in the modal, and it ends
+     * up holding focus — `LABEL.checkbox-container` is what `activeElement` reports. The reporter met it
+     * on the smart-cut path, where there is no earlier click in the box to hide it.
+     *
+     * DEFERRED, and that is the whole point: focusing at the end of `onOpen` does not stick, because the
+     * steal happens after it. One turn of the event loop is enough, and it is what the desktop test pins.
+     */
+    invokeAsyncSafely(async () => {
+      await sleep(0);
+      this.inputEl.focus();
+    });
   }
 
   /**

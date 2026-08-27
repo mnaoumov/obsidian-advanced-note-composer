@@ -44,6 +44,10 @@ describe('switch to split/extract from the smart-cut notice', () => {
           await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
+          // Issue #262: reached this way, the box has to be ready to type into. It was the create/merge
+          // Switch that held focus — it is PREPENDED to the modal, so it is the first focusable thing in it.
+          const isPickerInputFocused = activeDocument.activeElement === document.querySelector('.prompt-input');
+
           const activePathWhenPickerOpen = app.workspace.getActiveFile()?.path ?? '';
           const restoredSelection = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '';
           const isMarkNoticeGone = findSwitchButton() === null;
@@ -89,7 +93,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           const sourceContent = await app.vault.read(source);
           const targetContent = await app.vault.read(target);
 
-          return { activePathWhenPickerOpen, markNoticeGone: isMarkNoticeGone, restoredSelection, sourceContent, switchButtonPresent: isSwitchButtonPresent, targetContent };
+          return { activePathWhenPickerOpen, isPickerInputFocused, markNoticeGone: isMarkNoticeGone, restoredSelection, sourceContent, switchButtonPresent: isSwitchButtonPresent, targetContent };
         } finally {
           await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
@@ -154,6 +158,8 @@ describe('switch to split/extract from the smart-cut notice', () => {
     // Notice) with "bravo" restored as the selection and the split picker open.
     expect(result.switchButtonPresent).toBe(true);
     expect(result.markNoticeGone).toBe(true);
+    // Issue #262: the box is focused when the picker is reached from the smart-cut notice.
+    expect(result.isPickerInputFocused).toBe(true);
     expect(result.activePathWhenPickerOpen).toBe('open-split-source.md');
     expect(result.restoredSelection).toBe('bravo');
     // Completing the split moved "bravo" into the target and removed it from the source.

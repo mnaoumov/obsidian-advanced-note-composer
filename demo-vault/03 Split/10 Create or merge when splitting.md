@@ -33,6 +33,7 @@ That last row is worth knowing: extracting into the note you are already in — 
 - **Default split target mode** (under `Split/extract` in the settings) decides which mode the picker opens in. It defaults to `Create`.
 - **Should remember the last split target mode** (right below it, off by default) hands that setting to the picker: choose a target in `Merge` and the next extract opens in `Merge`. The two flows that show no switch — a heading-driven split that never opens the picker, and `Create empty note at cursor...`, which has nothing to merge — save nothing, so neither can reset your mode from a screen you never saw.
 - `Treat title as path` (`Alt+2`) and `Allow split into unresolved path` (`Alt+6`) only mean something while a note is being created, so `Merge` greys them out and gives your choices back on the way out.
+- The box has the cursor the moment the picker opens, however you got there — including the `Switch to split/extract` button on the smart cut & paste notice.
 - Flipping the switch leaves the cursor in the box, whether you clicked it or pressed `Alt+M`, so you can keep typing straight away. The box holds what that mode last had in it, and the cursor goes to the end of it.
 - **[Should show per-operation option overrides](<../10 UI/36 Settings.md>)** does not touch this switch. It hides the other per-operation controls, but the switch says what the picker is about to do rather than overriding a default — and with it hidden there was no way to see the mode you were in, which made every row in the picker look broken.
 
