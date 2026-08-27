@@ -181,3 +181,11 @@
     margin-left: 100%;
   }
 }
+
+// The per-command menu-placement rows (issue #254) carry TWO toggles, which are indistinguishable without
+// A word beside each. The label sits in the row's control area, immediately before the toggle it names.
+.advanced-note-composer-menu-placement-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-left: var(--size-4-2);
+}

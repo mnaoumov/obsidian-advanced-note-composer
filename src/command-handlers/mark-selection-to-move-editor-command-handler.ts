@@ -104,14 +104,14 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
 
   protected override shouldAddToEditorMenu(): boolean {
     return checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SmartCutAndPaste,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
   protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
     return checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SmartCutAndPaste,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

@@ -10,6 +10,7 @@ import {
 
 import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 
+import { MENU_PLACEABLE_COMMANDS } from './menu-placeable-commands.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 /*
@@ -39,12 +40,14 @@ interface ProbeResult {
   readonly isInEditorMenu: boolean;
   readonly isInReadingModeViewportMenu: boolean;
   readonly isInViewportMenu: boolean;
+  readonly isSiblingInEditorMenu: boolean;
+  readonly isSiblingInViewportMenu: boolean;
 }
 
-describe('command menu placement (issue #252)', () => {
-  it('moves the recursive split from the editor menu onto the readable-line-length margin', async () => {
+describe('command menu placement (issues #252, #254)', () => {
+  it('moves ONE command from the editor menu onto the readable-line-length margin, leaving its siblings', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, findSettingItem, lib: { waitUntil }, menuPlaceableCommandIds, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const ITEM_TITLE = 'Split note by headings recursively...';
@@ -58,9 +61,10 @@ describe('command menu placement (issue #252)', () => {
           '',
           'Body of section A.'
         ].join('\n');
-        const PLACEMENT_SETTING_NAME = 'Split/extract command menu placement';
-        const EDITOR_MENU_PLACEMENT = 'EditorMenu';
-        const VIEWPORT_MENU_PLACEMENT = 'ViewportMenu';
+        // Since issue #254 the placement row IS the command, and carries a toggle per menu.
+        // A sibling in the SAME category that this note offers with no selection made — issue #188 hides
+        // The selection-driven extracts, which would fail here for a reason that is not placement.
+        const SIBLING_ITEM_TITLE = 'Split note by headings - H1';
         const SOURCE_MODE = 'source';
         const PREVIEW_MODE = 'preview';
         const MENU_SOURCE = 'gutter';
@@ -71,16 +75,19 @@ describe('command menu placement (issue #252)', () => {
         await setToggle('Should add commands to submenu', false);
 
         const whileInEditorMenu = await probe(file);
-        await setPlacement(VIEWPORT_MENU_PLACEMENT);
+        await setMenuToggles(ITEM_TITLE, false, true);
         const whileOnMargin = await probe(file);
 
         // Restore the shared instance: this vault is reused by every other suite.
-        await setPlacement(EDITOR_MENU_PLACEMENT);
+        await setMenuToggles(ITEM_TITLE, true, false);
         await setToggle('Should add commands to submenu', true);
         const afterRestore = await probe(file);
 
         return {
           afterRestore,
+          // Issue #254's own guarantee: the table the settings page renders from names commands Obsidian
+          // Has actually registered, which is the drift a spelled-out list is exposed to.
+          missingCommandIds: menuPlaceableCommandIds.filter((commandId) => !app.commands.findCommand(`${pluginId}:${commandId}`)),
           whileInEditorMenu,
           whileOnMargin
         };
@@ -94,24 +101,26 @@ describe('command menu placement (issue #252)', () => {
 
           const editorMenu = new obsidianModule.Menu();
           app.workspace.trigger('editor-menu', editorMenu, view.editor, view);
-          const isInEditorMenu = hasItem(editorMenu);
+          const isInEditorMenu = hasItem(editorMenu, ITEM_TITLE);
+          const isSiblingInEditorMenu = hasItem(editorMenu, SIBLING_ITEM_TITLE);
           editorMenu.hide();
 
           const viewportMenu = new obsidianModule.Menu();
           app.workspace.trigger('markdown-viewport-menu', viewportMenu, view, SOURCE_MODE, MENU_SOURCE);
-          const isInViewportMenu = hasItem(viewportMenu);
+          const isInViewportMenu = hasItem(viewportMenu, ITEM_TITLE);
+          const isSiblingInViewportMenu = hasItem(viewportMenu, SIBLING_ITEM_TITLE);
           viewportMenu.hide();
 
           const readingModeMenu = new obsidianModule.Menu();
           app.workspace.trigger('markdown-viewport-menu', readingModeMenu, view, PREVIEW_MODE, MENU_SOURCE);
-          const isInReadingModeViewportMenu = hasItem(readingModeMenu);
+          const isInReadingModeViewportMenu = hasItem(readingModeMenu, ITEM_TITLE);
           readingModeMenu.hide();
 
-          return { isInEditorMenu, isInReadingModeViewportMenu, isInViewportMenu };
+          return { isInEditorMenu, isInReadingModeViewportMenu, isInViewportMenu, isSiblingInEditorMenu, isSiblingInViewportMenu };
         }
 
-        function hasItem(menu: MenuLike): boolean {
-          return menu.items.some((item) => (item.dom?.textContent ?? '').includes(ITEM_TITLE));
+        function hasItem(menu: MenuLike, itemTitle: string): boolean {
+          return menu.items.some((item) => (item.dom?.textContent ?? '').includes(itemTitle));
         }
 
         async function ensureMarkdownFile(path: string, content: string): Promise<TFile> {
@@ -136,16 +145,49 @@ describe('command menu placement (issue #252)', () => {
           });
         }
 
-        async function setPlacement(value: string): Promise<void> {
-          const settingTab = await openSettingTab();
-          const settingItem = await findSettingItem({ app, name: PLACEMENT_SETTING_NAME, settingTab });
-          const selectEl = settingItem?.querySelector('select');
-          if (!(selectEl instanceof HTMLSelectElement)) {
-            throw new TypeError(`"${PLACEMENT_SETTING_NAME}" dropdown was not found.`);
+        /**
+         * Sets one command's two placement toggles (issue #254). The row is named after the command, and
+         * its control area holds the editor-menu toggle first and the margin toggle second — the order
+         * `plugin-settings-tab.ts` renders them in.
+         *
+         * @param commandName - The command's display name, which is the row name.
+         * @param shouldBeInEditorMenu - Whether the editor menu should offer it.
+         * @param shouldBeOnMargin - Whether the margin menu should offer it.
+         */
+        async function setMenuToggles(commandName: string, shouldBeInEditorMenu: boolean, shouldBeOnMargin: boolean): Promise<void> {
+          for (const [index, shouldEnable] of [shouldBeInEditorMenu, shouldBeOnMargin].entries()) {
+            await setMenuToggle(commandName, index, shouldEnable);
           }
-          selectEl.value = value;
-          selectEl.dispatchEvent(new Event('change'));
-          await sleep(EDIT_SAVE_DELAY_IN_MILLISECONDS);
+        }
+
+        /**
+         * Sets ONE of a command's two placement toggles (issue #254). The row is named after the command,
+         * and its control area holds the editor-menu toggle first and the margin toggle second — the order
+         * `plugin-settings-tab.ts` renders them in.
+         *
+         * The row is looked up again for each toggle rather than both being captured up front: writing a
+         * placement re-renders the settings tab, which detaches the element the second click would land on
+         * — and a click on a detached toggle is a silent no-op that reads as "the setting did not work".
+         *
+         * @param commandName - The command's display name, which is the row name.
+         * @param toggleIndex - 0 for the editor menu, 1 for the margin.
+         * @param shouldEnable - Whether that menu should offer the command.
+         */
+        async function setMenuToggle(commandName: string, toggleIndex: number, shouldEnable: boolean): Promise<void> {
+          const settingTab = await openSettingTab();
+          const settingItem = await findSettingItem({ app, name: commandName, settingTab });
+          const toggleEls = [...settingItem?.querySelectorAll('.checkbox-container') ?? []];
+          if (toggleEls.length !== 2) {
+            throw new TypeError(`"${commandName}" did not render two placement toggles.`);
+          }
+          const toggleEl = toggleEls[toggleIndex];
+          if (!(toggleEl instanceof HTMLElement)) {
+            throw new TypeError(`"${commandName}" placement toggle ${String(toggleIndex)} was not an element.`);
+          }
+          if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {
+            toggleEl.click();
+            await sleep(EDIT_SAVE_DELAY_IN_MILLISECONDS);
+          }
           app.setting.close();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
@@ -177,7 +219,11 @@ describe('command menu placement (issue #252)', () => {
           return settingTab as PluginSettingsTab;
         }
       },
-      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
+      input: {
+        findSettingItem: findSettingItemInObsidian,
+        menuPlaceableCommandIds: MENU_PLACEABLE_COMMANDS.map((command) => command.id),
+        pluginId: PLUGIN_ID
+      },
       vaultPath: getTemporaryVault().path
     });
 
@@ -188,6 +234,14 @@ describe('command menu placement (issue #252)', () => {
     // Placed on the margin: exactly the swap the reporter asked for.
     expect(result.whileOnMargin.isInEditorMenu).toBe(false);
     expect(result.whileOnMargin.isInViewportMenu).toBe(true);
+
+    // Issue #254: its category sibling did NOT move with it, which the per-category setting could not do.
+    expect(result.whileInEditorMenu.isSiblingInEditorMenu).toBe(true);
+    expect(result.whileOnMargin.isSiblingInEditorMenu).toBe(true);
+    expect(result.whileOnMargin.isSiblingInViewportMenu).toBe(false);
+
+    // Every settings row governs a command Obsidian really registered.
+    expect(result.missingCommandIds).toEqual([]);
 
     // Reading mode raises the same Obsidian event, and is deliberately never offered the command.
     expect(result.whileOnMargin.isInReadingModeViewportMenu).toBe(false);

@@ -5,43 +5,40 @@ Obsidian has **two** context menus over an open note, and a right-click only eve
 - Right-click **the text** and you get the editor menu — `Cut`, `Copy`, `Format`, and every Advanced Note Composer command that applies.
 - Right-click **the empty space beside the text**, the margin `Readable line length` leaves, and you get a much smaller menu: `Readable line length`, `Line numbers`, `Inline title`. The line-number gutter raises that same menu.
 
-The first menu gets long. This plugin alone can put nine items in it, and they sit under everything Obsidian already puts there. So each category of commands picks which menu it appears in.
+The first menu gets long. This plugin alone can put nine items in it, and they sit under everything Obsidian already puts there. So **every command picks which menu it appears in, one command at a time**.
 
 ## Try it
 
 1. Turn on `Settings -> Editor -> Readable line length`, so there is a margin to right-click.
 2. Right-click this note's text. `Split note by headings recursively...` is in the menu, near the bottom.
-3. Open the plugin settings, go to `Include/exclude`, find the `Split/extract commands` group, and set `Split/extract command menu placement` to `Readable line length margin`.
-4. Right-click the text again — the split and extract commands are gone.
-5. Right-click the empty margin to the left or right of the text. There they are, under Obsidian's three view toggles.
+3. Open the plugin settings, go to `Command menu placement`, find the `Split/extract command menus` group, and on the `Split note by headings recursively...` row turn `Editor menu` off and `Margin` on.
+4. Right-click the text again — that one command is gone, and every other extract and split is still there.
+5. Right-click the empty margin to the left or right of the text. There it is, under Obsidian's three view toggles.
 
 The line-number gutter works the same way, so you do not have to aim at empty space if the window is narrow.
 
-## The four choices
+## Two toggles per command
 
-| Placement | Right-click on the text | Right-click on the margin |
-| --- | --- | --- |
-| `Editor menu` | shown | — |
-| `Readable line length margin` | — | shown |
-| `Both` | shown | shown |
-| `Neither` | — | — |
+Each row has two switches, and they are independent:
 
-`Editor menu` is the default, so nothing moves until you move it.
+| `Editor menu` | `Margin` | Right-click on the text | Right-click on the margin |
+| --- | --- | --- | --- |
+| on | off | shown | — |
+| off | on | — | shown |
+| on | on | shown | shown |
+| off | off | — | — |
 
-`Neither` is not the same as listing a path in `Split/extract command exclude paths`. Excluding a path takes the commands away entirely; `Neither` only takes them out of the context menus. They still run from the command palette, and from any hotkey you assigned.
+`Editor menu` on, `Margin` off is the default, so nothing moves until you move it.
 
-## Which categories can be placed
+Both off is not the same as listing a path in `Split/extract command exclude paths`. Excluding a path takes the commands away entirely; both off only takes that one command out of the context menus. It still runs from the command palette, and from any hotkey you assigned.
 
-Six of the eight:
+## Which commands can be placed
 
-- `Split/extract`
-- `Create`
-- `Smart cut & paste`
-- `Swap`
-- `Rename`
-- `Reorder`
+Every command that reaches an editor menu at all, grouped on the page by the category it belongs to — `Split/extract`, `Create`, `Smart cut & paste`, `Swap`, `Rename` and `Reorder`.
 
-`Merge` and `Move/flatten` have no placement row. Every command in them is invoked from a file or folder in the file explorer, not from inside a note, so there is no editor menu for them to be placed in.
+`Merge` and `Move/flatten` have no rows. Every command in them is invoked from a file or folder in the file explorer, not from inside a note, so there is no editor menu for them to be placed in.
+
+The category headings are there to find a row by, and nothing more: placing one command never moves the rest of its group. That was the whole point of the change — the recursive split could not be demoted to the margin without taking every extract with it.
 
 ## What placement does not change
 
@@ -51,4 +48,4 @@ Six of the eight:
 
 ## Where the keys live
 
-`splitCommandMenuPlacement` and its five siblings — see [36 Settings](<./36 Settings.md>).
+`commandMenuPlacements`, one entry per command you have moved — see [36 Settings](<./36 Settings.md>).

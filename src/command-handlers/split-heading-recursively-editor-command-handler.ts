@@ -117,7 +117,7 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
      * follow. The palette command and any hotkey keep working with a selection active.
      */
     return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
@@ -126,7 +126,7 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
     // The selection gate above is about which command the user means, not about which menu was raised, so
     // It holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

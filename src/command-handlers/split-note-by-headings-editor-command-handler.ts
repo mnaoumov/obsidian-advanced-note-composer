@@ -204,14 +204,14 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
   protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
     super.shouldAddToEditorMenu(editor, context);
     return checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
 
   protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
     return checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

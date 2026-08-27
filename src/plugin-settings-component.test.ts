@@ -12,6 +12,7 @@ import {
   it
 } from 'vitest';
 
+import { menuPlaceableCommandsOfCategory } from './menu-placeable-commands.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import {
   COMMAND_CATEGORIES,
@@ -410,29 +411,35 @@ describe('PluginSettingsComponent', () => {
     });
   });
 
-  // A placement only ever reaches the settings from a dropdown that offers real members, so the validator
-  // Exists for the other way in: a hand-edited `data.json`. Without it the unknown value would reach the
-  // `assertNever` guard in `command-menu-placement.ts` and throw from inside a context-menu handler.
-  describe.each(
-    [
-      'createCommandMenuPlacement',
-      'renameCommandMenuPlacement',
-      'reorderCommandMenuPlacement',
-      'smartCutAndPasteCommandMenuPlacement',
-      'splitCommandMenuPlacement',
-      'swapCommandMenuPlacement'
-    ] as const
-  )('%s validator', (propertyName) => {
-    it('should accept every known placement', async () => {
-      const component = createComponent();
-      for (const placement of COMMAND_MENU_PLACEMENTS) {
-        expect(await validateProperty(component, propertyName, placement)).toBeUndefined();
+  /*
+   * Issue #254 replaced the six per-category placement settings with one per-command map, so there is no
+   * settings property left for a validator to bind to. An unknown value out of a hand-edited `data.json`
+   * is answered by `PluginSettings.commandMenuPlacement` instead, which is covered in
+   * `command-menu-placement.test.ts`.
+   */
+  describe('commandMenuPlacement', () => {
+    it('should answer the default for a command with no stored placement', () => {
+      const settings = new PluginSettings();
+      expect(settings.commandMenuPlacement('split-note-by-headings-recursively')).toBe(CommandMenuPlacement.EditorMenu);
+    });
+
+    it('should answer the default for a command that has no settings row at all', () => {
+      const settings = new PluginSettings();
+      expect(settings.commandMenuPlacement('merge-folder')).toBe(CommandMenuPlacement.EditorMenu);
+    });
+
+    it('should answer every stored placement it is given', () => {
+      const settings = new PluginSettings();
+      for (const commandMenuPlacement of COMMAND_MENU_PLACEMENTS) {
+        settings.commandMenuPlacements.set('rename-heading', commandMenuPlacement);
+        expect(settings.commandMenuPlacement('rename-heading')).toBe(commandMenuPlacement);
       }
     });
 
-    it('should reject a placement that is not a known member', async () => {
-      const component = createComponent();
-      expect(await validateProperty(component, propertyName, castTo<CommandMenuPlacement>('bogus'))).toBe('Unknown menu placement: bogus');
+    it('should answer the default for a stored value that is not a known member', () => {
+      const settings = new PluginSettings();
+      settings.commandMenuPlacements.set('rename-heading', castTo<CommandMenuPlacement>('bogus'));
+      expect(settings.commandMenuPlacement('rename-heading')).toBe(CommandMenuPlacement.EditorMenu);
     });
   });
 
@@ -477,6 +484,38 @@ describe('PluginSettingsComponent', () => {
       const legacySettings: GenericObject = {};
       await component.runLegacyConverters(legacySettings);
       expect(legacySettings['frontmatterTitleMode']).toBeUndefined();
+    });
+
+    /*
+     * Issue #254: placement moved from six per-category keys to one per-command map. The expansion has to
+     * keep an upgraded vault's menus exactly as they were — which for the reporter of #252 means the whole
+     * `Split/extract` category still sitting on the margin until they thin it out command by command.
+     */
+    it('should expand a per-category menu placement across every command of that category', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { splitCommandMenuPlacement: CommandMenuPlacement.ViewportMenu };
+      await component.runLegacyConverters(legacySettings);
+      const commandMenuPlacements = castTo<Map<string, CommandMenuPlacement>>(legacySettings['commandMenuPlacements']);
+      for (const command of menuPlaceableCommandsOfCategory(CommandCategory.SplitAndExtract)) {
+        expect(commandMenuPlacements.get(command.id)).toBe(CommandMenuPlacement.ViewportMenu);
+      }
+      // Only that category moved.
+      expect(commandMenuPlacements.has('rename-heading')).toBe(false);
+    });
+
+    it('should write nothing for a per-category menu placement left at the default', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { splitCommandMenuPlacement: CommandMenuPlacement.EditorMenu };
+      await component.runLegacyConverters(legacySettings);
+      // An absent key already IS the default, so expanding it would only bloat `data.json`.
+      expect(legacySettings['commandMenuPlacements']).toBeUndefined();
+    });
+
+    it('should leave the placements alone when no per-category key was stored', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {};
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['commandMenuPlacements']).toBeUndefined();
     });
 
     it('should convert markdownAttachmentSubExtensions to attachmentExtensions', async () => {

@@ -153,7 +153,7 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
      * command and any hotkey keep working with a selection active.
      */
     return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SmartCutAndPaste,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
@@ -162,7 +162,7 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
     // The selection gate above is about which command the user means, not about which menu was raised, so
     // It holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SmartCutAndPaste,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });

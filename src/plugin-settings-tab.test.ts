@@ -36,11 +36,15 @@ import {
 
 import type { PluginSettings } from './plugin-settings.ts';
 
+import {
+  MENU_PLACEABLE_COMMANDS,
+  menuPlaceableCommandCategories
+} from './menu-placeable-commands.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
   COMMAND_CATEGORIES,
-  EDITOR_MENU_COMMAND_CATEGORIES,
+  CommandMenuPlacement,
   MergeFolderIntoFileLocation,
   SplitTargetMode
 } from './plugin-settings.ts';
@@ -195,6 +199,9 @@ describe('PluginSettingsTab', () => {
       // Its own page rather than rows scattered across three others (issue #223).
       'page:Frontmatter',
       'page:Title',
+      // Its own page since issue #254: thirty commands, each with two toggles, would swamp any page that
+      // Also had to hold something else.
+      'page:Command menu placement',
       // One page over what used to be two top-level headers (issue #225); the second path filter is still
       // Independent of the first (issue #198), it is now its own subheading rather than its own header.
       'page:Include/exclude',
@@ -212,6 +219,16 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
 
     expect(collectPageSubheadings(tab)).toEqual({
+      // Issue #254: one group per category, holding a row per command rather than one dropdown for all of
+      // Them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
+      'Command menu placement': [
+        'Split/extract command menus',
+        'Create command menus',
+        'Smart cut & paste command menus',
+        'Swap command menus',
+        'Rename command menus',
+        'Reorder command menus'
+      ],
       'Create folder with notes': [],
       'Folder note': [],
       'Frontmatter': [],
@@ -253,29 +270,73 @@ describe('PluginSettingsTab', () => {
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
-      /*
-       * Since issue #252 a category whose commands reach an editor menu leads with a menu-placement row.
-       * The two that have none — `Merge` and `Move/flatten`, both made up of file- and folder-menu commands
-       * — still render the two path rows alone.
-       */
-      const menuPlacementRows = EDITOR_MENU_COMMAND_CATEGORIES.includes(commandCategory)
-        ? [`${commandCategory} command menu placement`]
-        : [];
       expect(containers.get(`${commandCategory} commands`)).toEqual([
-        ...menuPlacementRows,
         `${commandCategory} command include paths`,
         `${commandCategory} command exclude paths`
       ]);
     }
   });
 
-  it('should offer a menu-placement row for exactly the categories whose commands reach an editor menu', async () => {
+  /*
+   * Issue #254 moved placement off this page entirely: it is chosen one COMMAND at a time now, on its own
+   * page, so a category group here holds nothing but its two path rows.
+   */
+  it('should give every menu-placeable command a row of its own, grouped by category', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
-    const categoriesWithMenuPlacementRow = COMMAND_CATEGORIES.filter((commandCategory) => (containers.get(`${commandCategory} commands`) ?? []).includes(`${commandCategory} command menu placement`));
+    for (const commandCategory of menuPlaceableCommandCategories()) {
+      expect(containers.get(`${commandCategory} commands`)).not.toContain(`${commandCategory} command menu placement`);
+    }
 
-    expect(categoriesWithMenuPlacementRow).toEqual([...EDITOR_MENU_COMMAND_CATEGORIES].sort((a, b) => COMMAND_CATEGORIES.indexOf(a) - COMMAND_CATEGORIES.indexOf(b)));
+    for (const command of MENU_PLACEABLE_COMMANDS) {
+      expect(containers.get(`${command.commandCategory} command menus`)).toContain(command.name);
+    }
+  });
+
+  it('should place a command in exactly one placement group', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    for (const command of MENU_PLACEABLE_COMMANDS) {
+      const groupsHoldingIt = menuPlaceableCommandCategories().filter((commandCategory) => (containers.get(`${commandCategory} command menus`) ?? []).includes(command.name));
+      expect(groupsHoldingIt).toEqual([command.commandCategory]);
+    }
+  });
+
+  /*
+   * The two toggles that replaced the four-way dropdown (issue #254). They have to compose: flipping one
+   * must not reset the other, which is the whole reason `withMenuIncludedInPlacement` exists.
+   */
+  it('should render a placement row as an editor-menu toggle and a margin toggle, and compose them', async () => {
+    const pluginSettingsComponent = await createSettingsComponent();
+    const tab = await createSettingsTab(pluginSettingsComponent);
+    renderRows(tab);
+
+    const [editorMenuToggle, marginToggle] = toggles
+      .filter((toggle) => toggle.name === 'Split note by headings recursively...')
+      .map((toggle) => toggle.component);
+    if (!editorMenuToggle || !marginToggle) {
+      throw new Error('The placement row did not render two toggles.');
+    }
+
+    // The default: in the editor menu, off the margin.
+    expect(editorMenuToggle.getValue()).toBe(true);
+    expect(marginToggle.getValue()).toBe(false);
+
+    // The row writes through `editAndSave`, which resolves on a later microtask.
+    marginToggle.setValue(true);
+    await vi.waitFor(() => {
+      expect(pluginSettingsComponent.settings.commandMenuPlacement('split-note-by-headings-recursively')).toBe(CommandMenuPlacement.Both);
+    });
+
+    editorMenuToggle.setValue(false);
+    await vi.waitFor(() => {
+      expect(pluginSettingsComponent.settings.commandMenuPlacement('split-note-by-headings-recursively')).toBe(CommandMenuPlacement.ViewportMenu);
+    });
+
+    // Its siblings are untouched — the defect issue #254 reports.
+    expect(pluginSettingsComponent.settings.commandMenuPlacement('extract-current-selection')).toBe(CommandMenuPlacement.EditorMenu);
   });
 
   it('should render every heading exactly once', async () => {
@@ -293,6 +354,12 @@ describe('PluginSettingsTab', () => {
       'At cursor',
       'To top of file',
       'To bottom of file',
+      'Split/extract command menus',
+      'Create command menus',
+      'Smart cut & paste command menus',
+      'Swap command menus',
+      'Rename command menus',
+      'Reorder command menus',
       'Paths',
       'All commands',
       'Merge commands',

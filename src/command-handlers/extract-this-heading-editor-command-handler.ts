@@ -170,7 +170,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
      * selection active.
      */
     return !editor.somethingSelected() && checkShouldAddCommandToEditorMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
   }
@@ -179,7 +179,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
     // The selection gate above is about which command the user means, not about which menu was raised, so
     // It holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
-      commandCategory: CommandCategory.SplitAndExtract,
+      commandId: this.id,
       mode,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
