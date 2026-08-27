@@ -129,6 +129,28 @@ describe('extract completion notice link (issue #232)', () => {
             // Reported through the returned state.
           }
 
+          /*
+           * Issue #263: the SECOND click has to re-select the content, exactly as the first did. Collapse
+           * the selection first so a stale one from the first click cannot pass for a fresh reveal.
+           */
+          const selectionAfterFirstClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '';
+          const viewBeforeSecondClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          viewBeforeSecondClick?.editor.setCursor({ ch: 0, line: 0 });
+          noticeLinkEl?.click();
+          try {
+            await waitUntil({
+              message: 'the extracted content was never re-selected on the second click',
+              predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() !== '',
+              timeoutInMilliseconds: OPEN_TIMEOUT_IN_MILLISECONDS
+            });
+          } catch {
+            // Reported through the returned state.
+          }
+          const selectionAfterSecondClick = readDestinationSelection();
+          // The point of #263: the editor is BACK, so the selection is something the user can see. A
+          // Repeat click leaves the file explorer active without this.
+          const isMarkdownViewActiveAfterSecondClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null;
+
           return {
             activeBeforeClick,
             activeFileAfterClick: app.workspace.getActiveFile()?.path ?? '',
@@ -139,10 +161,13 @@ describe('extract completion notice link (issue #232)', () => {
             // Active one, which is exactly the focus question `revealInFolder` raises — it "opens the view
             // If it is not already open/visible".
             isMarkdownViewActive: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null,
+            isMarkdownViewActiveAfterSecondClick,
             noticeTexts: [...seenNoticeTexts],
             revealedPaths: [...activeDocument.querySelectorAll<HTMLElement>('.nav-file-title.is-active')]
               .map((el) => el.dataset['path'] ?? ''),
-            selectionAfterClick: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '',
+            selectionAfterClick: selectionAfterFirstClick,
+            selectionAfterFirstClick,
+            selectionAfterSecondClick,
             wasNoticeLinkFound: noticeLinkEl !== null
           };
         } finally {
@@ -175,6 +200,23 @@ describe('extract completion notice link (issue #232)', () => {
           });
           inputEl.focus();
           pressKey({ key: 'Enter' });
+        }
+
+        /**
+         * The destination note's own editor selection, found by PATH rather than through the active view:
+         * the notice's link reveals the file in the explorer, which can leave the explorer as the active
+         * leaf — and `getActiveViewOfType` then answers `null` for a selection that is perfectly fine.
+         *
+         * @returns The selected text in the destination's editor, or an empty string.
+         */
+        function readDestinationSelection(): string {
+          for (const leaf of app.workspace.getLeavesOfType('markdown')) {
+            const view = leaf.view;
+            if (view instanceof obsidianModule.MarkdownView && view.file?.path === DESTINATION_PATH) {
+              return view.editor.getSelection();
+            }
+          }
+          return '';
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -287,6 +329,11 @@ describe('extract completion notice link (issue #232)', () => {
       .toMatchObject({ selectionAfterClick: 'EXTRACTED-BY-ISSUE-232' });
     // And the destination is highlighted in the file explorer, matching the folder-side behavior the
     // Reporter asked for consistency with.
+    // Issue #263: clicking again re-selects the content, so the notice keeps working as a way back to it
+    // Rather than only the first time.
+    expect(result.selectionAfterSecondClick).toBe('EXTRACTED-BY-ISSUE-232');
+    expect(result.isMarkdownViewActiveAfterSecondClick).toBe(true);
+
     expect(result.revealedPaths).toContain('issue-232-destination.md');
     // The editor is still the active view: `revealInFolder` "opens the view if it is not already
     // Open/visible", so this is the assertion that it does not leave the user parked in the file explorer.
