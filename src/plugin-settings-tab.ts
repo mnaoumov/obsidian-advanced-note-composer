@@ -262,9 +262,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                     'Whether a merge also moves and merges items whose path is excluded/ignored in the plugin settings, instead of skipping them. When off (the default), excluded items are skipped and reported in a notice.'
                   );
                   f.createEl('br');
-                  f.appendText('Applies to every merge command. With it on, an excluded note or folder is offered in the destination picker as well — otherwise there is no way to merge into one.');
+                  f.appendText('Applies to every merge command, and only to the items a merge picks up. Whether an excluded note or folder can be the destination is a separate setting, ');
+                  appendCodeBlock(f, 'Should offer excluded paths as merge destinations');
+                  f.appendText('.');
                   f.createEl('br');
-                  f.appendText('Where a merge is offered in the first place is a separate question, decided by ');
+                  f.appendText('Where a merge is offered in the first place is a separate question again, decided by ');
                   appendCodeBlock(f, 'Command include paths');
                   f.appendText(' / ');
                   appendCodeBlock(f, 'Command exclude paths');
@@ -274,6 +276,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 render: (setting) => {
                   setting.addToggle((toggle) => {
                     this.bind({ propertyName: 'shouldAlwaysMergeExcludedItems', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText(
+                    'Whether a merge destination picker offers a note or folder whose path is excluded/ignored in the plugin settings, and lets the merge land there. When off (the default), an excluded path never appears in a merge picker.'
+                  );
+                  f.createEl('br');
+                  f.appendText('Applies to every merge command. It decides only where a merge may land — what a merge picks up is ');
+                  appendCodeBlock(f, 'Should always merge excluded items');
+                  f.appendText(', and the two are set independently.');
+                }),
+                name: 'Should offer excluded paths as merge destinations',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldOfferExcludedPathsAsMergeDestinations', valueComponent: toggle });
                   });
                 }
               }),

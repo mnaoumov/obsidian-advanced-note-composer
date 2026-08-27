@@ -119,6 +119,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         shouldBlockVaultDuringOperations: false,
         shouldFixFootnotesByDefault: false,
         shouldMergeHeadingsByDefault: false,
+        shouldOfferExcludedPathsAsMergeDestinations: false,
         shouldOpenFirstNoteAfterMergingFolder: false,
         shouldOpenNoteAfterMerge: false,
         shouldRunTemplaterOnDestinationFile: false,
@@ -314,6 +315,42 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('src/sub/pic.png')).toBe(false);
     // The non-excluded file still merged, and no "ignored" notice was shown for the excluded ones.
     expect(await app.vault.adapter.read('dst/sub/keep.md')).toContain('keep body');
+    expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(false);
+  });
+
+  /*
+   * Issue #253 split the one setting in two. These two cover the half that decides the DESTINATION: the
+   * source items here are perfectly ordinary, and the only excluded path is the folder the merge lands in.
+   * Note that `Should always merge excluded items` is OFF in both — it is the other question, and the
+   * reporter's whole complaint was that answering it "yes" also answered this one.
+   */
+  it('should skip every item when the destination folder is excluded and excluded destinations are not offered (issue #253)', async () => {
+    initApp({ 'src/sub/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path.startsWith('dst') });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.exists('dst/sub/note.md')).toBe(false);
+    expect(await app.vault.adapter.read('src/sub/note.md')).toBe('note body');
+    expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(true);
+  });
+
+  it('should merge into an excluded destination folder when excluded destinations are offered (issue #253)', async () => {
+    initApp({ 'src/sub/note.md': 'note body' });
+    await app.vault.createFolder('dst');
+    const { handler, showNotice } = createHandler({
+      isPathIgnored: (path) => path.startsWith('dst'),
+      shouldOfferExcludedPathsAsMergeDestinations: true
+    });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    // The picker was allowed to offer `dst`, so nothing may quietly refuse to write into it.
+    expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('note body');
+    expect(await app.vault.adapter.exists('src/sub/note.md')).toBe(false);
     expect(containsNotice(showNotice, 'were not merged because they are ignored')).toBe(false);
   });
 

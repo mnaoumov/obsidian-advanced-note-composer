@@ -383,6 +383,7 @@ describe('PluginSettingsTab', () => {
       'Merge template',
       'Should ask before merging',
       'Should always merge excluded items',
+      'Should offer excluded paths as merge destinations',
       'Attachment extensions'
     ]);
     expect(containers.get('Merge file')).toEqual([

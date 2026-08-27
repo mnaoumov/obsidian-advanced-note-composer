@@ -526,6 +526,16 @@ export class PluginSettings {
   public shouldAddInvalidTitleToNoteAlias = true;
   public shouldAllowOnlyCurrentFolderByDefault = false;
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
+
+  /**
+   * Whether a merge SWALLOWS items whose path is excluded/ignored in the plugin settings, instead of
+   * skipping them and reporting them in a notice (issue #150).
+   *
+   * Strictly about the source side since issue #253. It used to double as "an excluded path may be picked
+   * as a destination" — an inference never asked for, made for the file pickers in issue #240's task and
+   * extended to the folder picker afterwards — which is what the reporter of #253 saw as a bug. That half
+   * now lives in {@link shouldOfferExcludedPathsAsMergeDestinations}.
+   */
   public shouldAlwaysMergeExcludedItems = false;
   public shouldApplyTextAfterExtractionToSameFile = false;
   /**
@@ -670,6 +680,26 @@ export class PluginSettings {
    */
   public shouldMoveAttachmentsWhenSplitting = true;
   public shouldOfferCurrentNoteWhenSplitting = true;
+
+  /**
+   * Whether a merge destination picker offers a note or folder whose path is excluded/ignored in the
+   * plugin settings, and lets the merge land there (issue #253).
+   *
+   * Split out of {@link shouldAlwaysMergeExcludedItems}, which governs only what a merge swallows. The two
+   * answer different questions — what may be poured in, and where it may be poured — and conflating them
+   * meant a user who wanted excluded items merged rather than skipped also got excluded folders offered as
+   * destinations, which is what #253 reports.
+   *
+   * Defaults to `false`, and deliberately with NO `registerLegacySettingsConverter` seeding it from
+   * {@link shouldAlwaysMergeExcludedItems}: such a converter would preserve for every existing vault
+   * exactly the behavior #253 calls a bug, the reporter's own included. The relaxation was never a
+   * requested feature, so it does not carry forward — anyone who wants it turns this on.
+   *
+   * Governs PICKERS and the destination guard they feed, never where a command is offered: every
+   * `canExecute*` gate and every ignored-SOURCE refusal is decided elsewhere and is untouched by it.
+   */
+  public shouldOfferExcludedPathsAsMergeDestinations = false;
+
   /**
    * Whether `Merge current folder with another folder...` opens the first note of the destination folder
    * once the merge lands (issue #215) — the folder's own notes ordered naturally, descending into a

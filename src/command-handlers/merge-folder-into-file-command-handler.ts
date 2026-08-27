@@ -409,7 +409,12 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       if (confirmResult === 'reselect-target') {
         const selectedFolder = await selectFolder({
           app: this.app,
-          isAllowedFolder: (candidateFolder) => !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path),
+          // Same question the other merge pickers ask since issue #253 — may the merge land on an excluded
+          // Path? — and answered by the same setting, so this detour cannot offer a different set than the
+          // Merge pickers do.
+          isAllowedFolder: (candidateFolder) =>
+            this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations
+            || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path),
           placeholder: 'Select folder for the merged note...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });

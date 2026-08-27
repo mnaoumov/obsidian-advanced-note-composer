@@ -204,11 +204,12 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
         shouldAllowOnlyCurrentFolderByDefault: false,
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
-        // Read by the picker since issue #240: with it on, an excluded note is offered as a destination.
-        shouldAlwaysMergeExcludedItems: false,
         shouldAskBeforeMerging,
         shouldFixFootnotesByDefault: true,
         shouldMergeHeadingsByDefault: false,
+        // Read by the picker since issue #253: with it on, an excluded note is offered as a destination.
+        // It used to read `shouldAlwaysMergeExcludedItems`, which decides only what a merge swallows.
+        shouldOfferExcludedPathsAsMergeDestinations: false,
         shouldShowModalInstructions: true
       })
     }),
