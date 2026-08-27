@@ -49,7 +49,7 @@ interface SettingsCarrier {
 describe('the split/extract picker asks for a name before a destination (issue #238)', () => {
   it('refuses to choose anything while a creation has no name, and says why', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { clickElement, pressKey, waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
         // Make another suite's link ambiguous.
@@ -107,14 +107,14 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isHintVisibleWhileUnnamed = isHintVisible();
 
-          // The reporter's step 3, verbatim: pick a note while the name is empty.
+          /*
+           * Issue #257 carved the CLICK out of this refusal: a row naming an existing note is unambiguous
+           * even with nothing typed, so it now flips the picker to `Merge` and goes through — covered by
+           * "chooses an existing note clicked while nothing is typed" below. What stays refused here is
+           * every way of choosing that really would be a nameless CREATION, which is what `Enter` is with
+           * an empty box.
+           */
           const suggestionCount = document.querySelectorAll('.suggestion-item').length;
-          const firstSuggestionEl = document.querySelector<HTMLElement>('.suggestion-item');
-          if (firstSuggestionEl) {
-            clickElement({ element: firstSuggestionEl });
-          }
-          await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          const isPickerOpenAfterClick = document.querySelector('.prompt') !== null;
 
           pressEnter();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -138,7 +138,6 @@ describe('the split/extract picker asks for a name before a destination (issue #
             isHintVisibleWhileBlank,
             isHintVisibleWhileNamed,
             isHintVisibleWhileUnnamed,
-            isPickerOpenAfterClick,
             isPickerOpenAfterEnter,
             suggestionCount,
             // The source keeps its heading: a refused choice must not have extracted anything either.
@@ -242,9 +241,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
     expect(result.isHintVisibleWhileUnnamed).toBe(true);
     expect(result.isHintVisibleWhileBlank).toBe(true);
 
-    // The reporter's own step: a row really was there to click, and clicking it chose nothing.
+    // A row really was there — so the refusal below is about the rule, not an empty list.
     expect(result.suggestionCount).toBeGreaterThan(0);
-    expect(result.isPickerOpenAfterClick).toBe(true);
     expect(result.isPickerOpenAfterEnter).toBe(true);
 
     // The bug itself: an unnamed creation used to become `Untitled` somewhere the user never chose.
@@ -432,5 +430,179 @@ describe('the split/extract picker asks for a name before a destination (issue #
     // The two ways it could have gone wrong: the old silent default, or reading the row as a merge target.
     expect(result.wasCreatedAtTheDefaultLocation).toBe(false);
     expect(result.wasSiblingMergedInto).toBe(false);
+  });
+
+  /*
+   * Issue #257: the reporter opened this picker, saw a list of notes, clicked one, and nothing happened —
+   * because the picker was in `Create` mode with an empty box, where a click could only ever have said
+   * WHERE a note that does not exist yet would go. A row naming an existing note is unambiguous, so it now
+   * flips the switch to `Merge` and extracts into that note.
+   *
+   * It is the same shape as the test above, minus the typing: what the user did, and what they expected.
+   */
+  it('chooses an existing note clicked while nothing is typed, instead of doing nothing', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { clickElement, waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const SOURCE_PATH = 'split-picker-name-first-nameless-source.md';
+        const FOLDER_PATH = 'split-picker-name-first-nameless-folder';
+        const SIBLING_NAME = 'split-picker-name-first-nameless-sibling';
+        const SIBLING_PATH = `${FOLDER_PATH}/${SIBLING_NAME}.md`;
+        const HEADING = 'split-picker-name-first-nameless-heading';
+        const SOURCE_CONTENT = `# Note\n\n## ${HEADING}\nnameless body one\nnameless body two\n`;
+        const HEADING_LINE_INDEX = 2;
+        const HEADING_COUNT = 2;
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldSplitHeadingsAutomatically = false;
+            settings.defaultSplitTargetMode = 'Create';
+            // Straight through to the split: the confirmation dialog is a different suite's subject, and a
+            // Confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
+            settings.shouldAskBeforeSplitting = false;
+            // Both would decide the destination themselves, which is the thing under test here.
+            settings.shouldAllowOnlyCurrentFolderByDefault = false;
+            settings.shouldAskForTargetFolderWhenSplitting = false;
+            // The note must land in the picked folder itself, not in a folder of its own inside it.
+            settings.shouldSplitIntoFolder = false;
+          });
+
+          await ensureFolder(FOLDER_PATH);
+          const sibling = await resetFile(SIBLING_PATH, 'nameless sibling body\n');
+          const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
+
+          const editor = await openAndGetEditor(source);
+          editor.setValue(SOURCE_CONTENT);
+          await waitUntil({
+            message: 'the source editor did not catch up with the reset content',
+            predicate: () => editor.getValue() === SOURCE_CONTENT
+          });
+          await waitUntil({
+            message: 'the heading cache is not ready',
+            predicate: () => (app.metadataCache.getFileCache(source)?.headings?.length ?? 0) === HEADING_COUNT
+          });
+
+          editor.setCursor({ ch: 0, line: HEADING_LINE_INDEX });
+          app.commands.executeCommandById(`${pluginId}:extract-this-heading`);
+          await waitUntil({
+            message: 'the split picker did not open',
+            predicate: () => document.querySelector('.prompt') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          // Nothing typed — the box is seeded with the heading name, so it has to be cleared to be the
+          // Reporter's case.
+          typeIntoPicker('');
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const siblingRow = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]
+            .find((row) => row.textContent.includes(SIBLING_NAME));
+          if (!siblingRow) {
+            throw new Error('The sibling note was not offered in the split picker.');
+          }
+          clickElement({ element: siblingRow });
+
+          await waitUntil({
+            message: 'the click chose nothing: the picker is still open',
+            predicate: () => document.querySelector('.prompt') === null
+          });
+          await waitUntil({
+            message: 'the heading was not extracted into the clicked note',
+            predicate: () => app.vault.getAbstractFileByPath(SIBLING_PATH) !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const siblingContent = await app.vault.read(sibling);
+          await resetFile(SIBLING_PATH, 'nameless sibling body\n');
+
+          return {
+            // A creation named after nothing is what the old code would have had to do — and #238 refuses.
+            wasSiblingMergedInto: siblingContent.includes('nameless body one'),
+            wasUntitledCreated: app.vault.getAbstractFileByPath('Untitled.md') !== null
+          };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
+            settings.shouldAllowOnlyCurrentFolderByDefault = original.shouldAllowOnlyCurrentFolderByDefault;
+            settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
+            settings.shouldAskForTargetFolderWhenSplitting = original.shouldAskForTargetFolderWhenSplitting;
+            settings.shouldSplitHeadingsAutomatically = original.shouldSplitHeadingsAutomatically;
+            settings.shouldSplitIntoFolder = original.shouldSplitIntoFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (isSettingsComponent(node)) {
+              return node;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
+          return typeof node.editAndSave === 'function' && typeof node.settings?.defaultSplitTargetMode === 'string';
+        }
+
+        function typeIntoPicker(value: string): void {
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new TypeError('No split picker input.');
+          }
+          input.value = value;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        async function ensureFolder(path: string): Promise<void> {
+          if (!app.vault.getAbstractFileByPath(path)) {
+            await app.vault.createFolder(path);
+          }
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          const leaf = app.workspace.getLeaf(false);
+          await leaf.openFile(file);
+          await app.workspace.revealLeaf(leaf);
+          await waitUntil({
+            message: `the editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return view.editor;
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // The report, answered: the clicked path IS chosen, and the extract lands in it.
+    expect(result.wasSiblingMergedInto).toBe(true);
+    // And it is a merge, not the nameless creation #238 exists to refuse.
+    expect(result.wasUntitledCreated).toBe(false);
   });
 });
