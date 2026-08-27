@@ -563,6 +563,26 @@ export class PluginSettings {
    * Honors {@link shouldShowOperationNotices}: with progress reporting off, nothing is shown at all.
    */
   public shouldBlockVaultDuringOperations = false;
+
+  /**
+   * Whether a split/extract that CREATES a note asks for its folder first and its name second, in two
+   * plain prompts, instead of opening the target picker (issue #261).
+   *
+   * The reporter's objection is that the picker's box does two jobs at once: what he types is the new
+   * note's NAME, and it simultaneously filters a list of notes that already exist — none of which he
+   * wants. With this on he is asked the two questions separately, and the name box has no suggestions
+   * under it at all.
+   *
+   * **Consequence, and the reason it is opt-in**: the `Create` / `Merge` switch lives in the picker, so a pass
+   * that skips the picker cannot be switched to `Merge`. The setting therefore applies only while
+   * {@link defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is asking for the picker
+   * — and anyone who wants to merge on a given pass turns it off.
+   *
+   * Name CLEANING needs nothing new: `createNoteFromTypedName` already runs
+   * {@link nameTransformTemplate}, replaces invalid characters per
+   * {@link shouldReplaceInvalidTitleCharacters}, and records what was typed as an alias / `title`.
+   */
+  public shouldChooseFolderBeforeNameWhenSplitting = false;
   /**
    * Whether the target note is handed to the Custom Attachment Location plugin once an extract lands,
    * so that plugin collects its attachments (issue #246).

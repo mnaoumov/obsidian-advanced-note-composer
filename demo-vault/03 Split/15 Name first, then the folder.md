@@ -50,3 +50,16 @@ It is off by default, because the common case is an extract whose name is alread
 | Obsidian's `Default location for new notes` | nothing above applies |
 
 `Mod+Enter` always creates from what you typed, so it never picks up a folder from a highlighted row.
+
+## …or the folder first, and no list at all
+
+The picker's box does two jobs at once: what you type names the new note **and** filters a list of notes that already exist. If you are creating a note, none of those notes is what you want.
+
+**Should choose the folder before the name when splitting** takes the picker out of that flow entirely and asks the two questions separately:
+
+1. A folder list — folders only, no note names in it.
+2. A plain name box, with nothing offered underneath.
+
+The name is cleaned exactly as it is anywhere else: the **Name transform template**, the invalid-character replacement, and the alias or `title` property recording what you actually typed — see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
+
+It only applies while **Default split target mode** is `Create`. The `Create` / `Merge` switch lives in the picker this replaces, so a pass that skips the picker cannot be switched to a merge — turn the setting off for a pass that should merge into an existing note. Heading-driven splits that never open the picker are unaffected, and dismissing either prompt abandons the split (there is no picker to fall back to).

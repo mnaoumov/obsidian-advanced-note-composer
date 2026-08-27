@@ -871,6 +871,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('Whether creating a note from a split/extract asks for its folder first and its name second, in two plain prompts, instead of opening the target picker.');
+              f.createEl('br');
+              f.appendText('The picker\'s box does two jobs at once: what you type names the new note AND filters a list of notes that already exist. Split in two, the folder list has no note names in it and the name box has no suggestions under it.');
+              f.createEl('br');
+              f.appendText('Only applies while ');
+              appendCodeBlock(f, 'Default split target mode');
+              f.appendText(' is ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(': the ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' / ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' switch lives in the picker this replaces, so a pass that skips it cannot be switched to a merge. Turn this off for a pass that should merge.');
+              f.createEl('br');
+              f.appendText('Heading-driven splits that never open the picker are unaffected. The name is cleaned exactly as it is anywhere else — the name transform, the invalid-character replacement, and the alias or title recording what you typed.');
+            }),
+            name: 'Should choose the folder before the name when splitting',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldChooseFolderBeforeNameWhenSplitting', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Which mode the split/extract picker opens in.');
               f.createEl('br');
               appendCodeBlock(f, 'Create');

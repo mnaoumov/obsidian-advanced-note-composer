@@ -21,6 +21,7 @@ import type {
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -40,6 +41,7 @@ import type { SuggestModalBaseConstructorParams } from './suggest-modal-base.ts'
 import { InsertMode } from '../insert-mode.ts';
 import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { NameTransformError } from '../name-transform.ts';
+import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import {
   FrontmatterMergeStrategy,
   SplitTargetMode
@@ -181,10 +183,15 @@ vi.mock('../headings.ts', () => ({
   extractHeading: vi.fn().mockReturnValue('Test Heading')
 }));
 
+vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
+  prompt: vi.fn()
+}));
+
 vi.mock('./select-folder-modal.ts', () => ({
   selectFolder: vi.fn()
 }));
 
+const mockPrompt = vi.mocked(prompt);
 const mockSelectFolder = vi.mocked(selectFolder);
 
 interface MockPluginOptions {
@@ -192,6 +199,7 @@ interface MockPluginOptions {
   readonly shouldAllowOnlyCurrentFolderByDefault?: boolean;
   readonly shouldAskBeforeSplitting?: boolean;
   readonly shouldAskForTargetFolderWhenSplitting?: boolean;
+  readonly shouldChooseFolderBeforeNameWhenSplitting?: boolean;
   readonly shouldSplitHeadingsAutomatically?: boolean;
 }
 
@@ -215,6 +223,7 @@ const pluginNoticeComponent = strictProxy<PluginNoticeComponent>({ showNotice: c
  * The subset of the item selector's constructor params these tests assert are threaded through.
  */
 interface CapturedSplitItemSelectorParams {
+  readonly inputValue: string;
   readonly isModifier: boolean;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldForceSplitIntoFolder: boolean;
@@ -223,6 +232,13 @@ interface CapturedSplitItemSelectorParams {
 }
 
 let capturedSplitItemSelectorParams: CapturedSplitItemSelectorParams | null = null;
+
+const mockOpenMinimizableModal = vi.mocked(openMinimizableModal);
+
+/**
+ * The folder the issue-#261 pair's first prompt answers with.
+ */
+const chosenFolder = castTo<TFolder>({ getParentPrefix: () => 'chosen-folder/', path: 'chosen-folder' });
 
 vi.mock('../item-selectors/split-item-selector.ts', () => {
   class MockSplitItemSelector {
@@ -311,6 +327,7 @@ function createMockPluginSettingsComponent(options?: MockPluginOptions): PluginS
       shouldAllowSplitIntoUnresolvedPathByDefault: true,
       shouldAskBeforeSplitting,
       shouldAskForTargetFolderWhenSplitting: options?.shouldAskForTargetFolderWhenSplitting ?? false,
+      shouldChooseFolderBeforeNameWhenSplitting: options?.shouldChooseFolderBeforeNameWhenSplitting ?? false,
       shouldFixFootnotesByDefault: true,
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldLockAllNotesWhenMarkingSelection: false,
@@ -358,6 +375,8 @@ describe('prepareForSplitFile', () => {
     shouldAutoSwitchToSmartCut = false;
     mockShowNotice.mockClear();
     mockSelectFolder.mockReset();
+    mockPrompt.mockReset();
+    mockOpenMinimizableModal.mockClear();
   });
 
   afterEach(() => {
@@ -860,6 +879,115 @@ describe('prepareForSplitFile', () => {
       expect(result).not.toBeNull();
       expect(mockSelectFolder).toHaveBeenCalledTimes(2);
       expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(pickedFolder);
+    });
+  });
+
+  /*
+   * Issue #261: the picker's box names the new note AND filters existing notes at the same time, and the
+   * reporter wants those two questions asked separately. With the setting on the picker never opens: a
+   * folder prompt comes first, a plain name prompt second.
+   */
+  describe('choosing the folder before the name (issue #261)', () => {
+    it('should ask for the folder and then the name, and never open the picker', async () => {
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockPrompt.mockResolvedValue('typed name');
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const result = await prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+
+      expect(result).not.toBeNull();
+      // The picker is what the pair REPLACES, so its absence is the feature, not a side effect.
+      // Counted rather than asserted with `toHaveBeenCalled`: a failure would pretty-format the recorded
+      // `strictProxy` modal, which throws on the first unmocked property it probes.
+      expect(mockOpenMinimizableModal.mock.calls).toHaveLength(0);
+      expect(mockSelectFolder).toHaveBeenCalledTimes(1);
+      expect(mockPrompt).toHaveBeenCalledTimes(1);
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(chosenFolder);
+      expect(capturedSplitItemSelectorParams?.inputValue).toBe('typed name');
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+    });
+
+    it('should abandon the split when the folder prompt is dismissed', async () => {
+      mockSelectFolder.mockResolvedValue(null);
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const result = await prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+
+      // Unlike the issue-#238 prompt, there is no picker to fall back to — these two prompts ARE the flow.
+      expect(result).toBeNull();
+      expect(mockPrompt).not.toHaveBeenCalled();
+    });
+
+    it('should abandon the split when the name prompt is dismissed', async () => {
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockPrompt.mockResolvedValue(null);
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const result = await prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+
+      expect(result).toBeNull();
+    });
+
+    it('should stay out of the way of a merge default', async () => {
+      // The switch lives in the picker this replaces, so a pass that skipped it could not be switched.
+      shouldAutoSelect = true;
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+      expect(mockPrompt).not.toHaveBeenCalled();
+      expect(mockOpenMinimizableModal.mock.calls.length).toBeGreaterThan(0);
+    });
+
+    it('should stay out of the way of a heading-driven split', async () => {
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
+
+      // That pass has both answers already; growing two prompts would be a regression of issue #143.
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).not.toHaveBeenCalled();
+      expect(mockPrompt).not.toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,7 @@ import type {
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import {
   App,
@@ -17,6 +18,7 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
@@ -53,6 +55,28 @@ import { resolveExistingItemFile } from './existing-item-file.ts';
 import { selectFolder } from './select-folder-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
+/**
+ * Which of the three things the folder-then-name pair did (issue #261).
+ */
+enum FolderThenNameKind {
+  /**
+   * The user answered both prompts.
+   */
+  Chosen = 'Chosen',
+
+  /**
+   * The user dismissed one of them, which abandons the split — unlike the issue-#238 folder prompt,
+   * where dismissing means "let me fix the name" and sends the flow back to a picker. There is no picker
+   * to go back to here: these two prompts ARE the flow.
+   */
+  Dismissed = 'Dismissed',
+
+  /**
+   * The pair does not apply to this pass, so the picker runs as usual.
+   */
+  NotApplicable = 'NotApplicable'
+}
+
 interface BuildSplitConfirmContentParams {
   readonly app: App;
   readonly editor: Editor;
@@ -69,6 +93,18 @@ interface ConfirmSplitParams {
   readonly resourceLockComponent: ResourceLockComponent;
   readonly sourceFile: TFile;
   readonly targetFile: TFile;
+}
+
+interface FolderThenNameChosen {
+  readonly folder: TFolder;
+  readonly kind: FolderThenNameKind.Chosen;
+  readonly name: string;
+}
+
+/* v8 ignore stop */
+
+interface FolderThenNameNotChosen {
+  readonly kind: FolderThenNameKind.Dismissed | FolderThenNameKind.NotApplicable;
 }
 
 interface PrepareForSplitFileParams {
@@ -171,8 +207,6 @@ interface PrepareForSplitFileResult {
   readonly targetFile: TFile;
 }
 
-/* v8 ignore stop */
-
 interface RememberSplitTargetModeParams {
   /**
    * See {@link PrepareForSplitFileParams.canMergeIntoExistingNote}, already defaulted by the caller.
@@ -188,6 +222,50 @@ interface RememberSplitTargetModeParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly splitTargetMode: SplitTargetMode;
 }
+
+interface ResolveSplitPassParams {
+  readonly abortController: AbortController;
+  readonly canSwitchToSmartCut: boolean;
+
+  /**
+   * The heading a heading-driven pass names its note after.
+   */
+  readonly heading: string;
+
+  readonly isCurrentSeedNewNoteName: boolean;
+  readonly params: PrepareForSplitFileParams;
+  readonly seed: string;
+  readonly shouldSkipModalThisPass: boolean;
+}
+
+interface ResolveSplitPassResult {
+  /**
+   * The folder the issue-#261 pair already asked for, or `null` when it did not run — in which case
+   * the issue-#238 prompt is still free to ask.
+   */
+  readonly chosenParentFolder: null | TFolder;
+
+  readonly splitFileModalResult: null | SplitFileModalResult;
+}
+
+interface SelectFolderThenNameParams {
+  readonly abortController: AbortController;
+
+  /**
+   * Whether this pass is already running without the picker. A heading-driven split has both answers
+   * already, so it must not grow two prompts.
+   */
+  readonly isPickerStillSkipped: boolean;
+
+  readonly params: PrepareForSplitFileParams;
+
+  /**
+   * What to pre-fill the name box with — the heading an extract came from, when there is one.
+   */
+  readonly seed: string | undefined;
+}
+
+type SelectFolderThenNameResult = FolderThenNameChosen | FolderThenNameNotChosen;
 
 interface SelectSplitTargetParams {
   /**
@@ -942,37 +1020,21 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     const currentSeed = pickerSeed;
     const isCurrentSeedNewNoteName = isPickerSeedNewNoteName;
 
-    const splitFileModalResult: null | SplitFileModalResult = shouldSkipModalThisPass
-      ? {
-        action: 'split',
-        frontmatterMergeStrategy: params.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy,
-        inputValue: heading,
-        insertMode: InsertMode.Append,
-        item: null,
-        shouldAllowOnlyCurrentFolder: params.shouldAllowOnlyCurrentFolderOverride ?? params.pluginSettingsComponent.settings.shouldAllowOnlyCurrentFolderByDefault,
-        shouldAllowSplitIntoUnresolvedPath: params.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault,
-        shouldFixFootnotes: params.pluginSettingsComponent.settings.shouldFixFootnotesByDefault,
-        shouldIncludeFrontmatter: params.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault,
-        shouldMergeHeadings: params.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault,
-        shouldTreatTitleAsPath: params.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault,
-        // A heading-driven split names a BRAND-NEW note after its heading, which is what this pass has
-        // Always done - so it is a `Create` whatever the picker's default mode is (it never opens).
-        splitTargetMode: SplitTargetMode.Create
-      }
-      : await new Promise<null | SplitFileModalResult>((promiseResolve) => {
-        const modal = new SplitFileModal({
-          ...params,
-          canSwitchToSmartCut,
-          initialInputValue: currentSeed,
-          isInitialInputValueNewNoteName: isCurrentSeedNewNoteName,
-          promiseResolve
-        });
-        openMinimizableModal(modal, abortController);
-      });
+    const pass = await resolveSplitPass({
+      abortController,
+      canSwitchToSmartCut,
+      heading,
+      isCurrentSeedNewNoteName,
+      params,
+      seed: currentSeed,
+      shouldSkipModalThisPass
+    });
 
+    const splitFileModalResult = pass.splitFileModalResult;
     if (!splitFileModalResult) {
       return null;
     }
+    const chosenParentFolder = pass.chosenParentFolder;
 
     if (splitFileModalResult.action === 'switch-to-smart-cut') {
       // Behave as if `Mark selection to move` had been invoked on the source selection, and stay on the
@@ -1007,12 +1069,16 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
 
     // Name first, path second (issue #238): once the name is settled, ASK where the note goes instead of
     // Letting the destination fall out of a setting, a typed path, or Obsidian's default new-note location.
-    const targetParentFolderResult = await selectTargetParentFolder({
-      abortController,
-      isPickerStillSkipped: shouldSkipModalThisPass,
-      params,
-      splitFileModalResult
-    });
+    const targetParentFolderResult = chosenParentFolder
+      // Already answered, by the prompt that came BEFORE the name (issue #261). Asking again would put
+      // The same question on screen twice in one pass.
+      ? { folder: chosenParentFolder }
+      : await selectTargetParentFolder({
+        abortController,
+        isPickerStillSkipped: shouldSkipModalThisPass,
+        params,
+        splitFileModalResult
+      });
 
     if (!targetParentFolderResult) {
       // The folder prompt was dismissed. That is "never mind, let me fix the name", not "abandon the
@@ -1156,6 +1222,35 @@ async function buildSplitConfirmContent(params: BuildSplitConfirmContentParams):
   }
 }
 
+/**
+ * The synthesized picker result a pass that never opened the picker stands in with.
+ *
+ * Shared by the two flows that skip it — a heading-driven split, and the folder-then-name pair of issue
+ * #261 — so neither can drift from the other on what the un-asked options default to. Both name a
+ * BRAND-NEW note, so both are a `Create` whatever the picker's default mode says.
+ *
+ * @param params - The prepare parameters.
+ * @param inputValue - The name the new note is being given.
+ * @returns The stand-in result.
+ */
+function buildSynthesizedSplitFileModalResult(params: PrepareForSplitFileParams, inputValue: string): SplitFileModalResult {
+  const { settings } = params.pluginSettingsComponent;
+  return {
+    action: 'split',
+    frontmatterMergeStrategy: settings.defaultFrontmatterMergeStrategy,
+    inputValue,
+    insertMode: InsertMode.Append,
+    item: null,
+    shouldAllowOnlyCurrentFolder: params.shouldAllowOnlyCurrentFolderOverride ?? settings.shouldAllowOnlyCurrentFolderByDefault,
+    shouldAllowSplitIntoUnresolvedPath: settings.shouldAllowSplitIntoUnresolvedPathByDefault,
+    shouldFixFootnotes: settings.shouldFixFootnotesByDefault,
+    shouldIncludeFrontmatter: settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+    shouldMergeHeadings: settings.shouldMergeHeadingsByDefault,
+    shouldTreatTitleAsPath: settings.shouldTreatTitleAsPathByDefault,
+    splitTargetMode: SplitTargetMode.Create
+  };
+}
+
 async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogModalResult> {
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
   // Released when this function returns, before the split operation re-locks both notes to do the work
@@ -1233,6 +1328,58 @@ async function rememberSplitTargetMode(params: RememberSplitTargetModeParams): P
 }
 
 /**
+ * Produces THIS pass's picker result — from the folder-then-name pair (issue #261), from a
+ * heading-driven skip, or from the picker itself.
+ *
+ * A function of its own for the reason `selectSplitTarget` and `selectTargetParentFolder` are: it keeps
+ * `prepareForSplitFile` under the complexity limit, and it is the one place that knows which of the
+ * three ways a pass can be answered was taken.
+ *
+ * @param params - The prepare parameters and the per-pass state.
+ * @returns The result, plus the folder the #261 pair already chose (`null` when it did not run).
+ */
+async function resolveSplitPass(params: ResolveSplitPassParams): Promise<ResolveSplitPassResult> {
+  const prepareParams = params.params;
+
+  const folderThenName = await selectFolderThenName({
+    abortController: params.abortController,
+    isPickerStillSkipped: params.shouldSkipModalThisPass,
+    params: prepareParams,
+    seed: params.seed
+  });
+
+  if (folderThenName.kind === FolderThenNameKind.Dismissed) {
+    return { chosenParentFolder: null, splitFileModalResult: null };
+  }
+
+  if (folderThenName.kind === FolderThenNameKind.Chosen) {
+    return {
+      chosenParentFolder: folderThenName.folder,
+      splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, folderThenName.name)
+    };
+  }
+
+  if (params.shouldSkipModalThisPass) {
+    return {
+      chosenParentFolder: null,
+      splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, params.heading)
+    };
+  }
+
+  const splitFileModalResult = await new Promise<null | SplitFileModalResult>((promiseResolve) => {
+    const modal = new SplitFileModal({
+      ...prepareParams,
+      canSwitchToSmartCut: params.canSwitchToSmartCut,
+      initialInputValue: params.seed,
+      isInitialInputValueNewNoteName: params.isCurrentSeedNewNoteName,
+      promiseResolve
+    });
+    openMinimizableModal(modal, params.abortController);
+  });
+  return { chosenParentFolder: null, splitFileModalResult };
+}
+
+/**
  * The forced target folder to hand the item selector for THIS pass.
  *
  * The override only holds while the picker is still being skipped. Once "Change target" has opened it, the
@@ -1248,6 +1395,74 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
     return null;
   }
   return params.targetParentFolderOverride ?? null;
+}
+
+/**
+ * Asks for the FOLDER and then the NAME, in two plain prompts, instead of opening the target picker
+ * (issue #261).
+ *
+ * The reporter's objection to the picker is that its box does two jobs at once: what he types names the
+ * new note AND filters a list of notes that already exist, none of which he wants. Split in two, the
+ * folder list has no names in it and the name box has no suggestions under it.
+ *
+ * **Applies only to a pass that would CREATE**, and only while the picker would have opened at all:
+ * - the setting is on;
+ * - {@link PluginSettings.defaultSplitTargetMode} is `Create` — the `Create` / `Merge` switch lives in the
+ *   picker this replaces, so a pass that skips it cannot be switched, and someone whose default is
+ *   `Merge` is asking for the picker;
+ * - the picker is not ALREADY being skipped by a heading-driven pass, which has both answers already.
+ *
+ * Nothing is done about name CLEANING here, because nothing needs to be: `createNoteFromTypedName`,
+ * which every creation goes through, already applies the name transform, replaces invalid characters and
+ * records what was typed as an alias / `title`.
+ *
+ * @param params - The prepare parameters, the seed for the name box, and whether the picker is skipped.
+ * @returns What the pair did — see {@link FolderThenNameKind}.
+ */
+async function selectFolderThenName(params: SelectFolderThenNameParams): Promise<SelectFolderThenNameResult> {
+  const prepareParams = params.params;
+  const { settings } = prepareParams.pluginSettingsComponent;
+
+  if (
+    !settings.shouldChooseFolderBeforeNameWhenSplitting
+    || params.isPickerStillSkipped
+    || settings.defaultSplitTargetMode !== SplitTargetMode.Create
+  ) {
+    return { kind: FolderThenNameKind.NotApplicable };
+  }
+
+  const folder = await selectFolder({
+    // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
+    // Just as it closes the picker it stands in for.
+    abortController: params.abortController,
+    app: prepareParams.app,
+    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path),
+    placeholder: 'Select folder to create the new note in...',
+    pluginSettingsComponent: prepareParams.pluginSettingsComponent
+  });
+  if (!folder) {
+    return { kind: FolderThenNameKind.Dismissed };
+  }
+
+  const name = await prompt({
+    app: prepareParams.app,
+    cancelButtonText: 'Cancel',
+    // The heading a heading-driven extract came from, so the common case is one keystroke: confirm it.
+    defaultValue: params.seed ?? '',
+    okButtonText: 'Create',
+    placeholder: 'Note name',
+    title: 'Enter note name',
+    valueValidator: (value: string): MaybeReturn<string> => {
+      if (!value.trim()) {
+        return 'Note name cannot be empty';
+      }
+    }
+  });
+  if (name === null) {
+    return { kind: FolderThenNameKind.Dismissed };
+  }
+
+  return { folder, kind: FolderThenNameKind.Chosen, name };
 }
 
 /**
