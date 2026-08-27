@@ -3,20 +3,14 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { normalizePath } from 'obsidian';
-import { createFolderSafe } from 'obsidian-dev-utils/obsidian/vault';
-import { trimEnd } from 'obsidian-dev-utils/string';
-
 import type {
   ItemSelectorBaseConstructorParams,
   SelectItemResult
 } from './item-selector-base.ts';
 
-import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { createNoteFromTypedName } from '../create-note.ts';
-import { fixFileName } from '../filename-validation.ts';
+import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import { SplitTargetMode } from '../plugin-settings.ts';
-import { resolveTemplateTokens } from '../template-tokens.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
 interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
@@ -121,34 +115,17 @@ export class SplitItemSelector extends ItemSelectorBase {
       folderPrefix: this.resolveTargetFolderPrefix(),
       pluginSettingsComponent: this.pluginSettingsComponent,
       relocateNote: this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
-        ? async (file: TFile): Promise<null | string> => await this.moveIntoOwnFolder(file)
+        ? async (file: TFile): Promise<null | string> =>
+          await moveIntoOwnFolder({
+            app: this.app,
+            file,
+            pluginSettingsComponent: this.pluginSettingsComponent,
+            sourceFile: this.sourceFile
+          })
         : null,
       shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
       sourcePath: this.sourceFile.path
     });
-  }
-
-  /**
-   * Relocates a freshly-created split/extract note into a brand-new folder named after it, so the note
-   * lives at `<dir>/<name>/<name>.md` instead of `<dir>/<name>.md` (issue #79). The folder name is
-   * de-duplicated against existing siblings. The note keeps its own base name inside the new folder
-   * unless the `splitIntoFolderNoteNameTemplate` setting overrides it (issue #153). The note is
-   * brand-new and empty, so the move carries no links or backlinks to fix.
-   *
-   * @param file - The just-created note to move into its own folder (mutated in place by the rename).
-   * @returns The overriding base name the note was given inside the folder, or `null` when it kept the
-   * folder's name.
-   */
-  private async moveIntoOwnFolder(file: TFile): Promise<null | string> {
-    const parentPath = file.parent?.path ?? '';
-    const originalBasename = file.basename;
-    const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${originalBasename}` : originalBasename);
-    const folderPath = getAvailableFolderPath(this.app, desiredFolderPath);
-    await createFolderSafe(this.app, folderPath);
-    const noteBasename = this.resolveNoteBasenameInOwnFolder(file, folderPath);
-    // The folder was just created and is therefore empty, so the note can never collide inside it.
-    await this.app.fileManager.renameFile(file, normalizePath(`${folderPath}/${noteBasename}.md`));
-    return noteBasename === originalBasename ? null : noteBasename;
   }
 
   /**
@@ -170,62 +147,6 @@ export class SplitItemSelector extends ItemSelectorBase {
     }
 
     return null;
-  }
-
-  /**
-   * Resolves the base name a split/extract note gets inside its own folder from the
-   * `splitIntoFolderNoteNameTemplate` setting (issue #153), so every folder split can produce e.g.
-   * `<dir>/<name>/Overview.md`. Tokens are resolved against the note as it exists *before* the move, so
-   * `{{newTitle}}` is the folder's name. An empty setting, a template resolving to nothing, or a name
-   * that still spans folders after sanitization all fall back to the folder's name (today's behavior).
-   *
-   * The `Name transform template` deliberately does NOT run here (issue #196): `{{newTitle}}` is the note
-   * whose name the transform already produced, so running it again would apply the rewrite twice.
-   *
-   * The folder-flavored tokens (`{{folderName}}`, `{{index}}`, ... — issue #227) are pointed at
-   * `folderPath` explicitly, because at this moment the note has NOT been renamed into that folder yet:
-   * left to resolve against the note's own parent they would name the folder ABOVE the one being created,
-   * which is never what a note-name template inside it means. `{{parentFolder}}` is deliberately left
-   * alone and still names that folder above — it is a shipped token in a shipped template.
-   *
-   * @param file - The just-created note, before it is moved into its folder.
-   * @param folderPath - The folder the note is about to be moved into.
-   * @returns The base name to give the note inside its folder, without the `.md` extension.
-   */
-  private resolveNoteBasenameInOwnFolder(file: TFile, folderPath: string): string {
-    const template = this.pluginSettingsComponent.settings.splitIntoFolderNoteNameTemplate;
-    if (!template) {
-      return file.basename;
-    }
-
-    const resolved = resolveTemplateTokens({
-      content: '',
-      folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
-      folderPath,
-      sourceFile: this.sourceFile,
-      targetFile: file,
-      template
-    });
-
-    const noteName = trimEnd({ $string: resolved.trim(), suffix: '.md' }).trim();
-    if (!noteName) {
-      return file.basename;
-    }
-
-    const { settings } = this.pluginSettingsComponent;
-    const fixedNoteName = fixFileName({
-      fileName: noteName,
-      replacement: settings.replacement,
-      shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
-      shouldTreatTitleAsPath: false
-    });
-    // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
-    // Renaming into the folder that separator implies would fail, since it does not exist.
-    if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {
-      return file.basename;
-    }
-
-    return fixedNoteName;
   }
 
   /**
