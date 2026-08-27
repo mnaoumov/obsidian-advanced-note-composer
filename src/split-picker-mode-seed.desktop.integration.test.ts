@@ -95,6 +95,9 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
 
           await flipSwitch();
           const valueAfterSwitchingToMerge = readPickerValue();
+          // Issue #260: a CLICK on the switch used to leave focus on the switch, so the next thing typed
+          // Went nowhere. `Alt+M` never had the problem — a key press leaves focus where it was.
+          const isBoxFocusedAfterClickingSwitch = activeDocument.activeElement === getPickerInput();
 
           typeIntoPicker(MERGE_SEARCH);
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -113,6 +116,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           return {
+            isBoxFocusedAfterClickingSwitch,
             seededValueInCreateMode,
             valueAfterSwitchingBackToCreate,
             valueAfterSwitchingToMerge,
@@ -208,6 +212,9 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
     });
 
     // The picker really was seeded with the heading, which is what makes the rest of this test mean anything.
+    // Issue #260: the box keeps the cursor when the switch is clicked, matching what `Alt+M` always did.
+    expect(result.isBoxFocusedAfterClickingSwitch).toBe(true);
+
     expect(result.seededValueInCreateMode).toBe('split-picker-mode-seed-heading');
 
     // The reported bug: `Merge` searches for an EXISTING note, so the name meant for a new one is gone.
