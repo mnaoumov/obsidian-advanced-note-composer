@@ -45,7 +45,10 @@ import { MoveSelectionBuffer } from './move-selection-buffer.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { FlattenMode } from './plugin-settings.ts';
-import { clearRecentTargets } from './recent-targets.ts';
+import {
+  clearRecentTargets,
+  recordRecentVisit
+} from './recent-targets.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
@@ -83,10 +86,19 @@ export class Plugin extends PluginBase {
       })
     );
 
-    // The targets a completed operation recorded rank ahead of everything in the pickers (issue #206) and
-    // Are deliberately session-only, so they are dropped on unload — a reload starts from Obsidian's own
-    // Recency, never from the previous session's operations.
+    // What a completed operation targeted (issue #206) and every note opened since (issue #256) share ONE
+    // Time-ordered log, which is what lets the pickers head with whichever happened last. It is
+    // Deliberately session-only, so it is dropped on unload — a reload starts from Obsidian's own recency,
+    // Never from the previous session's operations.
     this.register(clearRecentTargets);
+    // `file-open` rather than `active-leaf-change`: the question is which NOTE the user went to, and a
+    // Leaf change carrying the same file (splitting, focusing another pane on it) is not a move to
+    // Anywhere new. It fires with `null` when the last note is closed, which records nothing.
+    this.registerEvent(this.app.workspace.on('file-open', (file) => {
+      if (file) {
+        recordRecentVisit(file);
+      }
+    }));
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];

@@ -51,8 +51,8 @@ interface SettingsCarrier {
   settings: OrderingSettings;
 }
 
-describe('recent target ordering (issue #206)', () => {
-  it('offers the folder a completed operation targeted first, ahead of the folder of the note you are on', async () => {
+describe('recent target ordering (issues #206, #256)', () => {
+  it('ranks a completed target and the note you opened after it by WHICH CAME LAST', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -121,9 +121,23 @@ describe('recent target ordering (issue #206)', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
+          /*
+           * Wait for the operation to REPORT itself before navigating. The moved file becomes visible when
+           * the transaction commits, but the handler records its target only once the whole flow has
+           * unwound past that — so opening the next note on the strength of the file alone races the
+           * recording, and the log would come out in the opposite order to the one the user caused.
+           */
+          await waitUntil({
+            message: 'the move never reported completion',
+            predicate: () => [...activeDocument.querySelectorAll('.notice')].some((el) => el.textContent.includes('Moved folder'))
+          });
+
           // Go back to a note in a THIRD folder, so the folder we are ON is not the one we targeted — the
           // Case the reporter is in, and the only one where #206 and #158 disagree.
           await openFile(noteHere);
+          // The view is live before Obsidian has finished dispatching `file-open`, and that event is what
+          // Records the visit — reading the picker on the strength of the view alone races the recording.
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const suggestionsAfterMove = await pickerSuggestions();
 
@@ -225,11 +239,17 @@ describe('recent target ordering (issue #206)', () => {
     // Targets of its own, and the rest of the list is whatever the vault has been through.
     expect(result.suggestionsBeforeMove[0]).not.toBe('rt-dst');
 
-    // The reported ask: after an operation LANDED in `rt-dst`, it is the FIRST suggestion — even though the
-    // Note we are on lives in `rt-here`, which is what issue #158 would otherwise put first. Index 0 is
-    // Deterministic here whatever else ran before: recorded targets lead the list, most-recent-first, and
-    // This one was just recorded.
-    expect(result.suggestionsAfterMove[0]).toBe('rt-dst');
-    expect(result.suggestionsAfterMove.indexOf('rt-here')).toBeGreaterThan(0);
+    /*
+     * #206 asked that a completed target count as "clicked on"; #256 asked that the head of the list be
+     * whichever happened LAST. Both hold here, and this is the exact sequence #256 reports: an operation
+     * landed in `rt-dst`, and a note in `rt-here` was opened AFTER it — so `rt-here` leads and `rt-dst`
+     * is right behind it, ahead of everything Obsidian's own history has to offer.
+     *
+     * Before #256 the target led however much navigating had happened since, which is the defect. Both
+     * indexes are deterministic whatever else ran in the aggregate: these are the two most recent events
+     * in the plugin's own log, and anything an earlier suite recorded is older than both.
+     */
+    expect(result.suggestionsAfterMove[0]).toBe('rt-here');
+    expect(result.suggestionsAfterMove[1]).toBe('rt-dst');
   });
 });

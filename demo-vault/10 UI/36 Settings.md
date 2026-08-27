@@ -240,7 +240,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `shouldShowModalInstructions`
   - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of the pickers, the reorder dialog's `Include files` checkbox, and the split picker's `Create` / `Merge` switch. Turn it off and this settings page is the only place those choices are made.
 - `pickerRecencyOrder`
-  - which recency a picker offers first when you have typed nothing: the destinations of completed operations, or the folder you are currently in. They only disagree once you have run an operation without navigating to where the next one should go.
+  - which recency a picker offers first when you have typed nothing: your recent activity — the destinations of completed operations and the notes you have opened, whichever happened last — or the folder you are currently in.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
 

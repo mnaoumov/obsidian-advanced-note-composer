@@ -1,6 +1,8 @@
 import type {
   App,
-  PluginManifest
+  EventRef,
+  PluginManifest,
+  TFile
 } from 'obsidian';
 import type { CommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler';
 import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
@@ -26,6 +28,10 @@ import { MoveNoticeComponent } from './move-notice-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
+import {
+  clearRecentTargets,
+  getRecentTargetPaths
+} from './recent-targets.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
@@ -180,7 +186,15 @@ interface PluginInternals {
 }
 
 function createMockApp(): App {
-  return strictProxy<App>({});
+  return strictProxy<App>({
+    // `onloadImpl` subscribes to `file-open` to keep the pickers' recency log current (issue #256). The
+    // Ref is a plain object rather than a `strictProxy`: Obsidian reads its internals when the
+    // Subscription is released on unload, and a strict mock would throw on the first one.
+    workspace: strictProxy({
+      offref: vi.fn(),
+      on: vi.fn().mockReturnValue(castTo<EventRef>({}))
+    })
+  });
 }
 
 function createMockManifest(): PluginManifest {
@@ -254,6 +268,36 @@ describe('Plugin', () => {
     const firstBatchInstances = new Set<CommandHandler>(firstBatch);
     const shared = secondBatch.filter((commandHandler) => firstBatchInstances.has(commandHandler));
     expect(shared).toEqual([]);
+  });
+
+  /*
+   * Issue #256: opening a note has to demote the folder a previous operation targeted, so the plugin
+   * records every `file-open` into the same recency log the pickers read.
+   */
+  it('should record every opened note into the pickers recency log', async () => {
+    const app = createMockApp();
+    const plugin = new Plugin(app, createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals.consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals.resourceLockComponent = strictProxy<ResourceLockComponent>({});
+    internals.pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    internals.commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers: vi.fn() });
+    clearRecentTargets();
+
+    await internals.onloadImpl();
+
+    // The plugin subscribes to exactly one workspace event, and the assertion names which.
+    const [subscription] = vi.mocked(app.workspace.on).mock.calls;
+    expect(subscription?.[0]).toBe('file-open');
+    const handleFileOpen = castTo<(file: null | TFile) => void>(subscription?.[1]);
+
+    handleFileOpen(castTo<TFile>({ path: 'C/Note C.md' }));
+    handleFileOpen(castTo<TFile>({ path: 'D/Note D.md' }));
+    // Closing the last note hands over `null`, which records nothing.
+    handleFileOpen(null);
+
+    expect(getRecentTargetPaths()).toStrictEqual(['D/Note D.md', 'C/Note C.md']);
+    clearRecentTargets();
   });
 
   it('should register an unload cleanup that releases the marked selection', async () => {
