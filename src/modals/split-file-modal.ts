@@ -848,6 +848,18 @@ class SplitFileModal extends SuggestModalBase {
     this.refreshSplitTargetModeSwitch();
     this.splitTargetModeToggle?.setValue(splitTargetMode === SplitTargetMode.Merge);
     this.updateSuggestions();
+
+    /*
+     * The box keeps the cursor whichever surface flipped the mode (issue #260). `Alt+M` never moved it —
+     * a key press leaves focus where it was — but a CLICK focuses the switch it landed on, so the next
+     * thing typed went nowhere. Doing it here rather than on the toggle covers every surface at once and
+     * cannot fall out of step with the mode itself.
+     *
+     * The caret goes to the END because the box has just been repopulated with what the incoming mode last
+     * held (issue #237): a caret restored to its old offset would sit in the middle of different text.
+     */
+    this.inputEl.focus();
+    this.inputEl.setSelectionRange(this.inputEl.value.length, this.inputEl.value.length);
   }
 
   /**
