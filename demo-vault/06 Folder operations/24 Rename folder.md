@@ -35,7 +35,7 @@ The default alias template matches what [22 Create folder with notes](<../06 Fol
 Several commands need to know which note **describes** a folder — the one whose properties a reorder or a rename keeps in step, and the one a folder name in an [operation notice](<../10 UI/33 Operation notices.md>) opens when you click it. **Folder note location** (under `Folder note` in the settings) answers that:
 
 - `Auto` (the default)
-  - reads the installed [Folder notes](https://github.com/LostPaul/obsidian-folder-notes) plugin every time, so reconfiguring that plugin needs no change here. Without it, `Auto` means a note named after its folder, inside it (`alpha/bravo/charlie/charlie.md`).
+  - reads the installed [Folder notes](https://community.obsidian.md/plugins/folder-notes) plugin every time, so reconfiguring that plugin needs no change here. Without it, `Auto` means a note named after its folder, inside it (`alpha/bravo/charlie/charlie.md`).
 - `Inside the folder` / `Beside the folder`
   - say it yourself. The second is the `alpha/bravo/charlie.md` layout, whose point is that a link to `alpha/bravo/charlie` reaches a folder with no special syntax.
 - `This vault has no folder notes`
