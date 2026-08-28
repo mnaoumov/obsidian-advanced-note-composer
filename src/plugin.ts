@@ -7,9 +7,11 @@ import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin
 import type { Level } from './markdown-heading-document.ts';
 
 import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
+import { CancelSelectionEditorCommandHandler } from './command-handlers/cancel-selection-editor-command-handler.ts';
 import { CreateEmptyNoteAtCursorEditorCommandHandler } from './command-handlers/create-empty-note-at-cursor-editor-command-handler.ts';
 import { CreateEmptyNoteInFolderCommandHandler } from './command-handlers/create-empty-note-in-folder-command-handler.ts';
 import { CreateFolderWithNotesCommandHandler } from './command-handlers/create-folder-with-notes-command-handler.ts';
+import { EndSelectionEditorCommandHandler } from './command-handlers/end-selection-editor-command-handler.ts';
 import { ExtractAfterCursorEditorCommandHandler } from './command-handlers/extract-after-cursor-editor-command-handler.ts';
 import { ExtractBeforeCursorEditorCommandHandler } from './command-handlers/extract-before-cursor-editor-command-handler.ts';
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './command-handlers/extract-between-horizontal-rules-editor-command-handler.ts';
@@ -31,10 +33,16 @@ import { RenameHeadingEditorCommandHandler } from './command-handlers/rename-hea
 import { ReorderChildFoldersCommandHandler } from './command-handlers/reorder-child-folders-command-handler.ts';
 import { ReorderHeadingsEditorCommandHandler } from './command-handlers/reorder-headings-editor-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './command-handlers/reorder-sibling-folders-command-handler.ts';
+import { SelectAfterCursorEditorCommandHandler } from './command-handlers/select-after-cursor-editor-command-handler.ts';
+import { SelectBeforeCursorEditorCommandHandler } from './command-handlers/select-before-cursor-editor-command-handler.ts';
+import { SelectBetweenHorizontalRulesEditorCommandHandler } from './command-handlers/select-between-horizontal-rules-editor-command-handler.ts';
+import { SelectThisHeadingContentEditorCommandHandler } from './command-handlers/select-this-heading-content-editor-command-handler.ts';
+import { SelectThisHeadingEditorCommandHandler } from './command-handlers/select-this-heading-editor-command-handler.ts';
 import { SplitHeadingRecursivelyEditorCommandHandler } from './command-handlers/split-heading-recursively-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './command-handlers/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './command-handlers/split-note-by-headings-editor-command-handler.ts';
 import { SplitNoteByHeadingsRecursivelyEditorCommandHandler } from './command-handlers/split-note-by-headings-recursively-editor-command-handler.ts';
+import { StartSelectionEditorCommandHandler } from './command-handlers/start-selection-editor-command-handler.ts';
 import { SwapFileCommandHandler } from './command-handlers/swap-file-command-handler.ts';
 import { SwapFolderCommandHandler } from './command-handlers/swap-folder-command-handler.ts';
 import { SwapMarkedSelectionEditorCommandHandler } from './command-handlers/swap-marked-selection-editor-command-handler.ts';
@@ -50,6 +58,7 @@ import {
   recordRecentVisit
 } from './recent-targets.ts';
 import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
 import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
@@ -121,6 +130,12 @@ export class Plugin extends PluginBase {
     // In its source note. The editor extension must be registered for the field to exist in every editor.
     const selectionHighlightComponent = this.addChild(new SelectionHighlightComponent({ app: this.app }));
     this.registerEditorExtension(selectionHighlightComponent.getEditorExtension());
+
+    // Holds the pending `Selection anchor: Start selection` point and renders its marker (issue #266).
+    // A separate component from the highlight above, and not a reuse of it, because an anchor is a POINT:
+    // A mark decoration over a zero-length range draws nothing, so this one needs a widget.
+    const selectionAnchorComponent = this.addChild(new SelectionAnchorComponent({ app: this.app }));
+    this.registerEditorExtension(selectionAnchorComponent.getEditorExtension());
 
     // The three move commands are created up front so the marked-selection notice can offer them as
     // Buttons (and reflect their availability) — see MoveNoticeComponent.
@@ -288,6 +303,50 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent,
         selectionHighlightComponent
+      }),
+      // The selection-only commands (issue #266): the same ranges the extracts above compute, set on the
+      // Editor and nothing more. They exist because touch selection on Android fails the reporter roughly
+      // Four times in five, which makes every selection-first feature — smart cut & paste above all —
+      // Unreachable there; his workaround was to run an extract and CANCEL its modal to keep the
+      // Selection it had made.
+      new SelectThisHeadingEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent
+      }),
+      new SelectThisHeadingContentEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent
+      }),
+      new SelectBeforeCursorEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent
+      }),
+      new SelectAfterCursorEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent
+      }),
+      new SelectBetweenHorizontalRulesEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent
+      }),
+      // The anchor trio covers the ARBITRARY range the five above cannot: mark one end, move the caret,
+      // Mark the other. Tapping to place a caret is the gesture that still works on his phone.
+      new StartSelectionEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        selectionAnchorComponent
+      }),
+      new EndSelectionEditorCommandHandler({
+        app: this.app,
+        pluginSettingsComponent,
+        selectionAnchorComponent
+      }),
+      new CancelSelectionEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        selectionAnchorComponent
       }),
       new MarkSelectionToMoveEditorCommandHandler({
         app: this.app,

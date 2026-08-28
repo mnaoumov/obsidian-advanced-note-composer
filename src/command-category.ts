@@ -33,6 +33,7 @@ export enum CommandCategory {
   MoveAndFlatten = 'Move/flatten',
   Rename = 'Rename',
   Reorder = 'Reorder',
+  Select = 'Select',
   SmartCutAndPaste = 'Smart cut & paste',
   SplitAndExtract = 'Split/extract',
   Swap = 'Swap'
@@ -48,6 +49,7 @@ export enum CommandCategory {
 export const COMMAND_CATEGORIES: readonly CommandCategory[] = [
   CommandCategory.Merge,
   CommandCategory.SplitAndExtract,
+  CommandCategory.Select,
   CommandCategory.Create,
   CommandCategory.SmartCutAndPaste,
   CommandCategory.Swap,
