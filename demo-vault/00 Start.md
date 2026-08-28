@@ -29,6 +29,7 @@ Each folder opens with a note of its own listing what is inside, so the File Exp
 | [08 Include and exclude](<./08 Include and exclude/README.md>) | The two path filters: what the plugin may touch, and where its commands appear |
 | [09 Titles, links and frontmatter](<./09 Titles, links and frontmatter/README.md>) | The parts every operation shares: link fixing, titles, properties and templates |
 | [10 UI](<./10 UI/README.md>) | Dialogs you can park or point elsewhere, the notices operations show, and finding a setting |
+| [11 Selection](<./11 Selection/README.md>) | Commands that only set the selection — the step every other feature starts from, and the one that fails on a phone |
 
 ## Materials
 

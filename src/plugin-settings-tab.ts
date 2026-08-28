@@ -60,7 +60,7 @@ interface CommandCategorySettingGroupDefinition {
 }
 
 /**
- * The eight per-category groups of the `Include/exclude` page (issue #249), in the order they are listed.
+ * The nine per-category groups of the `Include/exclude` page (issue #249), in the order they are listed.
  *
  * One entry per {@link CommandCategory} — `plugin-settings-tab.test.ts` fails when a category has no group
  * here, which is what keeps a category from being added to the enum and never reaching the UI.
@@ -77,6 +77,13 @@ const COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS: readonly CommandCategorySettin
     commandsDesc: 'Every extract command, Split note by headings... at any level, and the two recursive splits',
     excludePathsPropertyName: 'splitCommandExcludePaths',
     includePathsPropertyName: 'splitCommandIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    commandsDesc:
+      'Select this heading, Select this heading\'s content, Select before cursor, Select after cursor, Select between horizontal rules and the three Selection anchor commands',
+    excludePathsPropertyName: 'selectCommandExcludePaths',
+    includePathsPropertyName: 'selectCommandIncludePaths'
   },
   {
     commandCategory: CommandCategory.Create,

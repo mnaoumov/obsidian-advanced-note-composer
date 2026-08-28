@@ -24,8 +24,8 @@ import {
 } from './plugin-settings.ts';
 
 /**
- * One category paired with the two settings that narrow it, so the cases below run over all eight
- * categories — and touch all sixteen accessors — instead of spelling each one out.
+ * One category paired with the two settings that narrow it, so the cases below run over all nine
+ * categories — and touch all eighteen accessors — instead of spelling each one out.
  */
 interface CommandCategoryPathProperties {
   readonly commandCategory: CommandCategory;
@@ -58,6 +58,11 @@ const COMMAND_CATEGORY_PATH_PROPERTIES: readonly CommandCategoryPathProperties[]
     commandCategory: CommandCategory.Reorder,
     excludePathsPropertyName: 'reorderCommandExcludePaths',
     includePathsPropertyName: 'reorderCommandIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    excludePathsPropertyName: 'selectCommandExcludePaths',
+    includePathsPropertyName: 'selectCommandIncludePaths'
   },
   {
     commandCategory: CommandCategory.SmartCutAndPaste,
@@ -107,6 +112,10 @@ describe('CommandCategory enum', () => {
 
   it('should have Reorder value', () => {
     expect(CommandCategory.Reorder).toBe('Reorder');
+  });
+
+  it('should have Select value', () => {
+    expect(CommandCategory.Select).toBe('Select');
   });
 
   it('should have SmartCutAndPaste value', () => {
@@ -480,9 +489,9 @@ describe('PluginSettings per-category command path lists (issue #249)', () => {
   });
 
   // The reporter's third example: block everything on a path except one category, spelled as the other
-  // Seven exclude lists. There is deliberately no allow-back over the un-prefixed pair — a category list
+  // Eight exclude lists. There is deliberately no allow-back over the un-prefixed pair — a category list
   // Can only narrow further, never re-open what the baseline already hid.
-  it('should leave exactly one category offered when the other seven exclude the path', () => {
+  it('should leave exactly one category offered when the other eight exclude the path', () => {
     const settings = new PluginSettings();
     for (const { commandCategory, excludePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
       if (commandCategory === CommandCategory.Rename) {

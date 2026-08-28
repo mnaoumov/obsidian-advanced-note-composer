@@ -71,6 +71,19 @@
   border-radius: var(--radius-s);
 }
 
+// The `Selection anchor: Start selection` marker (issue #266). An anchor is a POINT, so unlike the
+// Pending-selection highlight above there is no range to tint — the marker has to draw its own width or
+// It is invisible. It reads as a second, stationary caret, which is what it is: the end of the range the
+// Live caret is choosing.
+.advanced-note-composer-selection-anchor {
+  background-color: var(--text-accent);
+  border-radius: var(--radius-s);
+  display: inline-block;
+  height: 1em;
+  vertical-align: text-bottom;
+  width: 2px;
+}
+
 // The shared reorder modal (issue #216), used by `Reorder headings` and by the two folder reorders. Its
 // Body renders into the modal's own content element, outside the plugin-scoped container.
 .advanced-note-composer-reorder-item {

@@ -223,6 +223,7 @@ describe('PluginSettingsTab', () => {
       // Them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
       'Command menu placement': [
         'Split/extract command menus',
+        'Select command menus',
         'Create command menus',
         'Smart cut & paste command menus',
         'Swap command menus',
@@ -239,6 +240,7 @@ describe('PluginSettingsTab', () => {
         'All commands',
         'Merge commands',
         'Split/extract commands',
+        'Select commands',
         'Create commands',
         'Smart cut & paste commands',
         'Swap commands',
@@ -355,6 +357,7 @@ describe('PluginSettingsTab', () => {
       'To top of file',
       'To bottom of file',
       'Split/extract command menus',
+      'Select command menus',
       'Create command menus',
       'Smart cut & paste command menus',
       'Swap command menus',
@@ -364,6 +367,7 @@ describe('PluginSettingsTab', () => {
       'All commands',
       'Merge commands',
       'Split/extract commands',
+      'Select commands',
       'Create commands',
       'Smart cut & paste commands',
       'Swap commands',

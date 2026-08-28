@@ -103,6 +103,46 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
     name: `Split note by headings content - H${String(headingLevel)}`
   })),
   {
+    commandCategory: CommandCategory.Select,
+    id: 'select-this-heading',
+    name: 'Select this heading'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'select-this-heading-content',
+    name: 'Select this heading\'s content'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'select-before-cursor',
+    name: 'Select before cursor'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'select-after-cursor',
+    name: 'Select after cursor'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'select-between-horizontal-rules',
+    name: 'Select between horizontal rules'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'start-selection',
+    name: 'Selection anchor: Start selection'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'end-selection',
+    name: 'Selection anchor: End selection'
+  },
+  {
+    commandCategory: CommandCategory.Select,
+    id: 'cancel-selection',
+    name: 'Selection anchor: Cancel selection'
+  },
+  {
     commandCategory: CommandCategory.Create,
     id: 'create-empty-note-at-cursor',
     name: 'Create empty note at cursor...'

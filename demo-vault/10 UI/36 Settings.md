@@ -167,6 +167,8 @@ Each command category then has its own pair, which narrows what the two above al
   - where the merge commands are offered.
 - `splitCommandIncludePaths` / `splitCommandExcludePaths`
   - where the extract and split commands are offered.
+- `selectCommandIncludePaths` / `selectCommandExcludePaths`
+  - where the five `Select ...` commands and the three `Selection anchor` commands are offered. Their own pair rather than a share of the split/extract one: they only move the caret, so hiding every extract on a path is no reason to lose them too.
 - `createCommandIncludePaths` / `createCommandExcludePaths`
   - where the two create-empty-note commands and `Create folder with notes...` are offered.
 - `smartCutAndPasteCommandIncludePaths` / `smartCutAndPasteCommandExcludePaths`

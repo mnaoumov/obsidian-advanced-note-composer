@@ -239,7 +239,7 @@ export enum TextAfterExtractionMode {
 }
 
 /**
- * The name of one of the per-category command path settings (issue #249) — the sixteen accessors
+ * The name of one of the per-category command path settings (issue #249) — the eighteen accessors
  * {@link COMMAND_CATEGORIES} implies, two per category.
  *
  * Derived from {@link PluginSettings} rather than spelled out, so the settings tab and the tests that
@@ -1045,6 +1045,34 @@ export class PluginSettings {
 
   public set reorderCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Reorder).includePaths = value;
+  }
+
+  /**
+   * Paths on which the {@link CommandCategory.Select} commands are not offered (issue #266) — the exclude
+   * half of that category's own filter.
+   *
+   * The select commands got a category of their own rather than joining
+   * {@link CommandCategory.SplitAndExtract}, whose ranges they share: they only move the caret, so hiding
+   * every extract on a path is no reason to lose them too.
+   */
+  public get selectCommandExcludePaths(): string[] {
+    return this.commandCategoryPathSettings(CommandCategory.Select).excludePaths;
+  }
+
+  public set selectCommandExcludePaths(value: string[]) {
+    this.commandCategoryPathSettings(CommandCategory.Select).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Select} commands are restricted to (issue #266). Empty — the
+   * default — leaves them offered wherever the baseline pair and the exclude half above allow.
+   */
+  public get selectCommandIncludePaths(): string[] {
+    return this.commandCategoryPathSettings(CommandCategory.Select).includePaths;
+  }
+
+  public set selectCommandIncludePaths(value: string[]) {
+    this.commandCategoryPathSettings(CommandCategory.Select).includePaths = value;
   }
 
   /**
