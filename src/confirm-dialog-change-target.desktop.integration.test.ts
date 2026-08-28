@@ -15,10 +15,19 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 const PLUGIN_ID = 'advanced-note-composer';
 
+/**
+ * `SplitTargetMode.Create`, spelled as the literal the setting persists and the dropdown option carries.
+ *
+ * Deliberately NOT imported from `plugin-settings.ts`: this file's module scope is evaluated in plain
+ * Node, where that import pulls in `obsidian-dev-utils` and then `obsidian`, which does not resolve there
+ * (`Cannot find package 'obsidian'`). Only the `callback` below runs inside Obsidian.
+ */
+const SPLIT_TARGET_MODE_CREATE = 'Create';
+
 describe('change target from the split confirmation dialog', () => {
   it('reopens the picker and splits into the newly chosen target', async () => {
     const result = await evalInObsidian({
-      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, createMode, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(true);
@@ -69,6 +78,19 @@ describe('change target from the split confirmation dialog', () => {
           return { changeTargetButtonPresent: isChangeTargetButtonPresent, sourceContent, targetAContent, targetBContent };
         } finally {
           await didSetAskBeforeSplitting(isOriginalShouldAsk);
+          /*
+           * `chooseInPicker` above flips the picker to Merge so it will offer an EXISTING note, and CHOOSING
+           * a target in a flipped mode PERSISTS that mode (issue #245) — the switch is only per-run until
+           * you pick something with it. Nothing put it back, so this suite left every later suite in this
+           * shared vault with a picker that opens in Merge, where typing a new note name offers no
+           * create-new entry; that is what made a block of ~25 later files fail while each passed alone.
+           *
+           * Restored to `Create` rather than to whatever was here on entry: the mode is sticky GLOBAL
+           * state, so the incoming value is only ever "what the previous suite happened to leave", while
+           * `Create` is the shipped default every downstream picker test assumes. One settings visit, not
+           * two, which matters in a suite whose waits are 5s.
+           */
+          await setDefaultSplitTargetMode(createMode);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
@@ -126,6 +148,37 @@ describe('change target from the split confirmation dialog', () => {
           return wasEnabled;
         }
 
+        /**
+         * Sets the picker's remembered Create/Merge mode through its settings row.
+         *
+         * The switch above the picker itself is not usable for this: it is per-run, and by the time this
+         * runs the picker is closed. Mirrors {@link didSetAskBeforeSplitting}.
+         *
+         * @param mode - The mode to leave the setting on.
+         */
+        async function setDefaultSplitTargetMode(mode: string): Promise<void> {
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
+          if (!tab) {
+            throw new Error('Settings tab was not found.');
+          }
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const item = await findSettingItem({ app, name: 'Default split target mode', settingTab: tab });
+          const dropdown = item?.querySelector('select');
+          if (!(dropdown instanceof HTMLSelectElement)) {
+            throw new TypeError('"Default split target mode" dropdown was not found.');
+          }
+          if (dropdown.value !== mode) {
+            dropdown.value = mode;
+            dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+            await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          }
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        }
+
         async function resetFile(path: string, content: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);
           if (existing instanceof obsidianModule.TFile) {
@@ -145,7 +198,7 @@ describe('change target from the split confirmation dialog', () => {
           return view.editor;
         }
       },
-      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
+      input: { createMode: SPLIT_TARGET_MODE_CREATE, findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
       vaultPath: getTemporaryVault().path
     });
 
