@@ -80,8 +80,7 @@ const COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS: readonly CommandCategorySettin
   },
   {
     commandCategory: CommandCategory.Select,
-    commandsDesc:
-      'Select this heading, Select this heading\'s content, Select before cursor, Select after cursor, Select between horizontal rules and the three Selection anchor commands',
+    commandsDesc: 'Select this heading, Select this heading\'s content, Select before cursor, Select after cursor, Select between horizontal rules and the three Selection anchor commands',
     excludePathsPropertyName: 'selectCommandExcludePaths',
     includePathsPropertyName: 'selectCommandIncludePaths'
   },
