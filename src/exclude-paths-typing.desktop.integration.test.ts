@@ -107,11 +107,11 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           });
         }
 
-        async function waitOrGiveUp(predicate: () => boolean | Promise<boolean>): Promise<void> {
+        async function waitOrGiveUp(isSettled: () => boolean | Promise<boolean>): Promise<void> {
           try {
             await waitUntil({
               message: 'expected settings state never settled',
-              predicate,
+              predicate: isSettled,
               timeoutInMilliseconds: SETTLE_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
