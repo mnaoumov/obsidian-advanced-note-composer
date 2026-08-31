@@ -41,7 +41,7 @@ interface SelectEditorCommandHandlerBaseConstructorParams {
  */
 export abstract class SelectEditorCommandHandlerBase extends EditorCommandHandler {
   protected readonly app: App;
-  protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: SelectEditorCommandHandlerBaseConstructorParams) {
     super({
