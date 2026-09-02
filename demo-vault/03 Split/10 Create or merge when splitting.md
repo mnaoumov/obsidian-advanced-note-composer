@@ -45,3 +45,11 @@ The two modes ask for different things — a name to invent, or a note to find �
 - Flip back and the heading name is there again — and so is anything you typed over it, because each mode gives back what **you** last left in it rather than re-seeding on top of your own typing.
 - `Mod+Enter` is the exception, and deliberately so: it says "what I just typed is a new note's name", so that text travels with the switch into `Create` instead of being swapped out.
 - If your `Default split target mode` is `Merge`, the picker opens empty for the same reason.
+
+## Spell check follows the same split
+
+Because `Create` is a name you are **writing** and `Merge` is a note you are **finding**, the box is spell-checked in `Create` and not in `Merge`. It switches over with `Alt+M`, along with everything else.
+
+In `Create` it follows your own `Editor > Spellcheck` setting, exactly like the name prompts in [22 Create folder with notes](<../06 Folder operations/22 Create folder with notes.md>) and like Obsidian's own inline title and file-explorer rename. With it on, a misspelled name gets the red squiggle and right-clicking offers the usual suggestions and `Add to Dictionary`; with it off, nothing is checked anywhere. `Merge` stays unchecked either way, so half-typed search fragments never get squiggles.
+
+One thing to know if you use `Treat title as path`: the whole path is checked, folder names included, because the box holds one string and there is no way to spell-check only its last segment.
