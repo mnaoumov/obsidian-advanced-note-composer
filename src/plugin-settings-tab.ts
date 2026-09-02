@@ -652,6 +652,69 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('Numbers the FOLDER a split creates, continuing the numbering its sibling folders already carry.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{index}}');
+              f.appendText(' is one more than the highest number already in use, so folders ');
+              appendCodeBlock(f, '1.');
+              f.appendText(', ');
+              appendCodeBlock(f, '3.');
+              f.appendText(', ');
+              appendCodeBlock(f, '4.');
+              f.appendText(' continue at ');
+              appendCodeBlock(f, '5.');
+              f.appendText(' — a gap is never filled in, and only FOLDERS are counted. A recursive split therefore restarts at ');
+              appendCodeBlock(f, '1.');
+              f.appendText(' inside each new folder, because that folder has no numbered children yet.');
+              f.createEl('br');
+              f.appendText('Applies whenever the new note goes into a folder of its own — ');
+              appendCodeBlock(f, 'Should split into folder');
+              f.appendText(' below, and every pass of ');
+              appendCodeBlock(f, 'Split note by headings recursively...');
+              f.appendText(', which always makes folders. The note inside is then left unnumbered, since the folder around it already carries the number.');
+              f.createEl('br');
+              f.appendText('The whole format lives here: the separator is ordinary text, ');
+              appendCodeBlock(f, '{{index:000}}');
+              f.appendText(' zero-pads to the width of the mask, and ');
+              appendCodeBlock(f, '{{safeFolderName}} ({{index}})');
+              f.appendText(' puts the number at the end. Leave the field EMPTY (the default) to switch numbering off.');
+              f.createEl('br');
+              addNumberedSplitFolderTokens(f);
+            }),
+            name: 'Auto-numbered split folder name',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'numberedSplitFolderNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Numbers the NOTE a split creates, when that note does NOT go into a folder of its own — the other half of ');
+              appendCodeBlock(f, 'Auto-numbered split folder name');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Same rule: one more than the highest number already in use in the destination folder, counting only NOTES. Numbered folders beside them are a separate sequence, and so is an attachment. Leave the field EMPTY (the default) to switch numbering off.');
+              f.createEl('br');
+              f.appendText('The number makes the note\'s name differ from the one you typed, so the typed name is kept as an alias and/or a frontmatter title, exactly as ');
+              appendCodeBlock(f, 'Should add invalid title to note alias');
+              f.appendText(' and ');
+              appendCodeBlock(f, 'Frontmatter title mode');
+              f.appendText(' are configured — which is what keeps a link to the name you typed resolving.');
+              f.createEl('br');
+              addNumberedSplitNoteTokens(f);
+            }),
+            name: 'Auto-numbered split note name',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'numberedSplitNoteNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Template to use when splitting notes into a new file.');
               f.createEl('br');
               f.appendText('Leave empty to reuse ');
@@ -2485,6 +2548,31 @@ function addCreateFolderTokens(f: DocumentFragment, shouldIncludeFolderTokens: b
   f.appendText(' is the typed name after normalization, without the index. ');
   appendCodeBlock(f, '{{folderName}}');
   f.appendText(' is the folder\'s real final name, index included.');
+}
+
+/**
+ * Lists the tokens of the auto-numbered split FOLDER name template (issue #269).
+ *
+ * Narrower than {@link addReorderFolderTokens}: this template IS the folder's name, so the tokens naming
+ * the result are unavailable, and there is no typed prompt behind it to back `{{rawFolderName}}`.
+ *
+ * @param f - The fragment to append to.
+ */
+function addNumberedSplitFolderTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeFolderName}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeFolderName}}');
+  f.appendText(' is the name the folder would have had, i.e. the note\'s own name without the number.');
+}
+
+/**
+ * Lists the tokens of the auto-numbered split NOTE name template (issue #269).
+ *
+ * @param f - The fragment to append to.
+ */
+function addNumberedSplitNoteTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeName}}', '{{extension}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeName}}');
+  f.appendText(' is the basename the note would have had, without the number.');
 }
 
 function addReorderFileTokens(f: DocumentFragment): void {

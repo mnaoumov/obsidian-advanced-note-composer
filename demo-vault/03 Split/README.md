@@ -11,3 +11,4 @@ A split is an extraction driven by the note's own structure: instead of pointing
 | [13 Split headings recursively](<./13 Split headings recursively.md>) | A note's whole heading hierarchy turned into a folder tree |
 | [14 Split heading recursively](<./14 Split heading recursively.md>) | The same, scoped to the one heading your cursor is in |
 | [15 Name first, then the folder](<./15 Name first, then the folder.md>) | Naming a new note before it can be placed, and what decides where it goes |
+| [40 Auto-number splits](<./40 Auto-number splits.md>) | Numbering what a split creates, continuing the sequence already in the destination |

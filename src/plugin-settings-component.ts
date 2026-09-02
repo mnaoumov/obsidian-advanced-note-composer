@@ -287,6 +287,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // Same vocabulary, same "must be one file-name segment" constraint (issue #216).
     this.registerValidator('folderNoteNameTemplate', validateNoteNameTemplate);
 
+    // The auto-numbering pair (issue #269) takes each kind's reorder rules, with empty allowed as the
+    // Opt-out — see `validateNumberedSplitNameTemplate`.
+    this.registerValidator('numberedSplitFolderNameTemplate', validateNumberedSplitFolderNameTemplate);
+    this.registerValidator('numberedSplitNoteNameTemplate', validateNumberedSplitNoteNameTemplate);
+
     this.registerValidator('reorderedFolderNameTemplate', validateReorderedFolderNameTemplate);
     this.registerValidator('reorderedFileNameTemplate', validateReorderedFileNameTemplate);
     this.registerValidator('folderNoteTitleTemplate', validateFolderNotePropertyTemplate);
@@ -507,6 +512,59 @@ function validateNoteNameTemplate(value: string): MaybeReturn<string> {
 }
 
 /**
+ * Validates the `numberedSplitFolderNameTemplate` setting (issue #269).
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateNumberedSplitFolderNameTemplate(value: string): MaybeReturn<string> {
+  return validateNumberedSplitNameTemplate({
+    baseTokenKey: BASE_TOKEN_KEYS[ReorderItemKind.Folder],
+    findUnknownTokenKey: findUnknownCreateFolderTokenKey,
+    forbiddenTokenKeys: REORDER_FOLDER_FORBIDDEN_TOKEN_KEYS,
+    subject: 'Auto-numbered split folder name',
+    value
+  });
+}
+
+/**
+ * The rules the two auto-numbering templates share (issue #269): the reorder rules, minus the one that
+ * cannot apply here.
+ *
+ * A reorder template may not be EMPTY — a reorder always renames, so an empty template would leave it with
+ * no name to write. Auto-numbering is the opposite: empty is the documented opt-out, and it is the default,
+ * which is what keeps every existing vault's splits producing the names they produce today. Everything
+ * else is identical, because the two features number the same items by the same `1 + max` rule and read
+ * each other's names back through the parser `numbered-name.ts` derives from these very templates.
+ *
+ * @param params - The template, its kind's tokens, and the wording for the message.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateNumberedSplitNameTemplate(params: ValidateReorderNameTemplateParams): MaybeReturn<string> {
+  if (!params.value) {
+    return;
+  }
+
+  return validateReorderNameTemplate(params);
+}
+
+/**
+ * Validates the `numberedSplitNoteNameTemplate` setting (issue #269).
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateNumberedSplitNoteNameTemplate(value: string): MaybeReturn<string> {
+  return validateNumberedSplitNameTemplate({
+    baseTokenKey: BASE_TOKEN_KEYS[ReorderItemKind.File],
+    findUnknownTokenKey: findUnknownReorderedFileTokenKey,
+    forbiddenTokenKeys: REORDER_FILE_RESULT_TOKEN_KEYS,
+    subject: 'Auto-numbered split note name',
+    value
+  });
+}
+
+/**
  * Validates the `reorderedFileNameTemplate` setting (issue #216).
  *
  * @param value - The template as typed.
@@ -591,7 +649,7 @@ function validateReorderNameTemplate(params: ValidateReorderNameTemplateParams):
 
   const tokenKeys = new Set(getTemplateTokenKeys(value).map((key) => key.toLowerCase()));
   if (!tokenKeys.has('index')) {
-    return `${subject} template should contain {{index}}, which is the number a reorder rewrites`;
+    return `${subject} template should contain {{index}}, which is the number it writes`;
   }
 
   if (!tokenKeys.has(baseTokenKey.toLowerCase())) {

@@ -672,7 +672,7 @@ describe('PluginSettingsComponent', () => {
       it('should reject a template with no index, which could not renumber anything', async () => {
         const component = createComponent();
         expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{safeFolderName}}'))
-          .toBe('Folder name template should contain {{index}}, which is the number a reorder rewrites');
+          .toBe('Folder name template should contain {{index}}, which is the number it writes');
       });
 
       it('should reject a template that never names the folder, which would drop the name', async () => {
@@ -714,7 +714,7 @@ describe('PluginSettingsComponent', () => {
       it('should reject a template with no index', async () => {
         const component = createComponent();
         expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{safeName}}'))
-          .toBe('File name template should contain {{index}}, which is the number a reorder rewrites');
+          .toBe('File name template should contain {{index}}, which is the number it writes');
       });
 
       it('should reject a template that never names the file', async () => {
@@ -812,6 +812,76 @@ describe('PluginSettingsComponent', () => {
       it('should reject a name spanning folders', async () => {
         const component = createComponent();
         expect(await validateProperty(component, 'folderNoteNameTemplate', 'notes/{{folderName}}')).toBe('Invalid note name');
+      });
+    });
+  });
+
+  describe('auto-numbered split validators (issue #269)', () => {
+    describe('numberedSplitFolderNameTemplate validator', () => {
+      it('should accept an empty template, which is the default and switches numbering off', async () => {
+        // The one rule these do NOT share with the reorder templates: a reorder always renames, so an
+        // Empty template would leave it with no name to write, while here empty IS the opt-out.
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept a template that pads the index and puts it last', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeUndefined();
+      });
+
+      it('should reject a template with no index, which would number nothing', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{safeFolderName}}'))
+          .toBe('Auto-numbered split folder name template should contain {{index}}, which is the number it writes');
+      });
+
+      it('should reject a template that never names the folder, which would drop the name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{index}}. {{parentFolder}}'))
+          .toBe('Auto-numbered split folder name template should contain {{safeFolderName}}, or renumbering would drop the name');
+      });
+
+      it('should reject the token this template itself produces', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{index}}. {{folderName}}'))
+          .toBe('{{folderName}} cannot be used here, because this template IS the name');
+      });
+
+      it('should reject a name that could not be a single folder name', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{index}}/{{safeFolderName}}'))
+          .toBe('Invalid auto-numbered split folder name');
+      });
+    });
+
+    describe('numberedSplitNoteNameTemplate validator', () => {
+      it('should accept an empty template, which is the default and switches numbering off', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '')).toBeUndefined();
+      });
+
+      it('should accept the reporter\'s own numbering', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{index}}. {{safeName}}')).toBeUndefined();
+      });
+
+      it('should reject a template with no index, which would number nothing', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{safeName}}'))
+          .toBe('Auto-numbered split note name template should contain {{index}}, which is the number it writes');
+      });
+
+      it('should reject the token this template itself produces', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{index}}. {{name}}'))
+          .toBe('{{name}} cannot be used here, because this template IS the name');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{index}}. {{safeName}} {{nope}}'))
+          .toBe('Unknown token {{nope}}');
       });
     });
   });
