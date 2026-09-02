@@ -519,7 +519,6 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
             tokens
           }),
         canReselectTarget: true,
-        confirmButtonMobileText: 'Create and don\'t ask again',
         confirmButtonText: 'Create',
         // Handed straight through: the shared modal knows nothing about renaming, so every result IT produces
         // Simply carries no request.

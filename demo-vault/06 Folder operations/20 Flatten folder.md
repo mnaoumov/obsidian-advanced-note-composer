@@ -11,7 +11,7 @@ Promote children of a folder up one level, so they become siblings of that folde
 
 The link from [Note one](<../Materials/20 Flatten folder/Flatten example/Note one.md>) to [Note two](<../Materials/20 Flatten folder/Flatten example/Note two.md>) keeps resolving after the move, and `Nested` travels with its own note inside it.
 
-The dialog is there because this command has no picker to review before it acts. It lists a nested item by its path under the flattened folder, so two promoted folders sharing a name are still told apart, and both the folder and its destination are clickable links that reveal it in the file explorer (the vault root shows as `/`). Tick `Don't ask again` in it, or turn off **Should ask before flattening a folder** under `Move/flatten folders` in the settings, to flatten straight away.
+The dialog is there because this command has no picker to review before it acts. It lists a nested item by its path under the flattened folder, so two promoted folders sharing a name are still told apart, and both the folder and its destination are clickable links that reveal it in the file explorer (the vault root shows as `/`). Press `Don't ask again` in it (or `Alt+D`), or turn off **Should ask before flattening a folder** under `Move/flatten folders` in the settings, to flatten straight away.
 
 The source folder is left in place, empty — delete it yourself if you no longer want it.
 

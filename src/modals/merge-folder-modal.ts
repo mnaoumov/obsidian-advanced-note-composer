@@ -9,7 +9,7 @@ import type { PromiseResolve } from 'obsidian-dev-utils/async';
 import { FuzzySuggestModal } from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
+import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -65,7 +65,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     this.shouldIncludeChildFolders = params.pluginSettingsComponent.settings.shouldIncludeChildFoldersWhenMergingByDefault;
     this.shouldIncludeParentFolders = params.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenMergingByDefault;
 
-    const builder = new SuggestModalCommandBuilder();
+    const builder = new ModalCommandBuilder();
     builder.addCheckbox({
       key: '1',
       modifiers: ['Alt'],
@@ -176,7 +176,6 @@ export async function selectTargetFolderForMergeFolder(params: SelectTargetFolde
           app: params.app,
           buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app: params.app, fragment, source: params.sourceFolder, target: targetFolder }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Merge and don\'t ask again',
           confirmButtonText: 'Merge',
           promiseResolve,
           title: 'Merge folder'

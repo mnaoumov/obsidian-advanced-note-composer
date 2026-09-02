@@ -19,7 +19,7 @@ import type {
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import { FuzzySuggestModal } from 'obsidian';
-import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
+import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -80,7 +80,7 @@ class SelectFolderModal extends FuzzySuggestModal<TFolder> {
 
     this.setPlaceholder(params.placeholder);
 
-    const builder = new SuggestModalCommandBuilder();
+    const builder = new ModalCommandBuilder();
     builder.build(this, { shouldShowInstructions: params.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 

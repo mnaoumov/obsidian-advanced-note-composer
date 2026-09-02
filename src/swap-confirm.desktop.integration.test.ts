@@ -62,8 +62,11 @@ describe('swap confirmation dialog', () => {
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+          // Two containers now: the confirm/cancel action row, and the `ModalCommandBuilder` strip that
+          // Owns `Don't ask again` / `Change target` / `Switch to smart cut & paste`. A strip button's
+          // `textContent` runs its purpose straight into its hotkey, so match the first span instead.
+          for (const el of document.querySelectorAll('.modal-button-container button, .modal-commands button')) {
+            if (el.instanceOf(HTMLButtonElement) && (el.textContent === text || el.querySelector('span')?.textContent === text)) {
               return el;
             }
           }
@@ -165,8 +168,11 @@ describe('swap confirmation dialog', () => {
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+          // Two containers now: the confirm/cancel action row, and the `ModalCommandBuilder` strip that
+          // Owns `Don't ask again` / `Change target` / `Switch to smart cut & paste`. A strip button's
+          // `textContent` runs its purpose straight into its hotkey, so match the first span instead.
+          for (const el of document.querySelectorAll('.modal-button-container button, .modal-commands button')) {
+            if (el.instanceOf(HTMLButtonElement) && (el.textContent === text || el.querySelector('span')?.textContent === text)) {
               return el;
             }
           }
@@ -263,8 +269,11 @@ describe('swap confirmation dialog', () => {
         }
 
         function findButton(text: string): HTMLButtonElement | null {
-          for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+          // Two containers now: the confirm/cancel action row, and the `ModalCommandBuilder` strip that
+          // Owns `Don't ask again` / `Change target` / `Switch to smart cut & paste`. A strip button's
+          // `textContent` runs its purpose straight into its hotkey, so match the first span instead.
+          for (const el of document.querySelectorAll('.modal-button-container button, .modal-commands button')) {
+            if (el.instanceOf(HTMLButtonElement) && (el.textContent === text || el.querySelector('span')?.textContent === text)) {
               return el;
             }
           }

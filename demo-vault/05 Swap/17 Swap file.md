@@ -11,4 +11,4 @@ Exchange the contents (and paths) of two notes in one step.
 
 The two notes trade places - a handy way to reorder notes whose names you want to keep.
 
-The confirmation dialog is controlled by the **Should ask before swapping** setting in **Settings → Advanced Note Composer** (on by default). Turn it off to swap immediately without confirming. Tick **Don't ask again** in the dialog to turn it off from there.
+The confirmation dialog is controlled by the **Should ask before swapping** setting in **Settings → Advanced Note Composer** (on by default). Turn it off to swap immediately without confirming. Press **Don't ask again** in the dialog (or `Alt+D`) to turn it off from there.

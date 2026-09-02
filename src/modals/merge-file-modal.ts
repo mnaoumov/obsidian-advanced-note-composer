@@ -9,7 +9,7 @@ import {
 } from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
+import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -111,7 +111,7 @@ class MergeFileModal extends SuggestModalBase {
     this.shouldShowNonAttachments = false;
     this.setPlaceholder('Select file to merge into...');
 
-    const builder = new SuggestModalCommandBuilder();
+    const builder = new ModalCommandBuilder();
 
     builder.addKeyboardCommand({
       key: 'UpDown',
@@ -397,7 +397,6 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogMo
         app,
         buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app, fragment, source: sourceFile, target: targetFile }),
         canReselectTarget: true,
-        confirmButtonMobileText: 'Merge and don\'t ask again',
         confirmButtonText: 'Merge',
         promiseResolve,
         title: 'Merge file'
