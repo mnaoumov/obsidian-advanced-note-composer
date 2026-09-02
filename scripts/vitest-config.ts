@@ -56,6 +56,29 @@ const DEMO_VAULT_TEST_FILES = 'src/**/*.demo-vault.integration.test.ts';
  */
 const DEMO_VAULT_TIMEOUT_IN_MILLISECONDS = 600_000;
 
+/**
+ * Per-file cleanup for every project that drives a real desktop Obsidian. The whole project shares one
+ * instance and one vault, so a test that throws with a modal open hands the next file a covered app — the
+ * cascade [[T795-P12]] measured, where one failure was followed by 28 consecutively failing files that all
+ * pass in isolation. Appended here rather than in 101 test files so no new suite can forget it.
+ */
+const INTEGRATION_TEST_SETUP_FILE = './scripts/integration-test-setup.ts';
+
+/**
+ * Normalizes vitest's `string | string[]` setup-file field so a new entry can be appended without
+ * assuming which shape the shared configuration used.
+ *
+ * @param setupFiles - The project's current setup files.
+ * @returns The setup files as an array.
+ */
+function toSetupFileList(setupFiles: string | string[] | undefined): string[] {
+  if (setupFiles === undefined) {
+    return [];
+  }
+
+  return Array.isArray(setupFiles) ? setupFiles : [setupFiles];
+}
+
 export const config = defineObsidianPluginVitestConfig({
   customProjects(context: ObsidianPluginVitestConfigContext): TestProjectConfiguration[] {
     return [
@@ -90,6 +113,19 @@ export const config = defineObsidianPluginVitestConfig({
           testTimeout: DEMO_VAULT_TIMEOUT_IN_MILLISECONDS
         }
       }
+    ];
+  },
+  editContext(context: ObsidianPluginVitestConfigContext): void {
+    /*
+     * Mutating `context.desktop` BEFORE `customProjects` runs is what carries the cleanup into the
+     * projects that spread it — `integration-tests:demo-vault` and `capture-screenshots:desktop` drive the
+     * same shared instance and inherit the same hazard. The android project is deliberately left alone:
+     * its two cross-platform files have never shown the cascade, and an untested Appium round-trip in
+     * every `afterEach` would be a change nothing here has measured.
+     */
+    context.desktop.setupFiles = [
+      ...toSetupFileList(context.desktop.setupFiles),
+      INTEGRATION_TEST_SETUP_FILE
     ];
   }
 });
