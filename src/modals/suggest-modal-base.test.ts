@@ -35,6 +35,11 @@ interface OnInputable {
   onInput(): void;
 }
 
+interface RefreshSpellcheckScenario {
+  readonly isSpellcheckEnabled: boolean;
+  readonly supportsCreate: boolean;
+}
+
 interface SuggestModalSuper {
   onOpen(): void;
   updateSuggestions(): void;
@@ -63,6 +68,7 @@ interface MockPlugin {
 interface MockPluginOptions {
   readonly bookmarksPlugin?: BookmarksPlugin | null;
   readonly files?: TFile[];
+  readonly isSpellcheckEnabled?: boolean;
   readonly markdownFiles?: TFile[];
   readonly recentFiles?: string[];
   readonly unresolvedLinks?: Record<string, Record<string, number>>;
@@ -100,6 +106,7 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
   const recentFiles = overrides?.recentFiles ?? [];
   const unresolvedLinks = overrides?.unresolvedLinks ?? {};
   const bookmarksPlugin = overrides?.bookmarksPlugin ?? null;
+  const isSpellcheckEnabledOption = overrides?.isSpellcheckEnabled ?? false;
 
   return {
     app: strictProxy<App>({
@@ -117,6 +124,9 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
         unresolvedLinks
       }),
       vault: strictProxy<Vault>({
+        // Only ever asked for `spellcheck`, and only once the picker can create — `supportsCreate` short-
+        // Circuits ahead of it, which is why every pre-existing case here needs no value at all.
+        getConfig: castTo<Vault['getConfig']>(vi.fn((key: string) => key === 'spellcheck' ? isSpellcheckEnabledOption : undefined)),
         getFileByPath: vi.fn((filePath: string) => files.find((f) => f.path === filePath) ?? null),
         getFiles: vi.fn(() => files),
         getMarkdownFiles: vi.fn(() => markdownFiles)
@@ -218,6 +228,52 @@ describe('SuggestModalBase', () => {
       modal.onOpen();
 
       expect(modal.inputEl.value).toBe('');
+    });
+  });
+
+  /*
+   * Obsidian builds every `SuggestModal` input with a hardcoded `spellcheck="false"` and never consults
+   * `Editor > Spellcheck`. Right for a box that only FINDS a note; wrong for one that NAMES a new one,
+   * which is what the split picker's `Create` mode is — and what every other name prompt in this plugin
+   * already follows the setting for (issue #233).
+   *
+   * All three cases read the ATTRIBUTE rather than the `spellcheck` IDL property, because the hardcoded
+   * value being corrected is itself an attribute, and the IDL property reports a default for a missing one.
+   */
+  describe('refreshSpellcheck', () => {
+    function openCreateCapableModal(options: RefreshSpellcheckScenario): TestSuggestModal {
+      plugin = createMockPlugin({ isSpellcheckEnabled: options.isSpellcheckEnabled });
+      sourceFile = createMockFile('folder/source.md');
+      const modal = createTestSuggestModal(plugin, sourceFile);
+
+      const superPrototype = getSuggestModalSuperPrototype(modal);
+      superPrototype.onOpen = vi.fn();
+      superPrototype.updateSuggestions = vi.fn();
+
+      modal['allowCreateNewFile'] = options.supportsCreate;
+      modal.onOpen();
+      return modal;
+    }
+
+    it('should spell-check the box while it can name a note and the vault asks for it', () => {
+      const modal = openCreateCapableModal({ isSpellcheckEnabled: true, supportsCreate: true });
+
+      expect(modal.inputEl.getAttribute('spellcheck')).toBe('true');
+    });
+
+    it('should not spell-check the box when the vault has spell check off', () => {
+      const modal = openCreateCapableModal({ isSpellcheckEnabled: false, supportsCreate: true });
+
+      // Read in both directions on purpose: a single reading with the setting ON is indistinguishable
+      // From a box that is simply always checked, so only the pair proves it FOLLOWS the setting.
+      expect(modal.inputEl.getAttribute('spellcheck')).toBe('false');
+    });
+
+    it('should leave a find-only box unchecked even when the vault asks for spell check', () => {
+      const modal = openCreateCapableModal({ isSpellcheckEnabled: true, supportsCreate: false });
+
+      // The merge/swap pickers never create, so they stay the search boxes Obsidian built.
+      expect(modal.inputEl.getAttribute('spellcheck')).toBe('false');
     });
   });
 

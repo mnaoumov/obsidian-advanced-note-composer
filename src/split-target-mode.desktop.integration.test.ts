@@ -49,6 +49,11 @@ interface SettingsCarrier {
   settings: SplitTargetModeSettings;
 }
 
+/**
+ * The picker box's `spellcheck` attribute, keyed by the mode the switch reported when it was read.
+ */
+type SpellcheckByMode = Record<string, null | string>;
+
 interface SplitTargetModeSettings {
   defaultSplitTargetMode: string;
   shouldAskBeforeSplitting: boolean;
@@ -298,5 +303,135 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
     // `Mod+Enter` still forces a creation FROM `Merge` mode, where there is no creatable suggestion at all.
     expect(result.forcedObservations.isSwitchOn).toBe(true);
     expect(result.forcedContent).toContain('bravo');
+  });
+
+  it('should spell-check the box only while it names a note, following Editor > Spellcheck (issue #268)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const SOURCE_PATH = 'split-spellcheck-source.md';
+        const SOURCE_CONTENT = 'alpha bravo charlie\n';
+
+        const originalSpellcheck = app.vault.getConfig('spellcheck');
+        try {
+          /*
+           * Both directions, because either one alone is ambiguous: a reading of `true` in `Create` could
+           * equally be a box that is ALWAYS checked, and a reading of `false` could be Obsidian's own
+           * hardcoded `spellcheck="false"` still standing. Only the pair says the box follows the setting.
+           */
+          const whenEnabled = await readSpellcheckByMode(true);
+          const whenDisabled = await readSpellcheckByMode(false);
+          return { whenDisabled, whenEnabled };
+        } finally {
+          app.vault.setConfig('spellcheck', originalSpellcheck);
+        }
+
+        /**
+         * Opens the picker once with the vault setting at the given value and reads the box in BOTH modes,
+         * flipping between them with `Alt+M`.
+         *
+         * Deliberately cancels instead of choosing a target: choosing is what writes the mode back into
+         * `Default split target mode`, and a leaked `Merge` breaks the later split files that assume the
+         * shipped `Create` default. Cancelling also keeps this case out of the vault entirely.
+         *
+         * @param isSpellcheckEnabled - What to set the vault's `Editor > Spellcheck` to for this reading.
+         * @returns The attribute seen in each mode, keyed by what the switch itself reported.
+         */
+        async function readSpellcheckByMode(isSpellcheckEnabled: boolean): Promise<SpellcheckByMode> {
+          app.vault.setConfig('spellcheck', isSpellcheckEnabled);
+
+          const editor = await openSourceEditor();
+          const selectionStart = SOURCE_CONTENT.indexOf('bravo');
+          editor.setSelection(editor.offsetToPos(selectionStart), editor.offsetToPos(selectionStart + 'bravo'.length));
+
+          app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
+          await waitUntil({
+            message: 'the split picker did not open',
+            predicate: () => document.querySelector('.prompt') !== null
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const spellcheckByMode: SpellcheckByMode = {};
+          recordCurrentMode(spellcheckByMode);
+
+          // The box has the cursor when the picker opens (issue #262), and `Alt+M` needs it to still be
+          // There; focusing again costs nothing and makes that independent of the opening focus race.
+          requirePickerInput().focus();
+          pressKey({ key: 'm', modifiers: ['Alt'] });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          recordCurrentMode(spellcheckByMode);
+
+          pressKey({ key: 'Escape' });
+          await waitUntil({
+            message: 'the split picker did not close',
+            predicate: () => document.querySelector('.prompt') === null
+          });
+
+          return spellcheckByMode;
+        }
+
+        /*
+         * Keys the reading by what the SWITCH says rather than by what the mode was asked to be, so a
+         * picker that opened in the other mode - or an `Alt+M` that never landed - shows up as a missing
+         * key in the assertions instead of silently mislabelling a correct reading.
+         */
+        function recordCurrentMode(spellcheckByMode: SpellcheckByMode): void {
+          const isMerge = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container')?.classList.contains('is-enabled') ?? false;
+          // The ATTRIBUTE, not the `spellcheck` IDL property: the value being corrected is the hardcoded
+          // `spellcheck: "false"` Obsidian writes onto every `SuggestModal` input, and the IDL property
+          // Reports an inherited default for an element carrying no attribute at all.
+          spellcheckByMode[isMerge ? 'Merge' : 'Create'] = requirePickerInput().getAttribute('spellcheck');
+        }
+
+        function requirePickerInput(): HTMLInputElement {
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new TypeError('No split picker input.');
+          }
+          return input;
+        }
+
+        async function openSourceEditor(): Promise<Editor> {
+          const existing = app.vault.getAbstractFileByPath(SOURCE_PATH);
+          const file = existing instanceof obsidianModule.TFile ? existing : await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
+
+          const leaf = app.workspace.getLeaf(false);
+          await leaf.openFile(file);
+          await app.workspace.revealLeaf(leaf);
+          await waitUntil({
+            message: `the editor for ${SOURCE_PATH} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === SOURCE_PATH
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          // Reset through the EDITOR: an open buffer wins over `vault.modify`, so an offset-based
+          // Selection against a stale buffer would grab the previous reading's text.
+          view.editor.setValue(SOURCE_CONTENT);
+          await waitUntil({
+            message: 'the source editor did not catch up with the reset content',
+            predicate: () => view.editor.getValue() === SOURCE_CONTENT
+          });
+          return view.editor;
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // `Create` is a name being invented, so it follows the setting exactly as every other name prompt in
+    // The plugin does (issue #233) - rather than keeping the `spellcheck="false"` Obsidian hardcodes onto
+    // Every `SuggestModal` input.
+    expect(result.whenEnabled['Create']).toBe('true');
+    // `Merge` is a search box for notes that already exist. Nothing there is prose, so it stays unchecked
+    // Even with the setting on - which is also what proves the `Create` reading came from the MODE and not
+    // From the box simply always being checked.
+    expect(result.whenEnabled['Merge']).toBe('false');
+    // ...and turning the vault setting off turns `Create` off too, which is what makes it the user's call.
+    expect(result.whenDisabled['Create']).toBe('false');
+    expect(result.whenDisabled['Merge']).toBe('false');
   });
 });

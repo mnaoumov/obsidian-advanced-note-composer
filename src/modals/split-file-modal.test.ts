@@ -171,6 +171,13 @@ vi.mock('./suggest-modal-base.ts', async () => {
     public override updateSuggestions(): void {
       noop();
     }
+
+    // The real one reads `Editor > Spellcheck` off the vault and writes an attribute on `inputEl`; both
+    // Belong to the base, so they are proved by `suggest-modal-base.test.ts` and the desktop case rather
+    // Than here, where the base is a stand-in.
+    protected refreshSpellcheck(): void {
+      noop();
+    }
   }
   return { SuggestModalBase: MockSuggestModalBase };
 });

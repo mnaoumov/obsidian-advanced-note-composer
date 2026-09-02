@@ -576,6 +576,11 @@ class SplitFileModal extends SuggestModalBase {
     // Position instead).
     this.shouldAllowSameFile = !isCreate && this.pluginSettingsComponent.settings.shouldOfferCurrentNoteWhenSplitting;
     this.shouldShowUnresolved = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
+    // The box is a name to invent in `Create` and a note to find in `Merge`, and only the first is worth
+    // Spell-checking. Doing it HERE rather than on each surface that flips the mode is what keeps the
+    // Attribute from disagreeing with the switch: this is already the one place the mode is applied,
+    // Reached from the constructor, `Alt+M`, the toggle, and `Mod+Enter` alike.
+    this.refreshSpellcheck();
   }
 
   private async buildInstructions(): Promise<void> {
