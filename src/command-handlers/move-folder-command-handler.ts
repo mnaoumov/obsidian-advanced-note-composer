@@ -186,7 +186,6 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
               targetFolder
             }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Move and don\'t ask again',
           confirmButtonText: 'Move',
           promiseResolve,
           title: 'Move folder'

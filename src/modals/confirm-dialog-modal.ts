@@ -2,12 +2,14 @@ import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
   App,
-  ButtonComponent,
-  Modal,
-  Platform
+  Modal
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import {
+  ModalCommandBuilder,
+  ModalCommandsRenderMode
+} from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -41,11 +43,6 @@ interface ConfirmDialogModalConstructorParams {
   readonly canReselectTarget: boolean;
 
   /**
-   * The label of the mobile confirm-and-don't-ask-again button, e.g. `Split and don't ask again`.
-   */
-  readonly confirmButtonMobileText: string;
-
-  /**
    * The label of the primary confirm button, e.g. `Split` or `Merge`.
    */
   readonly confirmButtonText: string;
@@ -67,7 +64,6 @@ interface SwitchToSmartCutOptions {
 export class ConfirmDialogModal extends Modal {
   private readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
   private readonly canReselectTarget: boolean;
-  private readonly confirmButtonMobileText: string;
   private readonly confirmButtonText: string;
   private isSelected = false;
   private readonly promiseResolve: PromiseResolve<ConfirmDialogModalResult>;
@@ -80,7 +76,6 @@ export class ConfirmDialogModal extends Modal {
 
     this.buildContent = params.buildContent;
     this.canReselectTarget = params.canReselectTarget;
-    this.confirmButtonMobileText = params.confirmButtonMobileText;
     this.confirmButtonText = params.confirmButtonText;
     this.promiseResolve = params.promiseResolve;
     this.switchToSmartCut = params.switchToSmartCut ?? null;
@@ -96,20 +91,7 @@ export class ConfirmDialogModal extends Modal {
       return false;
     });
 
-    if (this.switchToSmartCut) {
-      this.scope.register(['Alt'], 's', () => {
-        this.switchToSmartCutAction();
-        return false;
-      });
-    }
-
-    this.scope.register(['Alt'], 'c', () => {
-      if (!this.canReselectTarget) {
-        return;
-      }
-      this.reselectTarget();
-      return false;
-    });
+    this.buildCommands();
   }
 
   public override onClose(): void {
@@ -128,6 +110,84 @@ export class ConfirmDialogModal extends Modal {
   public override onOpen(): void {
     super.onOpen();
     invokeAsyncSafely(this.onOpenAsync.bind(this));
+  }
+
+  /**
+   * Builds the dialog's control strip — the OPTIONS, as opposed to the confirm/cancel action row
+   * `onOpenAsync` builds.
+   *
+   * Built here rather than in `onOpenAsync` on purpose. `Modal`'s constructor has already created
+   * `modalEl` with its close button, title and content, and `ModalCommandBuilder.build` appends its own
+   * strip to `modalEl` — so building now lands the strip after the content and BEFORE the
+   * `modal-button-container` that `onOpenAsync` creates later. The options belong above the actions, and
+   * this gets that ordering out of the DOM shape rather than out of positioning code. It also keeps the
+   * `Alt` shortcuts registered where the `Enter` / `Escape` ones are.
+   *
+   * `Buttons` render mode rather than the instruction bar because this is a plain `Modal` with no
+   * instruction bar to borrow, and because a phone has no modifier key to press — the button IS the only
+   * way in there. That is what retired the `Platform.isMobile` branch this method replaces, which used to
+   * hand-roll a combined "<confirm> and don't ask again" button for exactly that reason.
+   *
+   * The returned `ModalCommands` handle is deliberately dropped: every `checkIsAvailable` below reads a
+   * field fixed at construction, so the single `refresh()` that `build` performs itself is the only one
+   * that can ever change anything.
+   */
+  private buildCommands(): void {
+    const builder = new ModalCommandBuilder();
+
+    builder.addCheckbox({
+      key: 'd',
+      modifiers: ['Alt'],
+      onChange: (isChecked: boolean) => {
+        this.shouldAskAgain = !isChecked;
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = !this.shouldAskAgain;
+      },
+      purpose: 'Don\'t ask again'
+    });
+
+    builder.addKeyboardCommand({
+      checkIsAvailable: () => this.canReselectTarget,
+      key: 'c',
+      modifiers: ['Alt'],
+      onActivate: () => {
+        this.reselectTarget();
+      },
+      onKey: () => {
+        if (!this.canReselectTarget) {
+          return true;
+        }
+        this.reselectTarget();
+        return false;
+      },
+      purpose: 'Change target'
+    });
+
+    const switchToSmartCut = this.switchToSmartCut;
+    if (switchToSmartCut) {
+      builder.addKeyboardCommand({
+        checkIsAvailable: () => switchToSmartCut.canSwitch,
+        key: 's',
+        modifiers: ['Alt'],
+        onActivate: () => {
+          this.switchToSmartCutAction();
+        },
+        // `checkIsAvailable` disables the BUTTON and nothing else, so the shortcut needs the same guard
+        // Spelled out — which `Alt+C` always had and `Alt+S` never did, letting the shortcut reach an
+        // Action whose button was visibly disabled.
+        onKey: () => {
+          if (!switchToSmartCut.canSwitch) {
+            return true;
+          }
+          this.switchToSmartCutAction();
+          return false;
+        },
+        purpose: 'Switch to smart cut & paste'
+      });
+    }
+
+    builder.build(this, { renderMode: ModalCommandsRenderMode.Buttons });
   }
 
   private confirm($event: KeyboardEvent | MouseEvent): void {
@@ -153,52 +213,6 @@ export class ConfirmDialogModal extends Modal {
         await this.buildContent(f);
       })
     );
-
-    if (Platform.isMobile) {
-      buttonContainerEl.createEl('button', {
-        cls: 'mod-warning',
-        text: this.confirmButtonMobileText
-      }, (button) => {
-        button.addEventListener('click', ($event) => {
-          this.shouldAskAgain = false;
-          this.confirm($event);
-        });
-      });
-    } else {
-      buttonContainerEl.createEl('label', { cls: 'mod-checkbox' }, (label) => {
-        label
-          .createEl('input', {
-            attr: { tabindex: -1 },
-            type: 'checkbox'
-          }, (checkbox) => {
-            checkbox.addEventListener('change', ($event) => {
-              if (!($event.target instanceof HTMLInputElement)) {
-                return;
-              }
-              this.shouldAskAgain = !$event.target.checked;
-            });
-          });
-        label.appendText('Don\'t ask again');
-      });
-    }
-
-    new ButtonComponent(buttonContainerEl)
-      .setButtonText('Change target')
-      .setTooltip('Go back to the target picker to choose a different target (Alt+C)')
-      .setDisabled(!this.canReselectTarget)
-      .onClick(() => {
-        this.reselectTarget();
-      });
-
-    if (this.switchToSmartCut) {
-      new ButtonComponent(buttonContainerEl)
-        .setButtonText('Switch to smart cut & paste')
-        .setTooltip('Mark the selection to move and open the target note instead of splitting')
-        .setDisabled(!this.switchToSmartCut.canSwitch)
-        .onClick(() => {
-          this.switchToSmartCutAction();
-        });
-    }
 
     buttonContainerEl.createEl('button', {
       cls: 'mod-warning',

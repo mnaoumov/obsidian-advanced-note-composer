@@ -351,7 +351,6 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
               sourceFile
             }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Split and don\'t ask again',
           confirmButtonText: 'Split',
           promiseResolve,
           title: run.dialogTitle

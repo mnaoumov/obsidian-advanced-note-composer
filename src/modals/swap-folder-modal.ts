@@ -11,7 +11,7 @@ import {
 } from 'obsidian';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
+import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -73,7 +73,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     this.shouldIncludeParentFolders = this.pluginSettingsComponent.settings.shouldIncludeParentFoldersWhenSwappingByDefault;
     this.shouldSwapEntireFolderStructure = this.pluginSettingsComponent.settings.shouldSwapEntireFolderStructureByDefault;
 
-    const builder = new SuggestModalCommandBuilder();
+    const builder = new ModalCommandBuilder();
     builder.addCheckbox({
       key: '1',
       modifiers: ['Alt'],
@@ -192,7 +192,6 @@ export async function selectTargetFolderForSwap(params: SelectTargetFolderForSwa
           app: params.app,
           buildContent: (fragment): Promise<void> => buildSwapConfirmContent({ app: params.app, fragment, source: params.sourceFolder, target: result.targetFolder }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Swap and don\'t ask again',
           confirmButtonText: 'Swap',
           promiseResolve,
           title: 'Swap folders'

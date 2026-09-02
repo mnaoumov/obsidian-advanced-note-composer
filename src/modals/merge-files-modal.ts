@@ -127,7 +127,6 @@ export async function selectTargetFileForMergeFiles(params: SelectTargetFileForM
           app: params.app,
           buildContent: (fragment): Promise<void> => buildConfirmContent({ app: params.app, fragment, sourceCount: params.sourceFiles.length, target: targetFile }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Merge and don\'t ask again',
           confirmButtonText: 'Merge',
           promiseResolve,
           title: 'Merge files'

@@ -86,7 +86,6 @@ function createConfirmDialogModal(): ConfirmDialogModal {
     app,
     buildContent: noopAsync,
     canReselectTarget: true,
-    confirmButtonMobileText: 'Confirm and don\'t ask again',
     confirmButtonText: 'Confirm',
     promiseResolve: noop,
     title: 'Confirm'

@@ -16,4 +16,4 @@ The link from [Points here](<../Materials/21 Move folder to/Points here.md>) to 
 
 In the dialog, both the source and the destination are clickable links that reveal that folder in the file explorer (the vault root shows as `/`).
 
-Tick `Don't ask again` in the dialog, or turn off **Should ask before moving a folder** under `Move/flatten folders` in the settings, to move as soon as you pick a destination.
+Press `Don't ask again` in the dialog (or `Alt+D`), or turn off **Should ask before moving a folder** under `Move/flatten folders` in the settings, to move as soon as you pick a destination.

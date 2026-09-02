@@ -67,7 +67,6 @@ export async function confirmMergeFolderIntoFile(params: ConfirmMergeFolderIntoF
             targetPath: params.targetPath
           }),
         canReselectTarget: true,
-        confirmButtonMobileText: 'Merge and don\'t ask again',
         confirmButtonText: 'Merge',
         promiseResolve,
         title: 'Merge folder into single file'

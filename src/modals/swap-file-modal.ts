@@ -139,7 +139,6 @@ export async function selectFileForSwap(params: SelectFileForSwapParams): Promis
           app: params.app,
           buildContent: (fragment): Promise<void> => buildSwapConfirmContent({ app: params.app, fragment, source: params.sourceFile, target: targetFile }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Swap and don\'t ask again',
           confirmButtonText: 'Swap',
           promiseResolve,
           title: 'Swap files'

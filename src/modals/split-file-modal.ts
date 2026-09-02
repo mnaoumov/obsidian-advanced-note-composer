@@ -18,8 +18,8 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { SuggestModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/suggest-modal-command-builder';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
@@ -585,7 +585,7 @@ class SplitFileModal extends SuggestModalBase {
 
   private async buildInstructions(): Promise<void> {
     const canIncludeFrontmatter = await this.canIncludeFrontmatter();
-    const builder = new SuggestModalCommandBuilder();
+    const builder = new ModalCommandBuilder();
 
     builder.addKeyboardCommand({ key: 'UpDown', purpose: 'to navigate' });
     builder.addKeyboardCommand({ key: 'Enter', purpose: 'to move to bottom' });
@@ -623,7 +623,7 @@ class SplitFileModal extends SuggestModalBase {
     });
 
     // Registered alongside the switch it mirrors, which since issue #258 is always on screen — so the
-    // Shortcut is too, and `SuggestModalCommandBuilder.build` only decides whether its purpose line is
+    // Shortcut is too, and `ModalCommandBuilder.build` only decides whether its purpose line is
     // Printed in the instruction bar. A flow that cannot merge at all still drops it (issue #244): an
     // Invisible shortcut into a mode the flow forbids is worse than no shortcut.
     if (this.canMergeIntoExistingNote) {
@@ -1271,7 +1271,6 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
         // Always available: every split has a picker, even the heading-driven flows that skipped it on the
         // First pass (issue #205).
         canReselectTarget: true,
-        confirmButtonMobileText: 'Split and don\'t ask again',
         confirmButtonText: 'Split',
         promiseResolve,
         switchToSmartCut: { canSwitch: params.canSwitchToSmartCut },

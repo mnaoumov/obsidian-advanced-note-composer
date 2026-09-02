@@ -402,7 +402,6 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
               previewRows
             }),
           canReselectTarget: true,
-          confirmButtonMobileText: 'Flatten and don\'t ask again',
           confirmButtonText: 'Flatten',
           promiseResolve,
           title: 'Flatten folder'
