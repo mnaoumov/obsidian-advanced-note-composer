@@ -10,6 +10,7 @@ import type { Frontmatter } from './frontmatter-merge.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { transformAndFixFileName } from './name-transform.ts';
+import { applyNumberedNoteName } from './numbered-note-name.ts';
 import { FrontmatterTitleMode } from './plugin-settings.ts';
 
 /**
@@ -86,9 +87,24 @@ export async function createNoteFromTypedName(params: CreateNoteFromTypedNamePar
   const overriddenBasename = relocateNote ? await relocateNote(file) : null;
 
   /*
+   * Issue #269's "instead": the number goes on the FOLDER when the note was given one, and on the note
+   * itself otherwise. Keyed off the relocation rather than off `shouldSplitIntoFolder` on purpose — both
+   * call sites already derive `relocateNote` from that setting, and the recursive split FORCES it on
+   * regardless of it, so reading the setting again here would be a second copy of the condition that could
+   * disagree with the move that actually happened.
+   */
+  if (!relocateNote) {
+    await applyNumberedNoteName({ app, file, pluginSettingsComponent });
+  }
+
+  /*
    * A `splitIntoFolderNoteNameTemplate` override renames the note away from the typed name, so the
    * typed name is recorded as an alias / frontmatter title exactly like any other changed title
    * (issue #153) — `Foo/Overview.md` still carries `Foo`, so `[[Foo]]` keeps resolving.
+   *
+   * An auto-numbered name (issue #269) is the same kind of change and needs no branch of its own:
+   * `renameFile` mutates the note in place, so `file.basename` is already `5. D` by the time it is read
+   * here — which is what keeps `[[D]]` resolving to it.
    */
   const isInvalidTitle = (overriddenBasename ?? file.basename) !== fileName;
 

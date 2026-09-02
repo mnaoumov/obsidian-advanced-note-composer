@@ -438,12 +438,47 @@ export class PluginSettings {
   public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
 
   /**
-   * The name a reorder gives a renumbered FOLDER (issue #216).
+   * The name a split gives the FOLDER it wraps its new note in — the auto-numbering of issue #269, for the
+   * `Should split into folder` case where the reporter asked for the number to go on the folder "instead".
    *
-   * Deliberately NOT {@link newFolderNameTemplate}: that one names a folder being CREATED, and a vault may
-   * want reordering to follow a different scheme — so the two are separate settings that merely start from
-   * the same default.
+   * `{{index}}` is the next number in the sibling sequence: `1 + max` over the destination's already-numbered
+   * child FOLDERS, so the reporter's own `1, 3, 4` continues at `5` — a gap is never backfilled and a
+   * deleted folder in the middle can never cause a collision. Sibling NOTES are a separate sequence and are
+   * not consulted.
+   *
+   * EMPTY BY DEFAULT, and empty means the folder is named after the note exactly as it always was. That is
+   * the opt-out: numbering is a template rather than a toggle for the same reason as
+   * {@link newFolderNameTemplate} — the separator, the padding (`{{index:000}}`) and even the number's
+   * POSITION (`{{safeFolderName}} ({{index}})`) are one decision written the way it will look, and dropping
+   * `{{index}}` turns numbering off. A default of `''` is also what keeps every existing vault's splits
+   * producing exactly the names they produce today.
+   *
+   * It takes the folder vocabulary of {@link newFolderNameTemplate}, with `{{safeFolderName}}` the name the
+   * folder would have had. Whenever this one applies, {@link numberedSplitNoteNameTemplate} deliberately
+   * does not: the note is already identified by the folder around it, so numbering both would write the
+   * number twice.
    */
+  public numberedSplitFolderNameTemplate = '';
+
+  /**
+   * The name a split gives the NOTE it creates, when that note is NOT wrapped in a folder of its own
+   * (issue #269) — the `Should split into folder` off case, and the other half of
+   * {@link numberedSplitFolderNameTemplate}.
+   *
+   * Same `1 + max` rule, over the destination's already-numbered sibling NOTES; numbered folders beside them
+   * belong to the other sequence and are not consulted, and neither is an attachment. Empty by default and
+   * empty means off, exactly as above.
+   *
+   * It takes the file vocabulary of {@link reorderedFileNameTemplate}, with `{{safeName}}` the basename the
+   * note would have had. The extension is never templated.
+   *
+   * The number makes the note's name differ from the one that was typed, so — exactly like a
+   * {@link splitIntoFolderNoteNameTemplate} override (issue #153) — the typed name is kept as an alias
+   * and/or a frontmatter title, as {@link shouldAddInvalidTitleToNoteAlias} and
+   * {@link frontmatterTitleMode} are configured. That is what keeps `[[D]]` resolving to `5. D`.
+   */
+  public numberedSplitNoteNameTemplate = '';
+
   /**
    * Which recency the pickers offer first when there is no query (issue #248). See
    * {@link PickerRecencyOrder} for why this is a choice rather than a fix.
@@ -475,6 +510,13 @@ export class PluginSettings {
    */
   public reorderedFileTitleTemplate = '';
 
+  /**
+   * The name a reorder gives a renumbered FOLDER (issue #216).
+   *
+   * Deliberately NOT {@link newFolderNameTemplate}: that one names a folder being CREATED, and a vault may
+   * want reordering to follow a different scheme — so the two are separate settings that merely start from
+   * the same default.
+   */
   public reorderedFolderNameTemplate = '{{index}}. {{safeFolderName}}';
   public replacement = '_';
   public shouldAddCommandsToSubmenu = true;

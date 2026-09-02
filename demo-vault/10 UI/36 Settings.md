@@ -93,6 +93,8 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
   - put every newly created note in a folder of its own.
 - `splitIntoFolderNoteNameTemplate`
   - names the note inside that folder. Empty means name it after the folder.
+- `numberedSplitFolderNameTemplate` / `numberedSplitNoteNameTemplate`
+  - continue the numbering the destination already carries — on the folder when the split makes one, on the note otherwise. Empty means no numbering.
 - `shouldSplitHeadingsAutomatically`
   - run heading splits with no picker and no confirmation.
 - `shouldSplitRecursivelyIntoDefaultNewNoteFolder`

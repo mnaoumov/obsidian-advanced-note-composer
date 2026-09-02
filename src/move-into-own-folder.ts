@@ -24,7 +24,12 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { getAvailableFolderPath } from './available-folder-path.ts';
 import { fixFileName } from './filename-validation.ts';
-import { resolveTemplateTokens } from './template-tokens.ts';
+import { resolveNextSiblingIndex } from './next-sibling-index.ts';
+import { ReorderItemKind } from './reorder-items.ts';
+import {
+  resolveCreateFolderTemplateTokens,
+  resolveTemplateTokens
+} from './template-tokens.ts';
 
 /**
  * Parameters for {@link moveIntoOwnFolder}.
@@ -63,7 +68,8 @@ export async function moveIntoOwnFolder(params: MoveIntoOwnFolderParams): Promis
   const { app, file } = params;
   const parentPath = file.parent?.path ?? '';
   const originalBasename = file.basename;
-  const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${originalBasename}` : originalBasename);
+  const desiredFolderName = resolveNumberedFolderName(params, originalBasename);
+  const desiredFolderPath = normalizePath(parentPath ? `${parentPath}/${desiredFolderName}` : desiredFolderName);
   const folderPath = getAvailableFolderPath(app, desiredFolderPath);
   await createFolderSafe(app, folderPath);
   const noteBasename = resolveNoteBasenameInOwnFolder(params, folderPath);
@@ -131,4 +137,48 @@ function resolveNoteBasenameInOwnFolder(params: MoveIntoOwnFolderParams, folderP
   }
 
   return fixedNoteName;
+}
+
+/**
+ * Renders the name of the folder about to be created through `numberedSplitFolderNameTemplate`, so the
+ * folder continues the numbering its siblings already carry (issue #269). This is the "instead" half of
+ * that issue: when the note goes into a folder of its own, the number belongs on the FOLDER, and
+ * `create-note.ts` therefore leaves the note alone.
+ *
+ * The index is `1 + max` over the destination's already-numbered child FOLDERS, so the reporter's own
+ * `1, 3, 4` continues at `5`. A recursive split needs nothing further: each deeper pass creates its note
+ * inside the folder the pass above just made, whose only child is that folder's own note — no numbered
+ * folder, so the children restart at `1` by themselves.
+ *
+ * `{{folderName}}` / `{{folderPath}}` / `{{rawFolderName}}` resolve to nothing here, exactly as they do
+ * while `Create folder with notes...` resolves ITS name template — this template is what produces them,
+ * and the settings validator rejects all three. An empty template, or one rendering to nothing, falls back
+ * to the note's own name, which is the pre-#269 behavior and the default.
+ *
+ * @param params - The parameters of the move.
+ * @param originalBasename - The note's basename, i.e. the name the folder would have had.
+ * @returns The name to create the folder under, before de-duplication.
+ */
+function resolveNumberedFolderName(params: MoveIntoOwnFolderParams, originalBasename: string): string {
+  const { app, file, pluginSettingsComponent } = params;
+  const template = pluginSettingsComponent.settings.numberedSplitFolderNameTemplate;
+  if (!template) {
+    return originalBasename;
+  }
+
+  const parentFolder = file.parent ?? app.vault.getRoot();
+  const renderedName = resolveCreateFolderTemplateTokens({
+    template,
+    tokens: {
+      folderName: '',
+      folderPath: '',
+      index: resolveNextSiblingIndex({ kind: ReorderItemKind.Folder, nameTemplate: template, parentFolder }),
+      parentFolder: parentFolder.name,
+      parentFolderPath: parentFolder.path,
+      rawFolderName: '',
+      safeFolderName: originalBasename
+    }
+  }).trim();
+
+  return renderedName || originalBasename;
 }

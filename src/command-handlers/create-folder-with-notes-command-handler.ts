@@ -38,7 +38,7 @@ import {
   applyNameTransform,
   NameTransformError
 } from '../name-transform.ts';
-import { resolveNextFolderIndex } from '../next-folder-index.ts';
+import { resolveNextSiblingIndex } from '../next-sibling-index.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
@@ -47,6 +47,7 @@ import {
 } from '../operation-notices.ts';
 import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
+import { ReorderItemKind } from '../reorder-items.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
@@ -430,7 +431,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     const { parentFolder, renameState } = params;
     const { noteNameOverrides, rawFolderName, safeFolderName } = renameState;
     const settings = this.pluginSettingsComponent.settings;
-    const index = resolveNextFolderIndex({
+    const index = resolveNextSiblingIndex({
+      kind: ReorderItemKind.Folder,
       nameTemplate: settings.newFolderNameTemplate,
       parentFolder
     });

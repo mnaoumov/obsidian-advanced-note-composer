@@ -51,6 +51,8 @@ interface SettingsOverrides {
   frontmatterTitleMode?: string;
   isPathIgnored?: ReturnType<typeof vi.fn>;
   nameTransformTemplate?: string;
+  numberedSplitFolderNameTemplate?: string;
+  numberedSplitNoteNameTemplate?: string;
   replacement?: string;
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldReplaceInvalidTitleCharacters?: boolean;
@@ -109,6 +111,8 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       frontmatterTitleMode: FrontmatterTitleMode.UseForInvalidTitleOnly,
       isPathIgnored: vi.fn().mockReturnValue(false),
       nameTransformTemplate: '',
+      numberedSplitFolderNameTemplate: '',
+      numberedSplitNoteNameTemplate: '',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       replacement: '_',
       shouldAddInvalidTitleToNoteAlias: true,
