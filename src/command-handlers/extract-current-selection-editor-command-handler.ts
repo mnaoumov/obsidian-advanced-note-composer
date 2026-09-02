@@ -76,7 +76,7 @@ export class ExtractCurrentSelectionEditorCommandHandler extends ActiveEditorCom
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.SplitAndExtract)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot extract from file ');

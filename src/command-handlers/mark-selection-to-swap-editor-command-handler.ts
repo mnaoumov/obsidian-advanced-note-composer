@@ -64,7 +64,7 @@ export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandle
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap a selection from file ');

@@ -184,6 +184,25 @@ Each command category then has its own pair, which narrows what the two above al
 - `reorderCommandIncludePaths` / `reorderCommandExcludePaths`
   - where the three reorder commands are offered.
 
+Every category except `Select` also has a pair for the *first* filter — what those commands may touch — which narrows `includePaths` / `excludePaths` the same way. That is how a folder stays out of one command's dialogs while every other command still uses it. `Select` has none because a select writes nothing: it moves the caret and stops, so there is nothing for a content filter to allow or refuse.
+
+- `mergeIncludePaths` / `mergeExcludePaths`
+  - what the merge commands may merge, and merge into.
+- `splitIncludePaths` / `splitExcludePaths`
+  - what the extract and split commands may split, and split into.
+- `createIncludePaths` / `createExcludePaths`
+  - where the two create-empty-note commands and `Create folder with notes...` may create.
+- `smartCutAndPasteIncludePaths` / `smartCutAndPasteExcludePaths`
+  - what the marked selection may be moved out of, and pasted into.
+- `swapIncludePaths` / `swapExcludePaths`
+  - what the swap commands may swap.
+- `moveAndFlattenIncludePaths` / `moveAndFlattenExcludePaths`
+  - what `Move folder...` and the three flatten commands may move.
+- `renameIncludePaths` / `renameExcludePaths`
+  - what `Rename folder...` and `Rename heading` may rename.
+- `reorderIncludePaths` / `reorderExcludePaths`
+  - what the three reorder commands may list and reorder — this is the pair that keeps a templates folder out of the reorder modal.
+
 ## Command menu placement
 
 Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Every command that reaches an editor menu picks which of the two it appears in, on its own settings row with a toggle each. Both off still leaves the command in the command palette and on its hotkey, which is what separates it from the exclude paths above.

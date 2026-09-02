@@ -5,7 +5,10 @@ import {
   it
 } from 'vitest';
 
-import type { CommandCategoryPathsSettingName } from './plugin-settings.ts';
+import type {
+  CommandCategoryContentPathsSettingName,
+  CommandCategoryPathsSettingName
+} from './plugin-settings.ts';
 
 import {
   Action,
@@ -81,6 +84,64 @@ const COMMAND_CATEGORY_PATH_PROPERTIES: readonly CommandCategoryPathProperties[]
   }
 ];
 
+/**
+ * The same pairing for the per-category CONTENT lists (issue #270) — what a category's commands may
+ * TOUCH, as opposed to whether they are offered.
+ *
+ * EIGHT entries, not nine: `Select` has no content pair. A select writes nothing and never consults the
+ * content filter, so the settings would be read by nothing — `plugin-settings.ts` carries the reasoning,
+ * and the assertion below pins the omission to that one category so a second one cannot go missing
+ * quietly.
+ */
+interface CommandCategoryContentPathProperties {
+  readonly commandCategory: CommandCategory;
+  readonly excludePathsPropertyName: CommandCategoryContentPathsSettingName;
+  readonly includePathsPropertyName: CommandCategoryContentPathsSettingName;
+}
+
+const COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES: readonly CommandCategoryContentPathProperties[] = [
+  {
+    commandCategory: CommandCategory.Create,
+    excludePathsPropertyName: 'createExcludePaths',
+    includePathsPropertyName: 'createIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Merge,
+    excludePathsPropertyName: 'mergeExcludePaths',
+    includePathsPropertyName: 'mergeIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.MoveAndFlatten,
+    excludePathsPropertyName: 'moveAndFlattenExcludePaths',
+    includePathsPropertyName: 'moveAndFlattenIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Rename,
+    excludePathsPropertyName: 'renameExcludePaths',
+    includePathsPropertyName: 'renameIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Reorder,
+    excludePathsPropertyName: 'reorderExcludePaths',
+    includePathsPropertyName: 'reorderIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.SmartCutAndPaste,
+    excludePathsPropertyName: 'smartCutAndPasteExcludePaths',
+    includePathsPropertyName: 'smartCutAndPasteIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.SplitAndExtract,
+    excludePathsPropertyName: 'splitExcludePaths',
+    includePathsPropertyName: 'splitIncludePaths'
+  },
+  {
+    commandCategory: CommandCategory.Swap,
+    excludePathsPropertyName: 'swapExcludePaths',
+    includePathsPropertyName: 'swapIncludePaths'
+  }
+];
+
 describe('Action enum', () => {
   it('should have Merge value', () => {
     expect(Action.Merge).toBe('Merge');
@@ -141,6 +202,11 @@ describe('COMMAND_CATEGORIES', () => {
 
   it('should have one settings pair per category', () => {
     expect(COMMAND_CATEGORY_PATH_PROPERTIES.map((properties) => properties.commandCategory).sort()).toEqual([...COMMAND_CATEGORIES].sort());
+  });
+
+  it('should have one content settings pair per category except Select', () => {
+    const categoriesWithContentPair = COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES.map((properties) => properties.commandCategory).sort();
+    expect(categoriesWithContentPair).toEqual(COMMAND_CATEGORIES.filter((commandCategory) => commandCategory !== CommandCategory.Select).sort());
   });
 });
 
@@ -323,42 +389,42 @@ describe('PluginSettings', () => {
   it('should delegate isPathIgnored to PathSettings', () => {
     const settings = new PluginSettings();
     settings.excludePaths = ['secret'];
-    expect(settings.isPathIgnored('secret/file.md')).toBe(true);
+    expect(settings.isPathIgnored('secret/file.md', CommandCategory.Merge)).toBe(true);
   });
 
   it('should not ignore paths that are not excluded', () => {
     const settings = new PluginSettings();
     settings.excludePaths = ['secret'];
-    expect(settings.isPathIgnored('public/file.md')).toBe(false);
+    expect(settings.isPathIgnored('public/file.md', CommandCategory.Merge)).toBe(false);
   });
 
   it('should include all paths when includePaths is empty', () => {
     const settings = new PluginSettings();
-    expect(settings.isPathIgnored('anything/file.md')).toBe(false);
+    expect(settings.isPathIgnored('anything/file.md', CommandCategory.Merge)).toBe(false);
   });
 
   it('should ignore paths not in includePaths when includePaths is set', () => {
     const settings = new PluginSettings();
     settings.includePaths = ['allowed'];
-    expect(settings.isPathIgnored('not-allowed/file.md')).toBe(true);
+    expect(settings.isPathIgnored('not-allowed/file.md', CommandCategory.Merge)).toBe(true);
   });
 
   it('should treat a path string entry as the folder and its entire subtree', () => {
     const settings = new PluginSettings();
     settings.excludePaths = ['Inbox'];
-    expect(settings.isPathIgnored('Inbox')).toBe(true);
-    expect(settings.isPathIgnored('Inbox/note.md')).toBe(true);
-    expect(settings.isPathIgnored('Inbox/sub/deep.md')).toBe(true);
-    expect(settings.isPathIgnored('Other/note.md')).toBe(false);
+    expect(settings.isPathIgnored('Inbox', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('Inbox/note.md', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('Inbox/sub/deep.md', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('Other/note.md', CommandCategory.Merge)).toBe(false);
   });
 
   it('should match only the folder itself for a regular expression entry anchored to it', () => {
     const settings = new PluginSettings();
     settings.excludePaths = ['/^Inbox$/'];
-    expect(settings.isPathIgnored('Inbox')).toBe(true);
-    expect(settings.isPathIgnored('Inbox/note.md')).toBe(false);
-    expect(settings.isPathIgnored('Inbox/sub/deep.md')).toBe(false);
-    expect(settings.isPathIgnored('Other/note.md')).toBe(false);
+    expect(settings.isPathIgnored('Inbox', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('Inbox/note.md', CommandCategory.Merge)).toBe(false);
+    expect(settings.isPathIgnored('Inbox/sub/deep.md', CommandCategory.Merge)).toBe(false);
+    expect(settings.isPathIgnored('Other/note.md', CommandCategory.Merge)).toBe(false);
   });
 });
 
@@ -510,5 +576,115 @@ describe('PluginSettings per-category command path lists (issue #249)', () => {
     settings.excludePaths = ['ignored'];
     expect(settings.shouldBlockCommandOnPath('ignored/file.md', CommandCategory.Merge)).toBe(false);
     expect(settings.mergeCommandExcludePaths).toEqual([]);
+  });
+});
+
+describe('PluginSettings per-category content path lists (issue #270)', () => {
+  it.each(COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES)(
+    'should get and set the $commandCategory lists',
+    ({ excludePathsPropertyName, includePathsPropertyName }) => {
+      const settings = new PluginSettings();
+      settings[includePathsPropertyName] = ['allowed'];
+      settings[excludePathsPropertyName] = ['blocked'];
+      expect(settings[includePathsPropertyName]).toEqual(['allowed']);
+      expect(settings[excludePathsPropertyName]).toEqual(['blocked']);
+    }
+  );
+
+  it.each(COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES)(
+    'should ignore the path for $commandCategory only when its exclude list names it',
+    ({ commandCategory, excludePathsPropertyName }) => {
+      const settings = new PluginSettings();
+      settings[excludePathsPropertyName] = ['secret'];
+      for (const otherCommandCategory of COMMAND_CATEGORIES) {
+        expect(settings.isPathIgnored('secret/file.md', otherCommandCategory)).toBe(otherCommandCategory === commandCategory);
+      }
+      expect(settings.isPathIgnored('public/file.md', commandCategory)).toBe(false);
+    }
+  );
+
+  it.each(COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES)(
+    'should restrict only $commandCategory when its include list is set',
+    ({ commandCategory, includePathsPropertyName }) => {
+      const settings = new PluginSettings();
+      settings[includePathsPropertyName] = ['allowed'];
+      for (const otherCommandCategory of COMMAND_CATEGORIES) {
+        expect(settings.isPathIgnored('elsewhere/file.md', otherCommandCategory)).toBe(otherCommandCategory === commandCategory);
+      }
+      expect(settings.isPathIgnored('allowed/file.md', commandCategory)).toBe(false);
+    }
+  );
+
+  it('should ignore nothing while every category list is empty', () => {
+    const settings = new PluginSettings();
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      expect(settings.isPathIgnored('anything/file.md', commandCategory)).toBe(false);
+    }
+  });
+
+  // The un-prefixed pair is the baseline that still means EVERY command — it is what an existing
+  // `data.json` carries, and why the change needs no legacy converter.
+  it('should ignore the path for every category from the un-prefixed content path lists', () => {
+    const settings = new PluginSettings();
+    settings.excludePaths = ['secret'];
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      expect(settings.isPathIgnored('secret/file.md', commandCategory)).toBe(true);
+    }
+  });
+
+  // The reporter's own case (issue #270): the templates folder must stay out of the reorder modal while
+  // Every other command keeps working on it. This is the assertion that would fail with #249's
+  // Per-category pair, which only hides commands.
+  it('should exclude a folder from one category while the others still use it', () => {
+    const settings = new PluginSettings();
+    settings.reorderExcludePaths = ['Templates'];
+    expect(settings.isPathIgnored('Templates/daily.md', CommandCategory.Reorder)).toBe(true);
+    expect(settings.isPathIgnored('Templates/daily.md', CommandCategory.Merge)).toBe(false);
+    expect(settings.isPathIgnored('Templates/daily.md', CommandCategory.SplitAndExtract)).toBe(false);
+    expect(settings.isPathIgnored('Templates/daily.md', CommandCategory.Rename)).toBe(false);
+  });
+
+  // A category narrows, it never re-opens: the baseline exclusion wins even where a category's include
+  // List names the same path.
+  it('should keep a category include list from re-opening a baseline-excluded path', () => {
+    const settings = new PluginSettings();
+    settings.excludePaths = ['Archive'];
+    settings.mergeIncludePaths = ['Archive'];
+    expect(settings.isPathIgnored('Archive/note.md', CommandCategory.Merge)).toBe(true);
+  });
+
+  it('should leave exactly one category using the path when every other category with a pair excludes it', () => {
+    const settings = new PluginSettings();
+    for (const { commandCategory, excludePathsPropertyName } of COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES) {
+      if (commandCategory === CommandCategory.Rename) {
+        continue;
+      }
+      settings[excludePathsPropertyName] = ['Archive'];
+    }
+
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      // `Select` joins `Rename` on the allowed side because it has no exclude list to have been set.
+      const isExcluded = commandCategory !== CommandCategory.Rename && commandCategory !== CommandCategory.Select;
+      expect(settings.isPathIgnored('Archive/note.md', commandCategory)).toBe(isExcluded);
+    }
+  });
+
+  // `Select` has no content pair, so it must still be ANSWERABLE — from the baseline pair alone — rather
+  // Than throwing on a missing map entry. This is what keeps `isPathIgnored` total over the enum.
+  it('should answer for Select from the baseline pair alone', () => {
+    const settings = new PluginSettings();
+    expect(settings.isPathIgnored('anywhere/note.md', CommandCategory.Select)).toBe(false);
+    settings.excludePaths = ['Archive'];
+    expect(settings.isPathIgnored('Archive/note.md', CommandCategory.Select)).toBe(true);
+    expect(settings.isPathIgnored('Other/note.md', CommandCategory.Select)).toBe(false);
+  });
+
+  // The two filters stay apart: excluding a path from a category's CONTENT does not hide its commands
+  // There, which is the whole point of #198 having split them.
+  it('should keep a content list independent of the command-visibility filter', () => {
+    const settings = new PluginSettings();
+    settings.reorderExcludePaths = ['Templates'];
+    expect(settings.shouldBlockCommandOnPath('Templates/daily.md', CommandCategory.Reorder)).toBe(false);
+    expect(settings.reorderCommandExcludePaths).toEqual([]);
   });
 });

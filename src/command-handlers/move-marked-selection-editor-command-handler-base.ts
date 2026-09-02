@@ -151,7 +151,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.isPathIgnored(targetFile.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(targetFile.path, CommandCategory.SmartCutAndPaste)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot move a selection into file ');

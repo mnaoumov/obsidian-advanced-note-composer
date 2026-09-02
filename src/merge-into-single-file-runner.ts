@@ -32,6 +32,7 @@ import {
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice
 } from './operation-notices.ts';
+import { CommandCategory } from './plugin-settings.ts';
 import { recordRecentTarget } from './recent-targets.ts';
 
 /**
@@ -418,10 +419,10 @@ function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, source
   const { settings } = pluginSettingsComponent;
   // Source and target are decided by their own settings since issue #253 — what a merge may swallow, and
   // Where it may land. Mirrors `MergeFolderCommandHandler.isMergeIgnored`.
-  if (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath)) {
+  if (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath, CommandCategory.Merge)) {
     return true;
   }
-  return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath);
+  return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath, CommandCategory.Merge);
 }
 
 /**

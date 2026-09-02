@@ -162,7 +162,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Reorder)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot reorder the contents of ');
@@ -321,7 +321,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     const nameTemplate = kind === ReorderItemKind.File ? settings.reorderedFileNameTemplate : settings.reorderedFolderNameTemplate;
 
     return parentFolder.children
-      .filter((child) => (kind === ReorderItemKind.File ? isFile(child) : isFolder(child)) && !settings.isPathIgnored(child.path))
+      .filter((child) => (kind === ReorderItemKind.File ? isFile(child) : isFolder(child)) && !settings.isPathIgnored(child.path, CommandCategory.Reorder))
       .map((child) =>
         isFile(child)
           ? { extension: `.${child.extension}`, name: child.basename, path: child.path }

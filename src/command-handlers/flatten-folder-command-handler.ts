@@ -233,7 +233,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.MoveAndFlatten)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot flatten folder ');
@@ -365,7 +365,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       app: this.app,
       attachmentExtensions: settings.attachmentExtensions,
       folder,
-      isPathIgnored: (path) => settings.isPathIgnored(path),
+      isPathIgnored: (path) => settings.isPathIgnored(path, CommandCategory.MoveAndFlatten),
       mode: this.flattenMode
     };
   }
@@ -512,7 +512,7 @@ export function isAllowedFlattenDestination(params: IsAllowedFlattenDestinationP
   if (isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
     return false;
   }
-  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path);
+  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
 }
 
 /**

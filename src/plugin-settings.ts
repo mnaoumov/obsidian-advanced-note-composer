@@ -239,8 +239,23 @@ export enum TextAfterExtractionMode {
 }
 
 /**
- * The name of one of the per-category command path settings (issue #249) — the eighteen accessors
+ * The name of one of the per-category CONTENT path settings (issue #270) — the other eighteen accessors
  * {@link COMMAND_CATEGORIES} implies, two per category.
+ *
+ * Derived the same way as {@link CommandCategoryPathsSettingName}, and stated as everything ending in
+ * `Include`/`ExcludePaths` MINUS the four un-prefixed baseline names and the eighteen visibility ones.
+ * Subtracting is what makes it self-maintaining: a nineteenth category pair added to {@link
+ * PluginSettings} joins this type without being listed anywhere, while nothing that is not a per-category
+ * content list can sneak in.
+ */
+export type CommandCategoryContentPathsSettingName = Exclude<
+  Extract<keyof PluginSettings, `${string}${'Exclude' | 'Include'}Paths`>,
+  'commandExcludePaths' | 'commandIncludePaths' | 'excludePaths' | 'includePaths' | CommandCategoryPathsSettingName
+>;
+
+/**
+ * The name of one of the per-category command-VISIBILITY path settings (issue #249) — the eighteen
+ * accessors {@link COMMAND_CATEGORIES} implies, two per category.
  *
  * Derived from {@link PluginSettings} rather than spelled out, so the settings tab and the tests that
  * drive them by name fail to type-check when one is renamed. The un-prefixed {@link
@@ -977,6 +992,30 @@ export class PluginSettings {
     this.commandCategoryPathSettings(CommandCategory.Create).includePaths = value;
   }
 
+  /**
+   * Paths the {@link CommandCategory.Create} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get createExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Create).excludePaths;
+  }
+
+  public set createExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Create).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Create} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get createIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Create).includePaths;
+  }
+
+  public set createIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Create).includePaths = value;
+  }
+
   public get excludePaths(): string[] {
     return this._pathSettings.excludePaths;
   }
@@ -1018,6 +1057,30 @@ export class PluginSettings {
   }
 
   /**
+   * Paths the {@link CommandCategory.Merge} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get mergeExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Merge).excludePaths;
+  }
+
+  public set mergeExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Merge).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Merge} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get mergeIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Merge).includePaths;
+  }
+
+  public set mergeIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Merge).includePaths = value;
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.MoveAndFlatten} commands are not offered
    * (issue #249) — the exclude half of that category's own filter.
    */
@@ -1039,6 +1102,30 @@ export class PluginSettings {
 
   public set moveAndFlattenCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.MoveAndFlatten).includePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.MoveAndFlatten} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get moveAndFlattenExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.MoveAndFlatten).excludePaths;
+  }
+
+  public set moveAndFlattenExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.MoveAndFlatten).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.MoveAndFlatten} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get moveAndFlattenIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.MoveAndFlatten).includePaths;
+  }
+
+  public set moveAndFlattenIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.MoveAndFlatten).includePaths = value;
   }
 
   /**
@@ -1066,6 +1153,30 @@ export class PluginSettings {
   }
 
   /**
+   * Paths the {@link CommandCategory.Rename} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get renameExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Rename).excludePaths;
+  }
+
+  public set renameExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Rename).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Rename} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get renameIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Rename).includePaths;
+  }
+
+  public set renameIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Rename).includePaths = value;
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.Reorder} commands are not offered (issue #249) — the
    * exclude half of that category's own filter.
    */
@@ -1087,6 +1198,30 @@ export class PluginSettings {
 
   public set reorderCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.Reorder).includePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Reorder} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get reorderExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Reorder).excludePaths;
+  }
+
+  public set reorderExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Reorder).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Reorder} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get reorderIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Reorder).includePaths;
+  }
+
+  public set reorderIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Reorder).includePaths = value;
   }
 
   /**
@@ -1117,6 +1252,21 @@ export class PluginSettings {
     this.commandCategoryPathSettings(CommandCategory.Select).includePaths = value;
   }
 
+  /*
+   * `CommandCategory.Select` deliberately has NO content pair here — it is the one category of the nine
+   * without one, so eight categories carry sixteen accessors rather than nine carrying eighteen.
+   *
+   * A select writes nothing: it moves the caret and stops. `SelectEditorCommandHandlerBase` therefore
+   * never consults the content filter at all, and says so in its own TSDoc. Exposing
+   * `selectExcludePaths` would put a switch in the settings tab that is read by nothing — a user would
+   * set it, watch the select commands carry on regardless, and report it as a bug. Issue #253 was
+   * exactly that failure in the other direction (one setting answering two questions), and a control
+   * wired to nothing is the same mistake with the wires cut.
+   *
+   * The map above is still seeded for all nine, so `isPathIgnored` stays TOTAL over `CommandCategory`
+   * and answers for `Select` from the baseline pair alone rather than throwing on a missing entry.
+   */
+
   /**
    * Paths on which the {@link CommandCategory.SmartCutAndPaste} commands are not offered (issue #249) —
    * the exclude half of that category's own filter.
@@ -1139,6 +1289,30 @@ export class PluginSettings {
 
   public set smartCutAndPasteCommandIncludePaths(value: string[]) {
     this.commandCategoryPathSettings(CommandCategory.SmartCutAndPaste).includePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.SmartCutAndPaste} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get smartCutAndPasteExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.SmartCutAndPaste).excludePaths;
+  }
+
+  public set smartCutAndPasteExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.SmartCutAndPaste).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.SmartCutAndPaste} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get smartCutAndPasteIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.SmartCutAndPaste).includePaths;
+  }
+
+  public set smartCutAndPasteIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.SmartCutAndPaste).includePaths = value;
   }
 
   /**
@@ -1166,6 +1340,30 @@ export class PluginSettings {
   }
 
   /**
+   * Paths the {@link CommandCategory.SplitAndExtract} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get splitExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.SplitAndExtract).excludePaths;
+  }
+
+  public set splitExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.SplitAndExtract).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.SplitAndExtract} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get splitIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.SplitAndExtract).includePaths;
+  }
+
+  public set splitIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.SplitAndExtract).includePaths = value;
+  }
+
+  /**
    * Paths on which the {@link CommandCategory.Swap} commands are not offered (issue #249) — the exclude
    * half of that category's own filter.
    */
@@ -1190,6 +1388,30 @@ export class PluginSettings {
   }
 
   /**
+   * Paths the {@link CommandCategory.Swap} commands never touch (issue #270) — the exclude half of
+   * that category's own CONTENT filter, narrowing what {@link excludePaths} already excludes.
+   */
+  public get swapExcludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Swap).excludePaths;
+  }
+
+  public set swapExcludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Swap).excludePaths = value;
+  }
+
+  /**
+   * Paths the {@link CommandCategory.Swap} commands are restricted to (issue #270). Empty — the
+   * default — leaves them working wherever {@link includePaths} and the exclude half above allow.
+   */
+  public get swapIncludePaths(): string[] {
+    return this.categoryPathSettings(CommandCategory.Swap).includePaths;
+  }
+
+  public set swapIncludePaths(value: string[]) {
+    this.categoryPathSettings(CommandCategory.Swap).includePaths = value;
+  }
+
+  /**
    * One {@link PathSettings} instance per {@link CommandCategory} (issue #249) — the per-category half of
    * the command-visibility filter, layered on {@link _commandPathSettings} rather than replacing it.
    *
@@ -1198,6 +1420,24 @@ export class PluginSettings {
    * feature free of a legacy-settings converter — an existing `data.json` carries only the baseline pair,
    * every category here starts with two empty lists, and two empty lists block nothing.
    */
+  /**
+   * One {@link PathSettings} instance per {@link CommandCategory} (issue #270) — the per-category half of
+   * the CONTENT filter, layered on {@link _pathSettings} exactly as {@link _commandCategoryPathSettings}
+   * is layered on {@link _commandPathSettings}.
+   *
+   * The reporter of #270 attached a screenshot of the `Include paths` / `Exclude paths` rows — this
+   * filter, not the visibility one — and asked for that pair on every command section. Their case was a
+   * templates folder that must not appear in the REORDER modal while staying merge-able: #249's
+   * per-category pair only hides commands, so it cannot drop a folder from a modal's candidate list.
+   *
+   * Same narrowing rule and same absence of a legacy converter as #249: {@link isPathIgnored} ignores a
+   * path when EITHER filter says so, every map entry starts with two empty lists, and two empty lists
+   * ignore nothing — so an existing `data.json` keeps meaning exactly what it meant.
+   */
+  private readonly _categoryPathSettings: ReadonlyMap<CommandCategory, PathSettings> = new Map(
+    COMMAND_CATEGORIES.map((commandCategory) => [commandCategory, new PathSettings()])
+  );
+
   private readonly _commandCategoryPathSettings: ReadonlyMap<CommandCategory, PathSettings> = new Map(
     COMMAND_CATEGORIES.map((commandCategory) => [commandCategory, new PathSettings()])
   );
@@ -1245,8 +1485,28 @@ export class PluginSettings {
     return commandMenuPlacement;
   }
 
-  public isPathIgnored(path: string): boolean {
-    return this._pathSettings.isPathIgnored(path);
+  /**
+   * Whether a path is off-limits to the plugin — never a picker entry, never a merge/split source or
+   * target, never moved by a folder operation.
+   *
+   * Since issue #270 the answer also depends on WHICH command asks, in the same shape issue #249 gave
+   * {@link shouldBlockCommandOnPath}: two filters are consulted and either one ignoring is enough — the
+   * un-prefixed {@link excludePaths} / {@link includePaths} pair covering every command, and the asking
+   * command's own {@link CommandCategory} pair narrowing it further. A category therefore cannot re-open
+   * a path the baseline pair already excludes; the ask was to exclude a path from ONE command, not to
+   * carve an exception out of a blanket exclusion.
+   *
+   * The category is a REQUIRED argument rather than an optional one, so that a caller which forgot to say
+   * which command it speaks for fails to compile instead of silently consulting the baseline alone.
+   *
+   * With every category pair empty — the default — this is exactly the pre-#270 behavior.
+   *
+   * @param path - The path to check.
+   * @param commandCategory - The category of the command asking.
+   * @returns Whether the path is ignored for that command.
+   */
+  public isPathIgnored(path: string, commandCategory: CommandCategory): boolean {
+    return this._pathSettings.isPathIgnored(path) || this.categoryPathSettings(commandCategory).isPathIgnored(path);
   }
 
   /**
@@ -1273,7 +1533,17 @@ export class PluginSettings {
   }
 
   /**
-   * The path filter of a single command category.
+   * The CONTENT filter of a single command category (issue #270).
+   *
+   * @param commandCategory - The category whose filter is wanted.
+   * @returns Its {@link PathSettings}.
+   */
+  private categoryPathSettings(commandCategory: CommandCategory): PathSettings {
+    return ensureNonNullable(this._categoryPathSettings.get(commandCategory));
+  }
+
+  /**
+   * The command-visibility filter of a single command category.
    *
    * @param commandCategory - The category whose filter is wanted.
    * @returns Its {@link PathSettings}.

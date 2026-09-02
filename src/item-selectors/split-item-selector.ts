@@ -11,7 +11,10 @@ import type {
 import { createNoteFromTypedName } from '../create-note.ts';
 import { resolveExistingItemFile } from '../modals/existing-item-file.ts';
 import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
-import { SplitTargetMode } from '../plugin-settings.ts';
+import {
+  CommandCategory,
+  SplitTargetMode
+} from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
 interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
@@ -83,7 +86,7 @@ export class SplitItemSelector extends ItemSelectorBase {
     const existingFile = this.app.metadataCache.getFirstLinkpathDest(this.inputValue, '');
     // An IGNORED note is absent from the suggestions, so typing its exact name is the only way to reach it
     // — which is why `Create` still resolves to it rather than making a numbered duplicate beside it.
-    if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
+    if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path, CommandCategory.SplitAndExtract)) {
       return {
         isNewTargetFile: false,
         targetFile: existingFile

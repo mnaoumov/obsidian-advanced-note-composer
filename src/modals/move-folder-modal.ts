@@ -7,6 +7,7 @@ import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { CommandCategory } from '../plugin-settings.ts';
 import { selectFolder } from './select-folder-modal.ts';
 
 interface IsAllowedMoveTargetParams {
@@ -38,7 +39,7 @@ export function isAllowedMoveTarget(params: IsAllowedMoveTargetParams): boolean 
   if (isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
     return false;
   }
-  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path);
+  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
 }
 
 export async function selectTargetFolderForMove(params: SelectTargetFolderForMoveParams): Promise<null | TFolder> {

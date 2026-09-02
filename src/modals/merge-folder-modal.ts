@@ -19,6 +19,7 @@ import {
   openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
@@ -134,7 +135,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     // Whether an excluded folder may be a destination is its OWN setting since issue #253, not a side
     // Effect of `Should always merge excluded items` — that one decides what a merge swallows, and a user
     // Who wanted excluded items merged rather than skipped was getting excluded destinations offered too.
-    if (!this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations && this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (!this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations && this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
       return false;
     }
     if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {

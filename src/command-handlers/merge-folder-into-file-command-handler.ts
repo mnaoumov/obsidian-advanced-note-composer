@@ -139,7 +139,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
@@ -414,7 +414,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
           // Merge pickers do.
           isAllowedFolder: (candidateFolder) =>
             this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations
-            || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path),
+            || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path, CommandCategory.Merge),
           placeholder: 'Select folder for the merged note...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });

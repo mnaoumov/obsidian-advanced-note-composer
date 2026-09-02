@@ -110,7 +110,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge folder ');
@@ -169,14 +169,14 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     if (settings.shouldAlwaysMergeExcludedItems) {
       return false;
     }
-    if (settings.isPathIgnored(sourcePath)) {
+    if (settings.isPathIgnored(sourcePath, CommandCategory.Merge)) {
       return true;
     }
     // A target path here is the SOURCE ITEM'S OWN PATH mirrored under the destination folder, so it is
     // Excluded mostly when the destination itself is — and that destination is one the picker was allowed
     // To offer since issue #253. Skipping every item would silently undo the pick, so the setting that
     // Offered it clears this half too.
-    return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath);
+    return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath, CommandCategory.Merge);
   }
 
   private async mergeFolder(params: MergeFolderCommandHandlerMergeFolderParams): Promise<void> {

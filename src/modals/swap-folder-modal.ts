@@ -21,6 +21,7 @@ import {
   openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
@@ -158,7 +159,7 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
     if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {
       return false;
     }
-    return !this.pluginSettingsComponent.settings.isPathIgnored(folder.path);
+    return !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Swap);
   }
 }
 

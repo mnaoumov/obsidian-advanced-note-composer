@@ -47,6 +47,7 @@ import {
   openMinimizableModal
 } from '../open-minimizable-modal.ts';
 import {
+  CommandCategory,
   FrontmatterMergeStrategy,
   SplitTargetMode
 } from '../plugin-settings.ts';
@@ -392,6 +393,10 @@ interface SplitFileModalSwitchToSmartCutResult {
 
 /* v8 ignore start -- SplitFileModal is an internal UI class tested through exported functions. */
 class SplitFileModal extends SuggestModalBase {
+  protected override get commandCategory(): CommandCategory {
+    return CommandCategory.SplitAndExtract;
+  }
+
   private readonly canMergeIntoExistingNote: boolean;
   private readonly canSwitchToSmartCut: boolean;
   private readonly editor: Editor;
@@ -1440,7 +1445,7 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
     // Just as it closes the picker it stands in for.
     abortController: params.abortController,
     app: prepareParams.app,
-    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path),
+    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
     placeholder: 'Select folder to create the new note in...',
     pluginSettingsComponent: prepareParams.pluginSettingsComponent
   });
@@ -1561,7 +1566,7 @@ async function selectTargetParentFolder(params: SelectTargetParentFolderParams):
     // Just as it closes the picker the user came from.
     abortController: params.abortController,
     app: prepareParams.app,
-    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path),
+    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
     placeholder: 'Select folder to create the new note in...',
     pluginSettingsComponent: prepareParams.pluginSettingsComponent
   });

@@ -16,6 +16,7 @@ import {
   openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
 interface BuildConfirmContentParams {
@@ -88,7 +89,7 @@ class MergeFilesModal extends FuzzySuggestModal<TFile> {
     if (this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations) {
       return true;
     }
-    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path);
+    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Merge);
   }
 }
 /* v8 ignore stop */

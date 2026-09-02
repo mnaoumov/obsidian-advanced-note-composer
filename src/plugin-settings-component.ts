@@ -330,6 +330,35 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('splitCommandExcludePaths', pathsValidator);
     this.registerValidator('swapCommandIncludePaths', pathsValidator);
     this.registerValidator('swapCommandExcludePaths', pathsValidator);
+
+    // The `Select` pair was missing from the block above since issue #249 — the list is spelled out
+    // Literally, because `registerValidator` needs a property-name literal, and nine categories written
+    // By hand lost one. A broken regex in those two boxes therefore fell back silently, exactly the
+    // Failure the validator exists to prevent. `plugin-settings-component.test.ts` now asserts the
+    // Registered set against the two derived setting-name types, so a tenth category cannot repeat it.
+    this.registerValidator('selectCommandIncludePaths', pathsValidator);
+    this.registerValidator('selectCommandExcludePaths', pathsValidator);
+
+    // Each category's own CONTENT pair (issue #270) is the same kind of list again — the reporter's
+    // Screenshot was of `Include paths` / `Exclude paths`, so these narrow what the plugin may TOUCH
+    // Rather than where its commands are offered. No legacy converter here either, for the same reason:
+    // Every pair starts empty and two empty lists ignore nothing.
+    this.registerValidator('createIncludePaths', pathsValidator);
+    this.registerValidator('createExcludePaths', pathsValidator);
+    this.registerValidator('mergeIncludePaths', pathsValidator);
+    this.registerValidator('mergeExcludePaths', pathsValidator);
+    this.registerValidator('moveAndFlattenIncludePaths', pathsValidator);
+    this.registerValidator('moveAndFlattenExcludePaths', pathsValidator);
+    this.registerValidator('renameIncludePaths', pathsValidator);
+    this.registerValidator('renameExcludePaths', pathsValidator);
+    this.registerValidator('reorderIncludePaths', pathsValidator);
+    this.registerValidator('reorderExcludePaths', pathsValidator);
+    this.registerValidator('smartCutAndPasteIncludePaths', pathsValidator);
+    this.registerValidator('smartCutAndPasteExcludePaths', pathsValidator);
+    this.registerValidator('splitIncludePaths', pathsValidator);
+    this.registerValidator('splitExcludePaths', pathsValidator);
+    this.registerValidator('swapIncludePaths', pathsValidator);
+    this.registerValidator('swapExcludePaths', pathsValidator);
   }
 }
 

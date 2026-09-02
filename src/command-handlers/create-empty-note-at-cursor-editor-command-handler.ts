@@ -86,7 +86,7 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Create)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot create a note from file ');

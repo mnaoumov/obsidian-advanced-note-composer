@@ -26,7 +26,10 @@ import {
   openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
-import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
+import {
+  CommandCategory,
+  FrontmatterMergeStrategy
+} from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
@@ -83,6 +86,10 @@ interface PrepareForMergeFileResult {
 
 /* v8 ignore start -- MergeFileModal is an internal UI class tested through exported functions. */
 class MergeFileModal extends SuggestModalBase {
+  protected override get commandCategory(): CommandCategory {
+    return CommandCategory.Merge;
+  }
+
   private frontmatterMergeStrategy: FrontmatterMergeStrategy;
 
   private isSelected = false;
