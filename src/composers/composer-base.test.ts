@@ -39,6 +39,7 @@ import type {
 import { InsertMode } from '../insert-mode.ts';
 import {
   Action,
+  CommandCategory,
   FrontmatterMergeStrategy
 } from '../plugin-settings.ts';
 import {
@@ -123,8 +124,8 @@ class TestComposer extends ComposerBase {
     await vaultTransaction.commit();
   }
 
-  public callIsPathIgnored(path: string): boolean {
-    return this.pluginSettingsComponent.settings.isPathIgnored(path);
+  public callIsPathIgnored(path: string, commandCategory = CommandCategory.Merge): boolean {
+    return this.pluginSettingsComponent.settings.isPathIgnored(path, commandCategory);
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Base class requires async.

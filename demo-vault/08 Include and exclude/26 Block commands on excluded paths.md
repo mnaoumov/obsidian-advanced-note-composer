@@ -7,6 +7,8 @@ Advanced Note Composer has **two independent path filters**, and knowing which i
 
 So you can hide the commands in a folder you still merge into, or keep them handy in a folder that must never be merged. All four boxes are empty by default, so nothing is excluded and nothing is hidden.
 
+Each filter also has a **per-command-category version** that narrows it further — see [Blocking only some commands](#blocking-only-some-commands) and [Excluding paths from only some commands](#excluding-paths-from-only-some-commands) below.
+
 ## Path forms
 
 Each line of any of the four boxes is either a path string or a `/regular expression/`, and they match differently:
@@ -59,6 +61,39 @@ That is enough for the three things people usually want:
 6. Clear both boxes when you are done.
 
 Upgrading changes nothing here: an existing vault has only the top pair filled in, every category pair starts empty, and two empty boxes block nothing.
+
+## Excluding paths from only some commands
+
+The section above hides commands. This one is the same idea applied to the **other** filter: what a command may *touch*.
+
+**Include paths** and **Exclude paths** cover *every* command, so an excluded folder is off-limits to all of them at once. Each command category's group carries its own pair above its command pair — **`Merge` include paths** / **`Merge` exclude paths**, **`Reorder` include paths** / **`Reorder` exclude paths**, and so on — and those narrow the top pair for that category alone.
+
+That is what makes this possible:
+
+- **Keep a folder out of one command's dialogs.** Put the folder path in `Reorder commands -> Reorder exclude paths`. The reorder modal stops listing it, while merges, splits and renames go on using it exactly as before.
+- **Let one command work only in one place.** Put the folder path in `Merge commands -> Merge include paths`. The merge commands then touch nothing outside that folder, and no other command notices.
+
+The `Reorder commands` group now holds four boxes, and the two halves answer different questions — worth keeping straight:
+
+| Box | Effect on a listed path |
+| --- | --- |
+| `Reorder exclude paths` | The reorder commands are still offered, and still run — they just skip that path. It is absent from the modal. |
+| `Reorder command exclude paths` | The reorder commands are gone there entirely: not in the command palette, not in the context menus. |
+
+The category boxes **narrow**, exactly as the command ones do: a path listed in the top **Exclude paths** is off-limits to everything regardless of what a category include box says.
+
+`Select` is the one category with no such pair, and only two boxes in its group. The `Select ...` commands move the caret and write nothing, so there is no content for a filter to allow or refuse — a pair there would be two boxes read by nothing. Hiding those commands on a path is what **`Select` command exclude paths** is for.
+
+### Try it
+
+1. Right-click `Materials/23 Reorder folders/Reorder example` and run `Reorder child folders`. All three of `1. Alpha`, `2. Beta` and `3. Gamma` are listed — see [23 Reorder folders](<../06 Folder operations/23 Reorder folders.md>).
+2. Open the plugin settings, go to **Include/exclude**, scroll to **Reorder commands**, and put `Materials/23 Reorder folders/Reorder example/2. Beta` in **`Reorder` exclude paths**.
+3. Run `Reorder child folders` on `Reorder example` again: `2. Beta` is gone from the list, and only `1. Alpha` and `3. Gamma` can be moved.
+4. Right-click `2. Beta` itself: every Advanced Note Composer command is still there, and `Merge current folder with another folder...` still offers it as a destination. Only the reorder skipped it.
+5. Clear that box, and put the same path in **`Reorder` command exclude paths** instead. Now right-click `2. Beta`: the reorder commands are gone from its menu — while `Reorder child folders` on the parent still lists it, because hiding a command is not the same as excluding a path. That is the pair, both ways round.
+6. Clear both boxes when you are done.
+
+Upgrading changes nothing here either: an existing vault has only **Include paths** / **Exclude paths** filled in, every category pair starts empty, and two empty boxes exclude nothing.
 
 ## An excluded path is never moved
 

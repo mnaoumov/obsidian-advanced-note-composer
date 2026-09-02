@@ -57,7 +57,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Swap)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap folder ');

@@ -44,6 +44,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import {
   COMMAND_CATEGORIES,
+  CommandCategory,
   CommandMenuPlacement,
   MergeFolderIntoFileLocation,
   SplitTargetMode
@@ -272,7 +273,15 @@ describe('PluginSettingsTab', () => {
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
+      // Four rows since issue #270, content pair first: the group mirrors the page's own order, where the
+      // `Paths` group (content) precedes `All commands` (visibility). `Select` is the exception at two
+      // Rows — it has no content pair, because a select writes nothing and never consults that filter, so
+      // The rows would be controls read by nothing.
+      const contentRowNames = commandCategory === CommandCategory.Select
+        ? []
+        : [`${commandCategory} include paths`, `${commandCategory} exclude paths`];
       expect(containers.get(`${commandCategory} commands`)).toEqual([
+        ...contentRowNames,
         `${commandCategory} command include paths`,
         `${commandCategory} command exclude paths`
       ]);

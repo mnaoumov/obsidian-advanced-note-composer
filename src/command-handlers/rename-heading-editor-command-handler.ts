@@ -95,7 +95,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Rename)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot rename a heading in file ');

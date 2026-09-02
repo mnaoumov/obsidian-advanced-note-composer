@@ -5,6 +5,7 @@ import type {
   SelectItemResult
 } from './item-selector-base.ts';
 
+import { CommandCategory } from '../plugin-settings.ts';
 import { ItemSelectorBase } from './item-selector-base.ts';
 
 interface MergeItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
@@ -22,7 +23,7 @@ export class MergeItemSelector extends ItemSelectorBase {
       const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
 
       const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
-      if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path)) {
+      if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path, CommandCategory.Merge)) {
         return {
           isNewTargetFile: false,
           targetFile: existingFile

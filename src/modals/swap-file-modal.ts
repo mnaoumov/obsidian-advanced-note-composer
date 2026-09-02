@@ -20,6 +20,7 @@ import {
   openConfirmDialogModal,
   openModal
 } from '../open-minimizable-modal.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { reorderSuggestionsByRecentFiles } from '../recent-suggestions.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 
@@ -105,7 +106,7 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
     if (isChildOrSelf({ app: this.app, childPathOrFile: file, parentPathOrFile: this.sourceFile })) {
       return false;
     }
-    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path);
+    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap);
   }
 }
 

@@ -22,6 +22,58 @@ import {
   PluginSettings
 } from './plugin-settings.ts';
 
+/**
+ * Every settings property registered with `obsidian-dev-utils`' shared paths validator: the two baseline
+ * pairs, the eighteen per-category visibility lists (issue #249) and the sixteen per-category content
+ * lists (issue #270 — `Select` has no content pair; see the comment in `plugin-settings.ts`).
+ *
+ * Spelled out because `registerValidator` needs a property-name LITERAL, so `plugin-settings-component.ts`
+ * lists them one by one and can lose one — it did: the `Select` visibility pair went unregistered from
+ * issue #249 until #270, so a broken regular expression in those two boxes fell back silently. The two
+ * assertions under `paths validator coverage` compare this list against the derived setting-name types,
+ * which is what turns the next such omission into a failure here.
+ */
+const PATHS_VALIDATOR_PROPERTY_NAMES = [
+  'commandExcludePaths',
+  'commandIncludePaths',
+  'createCommandExcludePaths',
+  'createCommandIncludePaths',
+  'createExcludePaths',
+  'createIncludePaths',
+  'excludePaths',
+  'includePaths',
+  'mergeCommandExcludePaths',
+  'mergeCommandIncludePaths',
+  'mergeExcludePaths',
+  'mergeIncludePaths',
+  'moveAndFlattenCommandExcludePaths',
+  'moveAndFlattenCommandIncludePaths',
+  'moveAndFlattenExcludePaths',
+  'moveAndFlattenIncludePaths',
+  'renameCommandExcludePaths',
+  'renameCommandIncludePaths',
+  'renameExcludePaths',
+  'renameIncludePaths',
+  'reorderCommandExcludePaths',
+  'reorderCommandIncludePaths',
+  'reorderExcludePaths',
+  'reorderIncludePaths',
+  'selectCommandExcludePaths',
+  'selectCommandIncludePaths',
+  'smartCutAndPasteCommandExcludePaths',
+  'smartCutAndPasteCommandIncludePaths',
+  'smartCutAndPasteExcludePaths',
+  'smartCutAndPasteIncludePaths',
+  'splitCommandExcludePaths',
+  'splitCommandIncludePaths',
+  'splitExcludePaths',
+  'splitIncludePaths',
+  'swapCommandExcludePaths',
+  'swapCommandIncludePaths',
+  'swapExcludePaths',
+  'swapIncludePaths'
+] as const;
+
 class TestablePluginSettingsComponent extends PluginSettingsComponent {
   public async runLegacyConverters(record: GenericObject): Promise<void> {
     await this.onLoadRecord(record);
@@ -360,30 +412,7 @@ describe('PluginSettingsComponent', () => {
     // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator,
     // And so does every per-category pair below it (issue #249) — a broken regex there fails the same
     // Silent all-or-nothing way.
-    describe.each(
-      [
-        'commandExcludePaths',
-        'commandIncludePaths',
-        'createCommandExcludePaths',
-        'createCommandIncludePaths',
-        'excludePaths',
-        'includePaths',
-        'mergeCommandExcludePaths',
-        'mergeCommandIncludePaths',
-        'moveAndFlattenCommandExcludePaths',
-        'moveAndFlattenCommandIncludePaths',
-        'renameCommandExcludePaths',
-        'renameCommandIncludePaths',
-        'reorderCommandExcludePaths',
-        'reorderCommandIncludePaths',
-        'smartCutAndPasteCommandExcludePaths',
-        'smartCutAndPasteCommandIncludePaths',
-        'splitCommandExcludePaths',
-        'splitCommandIncludePaths',
-        'swapCommandExcludePaths',
-        'swapCommandIncludePaths'
-      ] as const
-    )('%s validator', (propertyName) => {
+    describe.each(PATHS_VALIDATOR_PROPERTY_NAMES)('%s validator', (propertyName) => {
       it('should accept an empty list', async () => {
         const component = createComponent();
         expect(await validateProperty(component, propertyName, [])).toBeUndefined();
@@ -408,6 +437,17 @@ describe('PluginSettingsComponent', () => {
         const component = createComponent();
         expect(await validateProperty(component, propertyName, ['Inbox', '/^Archive[/', '/^Drafts(/'])).toBe('Invalid regular expression: /^Archive[/');
       });
+    });
+
+    // The cases above prove that every property NAMED in the list has a validator — an unregistered one
+    // Would accept the un-parseable literal. This is the other half: that the list names every such
+    // Property. Read off the prototype rather than spelled out again, because a hand-written second copy
+    // Is exactly what let the `Select` pair go unvalidated from issue #249 until #270.
+    it('should list every include/exclude settings property', () => {
+      const pathListPropertyNames = Object.getOwnPropertyNames(PluginSettings.prototype)
+        .filter((propertyName) => /(?:exclude|include)Paths$/i.test(propertyName))
+        .sort();
+      expect([...PATHS_VALIDATOR_PROPERTY_NAMES].sort()).toEqual(pathListPropertyNames);
     });
   });
 
@@ -620,7 +660,7 @@ describe('PluginSettingsComponent', () => {
       expect(component.settings.commandExcludePaths).toEqual([]);
       expect(component.settings.commandIncludePaths).toEqual([]);
       expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(false);
-      expect(component.settings.isPathIgnored('secret/note.md')).toBe(true);
+      expect(component.settings.isPathIgnored('secret/note.md', CommandCategory.Merge)).toBe(true);
     });
 
     // Issue #249's own version of the accessor question above: the per-category pairs are getters too, so

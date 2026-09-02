@@ -45,6 +45,7 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../operation-notices.ts';
+import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
@@ -200,7 +201,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.SplitAndExtract)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot split file ');
@@ -415,7 +416,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       if (confirmResult.shouldReselectTarget) {
         const selectedFolder = await selectFolder({
           app: this.app,
-          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path),
+          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.SplitAndExtract),
           placeholder: 'Select folder to root the produced tree in...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });

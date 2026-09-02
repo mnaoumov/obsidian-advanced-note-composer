@@ -82,7 +82,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Reorder)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot reorder headings in file ');

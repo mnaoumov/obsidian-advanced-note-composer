@@ -56,7 +56,7 @@ export class SwapFileCommandHandler extends FileCommandHandler {
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot swap file ');

@@ -29,6 +29,7 @@ import {
 } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+import type { CommandCategory } from '../plugin-settings.ts';
 
 import { getRecentPaths } from '../recent-suggestions.ts';
 
@@ -94,6 +95,16 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   protected shouldShowNonImageAttachments: boolean;
   protected shouldShowUnresolved: boolean;
   protected readonly sourceFile: TFile;
+
+  /**
+   * The category of the command that opened this picker, which decides WHICH per-category content filter
+   * narrows its candidate list (issue #270).
+   *
+   * An abstract getter rather than a constructor param: the category is a property of the picker itself,
+   * not something its caller chooses, so it must not become one more thing every call site has to pass.
+   */
+  protected abstract get commandCategory(): CommandCategory;
+
   private readonly initialInputValue: string;
   private readonly newFileButtonEl: HTMLElement;
   private readonly shouldShowAlias: boolean;
@@ -523,7 +534,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         if (this.shouldAllowOnlyCurrentFolder && !unresolvedLink.startsWith(this.sourceFile.parent?.getParentPrefix() ?? '')) {
           continue;
         }
-        if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink)) {
+        if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(unresolvedLink, this.commandCategory)) {
           continue;
         }
         unresolvedLinks.add(unresolvedLink);
@@ -545,7 +556,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   /* v8 ignore start -- shouldIncludeFile has many branches tested individually but v8 can't attribute coverage across test runs. */
   private shouldIncludeFile(file: TFile): boolean {
-    if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (!this.shouldAllowIgnoredPaths && this.pluginSettingsComponent.settings.isPathIgnored(file.path, this.commandCategory)) {
       return false;
     }
 

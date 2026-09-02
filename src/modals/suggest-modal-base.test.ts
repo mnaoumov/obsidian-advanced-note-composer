@@ -28,7 +28,10 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { Item } from './suggest-modal-base.ts';
 
-import { PickerRecencyOrder } from '../plugin-settings.ts';
+import {
+  CommandCategory,
+  PickerRecencyOrder
+} from '../plugin-settings.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 interface OnInputable {
@@ -77,6 +80,12 @@ interface MockPluginOptions {
 class TestSuggestModal extends SuggestModalBase {
   public lastChosenEvent: KeyboardEvent | MouseEvent | null = null;
   public lastChosenItem: Item | null = null;
+
+  // Merge, arbitrarily: the base only forwards this to the per-category content filter (issue #270), and
+  // These tests leave every category list empty, so the value chosen changes nothing here.
+  protected override get commandCategory(): CommandCategory {
+    return CommandCategory.Merge;
+  }
 
   // eslint-disable-next-line @typescript-eslint/require-await -- Abstract base class requires Promise<void> return type.
   protected override async onChooseSuggestionAsync(item: Item | null, $event: KeyboardEvent | MouseEvent): Promise<void> {

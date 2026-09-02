@@ -15,6 +15,7 @@ import type { SwapRegion } from './swap-selections.ts';
 
 import { runLockedTransaction } from './locked-transaction.ts';
 import { showOperationCompletionNotice } from './operation-notices.ts';
+import { CommandCategory } from './plugin-settings.ts';
 import {
   areRegionsOverlapping,
   swapContents,
@@ -140,7 +141,7 @@ export async function swapWithSelection(params: SwapWithSelectionParams): Promis
     return;
   }
 
-  if (pluginSettingsComponent.settings.isPathIgnored(targetFile.path)) {
+  if (pluginSettingsComponent.settings.isPathIgnored(targetFile.path, CommandCategory.Swap)) {
     pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
         f.appendText('You cannot swap a selection into file ');

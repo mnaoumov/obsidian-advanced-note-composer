@@ -53,6 +53,7 @@ import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
 import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
   Action,
+  CommandCategory,
   FrontmatterMergeStrategy
 } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
@@ -373,7 +374,7 @@ export abstract class ComposerBase {
   }
 
   protected async checkTargetFileIgnored(action: Action): Promise<boolean> {
-    if (!this.shouldMergeIgnoredTarget && this.isPathIgnored(this.targetFile.path)) {
+    if (!this.shouldMergeIgnoredTarget && this.isPathIgnored(this.targetFile.path, action)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText(`You cannot ${action} into `);
@@ -754,8 +755,20 @@ export abstract class ComposerBase {
     await vaultTransaction.modify(this.targetFile, mergedDocument.toString());
   }
 
-  private isPathIgnored(path: string): boolean {
-    return this.pluginSettingsComponent.settings.isPathIgnored(path);
+  /**
+   * Whether a path is off-limits to the operation being run (issue #270).
+   *
+   * The per-category content filter needs to know WHICH command is asking, and the {@link Action} the
+   * caller already passes answers it: this base class runs both halves, so the category is derived here
+   * rather than plumbed through the constructor and every subclass that builds its params.
+   *
+   * @param path - The path to check.
+   * @param action - The operation being run.
+   * @returns Whether the path is ignored for that operation.
+   */
+  private isPathIgnored(path: string, action: Action): boolean {
+    const commandCategory = action === Action.Merge ? CommandCategory.Merge : CommandCategory.SplitAndExtract;
+    return this.pluginSettingsComponent.settings.isPathIgnored(path, commandCategory);
   }
 
   private isSelected(position: Pos, selections: Selection[]): boolean {

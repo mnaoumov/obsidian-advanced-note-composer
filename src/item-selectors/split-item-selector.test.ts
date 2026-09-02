@@ -36,6 +36,10 @@ vi.mock('obsidian-dev-utils/obsidian/file-manager', () => ({
 }));
 
 vi.mock('../plugin-settings.ts', () => ({
+  // Only the member the selector names (issue #270); the mocked `isPathIgnored` ignores its argument.
+  CommandCategory: {
+    SplitAndExtract: 'Split/extract'
+  },
   FrontmatterTitleMode: {
     None: 'None',
     UseAlways: 'UseAlways',

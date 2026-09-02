@@ -69,7 +69,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Merge)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot merge file ');

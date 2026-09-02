@@ -132,7 +132,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
     const settings = this.pluginSettingsComponent.settings;
-    if (settings.isPathIgnored(folder.path)) {
+    if (settings.isPathIgnored(folder.path, CommandCategory.Rename)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot rename folder ');
