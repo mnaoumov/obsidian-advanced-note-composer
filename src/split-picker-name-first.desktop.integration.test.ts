@@ -494,7 +494,21 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           // Nothing typed — the box is seeded with the heading name, so it has to be cleared to be the
           // Reporter's case.
+          const seededFirstRow = document.querySelector('.suggestion-item');
           typeIntoPicker('');
+
+          /*
+           * Clearing the box re-filters the list ASYNCHRONOUSLY, and the seeded heading name already
+           * matched the sibling — so a fixed sleep can hand back a row from the PREVIOUS render, detached
+           * by the time the click lands. The click then chooses nothing and the picker never closes, which
+           * is precisely how this test failed in the aggregate while passing alone, and it was the head of
+           * the cascade T795 measured. Wait for the re-render itself (the chooser rebuilds its rows, so
+           * the first one is a new element), then re-query.
+           */
+          await waitUntil({
+            message: 'the picker did not re-filter after the name was cleared',
+            predicate: () => document.querySelector('.suggestion-item') !== seededFirstRow
+          });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const siblingRow = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]

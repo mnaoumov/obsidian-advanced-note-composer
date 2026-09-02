@@ -137,3 +137,46 @@ default, matching Obsidian. Two things the mocks deliberately do not give you:
   installs one — `Object.assign(vi.fn(), { extended })` on the vault INSTANCE (the bridged member lives on
   `Vault.prototype`, so patching it there would leak between tests) — and that is how issue #161's claim
   that the destination comes from whatever patched Obsidian's resolution is pinned.
+
+## Integration test isolation
+
+**The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE temp vault across all
+103 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts or resets Obsidian
+between files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — is handed to
+every file that runs after it.
+
+**`scripts/integration-test-setup.ts` is the cleanup that keeps that from cascading**, registered once
+through `editContext` in `scripts/vitest-config.ts` so it reaches every project spreading `context.desktop`
+and a new suite cannot forget it. `beforeAll` covers what a file inherits (above all the release-notes
+modal a fresh harness vault opens with — `ReleaseNotesComponent` is an `onLayoutReady` component);
+`afterEach` covers what it leaks. It never throws: cleanup that fails a run would mask the result of the
+test that just ran. **Do not add a per-file `afterEach` that duplicates it** — write the file assuming the
+app is uncovered when your test starts.
+
+**Why it exists (T795-P12, measured — do not re-diagnose this as machine load).** Without it, one
+failure took the rest of the run with it: a test threw with its picker still open, and every later file
+needing a modal-free app failed behind it — **28 consecutively failing files in one run, 20 in another**,
+every one of which passed in isolation. The fix took the suite from **50 and 48 failed tests to 3 and 4**,
+on the same loaded machine, and to **3 of 149 across 103 files** on the re-run that landed it. Raising the
+wait budgets was measured and rejected: the in-renderer `waitUntil` default from 5 s to 15 s produced the
+identical failure ten seconds later.
+
+**Two traps when writing an integration test here:**
+
+- **`sleep(RENDER_DELAY_IN_MILLISECONDS)` is not a wait.** A fixed sleep before reading the DOM can hand
+  back a node from the *previous* render, and a click on a detached row silently chooses nothing — which
+  is exactly what headed the cascade above. Wait on a predicate for the thing you are about to act on.
+- **`waitUntil` defaults to 5 000 ms**, from `obsidian-integration-testing`'s in-renderer
+  `namespace-bootstrap.ts`, not from anything in this repo — six times tighter than the project's 30 s
+  `testTimeout`, and inherited by ~505 of the suite's 535 call sites because they pass no timeout.
+
+**Vitest sequences files slowest-first from its own duration cache**, so file order changes every run.
+Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable
+failure whose downstream victims moved.
+
+**The shared vault is still never cleaned (T880-P12)**, and it bites in two ways, so do not assume the
+first one is the whole of it. A late-running file competes with every earlier file's notes for room in the
+picker's capped, fuzzy-ranked suggestion list — and a merge's link update reaches into the hundreds of
+notes earlier files left behind, rewriting links in notes it does not own and dying mid-merge on an
+unhandled error. Both pass in isolation. If a test of yours fails only in the aggregate, run it alone
+before reaching for a timing explanation.
