@@ -157,8 +157,9 @@ app is uncovered when your test starts.
 failure took the rest of the run with it: a test threw with its picker still open, and every later file
 needing a modal-free app failed behind it — **28 consecutively failing files in one run, 20 in another**,
 every one of which passed in isolation. The fix took the suite from **50 and 48 failed tests to 3 and 4**,
-on the same loaded machine. Raising the wait budgets was measured and rejected: the in-renderer
-`waitUntil` default from 5 s to 15 s produced the identical failure ten seconds later.
+on the same loaded machine, and to **3 of 149 across 103 files** on the re-run that landed it. Raising the
+wait budgets was measured and rejected: the in-renderer `waitUntil` default from 5 s to 15 s produced the
+identical failure ten seconds later.
 
 **Two traps when writing an integration test here:**
 
@@ -171,6 +172,11 @@ on the same loaded machine. Raising the wait budgets was measured and rejected: 
 
 **Vitest sequences files slowest-first from its own duration cache**, so file order changes every run.
 Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable
-failure whose downstream victims moved. The shared vault is still never cleaned (T880-P12): a
-late-running file competes with every earlier file's notes for room in the picker's capped, fuzzy-ranked
-suggestion list.
+failure whose downstream victims moved.
+
+**The shared vault is still never cleaned (T880-P12)**, and it bites in two ways, so do not assume the
+first one is the whole of it. A late-running file competes with every earlier file's notes for room in the
+picker's capped, fuzzy-ranked suggestion list — and a merge's link update reaches into the hundreds of
+notes earlier files left behind, rewriting links in notes it does not own and dying mid-merge on an
+unhandled error. Both pass in isolation. If a test of yours fails only in the aggregate, run it alone
+before reaching for a timing explanation.
