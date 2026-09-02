@@ -67,8 +67,14 @@ describe('auto-numbering what a split creates (issue #269)', () => {
         const ROOT_FOLDER = 'split-auto-number-note';
         const SOURCE_PATH = `${ROOT_FOLDER}/Flat source.md`;
         const SOURCE_CONTENT = 'keep this fragment here';
-        const NEW_NOTE_NAME = 'D';
-        const NUMBERED_PATH = `${ROOT_FOLDER}/5. D.md`;
+        /*
+         * Distinctive rather than the issue's bare `D`, and for the reason this feature makes vivid: the
+         * vault is shared, the numbered note keeps the typed name as an ALIAS, and a one-letter alias is
+         * exactly the row a later suite's picker would be offered and not expect. The recursive test below
+         * keeps the issue's own names, being nested and short-lived.
+         */
+        const NEW_NOTE_NAME = 'AutoNumNote';
+        const NUMBERED_PATH = `${ROOT_FOLDER}/5. ${NEW_NOTE_NAME}.md`;
 
         const settingsComponent = findSettingsComponent();
         const original = { ...settingsComponent.settings };
@@ -90,11 +96,11 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           await trashIfExists(ROOT_FOLDER);
           await app.vault.createFolder(ROOT_FOLDER);
           // The reporter's own sequence, gap at `2.` included.
-          await app.vault.create(`${ROOT_FOLDER}/1. A.md`, 'a');
-          await app.vault.create(`${ROOT_FOLDER}/3. B.md`, 'b');
-          await app.vault.create(`${ROOT_FOLDER}/4. C.md`, 'c');
+          await app.vault.create(`${ROOT_FOLDER}/1. AutoNumA.md`, 'a');
+          await app.vault.create(`${ROOT_FOLDER}/3. AutoNumB.md`, 'b');
+          await app.vault.create(`${ROOT_FOLDER}/4. AutoNumC.md`, 'c');
           // A numbered FOLDER beside them, to prove the note sequence does not count it.
-          await app.vault.createFolder(`${ROOT_FOLDER}/9. Folder`);
+          await app.vault.createFolder(`${ROOT_FOLDER}/9. AutoNumFolder`);
 
           const source = await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
@@ -113,12 +119,16 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           typeIntoPicker(NEW_NOTE_NAME);
-          await waitUntil({
-            message: 'the create-new suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
-          });
+          /*
+           * `Mod+Enter` rather than waiting for the `Enter to create` row, because that row is added ONLY
+           * by `onNoSuggestion()` â i.e. only when the search matches nothing at all. In the shared
+           * aggregate vault it usually matches something, and the fixtures here share a prefix with the
+           * name on purpose, so waiting for it would be waiting for a row that is correctly absent.
+           * `Mod+Enter` creates from what was typed whatever the list holds, which is the vault-independent
+           * way to say "create".
+           */
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          pressEnter();
+          forceCreateFromTypedName();
 
           await waitUntil({
             message: 'the extracted note was not created under its numbered name',
@@ -129,10 +139,21 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           const numbered = app.vault.getAbstractFileByPath(NUMBERED_PATH);
           const numberedContent = numbered instanceof obsidianModule.TFile ? await app.vault.read(numbered) : 'MISSING';
 
+          /*
+           * The one thing numbering AFTER the note exists could break: the residual link is written by the
+           * composer from the same `TFile`, which `renameFile` mutated in place, so it has to name the
+           * numbered note rather than the name the note was created under a moment earlier.
+           */
+          await waitUntil({
+            message: 'the link left in the source did not resolve to the numbered note',
+            predicate: () => Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NUMBERED_PATH)
+          });
+
           return {
-            // The typed name is recorded, so a link to it still resolves â the `{{index}}` made the real
-            // Name differ from what was typed, exactly as a folder-note override does.
+            // The typed name is recorded as an alias / title, so a link to THAT still resolves too: the
+            // `{{index}}` made the real name differ from what was typed, as a folder-note override does.
             hasTypedNameRecorded: numberedContent.includes(NEW_NOTE_NAME),
+            isResidualLinkResolved: Object.keys(app.metadataCache.resolvedLinks[SOURCE_PATH] ?? {}).includes(NUMBERED_PATH),
             // Nothing was created under the unnumbered name.
             isUnnumberedAbsent: app.vault.getAbstractFileByPath(`${ROOT_FOLDER}/${NEW_NOTE_NAME}.md`) === null,
             numberedContent
@@ -179,9 +200,9 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           return input;
         }
 
-        function pressEnter(): void {
+        function forceCreateFromTypedName(): void {
           getPickerInput().focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
 
         function typeIntoPicker(value: string): void {
@@ -227,13 +248,11 @@ describe('auto-numbering what a split creates (issue #269)', () => {
         const ROOT_FOLDER = 'split-auto-number-folder';
         const SOURCE_PATH = `${ROOT_FOLDER}/Folder source.md`;
         const SOURCE_CONTENT = 'keep this fragment here';
-        /*
-         * NOT the `D` of the other two tests, and the reason is the feature working: the note the first
-         * test numbered keeps `D` as an ALIAS, so typing `D` here would find an exact match in the shared
-         * vault and the picker would offer no `Enter to create` row at all.
-         */
-        const NEW_NOTE_NAME = 'Delta';
-        const NUMBERED_NOTE_PATH = `${ROOT_FOLDER}/5. Delta/Delta.md`;
+        // Its own name, distinct from the other two tests': each numbered note keeps the typed name as an
+        // ALIAS, so a name reused across tests would be an exact match and the picker would offer no
+        // `Enter to create` row at all.
+        const NEW_NOTE_NAME = 'AutoNumOwnFolder';
+        const NUMBERED_NOTE_PATH = `${ROOT_FOLDER}/5. ${NEW_NOTE_NAME}/${NEW_NOTE_NAME}.md`;
 
         const settingsComponent = findSettingsComponent();
         const original = { ...settingsComponent.settings };
@@ -251,11 +270,11 @@ describe('auto-numbering what a split creates (issue #269)', () => {
 
           await trashIfExists(ROOT_FOLDER);
           await app.vault.createFolder(ROOT_FOLDER);
-          await app.vault.createFolder(`${ROOT_FOLDER}/1. A`);
-          await app.vault.createFolder(`${ROOT_FOLDER}/3. B`);
-          await app.vault.createFolder(`${ROOT_FOLDER}/4. C`);
+          await app.vault.createFolder(`${ROOT_FOLDER}/1. AutoNumA`);
+          await app.vault.createFolder(`${ROOT_FOLDER}/3. AutoNumB`);
+          await app.vault.createFolder(`${ROOT_FOLDER}/4. AutoNumC`);
           // A numbered NOTE beside them, to prove the folder sequence does not count it.
-          await app.vault.create(`${ROOT_FOLDER}/9. note.md`, 'note');
+          await app.vault.create(`${ROOT_FOLDER}/9. AutoNumNeighbor.md`, 'note');
 
           const source = await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
@@ -271,12 +290,16 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           typeIntoPicker(NEW_NOTE_NAME);
-          await waitUntil({
-            message: 'the create-new suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
-          });
+          /*
+           * `Mod+Enter` rather than waiting for the `Enter to create` row, because that row is added ONLY
+           * by `onNoSuggestion()` â i.e. only when the search matches nothing at all. In the shared
+           * aggregate vault it usually matches something, and the fixtures here share a prefix with the
+           * name on purpose, so waiting for it would be waiting for a row that is correctly absent.
+           * `Mod+Enter` creates from what was typed whatever the list holds, which is the vault-independent
+           * way to say "create".
+           */
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          pressEnter();
+          forceCreateFromTypedName();
 
           await waitUntil({
             message: 'the extracted note was not created inside its numbered folder',
@@ -334,9 +357,9 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           return input;
         }
 
-        function pressEnter(): void {
+        function forceCreateFromTypedName(): void {
           getPickerInput().focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
 
         function typeIntoPicker(value: string): void {
