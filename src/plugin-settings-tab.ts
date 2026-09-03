@@ -1393,258 +1393,269 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         ],
         name: 'Smart cut & paste'
       }),
+      // Issue #223 gave the frontmatter rows a page of their own and issue #272 merged the `Title` page
+      // Into it: the two entries sat next to each other and read as one section. The rows are regrouped by
+      // TOPIC rather than by the page they came from, so the three that write or read the frontmatter
+      // `title` (`Frontmatter title mode`, `Should use source title when destination has none`, `Should add
+      // Invalid title to note aliases`) moved under `Title` with the rows that shape the file name, leaving
+      // `Frontmatter` the three that concern the property block itself. Regrouping by origin would have kept
+      // The very split the reporter objected to, one level down.
       this.settingPage({
-        desc: 'How properties are carried across when notes are merged, split, or extracted.',
+        desc: 'How a name you type becomes the file name of the note it creates, and how properties are carried across when notes are merged, split, or extracted.',
         items: [
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Default frontmatter merge strategy to use when merging notes. Can be changed in the merge/split modal dialog.');
-              f.createEl('br');
-              f.appendText('When merging frontmatter values from note A to note B:');
-              f.createEl('br');
-              appendCodeBlock(f, 'Merge and prefer new values');
-              f.appendText(' - copy values from A to B that were not in B yet, and overwrite existing values in B with values from A.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Merge and prefer original values');
-              f.appendText(' - copy values from A to B that were not in B yet, and keep existing values in B.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Keep original frontmatter');
-              f.appendText(' - keep existing values in B, and ignore values from A.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Replace with new frontmatter');
-              f.appendText(' - remove existing values in B, and copy values from A to B.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Preserve both original and new frontmatter');
-              f.appendText(' - copies new frontmatter from A into a separate frontmatter key in B.');
-            }),
-            name: 'Frontmatter merge strategy',
-            render: (setting) => {
-              setting.addDropdown((dropdown) => {
-                dropdown.addOptions({
-                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
-                  [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
-                  [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
-                  [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
-                  [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
-                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
-                });
-                this.bind({ propertyName: 'defaultFrontmatterMergeStrategy', valueComponent: dropdown });
-              });
-            }
+          this.settingGroupEx({
+            heading: 'Title',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('How a name is rewritten before it is turned into a file name, so you can define your own replacements ');
+                  f.appendText('instead of relying on the single replacement string below.');
+                  f.createEl('br');
+                  f.appendText('Leave empty to use the name as it was typed.');
+                  f.createEl('br');
+                  f.appendText('Available tokens:');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, '{{rawString}}');
+                  f.appendText(' - the name as it was typed, before any other clean-up.');
+                  f.createEl('br');
+                  f.appendText('- ');
+                  appendCodeBlock(f, '{{date:FORMAT}}');
+                  f.appendText(' and ');
+                  appendCodeBlock(f, '{{time:FORMAT}}');
+                  f.createEl('br');
+                  f.appendText('With ');
+                  f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+                  f.appendText(' installed, the same values are available as ');
+                  appendCodeBlock(f, 'TOKENS.rawString');
+                  f.appendText(', which is how you write a mapping:');
+                  f.createEl('br');
+                  appendCodeBlock(f, '<% TOKENS.rawString.replaceAll(": ", " - ") %>');
+                  f.createEl('br');
+                  f.appendText('turns ');
+                  appendCodeBlock(f, 'A: B');
+                  f.appendText(' into ');
+                  appendCodeBlock(f, 'A - B');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('No note has to be open for that: ');
+                  appendCodeBlock(f, 'tp.file');
+                  f.appendText(' reports on the note you have open, or on the last one you opened or edited when you have none.');
+                  f.createEl('br');
+                  f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
+                  appendCodeBlock(f, 'Create folder with notes...');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Characters the rewrite leaves invalid are handled by ');
+                  appendCodeBlock(f, 'Should replace invalid characters');
+                  f.appendText(' below: turn it off to have such names refused instead of replaced.');
+                }),
+                name: 'Name transform template',
+                render: (setting) => {
+                  setting.addCodeHighlighter((codeHighlighter) => {
+                    codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                    this.bind({ propertyName: 'nameTransformTemplate', valueComponent: codeHighlighter });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Whether to replace invalid characters in the title.');
+                  f.createEl('br');
+                  f.appendText('If disabled, the error will be shown for invalid titles.');
+                }),
+                name: 'Should replace invalid characters',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({
+                      onChanged: () => {
+                        // Only the replacement-string row reads this value, through its `disabled` predicate.
+                        this.refreshDomState();
+                      },
+                      propertyName: 'shouldReplaceInvalidTitleCharacters',
+                      valueComponent: toggle
+                    });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('String to replace invalid characters with.');
+                  f.createEl('br');
+                  f.appendText('Leave blank to remove invalid characters.');
+                }),
+                disabled: () => !this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters,
+                name: 'Replacement string',
+                render: (setting) => {
+                  setting.addText((text) => {
+                    this.bind({
+                      propertyName: 'replacement',
+                      shouldResetSettingWhenComponentIsEmpty: false,
+                      valueComponent: text
+                    });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Default setting for whether to treat title as path. Can be changed in the merge/split modal dialog.');
+                  f.createEl('br');
+                  f.appendText('If enabled, the title ');
+                  appendCodeBlock(f, 'foo/bar/baz');
+                  f.appendText(' will be treated as ');
+                  appendCodeBlock(f, 'foo/bar/baz.md');
+                  f.appendText(' path.');
+                  f.createEl('br');
+                  f.appendText('If disabled, the title ');
+                  appendCodeBlock(f, 'foo/bar/baz');
+                  f.appendText(' will be treated as ');
+                  appendCodeBlock(f, 'foo_bar_baz.md');
+                  f.appendText(' path.');
+                  f.createEl('br');
+                  f.appendText('When using ');
+                  appendCodeBlock(f, 'Split note by headings/content');
+                  f.appendText(' commands, the setting will be treated as disabled.');
+                }),
+                name: 'Should treat title as path',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldTreatTitleAsPathByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('How to handle the title property in the frontmatter.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'None');
+                  f.appendText(' - do not add the title property to the frontmatter.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Use for invalid title only');
+                  f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Use always');
+                  f.appendText(' - add the title property to the frontmatter always.');
+                }),
+                name: 'Frontmatter title mode',
+                render: (setting) => {
+                  setting.addDropdown((dropdown) => {
+                    dropdown.addOptions({
+                      /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                      [FrontmatterTitleMode.None]: 'None',
+                      [FrontmatterTitleMode.UseForInvalidTitleOnly]: 'Use for invalid title only',
+                      [FrontmatterTitleMode.UseAlways]: 'Use always'
+                      /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+                    });
+                    this.bind({ propertyName: 'frontmatterTitleMode', valueComponent: dropdown });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('When merging, if the destination note (note B) has no ');
+                  appendCodeBlock(f, 'title');
+                  f.appendText(' property, use the ');
+                  appendCodeBlock(f, 'title');
+                  f.appendText(' from the merged-in note (note A) instead of leaving it empty.');
+                  f.createEl('br');
+                  f.appendText('When the destination note already has a ');
+                  appendCodeBlock(f, 'title');
+                  f.appendText(', it is always kept.');
+                }),
+                name: 'Should use source title when destination has none',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldUseSourceTitleWhenTargetHasNoTitle', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Whether to add invalid title to the note alias.',
+                name: 'Should add invalid title to note aliases',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldAddInvalidTitleToNoteAlias', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
           }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('How to handle the title property in the frontmatter.');
-              f.createEl('br');
-              appendCodeBlock(f, 'None');
-              f.appendText(' - do not add the title property to the frontmatter.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Use for invalid title only');
-              f.appendText(' - add the title property to the frontmatter only if the title is cannot be used as a filename.');
-              f.createEl('br');
-              appendCodeBlock(f, 'Use always');
-              f.appendText(' - add the title property to the frontmatter always.');
-            }),
-            name: 'Frontmatter title mode',
-            render: (setting) => {
-              setting.addDropdown((dropdown) => {
-                dropdown.addOptions({
-                  /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
-                  [FrontmatterTitleMode.None]: 'None',
-                  [FrontmatterTitleMode.UseForInvalidTitleOnly]: 'Use for invalid title only',
-                  [FrontmatterTitleMode.UseAlways]: 'Use always'
-                  /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
-                });
-                this.bind({ propertyName: 'frontmatterTitleMode', valueComponent: dropdown });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When merging, if the destination note (note B) has no ');
-              appendCodeBlock(f, 'title');
-              f.appendText(' property, use the ');
-              appendCodeBlock(f, 'title');
-              f.appendText(' from the merged-in note (note A) instead of leaving it empty.');
-              f.createEl('br');
-              f.appendText('When the destination note already has a ');
-              appendCodeBlock(f, 'title');
-              f.appendText(', it is always kept.');
-            }),
-            name: 'Should use source title when destination has none',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldUseSourceTitleWhenTargetHasNoTitle', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'Whether to add invalid title to the note alias.',
-            name: 'Should add invalid title to note aliases',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldAddInvalidTitleToNoteAlias', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: 'Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.',
-            name: 'Should include frontmatter when splitting',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldIncludeFrontmatterWhenSplittingByDefault', valueComponent: toggle });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('When the extracted selection lies entirely inside the note\'s properties, extract it as ');
-              f.appendText('properties: they are merged into the destination note\'s own properties through the ');
-              appendCodeBlock(f, 'Frontmatter merge strategy');
-              f.appendText(', instead of being pasted into its body as raw text.');
-              f.createEl('br');
-              f.appendText('Every property line the selection touches is taken in full, together with the property it belongs to, ');
-              f.appendText('so selecting two ');
-              appendCodeBlock(f, 'aliases');
-              f.appendText(' values moves them across as ');
-              appendCodeBlock(f, 'aliases');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Smart cut & paste moves are unaffected: they insert at the cursor you place in the note\'s body.');
-            }),
-            name: 'Should extract a properties selection as properties',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldExtractFrontmatterSelectionAsProperties', valueComponent: toggle });
-              });
-            }
+          this.settingGroupEx({
+            heading: 'Frontmatter',
+            items: [
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Default frontmatter merge strategy to use when merging notes. Can be changed in the merge/split modal dialog.');
+                  f.createEl('br');
+                  f.appendText('When merging frontmatter values from note A to note B:');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Merge and prefer new values');
+                  f.appendText(' - copy values from A to B that were not in B yet, and overwrite existing values in B with values from A.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Merge and prefer original values');
+                  f.appendText(' - copy values from A to B that were not in B yet, and keep existing values in B.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Keep original frontmatter');
+                  f.appendText(' - keep existing values in B, and ignore values from A.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Replace with new frontmatter');
+                  f.appendText(' - remove existing values in B, and copy values from A to B.');
+                  f.createEl('br');
+                  appendCodeBlock(f, 'Preserve both original and new frontmatter');
+                  f.appendText(' - copies new frontmatter from A into a separate frontmatter key in B.');
+                }),
+                name: 'Frontmatter merge strategy',
+                render: (setting) => {
+                  setting.addDropdown((dropdown) => {
+                    dropdown.addOptions({
+                      /* eslint-disable perfectionist/sort-objects -- Need to keep order. */
+                      [FrontmatterMergeStrategy.MergeAndPreferNewValues]: 'Merge and prefer new values',
+                      [FrontmatterMergeStrategy.MergeAndPreferOriginalValues]: 'Merge and prefer original values',
+                      [FrontmatterMergeStrategy.KeepOriginalFrontmatter]: 'Keep original frontmatter',
+                      [FrontmatterMergeStrategy.ReplaceWithNewFrontmatter]: 'Replace with new frontmatter',
+                      [FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter]: 'Preserve both original and new frontmatter'
+                      /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
+                    });
+                    this.bind({ propertyName: 'defaultFrontmatterMergeStrategy', valueComponent: dropdown });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: 'Default setting for whether to include frontmatter when splitting. Can be changed in the split modal dialog.',
+                name: 'Should include frontmatter when splitting',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldIncludeFrontmatterWhenSplittingByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('When the extracted selection lies entirely inside the note\'s properties, extract it as ');
+                  f.appendText('properties: they are merged into the destination note\'s own properties through the ');
+                  appendCodeBlock(f, 'Frontmatter merge strategy');
+                  f.appendText(', instead of being pasted into its body as raw text.');
+                  f.createEl('br');
+                  f.appendText('Every property line the selection touches is taken in full, together with the property it belongs to, ');
+                  f.appendText('so selecting two ');
+                  appendCodeBlock(f, 'aliases');
+                  f.appendText(' values moves them across as ');
+                  appendCodeBlock(f, 'aliases');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Smart cut & paste moves are unaffected: they insert at the cursor you place in the note\'s body.');
+                }),
+                name: 'Should extract a properties selection as properties',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldExtractFrontmatterSelectionAsProperties', valueComponent: toggle });
+                  });
+                }
+              })
+            ]
           })
         ],
         name: 'Frontmatter'
-      }),
-      this.settingPage({
-        desc: 'How a name you type becomes the file name of the note it creates.',
-        items: [
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('How a name is rewritten before it is turned into a file name, so you can define your own replacements ');
-              f.appendText('instead of relying on the single replacement string below.');
-              f.createEl('br');
-              f.appendText('Leave empty to use the name as it was typed.');
-              f.createEl('br');
-              f.appendText('Available tokens:');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, '{{rawString}}');
-              f.appendText(' - the name as it was typed, before any other clean-up.');
-              f.createEl('br');
-              f.appendText('- ');
-              appendCodeBlock(f, '{{date:FORMAT}}');
-              f.appendText(' and ');
-              appendCodeBlock(f, '{{time:FORMAT}}');
-              f.createEl('br');
-              f.appendText('With ');
-              f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
-              f.appendText(' installed, the same values are available as ');
-              appendCodeBlock(f, 'TOKENS.rawString');
-              f.appendText(', which is how you write a mapping:');
-              f.createEl('br');
-              appendCodeBlock(f, '<% TOKENS.rawString.replaceAll(": ", " - ") %>');
-              f.createEl('br');
-              f.appendText('turns ');
-              appendCodeBlock(f, 'A: B');
-              f.appendText(' into ');
-              appendCodeBlock(f, 'A - B');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('No note has to be open for that: ');
-              appendCodeBlock(f, 'tp.file');
-              f.appendText(' reports on the note you have open, or on the last one you opened or edited when you have none.');
-              f.createEl('br');
-              f.appendText('Applies everywhere a name becomes a file name: split and extract targets, the merged note name, and ');
-              appendCodeBlock(f, 'Create folder with notes...');
-              f.appendText('.');
-              f.createEl('br');
-              f.appendText('Characters the rewrite leaves invalid are handled by ');
-              appendCodeBlock(f, 'Should replace invalid characters');
-              f.appendText(' below: turn it off to have such names refused instead of replaced.');
-            }),
-            name: 'Name transform template',
-            render: (setting) => {
-              setting.addCodeHighlighter((codeHighlighter) => {
-                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'nameTransformTemplate', valueComponent: codeHighlighter });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Whether to replace invalid characters in the title.');
-              f.createEl('br');
-              f.appendText('If disabled, the error will be shown for invalid titles.');
-            }),
-            name: 'Should replace invalid characters',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({
-                  onChanged: () => {
-                    // Only the replacement-string row reads this value, through its `disabled` predicate.
-                    this.refreshDomState();
-                  },
-                  propertyName: 'shouldReplaceInvalidTitleCharacters',
-                  valueComponent: toggle
-                });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('String to replace invalid characters with.');
-              f.createEl('br');
-              f.appendText('Leave blank to remove invalid characters.');
-            }),
-            disabled: () => !this.pluginSettingsComponent.settings.shouldReplaceInvalidTitleCharacters,
-            name: 'Replacement string',
-            render: (setting) => {
-              setting.addText((text) => {
-                this.bind({
-                  propertyName: 'replacement',
-                  shouldResetSettingWhenComponentIsEmpty: false,
-                  valueComponent: text
-                });
-              });
-            }
-          }),
-          this.settingEx({
-            desc: createFragment((f) => {
-              f.appendText('Default setting for whether to treat title as path. Can be changed in the merge/split modal dialog.');
-              f.createEl('br');
-              f.appendText('If enabled, the title ');
-              appendCodeBlock(f, 'foo/bar/baz');
-              f.appendText(' will be treated as ');
-              appendCodeBlock(f, 'foo/bar/baz.md');
-              f.appendText(' path.');
-              f.createEl('br');
-              f.appendText('If disabled, the title ');
-              appendCodeBlock(f, 'foo/bar/baz');
-              f.appendText(' will be treated as ');
-              appendCodeBlock(f, 'foo_bar_baz.md');
-              f.appendText(' path.');
-              f.createEl('br');
-              f.appendText('When using ');
-              appendCodeBlock(f, 'Split note by headings/content');
-              f.appendText(' commands, the setting will be treated as disabled.');
-            }),
-            name: 'Should treat title as path',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                this.bind({ propertyName: 'shouldTreatTitleAsPathByDefault', valueComponent: toggle });
-              });
-            }
-          })
-        ],
-        name: 'Title'
       }),
       this.settingPage({
         desc: 'Which of the two editor context menus offers each command — one command at a time.',

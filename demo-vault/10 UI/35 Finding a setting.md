@@ -5,9 +5,10 @@ This plugin has a lot of settings, and a single long scroll through all of them 
 ## Try it
 
 1. Open `Settings -> Advanced Note Composer`.
-2. You get a list of pages rather than a wall of settings: `Merge`, `Split/extract`, `Select`, `Swap`, `Smart cut & paste`, `Frontmatter`, `Title`, the folder pages, `Rename`, `Reorder` and `UI`.
+2. You get a list of pages rather than a wall of settings: `Merge`, `Split/extract`, `Select`, `Swap`, `Smart cut & paste`, `Frontmatter`, the folder pages, `Rename`, `Reorder` and `UI`.
 3. Click `Merge`. Inside it, subheadings separate the settings by **which command they apply to** — `All merges` for the ones every merge honors, then `Merge file`, `Merge folder contents into a single file` and `Merge current folder with another folder`, and finally `Merge include/exclude paths` for the four path boxes that decide where the merge commands work and where they are offered.
 4. Go back and try `Smart cut & paste`, which splits the same way: `Notice`, then one group per destination (`At cursor`, `To top of file`, `To bottom of file`), then its own `Smart cut & paste include/exclude paths`.
+5. Go back and open `Frontmatter`, whose two groups divide by **topic** instead: `Title` for everything about the name you type — how it becomes a file name, and how it is kept as an alias or a `title` property when it cannot — then `Frontmatter` for what happens to the property block itself.
 
 ## Why a subheading names a whole command
 

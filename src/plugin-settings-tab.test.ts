@@ -200,9 +200,10 @@ describe('PluginSettingsTab', () => {
       'page:Select',
       'page:Swap',
       'page:Smart cut & paste',
-      // Its own page rather than rows scattered across three others (issue #223).
+      // Its own page rather than rows scattered across three others (issue #223). Issue #272 folded the
+      // `Title` page into it — two adjacent entries the reporter read as one section — so there is one
+      // Entry here where there were two.
       'page:Frontmatter',
-      'page:Title',
       // Its own page since issue #254: thirty commands, each with two toggles, would swamp any page that
       // Also had to hold something else.
       'page:Command menu placement',
@@ -239,7 +240,10 @@ describe('PluginSettingsTab', () => {
       // Issue #271 moved the `Create` category's path rows here, under their own heading.
       'Create': ['Create include/exclude paths'],
       'Folder note': [],
-      'Frontmatter': [],
+      // Issue #272 merged the `Title` page in, and the merged page groups by TOPIC rather than by which
+      // Page a row came from: `Title` leads, because the rows that shape a file name are what the frontmatter
+      // `title` rows exist to preserve.
+      'Frontmatter': ['Title', 'Frontmatter'],
       // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
       // Six of its ten rows silently meant only the one their descriptions named. Issue #271 added the
       // Path group at the end.
@@ -263,7 +267,6 @@ describe('PluginSettingsTab', () => {
       // Shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
       // The folder rows name their own target type — so the headings only mislabelled the first row.
       'Swap': ['Swap include/exclude paths'],
-      'Title': [],
       'UI': []
     });
   });
@@ -377,6 +380,10 @@ describe('PluginSettingsTab', () => {
       'To top of file',
       'To bottom of file',
       'Smart cut & paste include/exclude paths',
+      // The two groups issue #272 gave the merged `Frontmatter` page. `Frontmatter` names both a page and a
+      // Group on it, which is why this list checks headings only — the page entry is pinned separately.
+      'Title',
+      'Frontmatter',
       'Split/extract command menus',
       'Select command menus',
       'Create command menus',
@@ -413,16 +420,27 @@ describe('PluginSettingsTab', () => {
     expect(offenders).toEqual([]);
   });
 
-  // Issue #223 named no settings, only screenshots — these six are everything that reads or writes
-  // Frontmatter, drawn out of three headers that each held a couple of them.
-  it('should gather the frontmatter settings onto their own page', async () => {
+  // Issue #223 named no settings, only screenshots — six rows that read or write frontmatter, drawn out of
+  // Three headers that each held a couple of them. Issue #272 merged the `Title` page into that page and
+  // Split the ten rows by TOPIC, so `collectContainers` keys by the two GROUP headings now rather than by
+  // The page: three of the six moved under `Title`, which is where the demo vault already documented two of
+  // Them. Both lists are asserted, because a row dropped in the move would otherwise leave one of them
+  // Passing on its own.
+  it('should split the merged frontmatter page into a title group and a frontmatter group', async () => {
     const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
 
-    expect(collectContainers(tab).get('Frontmatter')).toEqual([
-      'Frontmatter merge strategy',
+    expect(containers.get('Title')).toEqual([
+      'Name transform template',
+      'Should replace invalid characters',
+      'Replacement string',
+      'Should treat title as path',
       'Frontmatter title mode',
       'Should use source title when destination has none',
-      'Should add invalid title to note aliases',
+      'Should add invalid title to note aliases'
+    ]);
+    expect(containers.get('Frontmatter')).toEqual([
+      'Frontmatter merge strategy',
       'Should include frontmatter when splitting',
       'Should extract a properties selection as properties'
     ]);
