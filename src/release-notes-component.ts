@@ -50,6 +50,18 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText(' pages for the two that had none.');
         f.createEl('br');
         f.appendText('The four boxes that covered every command at once have been retired. Whatever you had listed in them was copied into every command\'s own boxes, so nothing changes until you edit them.');
+        f.createEl('br');
+        // Issue #272 moves no setting VALUE, but it does remove an entry the user navigates by, which is
+        // The same thing to anyone looking for a row where they last saw it.
+        f.appendText('The ');
+        appendCodeBlock(f, 'Title');
+        f.appendText(' settings page has been merged into ');
+        appendCodeBlock(f, 'Frontmatter');
+        f.appendText(', where its rows now sit under a ');
+        appendCodeBlock(f, 'Title');
+        f.appendText(' heading together with the three that write the frontmatter ');
+        appendCodeBlock(f, 'title');
+        f.appendText('. Every setting keeps its value.');
       })
     };
 

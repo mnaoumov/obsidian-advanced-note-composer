@@ -55,7 +55,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldMergeHeadingsByDefault`
   - merge under a matching heading in the target instead of appending, by default. On `Merge/split/extract strategies`, because splitting reads it too.
 - `shouldUseSourceTitleWhenTargetHasNoTitle`
-  - give the merged note the source's title when the target has none of its own. On the `Frontmatter` page with the rest of the property handling.
+  - give the merged note the source's title when the target has none of its own. On the `Frontmatter` page, under its `Title` group with the rest of the title handling.
 
 ## Split and extract
 
@@ -138,23 +138,27 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 
 ## Frontmatter
 
-- `defaultFrontmatterMergeStrategy`
-  - how two notes' properties are reconciled — see [30 Frontmatter merge strategy](<../09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>).
+One page, two groups: `Title` covers the name you type and everything that preserves it when a file name cannot hold it, `Frontmatter` what happens to the property block itself.
 
-## Title
+### Title
 
+- `nameTransformTemplate`
+  - your own mapping, applied before anything else — see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
 - `shouldReplaceInvalidTitleCharacters`
   - replace characters a file name cannot hold, instead of refusing the operation.
 - `replacement`
   - the string each such character becomes.
-- `nameTransformTemplate`
-  - your own mapping, applied before anything else — see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
-- `shouldAddInvalidTitleToNoteAlias`
-  - keep the original title reachable as an alias.
-- `frontmatterTitleMode`
-  - when to write the original title into a frontmatter `title` property.
 - `shouldTreatTitleAsPathByDefault`
   - turn a title containing `/` into a real folder path.
+- `frontmatterTitleMode`
+  - when to write the original title into a frontmatter `title` property.
+- `shouldAddInvalidTitleToNoteAlias`
+  - keep the original title reachable as an alias.
+
+### Frontmatter
+
+- `defaultFrontmatterMergeStrategy`
+  - how two notes' properties are reconciled — see [30 Frontmatter merge strategy](<../09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>).
 
 ## Include and exclude
 

@@ -15,6 +15,8 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface NavigationResult {
+  readonly frontmatterRows: string[];
+  readonly frontmatterSubheadings: string[];
   readonly mergeFolderRows: string[];
   readonly mergeSubheadings: string[];
   readonly onOpen: string[];
@@ -114,9 +116,44 @@ describe('settings page navigation', () => {
 
         app.setting.closePage();
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        // Issue #272: the page that ABSORBED another one. The unit test can pin the declared groups, but
+        // Only Obsidian can say whether the rows moved with them — a row is not in the DOM until its page
+        // Is opened, so the wait below is itself the proof that `Name transform template` left the retired
+        // `Title` page.
+        const frontmatterEntry = findRow('Frontmatter');
+        if (!frontmatterEntry) {
+          throw new Error('The `Frontmatter` page entry was not found.');
+        }
+
+        frontmatterEntry.click();
+        await waitUntil({
+          message: 'the `Frontmatter` page did not open',
+          predicate: () => findRow('Name transform template') !== null
+        });
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+        const frontmatterSubheadings = collectSubheadings();
+        const frontmatterRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
+          .map((el) => el.textContent)
+          .filter((name) => name !== '');
+
+        app.setting.closePage();
+        await sleep(RENDER_DELAY_IN_MILLISECONDS);
         app.setting.close();
 
-        return { mergeFolderRows, mergeSubheadings, onOpen, pageDescription, smartCutRows, smartCutSubheadings, swapRows, swapSubheadings };
+        return {
+          frontmatterRows,
+          frontmatterSubheadings,
+          mergeFolderRows,
+          mergeSubheadings,
+          onOpen,
+          pageDescription,
+          smartCutRows,
+          smartCutSubheadings,
+          swapRows,
+          swapSubheadings
+        };
 
         // A heading is a `.setting-item-heading` inside the page's `.setting-group`, NOT the group itself:
         // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
@@ -158,6 +195,10 @@ describe('settings page navigation', () => {
     expect(result.onOpen).not.toContain('Include/exclude');
     expect(result.onOpen).toContain('Select');
     expect(result.onOpen).toContain('Rename');
+    // Issue #272: `Title` is no longer an entry of its own — it is a heading INSIDE `Frontmatter` now, and a
+    // Heading is not in the DOM until its page is opened, which is what makes this assertion meaningful
+    // Rather than vacuous.
+    expect(result.onOpen).not.toContain('Title');
     expect(result.onOpen).not.toContain('Merge folders');
     expect(result.onOpen).not.toContain('Command include/exclude paths');
     // A row that lives inside a page is genuinely absent until that page is opened.
@@ -204,6 +245,27 @@ describe('settings page navigation', () => {
       'Swap exclude paths',
       'Swap command include paths',
       'Swap command exclude paths'
+    ]);
+
+    // Issue #272: the merged page renders both groups, `Title` first, and the four rows of the retired
+    // `Title` page really are on it — the row list is asserted in full, because a regroup that dropped a row
+    // Would still produce the right two headings.
+    expect(result.frontmatterSubheadings).toEqual(['Title', 'Frontmatter']);
+    expect(result.frontmatterRows).toEqual([
+      'Title',
+      'Name transform template',
+      'Should replace invalid characters',
+      'Replacement string',
+      'Should treat title as path',
+      // The three that moved off the old frontmatter set: they write or read the frontmatter `title`, which
+      // Is what the rows above exist to preserve when a name cannot become a file name.
+      'Frontmatter title mode',
+      'Should use source title when destination has none',
+      'Should add invalid title to note aliases',
+      'Frontmatter',
+      'Frontmatter merge strategy',
+      'Should include frontmatter when splitting',
+      'Should extract a properties selection as properties'
     ]);
 
     // Issue #243: the lock row moved here off `Split/extract`, and it sits FLAT above the groups because
