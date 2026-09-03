@@ -24,27 +24,22 @@ import {
 
 interface CreateComponentParams {
   /**
-   * The baseline list that covers every command.
-   */
-  readonly commandExcludePaths?: string[];
-
-  /**
-   * The content filter, which must never decide command visibility on its own (issue #198).
-   */
-  readonly excludePaths?: string[];
-
-  /**
-   * One category's own list, used to prove the helpers pass the asking command's category through
-   * (issue #249).
+   * The Merge category's own visibility list (issue #249), which since issue #271 is the whole of what
+   * decides whether a merge command is offered on a path.
    */
   readonly mergeCommandExcludePaths?: string[];
+
+  /**
+   * The Merge category's content filter, which must never decide command visibility on its own
+   * (issue #198).
+   */
+  readonly mergeExcludePaths?: string[];
 }
 
 function createComponent(params: CreateComponentParams = {}): PluginSettingsComponent {
   const settings = new PluginSettings();
-  settings.commandExcludePaths = params.commandExcludePaths ?? [];
-  settings.excludePaths = params.excludePaths ?? [];
   settings.mergeCommandExcludePaths = params.mergeCommandExcludePaths ?? [];
+  settings.mergeExcludePaths = params.mergeExcludePaths ?? [];
   return strictProxy<PluginSettingsComponent>({ settings });
 }
 
@@ -55,12 +50,12 @@ function createContext(path: null | string): MarkdownFileInfo {
 
 describe('isEditorCommandBlocked', () => {
   it('should block when the active path is in the command exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ commandExcludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext('secret/note.md'), pluginSettingsComponent })).toBe(true);
   });
 
   it('should not block when the active path is not in the command exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ commandExcludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext('public/note.md'), pluginSettingsComponent })).toBe(false);
   });
 
@@ -72,12 +67,12 @@ describe('isEditorCommandBlocked', () => {
   // Issue #198: the two filters are independent, so merely excluding a path from merges/splits must NOT
   // Hide its commands — they stay visible and refuse with a notice on trigger.
   it('should not block a path that is only in the content exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ excludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext('secret/note.md'), pluginSettingsComponent })).toBe(false);
   });
 
   it('should not block when there is no active file', () => {
-    const pluginSettingsComponent = createComponent({ commandExcludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext(null), pluginSettingsComponent })).toBe(false);
   });
 
@@ -92,7 +87,7 @@ describe('isEditorCommandBlocked', () => {
 
 describe('isFileOrFolderCommandBlocked', () => {
   it('should block when the path is in the command exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ commandExcludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(
       isFileOrFolderCommandBlocked({
         abstractFile: strictProxy<TAbstractFile>({ path: 'secret/folder' }),
@@ -103,7 +98,7 @@ describe('isFileOrFolderCommandBlocked', () => {
   });
 
   it('should not block when the path is not in the command exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ commandExcludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(
       isFileOrFolderCommandBlocked({
         abstractFile: strictProxy<TAbstractFile>({ path: 'public/folder' }),
@@ -125,7 +120,7 @@ describe('isFileOrFolderCommandBlocked', () => {
   });
 
   it('should not block a path that is only in the content exclude paths', () => {
-    const pluginSettingsComponent = createComponent({ excludePaths: ['secret'] });
+    const pluginSettingsComponent = createComponent({ mergeExcludePaths: ['secret'] });
     expect(
       isFileOrFolderCommandBlocked({
         abstractFile: strictProxy<TAbstractFile>({ path: 'secret/folder' }),

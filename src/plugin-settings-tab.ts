@@ -13,13 +13,10 @@ import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { EMPTY } from 'obsidian-dev-utils/string';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { MenuPlaceableCommand } from './menu-placeable-commands.ts';
-import type {
-  CommandCategoryContentPathsSettingName,
-  CommandCategoryPathsSettingName,
-  PluginSettings
-} from './plugin-settings.ts';
+import type { PluginSettings } from './plugin-settings.ts';
 
 import {
   isMenuIncludedInPlacement,
@@ -32,6 +29,7 @@ import {
 } from './menu-placeable-commands.ts';
 import {
   Action,
+  COMMAND_CATEGORY_PATH_SETTING_NAMES,
   CommandCategory,
   EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
@@ -44,111 +42,47 @@ import {
 } from './plugin-settings.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language-component.ts';
 
-interface CommandCategorySettingGroupDefinition {
-  /**
-   * The category, which is also the group's heading and the prefix of its two row names.
-   */
-  readonly commandCategory: CommandCategory;
-
-  /**
-   * The commands the category covers, named the way the command palette names them, so the group answers
-   * "is the command I mean in here?" without a trip to the docs.
-   */
-  readonly commandsDesc: string;
-
-  /**
-   * The category's own CONTENT lists (issue #270) — what these commands may TOUCH on a path, as opposed
-   * to whether they are offered there.
-   *
-   * Absent on `Select` alone, which has no content pair because a select writes nothing and never
-   * consults the content filter; `plugin-settings.ts` carries the full reasoning. Optional rather than
-   * required so that omission is expressible instead of forcing two rows wired to nothing.
-   */
-  readonly contentExcludePathsPropertyName?: CommandCategoryContentPathsSettingName;
-  readonly contentIncludePathsPropertyName?: CommandCategoryContentPathsSettingName;
-
-  readonly excludePathsPropertyName: CommandCategoryPathsSettingName;
-  readonly includePathsPropertyName: CommandCategoryPathsSettingName;
-}
-
 /**
- * The nine per-category groups of the `Include/exclude` page (issue #249), in the order they are listed.
+ * What each {@link CommandCategory}'s path rows cover, named the way the command palette names the
+ * commands, so a row answers "is the command I mean in here?" without a trip to the docs.
  *
- * One entry per {@link CommandCategory} — `plugin-settings-tab.test.ts` fails when a category has no group
- * here, which is what keeps a category from being added to the enum and never reaching the UI.
+ * Since issue #271 those rows live on the category's OWN settings page rather than together on one
+ * `Include/exclude` page, so this text is what tells a reader of, say, the `Merge` page that the four
+ * boxes at the bottom of it govern all four merge commands and nothing else.
+ *
+ * One entry per category — `plugin-settings-tab.test.ts` fails when a category has none, which is what
+ * keeps a category from being added to the enum and never reaching the UI. The settings behind them are
+ * named by `COMMAND_CATEGORY_PATH_SETTING_NAMES`, which the legacy-settings converter reads too.
  */
-const COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS: readonly CommandCategorySettingGroupDefinition[] = [
-  {
-    commandCategory: CommandCategory.Merge,
-    commandsDesc: 'Merge current file with another file..., Merge these files into one file..., Merge current folder with another folder... and Merge folder contents into a single file...',
-    contentExcludePathsPropertyName: 'mergeExcludePaths',
-    contentIncludePathsPropertyName: 'mergeIncludePaths',
-    excludePathsPropertyName: 'mergeCommandExcludePaths',
-    includePathsPropertyName: 'mergeCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.SplitAndExtract,
-    commandsDesc: 'Every extract command, Split note by headings... at any level, and the two recursive splits',
-    contentExcludePathsPropertyName: 'splitExcludePaths',
-    contentIncludePathsPropertyName: 'splitIncludePaths',
-    excludePathsPropertyName: 'splitCommandExcludePaths',
-    includePathsPropertyName: 'splitCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Select,
-    commandsDesc: 'Select this heading, Select this heading\'s content, Select before cursor, Select after cursor, Select between horizontal rules and the three Selection anchor commands',
-    excludePathsPropertyName: 'selectCommandExcludePaths',
-    includePathsPropertyName: 'selectCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Create,
-    commandsDesc: 'Create empty note at cursor..., Create empty note in folder... and Create folder with notes...',
-    contentExcludePathsPropertyName: 'createExcludePaths',
-    contentIncludePathsPropertyName: 'createIncludePaths',
-    excludePathsPropertyName: 'createCommandExcludePaths',
-    includePathsPropertyName: 'createCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.SmartCutAndPaste,
-    commandsDesc: 'Mark selection to move, Mark heading to move, and the three moves that paste a marked selection',
-    contentExcludePathsPropertyName: 'smartCutAndPasteExcludePaths',
-    contentIncludePathsPropertyName: 'smartCutAndPasteIncludePaths',
-    excludePathsPropertyName: 'smartCutAndPasteCommandExcludePaths',
-    includePathsPropertyName: 'smartCutAndPasteCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Swap,
-    commandsDesc: 'Swap current file with another file..., Swap current folder with another folder..., Mark selection to swap and Swap with marked selection',
-    contentExcludePathsPropertyName: 'swapExcludePaths',
-    contentIncludePathsPropertyName: 'swapIncludePaths',
-    excludePathsPropertyName: 'swapCommandExcludePaths',
-    includePathsPropertyName: 'swapCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.MoveAndFlatten,
-    commandsDesc: 'Move folder... and the three flatten commands',
-    contentExcludePathsPropertyName: 'moveAndFlattenExcludePaths',
-    contentIncludePathsPropertyName: 'moveAndFlattenIncludePaths',
-    excludePathsPropertyName: 'moveAndFlattenCommandExcludePaths',
-    includePathsPropertyName: 'moveAndFlattenCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Rename,
-    commandsDesc: 'Rename folder... and Rename heading',
-    contentExcludePathsPropertyName: 'renameExcludePaths',
-    contentIncludePathsPropertyName: 'renameIncludePaths',
-    excludePathsPropertyName: 'renameCommandExcludePaths',
-    includePathsPropertyName: 'renameCommandIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Reorder,
-    commandsDesc: 'Reorder headings, Reorder sibling folders and Reorder child folders',
-    contentExcludePathsPropertyName: 'reorderExcludePaths',
-    contentIncludePathsPropertyName: 'reorderIncludePaths',
-    excludePathsPropertyName: 'reorderCommandExcludePaths',
-    includePathsPropertyName: 'reorderCommandIncludePaths'
-  }
-];
+const COMMAND_CATEGORY_COMMANDS_DESCRIPTIONS: ReadonlyMap<CommandCategory, string> = new Map([
+  [
+    CommandCategory.Create,
+    'Create empty note at cursor..., Create empty note in folder... and Create folder with notes...'
+  ],
+  [
+    CommandCategory.Merge,
+    'Merge current file with another file..., Merge these files into one file..., Merge current folder with another folder... and Merge folder contents into a single file...'
+  ],
+  [CommandCategory.MoveAndFlatten, 'Move folder... and the three flatten commands'],
+  [CommandCategory.Rename, 'Rename folder... and Rename heading'],
+  [CommandCategory.Reorder, 'Reorder headings, Reorder sibling folders and Reorder child folders'],
+  [
+    CommandCategory.Select,
+    'Select this heading, Select this heading\'s content, Select before cursor, Select after cursor, Select between horizontal rules and the three Selection anchor commands'
+  ],
+  [
+    CommandCategory.SmartCutAndPaste,
+    'Mark selection to move, Mark heading to move, and the three moves that paste a marked selection'
+  ],
+  [
+    CommandCategory.SplitAndExtract,
+    'Every extract command, Split note by headings... at any level, and the two recursive splits'
+  ],
+  [
+    CommandCategory.Swap,
+    'Swap current file with another file..., Swap current folder with another folder..., Mark selection to swap and Swap with marked selection'
+  ]
+]);
 
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
@@ -295,9 +229,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.appendText('.');
                   f.createEl('br');
                   f.appendText('Where a merge is offered in the first place is a separate question again, decided by ');
-                  appendCodeBlock(f, 'Command include paths');
+                  appendCodeBlock(f, 'Merge command include paths');
                   f.appendText(' / ');
-                  appendCodeBlock(f, 'Command exclude paths');
+                  appendCodeBlock(f, 'Merge command exclude paths');
                   f.appendText('. This setting never puts a command back on an excluded note or folder; it decides what happens to the excluded items a merge would touch.');
                 }),
                 name: 'Should always merge excluded items',
@@ -635,7 +569,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 }
               })
             ]
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.Merge)
         ],
         name: 'Merge'
       }),
@@ -1095,9 +1030,21 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit', valueComponent: toggle });
               });
             }
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.SplitAndExtract)
         ],
         name: 'Split/extract'
+      }),
+      this.settingPage({
+        /*
+         * The select commands' own page since issue #271, sitting next to `Split/extract` because they
+         * share its ranges. It holds TWO rows rather than four, and nothing else: a select writes nothing,
+         * so it never consults the content filter and has no content pair to show. With nothing else on
+         * the page the rows sit on it directly, without a heading.
+         */
+        desc: 'Where the select commands are offered. They only move the caret, so there is nothing for them to include or exclude as content.',
+        items: this.commandCategoryPathSettings(CommandCategory.Select),
+        name: 'Select'
       }),
       this.settingPage({
         desc: 'Swapping exchanges two files or two folders, each taking the other\'s place.',
@@ -1148,7 +1095,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldSwapEntireFolderStructureByDefault', valueComponent: toggle });
               });
             }
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.Swap)
         ],
         name: 'Swap'
       }),
@@ -1440,7 +1388,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 }
               })
             ]
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.SmartCutAndPaste)
         ],
         name: 'Smart cut & paste'
       }),
@@ -1708,130 +1657,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Command menu placement'
       }),
       this.settingPage({
-        desc: 'Which paths this plugin works on, and where its commands are offered — all of them, or one category at a time.',
-        items: [
-          this.settingGroupEx({
-            heading: 'Paths',
-            items: [
-              this.settingEx({
-                desc: createFragment((f) => {
-                  f.appendText('In merge/split dialog include notes from the following paths');
-                  f.createEl('br');
-                  f.appendText('Insert each path on a new line');
-                  f.createEl('br');
-                  f.appendText('You can use path string or ');
-                  appendCodeBlock(f, '/regular expression/');
-                  f.createEl('br');
-                  appendPathFormsDesc(f);
-                  f.createEl('br');
-                  f.appendText('If the setting is empty, all notes are included');
-                }),
-                name: 'Include paths',
-                render: (setting) => {
-                  setting.addMultipleText((multipleText) => {
-                    this.bind({ propertyName: 'includePaths', valueComponent: multipleText });
-                  });
-                }
-              }),
-              this.settingEx({
-                desc: createFragment((f) => {
-                  f.appendText('In merge/split dialog exclude notes from the following paths');
-                  f.createEl('br');
-                  f.appendText('Insert each path on a new line');
-                  f.createEl('br');
-                  f.appendText('You can use path string or ');
-                  appendCodeBlock(f, '/regular expression/');
-                  f.createEl('br');
-                  appendPathFormsDesc(f);
-                  f.createEl('br');
-                  f.appendText('If the setting is empty, no notes are excluded');
-                  f.createEl('br');
-                  f.appendText(
-                    'An excluded item is also never MOVED by a folder operation: a folder merge skips it, and a flatten leaves it where it is, subtree included. That is independent of the '
-                  );
-                  appendCodeBlock(f, 'Command include/exclude paths');
-                  f.appendText(' settings below, which only decide whether the commands are offered at all');
-                  f.createEl('br');
-                  f.appendText('This is how to protect your attachment folder when ');
-                  /**
-                  HACK: see the TSDoc for {@link EMPTY} for motivation.
-                  */
-                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
-                  f.appendText(
-                    ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
-                  );
-                  appendCodeBlock(f, 'Files & Links > Default location for new attachments');
-                  f.appendText(' is recognized');
-                }),
-                name: 'Exclude paths',
-                render: (setting) => {
-                  setting.addMultipleText((multipleText) => {
-                    this.bind({ propertyName: 'excludePaths', valueComponent: multipleText });
-                  });
-                }
-              })
-            ]
-          }),
-          this.settingGroupEx({
-            heading: 'All commands',
-            items: [
-              this.settingEx({
-                desc: createFragment((f) => {
-                  f.appendText('Offer Advanced Note Composer commands only on notes and folders from the following paths');
-                  f.createEl('br');
-                  f.appendText('Insert each path on a new line');
-                  f.createEl('br');
-                  f.appendText('You can use path string or ');
-                  appendCodeBlock(f, '/regular expression/');
-                  f.createEl('br');
-                  appendPathFormsDesc(f);
-                  f.createEl('br');
-                  f.appendText('If the setting is empty, the commands are offered everywhere');
-                }),
-                name: 'Command include paths',
-                render: (setting) => {
-                  setting.addMultipleText((multipleText) => {
-                    this.bind({ propertyName: 'commandIncludePaths', valueComponent: multipleText });
-                  });
-                }
-              }),
-              this.settingEx({
-                desc: createFragment((f) => {
-                  f.appendText('Hide Advanced Note Composer commands on notes and folders from the following paths');
-                  f.createEl('br');
-                  f.appendText('Insert each path on a new line');
-                  f.createEl('br');
-                  f.appendText('You can use path string or ');
-                  appendCodeBlock(f, '/regular expression/');
-                  f.createEl('br');
-                  appendPathFormsDesc(f);
-                  f.createEl('br');
-                  f.appendText('If the setting is empty, no commands are hidden');
-                  f.createEl('br');
-                  f.appendText(
-                    'A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from '
-                  );
-                  appendCodeBlock(f, 'Include/exclude paths');
-                  f.appendText(
-                    ' on purpose: a path excluded there is still refused as a merge/split target and never moved, but its commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
-                  );
-                }),
-                name: 'Command exclude paths',
-                render: (setting) => {
-                  setting.addMultipleText((multipleText) => {
-                    this.bind({ propertyName: 'commandExcludePaths', valueComponent: multipleText });
-                  });
-                }
-              })
-            ]
-          }),
-          // One group per command category (issue #249), each narrowing what the pair above allows, so a
-          // Path can lose its merges and keep everything else.
-          ...COMMAND_CATEGORY_SETTING_GROUP_DEFINITIONS.map((definition) => this.commandCategorySettingGroup(definition))
-        ],
-        name: 'Include/exclude'
-      }),
-      this.settingPage({
         desc: 'Moving a folder into another one, and flattening a folder into its parent.',
         items: [
           this.settingEx({
@@ -1855,12 +1680,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldAskBeforeMovingFolder', valueComponent: toggle });
               });
             }
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.MoveAndFlatten)
         ],
         name: 'Move/flatten folders'
       }),
       this.settingPage({
-        desc: 'The folder that Create folder with notes creates, and the notes placed inside it.',
+        desc: 'The three create commands: the folder Create folder with notes creates and the notes placed inside it, plus where all three may create at all.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -2018,9 +1844,20 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldShowRenameButtonForCreatedNotes', valueComponent: toggle });
               });
             }
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.Create)
         ],
-        name: 'Create folder with notes'
+        // Renamed from `Create folder with notes` by issue #271: the page now also carries the path rows
+        // Of the whole `Create` category, which covers the two create-empty-note commands as well, so a
+        // Name that promised only the folder command would have under-sold half of it.
+        name: 'Create'
+      }),
+      this.settingPage({
+        // `Rename` holds nothing but its path rows, so they sit on the page directly rather than under a
+        // Heading — a separator with nothing to separate is noise.
+        desc: 'Where Rename folder... and Rename heading are offered, and what they may rename.',
+        items: this.commandCategoryPathSettings(CommandCategory.Rename),
+        name: 'Rename'
       }),
       this.settingPage({
         desc: 'Where this vault keeps the note that describes a folder, and what a rename or a reorder writes into it.',
@@ -2220,7 +2057,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({ propertyName: 'shouldIncludeFilesWhenReorderingByDefault', valueComponent: toggle });
               });
             }
-          })
+          }),
+          this.commandCategoryPathSettingGroup(CommandCategory.Reorder)
         ],
         name: 'Reorder'
       }),
@@ -2387,41 +2225,58 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   }
 
   /**
-   * The group that narrows ONE command category: FOUR rows, one pair per filter.
+   * One category's path rows under their own heading, for a page that also holds other settings.
    *
-   * - `<Category> include paths` / `<Category> exclude paths` (issue #270) narrow the CONTENT filter —
-   *   what these commands may touch. This is the pair the reporter of #270 attached a screenshot of, and the only
-   *   one that can drop a folder from a modal's candidate list.
-   * - `<Category> command include paths` / `<Category> command exclude paths` (issue #249) narrow the
-   *   VISIBILITY filter — whether these commands are offered at all.
+   * The heading is what separates the path boxes from the rest of the page; a page whose only content is
+   * these rows — `Rename` and `Select` — takes {@link commandCategoryPathSettings} directly instead,
+   * because a separator with nothing to separate is noise.
    *
-   * The content pair comes first, mirroring the page's own order: the `Paths` group above holds the
-   * baseline content pair, and `All commands` the baseline visibility pair.
+   * It names the category even though it sits on that category's own page, for the reason the row names
+   * do: a bare `Include/exclude paths` would be seven identical headings across seven pages, and Obsidian's
+   * settings search offers no page context to tell them apart.
    *
-   * `Select` is the one group with TWO rows rather than four — it has no content pair, because a select
-   * writes nothing and never consults the content filter.
-   *
-   * The rows repeat the category in their names on purpose. Obsidian 1.13 indexes every row for its
-   * settings search, and nine identically-named `Command exclude paths` rows would be indistinguishable in
-   * the results; the group heading only labels them once the page is open.
-   *
-   * The heading carries the ` commands` suffix for the same reason: most categories are named after a
-   * settings PAGE, and a bare `Merge` heading here would be a second container by that name. It stays that
-   * way now that the group also holds content rows — the heading names the commands the whole group is
-   * about, and each row's own description says which of the two filters it narrows.
-   *
-   * @param definition - The category and the four settings that narrow it.
+   * @param commandCategory - The category whose rows are wanted.
    * @returns The group definition.
    */
-  private commandCategorySettingGroup(definition: CommandCategorySettingGroupDefinition): SettingDefinitionGroup {
-    const commandCategory = definition.commandCategory;
-    const contentExcludePathsPropertyName = definition.contentExcludePathsPropertyName;
-    const contentIncludePathsPropertyName = definition.contentIncludePathsPropertyName;
+  private commandCategoryPathSettingGroup(commandCategory: CommandCategory): SettingDefinitionGroup {
+    return this.settingGroupEx({
+      heading: `${commandCategory} include/exclude paths`,
+      items: this.commandCategoryPathSettings(commandCategory)
+    });
+  }
+
+  /**
+   * The path rows of ONE command category: FOUR of them, one pair per filter.
+   *
+   * - `<Category> include paths` / `<Category> exclude paths` (issue #270) are the CONTENT filter — what
+   *   these commands may touch. This is the pair the reporter of #270 attached a screenshot of, and the
+   *   only one that can drop a folder from a modal's candidate list.
+   * - `<Category> command include paths` / `<Category> command exclude paths` (issue #249) are the
+   *   VISIBILITY filter — whether these commands are offered at all.
+   *
+   * Since issue #271 these four ARE the filter. They used to narrow a `Paths` / `All commands` quartet on
+   * a page of their own that covered every command at once; the reporter asked for that page to go,
+   * because a path could be listed there AND here with neither row explaining the result on its own.
+   *
+   * `Select` is the one category with TWO rows rather than four — it has no content pair, because a select
+   * writes nothing and never consults the content filter.
+   *
+   * The rows repeat the category in their names on purpose, even though they now sit on that category's
+   * own page. Obsidian 1.13 indexes every row for its settings search, and nine identically-named
+   * `Command exclude paths` rows would be indistinguishable in the results.
+   *
+   * @param commandCategory - The category whose rows are wanted.
+   * @returns The rows, content pair first.
+   */
+  private commandCategoryPathSettings(commandCategory: CommandCategory): SettingGroupItem[] {
+    const pathSettingNames = ensureNonNullable(COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory));
+    const commandsDesc = ensureNonNullable(COMMAND_CATEGORY_COMMANDS_DESCRIPTIONS.get(commandCategory));
+    const contentExcludePathsPropertyName = pathSettingNames.contentExcludePathsPropertyName;
+    const contentIncludePathsPropertyName = pathSettingNames.contentIncludePathsPropertyName;
 
     /*
      * Empty for `Select` and only for `Select`, which has no content pair to render: a select writes
      * nothing and never consults the content filter, so two rows here would be controls read by nothing.
-     * That group is the one with two rows instead of four.
      */
     const contentItems: SettingGroupItem[] = contentExcludePathsPropertyName === undefined || contentIncludePathsPropertyName === undefined
       ? []
@@ -2430,7 +2285,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           desc: createFragment((f) => {
             f.appendText(`In the ${commandCategory} commands, include notes and folders from the following paths only`);
             f.createEl('br');
-            f.appendText(`Covers: ${definition.commandsDesc}`);
+            f.appendText(`Covers: ${commandsDesc}`);
             f.createEl('br');
             f.appendText('Insert each path on a new line');
             f.createEl('br');
@@ -2439,9 +2294,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.createEl('br');
             appendPathFormsDesc(f);
             f.createEl('br');
-            f.appendText('If the setting is empty, these commands work on everything ');
-            appendCodeBlock(f, 'Include paths');
-            f.appendText(' already allows');
+            f.appendText('If the setting is empty, these commands work on everything');
           }),
           name: `${commandCategory} include paths`,
           render: (setting) => {
@@ -2456,7 +2309,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               `In the ${commandCategory} commands, exclude notes and folders from the following paths, leaving every other command free to use them`
             );
             f.createEl('br');
-            f.appendText(`Covers: ${definition.commandsDesc}`);
+            f.appendText(`Covers: ${commandsDesc}`);
             f.createEl('br');
             f.appendText('Insert each path on a new line');
             f.createEl('br');
@@ -2471,13 +2324,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             appendCodeBlock(f, `${commandCategory} command exclude paths`);
             f.appendText(' below decides instead');
             f.createEl('br');
-            f.appendText('If the setting is empty, nothing is excluded from these commands beyond what ');
-            appendCodeBlock(f, 'Exclude paths');
-            f.appendText(' already excludes');
+            f.appendText('If the setting is empty, nothing is excluded from these commands');
             f.createEl('br');
-            f.appendText('A category can only narrow further, never bring back a path the ');
-            appendCodeBlock(f, 'Paths');
-            f.appendText(' pair excluded');
+            appendAttachmentFolderProtectionDesc(f);
           }),
           name: `${commandCategory} exclude paths`,
           render: (setting) => {
@@ -2488,13 +2337,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         })
       ];
 
-    const items: SettingGroupItem[] = [
+    return [
       ...contentItems,
       this.settingEx({
         desc: createFragment((f) => {
           f.appendText(`Offer the ${commandCategory} commands only on notes and folders from the following paths`);
           f.createEl('br');
-          f.appendText(`Covers: ${definition.commandsDesc}`);
+          f.appendText(`Covers: ${commandsDesc}`);
           f.createEl('br');
           f.appendText('Insert each path on a new line');
           f.createEl('br');
@@ -2503,14 +2352,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.createEl('br');
           appendPathFormsDesc(f);
           f.createEl('br');
-          f.appendText('If the setting is empty, these commands are offered wherever ');
-          appendCodeBlock(f, 'Command include paths');
-          f.appendText(' already allows them');
+          f.appendText('If the setting is empty, these commands are offered everywhere');
         }),
         name: `${commandCategory} command include paths`,
         render: (setting) => {
           setting.addMultipleText((multipleText) => {
-            this.bind({ propertyName: definition.includePathsPropertyName, valueComponent: multipleText });
+            this.bind({ propertyName: pathSettingNames.commandIncludePathsPropertyName, valueComponent: multipleText });
           });
         }
       }),
@@ -2518,7 +2365,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         desc: createFragment((f) => {
           f.appendText(`Hide the ${commandCategory} commands on notes and folders from the following paths, leaving every other command there`);
           f.createEl('br');
-          f.appendText(`Covers: ${definition.commandsDesc}`);
+          f.appendText(`Covers: ${commandsDesc}`);
           f.createEl('br');
           f.appendText('Insert each path on a new line');
           f.createEl('br');
@@ -2527,29 +2374,24 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.createEl('br');
           appendPathFormsDesc(f);
           f.createEl('br');
+          f.appendText('A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from ');
+          appendCodeBlock(f, `${commandCategory} exclude paths`);
+          f.appendText(
+            ' on purpose: a path excluded there is still refused as a source or target and never moved, but these commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
+          );
+          f.createEl('br');
           f.appendText('If the setting is empty, no ');
           f.appendText(commandCategory);
-          f.appendText(' command is hidden beyond what ');
-          appendCodeBlock(f, 'Command exclude paths');
-          f.appendText(' already hides');
-          f.createEl('br');
-          f.appendText('A category can only narrow further, never bring back a command the ');
-          appendCodeBlock(f, 'All commands');
-          f.appendText(' pair hid. To leave one category offered on a path and hide the rest, list that path in the OTHER categories\' exclude boxes');
+          f.appendText(' command is hidden. To hide every other category on a path, list that path in the OTHER categories\' boxes');
         }),
         name: `${commandCategory} command exclude paths`,
         render: (setting) => {
           setting.addMultipleText((multipleText) => {
-            this.bind({ propertyName: definition.excludePathsPropertyName, valueComponent: multipleText });
+            this.bind({ propertyName: pathSettingNames.commandExcludePathsPropertyName, valueComponent: multipleText });
           });
         }
       })
     ];
-
-    return this.settingGroupEx({
-      heading: `${commandCategory} commands`,
-      items
-    });
   }
 
   /**
@@ -2746,6 +2588,28 @@ function addTokenList(f: DocumentFragment, tokens: readonly string[]): void {
     appendCodeBlock(f, token);
     f.createEl('br');
   }
+}
+
+/**
+ * The attachment-folder advice every category's exclude box needs.
+ *
+ * It belonged to the all-commands `Exclude paths` row until issue #271 retired it. The advice is not about
+ * any one category — it is how you keep a folder operation out of your attachments — so rather than being
+ * lost with that row it now rides on every content-exclude row instead.
+ *
+ * @param f - The description fragment to append to.
+ */
+function appendAttachmentFolderProtectionDesc(f: DocumentFragment): void {
+  f.appendText('This is how to protect your attachment folder when ');
+  /**
+  HACK: see the TSDoc for {@link EMPTY} for motivation.
+  */
+  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+  f.appendText(
+    ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
+  );
+  appendCodeBlock(f, 'Files & Links > Default location for new attachments');
+  f.appendText(' is recognized');
 }
 
 function appendPathFormsDesc(f: DocumentFragment): void {

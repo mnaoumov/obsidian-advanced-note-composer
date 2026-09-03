@@ -13,6 +13,7 @@ import type {
 import {
   Action,
   COMMAND_CATEGORIES,
+  COMMAND_CATEGORY_PATH_SETTING_NAMES,
   COMMAND_MENU_PLACEMENTS,
   CommandCategory,
   CommandMenuPlacement,
@@ -300,12 +301,9 @@ describe('TextAfterExtractionMode enum', () => {
 describe('PluginSettings', () => {
   it('should have correct default values', () => {
     const settings = new PluginSettings();
-    // Both halves of the command-visibility filter start empty (issue #198), which is what reproduces the
-    // Removed `shouldBlockCommandsOnExcludedPaths` toggle's off-by-default behavior: nothing is blocked.
-    expect(settings.commandExcludePaths).toEqual([]);
-    expect(settings.commandIncludePaths).toEqual([]);
-    // Every per-category pair starts empty too (issue #249), so an existing vault that only ever set the
-    // Two lists above keeps behaving exactly as it did — which is why the feature needs no converter.
+    // Every per-category pair of the command-visibility filter starts empty (issues #198 / #249), which is
+    // What reproduces the removed `shouldBlockCommandsOnExcludedPaths` toggle's off-by-default behavior:
+    // Nothing is blocked.
     for (const { excludePathsPropertyName, includePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
       expect(settings[excludePathsPropertyName]).toEqual([]);
       expect(settings[includePathsPropertyName]).toEqual([]);
@@ -374,44 +372,32 @@ describe('PluginSettings', () => {
     expect(settings.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
   });
 
-  it('should get and set includePaths', () => {
-    const settings = new PluginSettings();
-    settings.includePaths = ['path1', 'path2'];
-    expect(settings.includePaths).toEqual(['path1', 'path2']);
-  });
-
-  it('should get and set excludePaths', () => {
-    const settings = new PluginSettings();
-    settings.excludePaths = ['excluded'];
-    expect(settings.excludePaths).toEqual(['excluded']);
-  });
-
   it('should delegate isPathIgnored to PathSettings', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['secret'];
+    settings.mergeExcludePaths = ['secret'];
     expect(settings.isPathIgnored('secret/file.md', CommandCategory.Merge)).toBe(true);
   });
 
   it('should not ignore paths that are not excluded', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['secret'];
+    settings.mergeExcludePaths = ['secret'];
     expect(settings.isPathIgnored('public/file.md', CommandCategory.Merge)).toBe(false);
   });
 
-  it('should include all paths when includePaths is empty', () => {
+  it('should include all paths when the include list is empty', () => {
     const settings = new PluginSettings();
     expect(settings.isPathIgnored('anything/file.md', CommandCategory.Merge)).toBe(false);
   });
 
-  it('should ignore paths not in includePaths when includePaths is set', () => {
+  it('should ignore paths outside the include list when it is set', () => {
     const settings = new PluginSettings();
-    settings.includePaths = ['allowed'];
+    settings.mergeIncludePaths = ['allowed'];
     expect(settings.isPathIgnored('not-allowed/file.md', CommandCategory.Merge)).toBe(true);
   });
 
   it('should treat a path string entry as the folder and its entire subtree', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['Inbox'];
+    settings.mergeExcludePaths = ['Inbox'];
     expect(settings.isPathIgnored('Inbox', CommandCategory.Merge)).toBe(true);
     expect(settings.isPathIgnored('Inbox/note.md', CommandCategory.Merge)).toBe(true);
     expect(settings.isPathIgnored('Inbox/sub/deep.md', CommandCategory.Merge)).toBe(true);
@@ -420,7 +406,7 @@ describe('PluginSettings', () => {
 
   it('should match only the folder itself for a regular expression entry anchored to it', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['/^Inbox$/'];
+    settings.mergeExcludePaths = ['/^Inbox$/'];
     expect(settings.isPathIgnored('Inbox', CommandCategory.Merge)).toBe(true);
     expect(settings.isPathIgnored('Inbox/note.md', CommandCategory.Merge)).toBe(false);
     expect(settings.isPathIgnored('Inbox/sub/deep.md', CommandCategory.Merge)).toBe(false);
@@ -428,46 +414,22 @@ describe('PluginSettings', () => {
   });
 });
 
-describe('PluginSettings.commandIncludePaths / commandExcludePaths', () => {
-  it('should get and set commandIncludePaths', () => {
-    const settings = new PluginSettings();
-    settings.commandIncludePaths = ['path1', 'path2'];
-    expect(settings.commandIncludePaths).toEqual(['path1', 'path2']);
-  });
-
-  it('should get and set commandExcludePaths', () => {
-    const settings = new PluginSettings();
-    settings.commandExcludePaths = ['excluded'];
-    expect(settings.commandExcludePaths).toEqual(['excluded']);
-  });
-
-  // The two filters are backed by SEPARATE PathSettings instances (issue #198) — writing one must not
-  // Leak into the other, which is the whole point of the split.
-  it('should keep the command filter independent of the content filter', () => {
-    const settings = new PluginSettings();
-    settings.commandExcludePaths = ['blocked'];
-    settings.excludePaths = ['ignored'];
-    expect(settings.commandExcludePaths).toEqual(['blocked']);
-    expect(settings.excludePaths).toEqual(['ignored']);
-  });
-});
-
 describe('PluginSettings.shouldBlockCommandOnPath', () => {
-  it('should block a path listed in commandExcludePaths', () => {
+  it('should block a path listed in the category command exclude list', () => {
     const settings = new PluginSettings();
-    settings.commandExcludePaths = ['secret'];
+    settings.mergeCommandExcludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('secret/file.md', CommandCategory.Merge)).toBe(true);
   });
 
-  it('should not block a path outside commandExcludePaths', () => {
+  it('should not block a path outside the category command exclude list', () => {
     const settings = new PluginSettings();
-    settings.commandExcludePaths = ['secret'];
+    settings.mergeCommandExcludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('public/file.md', CommandCategory.Merge)).toBe(false);
   });
 
-  it('should block a path outside commandIncludePaths when it is set', () => {
+  it('should block a path outside the category command include list when it is set', () => {
     const settings = new PluginSettings();
-    settings.commandIncludePaths = ['allowed'];
+    settings.mergeCommandIncludePaths = ['allowed'];
     expect(settings.shouldBlockCommandOnPath('elsewhere/file.md', CommandCategory.Merge)).toBe(true);
     expect(settings.shouldBlockCommandOnPath('allowed/file.md', CommandCategory.Merge)).toBe(false);
   });
@@ -478,27 +440,17 @@ describe('PluginSettings.shouldBlockCommandOnPath', () => {
   });
 
   // Issue #198's actual ask: a path excluded from merges/splits keeps its commands unless it is ALSO
-  // Listed in the command filter. Before the split, `excludePaths` alone could hide them.
-  it('should not block a path that is only in excludePaths', () => {
+  // Listed in the command filter. Before the split, one list drove both.
+  it('should not block a path that is only in the content exclude list', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['secret'];
+    settings.mergeExcludePaths = ['secret'];
     expect(settings.shouldBlockCommandOnPath('secret/file.md', CommandCategory.Merge)).toBe(false);
   });
 
-  it('should not be affected by includePaths', () => {
+  it('should not be affected by the content include list', () => {
     const settings = new PluginSettings();
-    settings.includePaths = ['allowed'];
+    settings.mergeIncludePaths = ['allowed'];
     expect(settings.shouldBlockCommandOnPath('elsewhere/file.md', CommandCategory.Merge)).toBe(false);
-  });
-
-  // The pair without a category prefix is the baseline that still means EVERY command (issue #249) — it
-  // Is what an existing `data.json` carries, and why the change needs no legacy converter.
-  it('should block every category from the un-prefixed command path lists', () => {
-    const settings = new PluginSettings();
-    settings.commandExcludePaths = ['secret'];
-    for (const commandCategory of COMMAND_CATEGORIES) {
-      expect(settings.shouldBlockCommandOnPath('secret/file.md', commandCategory)).toBe(true);
-    }
   });
 });
 
@@ -555,8 +507,8 @@ describe('PluginSettings per-category command path lists (issue #249)', () => {
   });
 
   // The reporter's third example: block everything on a path except one category, spelled as the other
-  // Eight exclude lists. There is deliberately no allow-back over the un-prefixed pair — a category list
-  // Can only narrow further, never re-open what the baseline already hid.
+  // Eight exclude lists. Since issue #271 that IS the only way to say it — there is no all-commands list
+  // To exclude from and then carve an exception out of.
   it('should leave exactly one category offered when the other eight exclude the path', () => {
     const settings = new PluginSettings();
     for (const { commandCategory, excludePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
@@ -573,7 +525,7 @@ describe('PluginSettings per-category command path lists (issue #249)', () => {
 
   it('should keep a category list independent of the content filter', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['ignored'];
+    settings.mergeExcludePaths = ['ignored'];
     expect(settings.shouldBlockCommandOnPath('ignored/file.md', CommandCategory.Merge)).toBe(false);
     expect(settings.mergeCommandExcludePaths).toEqual([]);
   });
@@ -622,16 +574,6 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
     }
   });
 
-  // The un-prefixed pair is the baseline that still means EVERY command — it is what an existing
-  // `data.json` carries, and why the change needs no legacy converter.
-  it('should ignore the path for every category from the un-prefixed content path lists', () => {
-    const settings = new PluginSettings();
-    settings.excludePaths = ['secret'];
-    for (const commandCategory of COMMAND_CATEGORIES) {
-      expect(settings.isPathIgnored('secret/file.md', commandCategory)).toBe(true);
-    }
-  });
-
   // The reporter's own case (issue #270): the templates folder must stay out of the reorder modal while
   // Every other command keeps working on it. This is the assertion that would fail with #249's
   // Per-category pair, which only hides commands.
@@ -644,11 +586,11 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
     expect(settings.isPathIgnored('Templates/daily.md', CommandCategory.Rename)).toBe(false);
   });
 
-  // A category narrows, it never re-opens: the baseline exclusion wins even where a category's include
-  // List names the same path.
-  it('should keep a category include list from re-opening a baseline-excluded path', () => {
+  // Within one category the exclude list wins over its own include list — that is `PathSettings`' own
+  // Rule, and it is what stops "list it in both" reading as an exception.
+  it('should keep a category include list from re-opening a path its own exclude list names', () => {
     const settings = new PluginSettings();
-    settings.excludePaths = ['Archive'];
+    settings.mergeExcludePaths = ['Archive'];
     settings.mergeIncludePaths = ['Archive'];
     expect(settings.isPathIgnored('Archive/note.md', CommandCategory.Merge)).toBe(true);
   });
@@ -669,14 +611,14 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
     }
   });
 
-  // `Select` has no content pair, so it must still be ANSWERABLE — from the baseline pair alone — rather
-  // Than throwing on a missing map entry. This is what keeps `isPathIgnored` total over the enum.
-  it('should answer for Select from the baseline pair alone', () => {
+  // `Select` has no content pair, so it must still be ANSWERABLE — `false`, from the two empty lists its
+  // Map entry holds — rather than throwing on a missing entry. This is what keeps `isPathIgnored` total
+  // Over the enum.
+  it('should answer false for Select, which has no content pair to consult', () => {
     const settings = new PluginSettings();
     expect(settings.isPathIgnored('anywhere/note.md', CommandCategory.Select)).toBe(false);
-    settings.excludePaths = ['Archive'];
-    expect(settings.isPathIgnored('Archive/note.md', CommandCategory.Select)).toBe(true);
-    expect(settings.isPathIgnored('Other/note.md', CommandCategory.Select)).toBe(false);
+    settings.mergeExcludePaths = ['Archive'];
+    expect(settings.isPathIgnored('Archive/note.md', CommandCategory.Select)).toBe(false);
   });
 
   // The two filters stay apart: excluding a path from a category's CONTENT does not hide its commands
@@ -686,5 +628,47 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
     settings.reorderExcludePaths = ['Templates'];
     expect(settings.shouldBlockCommandOnPath('Templates/daily.md', CommandCategory.Reorder)).toBe(false);
     expect(settings.reorderCommandExcludePaths).toEqual([]);
+  });
+});
+
+describe('COMMAND_CATEGORY_PATH_SETTING_NAMES (issue #271)', () => {
+  /*
+   * The map is what both the settings tab and the legacy-settings converter reach a category's four lists
+   * by, so a category missing from it is a category whose boxes render nowhere AND whose share of an
+   * upgraded vault's retired lists is silently dropped. The expectations are the two tables at the top of
+   * this file, spelled out by hand on purpose: deriving them from the map under test would only assert
+   * that the map equals itself.
+   */
+  it('should name every category command pair', () => {
+    for (const { commandCategory, excludePathsPropertyName, includePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
+      expect(COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory)).toMatchObject({
+        commandExcludePathsPropertyName: excludePathsPropertyName,
+        commandIncludePathsPropertyName: includePathsPropertyName
+      });
+    }
+  });
+
+  it('should name every category content pair', () => {
+    for (const { commandCategory, excludePathsPropertyName, includePathsPropertyName } of COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES) {
+      expect(COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory)).toMatchObject({
+        contentExcludePathsPropertyName: excludePathsPropertyName,
+        contentIncludePathsPropertyName: includePathsPropertyName
+      });
+    }
+  });
+
+  // `Select` is the ONE category without a content pair, and the omission has to stay deliberate: an
+  // Entry that merely forgot its pair would leave a category's content lists unreachable and never migrated.
+  it('should leave the content pair out for Select alone', () => {
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      const pathSettingNames = COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory);
+      expect(pathSettingNames).toBeDefined();
+      expect(pathSettingNames?.contentExcludePathsPropertyName === undefined).toBe(commandCategory === CommandCategory.Select);
+      expect(pathSettingNames?.contentIncludePathsPropertyName === undefined).toBe(commandCategory === CommandCategory.Select);
+    }
+  });
+
+  it('should hold no entry beyond the nine categories', () => {
+    expect(COMMAND_CATEGORY_PATH_SETTING_NAMES.size).toBe(COMMAND_CATEGORIES.length);
   });
 });

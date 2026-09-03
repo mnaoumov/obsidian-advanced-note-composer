@@ -62,23 +62,23 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
 
         // --- Issue #198: excluding the path from merges/splits must NOT hide its commands. They stay
         // --- Visible and refuse with an "ignored in the plugin settings" notice when triggered.
-        await setPaths('Exclude paths', BLOCKED_FOLDER);
+        await setPaths('Smart cut & paste exclude paths', BLOCKED_FOLDER);
         const contentExcludedOnly = await probeCommand(blockedFile);
 
         // --- Listing it in the command filter is what hides it, independently of the list above.
-        await setPaths('Command exclude paths', BLOCKED_FOLDER);
+        await setPaths('Smart cut & paste command exclude paths', BLOCKED_FOLDER);
         const commandExcluded = await probeCommand(blockedFile);
         const commandExcludedElsewhere = await probeCommand(otherFile);
 
         // --- The include half: restrict the commands to one folder and they vanish outside it.
-        await setPaths('Exclude paths', '');
-        await setPaths('Command exclude paths', '');
-        await setPaths('Command include paths', BLOCKED_FOLDER);
+        await setPaths('Smart cut & paste exclude paths', '');
+        await setPaths('Smart cut & paste command exclude paths', '');
+        await setPaths('Smart cut & paste command include paths', BLOCKED_FOLDER);
         const commandIncludedInside = await probeCommand(blockedFile);
         const commandIncludedOutside = await probeCommand(otherFile);
 
         // Restore the shared instance to a clean default state.
-        await setPaths('Command include paths', '');
+        await setPaths('Smart cut & paste command include paths', '');
         await setToggle('Should add commands to submenu', true);
 
         return {
@@ -181,17 +181,17 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
     expect(result.noPathsConfigured.isAvailable).toBe(true);
     expect(result.noPathsConfigured.inMenu).toBe(true);
 
-    // Issue #198: `Exclude paths` alone no longer hides commands — that is the whole point of the split.
+    // Issue #198: the content exclude list alone no longer hides commands — that is the whole point of the split.
     expect(result.contentExcludedOnly.isAvailable).toBe(true);
     expect(result.contentExcludedOnly.inMenu).toBe(true);
 
-    // `Command exclude paths` hides it from the palette and the editor menu, and only there.
+    // `Smart cut & paste command exclude paths` hides it from the palette and the editor menu, and only there.
     expect(result.commandExcluded.isAvailable).toBe(false);
     expect(result.commandExcluded.inMenu).toBe(false);
     expect(result.commandExcludedElsewhere.isAvailable).toBe(true);
     expect(result.commandExcludedElsewhere.inMenu).toBe(true);
 
-    // `Command include paths` restricts the commands to the listed folder.
+    // `Smart cut & paste command include paths` restricts the commands to the listed folder.
     expect(result.commandIncludedInside.isAvailable).toBe(true);
     expect(result.commandIncludedInside.inMenu).toBe(true);
     expect(result.commandIncludedOutside.isAvailable).toBe(false);

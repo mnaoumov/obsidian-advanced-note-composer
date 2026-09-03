@@ -29,7 +29,7 @@ interface ComponentTreeNode {
 }
 
 interface ExcludePathsSettings {
-  excludePaths: string[];
+  mergeExcludePaths: string[];
 }
 
 interface SettingsCarrier {
@@ -44,7 +44,7 @@ interface TypingResult {
   readonly validationMessageForIncompleteValue: string;
 }
 
-describe('typing a regular expression into Exclude paths (issue #155)', () => {
+describe('typing a regular expression into Merge exclude paths (issue #155)', () => {
   it('shows no error notice, still saves the completed value, and reports an incomplete one', async () => {
     const result = await evalInObsidian({
       async callback({ app, completeValue, findSettingItem, incompleteValue, lib: { waitUntil }, pluginId }): Promise<TypingResult> {
@@ -55,7 +55,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
         const dataPath = `${app.vault.configDir}/plugins/${pluginId}/data.json`;
 
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.mergeExcludePaths];
 
         try {
           const textAreaEl = await openExcludePathsTextArea();
@@ -103,7 +103,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           app.setting.close();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.mergeExcludePaths = originalExcludePaths;
           });
         }
 
@@ -142,7 +142,7 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
             return [];
           }
           const saved = JSON.parse(await app.vault.adapter.read(dataPath)) as Partial<ExcludePathsSettings>;
-          return saved.excludePaths ?? [];
+          return saved.mergeExcludePaths ?? [];
         }
 
         async function openExcludePathsTextArea(): Promise<HTMLTextAreaElement> {
@@ -154,16 +154,16 @@ describe('typing a regular expression into Exclude paths (issue #155)', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItem = await findSettingItem({ app, name: 'Exclude paths', settingTab });
+          const settingItem = await findSettingItem({ app, name: 'Merge exclude paths', settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new TypeError('"Exclude paths" text area was not found.');
+            throw new TypeError('"Merge exclude paths" text area was not found.');
           }
           return textAreaEl;
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.mergeExcludePaths);
         }
 
         function findSettingsComponent(): SettingsCarrier {

@@ -21,7 +21,7 @@ interface ComponentTreeNode {
 }
 
 interface ExcludedMergeSettings {
-  excludePaths: string[];
+  mergeExcludePaths: string[];
   shouldAllowOnlyCurrentFolderByDefault: boolean;
   shouldAlwaysMergeExcludedItems: boolean;
   shouldAskBeforeMerging: boolean;
@@ -42,7 +42,7 @@ describe('merging into an excluded target file (issue #240)', () => {
         const TARGET_PATH = 't492-excluded/t492-target.md';
 
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.mergeExcludePaths];
         const isOriginalAlwaysMerge = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
         const isOriginalOfferExcludedDestinations = settingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations;
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
@@ -56,7 +56,7 @@ describe('merging into an excluded target file (issue #240)', () => {
           const source = await resetFile(SOURCE_PATH, 'source body');
 
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = ['t492-excluded'];
+            settings.mergeExcludePaths = ['t492-excluded'];
             settings.shouldAskBeforeMerging = false;
             // The target sits in a sub-folder, so leaving this on would hide it for a reason that has
             // Nothing to do with what is under test.
@@ -99,7 +99,7 @@ describe('merging into an excluded target file (issue #240)', () => {
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.mergeExcludePaths = originalExcludePaths;
             settings.shouldAlwaysMergeExcludedItems = isOriginalAlwaysMerge;
             settings.shouldAskBeforeMerging = isOriginalShouldAsk;
             settings.shouldAllowOnlyCurrentFolderByDefault = isOriginalOnlyCurrentFolder;
@@ -173,7 +173,7 @@ describe('merging into an excluded target file (issue #240)', () => {
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
           return typeof node.editAndSave === 'function'
-            && Array.isArray(node.settings?.excludePaths)
+            && Array.isArray(node.settings?.mergeExcludePaths)
             && typeof node.settings.shouldAlwaysMergeExcludedItems === 'boolean';
         }
 

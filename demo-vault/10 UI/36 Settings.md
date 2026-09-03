@@ -158,12 +158,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 
 ## Include and exclude
 
-- `includePaths` / `excludePaths`
-  - what the plugin may touch at all.
-- `commandIncludePaths` / `commandExcludePaths`
-  - where its commands are offered — see [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>).
-
-Each command category then has its own pair, which narrows what the two above already allow. Both empty means the category follows them exactly.
+Every one of these is per command category, and there is no pair covering every command at once — see [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>). Both boxes empty means that category is neither restricted nor blocked anywhere.
 
 - `mergeCommandIncludePaths` / `mergeCommandExcludePaths`
   - where the merge commands are offered.
@@ -184,7 +179,7 @@ Each command category then has its own pair, which narrows what the two above al
 - `reorderCommandIncludePaths` / `reorderCommandExcludePaths`
   - where the three reorder commands are offered.
 
-Every category except `Select` also has a pair for the *first* filter — what those commands may touch — which narrows `includePaths` / `excludePaths` the same way. That is how a folder stays out of one command's dialogs while every other command still uses it. `Select` has none because a select writes nothing: it moves the caret and stops, so there is nothing for a content filter to allow or refuse.
+Every category except `Select` also has a pair for the *first* filter — what those commands may touch. That is how a folder stays out of one command's dialogs while every other command still uses it. `Select` has none because a select writes nothing: it moves the caret and stops, so there is nothing for a content filter to allow or refuse.
 
 - `mergeIncludePaths` / `mergeExcludePaths`
   - what the merge commands may merge, and merge into.

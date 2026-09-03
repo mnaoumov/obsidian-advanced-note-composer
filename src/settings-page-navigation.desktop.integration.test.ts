@@ -153,7 +153,11 @@ describe('settings page navigation', () => {
     // Treatment from issue #226 and lost it again to issue #241: its four rows are flat on its page.
     expect(result.onOpen).toContain('Merge');
     expect(result.onOpen).toContain('Frontmatter');
-    expect(result.onOpen).toContain('Include/exclude');
+    // Issue #271 retired the `Include/exclude` page and gave the two categories that had no page of their
+    // Own one each; every other category's path rows moved onto the page of its commands.
+    expect(result.onOpen).not.toContain('Include/exclude');
+    expect(result.onOpen).toContain('Select');
+    expect(result.onOpen).toContain('Rename');
     expect(result.onOpen).not.toContain('Merge folders');
     expect(result.onOpen).not.toContain('Command include/exclude paths');
     // A row that lives inside a page is genuinely absent until that page is opened.
@@ -168,7 +172,9 @@ describe('settings page navigation', () => {
       'All merges',
       'Merge file',
       'Merge folder contents into a single file',
-      'Merge current folder with another folder'
+      'Merge current folder with another folder',
+      // Issue #271 moved the Merge category's four path rows onto this page, under a heading of their own.
+      'Merge include/exclude paths'
     ]);
 
     // Issue #220: the template leads its header.
@@ -182,15 +188,22 @@ describe('settings page navigation', () => {
     const firstMergeFolderWithFolderRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge current folder with another folder') + 1];
     expect(firstMergeFolderWithFolderRow).toBe('Should include child folders when merging folders');
 
-    // Issue #241: `Swap` renders its four rows with no subheading at all — the shared confirmation row
-    // Belonged under neither of the two issue #226 had put there. Asserted in real Obsidian because the
-    // Unit test can only pin the DECLARED tree, and a page's rows are not in the DOM until it is opened.
-    expect(result.swapSubheadings).toEqual([]);
+    // Issue #241: `Swap` renders its own four rows with no subheading of their own — the shared
+    // Confirmation row belonged under neither of the two issue #226 had put there. Issue #271 then added
+    // The category's path group below them, which is the page's only heading. Asserted in real Obsidian
+    // Because the unit test can only pin the DECLARED tree, and a page's rows are not in the DOM until it
+    // Is opened — the mixed flat-rows-then-a-group shape is exactly what needs confirming here.
+    expect(result.swapSubheadings).toEqual(['Swap include/exclude paths']);
     expect(result.swapRows).toEqual([
       'Should ask before swapping',
       'Should include child folders when swapping folders',
       'Should include parent folders when swapping folders',
-      'Should swap entire folder structure'
+      'Should swap entire folder structure',
+      'Swap include/exclude paths',
+      'Swap include paths',
+      'Swap exclude paths',
+      'Swap command include paths',
+      'Swap command exclude paths'
     ]);
 
     // Issue #243: the lock row moved here off `Split/extract`, and it sits FLAT above the groups because
@@ -202,7 +215,8 @@ describe('settings page navigation', () => {
       'Notice',
       'At cursor',
       'To top of file',
-      'To bottom of file'
+      'To bottom of file',
+      'Smart cut & paste include/exclude paths'
     ]);
   });
 });

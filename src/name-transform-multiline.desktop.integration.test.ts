@@ -31,7 +31,7 @@ interface ComponentTreeNode {
 }
 
 interface NameTransformSettings {
-  excludePaths: string[];
+  mergeExcludePaths: string[];
   nameTransformTemplate: string;
   shouldAskBeforeSplitting: boolean;
   shouldSplitHeadingsAutomatically: boolean;
@@ -155,7 +155,7 @@ describe('name transform producing a multi-line name (issue #203)', () => {
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.mergeExcludePaths);
         }
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
