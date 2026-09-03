@@ -123,13 +123,14 @@ describe('ReleaseNotesComponent', () => {
       expect(mockAppendCodeBlock).toHaveBeenCalledWith(expect.anything(), 'Note composer');
       expect(editAndSave).toHaveBeenCalledTimes(1);
       expect(settings.releaseNotesShown).toContain('3.0.0');
+      expect(settings.releaseNotesShown).toContain('5.11.0');
       expect(mockAlert).toHaveBeenCalledTimes(1);
       expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Release notes' }));
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
       const { app, triggerLayoutReady } = createMockApp();
-      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0']);
+      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0']);
       const component = new ReleaseNotesComponent({
         app,
         pluginSettingsComponent

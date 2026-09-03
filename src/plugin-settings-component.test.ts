@@ -16,6 +16,7 @@ import { menuPlaceableCommandsOfCategory } from './menu-placeable-commands.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import {
   COMMAND_CATEGORIES,
+  COMMAND_CATEGORY_PATH_SETTING_NAMES,
   COMMAND_MENU_PLACEMENTS,
   CommandCategory,
   CommandMenuPlacement,
@@ -34,14 +35,10 @@ import {
  * which is what turns the next such omission into a failure here.
  */
 const PATHS_VALIDATOR_PROPERTY_NAMES = [
-  'commandExcludePaths',
-  'commandIncludePaths',
   'createCommandExcludePaths',
   'createCommandIncludePaths',
   'createExcludePaths',
   'createIncludePaths',
-  'excludePaths',
-  'includePaths',
   'mergeCommandExcludePaths',
   'mergeCommandIncludePaths',
   'mergeExcludePaths',
@@ -587,9 +584,10 @@ describe('PluginSettingsComponent', () => {
       expect(legacySettings['attachmentExtensions']).toBeUndefined();
     });
 
-    // Issue #198. The old toggle made command blocking borrow the content filter's lists; the new
-    // Command-visibility filter has its own, so an upgraded vault has to be seeded from the old ones.
-    it('should seed both command path lists from the old lists when blocking was on', async () => {
+    // Issue #198's toggle made command blocking borrow the content filter's lists, and issue #271 then
+    // Retired the all-commands lists both of them wrote to — so the old toggle now has to reach the
+    // Per-category lists, through the #271 fan-out that runs after it.
+    it('should seed every category command list from the old lists when blocking was on', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
         excludePaths: ['secret'],
@@ -597,19 +595,21 @@ describe('PluginSettingsComponent', () => {
         shouldBlockCommandsOnExcludedPaths: true
       };
       await component.runLegacyConverters(legacySettings);
-      expect(legacySettings['commandExcludePaths']).toEqual(['secret']);
-      // The include half matters: the old blocking fired on `isPathIgnored`, which already accounted for
-      // `includePaths`, so copying only the exclude half would un-block everything outside the include list.
-      expect(legacySettings['commandIncludePaths']).toEqual(['allowed']);
+      for (const { commandExcludePathsPropertyName, commandIncludePathsPropertyName } of COMMAND_CATEGORY_PATH_SETTING_NAMES.values()) {
+        expect(legacySettings[commandExcludePathsPropertyName]).toEqual(['secret']);
+        // The include half matters: the old blocking fired on `isPathIgnored`, which already accounted for
+        // `includePaths`, so copying only the exclude half would un-block everything outside the include list.
+        expect(legacySettings[commandIncludePathsPropertyName]).toEqual(['allowed']);
+      }
       expect(legacySettings['shouldBlockCommandsOnExcludedPaths']).toBeUndefined();
     });
 
-    it('should seed empty command path lists when blocking was on with no paths configured', async () => {
+    it('should seed no command path list when blocking was on with no paths configured', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = { shouldBlockCommandsOnExcludedPaths: true };
       await component.runLegacyConverters(legacySettings);
-      expect(legacySettings['commandExcludePaths']).toEqual([]);
-      expect(legacySettings['commandIncludePaths']).toEqual([]);
+      expect(legacySettings['mergeCommandExcludePaths']).toBeUndefined();
+      expect(legacySettings['mergeCommandIncludePaths']).toBeUndefined();
     });
 
     it('should leave the command path lists alone when blocking was off', async () => {
@@ -619,36 +619,100 @@ describe('PluginSettingsComponent', () => {
         shouldBlockCommandsOnExcludedPaths: false
       };
       await component.runLegacyConverters(legacySettings);
-      expect(legacySettings['commandExcludePaths']).toBeUndefined();
-      expect(legacySettings['commandIncludePaths']).toBeUndefined();
+      expect(legacySettings['mergeCommandExcludePaths']).toBeUndefined();
+      expect(legacySettings['mergeCommandIncludePaths']).toBeUndefined();
       expect(legacySettings['shouldBlockCommandsOnExcludedPaths']).toBeUndefined();
-      // The content filter is untouched — the split does not change what is excluded from merges/splits.
-      expect(legacySettings['excludePaths']).toEqual(['secret']);
+      // The content half still moves: what was excluded from merges/splits stays excluded, one category
+      // At a time (issue #271).
+      expect(legacySettings['mergeExcludePaths']).toEqual(['secret']);
     });
 
     it('should not set the command path lists when the toggle was never persisted', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {};
       await component.runLegacyConverters(legacySettings);
-      expect(legacySettings['commandExcludePaths']).toBeUndefined();
-      expect(legacySettings['commandIncludePaths']).toBeUndefined();
+      expect(legacySettings['mergeCommandExcludePaths']).toBeUndefined();
+      expect(legacySettings['mergeCommandIncludePaths']).toBeUndefined();
+    });
+
+    // Issue #271 retired the four all-commands lists. Every entry has to reach the per-category lists that
+    // Replaced them, or an upgraded vault silently loses the paths it was protecting.
+    it('should fan a retired content exclude list out to every category with a content pair', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { excludePaths: ['secret'] };
+      await component.runLegacyConverters(legacySettings);
+      for (const { contentExcludePathsPropertyName } of COMMAND_CATEGORY_PATH_SETTING_NAMES.values()) {
+        if (contentExcludePathsPropertyName === undefined) {
+          continue;
+        }
+        expect(legacySettings[contentExcludePathsPropertyName]).toEqual(['secret']);
+      }
+      // `Select` has no content pair to receive it, and must not grow one.
+      expect(legacySettings['selectExcludePaths']).toBeUndefined();
+    });
+
+    it('should fan a retired command exclude list out to every category', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { commandExcludePaths: ['secret'] };
+      await component.runLegacyConverters(legacySettings);
+      for (const { commandExcludePathsPropertyName } of COMMAND_CATEGORY_PATH_SETTING_NAMES.values()) {
+        expect(legacySettings[commandExcludePathsPropertyName]).toEqual(['secret']);
+      }
+    });
+
+    // Exclude lists UNION, which is exactly faithful: `PathSettings` ORs its two halves, so one list
+    // Holding both sets excludes precisely what the retired pair excluded between them.
+    it('should concatenate a retired exclude list with a category list already set', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        excludePaths: ['secret'],
+        mergeExcludePaths: ['Archive']
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['mergeExcludePaths']).toEqual(['secret', 'Archive']);
+      expect(legacySettings['reorderExcludePaths']).toEqual(['secret']);
+    });
+
+    // Include lists cannot union: the retired pair ignored a path unless it matched BOTH lists, while one
+    // Concatenated list allows a path matching EITHER. A category that already carries include entries
+    // Therefore keeps them, and the retired half is dropped — an intersection is not expressible as a list.
+    it('should seed a retired include list only into the categories that have none', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        includePaths: ['allowed'],
+        mergeIncludePaths: ['Projects']
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['mergeIncludePaths']).toEqual(['Projects']);
+      expect(legacySettings['reorderIncludePaths']).toEqual(['allowed']);
+    });
+
+    it('should write no path list when no retired list was set', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { mergeExcludePaths: ['Archive'] };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['mergeExcludePaths']).toEqual(['Archive']);
+      expect(legacySettings['reorderExcludePaths']).toBeUndefined();
+      expect(legacySettings['reorderCommandExcludePaths']).toBeUndefined();
     });
 
     // Driving the REAL load pipeline, not just the converters: this is what proves the migrated keys are
-    // Recognized plugin settings that survive into `component.settings` — the accessor pairs added for
-    // Issue #198 would be silently dropped if the base did not enumerate them.
+    // Recognized plugin settings that survive into `component.settings` — the per-category accessor pairs
+    // Would be silently dropped if the base did not enumerate them.
     it('should carry a pre-#198 data.json through a real load with its blocking behavior intact', async () => {
       const component = await loadComponentFromRecord({
         excludePaths: ['secret'],
         shouldBlockCommandsOnExcludedPaths: true
       });
 
-      expect(component.settings.commandExcludePaths).toEqual(['secret']);
+      expect(component.settings.mergeCommandExcludePaths).toEqual(['secret']);
       // The behavior the upgraded user had before: commands hidden on the excluded path, and only there.
-      expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(true);
-      expect(component.settings.shouldBlockCommandOnPath('public/note.md', CommandCategory.Merge)).toBe(false);
-      // The content filter is untouched by the migration.
-      expect(component.settings.excludePaths).toEqual(['secret']);
+      for (const commandCategory of COMMAND_CATEGORIES) {
+        expect(component.settings.shouldBlockCommandOnPath('secret/note.md', commandCategory)).toBe(true);
+        expect(component.settings.shouldBlockCommandOnPath('public/note.md', commandCategory)).toBe(false);
+      }
+      // And the content filter still refuses that path, one category at a time now.
+      expect(component.settings.isPathIgnored('secret/note.md', CommandCategory.Merge)).toBe(true);
     });
 
     it('should leave a pre-#198 data.json with blocking off offering commands everywhere', async () => {
@@ -657,8 +721,8 @@ describe('PluginSettingsComponent', () => {
         shouldBlockCommandsOnExcludedPaths: false
       });
 
-      expect(component.settings.commandExcludePaths).toEqual([]);
-      expect(component.settings.commandIncludePaths).toEqual([]);
+      expect(component.settings.mergeCommandExcludePaths).toEqual([]);
+      expect(component.settings.mergeCommandIncludePaths).toEqual([]);
       expect(component.settings.shouldBlockCommandOnPath('secret/note.md', CommandCategory.Merge)).toBe(false);
       expect(component.settings.isPathIgnored('secret/note.md', CommandCategory.Merge)).toBe(true);
     });
@@ -677,14 +741,14 @@ describe('PluginSettingsComponent', () => {
       expect(component.settings.shouldBlockCommandOnPath('public/note.md', CommandCategory.Merge)).toBe(false);
     });
 
-    // A `data.json` written before issue #249 has none of the sixteen keys, and must behave exactly as it
-    // Did — which is what makes the feature need no legacy-settings converter.
-    it('should leave a data.json without any category key behaving as before', async () => {
+    // A `data.json` written before issue #271 carries the all-commands key and none of the per-category
+    // Ones, and must behave exactly as it did — which is the whole point of the fan-out.
+    it('should leave a pre-#271 data.json blocking every category as it did', async () => {
       const component = await loadComponentFromRecord({
         commandExcludePaths: ['secret']
       });
 
-      expect(component.settings.mergeCommandExcludePaths).toEqual([]);
+      expect(component.settings.mergeCommandExcludePaths).toEqual(['secret']);
       for (const commandCategory of COMMAND_CATEGORIES) {
         expect(component.settings.shouldBlockCommandOnPath('secret/note.md', commandCategory)).toBe(true);
         expect(component.settings.shouldBlockCommandOnPath('public/note.md', commandCategory)).toBe(false);

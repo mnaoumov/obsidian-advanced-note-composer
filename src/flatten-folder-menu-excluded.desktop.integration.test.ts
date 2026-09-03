@@ -25,7 +25,7 @@ interface ComponentTreeNode {
 }
 
 interface ExcludePathsSettings {
-  excludePaths: string[];
+  moveAndFlattenExcludePaths: string[];
 }
 
 /**
@@ -82,7 +82,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
     const result = await evalInObsidian({
       async callback({ app, obsidianModule, pluginId, pluginName }): Promise<MenuProbe> {
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.moveAndFlattenExcludePaths];
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
         const hasOwnGetAvailablePathForAttachments = Object.hasOwn(app.vault, 'getAvailablePathForAttachments');
         const originalGetAvailablePathForAttachments = app.vault.getAvailablePathForAttachments;
@@ -124,7 +124,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           await app.vault.create('t366-control/t366-sub/t366-deeper3/t366-deep3.md', 'deep body');
 
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = ['t366-excluded/t366-excluded-assets'];
+            settings.moveAndFlattenExcludePaths = ['t366-excluded/t366-excluded-assets'];
           });
 
           return {
@@ -134,7 +134,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.moveAndFlattenExcludePaths = originalExcludePaths;
           });
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
           if (hasOwnGetAvailablePathForAttachments) {
@@ -198,7 +198,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.moveAndFlattenExcludePaths);
         }
 
         /**

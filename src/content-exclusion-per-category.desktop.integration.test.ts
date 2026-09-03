@@ -50,8 +50,9 @@ describe('per-category content exclusion (issue #270)', () => {
         const reorderExcluded = await readReorderRows();
 
         // The isolation that #249's per-category pair could not give: the SAME path under a different
-        // Category's content list changes nothing here. Without the per-category split this would have to
-        // Be `Exclude paths`, which takes the folder away from every command at once.
+        // Category's content list changes nothing here. Before the per-category split this would have had
+        // To be the all-commands `Exclude paths` list, which took the folder away from every command at
+        // Once — and which issue #271 has since retired outright.
         await setPaths('Reorder exclude paths', '');
         await setPaths('Merge exclude paths', EXCLUDED_FOLDER);
         const mergeExcludedOnly = await readReorderRows();

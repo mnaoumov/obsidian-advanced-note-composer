@@ -33,6 +33,23 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText('The plugin no longer requires ');
         appendCodeBlock(f, 'Note composer');
         f.appendText(' core plugin. You can safely switch it off to avoid duplicated functionality.');
+      }),
+      // Issue #271 moved settings a user may have configured, so it is announced rather than left to be
+      // Discovered as "my exclusions disappeared" — the entries did move, but not to a page of that name.
+      '5.11.0': createFragment((f) => {
+        f.appendText('The ');
+        appendCodeBlock(f, 'Include/exclude');
+        f.appendText(' settings page is gone. Every include/exclude box now lives on the settings page of the commands it governs — ');
+        appendCodeBlock(f, 'Merge');
+        f.appendText(', ');
+        appendCodeBlock(f, 'Split/extract');
+        f.appendText(', and so on, with new ');
+        appendCodeBlock(f, 'Select');
+        f.appendText(' and ');
+        appendCodeBlock(f, 'Rename');
+        f.appendText(' pages for the two that had none.');
+        f.createEl('br');
+        f.appendText('The four boxes that covered every command at once have been retired. Whatever you had listed in them was copied into every command\'s own boxes, so nothing changes until you edit them.');
       })
     };
 

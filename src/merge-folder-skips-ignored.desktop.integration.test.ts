@@ -26,7 +26,7 @@ interface ComponentTreeNode {
 }
 
 interface ExcludePathsSettings {
-  excludePaths: string[];
+  mergeExcludePaths: string[];
   shouldAlwaysMergeExcludedItems: boolean;
   shouldAskBeforeMerging: boolean;
 }
@@ -43,11 +43,11 @@ describe('merge folder skips ignored files (issue #72)', () => {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.mergeExcludePaths];
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
         try {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = [ignoredPath];
+            settings.mergeExcludePaths = [ignoredPath];
           });
 
           await trashIfExists('ign-src');
@@ -99,7 +99,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
           return { ignoredFileRemainsInSource: isIgnoredFileRemainsInSource, normalMerged: isNormalMerged, noStrayEmptyTarget: isNoStrayEmptyTarget, noticeText };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.mergeExcludePaths = originalExcludePaths;
           });
           await didSetAskBeforeMerging(isOriginalShouldAsk);
         }
@@ -123,7 +123,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.mergeExcludePaths);
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -219,12 +219,12 @@ describe('merge folder skips ignored files (issue #72)', () => {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.mergeExcludePaths];
         const isOriginalAlways = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
         try {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = [ignoredPath];
+            settings.mergeExcludePaths = [ignoredPath];
             settings.shouldAlwaysMergeExcludedItems = true;
             // Skip the confirmation dialog so the merge runs straight from the picker.
             settings.shouldAskBeforeMerging = false;
@@ -265,7 +265,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
           return { excludedMerged: isExcludedMerged, excludedSourceGone: isExcludedSourceGone, hasIgnoredNotice, normalMerged: isNormalMerged };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.mergeExcludePaths = originalExcludePaths;
             settings.shouldAlwaysMergeExcludedItems = isOriginalAlways;
             settings.shouldAskBeforeMerging = isOriginalShouldAsk;
           });
@@ -305,7 +305,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.mergeExcludePaths);
         }
 
         async function openFile(file: TFile): Promise<void> {

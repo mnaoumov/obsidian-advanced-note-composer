@@ -45,7 +45,7 @@ This block sits between two horizontal rules, so `Select between horizontal rule
 - A command you cannot use is not offered
   - `Select before cursor` disappears with the cursor at the very top of the note, `Select after cursor` at the very bottom, and `Select between horizontal rules` in a note with no rules. On a phone, where filtering the command palette means typing, a list without the useless entries is worth having.
 - They never write anything
-  - so the `Include/exclude` → `Paths` setting, which decides what may be merged or split, does not hide them. Their own `Select commands` paths pair does, and nothing else.
+  - so no content filter applies to them at all: excluding a folder from merges or splits does not hide them. The `Select` settings page carries their own two path boxes, and nothing else decides where they appear.
 - They work with a selection already active
   - unlike `Extract this heading...`, which hides itself in the editor menu when you have selected something. Re-selecting over a live selection is the whole point here.
 

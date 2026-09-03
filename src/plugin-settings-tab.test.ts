@@ -195,6 +195,9 @@ describe('PluginSettingsTab', () => {
       'group:Merge/split/extract strategies',
       'page:Merge',
       'page:Split/extract',
+      // Its own page since issue #271, next to the split/extract commands whose ranges it shares. Two
+      // Path rows and nothing else: a select writes nothing, so it has no content pair.
+      'page:Select',
       'page:Swap',
       'page:Smart cut & paste',
       // Its own page rather than rows scattered across three others (issue #223).
@@ -203,11 +206,13 @@ describe('PluginSettingsTab', () => {
       // Its own page since issue #254: thirty commands, each with two toggles, would swamp any page that
       // Also had to hold something else.
       'page:Command menu placement',
-      // One page over what used to be two top-level headers (issue #225); the second path filter is still
-      // Independent of the first (issue #198), it is now its own subheading rather than its own header.
-      'page:Include/exclude',
+      // Issue #225 folded two top-level headers into one `Include/exclude` page; issue #271 retired that
+      // Page in turn, moving each category's path rows onto the page of the commands they govern.
       'page:Move/flatten folders',
-      'page:Create folder with notes',
+      // `Create folder with notes` until issue #271 gave it the whole `Create` category's path rows.
+      'page:Create',
+      // Its own page since issue #271, for the one remaining category with no page of its own.
+      'page:Rename',
       // Its own page rather than rows inside `Reorder` (issue #216): what a folder note IS also answers
       // Issue #217's rename, so it is not a reorder detail.
       'page:Folder note',
@@ -231,73 +236,76 @@ describe('PluginSettingsTab', () => {
         'Rename command menus',
         'Reorder command menus'
       ],
-      'Create folder with notes': [],
+      // Issue #271 moved the `Create` category's path rows here, under their own heading.
+      'Create': ['Create include/exclude paths'],
       'Folder note': [],
       'Frontmatter': [],
-      // Issue #225, extended by issue #249: the baseline pair keeps its own group — renamed `All commands`
-      // — and every command category gets one below it, so a path can lose one category and keep the rest.
-      'Include/exclude': [
-        'Paths',
-        'All commands',
-        'Merge commands',
-        'Split/extract commands',
-        'Select commands',
-        'Create commands',
-        'Smart cut & paste commands',
-        'Swap commands',
-        'Move/flatten commands',
-        'Rename commands',
-        'Reorder commands'
-      ],
       // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
-      // Six of its ten rows silently meant only the one their descriptions named.
-      'Merge': ['All merges', 'Merge file', 'Merge folder contents into a single file', 'Merge current folder with another folder'],
-      'Move/flatten folders': [],
-      'Reorder': [],
+      // Six of its ten rows silently meant only the one their descriptions named. Issue #271 added the
+      // Path group at the end.
+      'Merge': [
+        'All merges',
+        'Merge file',
+        'Merge folder contents into a single file',
+        'Merge current folder with another folder',
+        'Merge include/exclude paths'
+      ],
+      'Move/flatten folders': ['Move/flatten include/exclude paths'],
+      // `Rename` and `Select` hold nothing but their path rows, so those sit on the page directly — a
+      // Separator with nothing to separate is noise.
+      'Rename': [],
+      'Reorder': ['Reorder include/exclude paths'],
+      'Select': [],
       // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
-      'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file'],
-      'Split/extract': [],
+      'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file', 'Smart cut & paste include/exclude paths'],
+      'Split/extract': ['Split/extract include/exclude paths'],
       // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
       // Shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
       // The folder rows name their own target type — so the headings only mislabelled the first row.
-      'Swap': [],
+      'Swap': ['Swap include/exclude paths'],
       'Title': [],
       'UI': []
     });
   });
 
-  // Issue #249: the enum, the settings behind it and this page have to stay in step — a category with no
-  // Group is a filter the user cannot reach, and its two settings would only ever be editable by hand.
-  it('should give every command category its own group with an include and an exclude row', async () => {
+  // Issues #249 / #270 / #271: the enum, the settings behind it and the pages have to stay in step — a
+  // Category whose rows render nowhere is a filter the user cannot reach, and its settings would only
+  // Ever be editable by hand.
+  it('should give every command category its path rows on its own page', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
-      // Four rows since issue #270, content pair first: the group mirrors the page's own order, where the
-      // `Paths` group (content) precedes `All commands` (visibility). `Select` is the exception at two
-      // Rows — it has no content pair, because a select writes nothing and never consults that filter, so
-      // The rows would be controls read by nothing.
+      // Four rows since issue #270, content pair first. `Select` is the exception at two rows — it has no
+      // Content pair, because a select writes nothing and never consults that filter, so the rows would
+      // Be controls read by nothing.
       const contentRowNames = commandCategory === CommandCategory.Select
         ? []
         : [`${commandCategory} include paths`, `${commandCategory} exclude paths`];
-      expect(containers.get(`${commandCategory} commands`)).toEqual([
+      const rowNames = [
         ...contentRowNames,
         `${commandCategory} command include paths`,
         `${commandCategory} command exclude paths`
-      ]);
+      ];
+
+      // `Rename` and `Select` have no group of their own, so their rows are the whole of their page —
+      // Whose name IS the category, which is what makes the fallback lookup work for both of them.
+      const container = containers.get(`${commandCategory} include/exclude paths`) ?? containers.get(commandCategory);
+      expect(container).toEqual(rowNames);
     }
   });
 
   /*
-   * Issue #254 moved placement off this page entirely: it is chosen one COMMAND at a time now, on its own
-   * page, so a category group here holds nothing but its two path rows.
+   * Issue #254 moved placement off the path groups entirely: it is chosen one COMMAND at a time now, on
+   * its own page, so a category's path group holds nothing but its path rows.
    */
   it('should give every menu-placeable command a row of its own, grouped by category', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
     for (const commandCategory of menuPlaceableCommandCategories()) {
-      expect(containers.get(`${commandCategory} commands`)).not.toContain(`${commandCategory} command menu placement`);
+      expect(containers.get(`${commandCategory} include/exclude paths`) ?? containers.get(commandCategory) ?? [])
+        .not.toContain(`${commandCategory} command menu placement`);
     }
 
     for (const command of MENU_PLACEABLE_COMMANDS) {
@@ -361,10 +369,14 @@ describe('PluginSettingsTab', () => {
       'Merge file',
       'Merge folder contents into a single file',
       'Merge current folder with another folder',
+      'Merge include/exclude paths',
+      'Split/extract include/exclude paths',
+      'Swap include/exclude paths',
       'Notice',
       'At cursor',
       'To top of file',
       'To bottom of file',
+      'Smart cut & paste include/exclude paths',
       'Split/extract command menus',
       'Select command menus',
       'Create command menus',
@@ -372,17 +384,9 @@ describe('PluginSettingsTab', () => {
       'Swap command menus',
       'Rename command menus',
       'Reorder command menus',
-      'Paths',
-      'All commands',
-      'Merge commands',
-      'Split/extract commands',
-      'Select commands',
-      'Create commands',
-      'Smart cut & paste commands',
-      'Swap commands',
-      'Move/flatten commands',
-      'Rename commands',
-      'Reorder commands'
+      'Move/flatten include/exclude paths',
+      'Create include/exclude paths',
+      'Reorder include/exclude paths'
     ]);
   });
 
@@ -594,10 +598,25 @@ describe('PluginSettingsTab', () => {
     renderRows(tab);
 
     // The command-visibility filter (issue #198) takes the same two entry forms, so it explains them too.
-    for (const name of ['Include paths', 'Exclude paths', 'Command include paths', 'Command exclude paths']) {
+    for (const name of ['Merge include paths', 'Merge exclude paths', 'Merge command include paths', 'Merge command exclude paths']) {
       const desc = findDesc(name);
       expect(desc).toContain('A path string matches that note or folder and everything inside it');
       expect(desc).toContain('/^Inbox$/');
+    }
+  });
+
+  // The advice belonged to the all-commands `Exclude paths` row until issue #271 retired it. It is not
+  // About any one category, so rather than being lost it now rides on every content-exclude row.
+  it('should keep the attachment-folder advice on every content exclude row', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    for (const commandCategory of COMMAND_CATEGORIES) {
+      if (commandCategory === CommandCategory.Select) {
+        continue;
+      }
+
+      expect(findDesc(`${commandCategory} exclude paths`)).toContain('This is how to protect your attachment folder');
     }
   });
 
@@ -607,9 +626,20 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    expect(findDesc('Command exclude paths')).toContain('Hide Advanced Note Composer commands');
-    expect(findDesc('Command include paths')).toContain('Offer Advanced Note Composer commands only');
+    expect(findDesc('Merge command exclude paths')).toContain('Hide the Merge commands');
+    expect(findDesc('Merge command include paths')).toContain('Offer the Merge commands only');
     expect(() => findToggle('Should block commands on excluded paths')).toThrow();
+  });
+
+  // Issue #271 deleted the four all-commands boxes. Leaving one behind would put the plugin back in the
+  // State the reporter objected to, where a path can be listed in two places that disagree.
+  it('should render no all-commands path rows', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    for (const name of ['Include paths', 'Exclude paths', 'Command include paths', 'Command exclude paths']) {
+      expect(() => findDesc(name)).toThrow();
+    }
   });
 
   it('should render the per-operation-overrides toggle bound to its setting', async () => {

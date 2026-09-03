@@ -155,24 +155,26 @@ describe('per-category command blocking (issue #249)', () => {
         await setPaths('Split/extract command exclude paths', BLOCKED_FOLDER);
         const restBlocked = await probeCategories(blockedFile);
 
-        // The un-prefixed pair still means EVERY command (that is what makes an existing `data.json` behave
-        // Identically), so listing the path there hides the kept category too.
-        await setPaths('Command exclude paths', BLOCKED_FOLDER);
-        const baselineBlocked = await probeCategories(blockedFile);
+        // Since issue #271 there is no all-commands list to reach the kept category with: hiding it too
+        // Means naming it, which is exactly the change — every path is listed under the commands it
+        // Affects and nowhere else.
+        await setPaths('Smart cut & paste command exclude paths', BLOCKED_FOLDER);
+        const everyCategoryBlocked = await probeCategories(blockedFile);
 
-        // A category filter narrows; it can never re-open what the baseline hid.
+        // Within a category the exclude list wins over its own include list, so listing the path in both
+        // Is not an exception that brings the commands back.
         await setPaths('Create command include paths', BLOCKED_FOLDER);
-        const baselineWinsOverCategoryInclude = await probeCategories(blockedFile);
+        const categoryExcludeWinsOverItsInclude = await probeCategories(blockedFile);
 
         // Restore the shared instance to a clean default state.
         await setPaths('Create command include paths', '');
-        await setPaths('Command exclude paths', '');
+        await setPaths('Smart cut & paste command exclude paths', '');
         await setPaths('Create command exclude paths', '');
         await setPaths('Swap command exclude paths', '');
         await setPaths('Split/extract command exclude paths', '');
         const restored = await probeCategories(blockedFile);
 
-        return { baselineBlocked, baselineWinsOverCategoryInclude, restBlocked, restored };
+        return { categoryExcludeWinsOverItsInclude, everyCategoryBlocked, restBlocked, restored };
 
         async function probeCategories(file: TFile): Promise<CategoryAvailability> {
           const editor = await openAndGetEditor(file);
@@ -245,8 +247,8 @@ describe('per-category command blocking (issue #249)', () => {
     });
 
     expect(result.restBlocked).toEqual({ create: false, smartCutAndPaste: true, splitAndExtract: false, swap: false });
-    expect(result.baselineBlocked).toEqual({ create: false, smartCutAndPaste: false, splitAndExtract: false, swap: false });
-    expect(result.baselineWinsOverCategoryInclude).toEqual({ create: false, smartCutAndPaste: false, splitAndExtract: false, swap: false });
+    expect(result.everyCategoryBlocked).toEqual({ create: false, smartCutAndPaste: false, splitAndExtract: false, swap: false });
+    expect(result.categoryExcludeWinsOverItsInclude).toEqual({ create: false, smartCutAndPaste: false, splitAndExtract: false, swap: false });
     expect(result.restored).toEqual({ create: true, smartCutAndPaste: true, splitAndExtract: true, swap: true });
   });
 });

@@ -24,7 +24,7 @@ interface ComponentTreeNode {
 }
 
 interface ExcludedMergeSettings {
-  excludePaths: string[];
+  mergeExcludePaths: string[];
   shouldAlwaysMergeExcludedItems: boolean;
   shouldAskBeforeMerging: boolean;
   shouldIncludeChildFoldersWhenMergingByDefault: boolean;
@@ -48,7 +48,7 @@ describe('merging into an excluded target folder', () => {
         const MERGED_NOTE_PATH = 't504-excluded/t504-note.md';
 
         const settingsComponent = findSettingsComponent();
-        const originalExcludePaths = [...settingsComponent.settings.excludePaths];
+        const originalExcludePaths = [...settingsComponent.settings.mergeExcludePaths];
         const isOriginalAlwaysMerge = settingsComponent.settings.shouldAlwaysMergeExcludedItems;
         const isOriginalOfferExcludedDestinations = settingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations;
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMerging;
@@ -63,7 +63,7 @@ describe('merging into an excluded target folder', () => {
           const sourceNote = await app.vault.create(SOURCE_NOTE_PATH, 'source body');
 
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = [TARGET_FOLDER_PATH];
+            settings.mergeExcludePaths = [TARGET_FOLDER_PATH];
             settings.shouldAskBeforeMerging = false;
             // Both folders sit at the vault root, so neither of these filters can hide the target for a
             // Reason that has nothing to do with what is under test.
@@ -108,7 +108,7 @@ describe('merging into an excluded target folder', () => {
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
-            settings.excludePaths = originalExcludePaths;
+            settings.mergeExcludePaths = originalExcludePaths;
             settings.shouldAlwaysMergeExcludedItems = isOriginalAlwaysMerge;
             settings.shouldAskBeforeMerging = isOriginalShouldAsk;
             settings.shouldIncludeChildFoldersWhenMergingByDefault = isOriginalIncludeChildFolders;
@@ -185,7 +185,7 @@ describe('merging into an excluded target folder', () => {
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
           return typeof node.editAndSave === 'function'
-            && Array.isArray(node.settings?.excludePaths)
+            && Array.isArray(node.settings?.mergeExcludePaths)
             && typeof node.settings.shouldAlwaysMergeExcludedItems === 'boolean';
         }
 

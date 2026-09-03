@@ -39,10 +39,10 @@ interface SettingsCarrier {
 }
 
 interface TemplateSettings {
-  excludePaths: string[];
   shouldAskBeforeSplitting: boolean;
   shouldSplitHeadingsAutomatically: boolean;
   shouldSplitIntoFolder: boolean;
+  splitExcludePaths: string[];
   splitTemplate: string;
 }
 
@@ -344,7 +344,7 @@ describe('split headings recursively', () => {
         }
 
         function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.excludePaths);
+          return typeof node.editAndSave === 'function' && Array.isArray(node.settings?.splitExcludePaths);
         }
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {

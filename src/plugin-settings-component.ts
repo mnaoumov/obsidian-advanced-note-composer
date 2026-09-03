@@ -6,6 +6,10 @@ import { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/compone
 import { pathsValidator } from 'obsidian-dev-utils/obsidian/path-settings';
 
 import type {
+  CommandCategoryContentPathsSettingName,
+  CommandCategoryPathsSettingName
+} from './plugin-settings.ts';
+import type {
   CreateFolderTemplateTokens,
   NameTransformTokens,
   ReorderedFileTemplateTokens
@@ -15,6 +19,7 @@ import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import { parseFolderContentTemplate } from './folder-content-template.ts';
 import { menuPlaceableCommandsOfCategory } from './menu-placeable-commands.ts';
 import {
+  COMMAND_CATEGORY_PATH_SETTING_NAMES,
   CommandCategory,
   CommandMenuPlacement,
   FrontmatterTitleMode,
@@ -96,6 +101,17 @@ const REORDER_FOLDER_FORBIDDEN_TOKEN_KEYS = new Set([...FOLDER_ONLY_TOKEN_KEYS, 
  */
 const REORDER_TYPED_NAME_TOKEN_KEYS = new Set([RAW_FOLDER_NAME_TOKEN_KEY]);
 
+/**
+ * The name of any per-category path list — content or visibility — as the issue #271 fan-out addresses it.
+ */
+type CategoryPathsSettingName = CommandCategoryContentPathsSettingName | CommandCategoryPathsSettingName;
+
+/**
+ * The settings record a legacy converter is handed: a partial of the retired keys and a partial of the
+ * current ones, which is what lets the fan-out read the former and write the latter.
+ */
+type LegacyPathSettings = Partial<LegacySettings> & Partial<PluginSettings>;
+
 interface PluginSettingsComponentConstructorParams {
   readonly dataHandler: DataHandler;
   readonly pluginEventSource: PluginEventSource;
@@ -129,8 +145,20 @@ interface ValidateReorderNameTemplateParams {
 
 /* v8 ignore start -- LegacySettings is only instantiated during legacy settings migration. */
 class LegacySettings {
+  /**
+   * The all-commands command-VISIBILITY pair, retired by issue #271 in favour of the nine per-category
+   * pairs it used to be a baseline for.
+   */
+  public commandExcludePaths: string[] = [];
+  public commandIncludePaths: string[] = [];
   // eslint-disable-next-line unicorn/no-non-function-verb-prefix -- A retired settings key, named by the category it covered.
   public createCommandMenuPlacement?: CommandMenuPlacement;
+
+  /**
+   * The all-commands CONTENT pair, retired by issue #271 alongside the visibility pair above.
+   */
+  public excludePaths: string[] = [];
+  public includePaths: string[] = [];
   public markdownAttachmentSubExtensions: string[] = [];
   public renameCommandMenuPlacement?: CommandMenuPlacement;
   public reorderCommandMenuPlacement?: CommandMenuPlacement;
@@ -191,6 +219,32 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       if (legacySettings.shouldBlockCommandsOnExcludedPaths) {
         legacySettings.commandIncludePaths = legacySettings.includePaths ?? [];
         legacySettings.commandExcludePaths = legacySettings.excludePaths ?? [];
+      }
+
+      /*
+       * Issue #271 retired those four all-commands lists — `includePaths` / `excludePaths` (CONTENT) and
+       * `commandIncludePaths` / `commandExcludePaths` (VISIBILITY) — that every category's own pair used
+       * to narrow. Keeping both invited a vault with entries in the all-commands list AND in a category
+       * list, where neither row on its own explained what the plugin did; the per-category pairs that
+       * issues #249 and #270 completed are the whole filter now.
+       *
+       * Dropping the retired lists silently would un-protect every path they covered — including the
+       * attachment folder the old `Exclude paths` description told users to list — so they are fanned out
+       * across every category instead, and the upgraded vault behaves as it did.
+       *
+       * This runs AFTER the block above on purpose: that one can still populate the visibility pair from
+       * an even older toggle, and what it writes has to be fanned out too.
+       */
+      const retiredIncludePaths = legacySettings.includePaths ?? [];
+      const retiredExcludePaths = legacySettings.excludePaths ?? [];
+      const retiredCommandIncludePaths = legacySettings.commandIncludePaths ?? [];
+      const retiredCommandExcludePaths = legacySettings.commandExcludePaths ?? [];
+      for (const pathSettingNames of COMMAND_CATEGORY_PATH_SETTING_NAMES.values()) {
+        // `Select` passes `undefined` for the content pair — it has none — and the helpers ignore it.
+        fanOutRetiredIncludePaths(legacySettings, pathSettingNames.contentIncludePathsPropertyName, retiredIncludePaths);
+        fanOutRetiredExcludePaths(legacySettings, pathSettingNames.contentExcludePathsPropertyName, retiredExcludePaths);
+        fanOutRetiredIncludePaths(legacySettings, pathSettingNames.commandIncludePathsPropertyName, retiredCommandIncludePaths);
+        fanOutRetiredExcludePaths(legacySettings, pathSettingNames.commandExcludePathsPropertyName, retiredCommandExcludePaths);
       }
 
       /*
@@ -302,18 +356,10 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
     // Validator that fallback is invisible, so a single broken entry would silently stop the other
     // Entries from matching. The validator is the ODU export, not a local copy.
-    this.registerValidator('includePaths', pathsValidator);
-    this.registerValidator('excludePaths', pathsValidator);
-
-    // The command-visibility filter (issue #198) takes the same two entry forms, so it needs the same
-    // Validator — the silent all-or-nothing fallback above is not specific to the content filter.
-    this.registerValidator('commandIncludePaths', pathsValidator);
-    this.registerValidator('commandExcludePaths', pathsValidator);
-
-    // Each category's own pair (issue #249) is the same kind of list, entry forms included, so it needs
-    // The same validator. There is deliberately NO legacy-settings converter to go with them: the two
-    // Lists above keep meaning "every command", every pair below starts empty, and two empty lists block
-    // Nothing — so an existing `data.json` already expresses exactly what it expressed before.
+    //
+    // Every list below is per-category since issue #271 retired the all-commands `includePaths` /
+    // `excludePaths` / `commandIncludePaths` / `commandExcludePaths` quartet these used to narrow; the
+    // Converter above fans an upgrading vault's entries out across them.
     this.registerValidator('createCommandIncludePaths', pathsValidator);
     this.registerValidator('createCommandExcludePaths', pathsValidator);
     this.registerValidator('mergeCommandIncludePaths', pathsValidator);
@@ -340,9 +386,8 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('selectCommandExcludePaths', pathsValidator);
 
     // Each category's own CONTENT pair (issue #270) is the same kind of list again — the reporter's
-    // Screenshot was of `Include paths` / `Exclude paths`, so these narrow what the plugin may TOUCH
-    // Rather than where its commands are offered. No legacy converter here either, for the same reason:
-    // Every pair starts empty and two empty lists ignore nothing.
+    // Screenshot was of the then-`Include paths` / `Exclude paths` rows, so these decide what the
+    // Category's commands may TOUCH rather than where they are offered.
     this.registerValidator('createIncludePaths', pathsValidator);
     this.registerValidator('createExcludePaths', pathsValidator);
     this.registerValidator('mergeIncludePaths', pathsValidator);
@@ -360,6 +405,58 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('swapIncludePaths', pathsValidator);
     this.registerValidator('swapExcludePaths', pathsValidator);
   }
+}
+
+/**
+ * Copies a retired all-commands EXCLUDE list into one category's own exclude list (issue #271).
+ *
+ * Concatenating is exactly faithful to what the retired list meant: `PathSettings.isPathIgnored` ORs its
+ * two halves, so one list holding both sets of entries excludes precisely what the two lists excluded
+ * between them. The retired entries go first, so the category's own remain readable as the ones the user
+ * typed there.
+ *
+ * @param legacySettings - The settings record being migrated, edited in place.
+ * @param propertyName - The category's exclude list, or `undefined` where the category has none.
+ * @param retiredPaths - The retired list's entries.
+ */
+function fanOutRetiredExcludePaths(
+  legacySettings: LegacyPathSettings,
+  propertyName: CategoryPathsSettingName | undefined,
+  retiredPaths: string[]
+): void {
+  if (propertyName === undefined || retiredPaths.length === 0) {
+    return;
+  }
+
+  legacySettings[propertyName] = [...retiredPaths, ...legacySettings[propertyName] ?? []];
+}
+
+/**
+ * Copies a retired all-commands INCLUDE list into one category's own include list (issue #271), but only
+ * while that list is still empty.
+ *
+ * Include lists cannot be concatenated the way {@link fanOutRetiredExcludePaths} concatenates: the retired
+ * pair ignored a path unless it matched BOTH lists, while one list holding both sets allows a path
+ * matching EITHER — the union where the intersection was meant. An intersection of two path lists is not
+ * expressible as a third list at all (each entry is a plain path or a `/regular expression/`), so where a
+ * category already carries include entries of its own those win and the retired half is dropped. That is
+ * only reachable in a vault where someone filled in both, which needs a category configured since 5.10.x,
+ * when the per-category lists first shipped.
+ *
+ * @param legacySettings - The settings record being migrated, edited in place.
+ * @param propertyName - The category's include list, or `undefined` where the category has none.
+ * @param retiredPaths - The retired list's entries.
+ */
+function fanOutRetiredIncludePaths(
+  legacySettings: LegacyPathSettings,
+  propertyName: CategoryPathsSettingName | undefined,
+  retiredPaths: string[]
+): void {
+  if (propertyName === undefined || retiredPaths.length === 0 || (legacySettings[propertyName]?.length ?? 0) > 0) {
+    return;
+  }
+
+  legacySettings[propertyName] = [...retiredPaths];
 }
 
 /**
