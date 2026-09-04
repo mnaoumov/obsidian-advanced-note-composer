@@ -144,7 +144,7 @@ default, matching Obsidian. Two things the mocks deliberately do not give you:
 ## Integration test isolation
 
 **The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE temp vault across all
-103 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts Obsidian between
+105 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts Obsidian between
 files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — would be handed to
 every file that runs after it. Two setup files, both registered centrally, are what stop that.
 
@@ -196,6 +196,12 @@ fuzzy-ranked suggestion list, and a merge's link update reached into the hundred
 behind, rewriting links in notes it did not own and dying mid-merge on an unhandled error. Every victim
 passed in isolation. If a test of yours still fails only in the aggregate, run it alone before reaching for a
 timing explanation.
+
+**The suite is green, and that is the comparison now (measured 2026-09-04): `105 passed (105)` files,
+`153 passed (153)` tests.** It had been `3 failed | 100 passed (103)` files / `3 failed | 146 passed (149)`
+tests, where *which* three failed rotated run to run out of a larger pool, so a branch had to be checked
+against a recorded table rather than against zero. That table is history now, kept in the tracker item. A
+failure here is a real regression.
 
 **The `Enter to create` row is NOT a vault-size symptom, and a clean vault does not make waiting for it
 safe.** `SuggestModalBase.onNoSuggestion()` is the only thing that ever pushes it, so it exists **only when
