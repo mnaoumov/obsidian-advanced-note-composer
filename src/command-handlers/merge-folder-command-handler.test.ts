@@ -49,6 +49,17 @@ interface InitAppOptions {
   readonly plugins?: Record<string, unknown>;
 }
 
+/**
+ * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
+ *
+ * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
+ * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
+ * assign over `app.plugins` any more.
+ */
+interface PluginsRegistryTestable {
+  registerPlugin__(id: string, plugin: unknown): void;
+}
+
 interface Testable {
   canExecuteFolder(folder: TFolder): boolean;
   executeFolder(folder: TFolder): Promise<void>;
@@ -161,8 +172,8 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   app = App.createConfigured__({ files }).asOriginalType__();
   // Test-mocks' MetadataCache has no indexer; the merge's processFrontMatter triggers a recompute.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
-  if (options.plugins) {
-    castTo<GenericObject>(app)['plugins'] = { plugins: options.plugins };
+  for (const [id, plugin] of Object.entries(options.plugins ?? {})) {
+    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();

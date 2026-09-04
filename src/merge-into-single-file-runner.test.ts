@@ -73,6 +73,17 @@ interface InitAppOptions {
 }
 
 /**
+ * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
+ *
+ * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
+ * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
+ * assign over `app.plugins` any more.
+ */
+interface PluginsRegistryTestable {
+  registerPlugin__(id: string, plugin: unknown): void;
+}
+
+/**
  * A tab the rollback put back, as recorded by the stubbed leaf it was reopened in.
  */
 interface ReopenedTab {
@@ -137,8 +148,8 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   if (options.attachmentFolderPath !== undefined) {
     app.vault.setConfig('attachmentFolderPath', options.attachmentFolderPath);
   }
-  if (options.plugins) {
-    castTo<GenericObject>(app)['plugins'] = { plugins: options.plugins };
+  for (const [id, plugin] of Object.entries(options.plugins ?? {})) {
+    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();

@@ -199,7 +199,7 @@ describe('extract completion notice link (issue #232)', () => {
             predicate: () => [...activeDocument.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(basename))
           });
           inputEl.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         /**

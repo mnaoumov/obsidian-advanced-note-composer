@@ -72,7 +72,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           // The moved text lands in the target and is removed from the source; the source edit reaches
           // The open editor buffer first, so wait for the vault file to reflect both sides.

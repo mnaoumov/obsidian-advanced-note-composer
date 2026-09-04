@@ -18,6 +18,18 @@ import {
   CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID
 } from './custom-attachment-location.ts';
 
+/**
+ * Builds an app whose registry holds the given Custom Attachment Location.
+ *
+ * Not a candidate for `obsidian-test-mocks`' `registerPlugin__`, despite looking like one: this builds a
+ * standalone fake rather than stubbing around `App.createConfigured__()`'s strict proxy, so there is no real
+ * registry here to seed. The functions under test take any app shape and are asked about deliberately
+ * malformed plugins, so giving them a whole configured vault to reach one `getPlugin` would widen what the
+ * test isolates rather than narrow it.
+ *
+ * @param plugin - What `getPlugin` returns for that id.
+ * @returns The app.
+ */
 function createApp(plugin: unknown): App {
   return strictProxy<App>({
     plugins: strictProxy<App['plugins']>({

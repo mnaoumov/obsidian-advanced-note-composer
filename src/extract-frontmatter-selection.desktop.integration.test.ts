@@ -134,7 +134,7 @@ describe('extracting a properties selection (issue #183)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function editorValueFor(path: string): string | undefined {

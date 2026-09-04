@@ -31,6 +31,17 @@ interface FixOverrides {
   shouldReplaceInvalidCharacters?: boolean;
 }
 
+/**
+ * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
+ *
+ * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
+ * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
+ * assign over `app.plugins` any more.
+ */
+interface PluginsRegistryTestable {
+  registerPlugin__(id: string, plugin: unknown): void;
+}
+
 interface TemplaterMock {
   createRunningConfig: Mock;
   parseTemplate: Mock;
@@ -249,11 +260,9 @@ describe('transformAndFixFileName', () => {
 
 function createApp(overrides?: CreateAppOverrides): AppOriginal {
   const app = App.createConfigured__({ files: overrides?.files ?? { 'note.md': 'note' } }).asOriginalType__();
-  // `plugins` is not part of the mock's surface, so it is assigned outright — with no plugin installed by
-  // Default, which is the "Templater is missing" case.
-  castTo<GenericObject>(app)['plugins'] = { plugins: {} };
-  // Neither is `getRecentFiles`, which the Templater-context fallback chain consults whenever no note is
-  // Open (issue #218) — stubbed empty for every test, so only the tests that care about it say so.
+  // `getRecentFiles` is not part of the mock's surface, and the Templater-context fallback chain consults it
+  // Whenever no note is open (issue #218) — stubbed empty for every test, so only the tests that care about
+  // It say so. No plugin is registered here, which is the "Templater is missing" case.
   installRecentFiles(app, []);
   return app;
 }
@@ -283,18 +292,14 @@ function installTemplater(app: AppOriginal): TemplaterMock {
     createRunningConfig: vi.fn().mockReturnValue({}),
     parseTemplate: vi.fn().mockResolvedValue('')
   };
-  castTo<GenericObject>(app)['plugins'] = {
-    plugins: {
-      'templater-obsidian': {
-        templater: {
-          /* eslint-disable camelcase -- Templater's own API method names. */
-          create_running_config: templaterMock.createRunningConfig,
-          parse_template: templaterMock.parseTemplate
-          /* eslint-enable camelcase -- Templater's own API method names. */
-        }
-      }
+  castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
+    templater: {
+      /* eslint-disable camelcase -- Templater's own API method names. */
+      create_running_config: templaterMock.createRunningConfig,
+      parse_template: templaterMock.parseTemplate
+      /* eslint-enable camelcase -- Templater's own API method names. */
     }
-  };
+  });
   return templaterMock;
 }
 

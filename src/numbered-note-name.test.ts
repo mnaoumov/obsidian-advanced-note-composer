@@ -53,79 +53,103 @@ async function renumber(
 describe('applyNumberedNoteName', () => {
   it('should continue the reporter\'s own gapped sequence at 1 + max', async () => {
     // Issue #269's example verbatim, for the flat (no own folder) case.
-    expect(await renumber({
-      'parent/1. A.md': 'a',
-      'parent/3. B.md': 'b',
-      'parent/4. C.md': 'c',
-      'parent/D.md': 'd'
-    }, '{{index}}. {{safeName}}')).toBe('parent/5. D.md');
+    expect(
+      await renumber({
+        'parent/1. A.md': 'a',
+        'parent/3. B.md': 'b',
+        'parent/4. C.md': 'c',
+        'parent/D.md': 'd'
+      }, '{{index}}. {{safeName}}')
+    ).toBe('parent/5. D.md');
   });
 
   it('should start at 1 when no sibling note is numbered', async () => {
-    expect(await renumber({
-      'parent/Alpha.md': 'a',
-      'parent/D.md': 'd'
-    }, '{{index}}. {{safeName}}')).toBe('parent/1. D.md');
+    expect(
+      await renumber({
+        'parent/Alpha.md': 'a',
+        'parent/D.md': 'd'
+      }, '{{index}}. {{safeName}}')
+    ).toBe('parent/1. D.md');
   });
 
   it('should leave the note alone when the template is empty, which is the opt-out', async () => {
-    expect(await renumber({
-      'parent/1. A.md': 'a',
-      'parent/D.md': 'd'
-    }, '')).toBe('parent/D.md');
+    expect(
+      await renumber({
+        'parent/1. A.md': 'a',
+        'parent/D.md': 'd'
+      }, '')
+    ).toBe('parent/D.md');
   });
 
   it('should zero-pad to the width of the mask', async () => {
-    expect(await renumber({
-      'parent/006 D.md': 'six',
-      'parent/D.md': 'd'
-    }, '{{index:000}} {{safeName}}')).toBe('parent/007 D.md');
+    expect(
+      await renumber({
+        'parent/006 D.md': 'six',
+        'parent/D.md': 'd'
+      }, '{{index:000}} {{safeName}}')
+    ).toBe('parent/007 D.md');
   });
 
   it('should put the number wherever the template puts it', async () => {
-    expect(await renumber({
-      'parent/A (2).md': 'a',
-      'parent/D.md': 'd'
-    }, '{{safeName}} ({{index}})')).toBe('parent/D (3).md');
+    expect(
+      await renumber({
+        'parent/A (2).md': 'a',
+        'parent/D.md': 'd'
+      }, '{{safeName}} ({{index}})')
+    ).toBe('parent/D (3).md');
   });
 
   it('should de-duplicate against a note already holding the numbered name', async () => {
     // The sibling is numbered `2.` and something unrelated already occupies `2. D`, so the rename cannot
     // Simply take it.
-    expect(await renumber({
-      'parent/1. A.md': 'a',
-      'parent/2. D.md': 'squatter',
-      'parent/D.md': 'd'
-    }, '{{index}}. {{safeName}}')).toBe('parent/3. D.md');
+    expect(
+      await renumber({
+        'parent/1. A.md': 'a',
+        'parent/2. D.md': 'squatter',
+        'parent/D.md': 'd'
+      }, '{{index}}. {{safeName}}')
+    ).toBe('parent/3. D.md');
   });
 
   it('should number a note at the vault root', async () => {
-    expect(await renumber({
-      '1. A.md': 'a',
-      'D.md': 'd'
-    }, '{{index}}. {{safeName}}', 'D.md')).toBe('2. D.md');
+    expect(
+      await renumber(
+        {
+          '1. A.md': 'a',
+          'D.md': 'd'
+        },
+        '{{index}}. {{safeName}}',
+        'D.md'
+      )
+    ).toBe('2. D.md');
   });
 
   it('should resolve the folder tokens against the note\'s own folder', async () => {
-    expect(await renumber({
-      'parent/D.md': 'd'
-    }, '{{parentFolder}}-{{index}}-{{safeName}}')).toBe('parent/parent-1-D.md');
+    expect(
+      await renumber({
+        'parent/D.md': 'd'
+      }, '{{parentFolder}}-{{index}}-{{safeName}}')
+    ).toBe('parent/parent-1-D.md');
   });
 
   it('should leave the note alone when the template reproduces its current name', async () => {
     // Only reachable through a hand-edited `data.json` — the settings validator requires `{{index}}` — but
     // Without the guard the rename would de-duplicate the note against ITSELF and produce `D 1.md`.
-    expect(await renumber({
-      'parent/D.md': 'd'
-    }, '{{safeName}}')).toBe('parent/D.md');
+    expect(
+      await renumber({
+        'parent/D.md': 'd'
+      }, '{{safeName}}')
+    ).toBe('parent/D.md');
   });
 
   it('should leave the note alone when the template renders to nothing', async () => {
     // `{{name}}` and `{{path}}` are what this template PRODUCES, so they resolve to nothing here; the
     // Validator rejects them, and a hand-edited setting must not leave the note nameless.
-    expect(await renumber({
-      'parent/D.md': 'd'
-    }, '{{name}}')).toBe('parent/D.md');
+    expect(
+      await renumber({
+        'parent/D.md': 'd'
+      }, '{{name}}')
+    ).toBe('parent/D.md');
   });
 
   it('should scan the vault root for a note reporting no parent at all', async () => {

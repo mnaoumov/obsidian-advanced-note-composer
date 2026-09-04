@@ -88,7 +88,7 @@ describe('change target from the merge-folder confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {

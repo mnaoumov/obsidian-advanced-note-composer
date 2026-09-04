@@ -116,7 +116,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
            */
           const suggestionCount = document.querySelectorAll('.suggestion-item').length;
 
-          pressEnter();
+          await pressEnter();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isPickerOpenAfterEnter = document.querySelector('.prompt') !== null;
 
@@ -127,7 +127,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isHintVisibleWhileBlank = isHintVisible();
 
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null
@@ -189,9 +189,9 @@ describe('the split/extract picker asks for a name before a destination (issue #
           return hint.isShown();
         }
 
-        function pressEnter(): void {
+        async function pressEnter(): Promise<void> {
           getPickerInput().focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function typeIntoPicker(value: string): void {
@@ -319,7 +319,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           if (!siblingRow) {
             throw new Error('The sibling note was not offered in the split picker.');
           }
-          clickElement({ element: siblingRow });
+          await clickElement({ element: siblingRow });
 
           await waitUntil({
             message: `the new note was not created at ${EXPECTED_PATH}`,
@@ -516,7 +516,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           if (!siblingRow) {
             throw new Error('The sibling note was not offered in the split picker.');
           }
-          clickElement({ element: siblingRow });
+          await clickElement({ element: siblingRow });
 
           await waitUntil({
             message: 'the click chose nothing: the picker is still open',

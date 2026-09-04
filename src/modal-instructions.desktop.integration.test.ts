@@ -289,7 +289,7 @@ describe('shouldShowModalInstructions', () => {
           const hasSwitchBefore = document.querySelector('.advanced-note-composer-split-target-mode') !== null;
           const isCreateModeBefore = isCreateMode();
 
-          pressKey({ key: 'm', modifiers: ['Alt'] });
+          await pressKey({ key: 'm', modifiers: ['Alt'] });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const hasSwitchAfter = document.querySelector('.advanced-note-composer-split-target-mode') !== null;

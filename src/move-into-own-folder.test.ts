@@ -68,55 +68,73 @@ describe('moveIntoOwnFolder', () => {
   describe('numberedSplitFolderNameTemplate', () => {
     it('should continue the reporter\'s own gapped sequence at 1 + max', async () => {
       // Issue #269's example verbatim: the number goes on the FOLDER, and `1, 3, 4` continues at `5`.
-      expect(await wrap({
-        'parent/1. A/a.md': 'a',
-        'parent/3. B/b.md': 'b',
-        'parent/4. C/c.md': 'c',
-        'parent/D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })).toBe('parent/5. D/D.md');
+      expect(
+        await wrap({
+          'parent/1. A/a.md': 'a',
+          'parent/3. B/b.md': 'b',
+          'parent/4. C/c.md': 'c',
+          'parent/D.md': 'd'
+        }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })
+      ).toBe('parent/5. D/D.md');
     });
 
     it('should restart at 1 in a folder with no numbered subfolders, as each recursive pass does', async () => {
-      expect(await wrap({
-        'parent/D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })).toBe('parent/1. D/D.md');
+      expect(
+        await wrap({
+          'parent/D.md': 'd'
+        }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })
+      ).toBe('parent/1. D/D.md');
     });
 
     it('should ignore numbered NOTES, which are not part of the folder sequence', async () => {
-      expect(await wrap({
-        'parent/9. note.md': 'note',
-        'parent/D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })).toBe('parent/1. D/D.md');
+      expect(
+        await wrap({
+          'parent/9. note.md': 'note',
+          'parent/D.md': 'd'
+        }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })
+      ).toBe('parent/1. D/D.md');
     });
 
     it('should name the folder after the note when the template is empty, which is the opt-out', async () => {
-      expect(await wrap({
-        'parent/1. A/a.md': 'a',
-        'parent/D.md': 'd'
-      }, {})).toBe('parent/D/D.md');
+      expect(
+        await wrap({
+          'parent/1. A/a.md': 'a',
+          'parent/D.md': 'd'
+        }, {})
+      ).toBe('parent/D/D.md');
     });
 
     it('should de-duplicate a numbered folder name that already exists', async () => {
-      expect(await wrap({
-        'parent/1. A/a.md': 'a',
-        'parent/2. D/squatter.md': 'squatter',
-        'parent/D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })).toBe('parent/3. D/D.md');
+      expect(
+        await wrap({
+          'parent/1. A/a.md': 'a',
+          'parent/2. D/squatter.md': 'squatter',
+          'parent/D.md': 'd'
+        }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' })
+      ).toBe('parent/3. D/D.md');
     });
 
     it('should number a folder created at the vault root', async () => {
-      expect(await wrap({
-        '1. A/a.md': 'a',
-        'D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' }, 'D.md')).toBe('2. D/D.md');
+      expect(
+        await wrap(
+          {
+            '1. A/a.md': 'a',
+            'D.md': 'd'
+          },
+          { numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}' },
+          'D.md'
+        )
+      ).toBe('2. D/D.md');
     });
 
     it('should fall back to the note\'s name when the template renders to nothing', async () => {
       // `{{folderName}}` is what this template PRODUCES, so it resolves to nothing here; the validator
       // Rejects it, and a hand-edited setting must not leave the folder nameless.
-      expect(await wrap({
-        'parent/D.md': 'd'
-      }, { numberedSplitFolderNameTemplate: '{{folderName}}' })).toBe('parent/D/D.md');
+      expect(
+        await wrap({
+          'parent/D.md': 'd'
+        }, { numberedSplitFolderNameTemplate: '{{folderName}}' })
+      ).toBe('parent/D/D.md');
     });
 
     it('should scan the vault root for a note reporting no parent at all', async () => {
@@ -152,13 +170,15 @@ describe('moveIntoOwnFolder', () => {
     it('should let the note-name template read the number the folder just got', async () => {
       // `splitIntoFolderNoteNameTemplate`'s folder tokens are parsed back out of the created folder through
       // `reorderedFolderNameTemplate`, so numbering the folder makes them carry the new number.
-      expect(await wrap({
-        'parent/4. C/c.md': 'c',
-        'parent/D.md': 'd'
-      }, {
-        numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}',
-        splitIntoFolderNoteNameTemplate: '{{index}} {{safeFolderName}}'
-      })).toBe('parent/5. D/5 D.md');
+      expect(
+        await wrap({
+          'parent/4. C/c.md': 'c',
+          'parent/D.md': 'd'
+        }, {
+          numberedSplitFolderNameTemplate: '{{index}}. {{safeFolderName}}',
+          splitIntoFolderNoteNameTemplate: '{{index}} {{safeFolderName}}'
+        })
+      ).toBe('parent/5. D/5 D.md');
     });
   });
 });

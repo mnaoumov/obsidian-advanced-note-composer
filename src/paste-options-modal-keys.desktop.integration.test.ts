@@ -65,7 +65,7 @@ describe('paste options modal keyboard paths', () => {
         let wasDefaultPrevented = false;
         window.addEventListener('keydown', captureEnter, { capture: true });
         try {
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'Enter did not confirm the move',
@@ -206,7 +206,7 @@ describe('paste options modal keyboard paths', () => {
           // Outcome off the SAME trusted key press (issue #142's contract).
           window.addEventListener('keydown', captureEscape, { capture: true });
           try {
-            pressKey({ key: 'Escape' });
+            await pressKey({ key: 'Escape' });
 
             await waitUntil({
               message: 'Escape did not close the paste options modal',

@@ -101,7 +101,7 @@ describe('attachments in a merge (issue #161)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -231,7 +231,7 @@ describe('attachments in a merge (issue #161)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

@@ -52,13 +52,13 @@ describe('switch to smart cut from the split confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           // The confirmation dialog appears (with the switch button); trigger the switch via Alt+S.
           await waitUntil({ predicate: () => findSwitchButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isSwitchButtonPresent = findSwitchButton() !== null;
-          pressKey({ key: 's', modifiers: ['Alt'] });
+          await pressKey({ key: 's', modifiers: ['Alt'] });
 
           // The mark is now active: the permanent notice shows and the target note is opened.
           await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'confirm-switch-target.md' });

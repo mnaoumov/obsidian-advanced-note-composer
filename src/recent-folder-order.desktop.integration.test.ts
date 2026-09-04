@@ -100,7 +100,7 @@ describe('recent folder ordering (issue #158)', () => {
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
             input.focus();
-            pressKey({ key: 'Escape' });
+            await pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: `the picker for "${itemTitle}" did not close`,

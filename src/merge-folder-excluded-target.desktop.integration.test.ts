@@ -126,7 +126,7 @@ describe('merging into an excluded target folder', () => {
             predicate: () => hasSuggestion(query)
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         /**
@@ -146,7 +146,7 @@ describe('merging into an excluded target folder', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isOffered = hasSuggestion(TARGET_FOLDER_PATH);
           input.focus();
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return isOffered;
         }

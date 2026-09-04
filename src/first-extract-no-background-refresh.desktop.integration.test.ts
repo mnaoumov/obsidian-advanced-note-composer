@@ -74,9 +74,9 @@ describe('first extract does not refresh the background (issue #102)', () => {
           const activeWhenConfirmOpen = app.workspace.getActiveFile()?.path ?? '';
 
           // Close the confirm dialog and picker.
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const backgroundTabSwitches = activeLeafChanges.filter((path) => path !== 'issue-102-source.md');

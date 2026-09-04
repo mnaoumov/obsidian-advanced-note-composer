@@ -102,7 +102,7 @@ describe('split template folder tokens (issue #227)', () => {
           }
           await sleep(SETTLE_IN_MILLISECONDS);
           inputEl.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: `extracted note was not created at ${notePath}`,

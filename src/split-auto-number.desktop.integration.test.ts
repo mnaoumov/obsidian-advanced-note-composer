@@ -128,7 +128,7 @@ describe('auto-numbering what a split creates (issue #269)', () => {
            * way to say "create".
            */
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          forceCreateFromTypedName();
+          await forceCreateFromTypedName();
 
           await waitUntil({
             message: 'the extracted note was not created under its numbered name',
@@ -200,9 +200,9 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           return input;
         }
 
-        function forceCreateFromTypedName(): void {
+        async function forceCreateFromTypedName(): Promise<void> {
           getPickerInput().focus();
-          pressKey({ key: 'Enter', modifiers: ['Mod'] });
+          await pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
 
         function typeIntoPicker(value: string): void {
@@ -299,7 +299,7 @@ describe('auto-numbering what a split creates (issue #269)', () => {
            * way to say "create".
            */
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          forceCreateFromTypedName();
+          await forceCreateFromTypedName();
 
           await waitUntil({
             message: 'the extracted note was not created inside its numbered folder',
@@ -357,9 +357,9 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           return input;
         }
 
-        function forceCreateFromTypedName(): void {
+        async function forceCreateFromTypedName(): Promise<void> {
           getPickerInput().focus();
-          pressKey({ key: 'Enter', modifiers: ['Mod'] });
+          await pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
 
         function typeIntoPicker(value: string): void {

@@ -108,7 +108,7 @@ describe('choosing the folder before the name (issue #261)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === FOLDER_PATH)
           });
           getPromptInput()?.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           // SECOND prompt: the name box, which is a plain text prompt with no suggestion list at all.
           await waitUntil({

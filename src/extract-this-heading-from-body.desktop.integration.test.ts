@@ -65,7 +65,7 @@ describe('extract this heading from the body (issue #143)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(TARGET_BASENAME))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created',

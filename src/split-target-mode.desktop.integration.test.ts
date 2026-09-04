@@ -202,7 +202,7 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
             });
           }
           input.focus();
-          pressKey({ key: 'Enter', modifiers: shouldForceCreate ? ['Mod'] : [] });
+          await pressKey({ key: 'Enter', modifiers: shouldForceCreate ? ['Mod'] : [] });
 
           await waitUntil({
             message: 'the split picker did not close',
@@ -357,11 +357,11 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
           // The box has the cursor when the picker opens (issue #262), and `Alt+M` needs it to still be
           // There; focusing again costs nothing and makes that independent of the opening focus race.
           requirePickerInput().focus();
-          pressKey({ key: 'm', modifiers: ['Alt'] });
+          await pressKey({ key: 'm', modifiers: ['Alt'] });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           recordCurrentMode(spellcheckByMode);
 
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null
