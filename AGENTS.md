@@ -144,9 +144,9 @@ default, matching Obsidian. Two things the mocks deliberately do not give you:
 ## Integration test isolation
 
 **The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE temp vault across all
-103 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts or resets Obsidian
-between files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — is handed to
-every file that runs after it.
+105 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts Obsidian between
+files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — would be handed to
+every file that runs after it. Two setup files, both registered centrally, are what stop that.
 
 **`scripts/integration-test-setup.ts` is the cleanup that keeps that from cascading**, registered once
 through `editContext` in `scripts/vitest-config.ts` so it reaches every project spreading `context.desktop`
@@ -177,9 +177,41 @@ identical failure ten seconds later.
 Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable
 failure whose downstream victims moved.
 
-**The shared vault is still never cleaned (T880-P12)**, and it bites in two ways, so do not assume the
-first one is the whole of it. A late-running file competes with every earlier file's notes for room in the
-picker's capped, fuzzy-ranked suggestion list — and a merge's link update reaches into the hundreds of
-notes earlier files left behind, rewriting links in notes it does not own and dying mid-merge on an
-unhandled error. Both pass in isolation. If a test of yours fails only in the aggregate, run it alone
-before reaching for a timing explanation.
+**`scripts/integration-test-vault-reset.ts` empties the vault before each file (T880-P12)**, registered the
+same way and for the same reason — a suite cannot forget it. It deletes every child of `vault.getRoot()` in
+bounded passes, so a note resurrected by the previous file's debounced autosave goes on the next one, and a
+vault too large for one 30 s transport closure is finished by a later call. Dot-folders are not in Obsidian's
+file tree, so `.obsidian/data.json` and the harness's own configuration are untouched. Like the modal
+cleanup, it never throws.
+
+**Two projects deliberately opt out, via `withoutVaultReset` in `scripts/vitest-config.ts`.**
+`integration-tests:demo-vault` pre-populates the whole `demo-vault/` tree in its own `globalSetup` — that
+tree IS its subject, and it is reached by `npm run test:integration`, so wiping it would empty a real run —
+and `capture-screenshots:desktop` writes committed PNGs whose contents would change. Both keep the modal
+cleanup. The reset is appended to `context.desktop` for everyone and taken back off by name, so a new project
+inherits the isolation and opts out visibly rather than the other way round.
+
+**Why it exists.** A late-running file competed with every earlier file's notes for room in the picker's
+fuzzy-ranked suggestion list, and a merge's link update reached into the hundreds of notes earlier files left
+behind, rewriting links in notes it did not own and dying mid-merge on an unhandled error. Every victim
+passed in isolation. If a test of yours still fails only in the aggregate, run it alone before reaching for a
+timing explanation.
+
+**The suite is green, and that is the comparison now (measured 2026-09-04): `105 passed (105)` files,
+`153 passed (153)` tests.** It had been `3 failed | 100 passed (103)` files / `3 failed | 146 passed (149)`
+tests, where *which* three failed rotated run to run out of a larger pool, so a branch had to be checked
+against a recorded table rather than against zero. That table is history now, kept in the tracker item. A
+failure here is a real regression.
+
+**The `Enter to create` row is NOT a vault-size symptom, and a clean vault does not make waiting for it
+safe.** `SuggestModalBase.onNoSuggestion()` is the only thing that ever pushes it, so it exists **only when
+the search matched nothing at all** — not "when no exact match exists", which is the natural but wrong
+reading. Any fuzzy hit suppresses it, and four sibling notes in a freshly created vault are enough. **Force
+the creation with `pressKey({ key: 'Enter', modifiers: ['Mod'] })`** instead: `split-file-modal.ts` binds
+`Mod+Enter` to move the switch to `Create` and choose with no item at all, which is the same path the row
+takes, and it works whatever the list holds.
+
+**A test whose premise is "my note is somewhere in the list" needs to earn its place in it.** With an empty
+box the pickers order by recency before fuzz (`recent-suggestions.ts`), and the plugin records every note
+opened (issue #256) — so a fixture that is merely CREATED sits in the fuzzy tail, while one that is briefly
+OPENED is at the head. `split-picker-name-first`'s nothing-typed test does exactly that.

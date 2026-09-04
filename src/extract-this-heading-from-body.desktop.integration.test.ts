@@ -60,12 +60,11 @@ describe('extract this heading from the body (issue #143)', () => {
           }
           input.value = TARGET_BASENAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({
-            message: 'create-new suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(TARGET_BASENAME))
-          });
+          // `Mod+Enter` forces the creation from the typed name. Waiting for the `Enter to create` row instead
+          // Made this depend on the vault holding nothing that fuzzy-matches it, which the shared vault does
+          // Not guarantee ([[T880-P12]]).
           input.focus();
-          await pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
           await waitUntil({
             message: 'extracted note was not created',
