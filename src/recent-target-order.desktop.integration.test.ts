@@ -113,7 +113,7 @@ describe('recent target ordering (issues #206, #256)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'rt-dst')
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'folder was not moved into the destination',
@@ -214,7 +214,7 @@ describe('recent target ordering (issues #206, #256)', () => {
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
             input.focus();
-            pressKey({ key: 'Escape' });
+            await pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: 'the folder picker did not close',

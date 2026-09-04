@@ -178,7 +178,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       // Notes dialog, and waiting for "a modal" happily photographed THAT
       // Instead of the one the command opens. Waiting for the count to reach
       // Zero and then one is what ties the captured dialog to this command.
-      pressKey({ key: 'Escape' });
+      await pressKey({ key: 'Escape' });
 
       await waitUntil({
         message: 'every previously-open dialog to close',
@@ -254,7 +254,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
       // Escape, never the confirm button: clicking a feature dialog's primary
       // Action would PERFORM it, and the next shot would open over a mutated vault.
-      pressKey({ key: 'Escape' });
+      await pressKey({ key: 'Escape' });
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },
     vaultPath: vaultPath()

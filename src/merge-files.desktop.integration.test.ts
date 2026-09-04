@@ -121,7 +121,7 @@ describe('merge multiple selected files into one file (issue #92)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(filePath))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

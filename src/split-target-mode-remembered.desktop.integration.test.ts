@@ -84,7 +84,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(TARGET_BASENAME))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'the split picker did not close',
@@ -106,7 +106,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           await openPicker(reopenedEditor);
           const isSwitchOnAtSecondOpen = isSwitchOn();
 
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the reopened split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

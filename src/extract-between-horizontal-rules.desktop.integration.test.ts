@@ -67,7 +67,7 @@ describe('extract between horizontal rules', () => {
           // Instant the element appears races that and selects nothing.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'the block between the rules was not extracted to the bottom of the note',

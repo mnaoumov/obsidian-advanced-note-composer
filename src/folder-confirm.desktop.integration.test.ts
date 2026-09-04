@@ -278,7 +278,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findButton(text: string): HTMLButtonElement | null {
@@ -389,7 +389,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === itemPath) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findButton(text: string): HTMLButtonElement | null {

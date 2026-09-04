@@ -56,7 +56,7 @@ describe('split into folder note name', () => {
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created under the configured note name',

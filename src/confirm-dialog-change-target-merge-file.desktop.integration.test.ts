@@ -86,7 +86,7 @@ describe('change target from the merge-file confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {

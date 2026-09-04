@@ -149,7 +149,7 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

@@ -145,7 +145,7 @@ describe('property order when extracting a property value (issue #187)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

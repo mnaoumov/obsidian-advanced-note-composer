@@ -112,7 +112,7 @@ describe('modal background click', () => {
           // Is the gesture the reporter performs. Without the wrapper's capture-phase guard it CLOSES the
           // Dialog, cancelling the flatten.
           const backgroundPoint = findOwnPoint(backgroundEl);
-          clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
+          await clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
           await waitUntil({ message: 'the background click did not minimize the dialog', predicate: () => document.querySelector('.minimized-modal-bar') !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -281,7 +281,7 @@ describe('modal background click', () => {
 
           // A keypress is deliberate in a way a background click is not, so this half of the behavior is
           // Untouched by issue #202 and must stay that way.
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({ message: 'Escape did not close the flatten dialog', predicate: () => findButton('Flatten') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -402,7 +402,7 @@ describe('modal background click', () => {
             throw new Error('No dimmed background on the merge picker.');
           }
           const backgroundPoint = findOwnPoint(backgroundEl);
-          clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
+          await clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
           await waitUntil({ message: 'the background click did not dismiss the merge picker', predicate: () => document.querySelector('.prompt') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 

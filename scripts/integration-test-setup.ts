@@ -62,7 +62,7 @@ async function dismissStrayOverlays(): Promise<void> {
            * than the method: it leaves the `Modal` believing it is open, which is worse than a clean close
            * but far better than handing the next file a covered app.
            */
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
 
           try {
             await waitUntil({

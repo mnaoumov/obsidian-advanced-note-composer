@@ -40,6 +40,38 @@ interface ParseHeadingNodeParams {
   readonly level: Level;
 }
 
+class MarkdownHeadingDocument {
+  private readonly frontmatter: string;
+  private readonly node: MarkdownHeadingNode;
+
+  public constructor(params: MarkdownHeadingDocumentConstructorParams) {
+    this.frontmatter = params.frontmatter;
+    this.node = params.node;
+
+    /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
+    if (this.node.level !== 0) {
+      throw new Error('Node level must be 0');
+    }
+    /* v8 ignore stop */
+  }
+
+  public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
+    const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
+    return new MarkdownHeadingDocument({
+      frontmatter: this.frontmatter,
+      node: mergedNode
+    });
+  }
+
+  public toString(): string {
+    return this.frontmatter + this.node.toString();
+  }
+
+  public async wrapText(textFunction: (text: string) => Promisable<string>): Promise<void> {
+    await this.node.wrapText(textFunction);
+  }
+}
+
 class MarkdownHeadingNode {
   public readonly level: Level;
   private readonly children: MarkdownHeadingNode[];
@@ -152,38 +184,6 @@ class MarkdownHeadingNode {
     }
 
     return childrenKeys;
-  }
-}
-
-class MarkdownHeadingDocument {
-  private readonly frontmatter: string;
-  private readonly node: MarkdownHeadingNode;
-
-  public constructor(params: MarkdownHeadingDocumentConstructorParams) {
-    this.frontmatter = params.frontmatter;
-    this.node = params.node;
-
-    /* v8 ignore start -- defensive invariant: parseMarkdownHeadingDocument always creates root with level 0. */
-    if (this.node.level !== 0) {
-      throw new Error('Node level must be 0');
-    }
-    /* v8 ignore stop */
-  }
-
-  public mergeWith(doc: MarkdownHeadingDocument, insertMode: InsertMode): MarkdownHeadingDocument {
-    const mergedNode = insertMode === InsertMode.Append ? this.node.append(doc.node) : doc.node.append(this.node);
-    return new MarkdownHeadingDocument({
-      frontmatter: this.frontmatter,
-      node: mergedNode
-    });
-  }
-
-  public toString(): string {
-    return this.frontmatter + this.node.toString();
-  }
-
-  public async wrapText(textFunction: (text: string) => Promisable<string>): Promise<void> {
-    await this.node.wrapText(textFunction);
   }
 }
 

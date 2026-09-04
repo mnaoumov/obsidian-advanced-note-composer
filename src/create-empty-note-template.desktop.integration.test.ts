@@ -112,7 +112,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
 
           typeIntoPicker(GHOST_NAME);
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          pressEnter();
+          await pressEnter();
 
           await waitUntil({
             message: 'the templated note was never created',
@@ -172,9 +172,9 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
           return input;
         }
 
-        function pressEnter(): void {
+        async function pressEnter(): Promise<void> {
           getPickerInput().focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function typeIntoPicker(value: string): void {

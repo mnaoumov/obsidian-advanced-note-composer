@@ -82,7 +82,7 @@ describe('swap confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
@@ -188,7 +188,7 @@ describe('swap confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {
@@ -289,7 +289,7 @@ describe('swap confirmation dialog', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(itemPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeSwapping(shouldAsk: boolean): Promise<boolean> {

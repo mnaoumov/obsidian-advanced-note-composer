@@ -65,7 +65,7 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
 
           activeWindow.addEventListener('keydown', captureEnter, { capture: true });
           try {
-            pressKey({ key: 'Enter' });
+            await pressKey({ key: 'Enter' });
 
             // Enter also confirms the merge: the source folder is deleted and its note lands in the target.
             await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf142-src') === null });
@@ -104,7 +104,7 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {

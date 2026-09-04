@@ -143,7 +143,7 @@ describe('offering the current note in the split picker (issue #184)', () => {
           const isCurrentNoteListed = titles.some((title) => title.includes(SOURCE_BASENAME));
 
           input.focus();
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

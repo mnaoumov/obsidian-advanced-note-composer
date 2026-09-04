@@ -156,7 +156,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         async function didSetAskBeforeMerging(shouldAsk: boolean): Promise<boolean> {
@@ -283,7 +283,7 @@ describe('merge folder skips ignored files (issue #72)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         function findSettingsComponent(): SettingsCarrier {

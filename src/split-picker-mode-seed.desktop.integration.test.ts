@@ -108,7 +108,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
           await flipSwitch();
           const valueAfterSwitchingToMergeAgain = readPickerValue();
 
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
             predicate: () => document.querySelector('.prompt') === null

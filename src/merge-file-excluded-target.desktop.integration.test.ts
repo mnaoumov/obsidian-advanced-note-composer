@@ -116,7 +116,7 @@ describe('merging into an excluded target file (issue #240)', () => {
             predicate: () => hasSuggestion(query)
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
         }
 
         /**
@@ -136,7 +136,7 @@ describe('merging into an excluded target file (issue #240)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isOffered = hasSuggestion('t492-target');
           input.focus();
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return isOffered;
         }

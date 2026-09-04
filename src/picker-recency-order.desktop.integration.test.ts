@@ -159,7 +159,7 @@ describe('picker recency order (issue #248)', () => {
           const input = document.querySelector('.prompt-input');
           if (input instanceof HTMLInputElement) {
             input.focus();
-            pressKey({ key: 'Escape' });
+            await pressKey({ key: 'Escape' });
           }
           await waitUntil({
             message: 'the move picker did not close',
@@ -204,7 +204,7 @@ describe('picker recency order (issue #248)', () => {
           if (!targetSuggestion) {
             throw new Error(`"${targetName}" was not offered by the move picker.`);
           }
-          clickElement({ element: targetSuggestion });
+          await clickElement({ element: targetSuggestion });
 
           await waitUntil({
             message: 'the move did not land',

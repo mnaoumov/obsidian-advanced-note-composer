@@ -53,7 +53,7 @@ describe('split into folder', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // Enter selects the active (create-new) suggestion, creating a brand-new note from the typed name.
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'extracted note was not created inside its own folder',

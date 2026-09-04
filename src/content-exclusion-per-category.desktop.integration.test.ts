@@ -110,7 +110,7 @@ describe('per-category content exclusion (issue #270)', () => {
 
           // Discarded rather than confirmed: nothing here is about performing a reorder, and a confirmed
           // One would renumber the fixture out from under the next probe.
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'Escape did not close the reorder modal',
             predicate: () => document.querySelector('.advanced-note-composer-reorder-list') === null

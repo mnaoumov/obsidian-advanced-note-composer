@@ -8,7 +8,6 @@ import type {
   PluginNoticeComponentShowNoticeAfterDelayParams
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
@@ -51,6 +50,17 @@ interface HandlerContext {
   editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
   handler: Testable;
   showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+}
+
+/**
+ * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
+ *
+ * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
+ * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
+ * assign over `app.plugins` any more.
+ */
+interface PluginsRegistryTestable {
+  registerPlugin__(id: string, plugin: unknown): void;
 }
 
 interface Testable {
@@ -241,8 +251,8 @@ function getFolder(path: string): TFolder {
 
 function initApp(files: Record<string, string> = {}, plugins?: Record<string, unknown>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
-  if (plugins) {
-    castTo<GenericObject>(app)['plugins'] = { plugins };
+  for (const [id, plugin] of Object.entries(plugins ?? {})) {
+    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
   }
   vi.spyOn(app.vault, 'getAvailablePath').mockImplementation((basePath, extension) => {
     const suffix = extension ? `.${extension}` : '';

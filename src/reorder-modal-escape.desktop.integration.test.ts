@@ -79,7 +79,7 @@ describe('reorder modal keyboard paths', () => {
         let wasDefaultPrevented = false;
         window.addEventListener('keydown', captureEscape, { capture: true });
         try {
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
 
           await waitUntil({
             message: 'Escape did not close the reorder modal',

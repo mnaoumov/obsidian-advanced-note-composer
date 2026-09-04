@@ -88,7 +88,7 @@ describe('move folder to... (issue #73)', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'mv-dst')
           });
           input.focus();
-          pressKey({ key: 'Enter' });
+          await pressKey({ key: 'Enter' });
 
           // The folder is moved into the destination: `mv-src` now lives under `mv-dst`.
           await waitUntil({
@@ -196,7 +196,7 @@ describe('move folder to... (issue #73)', () => {
         const input = document.querySelector('.prompt-input');
         if (input instanceof HTMLInputElement) {
           input.focus();
-          pressKey({ key: 'Escape' });
+          await pressKey({ key: 'Escape' });
         }
 
         // The expectations are stated outright, NOT derived from `getRecentFiles()` the way the
