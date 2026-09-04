@@ -45,15 +45,16 @@ describe('split into folder', () => {
           }
           input.value = NEW_NOTE_NAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          // Wait for the "create new" suggestion (named after the typed value) to become the active one.
-          await waitUntil({
-            message: 'create-new suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
-          });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          // Enter selects the active (create-new) suggestion, creating a brand-new note from the typed name.
+          /*
+           * `Mod+Enter` creates from what was typed whatever the list holds, rather than waiting for the
+           * `Enter to create` row. That row is pushed by `SuggestModalBase.onNoSuggestion()` and nothing
+           * else, so it exists ONLY when the search matched nothing at all — one note fuzzy-matching
+           * `Extracted into folder` is enough for it to be correctly absent, and the wait then timed out on
+           * a row that was never coming ([[T880-P12]]).
+           */
           input.focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
           await waitUntil({
             message: 'extracted note was not created inside its own folder',

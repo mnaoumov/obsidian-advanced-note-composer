@@ -65,6 +65,14 @@ const DEMO_VAULT_TIMEOUT_IN_MILLISECONDS = 600_000;
 const INTEGRATION_TEST_SETUP_FILE = './scripts/integration-test-setup.ts';
 
 /**
+ * Per-file vault cleanup, emptying the shared temp vault before each file so no file inherits another's
+ * notes ([[T880-P12]]). Appended beside the modal cleanup rather than folded into it, because the two have
+ * different audiences: `withoutVaultReset` below takes this one back off the projects that OWN the contents
+ * of their vault, while leaving them the modal cleanup they still need.
+ */
+const INTEGRATION_TEST_VAULT_RESET_FILE = './scripts/integration-test-vault-reset.ts';
+
+/**
  * Normalizes vitest's `string | string[]` setup-file field so a new entry can be appended without
  * assuming which shape the shared configuration used.
  *
@@ -79,6 +87,20 @@ function toSetupFileList(setupFiles: string | string[] | undefined): string[] {
   return Array.isArray(setupFiles) ? setupFiles : [setupFiles];
 }
 
+/**
+ * The desktop setup files minus the vault reset, for a project whose vault is pre-populated with the very
+ * thing it tests.
+ *
+ * `editContext` runs BEFORE `customProjects`, so every project spreading `context.desktop` picks the reset up
+ * by default — which is what makes it forgettable-proof, and why opting out has to be explicit.
+ *
+ * @param setupFiles - The project's current setup files.
+ * @returns The setup files without the vault reset.
+ */
+function withoutVaultReset(setupFiles: string | string[] | undefined): string[] {
+  return toSetupFileList(setupFiles).filter((setupFile) => setupFile !== INTEGRATION_TEST_VAULT_RESET_FILE);
+}
+
 export const config = defineObsidianPluginVitestConfig({
   customProjects(context: ObsidianPluginVitestConfigContext): TestProjectConfiguration[] {
     return [
@@ -86,7 +108,10 @@ export const config = defineObsidianPluginVitestConfig({
         test: {
           ...context.desktop,
           include: [DESKTOP_CAPTURE_TEST_FILES],
-          name: 'capture-screenshots:desktop'
+          name: 'capture-screenshots:desktop',
+          // Capturing is what these suites are FOR: emptying the vault under them would change the PNGs
+          // They write into `images/`, which is a committed artifact and no part of T880's subject.
+          setupFiles: withoutVaultReset(context.desktop.setupFiles)
         }
       },
       {
@@ -110,6 +135,12 @@ export const config = defineObsidianPluginVitestConfig({
           globalSetup: ['./scripts/demo-vault-global-setup.ts'],
           include: [DEMO_VAULT_TEST_FILES],
           name: 'integration-tests:demo-vault',
+          /*
+           * Load-bearing, not tidiness: this project's `globalSetup` pre-populates the whole `demo-vault/`
+           * tree, which is the thing under test, so the reset would delete the subject before the first file
+           * ran. It is reached by `npm run test:integration`, so getting this wrong empties a real run.
+           */
+          setupFiles: withoutVaultReset(context.desktop.setupFiles),
           testTimeout: DEMO_VAULT_TIMEOUT_IN_MILLISECONDS
         }
       }
@@ -122,10 +153,17 @@ export const config = defineObsidianPluginVitestConfig({
      * same shared instance and inherit the same hazard. The android project is deliberately left alone:
      * its two cross-platform files have never shown the cascade, and an untested Appium round-trip in
      * every `afterEach` would be a change nothing here has measured.
+     *
+     * The two entries differ in how far that inheritance is wanted. The MODAL cleanup applies to every
+     * project spreading `context.desktop` without exception — a covered app is a hazard wherever it happens.
+     * The VAULT reset does not: both custom desktop projects own the contents of their vault, so each takes
+     * it back off with `withoutVaultReset`. Appending it here anyway rather than adding it to one project is
+     * what keeps the default safe — a new project inherits the isolation and opts out visibly.
      */
     context.desktop.setupFiles = [
       ...toSetupFileList(context.desktop.setupFiles),
-      INTEGRATION_TEST_SETUP_FILE
+      INTEGRATION_TEST_SETUP_FILE,
+      INTEGRATION_TEST_VAULT_RESET_FILE
     ];
   }
 });

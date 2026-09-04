@@ -179,9 +179,9 @@ describe('extract completion notice link (issue #232)', () => {
         /**
          * Drives the destination picker into creating the note the extract writes to.
          *
-         * A brand-new note rather than a pre-made one on purpose: the picker offers `Enter to create` for a
-         * typed name, which is the ordinary way an extract names its destination — and it keeps this suite
-         * from depending on how the picker ranks existing notes.
+         * A brand-new note rather than a pre-made one on purpose: creating from a typed name is the ordinary
+         * way an extract names its destination, and it keeps this suite from depending on how the picker
+         * ranks existing notes.
          *
          * @param basename - The destination note's name.
          */
@@ -194,12 +194,11 @@ describe('extract completion notice link (issue #232)', () => {
           inputEl.value = basename;
           inputEl.dispatchEvent(new Event('input', { bubbles: true }));
 
-          await waitUntil({
-            message: 'the create-destination suggestion did not appear',
-            predicate: () => [...activeDocument.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(basename))
-          });
+          // `Mod+Enter` chooses with no item at all, which is the same path the `Enter to create` row takes —
+          // And unlike that row it is always available, since the row is pushed only when the search matched
+          // Nothing whatsoever ([[T880-P12]]).
           inputEl.focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
 
         /**

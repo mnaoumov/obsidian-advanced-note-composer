@@ -50,13 +50,12 @@ describe('split into folder note name', () => {
           }
           input.value = NEW_NOTE_NAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({
-            message: 'create-new suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent === NEW_NOTE_NAME)
-          });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          // Forced rather than waited for: the `Enter to create` row is absent whenever ANYTHING fuzzy-matches
+          // The typed name, so waiting for it made this suite depend on the shared vault's contents
+          // ([[T880-P12]]).
           input.focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
           await waitUntil({
             message: 'extracted note was not created under the configured note name',

@@ -84,25 +84,16 @@ describe('split template folder tokens (issue #227)', () => {
           }
           inputEl.value = newNoteName;
           inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-          // The titles are captured as they are polled, not read after the fact: a timed-out `waitUntil`
-          // Throws, so anything observed only inside the predicate would be lost with it.
-          let seenTitles: string[] = [];
-          try {
-            await waitUntil({
-              message: 'create-new suggestion did not appear',
-              predicate: () => {
-                seenTitles = [...document.querySelectorAll('.suggestion-title')].map((el) => el.textContent);
-                return seenTitles.includes(newNoteName);
-              }
-            });
-          } catch (error) {
-            // Naming what the picker DID offer is what makes this actionable — the failure mode is a
-            // Suggestion that fuzzy-matched the typed text, which Enter would then extract into.
-            throw new Error(`create-new suggestion for "${newNoteName}" did not appear; the picker offered ${JSON.stringify(seenTitles)}`, { cause: error });
-          }
           await sleep(SETTLE_IN_MILLISECONDS);
+          /*
+           * This used to wait for the `Enter to create` row and, on giving up, name what the picker had
+           * offered instead — because a suggestion that fuzzy-matched the typed text is what plain `Enter`
+           * would have extracted into. `Mod+Enter` removes the hazard rather than diagnosing it: it creates
+           * from the typed name whatever the list holds, so nothing here depends on the shared vault's
+           * contents any more ([[T880-P12]]).
+           */
           inputEl.focus();
-          pressKey({ key: 'Enter' });
+          pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
           await waitUntil({
             message: `extracted note was not created at ${notePath}`,

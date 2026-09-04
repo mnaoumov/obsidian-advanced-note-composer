@@ -473,6 +473,19 @@ describe('the split/extract picker asks for a name before a destination (issue #
           const sibling = await resetFile(SIBLING_PATH, 'nameless sibling body\n');
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
 
+          /*
+           * The sibling is OPENED before the source so this test asserts against a list it controls
+           * ([[T880-P12]]). With an empty box the picker's order is recency before fuzz
+           * (`recent-suggestions.ts`), and the plugin records every note the user opens (issue #256) — so
+           * opening it here puts it at the head. The source is opened after it and is the operation's own
+           * source, which every file picker filters out, so nothing displaces it.
+           *
+           * Without this the test only held in a small vault: the sibling was created but never pointed at,
+           * so it sat in the fuzzy tail behind everything the run had accumulated, and simply fell off the
+           * list.
+           */
+          await openAndGetEditor(sibling);
+
           const editor = await openAndGetEditor(source);
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
