@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## 5.11.0
+
+- docs: name the unversioned demo-vault asset and the folder it unzips into
+- chore: make the LICENSE copyright line lintable and guard it against the year roll-over
+- chore(deps): take obsidian-dev-utils 101.4.1, so each vitest project collects only its own files
+- test(integration): isolate the shared desktop vault per file, and stop waiting for the create row
+- test(test-mocks): await the trusted-input helpers, and stop assigning over app.plugins
+- feat(settings): merge the title page into the frontmatter page (#272)
+- feat(paths): move each include/exclude list under its own command (#271)
+- feat(paths): narrow the content filter per command category (#270)
+- feat(split): auto-number the notes or folders a split creates (#269)
+- refactor(confirm-dialog): retire the hand-wired control strip onto ModalCommandBuilder
+- test(integration): reset the app between files so one failure stops cascading
+- docs(agents): record refreshSpellcheck and de-stale the spell-check note
+- feat(split): spell-check the picker box while it names a note
+- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
+- refactor: narrow an over-exposed field
+- style: reformat after the dprint bump
+- chore(deps): sweep caret-ranged dependencies to latest
+- fix(deps): move to obsidian-integration-testing 11 and obsidian-dev-utils 96.5.2
+- fix(deps): drop the brace-expansion file: override that breaks a clean install
+- test(confirm-dialog): restore the picker's Create/Merge mode after the change-target flow
+- feat(select): selection-only commands and the Selection anchor pair (#266)
+- docs: point plugin-directory links at community.obsidian.md
+- feat(split-picker): ask for the folder before the name, with no suggestions (#261)
+- fix(notices): put the user back in the editor when the destination link is clicked (#263)
+- feat(create): hide `Create empty note at cursor...` while a selection is active (#265)
+- fix(split-picker): always remember the last create/merge mode (#264)
+- fix(split-picker): put the cursor in the box when the picker opens (#262)
+- feat(split-picker): keep the cursor in the box when the mode is flipped (#260)
+- feat(split-picker): keep the create/merge switch out of the override setting (#258)
+- fix(split-picker): choose an existing note clicked while nothing is typed (#257)
+- fix(pickers): rank a completed target and a note you opened by which came last (#256)
+- feat(create): let `Create empty note in folder...` honor `Should split into folder` (#255)
+- feat(commands): choose each command's context menu one command at a time (#254)
+- fix(merge): give excluded merge destinations their own setting (#253)
+- test(advanced-note-composer): record the deliberate untrusted-input exceptions
+- test(advanced-note-composer): prove Enter is preventDefault-ed on a REAL key press
+- test(advanced-note-composer): convert the last dispatched key press in the split-picker suite
+- test(advanced-note-composer): drive integration tests with trusted input instead of dispatchEvent
+
 ## 5.10.1
 
 - fix(test): stop the multi-line name-transform test reading other tests' notices
