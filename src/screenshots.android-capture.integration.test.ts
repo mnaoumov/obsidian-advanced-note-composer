@@ -229,13 +229,11 @@ function buildSubjectNote(): string {
  */
 async function dismissDialogs(): Promise<void> {
   await evalInObsidian({
-    async callback({ lib: { waitUntil } }) {
+    async callback({ lib: { pressKey, waitUntil } }) {
       const MODAL_TIMEOUT_IN_MILLISECONDS = 15_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
 
-      // `pressKey` is Electron-only and there is no `window.electron` on the phone, so this file is a
-      // Permanent exception to the trusted-input convention (see the fuller note further down).
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await pressKey({ key: 'Escape' });
 
       await waitUntil({
         message: 'every open dialog to close',
@@ -259,7 +257,7 @@ async function dismissDialogs(): Promise<void> {
  */
 async function runCommandAndCapture(commandId: string, index: number, caption: string): Promise<void> {
   const modalTitle = await evalInObsidian({
-    async callback({ app, command, headingLine, lib: { waitUntil }, obsidianModule, pluginId, subjectNotePath }) {
+    async callback({ app, command, headingLine, lib: { pressKey, waitUntil }, obsidianModule, pluginId, subjectNotePath }) {
       const MODAL_TIMEOUT_IN_MILLISECONDS = 15_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
 
@@ -268,14 +266,9 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       // Instead of the one the command opens. Waiting for the count to reach
       // Zero and then one is what ties the captured dialog to this command.
       //
-      // A SYNTHETIC keydown rather than the harness's `pressKey`, which injects
-      // Through Electron's `sendInputEvent` and so exists on desktop only — on
-      // Android it dies with `Cannot read properties of undefined (reading
-      // 'remote')`. Obsidian's keymap listens on `document`, so a dispatched
-      // Event dismisses the dialog just as a real key would. Clicking the
-      // `.modal-close-button` is NOT an alternative: on an `obsidian-dev-utils`
-      // Alert it does not close the dialog at all (see [[T503-P1]]).
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      // Escape rather than the close button: on an `obsidian-dev-utils` alert,
+      // Clicking `.modal-close-button` does not close the dialog at all.
+      await pressKey({ key: 'Escape' });
 
       await waitUntil({
         message: 'every previously-open dialog to close',
@@ -347,12 +340,11 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
   await shoot(index, caption);
 
   await evalInObsidian({
-    async callback() {
+    async callback({ lib: { pressKey } }) {
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
-      // Escape, never the confirm button: clicking a feature dialog's primary
+      // Escape, never the confirm button: tapping a feature dialog's primary
       // Action would PERFORM it, and the next shot would open over a mutated vault.
-      // Dispatched rather than pressed for the same reason as above: no `window.electron` on Android.
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await pressKey({ key: 'Escape' });
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },
     vaultPath: vaultPath()
