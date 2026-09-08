@@ -20,7 +20,8 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { isSpellcheckEnabled } from 'obsidian-dev-utils/obsidian/obsidian-settings';
+import { applySpellcheckMode } from 'obsidian-dev-utils/obsidian/html-element';
+import { SpellcheckMode } from 'obsidian-dev-utils/obsidian/obsidian-settings';
 import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/plugin/plugin-context';
 import { basename } from 'obsidian-dev-utils/path';
 import {
@@ -325,12 +326,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   /**
    * Spell-checks the box while — and only while — it can NAME a note.
    *
-   * Obsidian builds every `SuggestModal` input with a hardcoded `spellcheck="false"`, without consulting
-   * `Editor > Spellcheck` at all. For a picker that only FINDS a note that is right: it is a search box,
-   * and squiggles under half-typed path fragments are noise. But this picker doubles as a name field the
-   * moment it can create one, and Obsidian's own name-entry surfaces — the inline title, the file
-   * explorer's inline rename, the properties long-text input — all follow that setting. So does every
-   * name prompt this plugin opens (issue #233). The odd one out was this box.
+   * This picker doubles as a name field the moment it can create one, and Obsidian's own name-entry
+   * surfaces — the inline title, the file explorer's inline rename, the properties long-text input — all
+   * follow `Editor > Spellcheck`. So does every name prompt this plugin opens (issue #233). The odd one
+   * out was this box, because Obsidian builds every `SuggestModal` input with a hardcoded
+   * `spellcheck="false"` and never consults the setting there.
    *
    * Keyed on {@link supportsCreate} rather than a literal, so a picker that cannot create stays exactly as
    * Obsidian built it, and a future create-capable picker is covered without a second edit.
@@ -340,7 +340,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
    * parsing the box to spell-check only its last segment — cannot be expressed as an attribute.
    */
   protected refreshSpellcheck(): void {
-    this.inputEl.setAttribute('spellcheck', String(this.supportsCreate && isSpellcheckEnabled(this.app)));
+    applySpellcheckMode({
+      app: this.app,
+      element: this.inputEl,
+      spellcheckMode: this.supportsCreate ? SpellcheckMode.FollowObsidianSetting : SpellcheckMode.Off
+    });
   }
 
   /* v8 ignore start -- addAliasMatches contains defensive ?? and ?. fallbacks that never take the null path. */
