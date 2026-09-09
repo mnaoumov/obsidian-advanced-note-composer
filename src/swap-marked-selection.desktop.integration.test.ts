@@ -14,7 +14,13 @@ describe('swap marked selection from the smart cut & paste notice', () => {
   it('should swap the marked selection with the active editor selection when the Swap button is clicked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
-        const BIG_TIMEOUT_IN_MILLISECONDS = 30_000;
+        /*
+         * Under the transport's ~30s per-closure cap, not at it. At 30_000 this ceiling was unreachable: the
+         * whole eval is killed at the cap first, and reported as a bare transport timeout naming the harness
+         * rather than the wait that overran. Several waits share this one budget, so the ceiling is sized for
+         * their sum; what is waited on here lands in well under a second.
+         */
+        const BIG_TIMEOUT_IN_MILLISECONDS = 8000;
 
         const sourceFile = await resetFile('swap-source.md', 'AAA BBB CCC\n');
         const targetFile = await resetFile('swap-target.md', 'XXX YYY ZZZ\n');
