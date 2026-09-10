@@ -9,11 +9,10 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 
 import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import {
-  editLinks,
+  editBacklinks,
   generateRawMarkdownLink,
   splitSubpath
 } from 'obsidian-dev-utils/obsidian/link';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { parseLink } from 'obsidian-dev-utils/obsidian/parse-link';
 
 // Mirrors Obsidian's internal heading normalization used to MATCH a heading against a link subpath
@@ -201,34 +200,25 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
     resourceLockComponent
   } = params;
 
-  const backlinks = await getBacklinksForFileSafe({ app, pathOrFile: notePathOrFile });
   // Collected in a `const` array (not a reassigned counter) so the per-file link converter closure can
   // Safely record rewrites without an unsafe reference to a loop-mutated variable.
   const rewrittenLinks: string[] = [];
 
-  for (const backlinkPath of backlinks.keys()) {
-    /* v8 ignore next -- `get` on a key from `keys()` is always non-null; the `?? []` is defensive. */
-    const references = backlinks.get(backlinkPath) ?? [];
-    const referenceJsons = new Set(references.map((reference) => JSON.stringify(reference)));
-    await editLinks({
-      abortSignal,
-      app,
-      linkConverter: (link) => {
-        if (!referenceJsons.has(JSON.stringify(link))) {
-          return;
-        }
-        const rewritten = rewriteHeadingLink({ link, newHeading, oldHeading });
-        if (rewritten === undefined) {
-          return;
-        }
-        rewrittenLinks.push(rewritten);
-        return rewritten;
-      },
-      pathOrFile: backlinkPath,
-      pluginNoticeComponent,
-      resourceLockComponent
-    });
-  }
+  await editBacklinks({
+    abortSignal,
+    app,
+    linkConverter: (link) => {
+      const rewritten = rewriteHeadingLink({ link, newHeading, oldHeading });
+      if (rewritten === undefined) {
+        return;
+      }
+      rewrittenLinks.push(rewritten);
+      return rewritten;
+    },
+    pathOrFile: notePathOrFile,
+    pluginNoticeComponent,
+    resourceLockComponent
+  });
 
   return rewrittenLinks.length;
 }
