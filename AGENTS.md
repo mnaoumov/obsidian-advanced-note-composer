@@ -216,3 +216,35 @@ takes, and it works whatever the list holds.
 box the pickers order by recency before fuzz (`recent-suggestions.ts`), and the plugin records every note
 opened (issue #256) — so a fixture that is merely CREATED sits in the fuzzy tail, while one that is briefly
 OPENED is at the head. `split-picker-name-first`'s nothing-typed test does exactly that.
+
+## Testing notes
+
+### Why the mobile frames do NOT raise the soft keyboard
+
+The rename-heading frame ends on a focused field with its text selected, so it looks like a candidate for
+the device-capture-with-a-keyboard treatment the command-palette frames in sibling plugins now use. **It
+was implemented, run on a real device, and reverted.** Recording why, because the frame alone does not
+show it and the next reader would reasonably try again:
+
+- The keyboard did come up, and the frame came back **worse**. Tapping a field whose text is already
+  selected also summons Android's own selection toolbar — `Cut / Copy / Select all / Read aloud` — which
+  floated across the dialog and covered the `Rename heading` title, with the two selection handles in
+  frame as well. The keyboard then covered `Cancel`, leaving only `Rename` visible. The measure looks
+  like an improvement (the largest flat row-run falls from 14% to 3.3%) and the picture is not one: this
+  is exactly the case where a frame has to be looked at rather than measured.
+- The dialog is ODU's `prompt`, a centred modal. A sibling plugin's frame on the same component measured
+  no lift at all under the same taps, so the behavior is not even consistent between the two — one gets
+  a keyboard and a selection toolbar, the other gets nothing. Neither outcome is a better frame.
+
+So the frame keeps `captureObsidianScreenshot`, which photographs the page: no status bar, no clock, no
+selection toolbar, and byte-reproducible.
+
+### The pickers this suite drops are a different question, and still open
+
+The file header explains that the `Extract` and `Merge` pickers are left out because they "render as a
+full-height empty list unless a real on-screen keyboard has focused them — which no script can arrange".
+**A script can arrange it now**: those pickers are Obsidian suggesters, whose field is anchored to the
+bottom of the viewport, and that is the one shape the harness's `raiseSoftKeyboard` handles correctly —
+a sibling plugin's suggester frames were re-captured this way and improved markedly. Restoring those two
+shots is therefore possible; it is a new pair of frames rather than a change to an existing one, so it is
+tracked separately rather than done here.
