@@ -230,7 +230,7 @@ describe('merge folder contents into a single file does not cycle the active lea
           context.eventRef = startActivationRecorder({ app, noFile, recording: context.recording });
 
           // Installed BEFORE the merge is kicked off, because notices auto-hide: the aggregate-only stall
-          // This suite has (T470) reports the state at the 90 s timeout, by which point any notice that
+          // This suite has reports the state at the 90 s timeout, by which point any notice that
           // Explained it has removed itself. Only the log can still say what appeared and when.
           context.noticeLog = [];
           context.noticeObserver = startNoticeRecorder({ noticeLog: context.noticeLog });
@@ -258,7 +258,7 @@ describe('merge folder contents into a single file does not cycle the active lea
        * And `PluginSettingsComponent.onExternalSettingsChange` RELOADS the settings from that file, so an
        * In-memory `false` written here is not by itself a guarantee that it is still `false` a moment later
        * (every confirmed dialog writes the setting back, and the dialog's `shouldAskAgain` defaults to true).
-       * Reading it back turns that from a 90 s mystery into an immediate, self-describing failure (T470).
+       * Reading it back turns that from a 90 s mystery into an immediate, self-describing failure.
        */
       const commandStart = await evalInObsidian({
         callback({ app, findSettingsComponent, pluginId }) {

@@ -196,7 +196,7 @@ describe('extract completion notice link (issue #232)', () => {
 
           // `Mod+Enter` chooses with no item at all, which is the same path the `Enter to create` row takes —
           // And unlike that row it is always available, since the row is pushed only when the search matched
-          // Nothing whatsoever ([[T880-P12]]).
+          // Nothing whatsoever.
           inputEl.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }

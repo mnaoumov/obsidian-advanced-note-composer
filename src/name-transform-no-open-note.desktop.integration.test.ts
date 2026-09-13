@@ -86,13 +86,13 @@ describe('name transform with no note open (issue #218)', () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, nameTransformTemplate, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
-        const PARENT_PATH = 't430-no-open-note-parent';
-        const CONTEXT_PATH = 't430-no-open-note-context.md';
+        const PARENT_PATH = 'name-transform-no-open-note-parent';
+        const CONTEXT_PATH = 'name-transform-no-open-note-context.md';
         // A path in the recent list that no longer resolves — the chain has to walk past it, which is the
         // Half of the resolution a vault accumulates naturally over a session of renames and deletions.
-        const DELETED_PATH = 't430-no-open-note-deleted.md';
-        const TYPED_NAME = 'T430: Alpha';
-        const EXPECTED_FOLDER_NAME = 'T430 - Alpha';
+        const DELETED_PATH = 'name-transform-no-open-note-deleted.md';
+        const TYPED_NAME = 'Name: Alpha';
+        const EXPECTED_FOLDER_NAME = 'Name - Alpha';
         const EXPECTED_FOLDER_PATH = `${PARENT_PATH}/${EXPECTED_FOLDER_NAME}`;
 
         const settingsComponent = findSettingsComponent();
@@ -300,11 +300,11 @@ describe('name transform with no note open (issue #218)', () => {
     // Templater ran, and against the note last opened — the deleted path ahead of it in the recent list was
     // Walked past rather than handed over.
     expect(result.wasTemplaterCalled).toBe(true);
-    expect(result.recordedTargetPaths).toStrictEqual(['t430-no-open-note-context.md']);
+    expect(result.recordedTargetPaths).toStrictEqual(['name-transform-no-open-note-context.md']);
 
-    // And the transform actually produced the name, with `T430: Alpha` becoming `T430 - Alpha`.
+    // And the transform actually produced the name, with `Name: Alpha` becoming `Name - Alpha`.
     expect(result.parentChildren).toStrictEqual([
-      't430-no-open-note-parent/T430 - Alpha'
+      'name-transform-no-open-note-parent/Name - Alpha'
     ]);
   });
 
@@ -317,8 +317,8 @@ describe('name transform with no note open (issue #218)', () => {
      */
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule }) {
-        const FIRST_PATH = 't430-recent-first.md';
-        const SECOND_PATH = 't430-recent-second.md';
+        const FIRST_PATH = 'name-transform-recent-first.md';
+        const SECOND_PATH = 'name-transform-recent-second.md';
         try {
           await trashIfExists(FIRST_PATH);
           await trashIfExists(SECOND_PATH);
@@ -363,7 +363,7 @@ describe('name transform with no note open (issue #218)', () => {
       }
     });
 
-    expect(result.recentPaths).toContain('t430-recent-first.md');
+    expect(result.recentPaths).toContain('name-transform-recent-first.md');
   });
 
   it('merges a folder into a single file with no note open, where the notice used to say a note was needed', async () => {
@@ -371,8 +371,8 @@ describe('name transform with no note open (issue #218)', () => {
       async callback({ app, lib: { waitUntil }, nameTransformTemplate, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const MENU_ITEM_TITLE = 'Merge folder contents into a single file...';
-        const SOURCE_PATH = 't430-merge-no-open-note-src';
-        const CONTEXT_PATH = 't430-merge-no-open-note-context.md';
+        const SOURCE_PATH = 'name-transform-merge-no-open-note-src';
+        const CONTEXT_PATH = 'name-transform-merge-no-open-note-context.md';
         /*
          * A literal template, so the merged note's name comes out of the TRANSFORM and its own tokens are one
          * less thing able to explain the result. It maps `_` rather than the reporter's `: `, because
@@ -380,8 +380,8 @@ describe('name transform with no note open (issue #218)', () => {
          * one either, so the reporter's own mapping can never fire on this path. What #218 was about is the
          * transform RUNNING at all here, which any non-empty template makes it do.
          */
-        const NOTE_NAME_TEMPLATE = 'T430m_Merged';
-        const EXPECTED_MERGED_PATH = 'T430m - Merged.md';
+        const NOTE_NAME_TEMPLATE = 'name-transform-merge_Merged';
+        const EXPECTED_MERGED_PATH = 'name-transform-merge - Merged.md';
 
         const settingsComponent = findSettingsComponent();
         const originalSettings = { ...settingsComponent.settings };
@@ -405,8 +405,8 @@ describe('name transform with no note open (issue #218)', () => {
           await trashIfExists(EXPECTED_MERGED_PATH);
           await app.vault.createFolder(SOURCE_PATH);
           // Two notes: a single-note folder is not offered the merge at all (issue #209).
-          await app.vault.create(`${SOURCE_PATH}/t430m-alpha.md`, 'alpha body');
-          await app.vault.create(`${SOURCE_PATH}/t430m-bravo.md`, 'bravo body');
+          await app.vault.create(`${SOURCE_PATH}/name-transform-merge-alpha.md`, 'alpha body');
+          await app.vault.create(`${SOURCE_PATH}/name-transform-merge-bravo.md`, 'bravo body');
           await app.vault.create(CONTEXT_PATH, 'the note the run should report on');
 
           app.workspace.getRecentFiles = (): string[] => [CONTEXT_PATH];
@@ -449,7 +449,7 @@ describe('name transform with no note open (issue #218)', () => {
             recordedTargetPaths: [...new Set(recordedTargetPaths)].sort(),
             // Every note this test is responsible for, so a merge that landed under another name says which
             // One instead of only reporting a `null` content.
-            t430Paths: app.vault.getMarkdownFiles().map((file) => file.path).filter((path) => path.toLowerCase().includes('t430')).sort()
+            mergePaths: app.vault.getMarkdownFiles().map((file) => file.path).filter((path) => path.toLowerCase().includes('name-transform-merge')).sort()
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {
@@ -563,12 +563,12 @@ describe('name transform with no note open (issue #218)', () => {
     // The refusal the reporter saw as a notice is gone...
     expect(result.noticeTexts.filter((text) => text.includes('Name transform template'))).toStrictEqual([]);
     /*
-     * ...and the merge ran under the name the TRANSFORM produced — `T430m_Merged` became `T430m - Merged`,
+     * ...and the merge ran under the name the TRANSFORM produced — `name-transform-merge_Merged` became `name-transform-merge - Merged`,
      * not the folder's own name, which is what `resolveTargetBasename` falls back to when the transform never
      * happens. Asserted before the content, because it names what happened when the rest fails.
      */
-    expect(result.t430Paths).toStrictEqual(['T430m - Merged.md', 't430-merge-no-open-note-context.md']);
-    expect(result.recordedTargetPaths).toStrictEqual(['t430-merge-no-open-note-context.md']);
+    expect(result.mergePaths).toStrictEqual(['name-transform-merge - Merged.md', 'name-transform-merge-no-open-note-context.md']);
+    expect(result.recordedTargetPaths).toStrictEqual(['name-transform-merge-no-open-note-context.md']);
     expect(result.mergedContent).toContain('alpha body');
     expect(result.mergedContent).toContain('bravo body');
   });

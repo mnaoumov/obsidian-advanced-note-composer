@@ -286,7 +286,7 @@
 - docs: drop per-plugin demo-vault setup notes (bootstrap covered by ODU harness)
 - docs: renumber demo-vault setup notes
 - feat: number demo vault example notes
-- docs: reconcile the demo vault helper description with T95
+- docs: reconcile the demo vault helper description with the injected helper
 - feat: add demo vault
 
 ## 3.34.4

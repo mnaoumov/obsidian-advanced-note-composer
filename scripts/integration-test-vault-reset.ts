@@ -5,7 +5,7 @@
  *
  * The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE vault across all 103
  * files: `globalSetup` runs once and nothing resets it, so by the time a file runs at position ~45 the vault
- * holds every earlier file's notes. That accumulation is T880, and it bit in two separate ways — the
+ * holds every earlier file's notes. That accumulation is the defect, and it bit in two separate ways — the
  * split/extract picker's fuzzy-ranked suggestion list stopped containing the row a test waited for, and a
  * merge's link update reached into hundreds of foreign notes and died mid-merge on an unhandled error. Every
  * victim passed in isolation, and the failing set changed every run because vitest sequences files
@@ -17,7 +17,7 @@
  * `capture-screenshots:desktop`, which own the contents of their vaults and must keep the modal cleanup while
  * never being wiped.
  *
- * **Why this grain (T880-P12).** Per-file cleanup written into each suite is the "101 files must remember it"
+ * **Why this grain.** Per-file cleanup written into each suite is the "101 files must remember it"
  * problem the modal cleanup was centralized to avoid; a vault per file is stronger still, but the harness
  * (`obsidian-integration-testing`) registers one vault per PROJECT, so it is a change there rather than here.
  * Emptying the shared vault centrally caps it at one file's own notes.

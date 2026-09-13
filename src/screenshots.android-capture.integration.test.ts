@@ -1,8 +1,8 @@
 /**
  * @file
  *
- * Produces the five mobile screenshots the community-store listing needs
- * (T461-P21), driving a staged note in Obsidian Mobile on a real Android
+ * Produces the five mobile screenshots the community-store listing needs,
+ * driving a staged note in Obsidian Mobile on a real Android
  * emulator and writing `images/screenshots/screenshot-mobile-N.png`.
  *
  * The mobile counterpart of the desktop capture suite. It shows a different cut
@@ -18,7 +18,8 @@
  * right size: this runs on a dedicated `obsidian_screenshots` AVD built at
  * exactly 900x1600, so the frame already IS the store's size — no crop, no
  * rescale, no letterbox, no post-processing at all. That AVD needs ONE-TIME
- * provisioning, and both steps are non-obvious — see [[T461-P21]].
+ * provisioning, and both steps are non-obvious; they are written out
+ * beside `SCREENSHOT_AVD_NAME` in `scripts/vitest-config.ts`.
  */
 
 import {
@@ -225,7 +226,7 @@ function buildSubjectNote(): string {
  * with `Cannot read properties of undefined (reading 'remote')`. Obsidian's
  * keymap listens on `document`, so a dispatched event dismisses a dialog just as
  * a real key would. Clicking the `.modal-close-button` is NOT an alternative: on
- * an `obsidian-dev-utils` alert it does not close the dialog at all (T503-P1).
+ * an `obsidian-dev-utils` alert it does not close the dialog at all.
  */
 async function dismissDialogs(): Promise<void> {
   await evalInObsidian({

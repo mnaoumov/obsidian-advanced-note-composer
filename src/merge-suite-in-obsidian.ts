@@ -12,7 +12,7 @@
  * DISCARDS everything it had gathered — no assertion, no message, nothing to read. So an in-page `waitUntil`
  * budget above 30 s is unreachable by construction, whatever vitest's own test timeout says.
  *
- * That is what made `merge-folder-no-active-leaf-cycling` flake in the aggregate (T446): a folder merge of a
+ * That is what made `merge-folder-no-active-leaf-cycling` flake in the aggregate: a folder merge of a
  * dozen cross-linked notes is slow enough under load to blow the cap on its own, so the suite failed with a
  * transport error rather than with anything about merging. Measured 2026-08-13, deterministically, not
  * inferred: a closure holding `await sleep(35_000)` fails with exactly that error, while the same wait
