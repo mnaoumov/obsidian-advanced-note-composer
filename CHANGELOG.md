@@ -181,7 +181,7 @@
 - feat: re #177
 - feat: re #178
 - fix: re #179
-- refactor(prism): register the template language through ODU's SyntaxHighlightingComponent
+- refactor(prism): register the template language through obsidian-dev-utils' SyntaxHighlightingComponent
 
 ## 5.3.0
 
@@ -283,7 +283,7 @@
 ## 3.34.5
 
 - docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by ODU harness)
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by obsidian-dev-utils harness)
 - docs: renumber demo-vault setup notes
 - feat: number demo vault example notes
 - docs: reconcile the demo vault helper description with the injected helper

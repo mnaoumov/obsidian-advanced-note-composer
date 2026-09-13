@@ -355,7 +355,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
     // Validator that fallback is invisible, so a single broken entry would silently stop the other
-    // Entries from matching. The validator is the ODU export, not a local copy.
+    // Entries from matching. The validator is the obsidian-dev-utils export, not a local copy.
     //
     // Every list below is per-category since issue #271 retired the all-commands `includePaths` /
     // `excludePaths` / `commandIncludePaths` / `commandExcludePaths` quartet these used to narrow; the

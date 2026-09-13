@@ -1488,7 +1488,7 @@ export class PluginSettings {
    *
    * Visibility first belonged to a `shouldBlockCommandsOnExcludedPaths` toggle, which needed a switch
    * precisely because it borrowed the content filter's list. Two empty lists already mean "block nothing"
-   * (ODU's `PathSettings` defaults make {@link PathSettings.isPathIgnored} `false`), which IS the old
+   * (obsidian-dev-utils' `PathSettings` defaults make {@link PathSettings.isPathIgnored} `false`), which IS the old
    * toggle-off default, so a separate switch would only add the incoherent "off, yet paths listed" state.
    *
    * Like the content map above, these nine replaced an all-commands pair in issue #271 rather than

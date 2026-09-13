@@ -162,8 +162,9 @@ describe('updateHeadingBacklinks', () => {
     resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
     resourceLockComponent.load();
 
-    // OTM's MetadataCache does not implement `getBacklinksForFile`, so discovery is driven from the
-    // Real parsed link cache of the linking note (only its target-referencing links). The rewrite path
+    // The obsidian-test-mocks MetadataCache does not implement `getBacklinksForFile`, so discovery is
+    // Driven from the real parsed link cache of the linking note (only its target-referencing links).
+    // The rewrite path
     // (editLinks + rewriteHeadingLink + the real files) stays real; `[[other]]` is intentionally left
     // Out so the converter's "reference not in the backlink set" branch is exercised.
     const noteFile = ensureNonNullable(app.vault.getFileByPath('note.md'));
