@@ -17,7 +17,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this drives the file-explorer folder context menu and the real folder-picker suggester
 // DOM, matching the plugin's established integration convention (no Android emulator is wired for it).
-// G99: the behavior under test depends on an Obsidian INTERNAL — `RecentFileTracker` collects the file
+// Version coverage: the behavior under test depends on an Obsidian INTERNAL — `RecentFileTracker` collects the file
 // You just LEFT, not the one you just opened — so it must be verified on both ends; a change there would
 // Silently reorder every picker. Run on BOTH: catalyst-latest 1.13.4 and public-latest 1.12.7, green on
 // Each. Pin the other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.

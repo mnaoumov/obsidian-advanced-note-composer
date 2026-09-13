@@ -14,7 +14,7 @@ import { MENU_PLACEABLE_COMMANDS } from './menu-placeable-commands.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 /*
- * Desktop-only: this exercises two editor context menus, a desktop-only surface. G99: the placement logic
+ * Desktop-only: this exercises two editor context menus, a desktop-only surface. Version coverage: the placement logic
  * is pure plugin logic on top of `obsidian-dev-utils`' `shouldAddToViewportMenu`, so public-latest is
  * enough.
  *

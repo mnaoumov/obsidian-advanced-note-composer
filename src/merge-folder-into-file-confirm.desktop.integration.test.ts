@@ -15,7 +15,7 @@ import {
 // Proves which element type came out (the unit test mocks both renderers).
 // Separate from `merge-folder-into-file.desktop.integration.test.ts` on purpose: this case cancels, so it
 // Never moves or deletes a file and stays clear of the headless rename wall that suite warns about.
-// G99: this asserts public-API modal DOM (`.modal-content` `code`/`a`), not Obsidian internals, so one end
+// Version coverage: this asserts public-API modal DOM (`.modal-content` `code`/`a`), not Obsidian internals, so one end
 // Would suffice — but it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7. Pin the
 // Other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-confirm.desktop.integration.test.ts`.

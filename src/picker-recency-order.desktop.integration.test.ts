@@ -9,7 +9,7 @@ import {
 } from 'vitest';
 
 /*
- * End-to-end coverage for issue #248 (G97): `pickerRecencyOrder` decides whether a folder picker leads
+ * End-to-end coverage for issue #248: `pickerRecencyOrder` decides whether a folder picker leads
  * with the destination of a completed operation or with the folder the user is currently in.
  *
  * The report is not a bug. Issue #206 — the same reporter — asked that a folder used as a destination be

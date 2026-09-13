@@ -8,7 +8,7 @@ import {
 
 // Desktop-only: it drives the plugin settings tab, matching this plugin's established convention for
 // Settings-tab suites (no Android emulator is wired for them).
-// G99: it uses only the stable settings-tab DOM (`.setting-item` / `.setting-item-name` /
+// Version coverage: it uses only the stable settings-tab DOM (`.setting-item` / `.setting-item-name` /
 // `.setting-item-chevron`) and the public `app.setting` navigation, with no dependence on minified
 // Obsidian internals, so verifying on public-latest is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/settings-page-navigation.desktop.integration.test.ts`.

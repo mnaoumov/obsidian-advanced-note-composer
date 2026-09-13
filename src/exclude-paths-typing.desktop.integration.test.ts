@@ -9,7 +9,7 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this drives the plugin settings tab, which is where the report came from (matching the
-// Plugin's established integration convention; no Android emulator is wired for it). G99: it uses only
+// Plugin's established integration convention; no Android emulator is wired for it). Version coverage: it uses only
 // The stable settings-tab DOM (`.setting-item` / `textarea`) and public APIs, with no dependence on
 // Minified Obsidian internals or serialization formats, so verifying on public-latest is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/exclude-paths-typing.desktop.integration.test.ts`.

@@ -15,7 +15,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 // The wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
 // The confirm cases additionally assert that both paths render as real anchors (issue #165) — the unit
 // Tests mock `renderInternalLink`, so only a real Obsidian proves its folder branch produces an `<a>`.
-// G99: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
+// Version coverage: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
 // `.modal-button-container` DOM), not Obsidian-internals/version-sensitive, so one end would suffice —
 // But it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7, 4/4 on each. Pin the
 // Other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.

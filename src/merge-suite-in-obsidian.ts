@@ -32,8 +32,8 @@
  *
  * Four of them are plugin-agnostic — `trashIfExistsInObsidian`, `startActivationRecorderInObsidian`,
  * `startNoticeRecorderInObsidian` and `captureStallDiagnosticsInObsidian` say nothing about this plugin —
- * so they belong in `obsidian-integration-testing`'s injected `lib` bag eventually (G52/G61). They are local for now for the
- * same reason `natural-sort.ts` is: extracting them is a cross-repo change (G55) that would have blocked
+ * so they belong in `obsidian-integration-testing`'s injected `lib` bag eventually. They are local for now for the
+ * same reason `natural-sort.ts` is: extracting them is a cross-repo change that would have blocked
  * the fix they were written for.
  */
 

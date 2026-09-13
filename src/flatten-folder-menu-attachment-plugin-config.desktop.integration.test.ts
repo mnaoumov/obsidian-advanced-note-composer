@@ -8,7 +8,7 @@ import {
   it
 } from 'vitest';
 
-// Desktop-only, matching the plugin's established integration convention. G99: it drives only public APIs
+// Desktop-only, matching the plugin's established integration convention. Version coverage: it drives only public APIs
 // (`Vault`, the `file-menu` workspace event), with no dependence on minified Obsidian internals, so
 // Verifying on public-latest is sufficient.
 // Isolation:
