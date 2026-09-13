@@ -11,7 +11,7 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only, for the same reason as `command-blocking-per-category.desktop.integration.test.ts`: it
-// Drives the settings tab and a folder context menu, both desktop-only surfaces here. G99: settings-gated
+// Drives the settings tab and a folder context menu, both desktop-only surfaces here. Version coverage: settings-gated
 // Filtering with no dependence on minified internals or version-sensitive DOM, so public-latest suffices.
 // Isolation: `npx vitest run --project integration-tests:desktop src/content-exclusion-per-category.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';

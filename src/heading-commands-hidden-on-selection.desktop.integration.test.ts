@@ -17,7 +17,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this exercises the editor context menu + command palette, which are desktop-only
 // Surfaces here (matching the plugin's established single-file integration convention; no Android
-// Emulator is wired for it). G99: this feature is pure plugin logic (it reads
+// Emulator is wired for it). Version coverage: this feature is pure plugin logic (it reads
 // `Editor.somethingSelected()` to decide whether to add a menu item) with no dependence on minified
 // Obsidian internals, version-sensitive DOM, or serialization formats, so verifying on public-latest is
 // Sufficient; there is nothing internals-specific to differ on catalyst.

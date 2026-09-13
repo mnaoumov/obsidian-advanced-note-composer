@@ -14,7 +14,7 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: an editor-selection behavior on a move flow, matching the plugin's established
-// Integration convention (no Android emulator wired). G99: pure editor-API behavior (`setSelection`)
+// Integration convention (no Android emulator wired). Version coverage: pure editor-API behavior (`setSelection`)
 // With no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
 // Public-latest verification is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/move-selection-cursor.desktop.integration.test.ts`.

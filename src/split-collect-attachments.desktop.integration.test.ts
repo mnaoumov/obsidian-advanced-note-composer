@@ -9,7 +9,7 @@ import {
 } from 'vitest';
 
 /*
- * End-to-end coverage for issue #246 (G97): with
+ * End-to-end coverage for issue #246: with
  * `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit` on, an extract hands its destination
  * note to the Custom Attachment Location plugin so that plugin collects the note's attachments.
  *

@@ -5,7 +5,7 @@
  *
  * The folder-note concept itself — where a folder's note lives, how the installed `folder-notes` plugin is
  * read under `Auto`, which file that resolves to — moved into `obsidian-dev-utils/obsidian/folder-note` in
- * 94.2.0 (G52/G61: it is not this plugin's to own, and `renderInternalLink` needed the same answer). What is
+ * 94.2.0 (it is not this plugin's to own, and `renderInternalLink` needed the same answer). What is
  * left here is the only half that IS this plugin's: two settings, and the token vocabulary their name
  * template is written in.
  *

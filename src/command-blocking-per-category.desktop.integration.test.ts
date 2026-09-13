@@ -16,7 +16,7 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only, for the same reason as `command-blocking.desktop.integration.test.ts`: it drives the
-// Command palette's check callback, a desktop-only surface here. G99: settings-gated `canExecute*` logic
+// Command palette's check callback, a desktop-only surface here. Version coverage: settings-gated `canExecute*` logic
 // With no dependence on minified internals or version-sensitive DOM, so public-latest is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/command-blocking-per-category.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';

@@ -12,7 +12,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // The swap confirmation dialog is v8-ignored modal UI (see swap-file-modal.ts / swap-folder-modal.ts);
 // This suite drives the REAL dialog DOM against a real Obsidian to prove the wiring (issue #74).
-// G99: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
+// Version coverage: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
 // `.modal-button-container` DOM), not Obsidian-internals/version-sensitive, so verifying against the
 // Default (currently-installed public-latest) build suffices; no separate catalyst run is required.
 
