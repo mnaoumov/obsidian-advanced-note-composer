@@ -62,7 +62,7 @@ const MIN_MERGEABLE_NOTE_COUNT = 2;
  * A `Record` keyed by the enum rather than a `switch`, so adding a member is a compile error instead of an
  * unreachable `default` branch.
  */
-const ODU_EMPTY_FOLDER_BEHAVIORS: Record<EmptyFolderBehaviorAfterMergingFolder, EmptyFolderBehavior> = {
+const DEV_UTILS_EMPTY_FOLDER_BEHAVIORS: Record<EmptyFolderBehaviorAfterMergingFolder, EmptyFolderBehavior> = {
   [EmptyFolderBehaviorAfterMergingFolder.Delete]: EmptyFolderBehavior.Delete,
   [EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly]: EmptyFolderBehavior.Delete,
   [EmptyFolderBehaviorAfterMergingFolder.DeleteWithEmptyParents]: EmptyFolderBehavior.DeleteWithEmptyParents,
@@ -217,7 +217,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const emptyFolderBehaviorAfterMergingFolder = settings.emptyFolderBehaviorAfterMergingFolder;
     await cleanupEmptyFolders({
       app: this.app,
-      emptyFolderBehavior: ODU_EMPTY_FOLDER_BEHAVIORS[emptyFolderBehaviorAfterMergingFolder],
+      emptyFolderBehavior: DEV_UTILS_EMPTY_FOLDER_BEHAVIORS[emptyFolderBehaviorAfterMergingFolder],
       // `DeleteSubFoldersOnly` keeps the merged folder by simply never offering it to the cleanup (issue
       // #167): the behavior is the same `Delete`, only the path set differs.
       folderPaths: emptyFolderBehaviorAfterMergingFolder === EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly
