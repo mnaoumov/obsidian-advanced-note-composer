@@ -90,7 +90,7 @@ describe('split template folder tokens (issue #227)', () => {
            * offered instead — because a suggestion that fuzzy-matched the typed text is what plain `Enter`
            * would have extracted into. `Mod+Enter` removes the hazard rather than diagnosing it: it creates
            * from the typed name whatever the list holds, so nothing here depends on the shared vault's
-           * contents any more ([[T880-P12]]).
+           * contents any more.
            */
           inputEl.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });

@@ -51,7 +51,7 @@ describe('split into folder', () => {
            * `Enter to create` row. That row is pushed by `SuggestModalBase.onNoSuggestion()` and nothing
            * else, so it exists ONLY when the search matched nothing at all — one note fuzzy-matching
            * `Extracted into folder` is enough for it to be correctly absent, and the wait then timed out on
-           * a row that was never coming ([[T880-P12]]).
+           * a row that was never coming.
            */
           input.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });

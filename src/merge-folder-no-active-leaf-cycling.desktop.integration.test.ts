@@ -30,7 +30,7 @@ const NOTE_COUNT = 12;
 /*
  * This suite renames more notes than any other in the aggregate (NOTE_COUNT of them, each with links to
  * Rewrite), and it runs FIRST - while Obsidian is still indexing the freshly created temp vault. That is why
- * It was the one that kept dying on the 30 s CDP cap (T446), and why every phase below is now its own short
+ * It was the one that kept dying on the 30 s CDP cap, and why every phase below is now its own short
  * Eval with the waiting done from Node: see `merge-suite-in-obsidian.ts` for the cap, the measurement and
  * The shape. The merge itself was measured at 1.65 s in a healthy aggregate run and at over 15x that on a
  * Loaded machine, so this budget is headroom rather than a performance expectation - the assertion below is

@@ -62,7 +62,7 @@ describe('extract this heading from the body (issue #143)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           // `Mod+Enter` forces the creation from the typed name. Waiting for the `Enter to create` row instead
           // Made this depend on the vault holding nothing that fuzzy-matches it, which the shared vault does
-          // Not guarantee ([[T880-P12]]).
+          // Not guarantee.
           input.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
 

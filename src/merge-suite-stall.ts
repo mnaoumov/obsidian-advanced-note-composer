@@ -11,7 +11,7 @@
  * make it happen again.
  *
  * What the snapshot carries is what has actually explained a stall in this repo before, plus the two things
- * the first version of it could not see (T470):
+ * the first version of it could not see:
  *
  * - the plugin's LIVE settings, because a merge waits FOREVER on a confirmation dialog nobody answers, and
  *   `shouldAskBeforeMerging` coming back true is the difference between "the merge is slow" and "the merge

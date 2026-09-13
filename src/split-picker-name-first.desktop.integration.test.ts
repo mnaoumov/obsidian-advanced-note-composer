@@ -475,7 +475,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           /*
            * The sibling is OPENED before the source so this test asserts against a list it controls
-           * ([[T880-P12]]). With an empty box the picker's order is recency before fuzz
+           * With an empty box the picker's order is recency before fuzz
            * (`recent-suggestions.ts`), and the plugin records every note the user opens (issue #256) — so
            * opening it here puts it at the head. The source is opened after it and is the operation's own
            * source, which every file picker filters out, so nothing displaces it.
@@ -515,7 +515,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
            * matched the sibling — so a fixed sleep can hand back a row from the PREVIOUS render, detached
            * by the time the click lands. The click then chooses nothing and the picker never closes, which
            * is precisely how this test failed in the aggregate while passing alone, and it was the head of
-           * the cascade T795 measured. Wait for the re-render itself (the chooser rebuilds its rows, so
+           * the cascade measured in `scripts/integration-test-setup.ts`. Wait for the re-render itself (the chooser rebuilds its rows, so
            * the first one is a new element), then re-query.
            */
           await waitUntil({

@@ -8,7 +8,7 @@
  * `afterEach`. A test that throws mid-flow therefore leaves its modal open OVER the app, and every later
  * file needing a modal-free app fails waiting for an operation that can never start.
  *
- * That cascade is the whole of T795, and it is measured, not assumed: in two instrumented runs the first
+ * That cascade is the whole reason for this file, and it is measured, not assumed: in two instrumented runs the first
  * failing file was `split-picker-name-first` both times, and it was followed by **28** and **20**
  * consecutively failing files — every one of which passes in isolation. Raising the wait budgets does not
  * touch it (5s to 15s left the head failure identical, ten seconds later); only the missing cleanup does.

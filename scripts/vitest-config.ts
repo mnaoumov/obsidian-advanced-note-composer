@@ -4,7 +4,7 @@ import type { TestProjectConfiguration } from 'vitest/config';
 import { defineObsidianPluginVitestConfig } from 'obsidian-dev-utils/script-utils/test-runners/vitest-config';
 
 /**
- * The screenshot-capture suites (T461-P21) that write `images/screenshot-*.png`.
+ * The screenshot-capture suites that write `images/screenshot-*.png`.
  *
  * They are named `*.desktop-capture.` / `*.android-capture.` rather than
  * `*.desktop.` / `*.android.` so they match NONE of the standard project globs.
@@ -24,7 +24,7 @@ const ANDROID_CAPTURE_TEST_FILES = 'src/**/*.android-capture.integration.test.ts
  * destroys the Appium session, because the display change recreates the
  * activity and with it the WebView the session is attached to.
  *
- * Needs one-time provisioning — see [[T461-P21]]. Briefly: the harness never
+ * Needs one-time provisioning, and it is not obvious: the harness never
  * installs the Obsidian APK, and because it launches emulators with
  * `-no-snapshot-save`, an install done under that flag is silently discarded.
  * Boot WITHOUT that flag, install, launch Obsidian once, then `adb emu kill`.
@@ -59,14 +59,14 @@ const DEMO_VAULT_TIMEOUT_IN_MILLISECONDS = 600_000;
 /**
  * Per-file cleanup for every project that drives a real desktop Obsidian. The whole project shares one
  * instance and one vault, so a test that throws with a modal open hands the next file a covered app — the
- * cascade [[T795-P12]] measured, where one failure was followed by 28 consecutively failing files that all
+ * cascade measured here, where one failure was followed by 28 consecutively failing files that all
  * pass in isolation. Appended here rather than in 101 test files so no new suite can forget it.
  */
 const INTEGRATION_TEST_SETUP_FILE = './scripts/integration-test-setup.ts';
 
 /**
  * Per-file vault cleanup, emptying the shared temp vault before each file so no file inherits another's
- * notes ([[T880-P12]]). Appended beside the modal cleanup rather than folded into it, because the two have
+ * notes. Appended beside the modal cleanup rather than folded into it, because the two have
  * different audiences: `withoutVaultReset` below takes this one back off the projects that OWN the contents
  * of their vault, while leaving them the modal cleanup they still need.
  */
@@ -110,7 +110,7 @@ export const config = defineObsidianPluginVitestConfig({
           include: [DESKTOP_CAPTURE_TEST_FILES],
           name: 'capture-screenshots:desktop',
           // Capturing is what these suites are FOR: emptying the vault under them would change the PNGs
-          // They write into `images/`, which is a committed artifact and no part of T880's subject.
+          // They write into `images/`, which is a committed artifact and no part of this reset's subject.
           setupFiles: withoutVaultReset(context.desktop.setupFiles)
         }
       },
