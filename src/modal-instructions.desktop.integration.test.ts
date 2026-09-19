@@ -37,6 +37,16 @@ describe('shouldShowModalInstructions', () => {
   it('should show the modal instruction bar only when the setting is enabled', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, overridesSettingName, pluginId }) {
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Nothing in this closure declares a ceiling: every wait in it takes the harness's documented 5_000
+         * default, so the 27_100 it adds up to is simply several of those plus a few short settles, and there
+         * is no chosen number here to tighten.
+         * What keeps that safe is the size of each wait rather than the size of the sum. The first wait to
+         * genuinely fail reports its own message after five seconds, far short of the cap, so only a run in
+         * which every wait in turn burned its whole default could reach the transport at all - and such a run
+         * has already failed on the first one.
+         */
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
 
@@ -123,6 +133,16 @@ describe('shouldShowModalInstructions', () => {
   it('should hide the reorder dialog\'s Include files checkbox while still applying the configured default', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, includeFilesSettingName, lib: { waitUntil }, obsidianModule, overridesSettingName, pluginId }) {
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Nothing in this closure declares a ceiling: every wait in it takes the harness's documented 5_000
+         * default, so the 25_200 it adds up to is simply several of those plus a few short settles, and there
+         * is no chosen number here to tighten.
+         * What keeps that safe is the size of each wait rather than the size of the sum. The first wait to
+         * genuinely fail reports its own message after five seconds, far short of the cap, so only a run in
+         * which every wait in turn burned its whole default could reach the transport at all - and such a run
+         * has already failed on the first one.
+         */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const ROOT = 'anc-overrides-reorder';
