@@ -61,6 +61,16 @@ describe('create an empty note (issue #244)', () => {
   it('creates an EMPTY note from the cursor, leaves a link behind and never navigates away', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Nothing in this closure declares a ceiling: every wait in it takes the harness's documented 5_000
+         * default, so the 26_200 it adds up to is simply several of those plus a few short settles, and there
+         * is no chosen number here to tighten.
+         * What keeps that safe is the size of each wait rather than the size of the sum. The first wait to
+         * genuinely fail reports its own message after five seconds, far short of the cap, so only a run in
+         * which every wait in turn burned its whole default could reach the transport at all - and such a run
+         * has already failed on the first one.
+         */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive names: the whole aggregate run shares ONE vault, so a generic one would make another
         // Suite's link ambiguous.

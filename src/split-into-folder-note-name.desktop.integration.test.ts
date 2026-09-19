@@ -21,6 +21,16 @@ describe('split into folder note name', () => {
   it('should name the extracted note after the template and keep the folder name as an alias', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Nothing in this closure declares a ceiling: every wait in it takes the harness's documented 5_000
+         * default, so the 28_200 it adds up to is simply several of those plus a few short settles, and there
+         * is no chosen number here to tighten.
+         * What keeps that safe is the size of each wait rather than the size of the sum. The first wait to
+         * genuinely fail reports its own message after five seconds, far short of the cap, so only a run in
+         * which every wait in turn burned its whole default could reach the transport at all - and such a run
+         * has already failed on the first one.
+         */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SAVE_DELAY_IN_MILLISECONDS = 300;
         const NEW_NOTE_NAME = 'Named split';
