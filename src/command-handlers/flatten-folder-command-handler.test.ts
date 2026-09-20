@@ -178,6 +178,10 @@ function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
       settings: strictProxy<PluginSettings>({
         attachmentExtensions: ['.excalidraw.md'],
         isPathIgnored: () => false,
+        // The shipped defaults (issue #273): empty is the opt-out, so every case that does not name them
+        // Flattens under exactly the pre-#273 names.
+        numberedMovedFolderNameTemplate: '',
+        numberedMovedNoteNameTemplate: '',
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeFlattening: false,
         shouldBlockCommandOnPath: () => false,
@@ -334,6 +338,54 @@ describe('FlattenFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('parent/note.md')).toBe('existing body');
     expect(await app.vault.adapter.read('parent/note 1.md')).toBe('inner body');
     expect(await app.vault.adapter.read('parent/note 1 1.md')).toBe('inner one body');
+  });
+
+  it('should auto-number the promoted folders, continuing the destination\'s sequence (issue #273)', async () => {
+    initApp({
+      'parent/1. one/x.md': 'one body',
+      'parent/3. three/y.md': 'three body',
+      'parent/a/b/deep.md': 'b body',
+      'parent/a/c/deep.md': 'c body'
+    });
+    const { handler } = createHandler({ numberedMovedFolderNameTemplate: '{{index}}. {{safeFolderName}}' });
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    // `1, 3` continues at `4` and `5` — the gap is not backfilled and the two promoted folders do not both
+    // Take `4`, which is what re-reading `1 + max` per item would have produced.
+    expect(await app.vault.adapter.read('parent/4. b/deep.md')).toBe('b body');
+    expect(await app.vault.adapter.read('parent/5. c/deep.md')).toBe('c body');
+    // The destination's own folders are untouched.
+    expect(await app.vault.adapter.read('parent/1. one/x.md')).toBe('one body');
+    expect(await app.vault.adapter.exists('parent/a/b/deep.md')).toBe(false);
+  });
+
+  it('should renumber an already-numbered folder rather than prefixing it twice (issue #273)', async () => {
+    initApp({
+      'parent/7. seven/x.md': 'seven body',
+      'parent/a/3. b/deep.md': 'b body'
+    });
+    const { handler } = createHandler({ numberedMovedFolderNameTemplate: '{{index}}. {{safeFolderName}}' });
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(await app.vault.adapter.read('parent/8. b/deep.md')).toBe('b body');
+    expect(await app.vault.adapter.exists('parent/8. 3. b/deep.md')).toBe(false);
+  });
+
+  it('should auto-number a promoted note and leave an attachment alone (issue #273)', async () => {
+    initApp({
+      'parent/2. two.md': 'two body',
+      'parent/a/note.md': 'note body',
+      'parent/a/pic.png': 'PIC'
+    });
+    const { handler } = createHandler({ numberedMovedNoteNameTemplate: '{{index}}. {{safeName}}' });
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(await app.vault.adapter.read('parent/3. note.md')).toBe('note body');
+    // A non-markdown file is in no sequence, so it keeps the name it has.
+    expect(await app.vault.adapter.exists('parent/pic.png')).toBe(true);
   });
 
   it('should not move anything when the confirmation is cancelled (issue #154)', async () => {

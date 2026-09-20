@@ -20,6 +20,7 @@ import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
+import { createMovedNameSequence } from '../numbered-moved-name.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
@@ -32,6 +33,12 @@ import { recordRecentTarget } from '../recent-targets.ts';
 interface BuildMoveConfirmContentParams {
   readonly app: App;
   readonly fragment: DocumentFragment;
+
+  /**
+   * The name the folder will carry in the destination once the auto-numbering of issue #273 has been
+   * applied. Shown only when it differs from the folder's current name.
+   */
+  readonly movedName: string;
   readonly sourceFolder: TFolder;
   readonly targetFolder: TFolder;
 }
@@ -91,7 +98,9 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const targetPath = getAvailablePath(this.app, join(targetFolder.path, folder.name));
+    // Issue #273: the folder continues the destination's numbering. Resolved here rather than inside the
+    // Transaction so the confirmation dialog above and this move ask the same question of the same vault.
+    const targetPath = getAvailablePath(this.app, join(targetFolder.path, this.resolveMovedName(folder, targetFolder)));
 
     // Captured as a string BEFORE the move: the rename mutates `folder.path` to its destination, so the
     // Completion notice would otherwise name the same folder on both sides.
@@ -182,6 +191,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
             buildMoveConfirmContent({
               app,
               fragment,
+              movedName: this.resolveMovedName(sourceFolder, targetFolder),
               sourceFolder,
               targetFolder
             }),
@@ -192,6 +202,32 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
         })
       );
     });
+  }
+
+  /**
+   * The name the folder takes in the destination, once the auto-numbering of issue #273 has been applied —
+   * `1 + max` over the destination's already-numbered child FOLDERS, with any index the folder already
+   * carries stripped first, so `3. B` moving into a `1, 3, 4, 7` folder becomes `8. B` rather than
+   * `8. 3. B`.
+   *
+   * One item, so the sequence is asked exactly once and its counter never advances. It is nevertheless the
+   * shared sequence rather than a one-off call, so a move and a flatten cannot come to number the same
+   * folder differently.
+   *
+   * With `numberedMovedFolderNameTemplate` empty — the default — this is the folder's own name and the move
+   * behaves exactly as it always has.
+   *
+   * @param folder - The folder being moved.
+   * @param targetFolder - The destination.
+   * @returns The name to move it under, before de-duplication.
+   */
+  private resolveMovedName(folder: TFolder, targetFolder: TFolder): string {
+    const { settings } = this.pluginSettingsComponent;
+    return createMovedNameSequence({
+      folderNameTemplate: settings.numberedMovedFolderNameTemplate,
+      noteNameTemplate: settings.numberedMovedNoteNameTemplate,
+      targetFolder
+    }).resolveName(folder);
   }
 
   /**
@@ -241,6 +277,7 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
   const {
     app,
     fragment,
+    movedName,
     sourceFolder,
     targetFolder
   } = params;
@@ -268,4 +305,15 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
       pathOrAbstractFile: targetFolder
     })
   );
+  // Only when the auto-numbering of issue #273 actually changes the name. The dialog otherwise names the
+  // Folder once and the user would meet `8. B` for the first time in the file explorer — the same surprise
+  // The flatten dialog's `old → new` arrow exists to prevent.
+  if (movedName !== sourceFolder.name) {
+    fragment.createEl('br');
+    fragment.createEl('br');
+    appendCodeBlock(fragment, 'New name');
+    fragment.appendText(': ');
+    // Plain text: the folder does not exist under that name yet.
+    appendCodeBlock(fragment, movedName);
+  }
 }

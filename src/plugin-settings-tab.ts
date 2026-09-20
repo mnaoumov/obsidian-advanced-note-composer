@@ -1668,8 +1668,62 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Command menu placement'
       }),
       this.settingPage({
-        desc: 'Moving a folder into another one, and flattening a folder into its parent.',
+        desc: 'Moving a folder into another one, flattening a folder into its parent, and numbering what either one relocates.',
         items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Numbers a FOLDER that ');
+              appendCodeBlock(f, 'Move folder to...');
+              f.appendText(' or any of the three flatten commands puts into another folder.');
+              f.createEl('br');
+              f.appendText('The number is one more than the highest already in use in the DESTINATION, counting only folders — so a folder moved into a ');
+              appendCodeBlock(f, '1, 3, 4');
+              f.appendText(' sequence becomes ');
+              appendCodeBlock(f, '5');
+              f.appendText('. A gap is never filled in, and the number the folder leaves behind stays vacant; use ');
+              appendCodeBlock(f, 'Reorder sibling folders');
+              f.appendText(' to close it.');
+              f.createEl('br');
+              f.appendText('A folder that already carries a number is RENUMBERED rather than numbered twice: ');
+              appendCodeBlock(f, '3. B');
+              f.appendText(' moving into a folder whose highest is ');
+              appendCodeBlock(f, '7');
+              f.appendText(' becomes ');
+              appendCodeBlock(f, '8. B');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Leave the field EMPTY (the default) to switch numbering off.');
+              f.createEl('br');
+              addNumberedMovedFolderTokens(f);
+            }),
+            name: 'Auto-numbered moved folder name',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'numberedMovedFolderNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Numbers a NOTE that a flatten promotes into another folder — the other half of ');
+              appendCodeBlock(f, 'Auto-numbered moved folder name');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Same rule, counting only NOTES: numbered folders beside them are a separate sequence, and an attachment is never renamed at all. Leave the field EMPTY (the default) to switch numbering off.');
+              f.createEl('br');
+              f.appendText('Renaming a note changes its name, so links to it are updated, exactly as they are when you rename it yourself.');
+              f.createEl('br');
+              addNumberedMovedNoteTokens(f);
+            }),
+            name: 'Auto-numbered moved note name',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'numberedMovedNoteNameTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
           this.settingEx({
             desc: createFragment((f) => {
               f.appendText('Whether to show a confirmation dialog before flattening a folder.');
@@ -2516,6 +2570,41 @@ function addCreateFolderTokens(f: DocumentFragment, shouldIncludeFolderTokens: b
   f.appendText(' is the typed name after normalization, without the index. ');
   appendCodeBlock(f, '{{folderName}}');
   f.appendText(' is the folder\'s real final name, index included.');
+}
+
+/**
+ * Lists the tokens of the auto-numbered moved FOLDER name template (issue #273).
+ *
+ * The same vocabulary as {@link addNumberedSplitFolderTokens} — both templates ARE a folder's name, so the
+ * tokens naming the result are unavailable in either — but `{{safeFolderName}}` means something different
+ * here, which is the whole reason this is its own list: a split's folder does not exist yet, while a moved
+ * one does and may already carry a number.
+ *
+ * @param f - The fragment to append to.
+ */
+function addNumberedMovedFolderTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeFolderName}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeFolderName}}');
+  f.appendText(' is the folder\'s current name with any number it already carries removed. ');
+  appendCodeBlock(f, '{{parentFolder}}');
+  f.appendText(' and ');
+  appendCodeBlock(f, '{{parentFolderPath}}');
+  f.appendText(' name the DESTINATION, not where the folder is coming from.');
+}
+
+/**
+ * Lists the tokens of the auto-numbered moved NOTE name template (issue #273).
+ *
+ * @param f - The fragment to append to.
+ */
+function addNumberedMovedNoteTokens(f: DocumentFragment): void {
+  addTokenList(f, ['{{index}}', '{{safeName}}', '{{extension}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}']);
+  appendCodeBlock(f, '{{safeName}}');
+  f.appendText(' is the note\'s current basename with any number it already carries removed. ');
+  appendCodeBlock(f, '{{parentFolder}}');
+  f.appendText(' and ');
+  appendCodeBlock(f, '{{parentFolderPath}}');
+  f.appendText(' name the DESTINATION.');
 }
 
 /**

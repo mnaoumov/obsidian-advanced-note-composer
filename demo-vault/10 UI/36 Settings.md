@@ -213,6 +213,8 @@ Obsidian has two context menus over an open note, and they never both answer one
 
 ## Move and flatten folders
 
+- `numberedMovedFolderNameTemplate` / `numberedMovedNoteNameTemplate`
+  - continue the numbering the DESTINATION already carries when a move or a flatten relocates a folder or a note — see [41 Auto-number moves](<../06 Folder operations/41 Auto-number moves.md>). Empty means no numbering.
 - `shouldAskBeforeFlattening`
   - show a confirmation dialog listing everything a flatten would move.
 - `shouldAskBeforeMovingFolder`

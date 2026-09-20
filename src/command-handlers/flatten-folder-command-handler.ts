@@ -18,6 +18,7 @@ import { join } from 'obsidian-dev-utils/path';
 import type { CollectFlattenItemsParams } from '../flatten-items.ts';
 import type { FlattenPreviewRow } from '../flatten-preview.ts';
 import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
+import type { MovedNameSequence } from '../numbered-moved-name.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { getAvailablePathForAbstractFile } from '../available-folder-path.ts';
@@ -32,6 +33,7 @@ import { buildFlattenPreviewRows } from '../flatten-preview.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { ConfirmDialogModal } from '../modals/confirm-dialog-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
+import { createMovedNameSequence } from '../numbered-moved-name.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
@@ -410,8 +412,36 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     });
   }
 
+  /**
+   * The ONE place the auto-numbering of issue #273 is assembled, so the executor and the confirmation
+   * preview cannot hand it different templates and disagree about the names — the same reason
+   * {@link FlattenFolderCommandHandler.buildCollectFlattenItemsParams} exists for what moves.
+   *
+   * A fresh sequence per call is deliberate. Each one reads the destination's current numbering as its
+   * starting point, and the preview is rebuilt every time the dialog reopens (a `Change target` may have
+   * moved the destination entirely), so a shared instance would carry one pass's counter into the next.
+   *
+   * @param targetFolder - The folder the items are being promoted into.
+   * @returns The sequence, to be asked for each item in move order.
+   */
+  private createMovedNameSequence(targetFolder: TFolder): MovedNameSequence {
+    const { settings } = this.pluginSettingsComponent;
+    return createMovedNameSequence({
+      folderNameTemplate: settings.numberedMovedFolderNameTemplate,
+      noteNameTemplate: settings.numberedMovedNoteNameTemplate,
+      targetFolder
+    });
+  }
+
   private async flattenImpl(params: FlattenFolderCommandHandlerFlattenImplParams): Promise<void> {
     const { abortController, itemsToMove, parentFolder, vaultTransaction } = params;
+    /*
+     * Built once for the whole pass (issue #273), so the promoted items take CONSECUTIVE numbers rather
+     * than every one of them asking the destination the same question. It is the same sequence the
+     * confirmation dialog previewed, seeded from the same vault state, so the preview cannot promise a name
+     * this loop will not give.
+     */
+    const movedNameSequence = this.createMovedNameSequence(parentFolder);
     for (const item of itemsToMove) {
       if (abortController.signal.aborted) {
         throw new Error('Flatten folder aborted.');
@@ -421,7 +451,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
        * folder before its own sub-folders, and Obsidian's rename cascades to descendants, so a nested item
        * is already at its promoted parent's new path by the time its turn comes.
        */
-      const targetPath = getAvailablePathForAbstractFile(this.app, item, join(parentFolder.path, item.name));
+      const targetPath = getAvailablePathForAbstractFile(this.app, item, join(parentFolder.path, movedNameSequence.resolveName(item)));
       await vaultTransaction.rename(item, targetPath);
     }
   }
@@ -458,6 +488,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
         app: this.app,
         children: itemsToMove,
         folder,
+        movedNameSequence: this.createMovedNameSequence(parentFolder),
         parentFolder
       });
       const confirmResult = await this.confirmFlatten({
