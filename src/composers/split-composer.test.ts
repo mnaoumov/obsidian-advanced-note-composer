@@ -321,6 +321,39 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
   });
 }
 
+/**
+ * Runs `splitFile` with the reveal poll's GIVE-UP budget elapsing in fake time rather than in wall clock.
+ *
+ * Only the two tests that drive the give-up need this, and they need it for the same reason: they pin
+ * `getActiveViewOfType` to something the poll can never accept, so `pollForInsertedContent` runs its budget
+ * out in full — 41 turns of a 50 ms sleep, on top of `openFileAfterOperation`'s 200 ms settle. Measured at
+ * 2919 ms and 2779 ms of real waiting, against a 5000 ms `testTimeout`, and coverage instrumentation ate
+ * what was left of the margin: the no-view test timed out at 5190 ms on a `npm run test:coverage` run and
+ * passed on the plain re-run, which is the worst way for a suite to fail.
+ *
+ * Deliberately NOT fixed by shortening the production budget or by returning early on a null view. The poll
+ * runs after `openFileAfterOperation` has already awaited the target's open, so a first-tick null is the
+ * view still being constructed — exactly what the poll is for, and what issue #144 was about. The budget is
+ * right; paying for it in real seconds is what is wrong.
+ *
+ * `runAllTimersAsync` rather than a fixed advance, so this does not restate the poll's arithmetic: it drains
+ * timers until none are pending, including the next sleep the poll schedules each turn. The loop still runs
+ * every one of its turns and still reaches the give-up, so neither caller's assertions weaken.
+ *
+ * @param composer - The composer to run.
+ * @returns A {@link Promise} that resolves once the split has finished.
+ */
+async function splitUnderFakeTimers(composer: SplitComposer): Promise<void> {
+  vi.useFakeTimers();
+  try {
+    const splitPromise = composer.splitFile();
+    await vi.runAllTimersAsync();
+    await splitPromise;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 describe('getSelections', () => {
   interface MockSelection {
     readonly anchor: number;
@@ -1254,7 +1287,7 @@ describe('splitFile move mode', () => {
       targetCursorOffset: 7
     });
 
-    await composer.splitFile();
+    await splitUnderFakeTimers(composer);
 
     expect(editor.setSelection).not.toHaveBeenCalled();
   });
@@ -1289,7 +1322,7 @@ describe('splitFile move mode', () => {
       targetCursorOffset: 7
     });
 
-    await composer.splitFile();
+    await splitUnderFakeTimers(composer);
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(consoleDebugMock).toHaveBeenCalledWith(expect.stringContaining('Could not locate the inserted content'));
