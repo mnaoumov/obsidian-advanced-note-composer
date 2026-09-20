@@ -82,6 +82,47 @@ export interface RenameStep {
 }
 
 /**
+ * Parameters for {@link renderNumberedName}.
+ */
+export interface RenderNumberedNameParams {
+  /**
+   * The item's name with any index it already carried stripped off — what {@link parseNumberedName} read
+   * back out of it.
+   */
+  readonly baseName: string;
+
+  /**
+   * The extension, leading dot included, or an empty string for a folder. Never templated.
+   */
+  readonly extension: string;
+
+  /**
+   * The number to write.
+   */
+  readonly index: number;
+
+  /**
+   * Which kind's token vocabulary the template speaks.
+   */
+  readonly kind: ReorderItemKind;
+
+  /**
+   * The name template for this kind, as typed into its setting.
+   */
+  readonly nameTemplate: string;
+
+  /**
+   * The name of the folder the item ends up in.
+   */
+  readonly parentFolder: string;
+
+  /**
+   * The path of the folder the item ends up in.
+   */
+  readonly parentFolderPath: string;
+}
+
+/**
  * One item with the name the reorder decided for it.
  */
 export interface RenumberedItem {
@@ -134,16 +175,6 @@ export const BASE_TOKEN_KEYS: Record<ReorderItemKind, string> = {
 interface ParkedItem {
   readonly item: RenumberedItem;
   readonly temporaryPath: string;
-}
-
-interface RenderNameParams {
-  readonly baseName: string;
-  readonly extension: string;
-  readonly index: number;
-  readonly kind: ReorderItemKind;
-  readonly nameTemplate: string;
-  readonly parentFolder: string;
-  readonly parentFolderPath: string;
 }
 
 /**
@@ -230,7 +261,7 @@ export function buildRenumberPlan(params: BuildRenumberPlanParams): readonly Ren
       name: item.name,
       nameTemplate
     });
-    const renderedName = renderName({
+    const renderedName = renderNumberedName({
       baseName,
       extension: item.extension,
       index,
@@ -254,16 +285,23 @@ export function buildRenumberPlan(params: BuildRenumberPlanParams): readonly Ren
 }
 
 /**
- * Renders one item's new name through its kind's own token vocabulary.
+ * Renders one item's numbered name through its kind's own token vocabulary.
  *
  * The tokens naming the RESULT (`{{folderName}}` / `{{name}}` / the paths) resolve to nothing here, exactly
  * as they do while `Create folder with notes...` resolves its own name template — this template is what
  * produces them, and the settings validator rejects them rather than letting them render as emptiness.
  *
- * @param params - The item's parsed name, its position and the template.
+ * Exported for `numbered-moved-name.ts` (issue #273), which numbers an item a move or a flatten puts into a
+ * new folder. That is the same two steps a reorder takes — strip the old index with
+ * {@link parseNumberedName}, write the new one with this — differing only in where the index comes from, so
+ * it is shared rather than written a second time. It lives HERE rather than beside `parseNumberedName` in
+ * `numbered-name.ts` because it needs {@link ReorderItemKind} and {@link BASE_TOKEN_KEYS}, which this module
+ * owns and that one is imported BY — putting it there would close an import cycle.
+ *
+ * @param params - The item's parsed name, the number to give it and the template.
  * @returns The rendered name, extension NOT included.
  */
-function renderName(params: RenderNameParams): string {
+export function renderNumberedName(params: RenderNumberedNameParams): string {
   const {
     baseName,
     extension,

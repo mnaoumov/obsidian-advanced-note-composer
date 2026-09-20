@@ -538,6 +538,42 @@ export class PluginSettings {
   public newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
 
   /**
+   * The name a relocation gives a FOLDER it moves into another folder — the auto-numbering of issue #273,
+   * for `Move folder to...` and the three `Flatten folder...` commands.
+   *
+   * Same `1 + max` rule as everything else numbered here, read over the DESTINATION's already-numbered child
+   * FOLDERS, so a folder moved into a `1, 3, 4` sequence becomes `5`. The number the folder vacates where it
+   * came from is left vacant; closing that gap is what `Reorder sibling folders` does, and it is opt-in
+   * there.
+   *
+   * A folder that ALREADY carries an index is RENUMBERED, not prefixed twice — `3. B` moving into a folder
+   * whose highest is `7` becomes `8. B`. The old index is read back through this very template, exactly as a
+   * reorder reads it.
+   *
+   * Its own setting rather than {@link numberedSplitFolderNameTemplate}, for the reason
+   * {@link reorderedFolderNameTemplate} is its own rather than {@link newFolderNameTemplate}: creating,
+   * reordering and relocating are three occasions a vault may want to number differently, and folding the
+   * third into the first would silently switch numbering on for four more commands in every vault that had
+   * opted into split numbering.
+   *
+   * EMPTY BY DEFAULT, and empty means a moved folder keeps its name exactly as it always did.
+   */
+  public numberedMovedFolderNameTemplate = '';
+
+  /**
+   * The name a relocation gives a NOTE it moves into another folder (issue #273) — the other half of
+   * {@link numberedMovedFolderNameTemplate}, and what `Flatten folder...` applies to the notes it promotes.
+   *
+   * Same rule, over the destination's already-numbered sibling NOTES; numbered folders beside them are a
+   * separate sequence and are not consulted, and neither is an attachment — a non-markdown file is never
+   * renamed by this, because it is not part of a note sequence to begin with.
+   *
+   * The rename goes through Obsidian's own rename, so links to the note follow it. Empty by default, and
+   * empty means off.
+   */
+  public numberedMovedNoteNameTemplate = '';
+
+  /**
    * The name a split gives the FOLDER it wraps its new note in — the auto-numbering of issue #269, for the
    * `Should split into folder` case where the reporter asked for the number to go on the folder "instead".
    *

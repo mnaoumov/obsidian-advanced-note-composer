@@ -75,6 +75,8 @@ Once the folder is numbered, the folder tokens of [11 Split into folder](<./11 S
 
 `Create empty note at cursor...` and `Create empty note in folder...` **are** numbered, like every other note these settings create.
 
+These two settings number what is **created**. Numbering what is **relocated** - by `Move folder to...` or any of the three flattens - is a separate pair, so the two occasions can follow different schemes: see [41 Auto-number moves](<../06 Folder operations/41 Auto-number moves.md>).
+
 ```code-button
 ---
 caption: Turn auto-numbering back off

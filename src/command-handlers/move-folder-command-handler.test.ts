@@ -146,6 +146,10 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       editAndSave,
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
+        // The shipped defaults (issue #273): empty is the opt-out, so every case that does not name them
+        // Moves the folder under exactly the pre-#273 name.
+        numberedMovedFolderNameTemplate: '',
+        numberedMovedNoteNameTemplate: '',
         shouldAddCommandsToSubmenu: true,
         shouldAskBeforeMovingFolder: false,
         shouldBlockCommandOnPath: () => false,
@@ -362,6 +366,63 @@ describe('MoveFolderCommandHandler', () => {
     // Unlike flatten, the move has a picked target, so it can be changed from the dialog.
     expect(capturedConfirmParams?.canReselectTarget).toBe(true);
     expect(capturedConfirmParams?.title).toBe('Move folder');
+    // With numbering off — the default — the folder keeps its name, so there is nothing to warn about.
+    expect(renderedCodeBlocks).not.toContain('New name');
+  });
+
+  it('should auto-number the moved folder, continuing the destination\'s sequence (issue #273)', async () => {
+    initApp({
+      'dst/1. one/x.md': 'one body',
+      'dst/3. three/y.md': 'three body',
+      'parent/a/note.md': 'note body'
+    });
+    const { handler } = createHandler({ numberedMovedFolderNameTemplate: '{{index}}. {{safeFolderName}}' });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    // `1, 3` continues at `4`: the gap is not backfilled.
+    expect(await app.vault.adapter.read('dst/4. a/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('parent/a/note.md')).toBe(false);
+  });
+
+  it('should renumber an already-numbered folder rather than prefixing it twice (issue #273)', async () => {
+    initApp({
+      'dst/7. seven/x.md': 'seven body',
+      'parent/3. a/note.md': 'note body'
+    });
+    const { handler } = createHandler({ numberedMovedFolderNameTemplate: '{{index}}. {{safeFolderName}}' });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('parent/3. a'));
+
+    expect(await app.vault.adapter.read('dst/8. a/note.md')).toBe('note body');
+    expect(await app.vault.adapter.exists('dst/8. 3. a/note.md')).toBe(false);
+  });
+
+  it('should name the auto-numbered result in the confirmation body (issue #273)', async () => {
+    // The dialog otherwise names the folder only as it is TODAY, so the user would meet `4. a` for the
+    // First time in the file explorer — the surprise the flatten dialog's `old → new` arrow prevents.
+    initApp({
+      'dst/3. three/y.md': 'three body',
+      'parent/a/note.md': 'note body'
+    });
+    const { handler } = createHandler({
+      numberedMovedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
+      shouldAskBeforeMovingFolder: true
+    });
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+    scriptConfirmResults(createConfirmResult(false));
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    const fragment = createFragment();
+    await capturedConfirmParams?.buildContent(fragment);
+
+    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
+    expect(renderedCodeBlocks).toContain('New name');
+    expect(renderedCodeBlocks).toContain('4. a');
   });
 
   it('should label the vault root destination link with a slash', async () => {

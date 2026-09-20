@@ -11,6 +11,8 @@ import {
   join
 } from 'obsidian-dev-utils/path';
 
+import type { MovedNameSequence } from './numbered-moved-name.ts';
+
 import { getAvailablePathForAbstractFile } from './available-folder-path.ts';
 
 /**
@@ -32,6 +34,13 @@ interface BuildFlattenPreviewRowsParams {
   readonly app: App;
   readonly children: readonly TAbstractFile[];
   readonly folder: TFolder;
+
+  /**
+   * The auto-numbering of issue #273, built over the DESTINATION. A sequence of its own per preview pass,
+   * seeded from the vault as it stands — which is the same state the flatten will start from, so the two
+   * hand out the same numbers.
+   */
+  readonly movedNameSequence: MovedNameSequence;
   readonly parentFolder: TFolder;
 }
 
@@ -39,6 +48,7 @@ interface ResolveTargetPathParams {
   readonly app: App;
   readonly child: TAbstractFile;
   readonly claimedPaths: ReadonlySet<string>;
+  readonly movedNameSequence: MovedNameSequence;
   readonly parentFolder: TFolder;
 }
 
@@ -64,6 +74,7 @@ export function buildFlattenPreviewRows(params: BuildFlattenPreviewRowsParams): 
     app,
     children,
     folder,
+    movedNameSequence,
     parentFolder
   } = params;
   const claimedPaths = new Set<string>();
@@ -73,6 +84,7 @@ export function buildFlattenPreviewRows(params: BuildFlattenPreviewRowsParams): 
       app,
       child,
       claimedPaths,
+      movedNameSequence,
       parentFolder
     });
     claimedPaths.add(targetPath);
@@ -89,6 +101,10 @@ export function buildFlattenPreviewRows(params: BuildFlattenPreviewRowsParams): 
 /**
  * Resolves the path a single item will end up at, skipping the names earlier items already claimed.
  *
+ * The auto-numbered name is resolved FIRST and everything after it works on that name, because the
+ * de-duplication is about the name the item will actually be given: `b` and `c` both landing beside an
+ * existing `5. b` only collide once one of them has become `5. b` itself.
+ *
  * @param params - The parameters.
  * @returns The path the item will be moved to.
  */
@@ -97,13 +113,16 @@ function resolveTargetPath(params: ResolveTargetPathParams): string {
     app,
     child,
     claimedPaths,
+    movedNameSequence,
     parentFolder
   } = params;
-  let targetPath = getAvailablePathForAbstractFile(app, child, join(parentFolder.path, child.name));
+  // Exactly once per item, in move order — the sequence counts UP as it answers.
+  const movedName = movedNameSequence.resolveName(child);
+  let targetPath = getAvailablePathForAbstractFile(app, child, join(parentFolder.path, movedName));
   // A folder has no extension, so its counter goes at the end of the whole name — otherwise a folder
   // Called `v1.2` would be de-duplicated as if `.2` were an extension.
-  const extension = isFolder(child) ? '' : extname(child.name);
-  const stem = extension ? basename(child.name, extension) : child.name;
+  const extension = isFolder(child) ? '' : extname(movedName);
+  const stem = extension ? basename(movedName, extension) : movedName;
   let counter = 1;
   while (claimedPaths.has(targetPath)) {
     targetPath = getAvailablePathForAbstractFile(app, child, join(parentFolder.path, `${stem} ${String(counter)}${extension}`));

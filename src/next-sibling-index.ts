@@ -1,4 +1,7 @@
-import type { TFolder } from 'obsidian';
+import type {
+  TAbstractFile,
+  TFolder
+} from 'obsidian';
 
 import {
   isFile,
@@ -95,21 +98,43 @@ export function resolveNextSiblingIndex(params: ResolveNextSiblingIndexParams): 
 }
 
 /**
+ * Which numbered sequence an item belongs to, or `null` when it belongs to none.
+ *
+ * A folder is a folder; a MARKDOWN file is a note; everything else is neither — an attachment named
+ * `9. diagram.png` is not part of a note sequence.
+ *
+ * Exported because a renumbering has to ask the same question from the other side (issue #273): a move or a
+ * flatten must number exactly the items this function would go on to COUNT, or the two would disagree about
+ * what a sequence contains and a moved attachment could take a number no scan would ever read back.
+ *
+ * @param abstractFile - The item to classify.
+ * @returns The kind whose sequence it belongs to, or `null`.
+ */
+export function resolveSequenceKind(abstractFile: TAbstractFile): null | ReorderItemKind {
+  if (isFolder(abstractFile)) {
+    return ReorderItemKind.Folder;
+  }
+
+  return isMarkdownFile(abstractFile) ? ReorderItemKind.File : null;
+}
+
+/**
  * The name a child contributes to the sequence, or `null` when it is not part of it at all.
  *
  * A file contributes its BASENAME, never its extension: the templates that number files
  * (`reorderedFileNameTemplate`, `numberedSplitNoteNameTemplate`) name the basename, so matching against
- * `1. Alpha.md` would never recognize `1. Alpha`. Non-markdown files are skipped along with folders of the
- * wrong kind — an attachment named `9. diagram.png` is not part of a note sequence.
+ * `1. Alpha.md` would never recognize `1. Alpha`.
  *
  * @param child - The child to classify.
  * @param kind - The kind whose sequence is being read.
  * @returns The name to match, or `null` to skip the child.
  */
 function resolveSiblingName(child: TFolder['children'][number], kind: ReorderItemKind): null | string {
-  if (kind === ReorderItemKind.Folder) {
-    return isFolder(child) ? child.name : null;
+  if (resolveSequenceKind(child) !== kind) {
+    return null;
   }
 
-  return isFile(child) && isMarkdownFile(child) ? child.basename : null;
+  // Already settled by the classification above: a `File` match is a markdown file, a `Folder` match is not
+  // A file at all. The guard is here to narrow the type, not to re-decide.
+  return isFile(child) ? child.basename : child.name;
 }

@@ -40,7 +40,17 @@ registerDemoVaultCoverageSuite({
       'Materials/40 Auto-number splits/Folder example/4. C/!.md',
       'Materials/40 Auto-number splits/Note example/1. A.md',
       'Materials/40 Auto-number splits/Note example/3. B.md',
-      'Materials/40 Auto-number splits/Note example/4. C.md'
+      'Materials/40 Auto-number splits/Note example/4. C.md',
+      // The same background for issue #273: the already-numbered neighbors a relocated item reads its
+      // `1 + max` from, plus the one note that travels INSIDE a promoted folder. The walkthrough links the
+      // Two notes the reader actually opens; nothing is done to these.
+      'Materials/41 Auto-number moves/Flatten example/1. Existing/!.md',
+      'Materials/41 Auto-number moves/Flatten example/2. First note.md',
+      'Materials/41 Auto-number moves/Flatten example/3. Another/!.md',
+      'Materials/41 Auto-number moves/Flatten example/5. Second note.md',
+      'Materials/41 Auto-number moves/Flatten example/Source folder/3. Numbered child/Deep.md',
+      'Materials/41 Auto-number moves/Move example/Destination/1. Alpha/!.md',
+      'Materials/41 Auto-number moves/Move example/Destination/3. Gamma/!.md'
     ]
   },
   configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/plugin-settings.ts' }],
