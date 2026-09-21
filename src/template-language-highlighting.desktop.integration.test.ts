@@ -7,10 +7,7 @@ import {
   it
 } from 'vitest';
 
-// Inlined rather than imported from `tokenized-string-language-component.ts`: this file runs in Node, and
-// That module pulls in `obsidian`, which only resolves inside the app. Same reason the suite inlines
-// `PLUGIN_ID`.
-const TOKENIZED_STRING_LANGUAGE = 'advanced-note-composer-template';
+import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
 describe('tokenized-string template language', () => {
   it('highlights the {{token:format}} placeholders of a template through real Prism', async () => {

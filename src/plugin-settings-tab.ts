@@ -40,7 +40,7 @@ import {
   SplitTargetMode,
   TextAfterExtractionMode
 } from './plugin-settings.ts';
-import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language-component.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
 /**
  * What each {@link CommandCategory}'s path rows cover, named the way the command palette names the

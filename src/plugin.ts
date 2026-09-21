@@ -1,5 +1,6 @@
 import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
+import { TemplatesLanguageComponent } from 'obsidian-dev-utils/obsidian/components/templates-language-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
@@ -61,7 +62,7 @@ import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
-import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
 /**
  * Every flatten variant, each of which is registered as its own command (issue #177). Spelled out rather
@@ -498,7 +499,15 @@ export class Plugin extends PluginBase {
       ])
     ]);
 
-    this.addChild(new TokenizedStringLanguageComponent());
+    // The token half admits a comma-separated argument list (`{{prev,2}}`), which core's own word-character
+    // Default does not; the format half admits the hyphens a date format carries.
+    this.addChild(
+      new TemplatesLanguageComponent({
+        formatSource: /[a-zA-Z0-9_,-]+/,
+        language: TOKENIZED_STRING_LANGUAGE,
+        tokenPattern: /^[a-zA-Z0-9_,]+/
+      })
+    );
     this.addChild(
       new ReleaseNotesComponent({
         app: this.app,

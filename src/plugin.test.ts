@@ -14,6 +14,7 @@ import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
+import { TemplatesLanguageComponent } from 'obsidian-dev-utils/obsidian/components/templates-language-component';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -35,10 +36,14 @@ import {
 import { ReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
-import { TokenizedStringLanguageComponent } from './tokenized-string-language-component.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/components/templates-language-component', () => ({
+  TemplatesLanguageComponent: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
@@ -173,10 +178,6 @@ vi.mock('./plugin-settings-tab.ts', () => ({
   PluginSettingsTab: vi.fn()
 }));
 
-vi.mock('./tokenized-string-language-component.ts', () => ({
-  TokenizedStringLanguageComponent: vi.fn()
-}));
-
 vi.mock('./release-notes-component.ts', () => ({
   ReleaseNotesComponent: vi.fn()
 }));
@@ -187,7 +188,7 @@ vi.mock('./release-notes-component.ts', () => ({
 interface PluginInternals {
   commandHandlerComponent: CommandHandlerComponent;
   consoleDebugComponent: ConsoleDebugComponent;
-  onloadImpl(): Promise<void>;
+  onloadImpl: () => Promise<void>;
   pluginNoticeComponent: PluginNoticeComponent;
   pluginSettingsComponent: PluginSettingsComponentBase<object>;
   resourceLockComponent: ResourceLockComponent;
@@ -244,7 +245,14 @@ describe('Plugin', () => {
     const EXPECTED_COMMAND_HANDLER_COUNT = 55;
     expect(commandHandlers).toHaveLength(EXPECTED_COMMAND_HANDLER_COUNT);
     expect(commandHandlers.every(Boolean)).toBe(true);
-    expect(TokenizedStringLanguageComponent).toHaveBeenCalledOnce();
+    expect(TemplatesLanguageComponent).toHaveBeenCalledOnce();
+    // The two vocabulary additions this plugin's dialect needs over core's Templates language: a
+    // Comma-separated argument list in the token half, and hyphens in the format half.
+    expect(TemplatesLanguageComponent).toHaveBeenCalledWith({
+      formatSource: /[a-zA-Z0-9_,-]+/,
+      language: TOKENIZED_STRING_LANGUAGE,
+      tokenPattern: /^[a-zA-Z0-9_,]+/
+    });
     expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
