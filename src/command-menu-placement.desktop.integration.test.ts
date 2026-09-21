@@ -48,6 +48,15 @@ describe('command menu placement (issues #252, #254)', () => {
   it('moves ONE command from the editor menu onto the readable-line-length margin, leaving its siblings', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { waitUntil }, menuPlaceableCommandIds, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 32 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3750;
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const ITEM_TITLE = 'Split note by headings recursively...';
@@ -136,12 +145,14 @@ describe('command menu placement (issues #252, #254)', () => {
           await app.workspace.getLeaf(false).openFile(targetFile);
           await waitUntil({
             message: `markdown view for ${targetFile.path} did not become active`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === targetFile.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === targetFile.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The menu gate reads the note's headings from `metadataCache`; wait for them to be indexed.
           await waitUntil({
             message: `headings for ${targetFile.path} were not indexed`,
-            predicate: () => (app.metadataCache.getFileCache(targetFile)?.headings?.length ?? 0) >= 2
+            predicate: () => (app.metadataCache.getFileCache(targetFile)?.headings?.length ?? 0) >= 2,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
 

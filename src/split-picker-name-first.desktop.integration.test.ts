@@ -42,7 +42,7 @@ interface NameFirstSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: NameFirstSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: NameFirstSettings) => void) => Promise<void>;
   settings: NameFirstSettings;
 }
 
@@ -50,6 +50,15 @@ describe('the split/extract picker asks for a name before a destination (issue #
   it('refuses to choose anything while a creation has no name, and says why', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 32 800 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
         // Make another suite's link ambiguous.
@@ -85,18 +94,21 @@ describe('the split/extract picker asks for a name before a destination (issue #
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
-            predicate: () => editor.getValue() === SOURCE_CONTENT
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             message: 'the heading cache is not ready',
-            predicate: () => (app.metadataCache.getFileCache(source)?.headings?.length ?? 0) === HEADING_COUNT
+            predicate: () => (app.metadataCache.getFileCache(source)?.headings?.length ?? 0) === HEADING_COUNT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           editor.setCursor({ ch: 0, line: HEADING_LINE_INDEX });
           app.commands.executeCommandById(`${pluginId}:extract-this-heading`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -130,7 +142,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -221,7 +234,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await app.workspace.revealLeaf(leaf);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -453,6 +467,15 @@ describe('the split/extract picker asks for a name before a destination (issue #
   it('chooses an existing note clicked while nothing is typed, instead of doing nothing', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { clickElement, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 42 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'split-picker-name-first-nameless-source.md';
         const FOLDER_PATH = 'split-picker-name-first-nameless-folder';
@@ -500,18 +523,21 @@ describe('the split/extract picker asks for a name before a destination (issue #
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
-            predicate: () => editor.getValue() === SOURCE_CONTENT
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             message: 'the heading cache is not ready',
-            predicate: () => (app.metadataCache.getFileCache(source)?.headings?.length ?? 0) === HEADING_COUNT
+            predicate: () => (app.metadataCache.getFileCache(source)?.headings?.length ?? 0) === HEADING_COUNT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           editor.setCursor({ ch: 0, line: HEADING_LINE_INDEX });
           app.commands.executeCommandById(`${pluginId}:extract-this-heading`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -530,7 +556,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
            */
           await waitUntil({
             message: 'the picker did not re-filter after the name was cleared',
-            predicate: () => document.querySelector('.suggestion-item') !== seededFirstRow
+            predicate: () => document.querySelector('.suggestion-item') !== seededFirstRow,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -543,11 +570,13 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           await waitUntil({
             message: 'the click chose nothing: the picker is still open',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             message: 'the heading was not extracted into the clicked note',
-            predicate: () => app.vault.getAbstractFileByPath(SIBLING_PATH) !== null
+            predicate: () => app.vault.getAbstractFileByPath(SIBLING_PATH) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -622,7 +651,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await app.workspace.revealLeaf(leaf);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {

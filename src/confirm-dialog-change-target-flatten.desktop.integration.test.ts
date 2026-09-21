@@ -22,6 +22,15 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
   it('opens the folder picker and promotes the children into the newly chosen folder', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 34 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeFlattening(true);
@@ -35,24 +44,24 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
 
           // The command acts on the folder of the active note.
           await app.workspace.getLeaf(false).openFile(child);
-          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'ctf-flat/ctf-child.md' });
+          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'ctf-flat/ctf-child.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
 
           app.commands.executeCommandById(`${pluginId}:flatten-folder`);
 
-          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findButton('Flatten') !== null });
+          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findButton('Flatten') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // The whole point of the issue: the button is live, not greyed out.
           const isChangeTargetEnabled = !(findButton('Change target')?.disabled ?? true);
 
           findButton('Change target')?.click();
-          await waitUntil({ message: 'destination picker did not open', predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ message: 'destination picker did not open', predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           await chooseFolderInPicker('ctf-dest');
 
           // Back to the confirmation dialog, now describing the picked destination.
-          await waitUntil({ message: 'flatten dialog did not reopen', predicate: () => findButton('Flatten') !== null });
+          await waitUntil({ message: 'flatten dialog did not reopen', predicate: () => findButton('Flatten') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isDestinationLinked = [...document.querySelectorAll('.modal-content a')].some((el) => el.textContent === 'ctf-dest');
 
@@ -60,7 +69,8 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
 
           await waitUntil({
             message: 'the child was not promoted into the chosen folder',
-            predicate: () => app.vault.getAbstractFileByPath('ctf-dest/ctf-child.md') !== null
+            predicate: () => app.vault.getAbstractFileByPath('ctf-dest/ctf-child.md') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -94,7 +104,7 @@ describe('change target from the flatten confirmation dialog (issue #205)', () =
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           input.focus();
           await pressKey({ key: 'Enter' });
         }

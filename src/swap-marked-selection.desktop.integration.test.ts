@@ -14,6 +14,15 @@ describe('swap marked selection from the smart cut & paste notice', () => {
   it('should swap the marked selection with the active editor selection when the Swap button is clicked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 31 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
         /*
          * Under the transport's ~30s per-closure cap, not at it. At 30_000 this ceiling was unreachable: the
          * whole eval is killed at the cap first, and reported as a bare transport timeout naming the harness
@@ -31,7 +40,8 @@ describe('swap marked selection from the smart cut & paste notice', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await waitUntil({
           message: 'smart cut & paste notice did not open',
-          predicate: () => findSwapButton() !== null
+          predicate: () => findSwapButton() !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         // Select "YYY" in the target note; the Swap button should become enabled.
@@ -74,7 +84,8 @@ describe('swap marked selection from the smart cut & paste notice', () => {
           await app.workspace.getLeaf(false).openFile(fileToOpen);
           await waitUntil({
             message: `editor for ${fileToOpen.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === fileToOpen.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === fileToOpen.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
 

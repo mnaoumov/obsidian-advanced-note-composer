@@ -19,6 +19,15 @@ describe('same-note extract via the split picker', () => {
   it('should offer the source note and extract the selection to its bottom (Enter) or top (Shift+Enter)', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 44 800 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2525;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
@@ -29,7 +38,7 @@ describe('same-note extract via the split picker', () => {
           // While the split picker is open, the captured selection is highlighted in the source note.
           const highlightWhileExtracting = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length;
           await selectSuggestion(false);
-          await waitUntil({ predicate: () => editorValueFor('extract-same-bottom.md')?.trimEnd().endsWith('bravo') === true });
+          await waitUntil({ predicate: () => editorValueFor('extract-same-bottom.md')?.trimEnd().endsWith('bravo') === true, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const bottomNote = editorValueFor('extract-same-bottom.md') ?? '';
 
@@ -37,7 +46,7 @@ describe('same-note extract via the split picker', () => {
           const topFile = await resetFile('extract-same-top.md', 'delta epsilon gamma');
           await openSplitPickerForSelection(topFile, 14, 19);
           await selectSuggestion(true);
-          await waitUntil({ predicate: () => wasMovedBefore('extract-same-top.md', 'gamma', 'delta') });
+          await waitUntil({ predicate: () => wasMovedBefore('extract-same-top.md', 'gamma', 'delta'), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const topNote = editorValueFor('extract-same-top.md') ?? '';
 
@@ -50,7 +59,7 @@ describe('same-note extract via the split picker', () => {
           const editor = await openAndGetEditor(file);
           editor.setSelection(editor.offsetToPos(startOffset), editor.offsetToPos(endOffset));
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Extracting into the note you are already in is a MERGE into an existing note, so since the
@@ -65,7 +74,7 @@ describe('same-note extract via the split picker', () => {
           }
           input.value = file.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           return [...document.querySelectorAll('.suggestion-title')].map((el) => el.textContent);
         }
 
@@ -134,7 +143,7 @@ describe('same-note extract via the split picker', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

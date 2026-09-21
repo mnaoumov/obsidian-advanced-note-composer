@@ -17,6 +17,15 @@ describe('move marked selection to top/bottom of file', () => {
   it('should move a marked selection to the top and bottom of the same note and another note', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 59 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2000;
         const SETTLE_IN_MILLISECONDS = 400;
 
         // --- Same-note bottom: mark "one" at the front and move it to the bottom of the same note. ---
@@ -26,7 +35,7 @@ describe('move marked selection to top/bottom of file', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-bottom-of-file`);
-        await waitUntil({ predicate: () => editorValueFor('edge-same-bottom.md')?.trimEnd().endsWith('one') === true });
+        await waitUntil({ predicate: () => editorValueFor('edge-same-bottom.md')?.trimEnd().endsWith('one') === true, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(SETTLE_IN_MILLISECONDS);
         const sameBottomNote = editorValueFor('edge-same-bottom.md') ?? '';
 
@@ -37,7 +46,7 @@ describe('move marked selection to top/bottom of file', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-top-of-file`);
-        await waitUntil({ predicate: () => editorValueFor('edge-same-top.md')?.trimStart().startsWith('three') === true });
+        await waitUntil({ predicate: () => editorValueFor('edge-same-top.md')?.trimStart().startsWith('three') === true, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(SETTLE_IN_MILLISECONDS);
         const sameTopNote = editorValueFor('edge-same-top.md') ?? '';
 
@@ -49,7 +58,7 @@ describe('move marked selection to top/bottom of file', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-top-of-file`);
-        await waitUntil({ predicate: () => wasMovedAboveMarker('edge-frontmatter-top.md', 'gamma', 'alpha') });
+        await waitUntil({ predicate: () => wasMovedAboveMarker('edge-frontmatter-top.md', 'gamma', 'alpha'), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(SETTLE_IN_MILLISECONDS);
         const withFmNote = editorValueFor('edge-frontmatter-top.md') ?? '';
 
@@ -62,7 +71,7 @@ describe('move marked selection to top/bottom of file', () => {
         const crossTarget = await resetFile('edge-cross-target.md', 'target body');
         await openAndGetEditor(crossTarget);
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-bottom-of-file`);
-        await waitUntil({ predicate: () => editorValueFor('edge-cross-target.md')?.includes('MOVEME') === true });
+        await waitUntil({ predicate: () => editorValueFor('edge-cross-target.md')?.includes('MOVEME') === true, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(SETTLE_IN_MILLISECONDS);
         const crossTargetNote = editorValueFor('edge-cross-target.md') ?? '';
         const crossSourceNote = editorValueFor('edge-cross-source.md') ?? await app.vault.read(crossSource);
@@ -74,7 +83,7 @@ describe('move marked selection to top/bottom of file', () => {
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await sleep(SETTLE_IN_MILLISECONDS);
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-bottom-of-file`);
-        await waitUntil({ predicate: () => editorValueFor('edge-footnote.md')?.trimEnd().endsWith('claim[^1]') === true });
+        await waitUntil({ predicate: () => editorValueFor('edge-footnote.md')?.trimEnd().endsWith('claim[^1]') === true, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(SETTLE_IN_MILLISECONDS);
         const footnoteNote = editorValueFor('edge-footnote.md') ?? '';
 
@@ -101,7 +110,7 @@ describe('move marked selection to top/bottom of file', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

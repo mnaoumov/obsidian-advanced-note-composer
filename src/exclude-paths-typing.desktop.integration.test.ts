@@ -33,7 +33,7 @@ interface ExcludePathsSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ExcludePathsSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
   settings: ExcludePathsSettings;
 }
 
@@ -51,7 +51,16 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const KEYSTROKE_DELAY_IN_MILLISECONDS = 60;
         const SETTLE_DELAY_IN_MILLISECONDS = 400;
-        const SETTLE_TIMEOUT_IN_MILLISECONDS = 10_000;
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s
+         * per-closure cap, not at it. `waitOrGiveUp` is charged once per CALL SITE and there are three, so
+         * at the 10 s this used to hold the closure declared 31000 ms and could only ever die as a bare
+         * transport timeout - which names the harness rather than the wait that overran. What is waited for
+         * is a debounced settings save reaching disk and the text area re-validating, both of which land in
+         * about a second. Adding a `waitOrGiveUp` call adds a whole ceiling: re-divide the ~25 s budget by
+         * the new call count, not by the one `waitUntil` the body shows.
+         */
+        const SETTLE_TIMEOUT_IN_MILLISECONDS = 8000;
         const dataPath = `${app.vault.configDir}/plugins/${pluginId}/data.json`;
 
         const settingsComponent = findSettingsComponent();

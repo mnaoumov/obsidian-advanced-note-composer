@@ -173,7 +173,40 @@ identical failure ten seconds later.
   is exactly what headed the cascade above. Wait on a predicate for the thing you are about to act on.
 - **`waitUntil` defaults to 5 000 ms**, from `obsidian-integration-testing`'s in-renderer
   `namespace-bootstrap.ts`, not from anything in this repo — six times tighter than the project's 30 s
-  `testTimeout`, and inherited by ~505 of the suite's 535 call sites because they pass no timeout.
+  `testTimeout`. It used to be inherited by ~505 of the suite's 535 call sites; roughly half of them now
+  name a ceiling instead, for the reason in the next section.
+
+### A closure's waits are SUMMED against the transport's 30 s cap
+
+**One `evalInObsidian` closure is one `Runtime.evaluate`, and the transport kills it at ~30 s** — so what
+matters is not any single wait but the SUM of every wait the closure can declare. Over that sum the eval can
+only ever die as a bare `script timeout`, which names the harness rather than the wait that overran, and no
+message any of those waits carries is ever printed. `obsidian-dev-utils/no-over-cap-wait-in-eval-in-obsidian`
+is the gate; it was red on **58 closures here** before the sweep that cleared them.
+
+**A helper that waits is charged once per CALL SITE, not once in total.** That is the counter-intuitive half
+and the one that makes an eyeballed budget wrong by an integer factor: an `openAndGetEditor` with one
+`waitUntil` called six times declares six ceilings. Divide a closure's budget by the CALL COUNT, not by the
+`waitUntil` calls the body shows.
+
+**The two treatments, in the order to reach for them:**
+
+- **Size the ceiling** where every step is genuinely fast — a modal opening, an editor becoming active, a
+  one-note vault write. Declare one `WAIT_TIMEOUT_IN_MILLISECONDS` at the top of the closure body, pass it to
+  every `waitUntil`, and comment what shares it. Aim at **21-25 s declared**, not at 29: the point is real
+  headroom under the cap, and a closure sitting at 29 s is one added wait away from red.
+- **Move the sequencing to NODE** when the closure repeats a scenario. Three passes through a picker at six
+  ceilings each cannot be sized down to fit — dividing 30 s by eighteen leaves less than two seconds apiece,
+  which is not enough for a dialog on a loaded machine. Lift the scenario into a module-level `async function`
+  that runs ONE `evalInObsidian`, and let the `it` call it three times: no cap applies to a sequence of evals,
+  and each closure then declares a third of what it did.
+
+**A value that crosses the transport is JSON, and `PluginSettings` carries a `Map`.** So a split that records
+settings in one eval and restores them in another must read and write the individual FIELDS - a
+`{ ...settings }` spread carries `commandCategoryPathSettings` out as `{}`, and assigning that back leaves
+every later file in the shared instance failing on `.get is not a function`. Measured, not guessed at: it is
+what `confirm-dialog-rename-buttons-hidden`'s first split did, and it took `split-collect-attachments` down
+with it.
 
 **Vitest sequences files slowest-first from its own duration cache**, so file order changes every run.
 Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable

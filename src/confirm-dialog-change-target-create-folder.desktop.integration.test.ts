@@ -29,7 +29,7 @@ interface CreateFolderSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: CreateFolderSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
   settings: CreateFolderSettings;
 }
 
@@ -37,6 +37,15 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
   it('opens the parent picker and rebuilds the plan, numbering against the newly chosen parent', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 37 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3250;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const ORIGINAL_PARENT = 'ctc-original';
         const PICKED_PARENT = 'ctc-picked';
@@ -76,22 +85,23 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
 
           await waitUntil({
             message: 'folder name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await submitName('Alpha');
 
-          await waitUntil({ message: 'create dialog did not open', predicate: () => findButton('Create') !== null });
+          await waitUntil({ message: 'create dialog did not open', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isChangeTargetEnabled = !(findButton('Change target')?.disabled ?? true);
 
           findButton('Change target')?.click();
-          await waitUntil({ message: 'parent picker did not open', predicate: () => document.querySelector('.prompt-input') !== null });
+          await waitUntil({ message: 'parent picker did not open', predicate: () => document.querySelector('.prompt-input') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await chooseFolderInPicker(PICKED_PARENT);
 
           // The name is NOT re-asked — renaming from the dialog is a separate feature (#200).
-          await waitUntil({ message: 'create dialog did not reopen', predicate: () => findButton('Create') !== null });
+          await waitUntil({ message: 'create dialog did not reopen', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const wasNamePromptReopened = document.querySelector('.prompt-modal .text-box') !== null;
 
@@ -102,7 +112,8 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           try {
             await waitUntil({
               message: 'the folder was not created under the picked parent',
-              predicate: () => app.vault.getFolderByPath(`${PICKED_PARENT}/4. Alpha`) !== null
+              predicate: () => app.vault.getFolderByPath(`${PICKED_PARENT}/4. Alpha`) !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Diagnostics are returned below.
@@ -147,7 +158,7 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           input.focus();
           await pressKey({ key: 'Enter' });
         }
@@ -187,7 +198,8 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           // Silently ignored.
           await waitUntil({
             message: 'the typed folder name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const okButton = document.querySelector('.prompt-modal .ok-button');
           if (!(okButton instanceof HTMLElement)) {

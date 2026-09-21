@@ -46,7 +46,7 @@ import {
  * The editor, reduced to cursor placement.
  */
 interface CursorEditor {
-  setCursor(this: void, line: number, ch: number): void;
+  setCursor: (this: void, line: number, ch: number) => void;
 }
 
 /**
@@ -61,7 +61,7 @@ interface CursorEditorView {
  * declare. Setting `baseFontSize` alone changes nothing on screen.
  */
 interface FontSizeApp {
-  updateFontSize(this: void): void;
+  updateFontSize: (this: void) => void;
 }
 
 /**
@@ -69,7 +69,7 @@ interface FontSizeApp {
  * declare.
  */
 interface InlineTitleApp {
-  updateInlineTitleDisplay(this: void): void;
+  updateInlineTitleDisplay: (this: void) => void;
 }
 
 const PLUGIN_ID = 'advanced-note-composer';
@@ -259,7 +259,15 @@ async function dismissDialogs(): Promise<void> {
 async function runCommandAndCapture(commandId: string, index: number, caption: string): Promise<void> {
   const modalTitle = await evalInObsidian({
     async callback({ app, command, headingLine, lib: { pressKey, waitUntil }, obsidianModule, pluginId, subjectNotePath }) {
-      const MODAL_TIMEOUT_IN_MILLISECONDS = 15_000;
+      /**
+       * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+       * cap, not at it. Two modal waits and the settling delay share the budget, so at the 15 s this used to
+       * hold the closure declared 30900 ms and could only ever die as a bare transport timeout - which names
+       * the harness rather than the wait that overran. Both waits are a modal count changing, which an
+       * emulator still reaches within a second of the keystroke that causes it; ten seconds is already far
+       * past the point where a missing modal means the command did not open one at all.
+       */
+      const MODAL_TIMEOUT_IN_MILLISECONDS = 10_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
 
       // Close anything already open — on first load this plugin shows a release

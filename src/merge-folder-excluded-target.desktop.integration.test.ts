@@ -33,7 +33,7 @@ interface ExcludedMergeSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ExcludedMergeSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ExcludedMergeSettings) => void) => Promise<void>;
   settings: ExcludedMergeSettings;
 }
 
@@ -41,6 +41,15 @@ describe('merging into an excluded target folder', () => {
   it('offers and merges into an excluded folder only while excluded destinations are offered', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 54 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_FOLDER_PATH = 't504-source';
         const SOURCE_NOTE_PATH = 't504-source/t504-note.md';
@@ -94,7 +103,8 @@ describe('merging into an excluded target folder', () => {
           await chooseInPicker(TARGET_FOLDER_PATH);
           await waitUntil({
             message: 'the merge into the excluded target folder did not complete',
-            predicate: () => app.vault.getAbstractFileByPath(SOURCE_FOLDER_PATH) === null
+            predicate: () => app.vault.getAbstractFileByPath(SOURCE_FOLDER_PATH) === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -123,7 +133,8 @@ describe('merging into an excluded target folder', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'the excluded target folder did not appear as a suggestion',
-            predicate: () => hasSuggestion(query)
+            predicate: () => hasSuggestion(query),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
@@ -193,12 +204,14 @@ describe('merging into an excluded target folder', () => {
           await app.workspace.getLeaf(false).openFile(sourceFile);
           await waitUntil({
             message: 'the source note did not become active',
-            predicate: () => app.workspace.getActiveFile()?.path === SOURCE_NOTE_PATH
+            predicate: () => app.workspace.getActiveFile()?.path === SOURCE_NOTE_PATH,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           app.commands.executeCommandById(`${pluginId}:merge-folder`);
           await waitUntil({
             message: 'the merge folder picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }

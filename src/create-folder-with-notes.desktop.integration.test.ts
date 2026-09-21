@@ -28,7 +28,7 @@ interface CreateFolderSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: CreateFolderSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
   settings: CreateFolderSettings;
 }
 
@@ -311,6 +311,15 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
   it('paints the red invalid outline only once Create is clicked on an empty name, never on open (issue #219)', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 30 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 4000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Already normalized, so a folder appearing under this exact name is unambiguous evidence that
         // Cancel did not create anything.
@@ -321,7 +330,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
 
           await waitUntil({
             message: 'folder name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           const nameInput = requirePromptInput();
@@ -332,7 +342,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
            */
           await waitUntil({
             message: 'the empty folder name never became invalid',
-            predicate: () => nameInput.validity.customError
+            predicate: () => nameInput.validity.customError,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           // The box shadow is transitioned, so a single reading can catch an interpolated color.
@@ -345,7 +356,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
               const isSettled = currentBoxShadow === previousBoxShadow;
               previousBoxShadow = currentBoxShadow;
               return isSettled;
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           const errorColor = getErrorColor();
@@ -357,7 +369,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           try {
             await waitUntil({
               message: 'the invalid outline never appeared after an empty Create',
-              predicate: () => getBoxShadow().includes(errorColor)
+              predicate: () => getBoxShadow().includes(errorColor),
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Diagnostics are returned below.
@@ -370,7 +383,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'the typed folder name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           let previousValidBoxShadow = '';
           await waitUntil({
@@ -380,7 +394,8 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
               const isSettled = currentBoxShadow === previousValidBoxShadow;
               previousValidBoxShadow = currentBoxShadow;
               return isSettled;
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const boxShadowAfterValidName = getBoxShadow();
 

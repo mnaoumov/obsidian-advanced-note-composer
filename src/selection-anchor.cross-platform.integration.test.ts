@@ -140,6 +140,15 @@ describe('selection anchor (issue #266)', () => {
   it('shows a marker while armed, and is unavailable with no anchor or after leaving the note', async () => {
     const result = await evalInObsidian({
       async callback({ anchorPosition, app, lib: { waitUntil }, obsidianModule, otherPath, path, pluginId, source }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 45 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2750;
         const ANCHOR_SELECTOR = '.advanced-note-composer-selection-anchor';
 
         /*
@@ -172,7 +181,8 @@ describe('selection anchor (issue #266)', () => {
          */
         await waitUntil({
           message: 'the anchor marker was never rendered',
-          predicate: () => view.containerEl.querySelector(ANCHOR_SELECTOR) !== null
+          predicate: () => view.containerEl.querySelector(ANCHOR_SELECTOR) !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         const markerWhileArmed = view.containerEl.querySelector(ANCHOR_SELECTOR);
         const hasMarkerWhileArmed = markerWhileArmed !== null;
@@ -200,13 +210,15 @@ describe('selection anchor (issue #266)', () => {
         app.commands.executeCommandById(`${pluginId}:start-selection`);
         await waitUntil({
           message: 'the anchor marker was never rendered for the cancel case',
-          predicate: () => reopened.containerEl.querySelector(ANCHOR_SELECTOR) !== null
+          predicate: () => reopened.containerEl.querySelector(ANCHOR_SELECTOR) !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         const isCancelAvailableWhileArmed = isAvailable('cancel-selection', reopened);
         app.commands.executeCommandById(`${pluginId}:cancel-selection`);
         await waitUntil({
           message: 'the anchor marker survived Cancel selection',
-          predicate: () => reopened.containerEl.querySelector(ANCHOR_SELECTOR) === null
+          predicate: () => reopened.containerEl.querySelector(ANCHOR_SELECTOR) === null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         app.workspace.offref(fileOpenRef);
@@ -243,13 +255,14 @@ describe('selection anchor (issue #266)', () => {
           const isAlreadyActive = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === notePath;
           const openCountBefore = openedPaths.filter((openedPath) => openedPath === notePath).length;
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === notePath });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === notePath, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           if (!isAlreadyActive) {
             // The view being live is not enough — every `file-open` subscriber, the plugin's included, has
             // To have seen the event before the next line asks about its effect.
             await waitUntil({
               message: `file-open never fired for ${notePath}`,
-              predicate: () => openedPaths.filter((openedPath) => openedPath === notePath).length > openCountBefore
+              predicate: () => openedPaths.filter((openedPath) => openedPath === notePath).length > openCountBefore,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           }
           const markdownView = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);

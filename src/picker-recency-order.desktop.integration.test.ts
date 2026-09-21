@@ -39,13 +39,13 @@ interface ComponentTreeNode {
 }
 
 interface MenuItemLike {
-  callback?(): void;
+  callback?: () => void;
   dom?: HTMLElement;
   section?: string;
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 
@@ -65,7 +65,7 @@ interface ProbeResult {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: PickerRecencySettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: PickerRecencySettings) => void) => Promise<void>;
   settings: PickerRecencySettings;
 }
 
@@ -73,6 +73,19 @@ describe('picker recency order (issue #248)', () => {
   it('leads with the last operation target or with the folder you are in, as the setting says', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { clickElement, pressKey, waitUntil }, obsidianModule, pluginId }): Promise<ProbeResult> {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 51 200 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
+        // The one wait here that is not a picker rendering: a real folder move, which rewrites whatever
+        // links point into it. The folder is empty apart from the note this suite puts there, so this is
+        // still generous - and it is the single largest share of the closure's budget above.
+        const MOVE_TIMEOUT_IN_MILLISECONDS = 8000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const MOVE_ITEM_TITLE = 'Move folder to...';
         const pluginName = app.plugins.manifests[pluginId]?.name ?? '';
@@ -150,7 +163,8 @@ describe('picker recency order (issue #248)', () => {
         async function waitForPicker(): Promise<void> {
           await waitUntil({
             message: 'the move picker did not open',
-            predicate: () => document.querySelector('.suggestion-item') !== null
+            predicate: () => document.querySelector('.suggestion-item') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
@@ -163,7 +177,8 @@ describe('picker recency order (issue #248)', () => {
           }
           await waitUntil({
             message: 'the move picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
 
@@ -209,7 +224,7 @@ describe('picker recency order (issue #248)', () => {
           await waitUntil({
             message: 'the move did not land',
             predicate: () => app.vault.getAbstractFileByPath(`${targetName}/${movedName}`) !== null,
-            timeoutInMilliseconds: 20_000
+            timeoutInMilliseconds: MOVE_TIMEOUT_IN_MILLISECONDS
           });
           const wasMoveRecorded = app.vault.getAbstractFileByPath(`${targetName}/${movedName}`) !== null;
 
@@ -219,7 +234,8 @@ describe('picker recency order (issue #248)', () => {
             await app.workspace.getLeaf(false).openFile(activeNote);
             await waitUntil({
               message: 'the note did not become active',
-              predicate: () => app.workspace.getActiveFile()?.path === `${activeName}/note.md`
+              predicate: () => app.workspace.getActiveFile()?.path === `${activeName}/note.md`,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           }
 

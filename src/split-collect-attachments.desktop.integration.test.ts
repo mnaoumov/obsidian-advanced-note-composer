@@ -52,7 +52,7 @@ interface ProbeResult {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: CollectAttachmentsSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: CollectAttachmentsSettings) => void) => Promise<void>;
   settings: CollectAttachmentsSettings;
 }
 
@@ -66,6 +66,15 @@ describe('an extract hands its destination note to Custom Attachment Location (i
         obsidianModule,
         pluginId
       }): Promise<ProbeResult> {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 30 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const SOURCE_PATH = 'split-collect-source.md';
         const ROOT_FOLDER = 'SplitCollectA';
         const SOURCE_CONTENT = [
@@ -148,7 +157,8 @@ describe('an extract hands its destination note to Custom Attachment Location (i
 
           await waitUntil({
             message: 'metadata cache did not index the source heading',
-            predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).length === EXPECTED_HEADING_COUNT
+            predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).length === EXPECTED_HEADING_COUNT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           editor.setCursor({ ch: 0, line: CURSOR_LINE });
 
@@ -156,7 +166,8 @@ describe('an extract hands its destination note to Custom Attachment Location (i
 
           await waitUntil({
             message: 'the heading was not extracted into a note of its own',
-            predicate: () => app.vault.getAbstractFileByPath(`${ROOT_FOLDER}/${ROOT_FOLDER}.md`) instanceof obsidianModule.TFile
+            predicate: () => app.vault.getAbstractFileByPath(`${ROOT_FOLDER}/${ROOT_FOLDER}.md`) instanceof obsidianModule.TFile,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           // The hand-off runs right after the transaction commits, so give that turn a chance to land
@@ -164,7 +175,8 @@ describe('an extract hands its destination note to Custom Attachment Location (i
           // So the ON phase asserting a non-empty list is what makes the wait meaningful.
           await waitUntil({
             message: 'the collect hand-off did not happen',
-            predicate: () => !shouldCollect || collectedPaths.length > 0
+            predicate: () => !shouldCollect || collectedPaths.length > 0,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           }).catch(() => undefined);
 
           return [...collectedPaths];

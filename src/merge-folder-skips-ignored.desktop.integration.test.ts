@@ -32,7 +32,7 @@ interface ExcludePathsSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ExcludePathsSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
   settings: ExcludePathsSettings;
 }
 
@@ -40,6 +40,15 @@ describe('merge folder skips ignored files (issue #72)', () => {
   it('does not create a stray empty target for an ignored file and reports it in a summary notice', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, ignoredPath, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 33 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const settingsComponent = findSettingsComponent();
@@ -66,14 +75,16 @@ describe('merge folder skips ignored files (issue #72)', () => {
           app.commands.executeCommandById(`${pluginId}:merge-folder`);
           await waitUntil({
             message: 'merge-folder picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           await chooseFolderInPicker('ign-dst');
           await waitUntil({
             message: 'merge confirm button did not appear',
-            predicate: () => findButton('Merge') !== null
+            predicate: () => findButton('Merge') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           findButton('Merge')?.click();
@@ -81,14 +92,16 @@ describe('merge folder skips ignored files (issue #72)', () => {
           // The normal file lands in the target; the ignored file never produces a target entry.
           await waitUntil({
             message: 'normal file was not merged into the target',
-            predicate: () => app.vault.getAbstractFileByPath('ign-dst/normal.md') !== null
+            predicate: () => app.vault.getAbstractFileByPath('ign-dst/normal.md') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // The summary notice must name the skipped file.
           await waitUntil({
             message: 'ignored-files summary notice did not appear',
-            predicate: () => summaryNoticeText() !== null
+            predicate: () => summaryNoticeText() !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           const isNormalMerged = app.vault.getAbstractFileByPath('ign-dst/normal.md') !== null;
@@ -153,7 +166,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target folder suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath)
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === folderPath),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
@@ -194,7 +208,8 @@ describe('merge folder skips ignored files (issue #72)', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
       },

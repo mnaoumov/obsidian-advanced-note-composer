@@ -25,6 +25,15 @@ describe('reorder modal keyboard paths', () => {
   it('should discard a pending reorder and leave the note untouched when Escape is pressed', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, noteContent, notePath, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 33 800 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         // The callback is serialized into the Obsidian process, so it cannot reach this file's
         // Module scope — everything it needs arrives through `input` or is declared right here.
         const HEADING_COUNT = 3;
@@ -52,13 +61,15 @@ describe('reorder modal keyboard paths', () => {
         // No-op and the timeout then blames the modal instead of the cache.
         await waitUntil({
           message: 'heading cache not ready',
-          predicate: () => (app.metadataCache.getFileCache(file)?.headings?.length ?? 0) === HEADING_COUNT
+          predicate: () => (app.metadataCache.getFileCache(file)?.headings?.length ?? 0) === HEADING_COUNT,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         app.commands.executeCommandById(`${pluginId}:reorder-headings`);
         await waitUntil({
           message: 'reorder modal did not open',
-          predicate: () => document.querySelector('.advanced-note-composer-reorder-list') !== null
+          predicate: () => document.querySelector('.advanced-note-composer-reorder-list') !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -83,7 +94,8 @@ describe('reorder modal keyboard paths', () => {
 
           await waitUntil({
             message: 'Escape did not close the reorder modal',
-            predicate: () => document.querySelector('.advanced-note-composer-reorder-list') === null
+            predicate: () => document.querySelector('.advanced-note-composer-reorder-list') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         } finally {
           window.removeEventListener('keydown', captureEscape, { capture: true });

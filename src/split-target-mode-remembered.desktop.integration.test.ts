@@ -41,7 +41,7 @@ interface RememberedModeSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: RememberedModeSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: RememberedModeSettings) => void) => Promise<void>;
   settings: RememberedModeSettings;
 }
 
@@ -49,6 +49,15 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
   it('should reopen in merge after a merge', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 52 800 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
         // Make another suite's link ambiguous.
@@ -81,20 +90,23 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           typeIntoPicker(input, TARGET_BASENAME);
           await waitUntil({
             message: `no suggestion appeared for ${TARGET_BASENAME}`,
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(TARGET_BASENAME))
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(TARGET_BASENAME)),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'the split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The extraction rewrites the SOURCE note too, so waiting for that is what proves the operation
           // Ran rather than the modal merely closing.
           await waitUntil({
             message: 'the selection was not extracted out of the source note',
-            predicate: () => !editor.getValue().includes('bravo charlie')
+            predicate: () => !editor.getValue().includes('bravo charlie'),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -109,7 +121,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the reopened split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -157,7 +170,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
@@ -209,7 +223,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           await app.workspace.revealLeaf(leaf);
           await waitUntil({
             message: `the editor for ${source.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === source.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === source.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -222,7 +237,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           view.editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
-            predicate: () => view.editor.getValue() === SOURCE_CONTENT
+            predicate: () => view.editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return view.editor;

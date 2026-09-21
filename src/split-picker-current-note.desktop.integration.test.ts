@@ -29,7 +29,7 @@ interface ComponentTreeNode {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: SplitPickerSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: SplitPickerSettings) => void) => Promise<void>;
   settings: SplitPickerSettings;
 }
 
@@ -42,6 +42,15 @@ describe('offering the current note in the split picker (issue #184)', () => {
   it('should list the current note only when the setting is on', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 44 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2625;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_BASENAME = 'split-picker-current-source';
         const SOURCE_PATH = `${SOURCE_BASENAME}.md`;
@@ -109,7 +118,8 @@ describe('offering the current note in the split picker (issue #184)', () => {
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -135,7 +145,8 @@ describe('offering the current note in the split picker (issue #184)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'no suggestion appeared for the query',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes('split-picker-current'))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes('split-picker-current')),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -146,7 +157,8 @@ describe('offering the current note in the split picker (issue #184)', () => {
           await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'the split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -158,7 +170,8 @@ describe('offering the current note in the split picker (issue #184)', () => {
           await leaf.openFile(file);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {

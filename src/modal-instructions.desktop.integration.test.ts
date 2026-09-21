@@ -268,6 +268,15 @@ describe('shouldShowModalInstructions', () => {
   it('should hide the split picker\'s Create/Merge switch and leave Alt+M inert', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, overridesSettingName, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 34 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3250;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         const SELECTION_END_OFFSET = 7;
@@ -298,7 +307,8 @@ describe('shouldShowModalInstructions', () => {
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -320,7 +330,8 @@ describe('shouldShowModalInstructions', () => {
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
           await waitUntil({
             message: 'the split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           return { hasSwitchAfter, hasSwitchBefore, isCreateModeAfter, isCreateModeBefore };
@@ -328,7 +339,7 @@ describe('shouldShowModalInstructions', () => {
 
         async function openAndGetEditor(): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(source);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

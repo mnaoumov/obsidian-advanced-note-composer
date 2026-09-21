@@ -26,7 +26,7 @@ interface ComponentTreeNode {
 }
 
 interface MenuItemLike {
-  callback?(): void;
+  callback?: () => void;
   dom?: HTMLElement;
 
   /**
@@ -37,7 +37,7 @@ interface MenuItemLike {
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 
@@ -47,7 +47,7 @@ interface OrderingSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: OrderingSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: OrderingSettings) => void) => Promise<void>;
   settings: OrderingSettings;
 }
 
@@ -55,6 +55,15 @@ describe('recent target ordering (issues #206, #256)', () => {
   it('ranks a completed target and the note you opened after it by WHICH CAME LAST', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 57 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const MERGE_ITEM_TITLE = 'Merge entire folder with...';
         const pluginName = app.plugins.manifests[pluginId]?.name ?? '';
@@ -98,7 +107,8 @@ describe('recent target ordering (issues #206, #256)', () => {
           app.commands.executeCommandById(`${pluginId}:move-folder`);
           await waitUntil({
             message: 'move-folder picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -110,14 +120,16 @@ describe('recent target ordering (issues #206, #256)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'target folder suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'rt-dst')
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === 'rt-dst'),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
 
           await waitUntil({
             message: 'folder was not moved into the destination',
-            predicate: () => app.vault.getAbstractFileByPath('rt-dst/rt-src/note-in-src.md') !== null
+            predicate: () => app.vault.getAbstractFileByPath('rt-dst/rt-src/note-in-src.md') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -129,7 +141,8 @@ describe('recent target ordering (issues #206, #256)', () => {
            */
           await waitUntil({
             message: 'the move never reported completion',
-            predicate: () => [...activeDocument.querySelectorAll('.notice')].some((el) => el.textContent.includes('Moved folder'))
+            predicate: () => [...activeDocument.querySelectorAll('.notice')].some((el) => el.textContent.includes('Moved folder')),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           // Go back to a note in a THIRD folder, so the folder we are ON is not the one we targeted — the
@@ -183,7 +196,8 @@ describe('recent target ordering (issues #206, #256)', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
 
@@ -206,7 +220,8 @@ describe('recent target ordering (issues #206, #256)', () => {
           menuItem.callback?.();
           await waitUntil({
             message: 'the folder picker did not open',
-            predicate: () => document.querySelector('.suggestion-item') !== null
+            predicate: () => document.querySelector('.suggestion-item') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const suggestions = [...document.querySelectorAll('.suggestion-item')].map((el) => el.textContent);
@@ -218,7 +233,8 @@ describe('recent target ordering (issues #206, #256)', () => {
           }
           await waitUntil({
             message: 'the folder picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           return suggestions;
         }

@@ -29,7 +29,7 @@ interface ExtractNoticeLinkSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ExtractNoticeLinkSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ExtractNoticeLinkSettings) => void) => Promise<void>;
   settings: ExtractNoticeLinkSettings;
 }
 
@@ -45,8 +45,17 @@ describe('extract completion notice link (issue #232)', () => {
   it('jumps to the extracted content and reveals the destination when clicked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 51 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if both waits time out.
-        const OPEN_TIMEOUT_IN_MILLISECONDS = 10_000;
+        const OPEN_TIMEOUT_IN_MILLISECONDS = 5000;
         const SETTLE_BEFORE_CLICK_IN_MILLISECONDS = 1000;
         const EXTRACTED_TEXT = 'EXTRACTED-BY-ISSUE-232';
         const DESTINATION_BASENAME = 'issue-232-destination';
@@ -94,7 +103,8 @@ describe('extract completion notice link (issue #232)', () => {
             predicate: () => {
               const destination = app.vault.getFileByPath(DESTINATION_PATH);
               return destination !== null && app.metadataCache.getFileCache(destination) !== null;
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           // Let the vault settle before clicking. The split has just created, written and re-read notes,
@@ -186,7 +196,7 @@ describe('extract completion notice link (issue #232)', () => {
          * @param basename - The destination note's name.
          */
         async function createDestinationFromPicker(basename: string): Promise<void> {
-          await waitUntil({ message: 'picker did not open', predicate: () => activeDocument.querySelector('.prompt-input') !== null });
+          await waitUntil({ message: 'picker did not open', predicate: () => activeDocument.querySelector('.prompt-input') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const inputEl = activeDocument.querySelector('.prompt-input');
           if (!(inputEl instanceof HTMLInputElement)) {
             throw new TypeError('No picker input.');
@@ -244,7 +254,8 @@ describe('extract completion notice link (issue #232)', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -280,7 +291,8 @@ describe('extract completion notice link (issue #232)', () => {
           try {
             await waitUntil({
               message: 'no completion notice named the destination',
-              predicate: () => findLink() !== null
+              predicate: () => findLink() !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Give-up wrapper: the caller reports what WAS observed, which a throw out of the closure
