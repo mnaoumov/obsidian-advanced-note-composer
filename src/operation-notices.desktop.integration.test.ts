@@ -25,7 +25,7 @@ interface OperationNoticeSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: OperationNoticeSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: OperationNoticeSettings) => void) => Promise<void>;
   settings: OperationNoticeSettings;
 }
 
@@ -38,6 +38,15 @@ describe('operation notices (issue #182)', () => {
   it('reports a finished operation, and stays silent when the setting is off', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 30 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3750;
         // Doubles as the silence window for the setting-off run: long enough that a notice would have
         // Rendered had one been shown, so timing out there means none was.
         const NOTICE_TIMEOUT_IN_MILLISECONDS = 5000;
@@ -114,7 +123,8 @@ describe('operation notices (issue #182)', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
 
@@ -137,7 +147,8 @@ describe('operation notices (issue #182)', () => {
 
           await waitUntil({
             message: 'the note was not promoted to the root',
-            predicate: () => app.vault.getAbstractFileByPath(`${prefix}-note.md`) !== null
+            predicate: () => app.vault.getAbstractFileByPath(`${prefix}-note.md`) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           try {

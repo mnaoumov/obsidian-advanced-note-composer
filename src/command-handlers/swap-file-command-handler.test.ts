@@ -41,13 +41,13 @@ interface HandlerContext {
 }
 
 interface Testable {
-  canExecuteFile(file: TFile): boolean;
-  executeFile(file: TFile): Promise<void>;
+  canExecuteFile: (file: TFile) => boolean;
+  executeFile: (file: TFile) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
 }
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does

@@ -83,7 +83,7 @@ export interface SwapWithSelectionParams extends CanSwapWithSelectionParams {
    * Releases the mark (dropping any held lock and hiding any pending notice); called before the write so
    * the swap is one-shot and the swap's own transaction can re-lock the notes.
    */
-  clearMark(): void;
+  readonly clearMark: () => void;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;

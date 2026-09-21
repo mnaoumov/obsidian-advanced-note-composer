@@ -39,17 +39,17 @@ interface ComponentTreeNode {
 }
 
 interface MenuItemLike {
-  callback?(this: void): unknown;
+  callback?: (this: void) => unknown;
   dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide(): unknown;
+  hide: () => unknown;
   items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: TemplateSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
   settings: TemplateSettings;
 }
 

@@ -63,7 +63,7 @@ const TEMPLATE_FIRST_EXCEPTIONS = new Set(['Folder note']);
 const TOP_LEVEL_LABEL = 'top level';
 
 interface AppStatics {
-  createConfigured__(): App;
+  createConfigured__: () => App;
 }
 
 interface DisabledPredicateRow {
@@ -108,7 +108,7 @@ vi.mock('@obsidian-typings/obsidian-public-latest/implementations', () => ({
   )
 }));
 
-vi.mock('./tokenized-string-language-component.ts', () => ({
+vi.mock('./tokenized-string-language.ts', () => ({
   TOKENIZED_STRING_LANGUAGE: 'mock-language'
 }));
 

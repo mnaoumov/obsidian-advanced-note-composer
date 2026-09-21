@@ -38,7 +38,7 @@ export interface RunLockedTransactionParams {
   /**
    * The mutations to perform, routed through the {@link VaultTransaction} so they can be rolled back.
    */
-  body(vaultTransaction: VaultTransaction): Promise<void>;
+  readonly body: (vaultTransaction: VaultTransaction) => Promise<void>;
 
   /**
    * An outer transaction to run the mutations against (e.g. a folder merge spanning many files). When

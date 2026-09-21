@@ -73,7 +73,7 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 interface OpenableModal {
-  open(): void;
+  open: () => void;
 }
 
 vi.mock('../open-minimizable-modal.ts', () => ({
@@ -96,7 +96,7 @@ let shouldAutoSelect = false;
 let shouldAutoSwitchToSmartCut = false;
 
 interface AsyncModule {
-  invokeAsyncSafely($function: () => Promise<void>): void;
+  invokeAsyncSafely: ($function: () => Promise<void>) => void;
 }
 
 interface SwitchToSmartCutResult {
@@ -104,12 +104,12 @@ interface SwitchToSmartCutResult {
 }
 
 interface WithChooseAsync {
-  onChooseSuggestionAsync(item: unknown, $event: KeyboardEvent | MouseEvent): Promise<void>;
+  onChooseSuggestionAsync: (item: unknown, $event: KeyboardEvent | MouseEvent) => Promise<void>;
 }
 
 interface WithSwitchToSmartCut {
   isSelected: boolean;
-  promiseResolve(result: SwitchToSmartCutResult): void;
+  promiseResolve: (result: SwitchToSmartCutResult) => void;
 }
 
 vi.mock('./suggest-modal-base.ts', async () => {

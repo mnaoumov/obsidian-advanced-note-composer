@@ -38,10 +38,10 @@ interface CreateHandlerParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
-  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToEditorMenu: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
 class TestSelectEditorCommandHandler extends SelectEditorCommandHandlerBase {

@@ -28,6 +28,15 @@ describe('split template folder tokens (issue #227)', () => {
   it('should resolve the folder tokens against the folder the split created, numbered or not', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 44 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2550;
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -75,7 +84,7 @@ describe('split template folder tokens (issue #227)', () => {
           // Select "fragment".
           editor.setSelection(editor.offsetToPos(10), editor.offsetToPos(18));
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
-          await waitUntil({ message: 'split picker did not open', predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ message: 'split picker did not open', predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(SETTLE_IN_MILLISECONDS);
 
           const inputEl = document.querySelector('.prompt-input');
@@ -97,7 +106,8 @@ describe('split template folder tokens (issue #227)', () => {
 
           await waitUntil({
             message: `extracted note was not created at ${notePath}`,
-            predicate: () => app.vault.getAbstractFileByPath(notePath) instanceof obsidianModule.TFile
+            predicate: () => app.vault.getAbstractFileByPath(notePath) instanceof obsidianModule.TFile,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The note is created before it is templated, so its existence is not the thing to wait for —
           // The template's own text landing in it is.
@@ -106,7 +116,8 @@ describe('split template folder tokens (issue #227)', () => {
             predicate: async () => {
               const content = await readIfExists(notePath);
               return content.includes('NAME:');
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           return await readIfExists(notePath);
@@ -135,7 +146,7 @@ describe('split template folder tokens (issue #227)', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ message: 'markdown editor did not open', predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ message: 'markdown editor did not open', predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

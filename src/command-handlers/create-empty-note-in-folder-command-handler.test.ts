@@ -35,15 +35,15 @@ import { placeCaretFromEnd } from '../reveal-inserted-content.ts';
 import { CreateEmptyNoteInFolderCommandHandler } from './create-empty-note-in-folder-command-handler.ts';
 
 interface TestableHandler {
-  canExecute(): boolean;
-  canExecuteFolder(folder: TFolder): boolean;
-  execute(): Promise<void>;
-  executeFolder(folder: TFolder): Promise<void>;
+  canExecute: () => boolean;
+  canExecuteFolder: (folder: TFolder) => boolean;
+  execute: () => Promise<void>;
+  executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({

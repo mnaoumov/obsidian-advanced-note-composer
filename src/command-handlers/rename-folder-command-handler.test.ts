@@ -42,13 +42,13 @@ interface HandlerContext {
 }
 
 interface Testable {
-  canExecuteFolder(folder: TFolder): boolean;
-  executeFolder(folder: TFolder): Promise<void>;
+  canExecuteFolder: (folder: TFolder) => boolean;
+  executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({

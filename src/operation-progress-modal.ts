@@ -65,7 +65,7 @@ export interface ShowOperationProgressModalParams {
   /**
    * Builds what the dialog says.
    */
-  content(this: void): Promise<DocumentFragment | string>;
+  readonly content: (this: void) => Promise<DocumentFragment | string>;
 }
 
 /**

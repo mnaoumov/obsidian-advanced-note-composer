@@ -28,6 +28,15 @@ describe('change target from the split confirmation dialog', () => {
   it('reopens the picker and splits into the newly chosen target', async () => {
     const result = await evalInObsidian({
       async callback({ app, createMode, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 50 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(true);
@@ -40,33 +49,33 @@ describe('change target from the split confirmation dialog', () => {
           const editor = await openAndGetEditor(source);
           editor.setSelection(editor.offsetToPos(6), editor.offsetToPos(11));
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Choose target A in the picker.
           await chooseInPicker(targetA.basename);
 
           // The confirmation dialog appears (for target A) with the "Change target" button.
-          await waitUntil({ predicate: () => findButton('Change target') !== null });
+          await waitUntil({ predicate: () => findButton('Change target') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isChangeTargetButtonPresent = findButton('Change target') !== null;
 
           // Click "Change target": the picker reopens.
           findButton('Change target')?.click();
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Choose target B in the reopened picker.
           await chooseInPicker(targetB.basename);
 
           // The confirmation dialog appears again (for target B); confirm the split.
-          await waitUntil({ predicate: () => findButton('Split') !== null });
+          await waitUntil({ predicate: () => findButton('Split') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           findButton('Split')?.click();
 
           // The split completes: target B receives the extracted text, source loses it.
-          await waitUntil({ predicate: () => !document.body.querySelector('.mod-confirmation') });
-          await waitUntil({ predicate: () => !editor.getValue().includes('bravo') });
+          await waitUntil({ predicate: () => !document.body.querySelector('.mod-confirmation'), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await waitUntil({ predicate: () => !editor.getValue().includes('bravo'), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Read the source from the live editor buffer (the removal is applied there before it is
@@ -122,7 +131,7 @@ describe('change target from the split confirmation dialog', () => {
 
           input.value = basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(basename)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           input.focus();
           await pressKey({ key: 'Enter' });
         }
@@ -193,7 +202,7 @@ describe('change target from the split confirmation dialog', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

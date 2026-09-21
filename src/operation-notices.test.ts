@@ -56,7 +56,7 @@ const folderNoteSettingsComponent = createFolderNoteSettingsComponent();
 const folder = strictProxy<TFolder>({ name: 'charlie', path: 'charlie' });
 
 interface RenderLinkParams {
-  onClick?(this: void): Promise<void>;
+  readonly onClick?: (this: void) => Promise<void>;
   readonly path: string;
 
   /**

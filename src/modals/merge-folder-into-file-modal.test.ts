@@ -53,8 +53,8 @@ interface ConfirmArguments {
 }
 
 interface ConfirmModalArguments {
-  buildContent(fragment: DocumentFragment): Promise<void>;
-  promiseResolve(result: ConfirmDialogModalResult): void;
+  buildContent: (fragment: DocumentFragment) => Promise<void>;
+  promiseResolve: (result: ConfirmDialogModalResult) => void;
 }
 
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);

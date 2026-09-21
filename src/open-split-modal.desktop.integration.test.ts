@@ -19,6 +19,15 @@ describe('switch to split/extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 38 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
@@ -30,18 +39,18 @@ describe('switch to split/extract from the smart-cut notice', () => {
           const editor = await openAndGetEditor(source);
           editor.setSelection(editor.offsetToPos(6), editor.offsetToPos(11));
           app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
-          await waitUntil({ predicate: () => findSwitchButton() !== null });
+          await waitUntil({ predicate: () => findSwitchButton() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isSwitchButtonPresent = findSwitchButton() !== null;
 
           // Navigate away to prove the switch re-opens the SOURCE (not whatever is active).
           await app.workspace.getLeaf(false).openFile(target);
-          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'open-split-target.md' });
+          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'open-split-target.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
 
           // Click the notice's "Switch to split/extract" button: it clears the mark, re-opens the source
           // With the selection restored, and opens the split picker.
           findSwitchButton()?.click();
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Issue #262: reached this way, the box has to be ready to type into. It was the create/merge
@@ -70,7 +79,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
 
           input.value = target.basename;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           input.focus();
           await pressKey({ key: 'Enter' });
 
@@ -80,13 +89,15 @@ describe('switch to split/extract from the smart-cut notice', () => {
             predicate: async () => {
               const content = await app.vault.read(target);
               return content.includes('bravo');
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             predicate: async () => {
               const content = await app.vault.read(source);
               return !content.includes('bravo');
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -142,7 +153,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

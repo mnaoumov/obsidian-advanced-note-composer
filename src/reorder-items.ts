@@ -33,7 +33,7 @@ export interface BuildRenameStepsParams {
    * @param desiredPath - The path a temporary rename would like to use.
    * @returns A free path.
    */
-  resolveTemporaryPath(this: void, desiredPath: string): string;
+  readonly resolveTemporaryPath: (this: void, desiredPath: string) => string;
 }
 
 /**

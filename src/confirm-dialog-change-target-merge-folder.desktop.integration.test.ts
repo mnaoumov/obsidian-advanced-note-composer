@@ -16,6 +16,15 @@ describe('change target from the merge-folder confirmation dialog', () => {
   it('reopens the folder picker and merges into the newly chosen folder', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 44 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2575;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
@@ -27,34 +36,34 @@ describe('change target from the merge-folder confirmation dialog', () => {
 
           // Open the note so its parent folder ("mf-src") becomes the merge source.
           await app.workspace.getLeaf(false).openFile(sourceNote);
-          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'mf-src/note.md' });
+          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'mf-src/note.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           app.commands.executeCommandById(`${pluginId}:merge-folder`);
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Choose target folder A.
           await chooseFolderInPicker('mf-tgt-a');
 
           // The confirmation dialog appears (for folder A) with the "Change target" button.
-          await waitUntil({ predicate: () => findButton('Change target') !== null });
+          await waitUntil({ predicate: () => findButton('Change target') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const isChangeTargetButtonPresent = findButton('Change target') !== null;
 
           // Click "Change target": the folder picker reopens.
           findButton('Change target')?.click();
-          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null });
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Choose target folder B in the reopened picker.
           await chooseFolderInPicker('mf-tgt-b');
 
           // The confirmation dialog appears again (for folder B); confirm the merge.
-          await waitUntil({ predicate: () => findButton('Merge') !== null });
+          await waitUntil({ predicate: () => findButton('Merge') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           findButton('Merge')?.click();
 
           // The merge completes: the source folder is deleted and its note lands in target B.
-          await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf-src') === null });
+          await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mf-src') === null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const isSourceFolderExists = app.vault.getAbstractFileByPath('mf-src') !== null;
@@ -86,7 +95,7 @@ describe('change target from the merge-folder confirmation dialog', () => {
           }
           input.value = folderPath;
           input.dispatchEvent(new Event('input', { bubbles: true }));
-          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)) });
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           input.focus();
           await pressKey({ key: 'Enter' });
         }

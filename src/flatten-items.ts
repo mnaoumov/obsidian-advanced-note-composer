@@ -52,7 +52,7 @@ export interface CollectFlattenItemsParams {
    * @param path - The path to check.
    * @returns Whether the path is excluded.
    */
-  isPathIgnored(path: string): boolean;
+  readonly isPathIgnored: (path: string) => boolean;
 
   /**
    * What the flatten promotes.
@@ -117,7 +117,7 @@ interface FlattenContext {
    * @param path - The path to check.
    * @returns Whether the path is excluded.
    */
-  isPathIgnored(path: string): boolean;
+  isPathIgnored: (path: string) => boolean;
 }
 
 /**

@@ -50,7 +50,7 @@ interface MoveAutoNumberSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: MoveAutoNumberSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: MoveAutoNumberSettings) => void) => Promise<void>;
   settings: MoveAutoNumberSettings;
 }
 

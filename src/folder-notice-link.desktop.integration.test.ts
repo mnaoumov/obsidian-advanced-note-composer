@@ -16,7 +16,7 @@ interface MenuItemLike {
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 
@@ -34,6 +34,15 @@ describe('folder operation notice link (issue #234)', () => {
   it('opens the folder note and highlights it when clicked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 36 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2720;
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if every wait times out.
         const OPEN_TIMEOUT_IN_MILLISECONDS = 10_000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -61,7 +70,8 @@ describe('folder operation notice link (issue #234)', () => {
         await app.workspace.getLeaf(false).openFile(control);
         await waitUntil({
           message: 'the control note did not open',
-          predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === CONTROL_PATH
+          predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === CONTROL_PATH,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         const folder = app.vault.getFolderByPath(`${ROOT}/${OLD_FOLDER_NAME}`);
@@ -76,7 +86,8 @@ describe('folder operation notice link (issue #234)', () => {
 
         await waitUntil({
           message: 'rename prompt did not open',
-          predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+          predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -92,7 +103,8 @@ describe('folder operation notice link (issue #234)', () => {
         // Before the validation settles is silently ignored.
         await waitUntil({
           message: 'the typed folder name never became valid',
-          predicate: () => nameInput.checkValidity()
+          predicate: () => nameInput.checkValidity(),
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         const okButton = document.querySelector('.prompt-modal .ok-button');
@@ -108,7 +120,8 @@ describe('folder operation notice link (issue #234)', () => {
         try {
           await waitUntil({
             message: `the folder note was never renamed to ${NEW_FOLDER_NOTE_PATH}`,
-            predicate: () => app.vault.getFileByPath(NEW_FOLDER_NOTE_PATH) !== null
+            predicate: () => app.vault.getFileByPath(NEW_FOLDER_NOTE_PATH) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         } catch {
           // Reported through the returned state.
@@ -186,7 +199,8 @@ describe('folder operation notice link (issue #234)', () => {
           try {
             await waitUntil({
               message: 'no completion notice named the renamed folder',
-              predicate: () => findLink() !== null
+              predicate: () => findLink() !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Give-up wrapper: the caller reports what WAS observed, which a throw out of the closure would

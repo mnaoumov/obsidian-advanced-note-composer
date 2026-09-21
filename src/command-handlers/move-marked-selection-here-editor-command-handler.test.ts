@@ -62,16 +62,16 @@ interface MockPosition {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  canExecuteInActiveEditor(): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
-  executeInActiveEditor(): Promise<void>;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  canExecuteInActiveEditor: () => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
+  executeInActiveEditor: () => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(): boolean;
-  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToEditorMenu: () => boolean;
+  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
 function capturedComposerArguments(): CapturedComposerArguments {

@@ -37,7 +37,7 @@ interface ModeSeedSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ModeSeedSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ModeSeedSettings) => void) => Promise<void>;
   settings: ModeSeedSettings;
 }
 

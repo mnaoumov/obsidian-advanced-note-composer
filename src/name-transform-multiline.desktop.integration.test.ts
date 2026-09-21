@@ -39,7 +39,7 @@ interface NameTransformSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: NameTransformSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
   settings: NameTransformSettings;
 }
 

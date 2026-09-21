@@ -49,6 +49,15 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
   it('should keep the switch row clear of the minimize button', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<OverlapObservations> {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 31 200 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3750;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const NARROW_PROMPT_WIDTH_IN_PIXELS = 320;
         const SOURCE_PATH = 'split-picker-overlap-source.md';
@@ -63,7 +72,8 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
-            predicate: () => editor.getValue() === SOURCE_CONTENT
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const selectionStart = SOURCE_CONTENT.indexOf(SELECTED_WORD);
           editor.setSelection(editor.offsetToPos(selectionStart), editor.offsetToPos(selectionStart + SELECTED_WORD.length));
@@ -71,18 +81,21 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
             message: 'the split picker did not open',
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // Both are rendered by the picker itself: the switch in `onOpen`, the button by the minimizable
           // Wrapper. Waiting for them is what makes a missing element a readable failure rather than a null
           // Rect.
           await waitUntil({
             message: 'the create/merge switch never rendered',
-            predicate: () => document.querySelector('.advanced-note-composer-split-target-mode .setting-item') !== null
+            predicate: () => document.querySelector('.advanced-note-composer-split-target-mode .setting-item') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             message: 'the picker has no minimize button',
-            predicate: () => document.querySelector('.prompt .minimize-button') !== null
+            predicate: () => document.querySelector('.prompt .minimize-button') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The rects are only meaningful once layout has settled.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -110,7 +123,8 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
           await waitUntil({
             message: 'the split picker did not close',
-            predicate: () => document.querySelector('.prompt') === null
+            predicate: () => document.querySelector('.prompt') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await trashIfExists(SOURCE_PATH);
         }
@@ -121,7 +135,8 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           await app.workspace.revealLeaf(leaf);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {

@@ -30,7 +30,7 @@ interface RecursiveSplitNoticeSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: RecursiveSplitNoticeSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: RecursiveSplitNoticeSettings) => void) => Promise<void>;
   settings: RecursiveSplitNoticeSettings;
 }
 
@@ -45,6 +45,15 @@ describe('recursive split completion notice link (issue #235)', () => {
   it('names and opens the note the split created, not the note it split', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 31 000 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if every wait times out.
         const OPEN_TIMEOUT_IN_MILLISECONDS = 10_000;
         const SETTLE_BEFORE_CLICK_IN_MILLISECONDS = 1000;
@@ -87,7 +96,8 @@ describe('recursive split completion notice link (issue #235)', () => {
           // Caught up with the text just written makes it silently do nothing.
           await waitUntil({
             message: `metadata cache never indexed the headings of ${SOURCE_PATH}`,
-            predicate: () => (app.metadataCache.getFileCache(source)?.headings ?? []).length === EXPECTED_HEADING_COUNT
+            predicate: () => (app.metadataCache.getFileCache(source)?.headings ?? []).length === EXPECTED_HEADING_COUNT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           app.commands.executeCommandById(`${pluginId}:split-heading-recursively`);
@@ -101,7 +111,8 @@ describe('recursive split completion notice link (issue #235)', () => {
             predicate: () => {
               const createdNote = app.vault.getFileByPath(ROOT_NOTE_PATH);
               return createdNote !== null && app.metadataCache.getFileCache(createdNote) !== null;
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           // The same settle the extract-notice suite needs: the split has just created, written and re-read
@@ -175,7 +186,8 @@ describe('recursive split completion notice link (issue #235)', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -211,7 +223,8 @@ describe('recursive split completion notice link (issue #235)', () => {
           try {
             await waitUntil({
               message: 'no completion notice named the created note',
-              predicate: () => findLink() !== null
+              predicate: () => findLink() !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Give-up wrapper: the caller reports what WAS observed, which a throw out of the closure

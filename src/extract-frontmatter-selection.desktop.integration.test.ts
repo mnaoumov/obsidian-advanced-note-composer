@@ -27,7 +27,7 @@ interface FrontmatterSelectionSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: FrontmatterSelectionSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: FrontmatterSelectionSettings) => void) => Promise<void>;
   settings: FrontmatterSelectionSettings;
 }
 

@@ -31,8 +31,8 @@ interface CreatedHandler {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): void;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => void;
   readonly icon: string;
   readonly id: string;
   readonly name: string;

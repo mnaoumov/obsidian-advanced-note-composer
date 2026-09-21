@@ -66,8 +66,8 @@ interface HandlerParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
   readonly id: string;
   readonly name: string;
 }

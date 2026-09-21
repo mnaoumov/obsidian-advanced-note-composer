@@ -63,15 +63,15 @@ vi.mock('../composers/composer-base.ts', () => ({
 let shouldAutoSelect = false;
 
 interface AsyncModule {
-  invokeAsyncSafely($function: () => Promise<void>): void;
+  invokeAsyncSafely: ($function: () => Promise<void>) => void;
 }
 
 interface WithChooseAsync {
-  onChooseSuggestionAsync(item: unknown, $event: KeyboardEvent | MouseEvent): Promise<void>;
+  onChooseSuggestionAsync: (item: unknown, $event: KeyboardEvent | MouseEvent) => Promise<void>;
 }
 
 interface WithSelectSuggestion {
-  selectSuggestion(value: unknown, $event: KeyboardEvent | MouseEvent): void;
+  selectSuggestion: (value: unknown, $event: KeyboardEvent | MouseEvent) => void;
 }
 
 vi.mock('./suggest-modal-base.ts', async () => {

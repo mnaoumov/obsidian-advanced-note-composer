@@ -43,17 +43,17 @@ interface EmptyNoteSettings {
 }
 
 interface MenuItemLike {
-  callback?(this: void): unknown;
+  callback?: (this: void) => unknown;
   dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide(): unknown;
+  hide: () => unknown;
   items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: EmptyNoteSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: EmptyNoteSettings) => void) => Promise<void>;
   settings: EmptyNoteSettings;
 }
 
@@ -253,6 +253,15 @@ describe('create an empty note (issue #244)', () => {
   it('creates an empty note in the folder right-clicked in the file explorer, and a folder note when asked', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 41 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2750;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const FOLDER_PATH = 'create-empty-note-folder';
         const NOTE_NAME = 'create-empty-note-in-folder-ghost';
@@ -320,18 +329,21 @@ describe('create an empty note (issue #244)', () => {
 
           await waitUntil({
             message: 'the note name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await submitName(name);
 
           await waitUntil({
             message: `the empty note was never created at ${expectedPath}`,
-            predicate: () => app.vault.getAbstractFileByPath(expectedPath) !== null
+            predicate: () => app.vault.getAbstractFileByPath(expectedPath) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await waitUntil({
             message: 'the created note was never opened',
-            predicate: () => app.workspace.getActiveFile()?.path === expectedPath
+            predicate: () => app.workspace.getActiveFile()?.path === expectedPath,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return isMenuItemPresent;
@@ -384,7 +396,8 @@ describe('create an empty note (issue #244)', () => {
           // Silently ignored.
           await waitUntil({
             message: 'the typed note name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const okButton = document.querySelector('.prompt-modal .ok-button');
           if (!(okButton instanceof HTMLElement)) {

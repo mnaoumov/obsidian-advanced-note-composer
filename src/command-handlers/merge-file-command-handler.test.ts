@@ -35,16 +35,16 @@ import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeFileCommandHandler } from './merge-file-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteFile(file: TFile): boolean;
-  canExecuteFiles(files: TFile[]): boolean;
-  executeFile(file: TFile): Promise<void>;
-  executeFiles(files: TFile[]): Promise<void>;
+  canExecuteFile: (file: TFile) => boolean;
+  canExecuteFiles: (files: TFile[]) => boolean;
+  executeFile: (file: TFile) => Promise<void>;
+  executeFiles: (files: TFile[]) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean;
-  shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
+  shouldAddToFilesMenu: (params: FileCommandHandlerShouldAddToFilesMenuParams) => boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({

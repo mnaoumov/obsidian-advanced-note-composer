@@ -58,7 +58,7 @@ interface PickerState {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: MinimizeButtonSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: MinimizeButtonSettings) => void) => Promise<void>;
   settings: MinimizeButtonSettings;
 }
 
@@ -111,6 +111,15 @@ describe('minimize button', () => {
   it('should render a minimize button on every menu that confirms an operation', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }): Promise<ModalProbeResult> {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 60 200 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SELECTION_END_CHARACTER = 6;
         const NOT_PROBED = -1;
@@ -152,7 +161,8 @@ describe('minimize button', () => {
             // A cache-gated command silently no-ops when the headings are not indexed yet.
             await waitUntil({
               message: 'the split note headings were never indexed',
-              predicate: () => (app.metadataCache.getFileCache(splitFile)?.headings ?? []).length > 0
+              predicate: () => (app.metadataCache.getFileCache(splitFile)?.headings ?? []).length > 0,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
             app.commands.executeCommandById(`${pluginId}:split-note-by-headings-recursively`);
           });
@@ -161,7 +171,8 @@ describe('minimize button', () => {
             app.commands.executeCommandById(`${pluginId}:create-folder-with-notes`);
             await waitUntil({
               message: 'folder name prompt did not open',
-              predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+              predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
             await submitName('mb-created');
@@ -171,7 +182,8 @@ describe('minimize button', () => {
             await openInEditor(reorderFile);
             await waitUntil({
               message: 'the reorder note headings were never indexed',
-              predicate: () => (app.metadataCache.getFileCache(reorderFile)?.headings ?? []).length > 0
+              predicate: () => (app.metadataCache.getFileCache(reorderFile)?.headings ?? []).length > 0,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
             app.commands.executeCommandById(`${pluginId}:reorder-headings`);
           });
@@ -182,7 +194,8 @@ describe('minimize button', () => {
             app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
             await waitUntil({
               message: 'the selection was never marked',
-              predicate: () => app.workspace.getActiveFile()?.path === 'mb-move-source.md'
+              predicate: () => app.workspace.getActiveFile()?.path === 'mb-move-source.md',
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
             await openInEditor(moveTarget);
@@ -247,7 +260,8 @@ describe('minimize button', () => {
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
             message: `${file.path} never became the active editor`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const editor = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor;
           if (!editor) {
@@ -266,7 +280,8 @@ describe('minimize button', () => {
             await trigger();
             await waitUntil({
               message: `${modalName} did not open`,
-              predicate: () => findButton(confirmButtonText) !== null
+              predicate: () => findButton(confirmButtonText) !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
             await sleep(RENDER_DELAY_IN_MILLISECONDS);
             return document.querySelectorAll('.modal-container .minimize-button').length;
@@ -305,7 +320,8 @@ describe('minimize button', () => {
           // Silently ignored.
           await waitUntil({
             message: 'the typed folder name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const okButton = document.querySelector('.prompt-modal .ok-button');
           if (!(okButton instanceof HTMLElement)) {

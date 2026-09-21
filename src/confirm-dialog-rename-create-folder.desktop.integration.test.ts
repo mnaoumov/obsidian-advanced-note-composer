@@ -31,7 +31,7 @@ interface CreateFolderSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: CreateFolderSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
   settings: CreateFolderSettings;
 }
 
@@ -39,6 +39,15 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
   it('renames the folder and a single note, keeping the note override across the rebuild', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 52 800 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const PARENT = 'cfr-parent';
         const RENAME_BUTTON_SELECTOR = '.advanced-note-composer-confirm-rename-button';
@@ -69,33 +78,34 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
 
           await waitUntil({
             message: 'folder name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await submitName('Alpha');
 
-          await waitUntil({ message: 'create dialog did not open', predicate: () => findButton('Create') !== null });
+          await waitUntil({ message: 'create dialog did not open', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // One beside the folder name and one beside each note, which is the layout the reporter asked for.
           const renameButtonCount = document.querySelectorAll(RENAME_BUTTON_SELECTOR).length;
 
           // The SECOND note first, so its typed name has to survive the folder rename that follows.
           clickRenameButton(2);
-          await waitUntil({ message: 'note rename prompt did not open', predicate: () => document.querySelector('.prompt-modal .text-box') !== null });
+          await waitUntil({ message: 'note rename prompt did not open', predicate: () => document.querySelector('.prompt-modal .text-box') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const seededNoteName = readPromptValue();
           await submitName('Plan');
 
-          await waitUntil({ message: 'create dialog did not reopen after the note rename', predicate: () => findButton('Create') !== null });
+          await waitUntil({ message: 'create dialog did not reopen after the note rename', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           clickRenameButton(0);
-          await waitUntil({ message: 'folder rename prompt did not open', predicate: () => document.querySelector('.prompt-modal .text-box') !== null });
+          await waitUntil({ message: 'folder rename prompt did not open', predicate: () => document.querySelector('.prompt-modal .text-box') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const seededFolderName = readPromptValue();
           await submitName('Beta');
 
-          await waitUntil({ message: 'create dialog did not reopen after the folder rename', predicate: () => findButton('Create') !== null });
+          await waitUntil({ message: 'create dialog did not reopen after the folder rename', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           findButton('Create')?.click();
@@ -105,7 +115,8 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           try {
             await waitUntil({
               message: 'the renamed folder was not created',
-              predicate: () => app.vault.getFolderByPath(`${PARENT}/1. Beta`) !== null
+              predicate: () => app.vault.getFolderByPath(`${PARENT}/1. Beta`) !== null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } catch {
             // Diagnostics are returned below.
@@ -191,7 +202,8 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           // The prompt validates ASYNCHRONOUSLY, so a click before it settles is silently ignored.
           await waitUntil({
             message: 'the typed name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const okButton = document.querySelector('.prompt-modal .ok-button');
           if (!(okButton instanceof HTMLElement)) {

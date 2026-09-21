@@ -42,7 +42,7 @@ interface FolderThenNameSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: FolderThenNameSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: FolderThenNameSettings) => void) => Promise<void>;
   settings: FolderThenNameSettings;
 }
 
@@ -50,6 +50,15 @@ describe('choosing the folder before the name (issue #261)', () => {
   it('asks for the folder, then the name, and never opens the target picker', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 36 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3250;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault.
         const SOURCE_PATH = 'folder-then-name-source.md';
@@ -86,7 +95,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
-            predicate: () => editor.getValue() === SOURCE_CONTENT
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           const selectionStart = SOURCE_CONTENT.indexOf(SELECTED_TEXT);
@@ -97,7 +107,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           // Placeholder is what tells them apart.
           await waitUntil({
             message: 'the folder prompt did not open',
-            predicate: () => getPromptInput() !== null
+            predicate: () => getPromptInput() !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const firstPromptPlaceholder = getPromptInput()?.placeholder ?? '';
@@ -105,7 +116,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           typeIntoPrompt(FOLDER_PATH);
           await waitUntil({
             message: 'the folder was not offered',
-            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === FOLDER_PATH)
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === FOLDER_PATH),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           getPromptInput()?.focus();
           await pressKey({ key: 'Enter' });
@@ -113,7 +125,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           // SECOND prompt: the name box, which is a plain text prompt with no suggestion list at all.
           await waitUntil({
             message: 'the note name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null
+            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const suggestionCountWhileNaming = document.querySelectorAll('.suggestion-item').length;
@@ -122,7 +135,8 @@ describe('choosing the folder before the name (issue #261)', () => {
 
           await waitUntil({
             message: `the new note was not created at ${EXPECTED_PATH}`,
-            predicate: () => app.vault.getAbstractFileByPath(EXPECTED_PATH) !== null
+            predicate: () => app.vault.getAbstractFileByPath(EXPECTED_PATH) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -188,7 +202,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           await leaf.openFile(file);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -229,7 +244,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           // Silently ignored.
           await waitUntil({
             message: 'the typed note name never became valid',
-            predicate: () => nameInput.checkValidity()
+            predicate: () => nameInput.checkValidity(),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const okButton = document.querySelector('.prompt-modal .ok-button');
           if (!(okButton instanceof HTMLElement)) {

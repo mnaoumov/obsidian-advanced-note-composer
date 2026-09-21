@@ -35,7 +35,7 @@ import {
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 interface OnInputable {
-  onInput(): void;
+  onInput: () => void;
 }
 
 interface RefreshSpellcheckScenario {
@@ -44,8 +44,8 @@ interface RefreshSpellcheckScenario {
 }
 
 interface SuggestModalSuper {
-  onOpen(): void;
-  updateSuggestions(): void;
+  onOpen: () => void;
+  updateSuggestions: () => void;
 }
 
 interface TestableSuggestModalBase {

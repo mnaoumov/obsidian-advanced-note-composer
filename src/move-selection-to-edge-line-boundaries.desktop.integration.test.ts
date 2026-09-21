@@ -36,6 +36,15 @@ describe('a marked selection moved to an edge lands on its own line', () => {
   it('should not glue the moved block onto the adjacent line, under either template (issue #179)', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }): Promise<EdgeBoundaryProbe> {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 48 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const SETTLE_IN_MILLISECONDS = 400;
         const SAVE_IN_MILLISECONDS = 300;
         const RENDER_IN_MILLISECONDS = 150;
@@ -74,7 +83,8 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           app.commands.executeCommandById(`${pluginId}:move-marked-selection-to-${edge}-of-file`);
           await waitUntil({
             message: `the moved block did not reach the ${edge} of ${targetPath}`,
-            predicate: () => editorValueFor(targetPath)?.includes('MOVEME') === true
+            predicate: () => editorValueFor(targetPath)?.includes('MOVEME') === true,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(SETTLE_IN_MILLISECONDS);
 
@@ -116,7 +126,7 @@ describe('a marked selection moved to an edge lands on its own line', () => {
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
           await app.workspace.getLeaf(false).openFile(file);
-          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined });
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');

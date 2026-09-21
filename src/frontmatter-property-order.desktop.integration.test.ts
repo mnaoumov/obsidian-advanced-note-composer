@@ -34,7 +34,7 @@ interface FrontmatterSelectionSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: FrontmatterSelectionSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: FrontmatterSelectionSettings) => void) => Promise<void>;
   settings: FrontmatterSelectionSettings;
 }
 
@@ -42,6 +42,15 @@ describe('property order when extracting a property value (issue #187)', () => {
   it('should keep the destination note\'s own property order under every merge strategy', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 42 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2750;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'fm-order-source.md';
         const TARGET_PATH = 'fm-order-target.md';
@@ -106,7 +115,8 @@ describe('property order when extracting a property value (issue #187)', () => {
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
             message: `the split picker did not open for ${strategy}`,
-            predicate: () => document.querySelector('.prompt') !== null
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await chooseTargetInPicker('fm-order-target');
@@ -116,7 +126,8 @@ describe('property order when extracting a property value (issue #187)', () => {
             predicate: async () => {
               const currentTargetContent = await app.vault.read(targetFile);
               return currentTargetContent.includes(valueToExtract);
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -142,7 +153,8 @@ describe('property order when extracting a property value (issue #187)', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'the destination note suggestion did not appear',
-            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query))
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query)),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
@@ -180,7 +192,8 @@ describe('property order when extracting a property value (issue #187)', () => {
           await leaf.openFile(file);
           await waitUntil({
             message: `the editor for ${file.path} did not open`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {

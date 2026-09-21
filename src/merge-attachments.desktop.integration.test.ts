@@ -27,7 +27,7 @@ interface MergeAttachmentSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: MergeAttachmentSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: MergeAttachmentSettings) => void) => Promise<void>;
   settings: MergeAttachmentSettings;
 }
 

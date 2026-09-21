@@ -24,8 +24,8 @@ import { SelectBeforeCursorEditorCommandHandler } from './select-before-cursor-e
 const DOCUMENT_START: EditorPosition = { ch: 0, line: 0 };
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): void;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => void;
   readonly icon: string;
   readonly id: string;
   readonly name: string;

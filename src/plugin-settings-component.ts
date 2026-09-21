@@ -129,7 +129,7 @@ interface ValidateReorderNameTemplateParams {
    * @param template - The template to check.
    * @returns The unknown key, or `undefined` when every token resolves.
    */
-  findUnknownTokenKey(this: void, template: string): string | undefined;
+  readonly findUnknownTokenKey: (this: void, template: string) => string | undefined;
 
   /**
    * Token keys this kind's name template may not use.

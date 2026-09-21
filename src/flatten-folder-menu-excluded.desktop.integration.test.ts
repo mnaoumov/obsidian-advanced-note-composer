@@ -48,7 +48,7 @@ interface MenuItemLike {
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 
@@ -59,7 +59,7 @@ interface MenuProbe {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: ExcludePathsSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
   settings: ExcludePathsSettings;
 }
 

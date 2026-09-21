@@ -32,6 +32,15 @@ describe('paste options modal keyboard paths', () => {
   it('should move the marked selection with the options set in the modal when Enter is pressed', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId, sourceContent, targetContent }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 52 400 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
         // The callback is serialized into the Obsidian process, so it cannot reach this file's
         // Module scope — everything it needs arrives through `input` or is declared right here.
         const MARKED_TEXT_END_OFFSET = 9;
@@ -47,7 +56,8 @@ describe('paste options modal keyboard paths', () => {
 
         await waitUntil({
           message: 'paste options modal did not open',
-          predicate: () => findButton('Move') !== null
+          predicate: () => findButton('Move') !== null,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -73,7 +83,7 @@ describe('paste options modal keyboard paths', () => {
               const value = await readFile('paste-options-keys-target.md');
               return value.includes('MOVED');
             },
-            timeoutInMilliseconds: 15_000
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         } finally {
@@ -118,7 +128,7 @@ describe('paste options modal keyboard paths', () => {
           await waitUntil({
             message: `editor for ${path} did not become active`,
             predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === path,
-            timeoutInMilliseconds: 15_000
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -174,6 +184,15 @@ describe('paste options modal keyboard paths', () => {
   it('should cancel the move and leave the editor untouched when Escape is pressed', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId, sourceContent, targetContent }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 49 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 4000;
         // The callback is serialized into the Obsidian process, so it cannot reach this file's
         // Module scope — everything it needs arrives through `input` or is declared right here.
         const MARKED_TEXT_END_OFFSET = 9;
@@ -195,7 +214,8 @@ describe('paste options modal keyboard paths', () => {
 
           await waitUntil({
             message: 'paste options modal did not open',
-            predicate: () => findButton('Move') !== null
+            predicate: () => findButton('Move') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -210,7 +230,8 @@ describe('paste options modal keyboard paths', () => {
 
             await waitUntil({
               message: 'Escape did not close the paste options modal',
-              predicate: () => findButton('Move') === null
+              predicate: () => findButton('Move') === null,
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } finally {
             window.removeEventListener('keydown', captureEscape, { capture: true });
@@ -233,7 +254,8 @@ describe('paste options modal keyboard paths', () => {
             predicate: () => {
               noticeTexts = [...activeDocument.querySelectorAll('.notice')].map((el) => el.textContent);
               return noticeTexts.some((text) => text.includes('Cancelled move'));
-            }
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
 
           return {
@@ -280,7 +302,7 @@ describe('paste options modal keyboard paths', () => {
           await waitUntil({
             message: `editor for ${path} did not become active`,
             predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === path,
-            timeoutInMilliseconds: 15_000
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
