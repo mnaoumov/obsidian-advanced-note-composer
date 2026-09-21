@@ -26,8 +26,8 @@ const LAST_LINE_TEXT = 'the final line';
 const DOCUMENT_END: EditorPosition = { ch: LAST_LINE_TEXT.length, line: LAST_LINE };
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): void;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => void;
   readonly icon: string;
   readonly id: string;
   readonly name: string;

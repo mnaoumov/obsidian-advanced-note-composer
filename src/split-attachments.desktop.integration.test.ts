@@ -25,7 +25,7 @@ interface ComponentTreeNode {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: SplitAttachmentSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: SplitAttachmentSettings) => void) => Promise<void>;
   settings: SplitAttachmentSettings;
 }
 

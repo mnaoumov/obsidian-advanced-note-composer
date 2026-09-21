@@ -50,7 +50,7 @@ export interface SelectFolderParams {
    * @param folder - The candidate destination folder.
    * @returns Whether the folder is offered.
    */
-  isAllowedFolder(this: void, folder: TFolder): boolean;
+  readonly isAllowedFolder: (this: void, folder: TFolder) => boolean;
 
   /**
    * The suggester's placeholder text, e.g. `Select folder to move into...`. Each flow words it in its own

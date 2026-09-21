@@ -27,7 +27,7 @@ interface MoveSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: MoveSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: MoveSettings) => void) => Promise<void>;
   settings: MoveSettings;
 }
 

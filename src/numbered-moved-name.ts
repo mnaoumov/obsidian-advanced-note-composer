@@ -67,7 +67,7 @@ export interface MovedNameSequence {
    * @param abstractFile - The item about to be moved.
    * @returns The name to move it under, before de-duplication.
    */
-  resolveName(this: void, abstractFile: TAbstractFile): string;
+  resolveName: (this: void, abstractFile: TAbstractFile) => string;
 }
 
 /**

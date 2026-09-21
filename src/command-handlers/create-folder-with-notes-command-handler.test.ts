@@ -40,9 +40,9 @@ import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { CreateFolderWithNotesCommandHandler } from './create-folder-with-notes-command-handler.ts';
 
 interface CapturedConfirmParams {
-  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
+  readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
   readonly canReselectTarget: boolean;
-  promiseResolve(this: void, result: ConfirmDialogModalResult): void;
+  readonly promiseResolve: (this: void, result: ConfirmDialogModalResult) => void;
   readonly title: string;
 }
 
@@ -60,20 +60,20 @@ interface HandlerContext {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__(id: string, plugin: unknown): void;
+  registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
-  canExecute(): boolean;
-  canExecuteFolder(folder: TFolder): boolean;
-  execute(): Promise<void>;
-  executeFolder(folder: TFolder): Promise<void>;
+  canExecute: () => boolean;
+  canExecuteFolder: (folder: TFolder) => boolean;
+  execute: () => Promise<void>;
+  executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
-  validateTypedNoteName(params: ValidateTypedNoteNameParams): Promise<MaybeReturn<string>>;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  validateTypedNoteName: (params: ValidateTypedNoteNameParams) => Promise<MaybeReturn<string>>;
 }
 
 interface ValidateTypedNoteNameParams {

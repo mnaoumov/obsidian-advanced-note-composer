@@ -56,7 +56,7 @@ interface TestButton {
 interface TestButtonComponent {
   readonly buttonEl: HTMLButtonElement;
   readonly disabled: boolean;
-  simulateClick__(): void;
+  simulateClick__: () => void;
 }
 
 function createActiveEditorHandler(): ActiveEditorCommandHandlerBase {

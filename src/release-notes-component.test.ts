@@ -22,7 +22,7 @@ import { ReleaseNotesComponent } from './release-notes-component.ts';
 
 interface MockAppResult {
   readonly app: App;
-  triggerLayoutReady(): void;
+  readonly triggerLayoutReady: () => void;
 }
 
 interface MockPluginSettingsComponentResult {

@@ -54,7 +54,7 @@ interface ComponentTreeNode {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: AutoNumberSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: AutoNumberSettings) => void) => Promise<void>;
   settings: AutoNumberSettings;
 }
 

@@ -52,7 +52,7 @@ export interface ReorderSuggestionsByRecentFilesParams {
    * @param file - The candidate recent file.
    * @returns Whether the file is an allowed target.
    */
-  isAllowedFile(this: void, file: TFile): boolean;
+  readonly isAllowedFile: (this: void, file: TFile) => boolean;
 
   /**
    * Which recency wins the top of the list (issue #248).
@@ -85,7 +85,7 @@ export interface ReorderSuggestionsByRecentFoldersParams {
    * @param folder - The candidate recent folder.
    * @returns Whether the folder is an allowed destination.
    */
-  isAllowedFolder(this: void, folder: TFolder): boolean;
+  readonly isAllowedFolder: (this: void, folder: TFolder) => boolean;
 
   /**
    * Which recency wins the top of the list (issue #248).
@@ -113,7 +113,7 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
    * @param item - The candidate recent item.
    * @returns Whether the item is an allowed target.
    */
-  isAllowedItem(this: void, item: Item): boolean;
+  readonly isAllowedItem: (this: void, item: Item) => boolean;
 
   readonly pickerRecencyOrder: PickerRecencyOrder;
 
@@ -126,7 +126,7 @@ interface ReorderSuggestionsByRecentItemsParams<Item extends TAbstractFile> {
    * @param path - The recent path.
    * @returns The item, or `null` when the path resolves to nothing offerable.
    */
-  resolveItem(this: void, path: string): Item | null;
+  readonly resolveItem: (this: void, path: string) => Item | null;
 
   readonly shouldIncludeActiveFile: boolean;
   readonly suggestions: FuzzyMatch<Item>[];

@@ -57,17 +57,17 @@ interface InitAppOptions {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__(id: string, plugin: unknown): void;
+  registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
-  canExecuteFolder(folder: TFolder): boolean;
-  executeFolder(folder: TFolder): Promise<void>;
+  canExecuteFolder: (folder: TFolder) => boolean;
+  executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe

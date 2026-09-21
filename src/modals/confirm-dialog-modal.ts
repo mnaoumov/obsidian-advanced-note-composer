@@ -34,7 +34,7 @@ interface ConfirmDialogModalConstructorParams {
    * Builds the dialog body. Each flow supplies its own content (the question, the source/target links,
    * and any extra sections such as split's "Source content to split").
    */
-  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
+  readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
 
   /**
    * Whether the "Change target" action is enabled (send the flow back to the target picker). The button

@@ -26,7 +26,7 @@ interface FlattenSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: FlattenSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: FlattenSettings) => void) => Promise<void>;
   settings: FlattenSettings;
 }
 

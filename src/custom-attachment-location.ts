@@ -43,7 +43,7 @@ export interface CollectAttachmentsWithCustomAttachmentLocationParams {
  * The slice of the Custom Attachment Location plugin this plugin uses.
  */
 interface CustomAttachmentLocationPluginLike {
-  collectAttachmentsInAbstractFiles(abstractFiles: TAbstractFile[]): void;
+  collectAttachmentsInAbstractFiles: (abstractFiles: TAbstractFile[]) => void;
 }
 
 /**

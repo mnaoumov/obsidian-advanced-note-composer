@@ -48,9 +48,9 @@ import {
  * dialog content can be rendered without a real modal) and the resolve callback the mocked opener fires.
  */
 interface CapturedConfirmParams {
-  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
+  readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
   readonly canReselectTarget: boolean;
-  promiseResolve(this: void, result: ConfirmDialogModalResult): void;
+  readonly promiseResolve: (this: void, result: ConfirmDialogModalResult) => void;
   readonly title: string;
 }
 
@@ -69,13 +69,13 @@ interface HandlerContext {
 }
 
 interface Testable {
-  canExecuteFolder(folder: TFolder): boolean;
-  executeFolder(folder: TFolder): Promise<void>;
+  canExecuteFolder: (folder: TFolder) => boolean;
+  executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into

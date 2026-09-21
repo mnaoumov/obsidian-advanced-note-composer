@@ -69,7 +69,7 @@ export interface BuildOperationNoticeContentParams {
    */
   // `this: void` because it is a standalone callback, never a method of these params — which is also what
   // Lets it be destructured and handed on without tripping `unbound-method`.
-  onTargetLinkClick?(this: void): Promise<void>;
+  readonly onTargetLinkClick?: (this: void) => Promise<void>;
 
   /**
    * Carries the `Folder note` settings a FOLDER link resolves its note with.
@@ -132,7 +132,7 @@ export interface RenderOperationNoticeLinkParams {
    * @default `undefined`
    */
   // See {@link BuildOperationNoticeContentParams.onTargetLinkClick} for why `this: void`.
-  onClick?(this: void): Promise<void>;
+  readonly onClick?: (this: void) => Promise<void>;
 
   readonly pathOrAbstractFile: PathOrAbstractFile;
 

@@ -76,7 +76,7 @@ interface BuildCreateConfirmContentParams {
    * Closes the dialog and sends the flow to the matching rename prompt. Called by the `Rename` button of the
    * folder row and of each note row.
    */
-  requestRename(this: void, renameRequest: RenameRequest): void;
+  readonly requestRename: (this: void, renameRequest: RenameRequest) => void;
 
   /**
    * Whether the folder row gets its `Rename` button (issue #214).

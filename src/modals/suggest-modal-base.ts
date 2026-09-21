@@ -68,7 +68,7 @@ interface SuggestModalBaseAddAliasMatchesParams {
 
 interface TraverseBookmarksParams {
   readonly bookmarkItems: BookmarkItem[];
-  callback(this: void, bookmarkItem: BookmarkItem, path: string): void;
+  readonly callback: (this: void, bookmarkItem: BookmarkItem, path: string) => void;
   readonly parentPath?: string;
 }
 

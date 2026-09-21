@@ -52,8 +52,8 @@ import { SplitHeadingRecursivelyEditorCommandHandler } from './split-heading-rec
  * The subset of the confirmation dialog's constructor params this test drives.
  */
 interface CapturedConfirmParams {
-  buildContent(this: void, fragment: DocumentFragment): Promise<void>;
-  promiseResolve(result: ConfirmDialogModalResult): void;
+  readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
+  readonly promiseResolve: (result: ConfirmDialogModalResult) => void;
   readonly title: string;
 }
 
@@ -74,13 +74,13 @@ interface SplitHeadingRecursivelyEditorCommandHandlerConstructorParams {
 }
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
-  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
+  shouldAddToEditorMenu: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
 let capturedConfirmParams: CapturedConfirmParams | null = null;

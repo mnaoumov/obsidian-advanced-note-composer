@@ -26,7 +26,7 @@ import {
 } from './rename-heading.ts';
 
 interface MetadataCacheWithCompute {
-  computeMetadataAsync(): void;
+  computeMetadataAsync: () => void;
 }
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({

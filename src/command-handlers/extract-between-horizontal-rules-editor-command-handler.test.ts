@@ -38,14 +38,14 @@ import {
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './extract-between-horizontal-rules-editor-command-handler.ts';
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void>;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu(): boolean;
-  shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean;
-  shouldAddToViewportMenu(view: MarkdownView, mode: string, source: string): boolean;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToEditorMenu: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
 vi.mock('obsidian-dev-utils/html-element', () => ({

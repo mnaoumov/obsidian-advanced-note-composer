@@ -49,7 +49,7 @@ interface MenuItemLike {
    * Set by whatever registered the item — a submenu PARENT has none, which is what distinguishes it from the
    * leaf that actually runs the command.
    */
-  callback?(): void;
+  callback?: () => void;
 
   dom?: HTMLElement;
 
@@ -60,7 +60,7 @@ interface MenuItemLike {
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 
@@ -77,7 +77,7 @@ interface NameTransformSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: NameTransformSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
   settings: NameTransformSettings;
 }
 
@@ -445,11 +445,11 @@ describe('name transform with no note open (issue #218)', () => {
           const mergedFile = app.vault.getFileByPath(EXPECTED_MERGED_PATH);
           return {
             mergedContent: mergedFile ? await app.vault.read(mergedFile) : null,
-            noticeTexts: [...noticeTexts],
-            recordedTargetPaths: [...new Set(recordedTargetPaths)].sort(),
             // Every note this test is responsible for, so a merge that landed under another name says which
             // One instead of only reporting a `null` content.
-            mergePaths: app.vault.getMarkdownFiles().map((file) => file.path).filter((path) => path.toLowerCase().includes('name-transform-merge')).sort()
+            mergePaths: app.vault.getMarkdownFiles().map((file) => file.path).filter((path) => path.toLowerCase().includes('name-transform-merge')).sort(),
+            noticeTexts: [...noticeTexts],
+            recordedTargetPaths: [...new Set(recordedTargetPaths)].sort()
           };
         } finally {
           await settingsComponent.editAndSave((settings) => {

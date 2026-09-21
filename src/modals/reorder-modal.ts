@@ -88,7 +88,7 @@ export interface ReorderModalToggle {
    *
    * @param isEnabled - The new state.
    */
-  onChanged(this: void, isEnabled: boolean): void;
+  onChanged: (this: void, isEnabled: boolean) => void;
 }
 
 /**
@@ -101,7 +101,7 @@ export interface ReorderModel {
    * The rows, in the order they are rendered. Rows of one group are contiguous; beyond that the order is
    * the model's own — depth-first for a heading tree, folders-then-files for a folder listing.
    */
-  buildRows(this: void): readonly ReorderModalRow[];
+  buildRows: (this: void) => readonly ReorderModalRow[];
 
   /**
    * Moves a row one place up or down among its own group.
@@ -109,7 +109,7 @@ export interface ReorderModel {
    * @param params - Which row, and which way.
    * @returns Whether anything actually moved.
    */
-  didMove(this: void, params: ReorderModelDidMoveParams): boolean;
+  didMove: (this: void, params: ReorderModelDidMoveParams) => boolean;
 
   /**
    * Moves a row to a dropped-on position within its own group.
@@ -117,7 +117,7 @@ export interface ReorderModel {
    * @param params - Which row, and where it was dropped.
    * @returns Whether anything actually moved.
    */
-  didMoveTo(this: void, params: ReorderModelDidMoveToParams): boolean;
+  didMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
 
   /**
    * The header to render above a group's first row.
@@ -126,7 +126,7 @@ export interface ReorderModel {
    * @returns The header text, or `null` for a group that needs none — which is every group of a heading
    * tree, where the groups exist only to keep a drag among its siblings.
    */
-  getGroupTitle(this: void, groupKey: string): null | string;
+  getGroupTitle: (this: void, groupKey: string) => null | string;
 }
 
 /**

@@ -56,7 +56,7 @@ export interface NavigableSettingTab {
    *
    * @returns The setting definitions.
    */
-  getSettingDefinitions(): SettingDefinitionItem[];
+  getSettingDefinitions: () => SettingDefinitionItem[];
 }
 
 /* v8 ignore start -- Serialized via toString() and executed inside Obsidian, not callable in unit tests. */

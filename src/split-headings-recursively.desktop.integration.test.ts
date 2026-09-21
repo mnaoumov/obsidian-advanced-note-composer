@@ -34,7 +34,7 @@ interface ComponentTreeNode {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: TemplateSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
   settings: TemplateSettings;
 }
 

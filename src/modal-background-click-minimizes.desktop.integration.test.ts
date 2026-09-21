@@ -61,7 +61,7 @@ interface Point {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: BackgroundClickSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: BackgroundClickSettings) => void) => Promise<void>;
   settings: BackgroundClickSettings;
 }
 

@@ -31,7 +31,7 @@ interface MergeSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave(editor: (settings: MergeSettings) => void): Promise<void>;
+  editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
   settings: MergeSettings;
 }
 

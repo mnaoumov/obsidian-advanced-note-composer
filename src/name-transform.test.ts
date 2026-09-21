@@ -39,7 +39,7 @@ interface FixOverrides {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__(id: string, plugin: unknown): void;
+  registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface TemplaterMock {

@@ -27,7 +27,7 @@ interface MenuItemLike {
 }
 
 interface MenuLike {
-  hide(): void;
+  hide: () => void;
   items: MenuItemLike[];
 }
 

@@ -128,7 +128,7 @@ export interface SettingsCarrier<Settings extends object> {
    * @param editor - Receives the live settings to mutate.
    * @returns A {@link Promise} that resolves once they are saved.
    */
-  editAndSave(editor: (settings: Settings) => void): Promise<void>;
+  editAndSave: (editor: (settings: Settings) => void) => Promise<void>;
 
   /**
    * The live settings.

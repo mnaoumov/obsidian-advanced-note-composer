@@ -27,8 +27,8 @@ const RANGE: SelectionRange = {
 };
 
 interface TestableHandler {
-  canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean;
-  executeEditor(editor: Editor, context: MarkdownFileInfo): void;
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => void;
 }
 
 class TestSelectRangeEditorCommandHandler extends SelectRangeEditorCommandHandlerBase {

@@ -37,8 +37,8 @@ import {
  * (it renders one fixed element), and this suite has no view to hand it.
  */
 interface AnchorWidget {
-  eq(other: AnchorWidget): boolean;
-  toDOM(): HTMLElement;
+  eq: (other: AnchorWidget) => boolean;
+  toDOM: () => HTMLElement;
 }
 
 interface AnchorWidgetSpec {

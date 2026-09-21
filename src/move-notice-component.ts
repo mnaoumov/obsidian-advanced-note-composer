@@ -86,7 +86,7 @@ interface MoveNoticeButtonDefinition {
    */
   readonly getIsEnabled: (() => boolean) | null;
   readonly label: string;
-  onClick(): void;
+  onClick: () => void;
 }
 
 /**

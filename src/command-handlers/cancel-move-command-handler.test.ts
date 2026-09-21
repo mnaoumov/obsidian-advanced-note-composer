@@ -18,12 +18,12 @@ import { CancelMoveCommandHandler } from './cancel-move-command-handler.ts';
 
 interface CreateHandlerResult {
   readonly handler: TestableHandler;
-  showNotice(): void;
+  readonly showNotice: () => void;
 }
 
 interface TestableHandler {
-  canExecute(): boolean;
-  execute(): void;
+  canExecute: () => boolean;
+  execute: () => void;
   readonly id: string;
   readonly name: string;
 }
