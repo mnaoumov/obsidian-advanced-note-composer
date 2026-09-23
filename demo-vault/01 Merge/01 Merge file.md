@@ -21,5 +21,4 @@ An attachment moves when the merged note references it and **no other note does*
 
 This paragraph, and the footnote below[^demo], travel into the target note when you merge.
 
-[^demo]: This footnote is renumbered if the target already has footnotes - proof that
-    footnote fixing works.
+[^demo]: This footnote is renumbered if the target already has footnotes - proof that footnote fixing works.
