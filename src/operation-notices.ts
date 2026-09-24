@@ -59,11 +59,12 @@ export interface BuildOperationNoticeContentParams {
   readonly isLoading?: boolean;
 
   /**
-   * What clicking the TARGET link should do on top of opening the note and revealing it (issue #232).
+   * What clicking the TARGET link should do on top of opening the note (issue #232).
    *
    * Supplied by the extract/split flow to land the user on the content it just wrote; every other
    * operation omits it and the link behaves as it always has. Invoked through `invokeAsyncSafely`, since a
-   * DOM click listener cannot await.
+   * DOM click listener cannot await. When supplied, it OWNS the file explorer reveal — see
+   * {@link RenderOperationNoticeLinkParams.onClick}.
    *
    * @default `undefined`
    */
@@ -127,7 +128,12 @@ export interface RenderOperationNoticeLinkParams {
   readonly app: App;
 
   /**
-   * What to run on click, on top of the open and the reveal.
+   * What to run on click, on top of the open.
+   *
+   * A FILE link that carries this hook does NOT ask dev-utils for the file explorer reveal: the hook does
+   * the revealing itself (issue #263). A hook that moves the focus back into an editor has to do so AFTER
+   * the explorer's reveal has finished taking it, and dev-utils' reveal is fire-and-forget — nothing can be
+   * ordered after it. A FOLDER link is unaffected; dev-utils always reveals those itself.
    *
    * @default `undefined`
    */
@@ -264,7 +270,8 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
  *
  * - A FILE link opens the note (Obsidian's own handler) and, with `shouldRevealFile`, also REVEALS it in the
  *   file explorer (issue #232) — always on here, which is what makes a file link and a folder link read
- *   consistently.
+ *   consistently. A link carrying an {@link RenderOperationNoticeLinkParams.onClick} hook does that reveal
+ *   in the hook instead, ordered before its own focus change (issue #263).
  * - A FOLDER link cannot open a folder, so it opens that folder's FOLDER NOTE and reveals it (issue #234),
  *   landing the user in a document instead of leaving them in the explorer. Which note that is, is the
  *   plugin's own `Folder note` settings' answer — {@link buildFolderNoteOptions} — the same one
@@ -294,7 +301,8 @@ export async function renderOperationNoticeLink(params: RenderOperationNoticeLin
     app,
     folderNote: buildFolderNoteOptions(pluginSettingsComponent.settings),
     pathOrAbstractFile,
-    shouldRevealFile: true
+    // A hook owns the reveal so it can order its own focus change after it (issue #263).
+    shouldRevealFile: onClick === undefined
   });
 
   if (onClick) {
