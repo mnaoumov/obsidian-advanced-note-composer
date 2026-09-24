@@ -225,7 +225,7 @@ export function canFlattenModeBeDistinctSync(params: CanFlattenModeBeDistinctSyn
  * attachment resolution at all. The folder-only modes ({@link FlattenMode.ChildFoldersOnly},
  * {@link FlattenMode.AllFoldersRecursively}, issues #170/#171) walk the folder top-down and collect its
  * sub-folders, skipping the ones that hold somebody else's attachments (see
- * {@link collectProtectedFolderPaths}) together with their whole subtree.
+ * {@link isProtectedFolder}) together with their whole subtree.
  *
  * The result is in move order, shallowest first. That matters for the recursive mode: each rename targets
  * `<parent>/<name>` off the live {@link TAbstractFile}, and Obsidian's rename cascades to descendants, so

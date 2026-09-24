@@ -44,7 +44,7 @@ export interface FolderHeadingPlanEntry {
   readonly depth: number;
 
   /**
-   * The note's path, as given in {@link BuildFolderHeadingPlanParams.filePaths}.
+   * The note's path, as given in {@link BuildFolderHeadingPlanParams.items}.
    */
   readonly filePath: string;
 

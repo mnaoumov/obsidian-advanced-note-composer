@@ -9,7 +9,7 @@ import {
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 
 /**
- * Parameters for {@link openReorderModal}.
+ * Parameters for {@link didConfirmReorderModal}.
  */
 export interface DidConfirmReorderModalParams {
   readonly app: App;
