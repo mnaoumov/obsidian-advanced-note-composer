@@ -188,12 +188,13 @@ describe('PluginSettingsTab', () => {
   // Issue #221 asked for collapsible headers, collapsed on open. Obsidian 1.13 has no collapsible groups
   // and its groups do not nest, so each section is a navigable PAGE instead: the tab opens as a short
   // list of entries, and a page holding groups is the two-level hierarchy issues #224/#225/#226 wanted.
-  it('should open as two inline groups followed by the page entries', async () => {
+  // Issue #275 folded the second root group, `Merge/split/extract strategies`, into `Common`: all four of
+  // its rows are read by several command families, which is what `Common` means.
+  it('should open as one inline group followed by the page entries', async () => {
     const tab = await createSettingsTab();
 
     expect(collectTopLevel(tab)).toEqual([
       'group:Common',
-      'group:Merge/split/extract strategies',
       'page:Merge',
       'page:Split/extract',
       // Its own page since issue #271, next to the split/extract commands whose ranges it shares. Two
@@ -366,17 +367,28 @@ describe('PluginSettingsTab', () => {
     expect(pluginSettingsComponent.settings.commandMenuPlacement('extract-current-selection')).toBe(CommandMenuPlacement.EditorMenu);
   });
 
-  // Issue #282: the only headed groups left are the two inline ones at the ROOT, which are not a section
-  // inside a section (and which issue #274 settled). A headed group anywhere below them is a section the
-  // user has to scroll to again.
-  it('should render only the two root headings', async () => {
+  // Issue #282: the only headed group left is the inline one at the ROOT, which is not a section inside a
+  // section (issue #274 settled that, and issue #275 merged the second root group into it). A headed group
+  // anywhere below it is a section the user has to scroll to again.
+  it('should render only the root heading', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    expect(headings).toEqual([
-      'Common',
-      'Merge/split/extract strategies'
+    expect(headings).toEqual(['Common']);
+  });
+
+  // Issue #275: `Common` holds exactly the rows several command families read. The debug toggle, read by
+  // none, moved to `UI`; `Should merge headings` stayed, because the split picker reads it as well.
+  it('should hold only the cross-cutting rows in the root group', async () => {
+    const containers = collectContainers(await createSettingsTab());
+
+    expect(containers.get('Common')).toEqual([
+      'Should allow only current folder',
+      'Should fix footnotes',
+      'Should merge headings',
+      'Should run templater on destination file'
     ]);
+    expect(containers.get('UI')?.at(-1)).toBe('Should show console debug messages');
   });
 
   // Issue #220: every header that has a template leads with it, so the templates stop reading as though
@@ -670,11 +682,11 @@ describe('PluginSettingsTab', () => {
     expect(desc).toContain('only the source note is locked');
   });
 
-  // The `Merge/split/extract strategies` heading names three families, but two of its rows are read by more:
-  // the smart cut & paste move reads the footnote default, and the create commands run Templater. The rows
-  // stay where they are (a row read by several families belongs on none of their pages), so the
-  // descriptions carry the families the heading leaves out.
-  it('should name the command families the strategies heading leaves out in its rows', async () => {
+  // The `Common` heading names no command family, and two of its rows are read by families a reader would not
+  // guess: the smart cut & paste move reads the footnote default, and the create commands run Templater. The
+  // rows stay where they are (a row read by several families belongs on none of their pages), so the
+  // descriptions name those families.
+  it('should name the less obvious command families in the common rows', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
