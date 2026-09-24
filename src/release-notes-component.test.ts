@@ -42,6 +42,8 @@ vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);
 const mockAlert = vi.mocked(alert);
 
+const PLUGIN_NAME = 'Advanced Note Composer';
+
 function createMockApp(isNoteComposerEnabled = true): MockAppResult {
   let layoutReadyCallback: (() => void) | undefined;
 
@@ -114,6 +116,7 @@ describe('ReleaseNotesComponent', () => {
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
       const component = new ReleaseNotesComponent({
         app,
+        pluginName: PLUGIN_NAME,
         pluginSettingsComponent
       });
 
@@ -125,7 +128,7 @@ describe('ReleaseNotesComponent', () => {
       expect(settings.releaseNotesShown).toContain('3.0.0');
       expect(settings.releaseNotesShown).toContain('5.11.0');
       expect(mockAlert).toHaveBeenCalledTimes(1);
-      expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Release notes' }));
+      expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Advanced Note Composer release notes' }));
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
@@ -133,6 +136,7 @@ describe('ReleaseNotesComponent', () => {
       const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0']);
       const component = new ReleaseNotesComponent({
         app,
+        pluginName: PLUGIN_NAME,
         pluginSettingsComponent
       });
 
@@ -148,6 +152,7 @@ describe('ReleaseNotesComponent', () => {
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
       const component = new ReleaseNotesComponent({
         app,
+        pluginName: PLUGIN_NAME,
         pluginSettingsComponent
       });
 
@@ -164,6 +169,7 @@ describe('ReleaseNotesComponent', () => {
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
       const component = new ReleaseNotesComponent({
         app,
+        pluginName: PLUGIN_NAME,
         pluginSettingsComponent
       });
 
