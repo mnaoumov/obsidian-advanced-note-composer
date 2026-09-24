@@ -195,6 +195,16 @@ describe('SelectionAnchorComponent', () => {
     expect(getSelectionAnchorOffset(state.update({ effects: spec.effects }).state)).toBe(4);
   });
 
+  // Issue #287: a live selection is resumed from where it was begun, not from where its head stopped.
+  it('anchors a live selection at its own anchor end, not its head', () => {
+    const dispatch = vi.fn();
+    const state = EditorState.create({ doc: DOC, extensions: [selectionAnchorField], selection: { anchor: 2, head: 7 } });
+    component.setAnchor(editorWithState(state, dispatch), sourceFile);
+
+    const spec = castTo<DispatchedTransactionSpec>(dispatch.mock.calls[0]?.[0]);
+    expect(getSelectionAnchorOffset(state.update({ effects: spec.effects }).state)).toBe(2);
+  });
+
   it('reads the anchored offset back out of the editor', () => {
     expect(component.getAnchorOffset(editorWithState(anchoredState(6)))).toBe(6);
   });

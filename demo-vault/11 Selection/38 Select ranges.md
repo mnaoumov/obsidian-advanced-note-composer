@@ -48,5 +48,7 @@ This block sits between two horizontal rules, so `Select between horizontal rule
   - so no content filter applies to them at all: excluding a folder from merges or splits does not hide them. The `Select` settings page carries their own two path boxes, and nothing else decides where they appear.
 - They work with a selection already active
   - unlike `Extract this heading...`, which hides itself in the editor menu when you have selected something. Re-selecting over a live selection is the whole point here.
+- `Select before cursor` and `Select after cursor` continue a selection you already started
+  - with text selected, `Select after cursor` keeps the selection's start and extends it to the end of the note, and `Select before cursor` keeps the selection's end and extends it to the top. So when a drag stops early (at a horizontal rule, or because a handle let go), you do not have to start again. With nothing selected they start from the cursor, as before.
 
 Once you have the selection, the rest of the plugin is waiting for it: [05 Extract selection](<../02 Extract/05 Extract selection.md>), [25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>) or [19 Swap selections](<../05 Swap/19 Swap selections.md>).

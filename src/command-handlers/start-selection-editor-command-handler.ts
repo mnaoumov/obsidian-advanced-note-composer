@@ -27,6 +27,10 @@ interface StartSelectionEditorCommandHandlerConstructorParams {
  * selection handles is the gesture that fails him roughly four times in five. Anchor, tap the far end,
  * end: two taps and no dragging.
  *
+ * With text already selected the anchor goes at where that selection BEGAN, not at the cursor (issue #287),
+ * so an interrupted selection is resumed rather than dropped: Start selection, tap the far end, End
+ * selection. See `SelectionAnchorComponent.setAnchor`.
+ *
  * Shipped as two named commands rather than one toggle on purpose. Both are meant to live on Obsidian's
  * mobile toolbar (Settings → Mobile → manage toolbar options), where two labelled buttons beat one button
  * whose meaning depends on hidden state — and where "have I anchored yet?" would otherwise be
