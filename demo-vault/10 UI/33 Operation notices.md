@@ -39,4 +39,6 @@ The part that matters is when it goes away. The operation returning is *not* the
 
 It carries the same `Cancel` button the notice does, because blocking the vault without offering a way out would be a trap. And the wait is bounded: if something downstream is stuck, the dialog gives the vault back rather than holding it forever.
 
+`Cancel` never leaves an operation half-done. It is offered only where cancelling rolls the **whole** operation back - every rename and every edit it had made so far is undone, as if it had never started - and it disappears once the operation has committed and the dialog is only waiting for the queue, since nothing left there can be undone. The one exception is **Split note by headings** (both variants): each heading is split on its own, so a cancel could only stop between two of them, and that command offers no `Cancel` at all.
+
 Off by default, and it needs **Should show operation notices** to be on, since that is what turns progress reporting on at all.

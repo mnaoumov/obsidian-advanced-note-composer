@@ -97,9 +97,11 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
 
     // The individual splits are silent (`isMultipleSplit`), so the batch reports itself once — a progress
     // notice for the whole run and one completion notice naming how many notes it produced (issue #182).
-    const abortController = new AbortController();
+    /*
+     * No `abortController`, so no Cancel (issue #289): each heading is split in its own transaction, so a
+     * cancel could only stop between two of them, leaving the earlier headings split and the rest not.
+     */
     const progressNotice = showOperationProgressNotice({
-      abortController,
       app: this.app,
       content: () =>
         buildOperationNoticeContent({
@@ -119,9 +121,6 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
     try {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
       while (true) {
-        if (abortController.signal.aborted) {
-          break;
-        }
         const cache = await getCacheSafe(this.app, file);
         if (!cache) {
           break;

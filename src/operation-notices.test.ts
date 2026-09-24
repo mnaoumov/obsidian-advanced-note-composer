@@ -430,9 +430,9 @@ describe('showOperationProgressNotice', () => {
     await expect(params?.content()).resolves.toBeInstanceOf(DocumentFragment);
   });
 
-  it('should give the dialog its own abort controller when the operation has none', () => {
-    // The dialog always offers Cancel, so it needs something to abort even when the operation would
-    // not have offered one.
+  it('should give the dialog no abort controller when the operation has none (issue #289)', () => {
+    // An operation that cannot be cancelled whole gets no Cancel button, in the dialog as in the notice:
+    // a substituted controller would be a Cancel wired to nothing.
     vi.mocked(showOperationProgressModal).mockReturnValue(strictProxy<PluginNoticeComponentDelayedNotice>({}));
     const settingsComponent = createPluginSettingsComponent(true, true);
 
@@ -443,7 +443,7 @@ describe('showOperationProgressNotice', () => {
       pluginSettingsComponent: settingsComponent
     });
 
-    expect(vi.mocked(showOperationProgressModal).mock.calls[0]?.[0].abortController).toBeInstanceOf(AbortController);
+    expect(vi.mocked(showOperationProgressModal).mock.calls[0]?.[0].abortController).toBeNull();
   });
 });
 

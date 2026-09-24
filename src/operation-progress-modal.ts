@@ -53,9 +53,11 @@ export type OperationProgressModalHandle = PluginNoticeComponentDelayedNotice;
  */
 export interface ShowOperationProgressModalParams {
   /**
-   * Aborts the operation when the user asks to cancel.
+   * Aborts the operation when the user asks to cancel, or `null` for an operation that cannot be cancelled
+   * as a whole — the dialog then offers no Cancel button rather than one that would do nothing, or that
+   * would stop the operation half-applied (issue #289).
    */
-  readonly abortController: AbortController;
+  readonly abortController: AbortController | null;
 
   /**
    * The Obsidian application instance.
@@ -73,9 +75,10 @@ export interface ShowOperationProgressModalParams {
  */
 class OperationProgressModal extends Modal {
   private readonly bodyEl: HTMLElement;
+  private cancelButtonContainerEl: HTMLElement | null = null;
   private isClosable = false;
 
-  public constructor(app: App, private readonly abortController: AbortController) {
+  public constructor(app: App, private readonly abortController: AbortController | null) {
     super(app);
     // Built here rather than in `onOpen` so it is never absent: a body that might not exist yet would
     // need a guard on every write, and that guard would be unreachable in practice.
@@ -101,20 +104,40 @@ class OperationProgressModal extends Modal {
 
   public override onOpen(): void {
     // Obsidian's own close affordance would be a lie while the operation runs, so it goes away rather
-    // than sitting there refusing to work.
-    this.modalEl.querySelector('.modal-close-button')?.remove();
+    // than sitting there refusing to work. Obsidian 1.13.0 renamed it from `.modal-close-button` to
+    // `.modal-header-button`; matching only the old name left a dead X on screen (issue #289), so both
+    // are matched, and only as direct children of the dialog, which is where Obsidian puts the X.
+    for (const closeButtonEl of this.modalEl.querySelectorAll(':scope > :is(.modal-close-button, .modal-header-button)')) {
+      closeButtonEl.remove();
+    }
     this.titleEl.setText('Working...');
     this.contentEl.createDiv({ cls: 'advanced-note-composer-operation-progress-bar' }, (bar) => {
       bar.createDiv({ cls: 'advanced-note-composer-operation-progress-bar-fill' });
     });
 
+    const abortController = this.abortController;
+    if (!abortController) {
+      return;
+    }
+
     // Blocking the vault without offering a way out would be a trap. The notice carries a Cancel
-    // button for the same reason, and this is the dialog's version of it.
-    new ButtonComponent(this.contentEl.createDiv({ cls: 'advanced-note-composer-operation-progress-buttons' }))
+    // button for the same reason, and this is the dialog's version of it. It is offered only where the
+    // operation rolls back WHOLE on cancel (issue #289): the caller passes no controller otherwise.
+    this.cancelButtonContainerEl = this.contentEl.createDiv({ cls: 'advanced-note-composer-operation-progress-buttons' });
+    new ButtonComponent(this.cancelButtonContainerEl)
       .setButtonText('Cancel')
       .onClick(() => {
-        this.abortController.abort();
+        abortController.abort();
       });
+  }
+
+  /**
+   * Takes the Cancel button away once the operation has committed: what is left is waiting for other
+   * plugins' queued work, which cancelling could not undo, so the button would only pretend to.
+   */
+  public removeCancelButton(): void {
+    this.cancelButtonContainerEl?.remove();
+    this.cancelButtonContainerEl = null;
   }
 
   /**
@@ -168,6 +191,7 @@ export function showOperationProgressModal(params: ShowOperationProgressModalPar
       isDisposed = true;
 
       modal.setBody('Finishing up...');
+      modal.removeCancelButton();
       invokeAsyncSafely(async () => {
         try {
           await Promise.race([

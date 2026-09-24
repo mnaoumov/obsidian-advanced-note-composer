@@ -16,6 +16,7 @@ import {
 } from 'obsidian-dev-utils/object-utils';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { resolveValue } from 'obsidian-dev-utils/value-provider';
@@ -82,6 +83,7 @@ interface CreateComposerOptions {
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
   readonly templateOverride?: string;
+  readonly vaultTransaction?: VaultTransaction;
 }
 
 interface EditorDoubleOptions {
@@ -100,6 +102,7 @@ interface OptionalComposerParams {
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
   readonly templateOverride?: string;
+  readonly vaultTransaction?: VaultTransaction;
 }
 
 /**
@@ -317,7 +320,8 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
     smartCutAndPasteMoveKind: options?.smartCutAndPasteMoveKind,
     targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset,
-    templateOverride: options?.templateOverride
+    templateOverride: options?.templateOverride,
+    vaultTransaction: options?.vaultTransaction
   });
 }
 
@@ -653,6 +657,24 @@ describe('splitFile', () => {
     const composer = createComposer({ consoleDebugComponent, editor });
 
     await composer.splitFile();
+
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should report nothing when the guard trips inside an injected transaction (issue #289)', async () => {
+    // With an outer transaction injected, the runner leaves commit and rollback to its owner and returns
+    // normally, so the composer's own abort check is what stops it reporting a split that never happened.
+    const sourceFile = getSourceFile();
+    const consoleDebugComponent = strictProxy<ConsoleDebugComponent>({
+      consoleDebug: vi.fn(() => {
+        sourceFile.stat.mtime += 1;
+      })
+    });
+    const editor = createEditorDouble();
+    const composer = createComposer({ consoleDebugComponent, editor, vaultTransaction: new VaultTransaction({ app }) });
+
+    await expect(composer.splitFile()).resolves.toBeUndefined();
 
     expect(await app.vault.adapter.read('target.md')).toBe('target body');
     expect(editor.replaceSelection).not.toHaveBeenCalled();

@@ -34,6 +34,11 @@ interface TestButtonComponent {
 const modals: ModalProbe[] = [];
 const buttons: TestButtonComponent[] = [];
 
+/**
+ * The class Obsidian gives the dialog's X: `modal-header-button` since 1.13.0, `modal-close-button` before.
+ */
+let closeButtonCls = 'modal-header-button';
+
 vi.mock('obsidian', async (importOriginal) => {
   const original = await importOriginal<typeof import('obsidian')>();
 
@@ -43,6 +48,11 @@ vi.mock('obsidian', async (importOriginal) => {
     public isOpen = false;
     public modalEl = createDiv();
     public titleEl = createDiv();
+
+    public constructor() {
+      // Where Obsidian's own constructor puts the X: a direct child of the dialog.
+      this.modalEl.createDiv({ cls: closeButtonCls });
+    }
 
     public close(): void {
       this.closeCallCount++;
@@ -94,6 +104,7 @@ describe('showOperationProgressModal', () => {
   beforeEach(() => {
     modals.length = 0;
     buttons.length = 0;
+    closeButtonCls = 'modal-header-button';
     vi.mocked(flushQueue).mockClear().mockResolvedValue(undefined);
   });
 
@@ -113,12 +124,38 @@ describe('showOperationProgressModal', () => {
     expect(getModal().contentEl.textContent).toContain('Merging folders');
   });
 
-  it('should remove the close button, since it would refuse to work anyway', () => {
-    const modal = createDiv();
-    modal.createDiv({ cls: 'modal-close-button' });
+  it('should remove the close button, since it would refuse to work anyway (issue #289)', () => {
+    show();
+
+    expect(getModal().modalEl.querySelector('.modal-header-button')).toBeNull();
+  });
+
+  it('should remove the close button under its pre-1.13 class too', () => {
+    closeButtonCls = 'modal-close-button';
     show();
 
     expect(getModal().modalEl.querySelector('.modal-close-button')).toBeNull();
+  });
+
+  it('should offer no Cancel button when the operation cannot be cancelled whole (issue #289)', () => {
+    showOperationProgressModal({
+      abortController: null,
+      app: APP,
+      content: () => Promise.resolve('Splitting note')
+    });
+
+    expect(buttons.find((button) => button.buttonEl.textContent === 'Cancel')).toBeUndefined();
+  });
+
+  it('should take the Cancel button away once the operation has committed (issue #289)', async () => {
+    const handle = show();
+    await waitForAllAsyncOperations();
+    expect(getModal().contentEl.textContent).toContain('Cancel');
+
+    handle[Symbol.dispose]();
+
+    // What is left is waiting for other plugins' queued work, which cancelling could not undo.
+    expect(getModal().contentEl.textContent).not.toContain('Cancel');
   });
 
   it('should refuse to close while the operation is running', () => {
