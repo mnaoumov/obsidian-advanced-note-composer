@@ -21,10 +21,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
-import {
-  App,
-  Vault
-} from 'obsidian-test-mocks/obsidian';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   describe,
@@ -420,13 +417,9 @@ describe('MergeFolderCommandHandler', () => {
       'src/gamma.md': 'gamma body',
       'src/sub/note.md': 'sub body'
     });
-    // Real Obsidian yields the folder it was given before its descendants; the mock does not. With the
-    // folder yielded, the pre-fix mapping sent `src` to `dst/src` and every note landed one level too deep.
-    const originalRecurseChildren = Vault.recurseChildren.bind(Vault);
-    vi.spyOn(Vault, 'recurseChildren').mockImplementation((folder, callback) => {
-      callback(folder);
-      originalRecurseChildren(folder, callback);
-    });
+    // `recurseChildren` yields the folder it was given before its descendants, in Obsidian and in the mocks
+    // alike. With the folder yielded, the pre-fix mapping sent `src` to `dst/src` and every note landed one
+    // level too deep.
     const { handler } = createHandler();
     mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 

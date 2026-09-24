@@ -4,11 +4,13 @@ import type {
   EditorPosition,
   EditorSelection,
   MarkdownView,
-  TFile
+  TFile,
+  WorkspaceLeaf
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { Mock } from 'vitest';
 
 import {
   castTo,
@@ -199,6 +201,7 @@ vi.mock('../reveal-inserted-content.ts', async (importOriginal) => ({
 }));
 
 let app: AppOriginal;
+let openFileMock: Mock;
 let resourceLockComponent: ResourceLockComponent;
 
 beforeEach(() => {
@@ -211,6 +214,13 @@ beforeEach(() => {
   // Test-mocks' MetadataCache is a strict proxy with no indexer; the frontmatter merge's
   // processFrontMatter triggers a recompute, so stub it to a no-op.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
+  // Since obsidian-test-mocks 6 a leaf that opens a note holds a real MarkdownView, as in Obsidian, so re-opening
+  // the source would rebind the composer onto that view's editor and away from the double each test hands it. The
+  // re-open and the post-split open are `v8 ignore`d and pinned by the desktop integration suite; this one asserts
+  // what the composer does with the editor it is given, so the leaf opens nothing and only records what it was
+  // asked to open.
+  openFileMock = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(app.workspace, 'getLeaf').mockReturnValue(strictProxy<WorkspaceLeaf>({ openFile: openFileMock }));
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
 });
@@ -310,6 +320,11 @@ function createPluginSettingsComponentStub(
 function getLastNoticeText(pluginNoticeComponent: PluginNoticeComponent): string {
   const [content] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
   return castTo<DocumentFragment>(content).textContent;
+}
+
+// Paths rather than the files: pretty-format probes `TFile` members the mocks do not model.
+function getOpenedPaths(): string[] {
+  return openFileMock.mock.calls.map(([file]) => castTo<TFile>(file).path);
 }
 
 function getSourceFile(): TFile {
@@ -787,7 +802,7 @@ describe('splitFile', () => {
 
     await composer.splitFile();
 
-    expect(app.workspace.getActiveFile()?.path).toBe('target.md');
+    expect(getOpenedPaths()).toContain('target.md');
   });
 
   it('should not open the target note when the split is a multiple split', async () => {
@@ -799,7 +814,7 @@ describe('splitFile', () => {
     await composer.splitFile();
 
     // No leaf was ever activated, so there is no active file.
-    expect(app.workspace.getActiveFile()).toBeNull();
+    expect(getOpenedPaths()).not.toContain('target.md');
   });
 });
 
@@ -828,7 +843,7 @@ describe('splitFile move mode', () => {
     expect(targetContent).not.toContain('TK');
     expect(targetContent.indexOf('MOVED')).toBe(7);
     expect(editor.replaceSelection).toHaveBeenCalledWith('');
-    expect(app.workspace.getActiveFile()?.path).toBe('target.md');
+    expect(getOpenedPaths()).toContain('target.md');
   });
 
   it('should replace the target selection range with the moved content (paste-over-selection)', async () => {
@@ -2067,7 +2082,8 @@ describe('splitFile frontmatter-only extract', () => {
     await createFrontmatterSourceComposer({ editor }).splitFile();
 
     // The whole YAML region is replaced, so the key line survives with only the value that stayed.
-    expect(editor.replaceSelection).toHaveBeenCalledWith('aliases:\n  - bravo');
+    // Obsidian's `getFrontMatterInfo` keeps the newline before the closing fence in the region.
+    expect(editor.replaceSelection).toHaveBeenCalledWith('aliases:\n  - bravo\n');
   });
 
   it('should extract the raw text when the setting is off', async () => {

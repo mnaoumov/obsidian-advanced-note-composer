@@ -25,6 +25,7 @@ import { castTo } from 'obsidian-dev-utils/object-utils';
 import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
   afterEach,
   beforeEach,
@@ -736,7 +737,9 @@ describe('PluginSettingsTab', () => {
     // The default is real text rather than a placeholder, so an empty box cannot be mistaken for it.
     expect(codeHighlighter.getValue()).toBe(defaultValue);
 
-    codeHighlighter.setValue('');
+    // `setValue` does not fire `onChange`, as in Obsidian; the textarea's `input` event does.
+    codeHighlighter.inputEl.value = '';
+    codeHighlighter.inputEl.dispatchEvent(new Event('input'));
 
     await vi.waitFor(() => {
       expect(pluginSettingsComponent.settings[propertyName]).toBe('');
@@ -805,7 +808,8 @@ describe('debug controller toggle', () => {
     vi.mocked(getDebugController).mockReturnValue(castTo<DebugController>({
       disable: disableMock,
       enable: enableMock,
-      get: vi.fn().mockReturnValue([])
+      // A toggle fires `onChange` only on a real change, so it has to start on to be switched off.
+      get: vi.fn().mockReturnValue([PLUGIN_ID])
     }));
 
     const tab = await createSettingsTab();
@@ -874,7 +878,10 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     const refreshDomStateSpy = vi.fn();
     tab.refreshDomState = refreshDomStateSpy;
     const location = dropdowns.find((dropdown) => dropdown.name === 'Folder note location');
-    location?.component.setValue(FolderNoteLocation.InsideFolder);
+    // `setValue` does not fire `onChange`, as in Obsidian; the select's `change` event does.
+    const selectEl = ensureNonNullable(location).component.selectEl;
+    selectEl.value = FolderNoteLocation.InsideFolder;
+    selectEl.dispatchEvent(new Event('change'));
 
     await vi.waitFor(() => {
       expect(refreshDomStateSpy).toHaveBeenCalled();
