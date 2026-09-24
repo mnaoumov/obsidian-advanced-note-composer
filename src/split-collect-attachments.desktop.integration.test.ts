@@ -14,9 +14,10 @@ import {
  * note to the Custom Attachment Location plugin so that plugin collects the note's attachments.
  *
  * That plugin is not installed in this vault, and installing it to test this would be testing IT rather
- * than the hand-off. So a stand-in is registered under its id and the test asserts what this plugin is
- * responsible for: that it looks the plugin up, calls the documented entry point, passes the note the
- * extract actually created, and does none of it when the setting is off.
+ * than the hand-off. So a stand-in API is published under its id in the `obsidian-dev-utils` plugin registry
+ * - the wire-level path that library's Plugin API protocol guide freezes - and the test asserts what this
+ * plugin is responsible for: that it finds the API the way a consumer does, calls `collectAttachments`, passes
+ * the note the extract actually created, and does none of it when the setting is off.
  *
  * Desktop-only, matching the sibling attachment suites.
  * Isolation: `npx vitest run --project integration-tests:desktop src/split-collect-attachments.desktop.integration.test.ts`.
@@ -24,6 +25,10 @@ import {
 
 const PLUGIN_ID = 'advanced-note-composer';
 const CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID = 'obsidian-custom-attachment-location';
+
+interface CollectAttachmentsParamsLike {
+  readonly pathsOrFiles: readonly (CollectedAbstractFile | string)[];
+}
 
 interface CollectAttachmentsSettings {
   shouldAskBeforeSplitting: boolean;
@@ -44,11 +49,39 @@ interface LeafWithEditor {
   editor: Editor;
 }
 
+interface ObsidianDevUtilsStateLike {
+  pluginApiRegistry?: PluginApiRegistryWrapperLike;
+}
+
+/**
+ * The slice of the `obsidian-dev-utils` cross-plugin registry the stand-in is published into.
+ */
+interface PluginApiRegistryHostLike {
+  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+}
+
+interface PluginApiRegistryLike {
+  records?: Record<string, PublishedPluginApiRecordLike[]>;
+  subscribers?: (() => void)[];
+}
+
+interface PluginApiRegistryWrapperLike {
+  value?: PluginApiRegistryLike;
+}
+
 interface ProbeResult {
   readonly collectedPathsWhenOff: readonly string[];
   readonly collectedPathsWhenOn: readonly string[];
   readonly createdNoteExists: boolean;
   readonly settingsFound: boolean;
+}
+
+interface PublishedPluginApiRecordLike {
+  api: object;
+  apiVersion: string;
+  contract: Record<string, object>;
+  isRevoked: boolean;
+  pluginId: string;
 }
 
 interface SettingsCarrier {
@@ -125,17 +158,47 @@ describe('an extract hands its destination note to Custom Attachment Location (i
         const settingsComponent = foundSettingsComponent;
 
         const original = { ...settingsComponent.settings };
-        const pluginRegistry = app.plugins.plugins as Record<string, unknown>;
-        const priorStandIn = pluginRegistry[customAttachmentLocationPluginId];
+        const host = window as PluginApiRegistryHostLike;
+        host.__obsidianDevUtils ??= {};
+        host.__obsidianDevUtils.pluginApiRegistry ??= {};
+        const registryWrapper = host.__obsidianDevUtils.pluginApiRegistry;
+        registryWrapper.value ??= {};
+        const registry = registryWrapper.value;
+        registry.records ??= {};
+        const records = registry.records;
 
         const collectedPaths: string[] = [];
-        // The stand-in exposes exactly the documented entry point and nothing else, so a call proves this
-        // plugin found it the documented way rather than by reaching into internals.
-        pluginRegistry[customAttachmentLocationPluginId] = {
-          collectAttachmentsInAbstractFiles(abstractFiles: CollectedAbstractFile[]): void {
-            collectedPaths.push(...abstractFiles.map((abstractFile) => abstractFile.path));
-          }
+        // The stand-in publishes exactly the documented member under the contract version that introduced it,
+        // so a call proves this plugin found it through the registry rather than by reaching into internals.
+        const standInRecord: PublishedPluginApiRecordLike = {
+          api: {
+            // Synchronous on purpose: the closure cannot import `noopAsync`, and `await` on a plain value is what
+            // the real promise would amount to here, since the stand-in has nothing to wait for.
+            collectAttachments(params: CollectAttachmentsParamsLike): void {
+              collectedPaths.push(...params.pathsOrFiles.map((pathOrFile) => typeof pathOrFile === 'string' ? pathOrFile : pathOrFile.path));
+            }
+          },
+          apiVersion: '1.2.0',
+          contract: { collectAttachments: {} },
+          isRevoked: false,
+          pluginId: customAttachmentLocationPluginId
         };
+        records[customAttachmentLocationPluginId] = [...(records[customAttachmentLocationPluginId] ?? []), standInRecord];
+
+        function notifyRegistrySubscribers(): void {
+          for (const subscriber of registry.subscribers ?? []) {
+            subscriber();
+          }
+        }
+        notifyRegistrySubscribers();
+
+        // A function rather than inline in the `finally`, whose earlier `await`s would otherwise make the
+        // revocation look like a stale write.
+        function revokeStandIn(): void {
+          standInRecord.isRevoked = true;
+          records[customAttachmentLocationPluginId] = (records[customAttachmentLocationPluginId] ?? []).filter((record) => record !== standInRecord);
+          notifyRegistrySubscribers();
+        }
 
         async function runPhase(shouldCollect: boolean): Promise<string[]> {
           collectedPaths.length = 0;
@@ -192,12 +255,8 @@ describe('an extract hands its destination note to Custom Attachment Location (i
             settingsFound: true
           };
         } finally {
-          if (priorStandIn === undefined) {
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Restoring the registry to exactly what it was.
-            delete pluginRegistry[customAttachmentLocationPluginId];
-          } else {
-            pluginRegistry[customAttachmentLocationPluginId] = priorStandIn;
-          }
+          // Revoked and dropped, as `publishPluginApi` does when its provider unloads.
+          revokeStandIn();
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
             settings.shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit = original.shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit;
@@ -216,7 +275,7 @@ describe('an extract hands its destination note to Custom Attachment Location (i
     expect(result.settingsFound).toBe(true);
     expect(result.createdNoteExists).toBe(true);
 
-    // On: the entry point was called with the note the extract created, not the source.
+    // On: `collectAttachments` was called with the note the extract created, not the source.
     expect(result.collectedPathsWhenOn).toStrictEqual(['SplitCollectA/SplitCollectA.md']);
 
     // Off: nothing was handed over at all.

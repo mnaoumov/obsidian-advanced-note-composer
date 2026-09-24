@@ -102,7 +102,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldMoveAttachmentsWhenSplitting`
   - carry the attachments the extracted text references into the new note's attachment folder. One the text left behind still references stays put.
 - `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit`
-  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that note's attachments. Covers the shared ones the setting above deliberately leaves behind.
+  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that note's attachments (Custom Attachment Location 13.0.0 or later). Covers the shared ones the setting above deliberately leaves behind.
 - `shouldOpenTargetNoteAfterSplit`
   - open the note a split produced.
 

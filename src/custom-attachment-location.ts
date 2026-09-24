@@ -10,19 +10,42 @@
  * grow a second, worse copy of that logic here, the destination note is handed over and the other
  * plugin decides (issue #246).
  *
- * Everything here is defensive. The other plugin is optional: the user may not have it installed, may
- * have disabled it, or may be running a version from before it exposed this.
+ * The other plugin is reached through the API it publishes in the `obsidian-dev-utils` plugin registry,
+ * not through its plugin instance. That plugin is an Obsidian plugin repo rather than an npm package, so
+ * there is nothing to depend on: the shape below is this plugin's compiled-against copy of the one member
+ * it calls, taken from that repo's own copyable `api.d.ts`, and `watchPluginApi` negotiates the version at
+ * runtime. The other plugin is optional — not installed, disabled, or older than contract `1.2.0` all read
+ * as "not available".
  */
 
 import type {
   App,
   TAbstractFile
 } from 'obsidian';
+import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
+
+import { Component } from 'obsidian';
+import { noopAsync } from 'obsidian-dev-utils/function';
+import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
 /**
- * The Custom Attachment Location plugin's id, as it appears in `app.plugins`.
+ * The Custom Attachment Location plugin's id, under which it publishes its API.
  */
 export const CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID = 'obsidian-custom-attachment-location';
+
+/**
+ * The contract version range this plugin compiled against. `collectAttachments` was added in contract
+ * `1.2.0`, first released in Custom Attachment Location `13.0.0`.
+ */
+export const CUSTOM_ATTACHMENT_LOCATION_API_VERSION_RANGE = '^1.2.0';
+
+/**
+ * What this plugin calls, supplied to `watchPluginApi` as the consumer's own contract. Without it the shape
+ * check would use the provider's contract, which a future provider could satisfy while dropping this member.
+ */
+export const CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT: PluginApiContract = {
+  collectAttachments: {}
+};
 
 /**
  * Parameters for {@link collectAttachmentsWithCustomAttachmentLocation}.
@@ -40,53 +63,69 @@ export interface CollectAttachmentsWithCustomAttachmentLocationParams {
 }
 
 /**
- * The slice of the Custom Attachment Location plugin this plugin uses.
+ * Custom Attachment Location's public API, as far as this plugin uses it.
  */
-interface CustomAttachmentLocationPluginLike {
-  collectAttachmentsInAbstractFiles: (abstractFiles: TAbstractFile[]) => void;
+export interface CustomAttachmentLocationApi {
+  /**
+   * Collects the attachments of the given notes, or of every note under the given folders, into the folders
+   * the settings say they belong in — exactly as the `Collect attachments` commands do, dialogs included.
+   *
+   * @param params - What to collect.
+   * @returns A promise that settles once the collect has finished.
+   */
+  collectAttachments: (params: CollectAttachmentsParams) => Promise<void>;
 }
 
 /**
- * Whether the Custom Attachment Location plugin is installed, enabled, and new enough to expose the
- * entry point {@link collectAttachmentsWithCustomAttachmentLocation} uses.
- *
- * @param app - The Obsidian application instance.
- * @returns `true` when it can be asked, `false` otherwise.
+ * Parameters for {@link CustomAttachmentLocationApi.collectAttachments}.
  */
-export function checkIsCustomAttachmentLocationAvailable(app: App): boolean {
-  return findCustomAttachmentLocationPlugin(app) !== null;
+interface CollectAttachmentsParams {
+  /**
+   * The notes to collect for, and folders whose notes are all collected for.
+   */
+  readonly pathsOrFiles: readonly (string | TAbstractFile)[];
 }
 
 /**
  * Asks the Custom Attachment Location plugin to collect the given notes' attachments.
  *
- * Does nothing when that plugin is absent, disabled, or too old to expose the entry point, so a user
- * without it sees no change and no error. Use {@link checkIsCustomAttachmentLocationAvailable} to tell
- * the two apart.
+ * The API is watched through a component that lives exactly as long as the call. `watchPluginApi` resolves
+ * the published record synchronously, so the handle is current the moment it is returned, and the component
+ * is unloaded once the collect settles — nothing is held between splits.
  *
  * @param params - The parameters.
+ * @returns A promise that settles once the collect has finished, or `null` when the other plugin is not
+ *   installed, not enabled, or too old to publish `collectAttachments`. The collect may ask the user things (a
+ *   shared attachment, a `${prompt}` token), so a caller that has nothing to do after it need not await it.
  */
-export function collectAttachmentsWithCustomAttachmentLocation(params: CollectAttachmentsWithCustomAttachmentLocationParams): void {
+export function collectAttachmentsWithCustomAttachmentLocation(params: CollectAttachmentsWithCustomAttachmentLocationParams): null | Promise<void> {
   if (params.abstractFiles.length === 0) {
-    return;
+    return noopAsync();
   }
 
-  const plugin = findCustomAttachmentLocationPlugin(params.app);
-  plugin?.collectAttachmentsInAbstractFiles([...params.abstractFiles]);
-}
+  const component = new Component();
+  component.load();
 
-function findCustomAttachmentLocationPlugin(app: App): CustomAttachmentLocationPluginLike | null {
-  const plugin: unknown = app.plugins.getPlugin(CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID);
-  if (plugin === null || typeof plugin !== 'object') {
+  const api = watchPluginApi<CustomAttachmentLocationApi>({
+    apiVersionRange: CUSTOM_ATTACHMENT_LOCATION_API_VERSION_RANGE,
+    app: params.app,
+    component,
+    contract: CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT,
+    pluginId: CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID
+  }).value;
+
+  if (api === null) {
+    component.unload();
     return null;
   }
 
-  // Checked rather than assumed: the entry point was added in a later version than the plugin itself,
-  // so a user can perfectly well have the plugin without having the method.
-  const candidate = plugin as Partial<CustomAttachmentLocationPluginLike>;
-  if (typeof candidate.collectAttachmentsInAbstractFiles !== 'function') {
-    return null;
-  }
-
-  return candidate as CustomAttachmentLocationPluginLike;
+  // A copy, so the other plugin cannot mutate an array this plugin still holds.
+  const pathsOrFiles = [...params.abstractFiles];
+  return (async (): Promise<void> => {
+    try {
+      await api.collectAttachments({ pathsOrFiles });
+    } finally {
+      component.unload();
+    }
+  })();
 }

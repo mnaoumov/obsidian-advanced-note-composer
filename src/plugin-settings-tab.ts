@@ -1088,7 +1088,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 'Useful because the setting above stops short: it moves an attachment only when the extracted text is the only thing referencing it. Where a SHARED attachment belongs is a question this plugin cannot answer, and that one can.'
               );
               f.createEl('br');
-              f.appendText('Does nothing when that plugin is not installed or is disabled.');
+              f.appendText('Does nothing when that plugin is not installed, is disabled, or is older than version 13.0.0.');
             }),
             name: 'Should collect attachments with Custom Attachment Location after splitting',
             render: (setting) => {

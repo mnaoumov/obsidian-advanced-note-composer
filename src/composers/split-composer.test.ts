@@ -40,10 +40,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import type { Selection } from './composer-base.ts';
 
 import { relocateAttachments } from '../attachments.ts';
-import {
-  checkIsCustomAttachmentLocationAvailable,
-  collectAttachmentsWithCustomAttachmentLocation
-} from '../custom-attachment-location.ts';
+import { collectAttachmentsWithCustomAttachmentLocation } from '../custom-attachment-location.ts';
 import { buildExtractedSubpathPredicate } from '../extracted-link-targets.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { buildOperationNoticeContent } from '../operation-notices.ts';
@@ -188,8 +185,7 @@ vi.mock('../attachments.ts', async (importOriginal) => ({
 // right moment (issue #246).
 vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../custom-attachment-location.ts')>()),
-  checkIsCustomAttachmentLocationAvailable: vi.fn().mockReturnValue(true),
-  collectAttachmentsWithCustomAttachmentLocation: vi.fn()
+  collectAttachmentsWithCustomAttachmentLocation: vi.fn().mockResolvedValue(undefined)
 }));
 
 // `revealInsertedContent` polls a live workspace for a MarkdownView; what this suite asserts is that the
@@ -1437,8 +1433,7 @@ describe('splitFile attachments (issue #239)', () => {
     beforeEach(() => {
       // Calls and the stubbed availability both leak between tests otherwise, so
       // `not.toHaveBeenCalled()` would see the previous test's call.
-      vi.mocked(collectAttachmentsWithCustomAttachmentLocation).mockClear();
-      vi.mocked(checkIsCustomAttachmentLocationAvailable).mockClear().mockReturnValue(true);
+      vi.mocked(collectAttachmentsWithCustomAttachmentLocation).mockClear().mockResolvedValue(undefined);
     });
 
     it('should hand the target note over once the extract lands', async () => {
@@ -1464,7 +1459,7 @@ describe('splitFile attachments (issue #239)', () => {
     });
 
     it('should note in the debug log when the other plugin is unavailable', async () => {
-      vi.mocked(checkIsCustomAttachmentLocationAvailable).mockReturnValue(false);
+      vi.mocked(collectAttachmentsWithCustomAttachmentLocation).mockReturnValue(null);
       const consoleDebug = vi.fn();
 
       await createComposer({
