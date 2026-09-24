@@ -53,7 +53,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 ### Read by merging, but living on another page
 
 - `shouldMergeHeadingsByDefault`
-  - merge under a matching heading in the target instead of appending, by default. On `Merge/split/extract strategies`, because splitting reads it too.
+  - merge under a matching heading in the target instead of appending, by default. In the `Common` group at the top of the settings, because splitting reads it too.
 - `shouldUseSourceTitleWhenTargetHasNoTitle`
   - give the merged note the source's title when the target has none of its own. On the `Frontmatter` page, in its `Title` section with the rest of the title handling.
 
@@ -76,11 +76,11 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldAllowSplitIntoUnresolvedPathByDefault`
   - offer unresolved links as split targets.
 - `shouldAllowOnlyCurrentFolderByDefault`
-  - restrict the target picker to the current folder.
+  - restrict the target picker to the current folder. In the `Common` group at the top of the settings, because every picker reads it.
 - `shouldIncludeFrontmatterWhenSplittingByDefault`
   - carry the source's properties into the new note.
 - `shouldFixFootnotesByDefault`
-  - renumber and move footnotes that travel with the extracted text. On `Merge/split/extract strategies`, because merging and every smart cut & paste move read it too.
+  - renumber and move footnotes that travel with the extracted text. In the `Common` group at the top of the settings, because merging and every smart cut & paste move read it too.
 - `shouldKeepHeadingsWhenSplittingContent`
   - keep each heading line in the note it produced, rather than dropping it.
 - `textAfterExtractionMode`
@@ -235,7 +235,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `shouldOpenNoteAfterCreatingFolder`
   - open the first declared note once the folder is created.
 - `shouldRunTemplaterOnDestinationFile`
-  - hand each created note to Templater, with the plugin's own tokens already substituted. On `Merge/split/extract strategies`, because merges, splits and `Create empty note in folder...` read it too.
+  - hand each created note to Templater, with the plugin's own tokens already substituted. In the `Common` group at the top of the settings, because merges, splits and `Create empty note in folder...` read it too.
 
 ## Reorder
 
@@ -267,6 +267,8 @@ Obsidian has two context menus over an open note, and they never both answer one
   - which recency a picker offers first when you have typed nothing: your recent activity — the destinations of completed operations and the notes you have opened, whichever happened last — or the folder you are currently in.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
+
+`Should show console debug messages` lives on this page too. It has no `data.json` key: the choice is stored by the debug controller the plugin shares with its library, which is why it is not in this list.
 
 ## Internal
 

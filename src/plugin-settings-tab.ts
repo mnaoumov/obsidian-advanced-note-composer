@@ -116,6 +116,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
 
   protected override getSettingDefinitionItems(): SettingDefinitionItem[] {
     return [
+      // Issue #275: the ONE root group, holding exactly the rows read by more than one command family. A row
+      // read by one family belongs on that family's page, and one read by several belongs on none of them.
       this.settingGroupEx({
         heading: 'Common',
         items: [
@@ -128,29 +130,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.settingEx({
-            desc: 'Whether to show console debug messages.',
-            name: 'Should show console debug messages',
-            render: (setting) => {
-              setting.addToggle((toggle) => {
-                const debugController = getDebugController();
-                const isEnabled = debugController.get().includes(this.pluginId);
-                toggle.setValue(isEnabled);
-                toggle.onChange((value) => {
-                  if (value) {
-                    debugController.enable(this.pluginId);
-                  } else {
-                    debugController.disable(this.pluginId);
-                  }
-                });
-              });
-            }
-          })
-        ]
-      }),
-      this.settingGroupEx({
-        heading: 'Merge/split/extract strategies',
-        items: [
           this.settingEx({
             desc: createFragment((f) => {
               f.appendText('Default setting for whether to fix footnotes. Can be changed in the merge/split modal dialog.');
@@ -2358,6 +2337,25 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   /* eslint-enable perfectionist/sort-objects -- Need to keep enum order. */
                 });
                 this.bind({ propertyName: 'pickerRecencyOrder', valueComponent: dropdown });
+              });
+            }
+          }),
+          // Issue #275: read by no command family, so it has no place among the cross-cutting `Common` rows.
+          this.settingEx({
+            desc: 'Whether to show console debug messages.',
+            name: 'Should show console debug messages',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                const debugController = getDebugController();
+                const isEnabled = debugController.get().includes(this.pluginId);
+                toggle.setValue(isEnabled);
+                toggle.onChange((value) => {
+                  if (value) {
+                    debugController.enable(this.pluginId);
+                  } else {
+                    debugController.disable(this.pluginId);
+                  }
+                });
               });
             }
           })

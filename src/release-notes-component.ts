@@ -84,6 +84,17 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText(' boxes of that kind did nothing but refuse, so they are gone. What you had listed in them was moved into the ');
         appendCodeBlock(f, 'Rename command');
         f.appendText(' boxes, so renaming stays blocked where it was.');
+        f.createEl('br');
+        // Issue #275: a heading the user navigates by disappeared, and a row moved to another page.
+        f.appendText('The ');
+        appendCodeBlock(f, 'Merge/split/extract strategies');
+        f.appendText(' settings heading is gone: its rows are now in ');
+        appendCodeBlock(f, 'Common');
+        f.appendText(', with every other setting several commands read. ');
+        appendCodeBlock(f, 'Should show console debug messages');
+        f.appendText(' moved to the ');
+        appendCodeBlock(f, 'UI');
+        f.appendText(' page. Every setting keeps its value.');
       })
     };
 

@@ -138,7 +138,7 @@ describe('settings page navigation', () => {
         // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
         // (verified against the rendered `Swap` page), so counting groups reports a heading a flat page
         // does not have — it returned the first ROW's name. The positive half of this selector is the unit
-        // test's `should render only the two root headings`.
+        // test's `should render only the root heading`.
         function collectSubheadings(): string[] {
           return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-heading .setting-item-name') ?? [])]
             .map((el) => el.textContent)
