@@ -229,13 +229,15 @@ describe('settings page navigation', () => {
     // Issue #220: the template leads its section.
     expect(result.allMergesRows[0]).toBe('Merge template');
 
-    // Issue #241: `Swap` renders its own four rows flat; issue #271's path rows are its one section.
+    // Issue #241: `Swap` renders its own four rows flat; issue #278's command menus and issue #271's path rows
+    // are its two sections, in that order.
     expect(result.swapSubheadings).toEqual([]);
     expect(result.swapRows).toEqual([
       'Should ask before swapping',
       'Should include child folders when swapping folders',
       'Should include parent folders when swapping folders',
       'Should swap entire folder structure',
+      'Swap command menus',
       'Swap include/exclude paths'
     ]);
 
@@ -269,6 +271,7 @@ describe('settings page navigation', () => {
       'At cursor',
       'To top of file',
       'To bottom of file',
+      'Smart cut & paste command menus',
       'Smart cut & paste include/exclude paths'
     ]);
   });
