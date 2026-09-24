@@ -2,14 +2,11 @@ import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
 import {
   App,
+  ButtonComponent,
   Modal
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import {
-  ModalCommandBuilder,
-  ModalCommandsRenderMode
-} from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';
@@ -62,6 +59,7 @@ interface SwitchToSmartCutOptions {
 
 /* v8 ignore start -- ConfirmDialogModal is an internal UI class tested through exported functions and desktop integration tests. */
 export class ConfirmDialogModal extends Modal {
+  private askAgainCheckboxEl: HTMLInputElement | null = null;
   private readonly buildContent: (this: void, fragment: DocumentFragment) => Promise<void>;
   private readonly canReselectTarget: boolean;
   private readonly confirmButtonText: string;
@@ -91,7 +89,7 @@ export class ConfirmDialogModal extends Modal {
       return false;
     });
 
-    this.buildCommands();
+    this.registerAltShortcuts();
   }
 
   public override onClose(): void {
@@ -112,84 +110,6 @@ export class ConfirmDialogModal extends Modal {
     invokeAsyncSafely(this.onOpenAsync.bind(this));
   }
 
-  /**
-   * Builds the dialog's control strip — the OPTIONS, as opposed to the confirm/cancel action row
-   * `onOpenAsync` builds.
-   *
-   * Built here rather than in `onOpenAsync` on purpose. `Modal`'s constructor has already created
-   * `modalEl` with its close button, title and content, and `ModalCommandBuilder.build` appends its own
-   * strip to `modalEl` — so building now lands the strip after the content and BEFORE the
-   * `modal-button-container` that `onOpenAsync` creates later. The options belong above the actions, and
-   * this gets that ordering out of the DOM shape rather than out of positioning code. It also keeps the
-   * `Alt` shortcuts registered where the `Enter` / `Escape` ones are.
-   *
-   * `Buttons` render mode rather than the instruction bar because this is a plain `Modal` with no
-   * instruction bar to borrow, and because a phone has no modifier key to press — the button IS the only
-   * way in there. That is what retired the `Platform.isMobile` branch this method replaces, which used to
-   * hand-roll a combined "<confirm> and don't ask again" button for exactly that reason.
-   *
-   * The returned `ModalCommands` handle is deliberately dropped: every `checkIsAvailable` below reads a
-   * field fixed at construction, so the single `refresh()` that `build` performs itself is the only one
-   * that can ever change anything.
-   */
-  private buildCommands(): void {
-    const builder = new ModalCommandBuilder();
-
-    builder.addCheckbox({
-      key: 'd',
-      modifiers: ['Alt'],
-      onChange: (isChecked: boolean) => {
-        this.shouldAskAgain = !isChecked;
-      },
-      onInit: (checkboxEl) => {
-        checkboxEl.checked = !this.shouldAskAgain;
-      },
-      purpose: 'Don\'t ask again'
-    });
-
-    builder.addKeyboardCommand({
-      checkIsAvailable: () => this.canReselectTarget,
-      key: 'c',
-      modifiers: ['Alt'],
-      onActivate: () => {
-        this.reselectTarget();
-      },
-      onKey: () => {
-        if (!this.canReselectTarget) {
-          return true;
-        }
-        this.reselectTarget();
-        return false;
-      },
-      purpose: 'Change target'
-    });
-
-    const switchToSmartCut = this.switchToSmartCut;
-    if (switchToSmartCut) {
-      builder.addKeyboardCommand({
-        checkIsAvailable: () => switchToSmartCut.canSwitch,
-        key: 's',
-        modifiers: ['Alt'],
-        onActivate: () => {
-          this.switchToSmartCutAction();
-        },
-        // `checkIsAvailable` disables the BUTTON and nothing else, so the shortcut needs the same guard
-        // Spelled out — which `Alt+C` always had and `Alt+S` never did, letting the shortcut reach an
-        // Action whose button was visibly disabled.
-        onKey: () => {
-          if (!switchToSmartCut.canSwitch) {
-            return true;
-          }
-          this.switchToSmartCutAction();
-          return false;
-        },
-        purpose: 'Switch to smart cut & paste'
-      });
-    }
-
-    builder.build(this, { renderMode: ModalCommandsRenderMode.Buttons });
-  }
-
   private confirm($event: KeyboardEvent | MouseEvent): void {
     this.isSelected = true;
     this.promiseResolve({
@@ -206,6 +126,12 @@ export class ConfirmDialogModal extends Modal {
     this.setTitle(this.title);
 
     this.containerEl.addClass('mod-confirmation');
+    // ONE action row, the shape Obsidian's own confirmation dialogs have (issue #281). 5.11.0 had moved
+    // `Don't ask again` / `Change target` / `Switch to smart cut & paste` onto a separate bordered strip
+    // Above this row, and two users independently found the dialog harder to read for it — so the row is
+    // Back, and only the `Alt` shortcuts that strip introduced are kept, named in each control's tooltip.
+    // The checkbox is rendered on mobile as well: it works by touch, and it replaces the combined
+    // "<verb> and don't ask again" button the mobile layout used to hand-roll.
     const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
 
     this.setContent(
@@ -213,6 +139,42 @@ export class ConfirmDialogModal extends Modal {
         await this.buildContent(f);
       })
     );
+
+    buttonContainerEl.createEl('label', {
+      attr: { title: 'Don\'t ask again (Alt+D)' },
+      cls: 'mod-checkbox'
+    }, (label) => {
+      label.createEl('input', {
+        attr: { tabindex: -1 },
+        type: 'checkbox'
+      }, (checkboxEl) => {
+        this.askAgainCheckboxEl = checkboxEl;
+        checkboxEl.checked = !this.shouldAskAgain;
+        checkboxEl.addEventListener('change', () => {
+          this.shouldAskAgain = !checkboxEl.checked;
+        });
+      });
+      label.appendText('Don\'t ask again');
+    });
+
+    new ButtonComponent(buttonContainerEl)
+      .setButtonText('Change target')
+      .setTooltip('Go back to the target picker to choose a different target (Alt+C)')
+      .setDisabled(!this.canReselectTarget)
+      .onClick(() => {
+        this.reselectTarget();
+      });
+
+    const switchToSmartCut = this.switchToSmartCut;
+    if (switchToSmartCut) {
+      new ButtonComponent(buttonContainerEl)
+        .setButtonText('Switch to smart cut & paste')
+        .setTooltip('Mark the selection to move and open the target note instead of splitting (Alt+S)')
+        .setDisabled(!switchToSmartCut.canSwitch)
+        .onClick(() => {
+          this.switchToSmartCutAction();
+        });
+    }
 
     buttonContainerEl.createEl('button', {
       cls: 'mod-warning',
@@ -231,6 +193,39 @@ export class ConfirmDialogModal extends Modal {
         this.close();
       });
     });
+  }
+
+  /**
+   * The `Alt` shortcuts for the options in the action row. Each one repeats its control's own disabled
+   * guard, because a disabled button does nothing to stop the key reaching the same action.
+   */
+  private registerAltShortcuts(): void {
+    this.scope.register(['Alt'], 'd', () => {
+      this.shouldAskAgain = !this.shouldAskAgain;
+      if (this.askAgainCheckboxEl) {
+        this.askAgainCheckboxEl.checked = !this.shouldAskAgain;
+      }
+      return false;
+    });
+
+    this.scope.register(['Alt'], 'c', () => {
+      if (!this.canReselectTarget) {
+        return true;
+      }
+      this.reselectTarget();
+      return false;
+    });
+
+    const switchToSmartCut = this.switchToSmartCut;
+    if (switchToSmartCut) {
+      this.scope.register(['Alt'], 's', () => {
+        if (!switchToSmartCut.canSwitch) {
+          return true;
+        }
+        this.switchToSmartCutAction();
+        return false;
+      });
+    }
   }
 
   private reselectTarget(): void {
