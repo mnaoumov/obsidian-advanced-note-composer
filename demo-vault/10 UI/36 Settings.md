@@ -17,7 +17,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldOfferExcludedPathsAsMergeDestinations`
   - offer a note or folder on an ignored path as a merge destination, and let the merge land there. Off by default; the two exclusion settings are set independently.
 - `attachmentExtensions`
-  - markdown files that are really attachments (default `.excalidraw.md`), never merged as text. Splitting and flattening classify them the same way.
+  - markdown files that are really attachments (default `.excalidraw.md`), never merged as text. Splitting and flattening classify them the same way. It blocks nothing: to keep a path out of merges, use `Merge exclude paths`, which takes a path or a `/regular expression/`.
 
 ### Merge file
 

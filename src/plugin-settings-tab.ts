@@ -271,6 +271,14 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.appendText('.');
                   f.createEl('br');
                   f.appendText('Leave empty to treat every markdown file as a note.');
+                  f.createEl('br');
+                  f.appendText('This does not keep a file out of a merge: a file listed here is still moved, just never inlined as text. To keep notes and folders out of merges by path or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.appendText(', use ');
+                  appendCodeBlock(f, 'Merge exclude paths');
+                  f.appendText('; to stop the merge commands running on a path, use ');
+                  appendCodeBlock(f, 'Merge command exclude paths');
+                  f.appendText('.');
                 }),
                 name: 'Attachment extensions',
                 render: (setting) => {
