@@ -1,5 +1,4 @@
 import type {
-  SettingDefinitionGroup,
   SettingDefinitionItem,
   SettingDefinitionPage,
   SettingGroupItem
@@ -187,8 +186,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       this.settingPage({
         desc: 'Merging pours content into a destination and removes what it came from. Merging a file pours the note you started from into the note you pick, then deletes it; merging a folder pours the folder\'s notes into a single new note. The destination is always the one that survives.',
         items: [
-          this.settingGroupEx({
-            heading: 'All merges',
+          this.settingPage({
+            desc: 'What every merge command reads: the merge template, the confirmation, and how excluded paths take part.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -277,10 +276,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'All merges'
           }),
-          this.settingGroupEx({
-            heading: 'Merge file',
+          this.settingPage({
+            desc: 'What a file merge does with the note it merged into, and with the attachments of the note it merged away.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -327,10 +327,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Merge file'
           }),
-          this.settingGroupEx({
-            heading: 'Merge folder contents into a single file',
+          this.settingPage({
+            desc: 'Where the merged note goes, what it is called, and what happens to the folder it came from.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -520,10 +521,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Merge folder contents into a single file'
           }),
-          this.settingGroupEx({
-            heading: 'Merge current folder with another folder',
+          this.settingPage({
+            desc: 'Which folders take part, which of them stay separate, and what opens afterwards.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -613,9 +615,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Merge current folder with another folder'
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.Merge)
+          this.commandCategoryPathSettingPage(CommandCategory.Merge)
         ],
         name: 'Merge'
       }),
@@ -1082,7 +1085,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.SplitAndExtract)
+          this.commandCategoryPathSettingPage(CommandCategory.SplitAndExtract)
         ],
         name: 'Split/extract'
       }),
@@ -1102,8 +1105,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         // Issue #241 removed the `Swap file` / `Swap folders` subheadings issue #226 had given this page.
         // `Should ask before swapping` applies to both kinds of swap, so it belonged to neither, and
         // `Swap file` held nothing else; the three folder rows name their own target type, so the headings
-        // Carried nothing their names lack. The `Merge` page keeps its subheadings (issue #240) — there
-        // Each row genuinely belongs to exactly one command.
+        // Carried nothing their names lack. The `Merge` page keeps its sections (issue #240, sub-pages since
+        // Issue #282) — there each row genuinely belongs to exactly one command.
         items: [
           this.settingEx({
             desc: 'Whether to show a confirmation dialog before swapping files or folders.',
@@ -1147,7 +1150,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.Swap)
+          this.commandCategoryPathSettingPage(CommandCategory.Swap)
         ],
         name: 'Swap'
       }),
@@ -1157,7 +1160,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           // Issue #243 moved this row off the `Split/extract` page: no split or extract ever reads it —
           // Both of the split modal's uses are its `switch to smart cut` paths, which mark the selection
           // Through the same `markSelectionToMove()` helper the two mark commands use. It sits FLAT on the
-          // Page, above the groups, because it governs the mark itself rather than any one notice or
+          // Page, above the nested pages, because it governs the mark itself rather than any one notice or
           // Move direction.
           this.settingEx({
             desc: createFragment((f) => {
@@ -1180,8 +1183,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.settingGroupEx({
-            heading: 'Notice',
+          this.settingPage({
+            desc: 'The notice shown while a selection is marked, its buttons, and how a finished move reports itself.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1269,10 +1272,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Notice'
           }),
-          this.settingGroupEx({
-            heading: 'At cursor',
+          this.settingPage({
+            desc: 'Moving a marked selection to the cursor.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1320,10 +1324,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'At cursor'
           }),
-          this.settingGroupEx({
-            heading: 'To top of file',
+          this.settingPage({
+            desc: 'Moving a marked selection to the top of the note.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1377,10 +1382,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'To top of file'
           }),
-          this.settingGroupEx({
-            heading: 'To bottom of file',
+          this.settingPage({
+            desc: 'Moving a marked selection to the bottom of the note.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1438,9 +1444,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'To bottom of file'
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.SmartCutAndPaste)
+          this.commandCategoryPathSettingPage(CommandCategory.SmartCutAndPaste)
         ],
         name: 'Smart cut & paste'
       }),
@@ -1450,12 +1457,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       // `title` (`Frontmatter title mode`, `Should use source title when destination has none`, `Should add
       // Invalid title to note aliases`) moved under `Title` with the rows that shape the file name, leaving
       // `Frontmatter` the three that concern the property block itself. Regrouping by origin would have kept
-      // The very split the reporter objected to, one level down.
+      // The very split the reporter objected to, one level down. Issue #282 made both groups nested pages,
+      // And the inner one is `Frontmatter properties` so the page does not hold an entry named after itself.
       this.settingPage({
         desc: 'How a name you type becomes the file name of the note it creates, and how properties are carried across when notes are merged, split, or extracted.',
         items: [
-          this.settingGroupEx({
-            heading: 'Title',
+          this.settingPage({
+            desc: 'How a typed name becomes a file name, and what the frontmatter title says about it.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1629,10 +1637,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Title'
           }),
-          this.settingGroupEx({
-            heading: 'Frontmatter',
+          this.settingPage({
+            desc: 'How the property block itself is merged, split and extracted.',
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
@@ -1703,7 +1712,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   });
                 }
               })
-            ]
+            ],
+            name: 'Frontmatter properties'
           })
         ],
         name: 'Frontmatter'
@@ -1711,9 +1721,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       this.settingPage({
         desc: 'Which of the two editor context menus offers each command — one command at a time.',
         items: menuPlaceableCommandCategories().map((commandCategory) =>
-          this.settingGroupEx({
-            heading: `${commandCategory} command menus`,
-            items: menuPlaceableCommandsOfCategory(commandCategory).map((command) => this.commandMenuPlacementSetting(command))
+          this.settingPage({
+            desc: `Which editor context menu offers each ${commandCategory} command.`,
+            items: menuPlaceableCommandsOfCategory(commandCategory).map((command) => this.commandMenuPlacementSetting(command)),
+            name: `${commandCategory} command menus`
           })
         ),
         name: 'Command menu placement'
@@ -1797,7 +1808,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.MoveAndFlatten)
+          this.commandCategoryPathSettingPage(CommandCategory.MoveAndFlatten)
         ],
         name: 'Move/flatten folders'
       }),
@@ -1961,7 +1972,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.Create)
+          this.commandCategoryPathSettingPage(CommandCategory.Create)
         ],
         // Renamed from `Create folder with notes` by issue #271: the page now also carries the path rows
         // Of the whole `Create` category, which covers the two create-empty-note commands as well, so a
@@ -2174,7 +2185,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
-          this.commandCategoryPathSettingGroup(CommandCategory.Reorder)
+          this.commandCategoryPathSettingPage(CommandCategory.Reorder)
         ],
         name: 'Reorder'
       }),
@@ -2301,18 +2312,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   }
 
   /**
-   * Builds a navigable sub-page — the declarative counterpart of {@link PluginSettingsTab.settingGroupEx}
-   * for a whole section.
-   *
-   * Obsidian 1.13 has no collapsible groups and its groups do not nest
-   * (`SettingGroupItem = SettingDefinition | SettingDefinitionPage`), so a page is what gives this tab both
-   * of the things issues #221 and #224/#225/#226 asked for: the tab opens as a short list of entries
-   * instead of one long scroll, and a page holding groups IS the two-level hierarchy the subheadings need.
-   *
-   * @param params - The page params.
-   * @returns The page definition.
-   */
-  /**
    * One menu's toggle on a placement row, labelled so the two switches are told apart.
    *
    * @param setting - The row being rendered.
@@ -2341,23 +2340,26 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   }
 
   /**
-   * One category's path rows under their own heading, for a page that also holds other settings.
+   * One category's path rows on a page of their own, nested inside that category's page (issue #282).
    *
-   * The heading is what separates the path boxes from the rest of the page; a page whose only content is
-   * these rows — `Rename` and `Select` — takes {@link commandCategoryPathSettings} directly instead,
-   * because a separator with nothing to separate is noise.
+   * They were a headed group on the category's page until #282, whose reporter asked for every section
+   * inside a section to be something to click into rather than something to scroll past; the path boxes
+   * are the longest rows a page has, so they are the section that cost the most scrolling. A page whose
+   * only content is these rows — `Rename` and `Select` — takes {@link commandCategoryPathSettings}
+   * directly instead, because a page holding nothing but one entry to another page is a detour.
    *
    * It names the category even though it sits on that category's own page, for the reason the row names
-   * do: a bare `Include/exclude paths` would be seven identical headings across seven pages, and Obsidian's
+   * do: a bare `Include/exclude paths` would be seven identical entries across seven pages, and Obsidian's
    * settings search offers no page context to tell them apart.
    *
    * @param commandCategory - The category whose rows are wanted.
-   * @returns The group definition.
+   * @returns The page definition.
    */
-  private commandCategoryPathSettingGroup(commandCategory: CommandCategory): SettingDefinitionGroup {
-    return this.settingGroupEx({
-      heading: `${commandCategory} include/exclude paths`,
-      items: this.commandCategoryPathSettings(commandCategory)
+  private commandCategoryPathSettingPage(commandCategory: CommandCategory): SettingDefinitionPage {
+    return this.settingPage({
+      desc: `Where the ${commandCategory} commands are offered, and what they may touch.`,
+      items: this.commandCategoryPathSettings(commandCategory),
+      name: `${commandCategory} include/exclude paths`
     });
   }
 
@@ -2547,6 +2549,20 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
     });
   }
 
+  /**
+   * Builds a navigable page — the declarative counterpart of {@link PluginSettingsTab.settingGroupEx} for a
+   * whole section.
+   *
+   * Obsidian 1.13 has no collapsible groups and its groups do not nest
+   * (`SettingGroupItem = SettingDefinition | SettingDefinitionPage`), so a page is what gives this tab both
+   * of the things issues #221 and #224/#225/#226 asked for: the tab opens as a short list of entries
+   * instead of one long scroll, and a page holding other pages IS the two-level hierarchy the sections
+   * need. Pages DO nest (`SettingDefinitionPage.items` takes pages), and issue #282 is why a section inside
+   * a page is a page too rather than a headed group: the reporter was inside a page and still scrolling.
+   *
+   * @param params - The page params.
+   * @returns The page definition.
+   */
   private settingPage(params: PluginSettingsTabSettingPageParams): SettingDefinitionPage {
     return {
       ...params,

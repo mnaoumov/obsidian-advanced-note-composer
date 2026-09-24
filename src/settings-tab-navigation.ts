@@ -9,7 +9,8 @@
  * a row therefore finds nothing, whatever it waits for.
  *
  * {@link findSettingItemInObsidian} hides both facts: it asks the tab's own declarations which page holds
- * the row, opens that one, and leaves it open so the caller can drive the row.
+ * the row, opens that one, and leaves it open so the caller can drive the row. Since issue #282 pages nest,
+ * so what the declarations answer is a PATH of pages, opened one after another from the top level.
  *
  * It is passed into a closure through `evalInObsidian`'s `input` (functions are serialized with their
  * source, so it runs inside Obsidian) and must stay SELF-CONTAINED — an import or a module-scope constant
@@ -76,29 +77,27 @@ export async function findSettingItemInObsidian(params: FindSettingItemInObsidia
     return rows.find((row) => row.querySelector(':scope .setting-item-name')?.textContent === rowName) ?? null;
   }
 
-  function hasRow(items: SettingDefinitionItem[]): boolean {
-    return items.some((item) => {
-      if ('items' in item) {
-        return hasRow(item.items ?? []);
-      }
-
-      return 'name' in item && item.name === name;
-    });
-  }
-
-  // Ask the declarations which page holds the row, rather than opening every page until it turns up: a
+  // Ask the declarations which pages lead to the row, rather than opening every page until it turns up: a
   // Suite that flips several settings pays that walk on every single lookup, which is what timed out
-  // `smart-cut-notice-settings` at 30 s.
-  function findPageName(): null | string {
-    for (const item of settingTab.getSettingDefinitions()) {
-      // A page carries a `name`; a group carries a `heading` instead.
-      if (!('items' in item) || !('name' in item)) {
+  // `smart-cut-notice-settings` at 30 s. The answer is the page names from the top level down, empty for a
+  // Row that is on the top level itself, and `null` when nothing declares it.
+  function findPagePath(items: SettingDefinitionItem[]): null | string[] {
+    for (const item of items) {
+      if (!('items' in item)) {
+        if ('name' in item && item.name === name) {
+          return [];
+        }
+
         continue;
       }
 
-      if (hasRow(item.items ?? [])) {
-        return item.name;
+      const innerPath = findPagePath(item.items ?? []);
+      if (innerPath === null) {
+        continue;
       }
+
+      // A page carries a `name`; a group carries a `heading` instead, and opens nothing.
+      return item.type === 'page' ? [item.name, ...innerPath] : innerPath;
     }
 
     return null;
@@ -115,19 +114,22 @@ export async function findSettingItemInObsidian(params: FindSettingItemInObsidia
     return directMatch;
   }
 
-  const pageName = findPageName();
-  if (pageName === null) {
+  const pagePath = findPagePath(settingTab.getSettingDefinitions());
+  if (pagePath === null) {
     return null;
   }
 
-  // Looked up by name rather than kept as an element: navigating re-renders the tab and detaches it.
-  const entry = findRow(pageName);
-  if (!entry) {
-    return null;
+  for (const pageName of pagePath) {
+    // Looked up by name rather than kept as an element: navigating re-renders the tab and detaches it.
+    const entry = findRow(pageName);
+    if (!entry) {
+      return null;
+    }
+
+    entry.click();
+    await sleep(RENDER_DELAY_IN_MILLISECONDS);
   }
 
-  entry.click();
-  await sleep(RENDER_DELAY_IN_MILLISECONDS);
   return findRow(name);
 }
 /* v8 ignore stop */

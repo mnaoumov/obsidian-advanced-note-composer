@@ -222,11 +222,13 @@ describe('PluginSettingsTab', () => {
     ]);
   });
 
-  it('should give the merge, swap, smart cut and path pages their subheadings', async () => {
+  // Issue #282: every section inside a page is a page of its own, clicked into rather than scrolled past.
+  // Until then each was a headed group, and the reporter was inside a page and still scrolling.
+  it('should give the merge, swap, smart cut and path pages their sub-pages', async () => {
     const tab = await createSettingsTab();
 
-    expect(collectPageSubheadings(tab)).toEqual({
-      // Issue #254: one group per category, holding a row per command rather than one dropdown for all of
+    expect(collectPageSections(tab)).toEqual({
+      // Issue #254: one section per category, holding a row per command rather than one dropdown for all of
       // Them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
       'Command menu placement': [
         'Split/extract command menus',
@@ -237,16 +239,17 @@ describe('PluginSettingsTab', () => {
         'Rename command menus',
         'Reorder command menus'
       ],
-      // Issue #271 moved the `Create` category's path rows here, under their own heading.
+      // Issue #271 moved the `Create` category's path rows here, in a section of their own.
       'Create': ['Create include/exclude paths'],
       'Folder note': [],
       // Issue #272 merged the `Title` page in, and the merged page groups by TOPIC rather than by which
       // Page a row came from: `Title` leads, because the rows that shape a file name are what the frontmatter
-      // `title` rows exist to preserve.
-      'Frontmatter': ['Title', 'Frontmatter'],
+      // `title` rows exist to preserve. The inner one is `Frontmatter properties` since issue #282: an entry
+      // Named `Frontmatter` on the `Frontmatter` page would open a page of the same name as the one it is on.
+      'Frontmatter': ['Title', 'Frontmatter properties'],
       // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
       // Six of its ten rows silently meant only the one their descriptions named. Issue #271 added the
-      // Path group at the end.
+      // Path section at the end.
       'Merge': [
         'All merges',
         'Merge file',
@@ -256,7 +259,7 @@ describe('PluginSettingsTab', () => {
       ],
       'Move/flatten folders': ['Move/flatten include/exclude paths'],
       // `Rename` and `Select` hold nothing but their path rows, so those sit on the page directly — a
-      // Separator with nothing to separate is noise.
+      // Page holding nothing but one entry to another page is a detour.
       'Rename': [],
       'Reorder': ['Reorder include/exclude paths'],
       'Select': [],
@@ -266,6 +269,7 @@ describe('PluginSettingsTab', () => {
       // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
       // Shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
       // The folder rows name their own target type — so the headings only mislabelled the first row.
+      // Issue #282 did not bring them back: the page is four rows, and only its path rows are a section.
       'Swap': ['Swap include/exclude paths'],
       'UI': []
     });
@@ -361,39 +365,16 @@ describe('PluginSettingsTab', () => {
     expect(pluginSettingsComponent.settings.commandMenuPlacement('extract-current-selection')).toBe(CommandMenuPlacement.EditorMenu);
   });
 
-  it('should render every heading exactly once', async () => {
+  // Issue #282: the only headed groups left are the two inline ones at the ROOT, which are not a section
+  // Inside a section (and which issue #274 settled). A headed group anywhere below them is a section the
+  // User has to scroll to again.
+  it('should render only the two root headings', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
     expect(headings).toEqual([
       'Common',
-      'Merge/split/extract strategies',
-      'All merges',
-      'Merge file',
-      'Merge folder contents into a single file',
-      'Merge current folder with another folder',
-      'Merge include/exclude paths',
-      'Split/extract include/exclude paths',
-      'Swap include/exclude paths',
-      'Notice',
-      'At cursor',
-      'To top of file',
-      'To bottom of file',
-      'Smart cut & paste include/exclude paths',
-      // The two groups issue #272 gave the merged `Frontmatter` page. `Frontmatter` names both a page and a
-      // Group on it, which is why this list checks headings only — the page entry is pinned separately.
-      'Title',
-      'Frontmatter',
-      'Split/extract command menus',
-      'Select command menus',
-      'Create command menus',
-      'Smart cut & paste command menus',
-      'Swap command menus',
-      'Rename command menus',
-      'Reorder command menus',
-      'Move/flatten include/exclude paths',
-      'Create include/exclude paths',
-      'Reorder include/exclude paths'
+      'Merge/split/extract strategies'
     ]);
   });
 
@@ -426,7 +407,7 @@ describe('PluginSettingsTab', () => {
   // The page: three of the six moved under `Title`, which is where the demo vault already documented two of
   // Them. Both lists are asserted, because a row dropped in the move would otherwise leave one of them
   // Passing on its own.
-  it('should split the merged frontmatter page into a title group and a frontmatter group', async () => {
+  it('should split the merged frontmatter page into a title section and a frontmatter properties section', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
@@ -439,7 +420,7 @@ describe('PluginSettingsTab', () => {
       'Should use source title when destination has none',
       'Should add invalid title to note aliases'
     ]);
-    expect(containers.get('Frontmatter')).toEqual([
+    expect(containers.get('Frontmatter properties')).toEqual([
       'Frontmatter merge strategy',
       'Should include frontmatter when splitting',
       'Should extract a properties selection as properties'
@@ -991,25 +972,30 @@ function collectContainers(tab: PluginSettingsTab): Map<string, string[]> {
 }
 
 /**
- * Maps each page to the subheadings it holds — empty for a page whose rows sit directly on it.
+ * Maps each top-level page to the sections it holds — its nested pages (issue #282), or the headings of
+ * any group it still holds, so a group reintroduced inside a page shows up here rather than passing
+ * unnoticed. Empty for a page whose rows sit directly on it.
  *
  * @param tab - The settings tab.
- * @returns The subheadings of each page, keyed by page name.
+ * @returns The sections of each page, keyed by page name.
  */
-function collectPageSubheadings(tab: PluginSettingsTab): Record<string, string[]> {
-  const subheadings: Record<string, string[]> = {};
+function collectPageSections(tab: PluginSettingsTab): Record<string, string[]> {
+  const sections: Record<string, string[]> = {};
   for (const item of tab.getSettingDefinitions()) {
     if (!('items' in item) || castTo<SettingDefinitionGroup>(item).heading !== undefined) {
       continue;
     }
 
     const page = castTo<SettingDefinitionPage>(item);
-    subheadings[page.name] = (page.items ?? [])
-      .filter((child) => 'heading' in child)
-      .map((child) => castTo<SettingDefinitionGroup>(child).heading ?? '');
+    sections[page.name] = (page.items ?? [])
+      .filter((child) => 'items' in child)
+      .map((child) => {
+        const heading = castTo<SettingDefinitionGroup>(child).heading;
+        return heading === undefined ? castTo<SettingDefinitionPage>(child).name : `group:${heading}`;
+      });
   }
 
-  return subheadings;
+  return sections;
 }
 
 /**
