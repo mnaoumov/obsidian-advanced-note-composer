@@ -522,6 +522,13 @@ export abstract class ComposerBase {
       } else {
         mergedFrontmatter.title = originalTitle;
       }
+      // Issue #276: the rule above is about a title carried in INCIDENTALLY from the source. A `title` the
+      // template writes was put there on purpose for the note being created, so on a brand-new target it
+      // beats both the source's and the `frontmatterTitleMode` one the plugin itself just wrote. An existing
+      // target keeps its own, or a merge template carrying a title would rename every note merged into.
+      if (this.isNewTargetFile && templateFrontmatter.title !== undefined) {
+        mergedFrontmatter.title = templateFrontmatter.title;
+      }
       await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
         for (const key of Object.keys(frontmatter)) {
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- We need to empty the object.
