@@ -15,6 +15,7 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
 import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -180,6 +181,35 @@ describe('MergeComposer', () => {
 
       expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
       expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    });
+
+    it('should report nothing when the guard trips inside an injected transaction (issue #289)', async () => {
+      // A folder merge injects its spanning transaction; the runner then leaves commit and rollback to that
+      // owner and returns normally, so the composer's own abort check is what stops the completion notice.
+      const pluginNoticeComponent = createPluginNoticeComponentStub();
+      const composer = new MergeComposer({
+        app,
+        consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+        isNewTargetFile: false,
+        pluginNoticeComponent,
+        pluginSettingsComponent: createPluginSettingsComponentStub(),
+        resourceLockComponent,
+        sourceFile: getSourceFile(),
+        targetFile: getTargetFile(),
+        vaultTransaction: new VaultTransaction({ app })
+      });
+      vi.spyOn(app.vault, 'read').mockImplementation((file) => {
+        ensureNonNullable(app.vault.getFileByPath('source.md')).stat.mtime += 1;
+        return Promise.resolve(castTo<TFile>(file).path === 'source.md' ? 'source body' : 'target body');
+      });
+
+      await composer.mergeFile();
+
+      expect(app.vault.getAbstractFileByPath('source.md')).not.toBeNull();
+      // Only the guard's own refusal is shown, never a completion notice for a merge that did not happen.
+      const noticeTexts = vi.mocked(pluginNoticeComponent.showNotice).mock.calls.map((call) => castTo<Node>(call[0]).textContent);
+      expect(noticeTexts).toHaveLength(1);
+      expect(noticeTexts[0]).toContain('was modified during the operation');
     });
 
     it('should swallow the cancellation and roll back when aborted mid-operation', async () => {

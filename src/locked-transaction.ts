@@ -101,6 +101,10 @@ export async function runLockedTransaction(params: RunLockedTransactionParams): 
 
   try {
     await params.body(vaultTransaction);
+    // A body that never polls the signal would otherwise run to the end and commit a cancelled operation
+    // (issue #289). Checked here, before the commit, so a cancel at ANY point rolls the whole operation
+    // back - never half of it.
+    params.abortController.signal.throwIfAborted();
     await vaultTransaction.commit();
   } catch (error) {
     await vaultTransaction.rollback();

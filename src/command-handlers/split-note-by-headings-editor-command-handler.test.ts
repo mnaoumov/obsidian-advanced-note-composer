@@ -95,19 +95,6 @@ interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
   readonly resourceLockComponent: ResourceLockComponent;
 }
 
-/**
- * Makes the progress notice abort the run's controller the moment it is shown, standing in for the user
- * clicking its Cancel button.
- *
- * @param pluginNoticeComponent - The notice component stub to rewire.
- */
-function cancelOnProgressNotice(pluginNoticeComponent: PluginNoticeComponent): void {
-  vi.mocked(pluginNoticeComponent.showNoticeAfterDelay).mockImplementation((delayedNoticeParams: PluginNoticeComponentShowNoticeAfterDelayParams) => {
-    delayedNoticeParams.abortController?.abort();
-    return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
-  });
-}
-
 function createHeading(level: number, line: number): HeadingCache {
   return strictProxy<HeadingCache>({
     heading: `Heading ${String(line)}`,
@@ -462,18 +449,16 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 1 note(s): [test/note.md].');
   });
 
-  it('should split nothing and report nothing once the progress notice is cancelled', async () => {
+  it('should offer no Cancel, since it could only stop between two committed splits (issue #289)', async () => {
     const params = createMockParams(2, false);
     const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
-    // The Cancel button on the progress notice aborts the run's controller; the loop checks it before
-    // every heading, so an abort taken as the notice appears stops it before the first split.
-    cancelOnProgressNotice(params.pluginNoticeComponent);
-    mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] }));
+    mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [] }));
 
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
-    expect(MockSplitComposer).not.toHaveBeenCalled();
-    expect(params.pluginNoticeComponent.showNotice).not.toHaveBeenCalled();
+    const noticeParams = vi.mocked(params.pluginNoticeComponent.showNoticeAfterDelay).mock.calls[0]?.[0];
+    expect(noticeParams).toBeDefined();
+    expect(noticeParams?.abortController).toBeUndefined();
   });
 
   it('should return shouldAddCommandsToSubmenu setting when super returns undefined', () => {

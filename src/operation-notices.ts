@@ -373,7 +373,7 @@ export function showOperationProgressNotice(params: ShowOperationProgressNoticeP
    */
   if (pluginSettingsComponent.settings.shouldBlockVaultDuringOperations) {
     return showOperationProgressModal({
-      abortController: abortController ?? new AbortController(),
+      abortController: abortController ?? null,
       app,
       content: () => resolveValue(content, {})
     });
