@@ -911,11 +911,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendCodeBlock(f, 'Default split target mode');
               f.appendText(' is ');
               appendCodeBlock(f, 'Create');
-              f.appendText(': the ');
-              appendCodeBlock(f, 'Create');
-              f.appendText(' / ');
+              f.appendText(': a default of ');
               appendCodeBlock(f, 'Merge');
-              f.appendText(' switch lives in the picker this replaces, so a pass that skips it cannot be switched to a merge. Turn this off for a pass that should merge.');
+              f.appendText(' is asking for the picker.');
+              f.createEl('br');
+              f.appendText('The name box still offers ');
+              appendCodeBlock(f, 'Change target folder');
+              f.appendText(' (Alt+C) to go back and pick a different folder, and ');
+              appendCodeBlock(f, 'Switch to merge');
+              f.appendText(' (Alt+M) to hand the pass to the ordinary picker in ');
+              appendCodeBlock(f, 'Merge');
+              f.appendText(' mode — so merging stays available without turning this off. It can also be minimized while you go and look at a note.');
               f.createEl('br');
               f.appendText('Heading-driven splits that never open the picker are unaffected. The name is cleaned exactly as it is anywhere else — the name transform, the invalid-character replacement, and the alias or title recording what you typed.');
             }),

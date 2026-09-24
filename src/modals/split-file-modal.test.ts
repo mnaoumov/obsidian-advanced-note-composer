@@ -21,7 +21,6 @@ import type {
 
 import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -48,6 +47,10 @@ import {
 } from '../plugin-settings.ts';
 import { selectFolder } from './select-folder-modal.ts';
 import { prepareForSplitFile } from './split-file-modal.ts';
+import {
+  openSplitNoteNameModal,
+  SplitNoteNameAction
+} from './split-note-name-modal.ts';
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
   appendCodeBlock: vi.fn()
@@ -190,15 +193,18 @@ vi.mock('../headings.ts', () => ({
   extractHeading: vi.fn().mockReturnValue('Test Heading')
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
-  prompt: vi.fn()
-}));
+vi.mock('./split-note-name-modal.ts', async () => {
+  // The ACTION enum is real: a stand-in for it would let a test pass against a member the modal does not
+  // Have, which is the one thing these tests are for.
+  const actual = await vi.importActual<typeof import('./split-note-name-modal.ts')>('./split-note-name-modal.ts');
+  return { ...actual, openSplitNoteNameModal: vi.fn() };
+});
 
 vi.mock('./select-folder-modal.ts', () => ({
   selectFolder: vi.fn()
 }));
 
-const mockPrompt = vi.mocked(prompt);
+const mockOpenSplitNoteNameModal = vi.mocked(openSplitNoteNameModal);
 const mockSelectFolder = vi.mocked(selectFolder);
 
 interface MockPluginOptions {
@@ -382,7 +388,7 @@ describe('prepareForSplitFile', () => {
     shouldAutoSwitchToSmartCut = false;
     mockShowNotice.mockClear();
     mockSelectFolder.mockReset();
-    mockPrompt.mockReset();
+    mockOpenSplitNoteNameModal.mockReset();
     mockOpenMinimizableModal.mockClear();
   });
 
@@ -897,7 +903,7 @@ describe('prepareForSplitFile', () => {
   describe('choosing the folder before the name (issue #261)', () => {
     it('should ask for the folder and then the name, and never open the picker', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
-      mockPrompt.mockResolvedValue('typed name');
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
@@ -915,7 +921,7 @@ describe('prepareForSplitFile', () => {
       // `strictProxy` modal, which throws on the first unmocked property it probes.
       expect(mockOpenMinimizableModal.mock.calls).toHaveLength(0);
       expect(mockSelectFolder).toHaveBeenCalledTimes(1);
-      expect(mockPrompt).toHaveBeenCalledTimes(1);
+      expect(mockOpenSplitNoteNameModal).toHaveBeenCalledTimes(1);
       expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(chosenFolder);
       expect(capturedSplitItemSelectorParams?.inputValue).toBe('typed name');
       expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
@@ -936,12 +942,12 @@ describe('prepareForSplitFile', () => {
 
       // Unlike the issue-#238 prompt, there is no picker to fall back to — these two prompts ARE the flow.
       expect(result).toBeNull();
-      expect(mockPrompt).not.toHaveBeenCalled();
+      expect(mockOpenSplitNoteNameModal).not.toHaveBeenCalled();
     });
 
     it('should abandon the split when the name prompt is dismissed', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
-      mockPrompt.mockResolvedValue(null);
+      mockOpenSplitNoteNameModal.mockResolvedValue(null);
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
@@ -957,7 +963,8 @@ describe('prepareForSplitFile', () => {
     });
 
     it('should stay out of the way of a merge default', async () => {
-      // The switch lives in the picker this replaces, so a pass that skipped it could not be switched.
+      // Someone whose default is `Merge` is asking for the picker, and since issue #280 the pair has
+      // Nothing to offer them that the picker does not — its `Switch to merge` leads straight back here.
       shouldAutoSelect = true;
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
@@ -975,7 +982,7 @@ describe('prepareForSplitFile', () => {
 
       expect(result).not.toBeNull();
       expect(mockSelectFolder).not.toHaveBeenCalled();
-      expect(mockPrompt).not.toHaveBeenCalled();
+      expect(mockOpenSplitNoteNameModal).not.toHaveBeenCalled();
       expect(mockOpenMinimizableModal.mock.calls.length).toBeGreaterThan(0);
     });
 
@@ -994,7 +1001,133 @@ describe('prepareForSplitFile', () => {
       // That pass has both answers already; growing two prompts would be a regression of issue #143.
       expect(result).not.toBeNull();
       expect(mockSelectFolder).not.toHaveBeenCalled();
-      expect(mockPrompt).not.toHaveBeenCalled();
+      expect(mockOpenSplitNoteNameModal).not.toHaveBeenCalled();
+    });
+  });
+
+  /*
+   * Issue #280: the pair above took the `Create` / `Merge` switch off the table, because the switch lives
+   * in the picker the pair replaces. The name box now carries the two detours that gives it back.
+   */
+  describe('the name box\'s detours (issue #280)', () => {
+    function createFolderThenNameSettings(): PluginSettingsComponent {
+      return createMockPluginSettingsComponent({
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+    }
+
+    it('should hand the pass to the picker in Merge when the name box switches', async () => {
+      // The whole point of the issue: with the setting on, a merge was unreachable without going back to
+      // The settings tab. Asserted on the mode the ITEM SELECTOR is given, which is what actually decides
+      // Whether an existing note can be chosen — not on the modal's internal field.
+      shouldAutoSelect = true;
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createFolderThenNameSettings();
+
+      const promise = prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Merge);
+      // The pair is abandoned, so the folder it chose must NOT be forced on the picker's own resolution.
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBeNull();
+      expect(mockOpenMinimizableModal.mock.calls.length).toBeGreaterThan(0);
+    });
+
+    it('should not reach Merge on a flow that has nothing to merge', async () => {
+      // `Create empty note at cursor...` (issue #244). The button is disabled there, but the refusal has to
+      // Hold in the flow too: a disabled control is a statement, not a guarantee.
+      shouldAutoSelect = true;
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createFolderThenNameSettings();
+
+      const promise = prepareForSplitFile({
+        app,
+        canMergeIntoExistingNote: false,
+        editor,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        sourceFile
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await promise;
+
+      expect(result).not.toBeNull();
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+    });
+
+    it('should tell the name box whether merging is available at all', async () => {
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createFolderThenNameSettings();
+
+      await prepareForSplitFile({
+        app,
+        canMergeIntoExistingNote: false,
+        editor,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        sourceFile
+      });
+
+      expect(mockOpenSplitNoteNameModal.mock.calls[0]?.[0].canMergeIntoExistingNote).toBe(false);
+      expect(mockOpenSplitNoteNameModal.mock.calls[0]?.[0].folderPath).toBe(chosenFolder.path);
+    });
+
+    it('should reopen the folder prompt, keeping what was typed, on Change target folder', async () => {
+      const otherFolder = castTo<TFolder>({ getParentPrefix: () => 'other-folder/', path: 'other-folder' });
+      mockSelectFolder.mockResolvedValueOnce(chosenFolder).mockResolvedValueOnce(otherFolder);
+      mockOpenSplitNoteNameModal
+        .mockResolvedValueOnce({ action: SplitNoteNameAction.ChangeFolder, name: 'edited name' })
+        .mockResolvedValueOnce({ action: SplitNoteNameAction.Create, name: 'edited name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createFolderThenNameSettings();
+
+      const result = await prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+
+      expect(result).not.toBeNull();
+      expect(mockSelectFolder).toHaveBeenCalledTimes(2);
+      // The name typed before the detour is what the box reopens holding — losing it is what makes a
+      // "let me just change the folder" into a retype.
+      expect(mockOpenSplitNoteNameModal.mock.calls[1]?.[0].defaultValue).toBe('edited name');
+      expect(mockOpenSplitNoteNameModal.mock.calls[1]?.[0].folderPath).toBe(otherFolder.path);
+      expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(otherFolder);
+    });
+
+    it('should abandon the split when the reopened folder prompt is dismissed', async () => {
+      mockSelectFolder.mockResolvedValueOnce(chosenFolder).mockResolvedValueOnce(null);
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.ChangeFolder, name: 'typed name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createFolderThenNameSettings();
+
+      const result = await prepareForSplitFile({ app, editor, pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, sourceFile });
+
+      expect(result).toBeNull();
+      expect(mockOpenSplitNoteNameModal).toHaveBeenCalledTimes(1);
     });
   });
 

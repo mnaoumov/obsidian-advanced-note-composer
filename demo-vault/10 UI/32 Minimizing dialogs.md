@@ -1,8 +1,8 @@
 # Minimizing dialogs
 
-Every **confirmation** dialog this plugin opens - plus the `Extract ...` (split) picker and the `Move marked selection here (advanced)...` / `Reorder headings` option dialogs - can be **minimized** to a small floating bar, so you can peek at the notes involved without losing your place.
+Every **confirmation** dialog this plugin opens - plus the `Extract ...` (split) picker, the name box of [15 Name first, then the folder](<../03 Split/15 Name first, then the folder.md>), and the `Move marked selection here (advanced)...` / `Reorder headings` option dialogs - can be **minimized** to a small floating bar, so you can peek at the notes involved without losing your place.
 
-The initial `Merge ...` and `Swap ...` pickers are deliberately left out: no target has been chosen yet, so there is nothing to park.
+The initial `Merge ...` and `Swap ...` pickers are deliberately left out, and so is the folder list that opens **before** that name box: no target has been chosen yet, so there is nothing to park.
 
 ## Try it
 

@@ -5,7 +5,6 @@ import type {
 import type { PromiseResolve } from 'obsidian-dev-utils/async';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import {
   App,
@@ -19,7 +18,6 @@ import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
@@ -54,10 +52,14 @@ import {
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { resolveExistingItemFile } from './existing-item-file.ts';
 import { selectFolder } from './select-folder-modal.ts';
+import {
+  openSplitNoteNameModal,
+  SplitNoteNameAction
+} from './split-note-name-modal.ts';
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 /**
- * Which of the three things the folder-then-name pair did (issue #261).
+ * Which of the four things the folder-then-name pair did (issues #261, #280).
  */
 enum FolderThenNameKind {
   /**
@@ -75,7 +77,14 @@ enum FolderThenNameKind {
   /**
    * The pair does not apply to this pass, so the picker runs as usual.
    */
-  NotApplicable = 'NotApplicable'
+  NotApplicable = 'NotApplicable',
+
+  /**
+   * The user pressed `Switch to merge` in the name box (issue #280). The pair is abandoned for this pass
+   * and the ordinary picker opens in `Merge` mode — which is how the `Create` / `Merge` switch stays
+   * reachable on a path that replaces the picker holding it.
+   */
+  SwitchedToMerge = 'SwitchedToMerge'
 }
 
 interface BuildSplitConfirmContentParams {
@@ -106,6 +115,17 @@ interface FolderThenNameChosen {
 
 interface FolderThenNameNotChosen {
   readonly kind: FolderThenNameKind.Dismissed | FolderThenNameKind.NotApplicable;
+}
+
+interface FolderThenNameSwitchedToMerge {
+  readonly kind: FolderThenNameKind.SwitchedToMerge;
+
+  /**
+   * What the name box held when the user switched. It seeds the picker, which — per issue #237 — treats
+   * it as a name to CREATE and therefore opens `Merge` empty rather than searching for a note named after
+   * something the user was inventing.
+   */
+  readonly name: string;
 }
 
 interface PrepareForSplitFileParams {
@@ -266,7 +286,7 @@ interface SelectFolderThenNameParams {
   readonly seed: string | undefined;
 }
 
-type SelectFolderThenNameResult = FolderThenNameChosen | FolderThenNameNotChosen;
+type SelectFolderThenNameResult = FolderThenNameChosen | FolderThenNameNotChosen | FolderThenNameSwitchedToMerge;
 
 interface SelectSplitTargetParams {
   /**
@@ -344,6 +364,16 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
    */
   readonly canSwitchToSmartCut: boolean;
   readonly editor: Editor;
+
+  /**
+   * The mode this picker opens in, overriding {@link PluginSettings.defaultSplitTargetMode} (issue #280).
+   *
+   * Only the folder-then-name pair's `Switch to merge` supplies one: that pass has ALREADY established
+   * that the user wants a merge, so opening in the `Create` their setting says would throw their answer
+   * away. Every other pass passes `null` and gets the setting. It never overrides
+   * {@link PrepareForSplitFileParams.canMergeIntoExistingNote}, which forbids `Merge` outright.
+   */
+  readonly initialSplitTargetMode: null | SplitTargetMode;
 
   /**
    * Whether {@link SuggestModalBaseConstructorParams.initialInputValue} NAMES a note to create — the heading
@@ -438,8 +468,12 @@ class SplitFileModal extends SuggestModalBase {
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     // A flow with nothing to merge opens in `Create` whatever the setting says (issue #244) — the setting
-    // Chooses between two modes, and here only one of them exists.
-    this.splitTargetMode = this.canMergeIntoExistingNote ? this.pluginSettingsComponent.settings.defaultSplitTargetMode : SplitTargetMode.Create;
+    // Chooses between two modes, and here only one of them exists. A caller-supplied mode wins over the
+    // Setting but not over that (issue #280): `Switch to merge` in the folder-then-name name box is a
+    // Fresher answer than `defaultSplitTargetMode`, and cannot reach a flow that has nothing to merge.
+    this.splitTargetMode = this.canMergeIntoExistingNote
+      ? (params.initialSplitTargetMode ?? this.pluginSettingsComponent.settings.defaultSplitTargetMode)
+      : SplitTargetMode.Create;
 
     const initialInputValue = params.initialInputValue ?? '';
     this.inputValueBySplitTargetMode = {
@@ -1375,12 +1409,17 @@ async function resolveSplitPass(params: ResolveSplitPassParams): Promise<Resolve
     };
   }
 
+  // The pair handed the pass to the picker in `Merge` (issue #280), seeded with the name that was typed —
+  // Which the picker then keeps out of the `Merge` box, since it names a note to CREATE (issue #237).
+  const hasSwitchedToMerge = folderThenName.kind === FolderThenNameKind.SwitchedToMerge;
+
   const splitFileModalResult = await new Promise<null | SplitFileModalResult>((promiseResolve) => {
     const modal = new SplitFileModal({
       ...prepareParams,
       canSwitchToSmartCut: params.canSwitchToSmartCut,
-      initialInputValue: params.seed,
-      isInitialInputValueNewNoteName: params.isCurrentSeedNewNoteName,
+      initialInputValue: hasSwitchedToMerge ? folderThenName.name : params.seed,
+      initialSplitTargetMode: hasSwitchedToMerge ? SplitTargetMode.Merge : null,
+      isInitialInputValueNewNoteName: hasSwitchedToMerge || params.isCurrentSeedNewNoteName,
       promiseResolve
     });
     openMinimizableModal(modal, params.abortController);
@@ -1416,10 +1455,16 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
  *
  * **Applies only to a pass that would CREATE**, and only while the picker would have opened at all:
  * - the setting is on;
- * - {@link PluginSettings.defaultSplitTargetMode} is `Create` — the `Create` / `Merge` switch lives in the
- *   picker this replaces, so a pass that skips it cannot be switched, and someone whose default is
- *   `Merge` is asking for the picker;
+ * - {@link PluginSettings.defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is asking
+ *   for the picker, and the pair has nothing to offer them that the picker does not;
  * - the picker is not ALREADY being skipped by a heading-driven pass, which has both answers already.
+ *
+ * **Merging is no longer off the table on this path (issue #280).** It was: the `Create` / `Merge` switch
+ * lives in the picker this replaces, so with the setting on a split could only ever create, and the only
+ * way to merge was to go and turn the setting off. The name box now carries `Switch to merge`, which
+ * abandons the pair for this pass and hands it to the picker in `Merge` — the switch is reachable again
+ * without the setting having to be touched. It also carries `Change target folder`, which is why this is a
+ * LOOP: that answer reopens the folder prompt with what was typed still in hand.
  *
  * Nothing is done about name CLEANING here, because nothing needs to be: `createNoteFromTypedName`,
  * which every creation goes through, already applies the name transform, replaces invalid characters and
@@ -1440,38 +1485,45 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
     return { kind: FolderThenNameKind.NotApplicable };
   }
 
-  const folder = await selectFolder({
-    // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
-    // Just as it closes the picker it stands in for.
-    abortController: params.abortController,
-    app: prepareParams.app,
-    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
-    placeholder: 'Select folder to create the new note in...',
-    pluginSettingsComponent: prepareParams.pluginSettingsComponent
-  });
-  if (!folder) {
-    return { kind: FolderThenNameKind.Dismissed };
-  }
+  // The heading a heading-driven extract came from, so the common case is one keystroke: confirm it. It
+  // Survives a `Change target folder` detour, which is the whole reason it lives outside the loop.
+  let name = params.seed ?? '';
 
-  const name = await prompt({
-    app: prepareParams.app,
-    cancelButtonText: 'Cancel',
-    // The heading a heading-driven extract came from, so the common case is one keystroke: confirm it.
-    defaultValue: params.seed ?? '',
-    okButtonText: 'Create',
-    placeholder: 'Note name',
-    title: 'Enter note name',
-    valueValidator: (value: string): MaybeReturn<string> => {
-      if (!value.trim()) {
-        return 'Note name cannot be empty';
-      }
+  for (;;) {
+    const folder = await selectFolder({
+      // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
+      // Just as it closes the picker it stands in for.
+      abortController: params.abortController,
+      app: prepareParams.app,
+      isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
+      placeholder: 'Select folder to create the new note in...',
+      pluginSettingsComponent: prepareParams.pluginSettingsComponent
+    });
+    if (!folder) {
+      return { kind: FolderThenNameKind.Dismissed };
     }
-  });
-  if (name === null) {
-    return { kind: FolderThenNameKind.Dismissed };
-  }
 
-  return { folder, kind: FolderThenNameKind.Chosen, name };
+    const nameResult = await openSplitNoteNameModal({
+      abortController: params.abortController,
+      app: prepareParams.app,
+      canMergeIntoExistingNote: prepareParams.canMergeIntoExistingNote ?? true,
+      defaultValue: name,
+      folderPath: folder.path
+    });
+    if (!nameResult) {
+      return { kind: FolderThenNameKind.Dismissed };
+    }
+
+    name = nameResult.name;
+
+    if (nameResult.action === SplitNoteNameAction.SwitchToMerge) {
+      return { kind: FolderThenNameKind.SwitchedToMerge, name };
+    }
+
+    if (nameResult.action === SplitNoteNameAction.Create) {
+      return { folder, kind: FolderThenNameKind.Chosen, name };
+    }
+  }
 }
 
 /**
