@@ -21,7 +21,10 @@ import {
 } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
-import { App } from 'obsidian-test-mocks/obsidian';
+import {
+  App,
+  Vault
+} from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   describe,
@@ -409,6 +412,29 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.read('dst/existing.md')).toBe('existing body');
     // The permanent progress notice was hidden on completion.
     expect(hide).toHaveBeenCalledOnce();
+  });
+
+  it('should merge into the target itself when recurseChildren also visits the source folder, as real Obsidian does', async () => {
+    initApp({
+      'dst/keep.md': 'keep',
+      'src/gamma.md': 'gamma body',
+      'src/sub/note.md': 'sub body'
+    });
+    // Real Obsidian yields the folder it was given before its descendants; the mock does not. With the
+    // folder yielded, the pre-fix mapping sent `src` to `dst/src` and every note landed one level too deep.
+    const originalRecurseChildren = Vault.recurseChildren.bind(Vault);
+    vi.spyOn(Vault, 'recurseChildren').mockImplementation((folder, callback) => {
+      callback(folder);
+      originalRecurseChildren(folder, callback);
+    });
+    const { handler } = createHandler();
+    mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
+
+    await handler.executeFolder(getFolder('src'));
+
+    expect(await app.vault.adapter.read('dst/gamma.md')).toContain('gamma body');
+    expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('sub body');
+    expect(await app.vault.adapter.exists('dst/src')).toBe(false);
   });
 
   it('should keep a moved child note title when the target folder has no colliding note (issue #114)', async () => {
