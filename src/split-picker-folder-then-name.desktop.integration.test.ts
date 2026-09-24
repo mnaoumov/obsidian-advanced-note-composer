@@ -283,4 +283,175 @@ describe('choosing the folder before the name (issue #261)', () => {
     expect(result.createdContent).toContain('FOLDER-THEN-NAME-BODY');
     expect(result.wasDecoyMergedInto).toBe(false);
   });
+
+  it('still asks for the folder first on Create empty note at cursor... under a Merge default', async () => {
+    // The gate used to read the raw `Default split target mode`, so a `Merge` default switched the pair
+    // off here — although this command opens in `Create` whatever that setting says (issue #244), leaving
+    // the user in a picker stuck in a mode they could not leave.
+    const result = await evalInObsidian({
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Six call sites share this ceiling (one inside `openAndGetEditor`), so the closure declares 19.5 s
+         * of waits plus about 1.6 s of fixed render delays - under the transport's ~30 s cap with headroom.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3250;
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const SOURCE_PATH = 'folder-then-name-merge-default-source.md';
+        const FOLDER_PATH = 'folder-then-name-merge-default-folder';
+        const NEW_NOTE_NAME = 'folder-then-name-merge-default-created';
+        const EXPECTED_PATH = `${FOLDER_PATH}/${NEW_NOTE_NAME}.md`;
+        const SOURCE_CONTENT = 'alpha omega\n';
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldChooseFolderBeforeNameWhenSplitting = true;
+            settings.defaultSplitTargetMode = 'Merge';
+            settings.shouldAskBeforeSplitting = false;
+            settings.shouldAskForTargetFolderWhenSplitting = false;
+            settings.shouldSplitIntoFolder = false;
+            settings.shouldSplitHeadingsAutomatically = false;
+          });
+
+          if (!app.vault.getAbstractFileByPath(FOLDER_PATH)) {
+            await app.vault.createFolder(FOLDER_PATH);
+          }
+          const staleNote = app.vault.getAbstractFileByPath(EXPECTED_PATH);
+          if (staleNote) {
+            await app.fileManager.trashFile(staleNote);
+          }
+          const existingSource = app.vault.getAbstractFileByPath(SOURCE_PATH);
+          const source = existingSource instanceof obsidianModule.TFile ? existingSource : await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
+
+          const editor = await openAndGetEditor(source);
+          editor.setValue(SOURCE_CONTENT);
+          await waitUntil({
+            message: 'the source editor did not catch up with the reset content',
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          editor.setCursor(editor.offsetToPos('alpha '.length));
+          app.commands.executeCommandById(`${pluginId}:create-empty-note-at-cursor`);
+
+          await waitUntil({
+            message: 'no prompt opened',
+            predicate: () => getPromptInput() !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const firstPromptPlaceholder = getPromptInput()?.placeholder ?? '';
+
+          const promptInput = getPromptInput();
+          if (!promptInput) {
+            throw new TypeError('No prompt input.');
+          }
+          promptInput.value = FOLDER_PATH;
+          promptInput.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'the folder was not offered',
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent === FOLDER_PATH),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          promptInput.focus();
+          await pressKey({ key: 'Enter' });
+
+          await waitUntil({
+            message: 'the note name prompt did not open',
+            predicate: () => getNameInput() !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          submitName(NEW_NOTE_NAME);
+
+          await waitUntil({
+            message: `the new note was not created at ${EXPECTED_PATH}`,
+            predicate: () => app.vault.getAbstractFileByPath(EXPECTED_PATH) !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const createdNote = app.vault.getAbstractFileByPath(EXPECTED_PATH);
+          if (createdNote) {
+            await app.fileManager.trashFile(createdNote);
+          }
+          return { firstPromptPlaceholder, wasCreated: createdNote !== null };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
+            settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
+            settings.shouldAskForTargetFolderWhenSplitting = original.shouldAskForTargetFolderWhenSplitting;
+            settings.shouldChooseFolderBeforeNameWhenSplitting = original.shouldChooseFolderBeforeNameWhenSplitting;
+            settings.shouldSplitHeadingsAutomatically = original.shouldSplitHeadingsAutomatically;
+            settings.shouldSplitIntoFolder = original.shouldSplitIntoFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (typeof node.editAndSave === 'function' && typeof node.settings?.shouldChooseFolderBeforeNameWhenSplitting === 'boolean') {
+              return node as SettingsCarrier;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function getNameInput(): HTMLInputElement | null {
+          const input = document.querySelector('.advanced-note-composer-split-note-name-modal input[type="text"]');
+          return input instanceof HTMLInputElement ? input : null;
+        }
+
+        function getPromptInput(): HTMLInputElement | null {
+          const input = document.querySelector('.prompt-input');
+          return input instanceof HTMLInputElement ? input : null;
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          const leaf = app.workspace.getLeaf(false);
+          await leaf.openFile(file);
+          await waitUntil({
+            message: `the editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return view.editor;
+        }
+
+        function submitName(name: string): void {
+          const nameInput = getNameInput();
+          if (!nameInput) {
+            throw new TypeError('No note name prompt input.');
+          }
+          nameInput.value = name;
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+          const createButton = [...document.querySelectorAll('.advanced-note-composer-split-note-name-modal .modal-button-container button')]
+            .find((el) => el.textContent === 'Create');
+          if (!(createButton instanceof HTMLElement)) {
+            throw new TypeError('No note name prompt Create button.');
+          }
+          createButton.click();
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    expect(result.firstPromptPlaceholder).toBe('Select folder to create the new note in...');
+    expect(result.wasCreated).toBe(true);
+  });
 });

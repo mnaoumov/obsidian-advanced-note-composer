@@ -250,6 +250,12 @@ interface RememberSplitTargetModeParams {
   readonly splitTargetMode: SplitTargetMode;
 }
 
+interface ResolveInitialSplitTargetModeParams {
+  readonly canMergeIntoExistingNote: boolean;
+  readonly defaultSplitTargetMode: SplitTargetMode;
+  readonly initialSplitTargetMode: null | SplitTargetMode;
+}
+
 interface ResolveSplitPassParams {
   readonly abortController: AbortController;
   readonly canSwitchToSmartCut: boolean;
@@ -473,13 +479,11 @@ class SplitFileModal extends SuggestModalBase {
     this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
-    // A flow with nothing to merge opens in `Create` whatever the setting says (issue #244) — the setting
-    // chooses between two modes, and here only one of them exists. A caller-supplied mode wins over the
-    // setting but not over that (issue #280): `Switch to merge` in the folder-then-name name box is a
-    // fresher answer than `defaultSplitTargetMode`, and cannot reach a flow that has nothing to merge.
-    this.splitTargetMode = this.canMergeIntoExistingNote
-      ? (params.initialSplitTargetMode ?? this.pluginSettingsComponent.settings.defaultSplitTargetMode)
-      : SplitTargetMode.Create;
+    this.splitTargetMode = resolveInitialSplitTargetMode({
+      canMergeIntoExistingNote: this.canMergeIntoExistingNote,
+      defaultSplitTargetMode: this.pluginSettingsComponent.settings.defaultSplitTargetMode,
+      initialSplitTargetMode: params.initialSplitTargetMode ?? null
+    });
 
     const initialInputValue = params.initialInputValue ?? '';
     this.inputValueBySplitTargetMode = {
@@ -1379,6 +1383,25 @@ async function rememberSplitTargetMode(params: RememberSplitTargetModeParams): P
 }
 
 /**
+ * The mode a pass opens in — the ONE rule, shared by the picker's constructor and the folder-then-name
+ * gate so the two cannot disagree again.
+ *
+ * A flow with nothing to merge opens in `Create` whatever the setting says (issue #244) — the setting
+ * chooses between two modes, and there only one of them exists. A caller-supplied mode wins over the
+ * setting but not over that (issue #280): `Switch to merge` in the folder-then-name name box is a
+ * fresher answer than `defaultSplitTargetMode`, and cannot reach a flow that has nothing to merge.
+ *
+ * @param params - Whether the flow can merge, the configured default, and the caller-supplied mode.
+ * @returns The mode the pass opens in.
+ */
+function resolveInitialSplitTargetMode(params: ResolveInitialSplitTargetModeParams): SplitTargetMode {
+  if (!params.canMergeIntoExistingNote) {
+    return SplitTargetMode.Create;
+  }
+  return params.initialSplitTargetMode ?? params.defaultSplitTargetMode;
+}
+
+/**
  * Produces THIS pass's picker result — from the folder-then-name pair (issue #261), from a
  * heading-driven skip, or from the picker itself.
  *
@@ -1463,8 +1486,12 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
  *
  * **Applies only to a pass that would CREATE**, and only while the picker would have opened at all:
  * - the setting is on;
- * - {@link PluginSettings.defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is asking
- *   for the picker, and the pair has nothing to offer them that the picker does not;
+ * - the pass would open in `Create` — someone whose default is `Merge` is asking for the picker, and the
+ *   pair has nothing to offer them that the picker does not. That is the EFFECTIVE mode
+ *   ({@link resolveInitialSplitTargetMode}), not the raw {@link PluginSettings.defaultSplitTargetMode}: a
+ *   flow with nothing to merge (`Create empty note at cursor...`) opens in `Create` whatever the setting
+ *   says, so a `Merge` default must not switch the pair off there. It used to, leaving the picker in a
+ *   `Create` the user could not leave, with the setting on and doing nothing;
  * - the picker is not ALREADY being skipped by a heading-driven pass, which has both answers already.
  *
  * **Merging is no longer off the table on this path (issue #280).** It was: the `Create` / `Merge` switch
@@ -1489,7 +1516,11 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
   if (
     !settings.shouldChooseFolderBeforeNameWhenSplitting
     || params.isPickerStillSkipped
-    || settings.defaultSplitTargetMode !== SplitTargetMode.Create
+    || resolveInitialSplitTargetMode({
+        canMergeIntoExistingNote: prepareParams.canMergeIntoExistingNote ?? true,
+        defaultSplitTargetMode: settings.defaultSplitTargetMode,
+        initialSplitTargetMode: null
+      }) !== SplitTargetMode.Create
   ) {
     return { kind: FolderThenNameKind.NotApplicable };
   }
