@@ -339,12 +339,15 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
 /**
  * Runs `splitFile` with the reveal poll's GIVE-UP budget elapsing in fake time rather than in wall clock.
  *
- * Only the two tests that drive the give-up need this, and they need it for the same reason: they pin
+ * Every test that drives the give-up needs this, and for the same reason: it pins
  * `getActiveViewOfType` to something the poll can never accept, so `pollForInsertedContent` runs its budget
  * out in full — 41 turns of a 50 ms sleep, on top of `openFileAfterOperation`'s 200 ms settle. Measured at
  * 2919 ms and 2779 ms of real waiting, against a 5000 ms `testTimeout`, and coverage instrumentation ate
  * what was left of the margin: the no-view test timed out at 5190 ms on a `npm run test:coverage` run and
- * passed on the plain re-run, which is the worst way for a suite to fail.
+ * passed on the plain re-run, which is the worst way for a suite to fail. The whitespace-only case pays the
+ * same budget (its content can never be located, so the poll never accepts) and was missed at first: it
+ * crossed the line at 5043 ms on a plain `npm test` under load. A new test asserting the give-up log
+ * belongs behind this helper too.
  *
  * Deliberately NOT fixed by shortening the production budget or by returning early on a null view. The poll
  * runs after `openFileAfterOperation` has already awaited the target's open, so a first-tick null is the
@@ -1156,7 +1159,7 @@ describe('splitFile move mode', () => {
       targetCursorOffset: 7
     });
 
-    await composer.splitFile();
+    await splitUnderFakeTimers(composer);
 
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(targetEditor.setCursor).not.toHaveBeenCalled();
