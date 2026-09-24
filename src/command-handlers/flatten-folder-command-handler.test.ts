@@ -277,14 +277,14 @@ describe('FlattenFolderCommandHandler', () => {
     expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
   });
 
-  it('should show a notice and not move anything when the folder path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'parent/a/note.md': 'note body' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'parent/a' });
+    const { handler } = createHandler({ isPathIgnored: (path) => path === 'parent/a' });
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
+    // The ignored folder was flattened; its note, which the filter does not cover, moved up.
+    expect(await app.vault.adapter.read('parent/note.md')).toBe('note body');
   });
 
   it('should move direct children up to the parent, preserving subfolder structure', async () => {

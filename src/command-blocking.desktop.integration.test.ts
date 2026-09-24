@@ -70,7 +70,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
         const noPathsConfigured = await probeCommand(blockedFile);
 
         // --- Issue #198: excluding the path from merges/splits must NOT hide its commands. They stay
-        // --- Visible and refuse with an "ignored in the plugin settings" notice when triggered.
+        // --- Visible, and since issue #288 they also RUN there: the content list only filters what they pick.
         await setPaths('Smart cut & paste exclude paths', BLOCKED_FOLDER);
         const contentExcludedOnly = await probeCommand(blockedFile);
 

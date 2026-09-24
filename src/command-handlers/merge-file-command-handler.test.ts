@@ -10,10 +10,8 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -47,20 +45,12 @@ interface TestableHandler {
   shouldAddToFilesMenu: (params: FileCommandHandlerShouldAddToFilesMenuParams) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
-}));
-
 // Partial rather than a bare factory: `plugin-settings.ts` reaches dev-utils' folder-note module, which
 // Imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
 // `undefined` and the whole suite fails to load.
 vi.mock(import('obsidian-dev-utils/obsidian/file-system'), async (importOriginal) => ({
   ...await importOriginal(),
   isMarkdownFile: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
 }));
 
 vi.mock('../composers/merge-composer.ts', () => {
@@ -82,8 +72,6 @@ vi.mock('../merge-into-single-file-runner.ts', () => ({
   mergeFilesIntoSingleFile: vi.fn().mockResolvedValue({ aborted: false, ignoredSourceFiles: [], mergedCount: 0 })
 }));
 
-const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
-const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForMergeFile = vi.mocked(prepareForMergeFile);
 const MockMergeComposer = vi.mocked(MergeComposer);
 const mockIsMarkdownFile = vi.mocked(isMarkdownFile);
@@ -172,26 +160,14 @@ describe('MergeFileCommandHandler', () => {
     expect(handler.canExecuteFile(file)).toBe(false);
   });
 
-  it('should show notice and return when path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     const params = createMockParams(true);
     const handler = toTestable(new MergeFileCommandHandler(params));
     const file = createMockFile();
 
-    const mockFragment = strictProxy<DocumentFragment>({
-      append: vi.fn(),
-      appendChild: vi.fn(),
-      appendText: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (callback) => {
-      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
     await handler.executeFile(file);
 
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(mockPrepareForMergeFile).not.toHaveBeenCalled();
+    expect(mockPrepareForMergeFile).toHaveBeenCalled();
   });
 
   it('should return when prepareForMergeFile returns null', async () => {

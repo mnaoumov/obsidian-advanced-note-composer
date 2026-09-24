@@ -9,9 +9,6 @@ import type {
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
@@ -82,17 +79,6 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Reorder)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot reorder headings in file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     const content = await this.app.vault.read(file);
     const split = splitIntoReorderableSections(content, this.getHeadings(file));
 

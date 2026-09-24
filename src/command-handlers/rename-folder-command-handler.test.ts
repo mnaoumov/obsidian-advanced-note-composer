@@ -130,14 +130,13 @@ describe('RenameFolderCommandHandler', () => {
     expect(handler.canExecuteFolder(getFolder('parent/Alpha'))).toBe(false);
   });
 
-  it('should refuse an ignored folder with a notice, without ever asking for a name', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'parent/Alpha/note.md': 'a' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: () => true });
+    const { handler } = createHandler({ isPathIgnored: () => true });
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockPrompt).not.toHaveBeenCalled();
+    expect(mockPrompt).toHaveBeenCalled();
   });
 
   it('should leave everything alone when the prompt is cancelled', async () => {

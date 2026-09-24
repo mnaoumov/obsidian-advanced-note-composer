@@ -8,9 +8,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -72,16 +70,6 @@ export class ExtractBeforeCursorEditorCommandHandler extends EditorCommandHandle
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
     const file = context.file;
     if (!file) {
-      return;
-    }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.SplitAndExtract)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot extract from file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
       return;
     }
     editor.setSelection({ ch: 0, line: 0 }, editor.getCursor());

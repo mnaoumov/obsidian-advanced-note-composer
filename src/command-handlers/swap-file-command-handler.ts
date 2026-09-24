@@ -6,9 +6,7 @@ import type { FileCommandHandlerShouldAddToFileMenuParams } from 'obsidian-dev-u
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -56,16 +54,6 @@ export class SwapFileCommandHandler extends FileCommandHandler {
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot swap file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
     const targetFile = await selectFileForSwap({
       app: this.app,
       pluginSettingsComponent: this.pluginSettingsComponent,

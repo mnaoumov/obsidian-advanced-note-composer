@@ -2428,7 +2428,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
    * The path rows of ONE command category: FOUR of them, one pair per filter.
    *
    * - `<Category> include paths` / `<Category> exclude paths` (issue #270) are the CONTENT filter — what
-   *   these commands may touch. This is the pair the reporter of #270 attached a screenshot of, and the
+   *   these commands may CHOOSE or SWEEP UP. Since issue #288 they no longer refuse the note or folder a
+   *   command is run on; that is the visibility filter's job alone. This is the pair the reporter of #270 attached a screenshot of, and the
    *   only one that can drop a folder from a modal's candidate list.
    * - `<Category> command include paths` / `<Category> command exclude paths` (issue #249) are the
    *   VISIBILITY filter — whether these commands are offered at all.
@@ -2437,8 +2438,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
    * a page of their own that covered every command at once; the reporter asked for that page to go,
    * because a path could be listed there AND here with neither row explaining the result on its own.
    *
-   * `Select` is the one category with TWO rows rather than four — it has no content pair, because a select
-   * writes nothing and never consults the content filter.
+   * `Select` and `Rename` have TWO rows rather than four — neither has a content pair. A select writes
+   * nothing, and a rename's only subject is what it was run on, which since issue #288 the content filter no
+   * longer refuses.
    *
    * The rows repeat the category in their names on purpose, even though they now sit on that category's
    * own page. Obsidian 1.13 indexes every row for its settings search, and nine identically-named
@@ -2454,8 +2456,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
     const contentIncludePathsPropertyName = pathSettingNames.contentIncludePathsPropertyName;
 
     /*
-     * Empty for `Select` and only for `Select`, which has no content pair to render: a select writes
-     * nothing and never consults the content filter, so two rows here would be controls read by nothing.
+     * Empty for `Select` and `Rename`, which have no content pair to render: a select writes nothing and
+     * never consults the content filter, and a rename has no picker and sweeps up nothing, so since issue
+     * #288 took the source refusal out its pair would be controls read by nothing.
      */
     const contentItems: SettingGroupItem[] = contentExcludePathsPropertyName === undefined || contentIncludePathsPropertyName === undefined
       ? []
@@ -2497,9 +2500,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.createEl('br');
             appendPathFormsDesc(f);
             f.createEl('br');
-            f.appendText('An excluded path is never offered in these commands\' dialogs, is refused as their source or target, and is never moved by them');
+            f.appendText('An excluded path is never offered in these commands\' dialogs, is refused as their target, and is never swept up when they run on a folder around it');
             f.createEl('br');
-            f.appendText('The commands themselves stay OFFERED here — that is what ');
+            f.appendText('The commands still RUN on an excluded note or folder itself — whether they are offered there is what ');
             appendCodeBlock(f, `${commandCategory} command exclude paths`);
             f.appendText(' below decides instead');
             f.createEl('br');
@@ -2556,7 +2559,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.appendText('A hidden command is gone from the command palette and from the editor, file, and folder context menus, so it cannot be triggered at all. This is a separate list from ');
           appendCodeBlock(f, `${commandCategory} exclude paths`);
           f.appendText(
-            ' on purpose: a path excluded there is still refused as a source or target and never moved, but these commands stay visible and explain themselves with an "ignored in the plugin settings" notice when triggered. List it here as well to hide them instead'
+            ' on purpose: a path excluded there is only kept out of these commands\' dialogs and targets, and the commands still run on it. List it here to stop them running there'
           );
           f.createEl('br');
           f.appendText('If the setting is empty, no ');

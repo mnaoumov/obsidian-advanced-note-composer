@@ -49,8 +49,6 @@ const PATHS_VALIDATOR_PROPERTY_NAMES = [
   'moveAndFlattenIncludePaths',
   'renameCommandExcludePaths',
   'renameCommandIncludePaths',
-  'renameExcludePaths',
-  'renameIncludePaths',
   'reorderCommandExcludePaths',
   'reorderCommandIncludePaths',
   'reorderExcludePaths',
@@ -694,6 +692,51 @@ describe('PluginSettingsComponent', () => {
       expect(legacySettings['mergeExcludePaths']).toEqual(['Archive']);
       expect(legacySettings['reorderExcludePaths']).toBeUndefined();
       expect(legacySettings['reorderCommandExcludePaths']).toBeUndefined();
+    });
+
+    // Issue #288 retired Rename's content pair. All it did was refuse to rename what it covered, which is
+    // What Rename's command pair does, so its entries move there: excludes union, as every exclude does.
+    it('should fold the retired Rename content pair into the Rename command pair', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        renameCommandExcludePaths: ['Drafts'],
+        renameExcludePaths: ['Archive'],
+        renameIncludePaths: ['Projects']
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['renameCommandExcludePaths']).toEqual(['Archive', 'Drafts']);
+      expect(legacySettings['renameCommandIncludePaths']).toEqual(['Projects']);
+    });
+
+    // Include lists cannot union, for the reason the #271 fan-out gives: a command include list already
+    // Set wins, and the retired half is dropped.
+    it('should keep a Rename command include list already set', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = {
+        renameCommandIncludePaths: ['Work'],
+        renameIncludePaths: ['Projects']
+      };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['renameCommandIncludePaths']).toEqual(['Work']);
+    });
+
+    // A pre-#271 vault reached Rename's content pair through the all-commands content list, so that list
+    // Now reaches Rename's command pair instead — and only once, even when blocking was on and the command
+    // Half fanned the same entries in already.
+    it('should route a retired all-commands content list to the Rename command pair', async () => {
+      const component = createComponent();
+      const legacySettings: GenericObject = { excludePaths: ['secret'], includePaths: ['allowed'] };
+      await component.runLegacyConverters(legacySettings);
+      expect(legacySettings['renameCommandExcludePaths']).toEqual(['secret']);
+      expect(legacySettings['renameCommandIncludePaths']).toEqual(['allowed']);
+    });
+
+    it('should carry a Rename content exclude list through a real load as a command block', async () => {
+      const component = await loadComponentFromRecord({ renameExcludePaths: ['Archive'] });
+
+      expect(component.settings.renameCommandExcludePaths).toEqual(['Archive']);
+      expect(component.settings.shouldBlockCommandOnPath('Archive/folder', CommandCategory.Rename)).toBe(true);
+      expect(component.settings.shouldBlockCommandOnPath('Archive/folder', CommandCategory.Merge)).toBe(false);
     });
 
     // Driving the REAL load pipeline, not just the converters: this is what proves the migrated keys are

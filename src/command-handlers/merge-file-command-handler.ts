@@ -10,10 +10,8 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -69,16 +67,6 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override async executeFile(file: TFile): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Merge)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot merge file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
     const result = await prepareForMergeFile({
       app: this.app,
       pluginSettingsComponent: this.pluginSettingsComponent,

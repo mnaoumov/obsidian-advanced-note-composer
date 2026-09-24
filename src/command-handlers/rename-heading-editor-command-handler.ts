@@ -8,9 +8,7 @@ import type {
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -93,16 +91,6 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
   protected override async executeEditor(_editor: Editor, context: MarkdownFileInfo): Promise<void> {
     const file = context.file;
     if (!file) {
-      return;
-    }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Rename)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot rename a heading in file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
       return;
     }
     const headingCache = this.headingCache;

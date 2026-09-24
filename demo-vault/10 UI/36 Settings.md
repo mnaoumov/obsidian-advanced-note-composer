@@ -183,7 +183,7 @@ Every one of these is per command category, and there is no pair covering every 
 - `reorderCommandIncludePaths` / `reorderCommandExcludePaths`
   - where the three reorder commands are offered.
 
-Every category except `Select` also has a pair for the *first* filter — what those commands may touch. That is how a folder stays out of one command's dialogs while every other command still uses it. `Select` has none because a select writes nothing: it moves the caret and stops, so there is nothing for a content filter to allow or refuse.
+Every category except `Select` and `Rename` also has a pair for the *first* filter — what those commands may pick, target, or sweep up. That is how a folder stays out of one command's dialogs while every other command still uses it. It never stops a command running *on* the listed note or folder itself; only the command pairs above do that. `Select` has none because a select writes nothing: it moves the caret and stops, so there is nothing for a content filter to allow or refuse. `Rename` has none because a rename has no picker and sweeps nothing up — its only subject is what it was run on, so hiding it there is the whole job, and that is `renameCommandExcludePaths`.
 
 - `mergeIncludePaths` / `mergeExcludePaths`
   - what the merge commands may merge, and merge into.
@@ -197,8 +197,6 @@ Every category except `Select` also has a pair for the *first* filter — what t
   - what the swap commands may swap.
 - `moveAndFlattenIncludePaths` / `moveAndFlattenExcludePaths`
   - what `Move folder...` and the three flatten commands may move.
-- `renameIncludePaths` / `renameExcludePaths`
-  - what `Rename folder...` and `Rename heading` may rename.
 - `reorderIncludePaths` / `reorderExcludePaths`
   - what the three reorder commands may list and reorder — this is the pair that keeps a templates folder out of the reorder modal.
 

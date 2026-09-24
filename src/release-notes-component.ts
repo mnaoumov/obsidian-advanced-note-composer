@@ -65,6 +65,25 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText(' heading together with the three that write the frontmatter ');
         appendCodeBlock(f, 'title');
         f.appendText('. Every setting keeps its value.');
+      }),
+      // Issue #288 changes what a setting the user already configured DOES, which is exactly what goes
+      // Unnoticed until a command that used to refuse quietly runs.
+      '5.12.0': createFragment((f) => {
+        f.appendText('The ');
+        appendCodeBlock(f, '<Category> exclude paths');
+        f.appendText(' and ');
+        appendCodeBlock(f, '<Category> include paths');
+        f.appendText(' boxes no longer stop a command you run ON a listed note or folder. They keep it out of the pickers, refuse it as a target, and keep it from being swept up by a folder operation, as before.');
+        f.createEl('br');
+        f.appendText('If you relied on the refusal, list the same path in that category\'s ');
+        appendCodeBlock(f, '<Category> command exclude paths');
+        f.appendText(', which hides the commands there instead.');
+        f.createEl('br');
+        f.appendText('The two ');
+        appendCodeBlock(f, 'Rename');
+        f.appendText(' boxes of that kind did nothing but refuse, so they are gone. What you had listed in them was moved into the ');
+        appendCodeBlock(f, 'Rename command');
+        f.appendText(' boxes, so renaming stays blocked where it was.');
       })
     };
 

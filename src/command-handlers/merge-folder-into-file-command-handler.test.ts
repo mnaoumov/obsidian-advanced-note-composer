@@ -284,15 +284,13 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     });
   });
 
-  it('should show a notice and not merge when the folder path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'src/note.md': 'note body' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'src' });
+    const { handler } = createHandler({ isPathIgnored: (path) => path === 'src' });
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockConfirm).not.toHaveBeenCalled();
-    expect(await app.vault.adapter.read('src/note.md')).toBe('note body');
+    expect(mockConfirm).toHaveBeenCalled();
   });
 
   it('should show a notice when the folder has no markdown notes', async () => {

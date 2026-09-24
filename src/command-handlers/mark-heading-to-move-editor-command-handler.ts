@@ -4,12 +4,9 @@ import type {
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { MoveNoticeComponent } from '../move-notice-component.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
@@ -32,7 +29,6 @@ interface MarkHeadingToMoveEditorCommandHandlerConstructorParams {
   readonly app: App;
   readonly moveNoticeComponent: MoveNoticeComponent;
   readonly moveSelectionBuffer: MoveSelectionBuffer;
-  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
   readonly selectionHighlightComponent: SelectionHighlightComponent;
@@ -52,7 +48,6 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
   private readonly app: App;
   private readonly moveNoticeComponent: MoveNoticeComponent;
   private readonly moveSelectionBuffer: MoveSelectionBuffer;
-  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
   private readonly selectionHighlightComponent: SelectionHighlightComponent;
@@ -68,7 +63,6 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
     this.app = params.app;
     this.moveNoticeComponent = params.moveNoticeComponent;
     this.moveSelectionBuffer = params.moveSelectionBuffer;
-    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
     this.selectionHighlightComponent = params.selectionHighlightComponent;
@@ -89,22 +83,11 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
     return getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
   }
 
-  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+  protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {
     const file = context.file;
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.SmartCutAndPaste)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot move a heading from file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     /*
      * Re-resolved here rather than remembered from `canExecuteEditor`: the gate runs whenever Obsidian builds
      * a menu or checks the palette, so a cursor moved in between would otherwise mark a heading the user has

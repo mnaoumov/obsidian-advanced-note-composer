@@ -1,14 +1,11 @@
 import type {
-  App,
   Editor,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SwapSelectionBuffer } from '../swap-selection-buffer.ts';
@@ -21,7 +18,6 @@ import {
 import { CommandCategory } from '../plugin-settings.ts';
 
 interface MarkSelectionToSwapEditorCommandHandlerConstructorParams {
-  readonly app: App;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly swapSelectionBuffer: SwapSelectionBuffer;
@@ -33,7 +29,6 @@ interface MarkSelectionToSwapEditorCommandHandlerConstructorParams {
  * `Swap selections: Swap with marked selection`.
  */
 export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandler {
-  private readonly app: App;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly swapSelectionBuffer: SwapSelectionBuffer;
@@ -46,7 +41,6 @@ export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandle
       name: 'Swap selections: Mark selection to swap'
     });
 
-    this.app = params.app;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.swapSelectionBuffer = params.swapSelectionBuffer;
@@ -59,22 +53,11 @@ export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandle
     return editor.somethingSelected();
   }
 
-  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+  protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {
     const file = context.file;
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot swap a selection from file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     this.swapSelectionBuffer.mark({
       endOffset: editor.posToOffset(editor.getCursor('to')),
       selectedText: editor.getSelection(),

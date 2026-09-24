@@ -283,10 +283,10 @@ describe('PluginSettingsTab', () => {
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
-      // Four rows since issue #270, content pair first. `Select` is the exception at two rows — it has no
-      // Content pair, because a select writes nothing and never consults that filter, so the rows would
-      // Be controls read by nothing.
-      const contentRowNames = commandCategory === CommandCategory.Select
+      // Four rows since issue #270, content pair first. `Select` and `Rename` are the exceptions at two rows —
+      // Neither has a content pair (a select writes nothing; a rename's only subject is what it was run on,
+      // Which the content filter stopped refusing in issue #288), so the rows would be controls read by nothing.
+      const contentRowNames = commandCategory === CommandCategory.Select || commandCategory === CommandCategory.Rename
         ? []
         : [`${commandCategory} include paths`, `${commandCategory} exclude paths`];
       const rowNames = [
@@ -612,7 +612,7 @@ describe('PluginSettingsTab', () => {
     renderRows(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
-      if (commandCategory === CommandCategory.Select) {
+      if (commandCategory === CommandCategory.Select || commandCategory === CommandCategory.Rename) {
         continue;
       }
 
