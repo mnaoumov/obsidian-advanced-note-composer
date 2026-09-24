@@ -93,9 +93,7 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
   - **The INVERTED reselect loop (issue #205, subsuming #199) — the five flows whose target is DERIVED rather than picked.** `Change target` used to be disabled in five places, which is what #205 is about: the reporter named flatten, #199 named `Create folder with notes...`. The loop above cannot be reused verbatim, because those flows have no picker to run FIRST — their destination is computed (the folder's own parent, the right-clicked folder, `MergeFolderIntoFileLocation`, a heading). So the loop inverts: **derived default → confirm → picker only on `shouldReselectTarget` → recompute → confirm again.** Two rules hold everywhere and must not be "simplified" away: (1) **dismissing the picker returns to the SAME dialog with the target unchanged, it does not cancel the operation** — a detour cancelled is not the journey abandoned; (2) **everything derived from the target is recomputed each pass**, or the dialog previews a plan the write then contradicts. The five: **heading-driven split** (`split-file-modal.ts`) needs no folder picker at all — it has `SplitFileModal`, merely skipped, so a per-pass `shouldSkipModalThisPass` (NOT `params.shouldSkipModal`, which must stay the caller's intent) is cleared on reselect and also fed to `shouldSkipSplitConfirmation`, so a re-picked pass still confirms; **flatten** re-derives its preview rows (de-duplication depends on what is already in the destination) and filters with `isAllowedFlattenDestination`, which is `isAllowedMoveTarget` MINUS the "not the current parent" clause — that parent is flatten's default, so it must stay on offer; **create folder with notes** rebuilds the WHOLE plan (`buildPlan`: sibling-aware `{{index}}`, rendered name, de-duplicated path, tokens, planned notes) because every one of them interpolates the parent; **merge folder into file** overrides the location setting for that run only and recomputes the issue-#186 "the occupying note is itself being merged away" branch, which is why `shouldMergeFolderIntoFile` became `confirmMergeFolderIntoFile` returning `'cancelled' | 'confirmed' | 'reselect-target'` (a `boolean` cannot carry the third answer); **recursive split** overrides the ROOT pass only, via `prepareForSplitFile`'s `targetParentFolderOverride` → `SplitItemSelector.resolveTargetFolderPrefix`, which beats both `shouldAllowOnlyCurrentFolder` branches — and `buildRecursiveSplitConfirmContent` gained a `Target` row, because a control whose effect is invisible is indistinguishable from one that does nothing. The picker itself is the shared `modals/select-folder-modal.ts` (`selectFolder({ isAllowedFolder, placeholder, … })`), extracted out of `MoveFolderModal` so the five flows differ only by their filter; `move-folder-modal.ts` keeps `isAllowedMoveTarget` and is now a thin caller.
   - `open-minimizable-modal.ts` — three openers. `openConfirmDialogModal(modal, abortController?)` takes a `ConfirmDialogModal` and nothing else, and always wraps it in the minimizable wrapper; `openMinimizableModal(modal, abortController?)` wraps any other modal in the dev-utils `MinimizableModal` so it can be minimized to a floating bar while its operation's lock is held; `openModal(modal, abortController?)` opens the modal plainly, with **no** minimize button. **`openConfirmDialogModal` exists because the invariant "every confirmation dialog is minimizable" was documented here but not enforced anywhere, and three flows had already broken it** — `Flatten folder`, `Split note recursively` and `Create folder with notes` each opened their confirmation through `openModal` and shipped without the button (issue #201). It is a one-line delegation whose ONLY job is its narrow parameter type: the 11 `new ConfirmDialogModal(...)` call sites can no longer reach the plain opener, so the twelfth cannot repeat the drift. **Minimizable**: every confirmation dialog (via that opener), **the split/extract picker** — deliberately minimizable so a pending extract can be parked and cancelled from the minimized bar (issue #130) — and the two pre-operation option modals, `paste-options-modal.ts` (`Move marked selection here (advanced)...`) and `reorder-headings-modal.ts`, which are the last step before their operation runs and are covered by issue #201's "all confirmation menus" for the same reason a confirmation dialog is (owner's call, 2026-08-09: peeking at the note before pressing `Move`/`Reorder` is worth exactly what peeking before pressing `Merge` is). **Plain (`openModal`)**: the initial pickers — merge file/folder, swap file/folder, and the folder picker — because a target has not been chosen yet, so minimizing serves no purpose and risks the user forgetting which note the operation was triggered on (issue #125). None of the three flows fixed by #201 holds a lock while its dialog is open (each confirms BEFORE `runLockedTransaction`), so none of them needed the `abortController` the lock-holding flows pass. All three openers wire an optional `abortController` `signal → modal.close()` so an external unlock (the lock indicator's Unlock menu / `Unlock active note` command) closes the open (possibly minimized) modal and cancels the setup flow. The minimized bar's **Cancel button is provided by dev-utils and is on by default** (`obsidian-dev-utils` ≥ 86.0.0 defaults `MinimizableModalConstructorOptions.shouldShowCancelButton` to `true`), so the wrapper passes **no** option — every minimizable modal gets a bar `Cancel` (✕) that closes it. For a lock-holding flow (extract/split, merge) closing releases the lock via the `onClose` → `promiseResolve(null)` → `using` chain, so the bar Cancel cancels the whole operation and unlocks the note — the discoverable alternative to the Unlock command that issue #130 asked for (while minimized, the peek-lock suppresses `contextmenu`, hiding the lock-indicator's right-click Unlock menu). Confirmed against real Obsidian by `unlock-cancel-minimized-modal.desktop.integration.test.ts` (minimize the extract picker, click the bar Cancel → modal gone AND the source lock indicator gone) and by `minimize-button.desktop.integration.test.ts`, which pins BOTH ends of the rule: the initial merge picker renders no minimize button, while the flatten / recursive-split / create-folder confirmations and the paste-options / reorder-headings modals each render exactly one. That second case probes all five in ONE closure with a per-modal `try`/`catch` — a throwing `waitUntil` would discard everything the earlier probes had already observed — and returns the failures so they are reported from outside Obsidian. `open-minimizable-modal.test.ts` pins the opener itself, which is the cheap guard that fails the moment anyone re-points a confirmation dialog at `openModal`. **Since `obsidian-dev-utils` ≥ 92.0.0 the wrapper changes a SECOND thing, and the two openers now differ in two ways rather than one (issue #202): clicking the dimmed background of a wrapped modal MINIMIZES it instead of cancelling the operation it is running.** The reporter's complaint was that a stray click past a confirmation menu threw away the whole pending command; a click is not a deliberate cancel, so it now parks the dialog on the floating bar and the operation stays alive. `MinimizableModalConstructorOptions.shouldMinimizeOnClickOutside` defaults to `true`, so — exactly as with `shouldShowCancelButton` — the wrapper passes **no** option and every minimizable modal gets it. Do NOT "restore" the native behavior thinking it was lost by accident. What still cancels is unchanged and deliberate: `Escape` (`ConfirmDialogModal`'s own `scope.register([], 'Escape')`), the dialog's Cancel button, and the bar's ✕ — a keypress or a button press is deliberate in a way a background click is not. **The plain `openModal` pickers keep dismissing on a background click**, since they are never wrapped: minimizing them was ruled out by #125, and there is no half-finished operation to protect before a target has been chosen. Upstream in dev-utils it is a capture-phase `click` listener on `containerEl` that `preventDefault()`s and `stopImmediatePropagation()`s — Obsidian registers its own dismissal on `bgEl` inside the `Modal` constructor and calls `close()` directly there, so nothing overridable and no prevented default can stop it from a listener on the same element. Confirmed against real Obsidian by `modal-background-click-minimizes.desktop.integration.test.ts`, which pins all three sides: the flatten confirmation parks and still completes after a restore, `Escape` still cancels it, and the initial merge picker is still dismissed by the same click.
   - `styles/` — `main.scss` plus the SCSS module type declaration.
-- **Smart-cut reverse flow.** A marked selection can switch back into the split/extract flow through the
-  permanent notice or the `open-split-modal` command; `OpenSplitModalCommandHandler` clears the mark,
-  restores the source-editor selection, then delegates to the normal extract-current-selection handler.
+- **Smart-cut reverse flow.** A marked selection can switch back into the split/extract flow through the permanent notice or the `open-split-modal` command; `OpenSplitModalCommandHandler` clears the mark, restores the source-editor selection, then delegates to the normal extract-current-selection handler.
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
 
 ## Demo vault
@@ -108,177 +106,66 @@ Advanced Note Composer is an Obsidian plugin that enhances the built-in Note Com
 
 ## Resource locking & transactional rollback
 
-Every merge/split/swap operation (files **and** folders) locks the resources it touches
-(`ResourceLockComponent.lockForPath({ shouldBlockMutations: true })`) against edit/delete/rename/move,
-detects external changes and aborts, and runs its vault mutations inside a reversible dev-utils
-`VaultTransaction` that commits on success and rolls back on cancel/error. The shared runner is
-`src/locked-transaction.ts` (`runLockedTransaction`), used by the composers and the swap/merge-folder
-handlers; folder-merge threads one spanning transaction into each `MergeComposer`. Requires
-`obsidian-dev-utils` ≥ 84.1.0 (`tx.rollback` uses `syncOpenEditorBuffersForPath` so split's rollback
-survives an open editor). Unit tests use the real bridge (`App.createConfigured__()` + real
-`ResourceLockComponent`/`VaultTransaction`), 100% coverage.
+Every merge/split/swap operation (files **and** folders) locks the resources it touches (`ResourceLockComponent.lockForPath({ shouldBlockMutations: true })`) against edit/delete/rename/move, detects external changes and aborts, and runs its vault mutations inside a reversible dev-utils `VaultTransaction` that commits on success and rolls back on cancel/error. The shared runner is `src/locked-transaction.ts` (`runLockedTransaction`), used by the composers and the swap/merge-folder handlers; folder-merge threads one spanning transaction into each `MergeComposer`. Requires `obsidian-dev-utils` ≥ 84.1.0 (`tx.rollback` uses `syncOpenEditorBuffersForPath` so split's rollback survives an open editor). Unit tests use the real bridge (`App.createConfigured__()` + real `ResourceLockComponent`/`VaultTransaction`), 100% coverage.
 
-The former integration-only branches are now fully unit-covered against `obsidian-test-mocks` ≥ 3.5.1,
-so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap paths in `swapper.ts`
-(3.5.0 made folder rename cascade to descendants and `getAvailablePath` de-duplicate), and the
-backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link
-indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so
-dev-utils' `editLinks` write path now completes against the mock.
+The former integration-only branches are now fully unit-covered against `obsidian-test-mocks` ≥ 3.5.1, so their `/* v8 ignore */`s are gone: the nested / differently-named folder-swap paths in `swapper.ts` (3.5.0 made folder rename cascade to descendants and `getAvailablePath` de-duplicate), and the backlink-rewrite `linkConverter` in `merge-composer.ts` (`fixBacklinks`) — 3.5.0 gave synchronous link indexing and 3.5.1 fixed the markdown parser's link end offset to the exclusive `start + length`, so dev-utils' `editLinks` write path now completes against the mock.
 
-**Attachment-path unit tests need no local scaffolding** since `obsidian-test-mocks` ≥ 3.8.0 models the
-resolution surface (`Vault.getConfig`/`setConfig`, `getAvailablePath`, `getAvailablePathForAttachments`,
-`TFolder.getParentPrefix`), which retired the former `attachment-path.test-helpers.ts` seed. A suite just
-calls `app.vault.setConfig('attachmentFolderPath', …)`; the vault root (`/`) is already the modeled
-default, matching Obsidian. Two things the mocks deliberately do not give you:
+**Attachment-path unit tests need no local scaffolding** since `obsidian-test-mocks` ≥ 3.8.0 models the resolution surface (`Vault.getConfig`/`setConfig`, `getAvailablePath`, `getAvailablePathForAttachments`, `TFolder.getParentPrefix`), which retired the former `attachment-path.test-helpers.ts` seed. A suite just calls `app.vault.setConfig('attachmentFolderPath', …)`; the vault root (`/`) is already the modeled default, matching Obsidian. Two things the mocks deliberately do not give you:
 
-- **Link settings have no modeled default**, and obsidian-dev-utils' `getNewLinkFormat` feeds a `switch` ending in
-  `assertNever`, so an undefined `newLinkFormat` THROWS once a merge rewrites a link. Set
-  `newLinkFormat: 'absolute'` (deterministic — `shortest` would depend on the rest of the fixture vault)
-  and `useMarkdownLinks: false`. Only `merge-composer.test.ts` reaches that path today; the other
-  attachment suites do not, so they do not set them.
-- **The attachment-location-plugin override** (Custom Attachment Location) is a third-party member, not
-  Obsidian's: obsidian-dev-utils dispatches to `app.vault.getAvailablePathForAttachments.extended` when present and
-  ignores the native resolution entirely. `merge-composer.test.ts`'s `stubAttachmentLocationPlugin`
-  installs one — `Object.assign(vi.fn(), { extended })` on the vault INSTANCE (the bridged member lives on
-  `Vault.prototype`, so patching it there would leak between tests) — and that is how issue #161's claim
-  that the destination comes from whatever patched Obsidian's resolution is pinned.
+- **Link settings have no modeled default**, and obsidian-dev-utils' `getNewLinkFormat` feeds a `switch` ending in `assertNever`, so an undefined `newLinkFormat` THROWS once a merge rewrites a link. Set `newLinkFormat: 'absolute'` (deterministic — `shortest` would depend on the rest of the fixture vault) and `useMarkdownLinks: false`. Only `merge-composer.test.ts` reaches that path today; the other attachment suites do not, so they do not set them.
+- **The attachment-location-plugin override** (Custom Attachment Location) is a third-party member, not Obsidian's: obsidian-dev-utils dispatches to `app.vault.getAvailablePathForAttachments.extended` when present and ignores the native resolution entirely. `merge-composer.test.ts`'s `stubAttachmentLocationPlugin` installs one — `Object.assign(vi.fn(), { extended })` on the vault INSTANCE (the bridged member lives on `Vault.prototype`, so patching it there would leak between tests) — and that is how issue #161's claim that the destination comes from whatever patched Obsidian's resolution is pinned.
 
 ## Integration test isolation
 
-**The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE temp vault across all
-105 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts Obsidian between
-files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — would be handed to
-every file that runs after it. Two setup files, both registered centrally, are what stop that.
+**The whole `integration-tests:desktop` project shares ONE Obsidian instance and ONE temp vault across all 105 files.** `globalSetup` runs once, `fileParallelism` is `false`, and nothing restarts Obsidian between files. So anything a test leaves behind — an open modal, a leftover `.menu`, a note — would be handed to every file that runs after it. Two setup files, both registered centrally, are what stop that.
 
-**`scripts/integration-test-setup.ts` is the cleanup that keeps that from cascading**, registered once
-through `editContext` in `scripts/vitest-config.ts` so it reaches every project spreading `context.desktop`
-and a new suite cannot forget it. `beforeAll` covers what a file inherits (above all the release-notes
-modal a fresh harness vault opens with — `ReleaseNotesComponent` is an `onLayoutReady` component);
-`afterEach` covers what it leaks. It never throws: cleanup that fails a run would mask the result of the
-test that just ran. **Do not add a per-file `afterEach` that duplicates it** — write the file assuming the
-app is uncovered when your test starts.
+**`scripts/integration-test-setup.ts` is the cleanup that keeps that from cascading**, registered once through `editContext` in `scripts/vitest-config.ts` so it reaches every project spreading `context.desktop` and a new suite cannot forget it. `beforeAll` covers what a file inherits (above all the release-notes modal a fresh harness vault opens with — `ReleaseNotesComponent` is an `onLayoutReady` component); `afterEach` covers what it leaks. It never throws: cleanup that fails a run would mask the result of the test that just ran. **Do not add a per-file `afterEach` that duplicates it** — write the file assuming the app is uncovered when your test starts.
 
-**Why it exists (measured — do not re-diagnose this as machine load).** Without it, one
-failure took the rest of the run with it: a test threw with its picker still open, and every later file
-needing a modal-free app failed behind it — **28 consecutively failing files in one run, 20 in another**,
-every one of which passed in isolation. The fix took the suite from **50 and 48 failed tests to 3 and 4**,
-on the same loaded machine, and to **3 of 149 across 103 files** on the re-run that landed it. Raising the
-wait budgets was measured and rejected: the in-renderer `waitUntil` default from 5 s to 15 s produced the
-identical failure ten seconds later.
+**Why it exists (measured — do not re-diagnose this as machine load).** Without it, one failure took the rest of the run with it: a test threw with its picker still open, and every later file needing a modal-free app failed behind it — **28 consecutively failing files in one run, 20 in another**, every one of which passed in isolation. The fix took the suite from **50 and 48 failed tests to 3 and 4**, on the same loaded machine, and to **3 of 149 across 103 files** on the re-run that landed it. Raising the wait budgets was measured and rejected: the in-renderer `waitUntil` default from 5 s to 15 s produced the identical failure ten seconds later.
 
 **Two traps when writing an integration test here:**
 
-- **`sleep(RENDER_DELAY_IN_MILLISECONDS)` is not a wait.** A fixed sleep before reading the DOM can hand
-  back a node from the *previous* render, and a click on a detached row silently chooses nothing — which
-  is exactly what headed the cascade above. Wait on a predicate for the thing you are about to act on.
-- **`waitUntil` defaults to 5 000 ms**, from `obsidian-integration-testing`'s in-renderer
-  `namespace-bootstrap.ts`, not from anything in this repo — six times tighter than the project's 30 s
-  `testTimeout`. It used to be inherited by ~505 of the suite's 535 call sites; roughly half of them now
-  name a ceiling instead, for the reason in the next section.
+- **`sleep(RENDER_DELAY_IN_MILLISECONDS)` is not a wait.** A fixed sleep before reading the DOM can hand back a node from the *previous* render, and a click on a detached row silently chooses nothing — which is exactly what headed the cascade above. Wait on a predicate for the thing you are about to act on.
+- **`waitUntil` defaults to 5 000 ms**, from `obsidian-integration-testing`'s in-renderer `namespace-bootstrap.ts`, not from anything in this repo — six times tighter than the project's 30 s `testTimeout`. It used to be inherited by ~505 of the suite's 535 call sites; roughly half of them now name a ceiling instead, for the reason in the next section.
 
 ### A closure's waits are SUMMED against the transport's 30 s cap
 
-**One `evalInObsidian` closure is one `Runtime.evaluate`, and the transport kills it at ~30 s** — so what
-matters is not any single wait but the SUM of every wait the closure can declare. Over that sum the eval can
-only ever die as a bare `script timeout`, which names the harness rather than the wait that overran, and no
-message any of those waits carries is ever printed. `obsidian-dev-utils/no-over-cap-wait-in-eval-in-obsidian`
-is the gate; it was red on **58 closures here** before the sweep that cleared them.
+**One `evalInObsidian` closure is one `Runtime.evaluate`, and the transport kills it at ~30 s** — so what matters is not any single wait but the SUM of every wait the closure can declare. Over that sum the eval can only ever die as a bare `script timeout`, which names the harness rather than the wait that overran, and no message any of those waits carries is ever printed. `obsidian-dev-utils/no-over-cap-wait-in-eval-in-obsidian` is the gate; it was red on **58 closures here** before the sweep that cleared them.
 
-**A helper that waits is charged once per CALL SITE, not once in total.** That is the counter-intuitive half
-and the one that makes an eyeballed budget wrong by an integer factor: an `openAndGetEditor` with one
-`waitUntil` called six times declares six ceilings. Divide a closure's budget by the CALL COUNT, not by the
-`waitUntil` calls the body shows.
+**A helper that waits is charged once per CALL SITE, not once in total.** That is the counter-intuitive half and the one that makes an eyeballed budget wrong by an integer factor: an `openAndGetEditor` with one `waitUntil` called six times declares six ceilings. Divide a closure's budget by the CALL COUNT, not by the `waitUntil` calls the body shows.
 
 **The two treatments, in the order to reach for them:**
 
-- **Size the ceiling** where every step is genuinely fast — a modal opening, an editor becoming active, a
-  one-note vault write. Declare one `WAIT_TIMEOUT_IN_MILLISECONDS` at the top of the closure body, pass it to
-  every `waitUntil`, and comment what shares it. Aim at **21-25 s declared**, not at 29: the point is real
-  headroom under the cap, and a closure sitting at 29 s is one added wait away from red.
-- **Move the sequencing to NODE** when the closure repeats a scenario. Three passes through a picker at six
-  ceilings each cannot be sized down to fit — dividing 30 s by eighteen leaves less than two seconds apiece,
-  which is not enough for a dialog on a loaded machine. Lift the scenario into a module-level `async function`
-  that runs ONE `evalInObsidian`, and let the `it` call it three times: no cap applies to a sequence of evals,
-  and each closure then declares a third of what it did.
+- **Size the ceiling** where every step is genuinely fast — a modal opening, an editor becoming active, a one-note vault write. Declare one `WAIT_TIMEOUT_IN_MILLISECONDS` at the top of the closure body, pass it to every `waitUntil`, and comment what shares it. Aim at **21-25 s declared**, not at 29: the point is real headroom under the cap, and a closure sitting at 29 s is one added wait away from red.
+- **Move the sequencing to NODE** when the closure repeats a scenario. Three passes through a picker at six ceilings each cannot be sized down to fit — dividing 30 s by eighteen leaves less than two seconds apiece, which is not enough for a dialog on a loaded machine. Lift the scenario into a module-level `async function` that runs ONE `evalInObsidian`, and let the `it` call it three times: no cap applies to a sequence of evals, and each closure then declares a third of what it did.
 
-**A value that crosses the transport is JSON, and `PluginSettings` carries a `Map`.** So a split that records
-settings in one eval and restores them in another must read and write the individual FIELDS - a
-`{ ...settings }` spread carries `commandCategoryPathSettings` out as `{}`, and assigning that back leaves
-every later file in the shared instance failing on `.get is not a function`. Measured, not guessed at: it is
-what `confirm-dialog-rename-buttons-hidden`'s first split did, and it took `split-collect-attachments` down
-with it.
+**A value that crosses the transport is JSON, and `PluginSettings` carries a `Map`.** So a split that records settings in one eval and restores them in another must read and write the individual FIELDS - a `{ ...settings }` spread carries `commandCategoryPathSettings` out as `{}`, and assigning that back leaves every later file in the shared instance failing on `.get is not a function`. Measured, not guessed at: it is what `confirm-dialog-rename-buttons-hidden`'s first split did, and it took `split-collect-attachments` down with it.
 
-**Vitest sequences files slowest-first from its own duration cache**, so file order changes every run.
-Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable
-failure whose downstream victims moved.
+**Vitest sequences files slowest-first from its own duration cache**, so file order changes every run. Never assume a fixed order, and be suspicious of a failure set that looks random — it may be one stable failure whose downstream victims moved.
 
-**`scripts/integration-test-vault-reset.ts` empties the vault before each file**, registered the
-same way and for the same reason — a suite cannot forget it. It deletes every child of `vault.getRoot()` in
-bounded passes, so a note resurrected by the previous file's debounced autosave goes on the next one, and a
-vault too large for one 30 s transport closure is finished by a later call. Dot-folders are not in Obsidian's
-file tree, so `.obsidian/data.json` and the harness's own configuration are untouched. Like the modal
-cleanup, it never throws.
+**`scripts/integration-test-vault-reset.ts` empties the vault before each file**, registered the same way and for the same reason — a suite cannot forget it. It deletes every child of `vault.getRoot()` in bounded passes, so a note resurrected by the previous file's debounced autosave goes on the next one, and a vault too large for one 30 s transport closure is finished by a later call. Dot-folders are not in Obsidian's file tree, so `.obsidian/data.json` and the harness's own configuration are untouched. Like the modal cleanup, it never throws.
 
-**Two projects deliberately opt out, via `withoutVaultReset` in `scripts/vitest-config.ts`.**
-`integration-tests:demo-vault` pre-populates the whole `demo-vault/` tree in its own `globalSetup` — that
-tree IS its subject, and it is reached by `npm run test:integration`, so wiping it would empty a real run —
-and `capture-screenshots:desktop` writes committed PNGs whose contents would change. Both keep the modal
-cleanup. The reset is appended to `context.desktop` for everyone and taken back off by name, so a new project
-inherits the isolation and opts out visibly rather than the other way round.
+**Two projects deliberately opt out, via `withoutVaultReset` in `scripts/vitest-config.ts`.** `integration-tests:demo-vault` pre-populates the whole `demo-vault/` tree in its own `globalSetup` — that tree IS its subject, and it is reached by `npm run test:integration`, so wiping it would empty a real run — and `capture-screenshots:desktop` writes committed PNGs whose contents would change. Both keep the modal cleanup. The reset is appended to `context.desktop` for everyone and taken back off by name, so a new project inherits the isolation and opts out visibly rather than the other way round.
 
-**Why it exists.** A late-running file competed with every earlier file's notes for room in the picker's
-fuzzy-ranked suggestion list, and a merge's link update reached into the hundreds of notes earlier files left
-behind, rewriting links in notes it did not own and dying mid-merge on an unhandled error. Every victim
-passed in isolation. If a test of yours still fails only in the aggregate, run it alone before reaching for a
-timing explanation.
+**Why it exists.** A late-running file competed with every earlier file's notes for room in the picker's fuzzy-ranked suggestion list, and a merge's link update reached into the hundreds of notes earlier files left behind, rewriting links in notes it did not own and dying mid-merge on an unhandled error. Every victim passed in isolation. If a test of yours still fails only in the aggregate, run it alone before reaching for a timing explanation.
 
-**The suite is green, and that is the comparison now (measured 2026-09-04): `105 passed (105)` files,
-`153 passed (153)` tests.** It had been `3 failed | 100 passed (103)` files / `3 failed | 146 passed (149)`
-tests, where *which* three failed rotated run to run out of a larger pool, so a branch had to be checked
-against a recorded table rather than against zero. That table is history now, kept in the tracker item. A
-failure here is a real regression.
+**The suite is green, and that is the comparison now (measured 2026-09-04): `105 passed (105)` files, `153 passed (153)` tests.** It had been `3 failed | 100 passed (103)` files / `3 failed | 146 passed (149)` tests, where *which* three failed rotated run to run out of a larger pool, so a branch had to be checked against a recorded table rather than against zero. That table is history now, kept in the tracker item. A failure here is a real regression.
 
-**The `Enter to create` row is NOT a vault-size symptom, and a clean vault does not make waiting for it
-safe.** `SuggestModalBase.onNoSuggestion()` is the only thing that ever pushes it, so it exists **only when
-the search matched nothing at all** — not "when no exact match exists", which is the natural but wrong
-reading. Any fuzzy hit suppresses it, and four sibling notes in a freshly created vault are enough. **Force
-the creation with `pressKey({ key: 'Enter', modifiers: ['Mod'] })`** instead: `split-file-modal.ts` binds
-`Mod+Enter` to move the switch to `Create` and choose with no item at all, which is the same path the row
-takes, and it works whatever the list holds.
+**The `Enter to create` row is NOT a vault-size symptom, and a clean vault does not make waiting for it safe.** `SuggestModalBase.onNoSuggestion()` is the only thing that ever pushes it, so it exists **only when the search matched nothing at all** — not "when no exact match exists", which is the natural but wrong reading. Any fuzzy hit suppresses it, and four sibling notes in a freshly created vault are enough. **Force the creation with `pressKey({ key: 'Enter', modifiers: ['Mod'] })`** instead: `split-file-modal.ts` binds `Mod+Enter` to move the switch to `Create` and choose with no item at all, which is the same path the row takes, and it works whatever the list holds.
 
-**A test whose premise is "my note is somewhere in the list" needs to earn its place in it.** With an empty
-box the pickers order by recency before fuzz (`recent-suggestions.ts`), and the plugin records every note
-opened (issue #256) — so a fixture that is merely CREATED sits in the fuzzy tail, while one that is briefly
-OPENED is at the head. `split-picker-name-first`'s nothing-typed test does exactly that.
+**A test whose premise is "my note is somewhere in the list" needs to earn its place in it.** With an empty box the pickers order by recency before fuzz (`recent-suggestions.ts`), and the plugin records every note opened (issue #256) — so a fixture that is merely CREATED sits in the fuzzy tail, while one that is briefly OPENED is at the head. `split-picker-name-first`'s nothing-typed test does exactly that.
 
 ## Testing notes
 
 ### Why the mobile frames do NOT raise the soft keyboard
 
-The rename-heading frame ends on a focused field with its text selected, so it looks like a candidate for
-the device-capture-with-a-keyboard treatment the command-palette frames in sibling plugins now use. **It
-was implemented, run on a real device, and reverted.** Recording why, because the frame alone does not
-show it and the next reader would reasonably try again:
+The rename-heading frame ends on a focused field with its text selected, so it looks like a candidate for the device-capture-with-a-keyboard treatment the command-palette frames in sibling plugins now use. **It was implemented, run on a real device, and reverted.** Recording why, because the frame alone does not show it and the next reader would reasonably try again:
 
-- The keyboard did come up, and the frame came back **worse**. Tapping a field whose text is already
-  selected also summons Android's own selection toolbar — `Cut / Copy / Select all / Read aloud` — which
-  floated across the dialog and covered the `Rename heading` title, with the two selection handles in
-  frame as well. The keyboard then covered `Cancel`, leaving only `Rename` visible. The measure looks
-  like an improvement (the largest flat row-run falls from 14% to 3.3%) and the picture is not one: this
-  is exactly the case where a frame has to be looked at rather than measured.
-- The dialog is obsidian-dev-utils' `prompt`, a centred modal. A sibling plugin's frame on the same component measured
-  no lift at all under the same taps, so the behavior is not even consistent between the two — one gets
-  a keyboard and a selection toolbar, the other gets nothing. Neither outcome is a better frame.
+- The keyboard did come up, and the frame came back **worse**. Tapping a field whose text is already selected also summons Android's own selection toolbar — `Cut / Copy / Select all / Read aloud` — which floated across the dialog and covered the `Rename heading` title, with the two selection handles in frame as well. The keyboard then covered `Cancel`, leaving only `Rename` visible. The measure looks like an improvement (the largest flat row-run falls from 14% to 3.3%) and the picture is not one: this is exactly the case where a frame has to be looked at rather than measured.
+- The dialog is obsidian-dev-utils' `prompt`, a centred modal. A sibling plugin's frame on the same component measured no lift at all under the same taps, so the behavior is not even consistent between the two — one gets a keyboard and a selection toolbar, the other gets nothing. Neither outcome is a better frame.
 
-So the frame keeps `captureObsidianScreenshot`, which photographs the page: no status bar, no clock, no
-selection toolbar, and byte-reproducible.
+So the frame keeps `captureObsidianScreenshot`, which photographs the page: no status bar, no clock, no selection toolbar, and byte-reproducible.
 
 ### The pickers this suite drops are a different question, and still open
 
-The file header explains that the `Extract` and `Merge` pickers are left out because they "render as a
-full-height empty list unless a real on-screen keyboard has focused them — which no script can arrange".
-**A script can arrange it now**: those pickers are Obsidian suggesters, whose field is anchored to the
-bottom of the viewport, and that is the one shape the harness's `raiseSoftKeyboard` handles correctly —
-a sibling plugin's suggester frames were re-captured this way and improved markedly. Restoring those two
-shots is therefore possible; it is a new pair of frames rather than a change to an existing one, so it is
-tracked separately rather than done here.
+The file header explains that the `Extract` and `Merge` pickers are left out because they "render as a full-height empty list unless a real on-screen keyboard has focused them — which no script can arrange". **A script can arrange it now**: those pickers are Obsidian suggesters, whose field is anchored to the bottom of the viewport, and that is the one shape the harness's `raiseSoftKeyboard` handles correctly — a sibling plugin's suggester frames were re-captured this way and improved markedly. Restoring those two shots is therefore possible; it is a new pair of frames rather than a change to an existing one, so it is tracked separately rather than done here.
