@@ -50,8 +50,6 @@ interface SwapFolderModalResult {
   readonly targetFolder: TFolder;
 }
 
-/* v8 ignore stop */
-
 /* v8 ignore start -- SwapFolderModal is an internal UI class tested through exported functions. */
 class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   private isSelected = false;

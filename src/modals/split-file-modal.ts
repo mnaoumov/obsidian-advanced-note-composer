@@ -111,8 +111,6 @@ interface FolderThenNameChosen {
   readonly name: string;
 }
 
-/* v8 ignore stop */
-
 interface FolderThenNameNotChosen {
   readonly kind: FolderThenNameKind.Dismissed | FolderThenNameKind.NotApplicable;
 }
@@ -289,9 +287,9 @@ interface SelectFolderThenNameParams {
   readonly params: PrepareForSplitFileParams;
 
   /**
-   * What to pre-fill the name box with — the heading an extract came from, when there is one.
+   * What to pre-fill the name box with — the heading an extract came from, or empty when there is none.
    */
-  readonly seed: string | undefined;
+  readonly seed: string;
 }
 
 type SelectFolderThenNameResult = FolderThenNameChosen | FolderThenNameNotChosen | FolderThenNameSwitchedToMerge;
@@ -1020,6 +1018,8 @@ class SplitFileModal extends SuggestModalBase {
   }
 }
 
+/* v8 ignore stop */
+
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
   // Capture the source selection and its text NOW, before the (minimizable) modal opens, while
   // `params.editor` still shows the source note. If the user navigates that leaf to another note
@@ -1496,7 +1496,7 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
 
   // The heading a heading-driven extract came from, so the common case is one keystroke: confirm it. It
   // survives a `Change target folder` detour, which is the whole reason it lives outside the loop.
-  let name = params.seed ?? '';
+  let name = params.seed;
 
   for (;;) {
     const folder = await selectFolder({

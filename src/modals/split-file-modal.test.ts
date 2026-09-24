@@ -42,6 +42,7 @@ import { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import { NameTransformError } from '../name-transform.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import {
+  CommandCategory,
   FrontmatterMergeStrategy,
   SplitTargetMode
 } from '../plugin-settings.ts';
@@ -378,6 +379,25 @@ function createMockWorkspace(): Workspace {
     getLeaf: castTo<Workspace['getLeaf']>(vi.fn().mockReturnValue(createMockLeaf())),
     getRecentFiles: vi.fn().mockReturnValue([])
   });
+}
+
+/**
+ * Asserts that the folder filter the flow handed to `selectFolder` refuses exactly the paths the
+ * split/extract content filter ignores.
+ *
+ * `selectFolder` is mocked, so nothing else ever calls the filter: without this, the rule deciding which
+ * folders a new note may be created in would go untested.
+ *
+ * @param pluginSettingsComponent - The settings component the flow ran with.
+ */
+function expectFolderFilterFollowsSplitContentFilter(pluginSettingsComponent: PluginSettingsComponent): void {
+  const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0]?.isAllowedFolder;
+  const isPathIgnored = vi.mocked(pluginSettingsComponent.settings.isPathIgnored);
+  isPathIgnored.mockImplementation((path) => path === 'ignored-folder');
+
+  expect(isAllowedFolder?.(castTo<TFolder>({ path: 'ignored-folder' }))).toBe(false);
+  expect(isAllowedFolder?.(castTo<TFolder>({ path: 'allowed-folder' }))).toBe(true);
+  expect(isPathIgnored).toHaveBeenLastCalledWith('allowed-folder', CommandCategory.SplitAndExtract);
 }
 
 describe('prepareForSplitFile', () => {
@@ -834,6 +854,7 @@ describe('prepareForSplitFile', () => {
       // The source note is locked for the whole setup flow, so an unlock request has to close this prompt.
       expect(mockSelectFolder.mock.calls[0]?.[0]?.abortController).toBeInstanceOf(AbortController);
       expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(pickedFolder);
+      expectFolderFilterFollowsSplitContentFilter(pluginSettingsComponent);
     });
 
     it('should not ask when the picker never opened', async () => {
@@ -925,6 +946,7 @@ describe('prepareForSplitFile', () => {
       expect(capturedSplitItemSelectorParams?.targetParentFolderOverride).toBe(chosenFolder);
       expect(capturedSplitItemSelectorParams?.inputValue).toBe('typed name');
       expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+      expectFolderFilterFollowsSplitContentFilter(pluginSettingsComponent);
     });
 
     it('should abandon the split when the folder prompt is dismissed', async () => {
