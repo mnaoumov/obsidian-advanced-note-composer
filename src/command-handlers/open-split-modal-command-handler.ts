@@ -57,7 +57,7 @@ export class OpenSplitModalCommandHandler extends GlobalCommandHandler {
     const capturedSelections = marked.capturedSelections;
 
     // Releases the held source-note lock (hiding the notice + removing the highlight) and re-opens the
-    // Source note — `prepareForSplitFile` takes its own lock on it, which would otherwise conflict.
+    // source note — `prepareForSplitFile` takes its own lock on it, which would otherwise conflict.
     const view = await reopenMarkedSourceNote({
       app: this.app,
       moveSelectionBuffer: this.moveSelectionBuffer,
@@ -68,7 +68,7 @@ export class OpenSplitModalCommandHandler extends GlobalCommandHandler {
     }
 
     // Restore the marked selection, so the reused `Extract current selection` flow sees exactly the text
-    // That was marked.
+    // that was marked.
     view.editor.setSelections(capturedSelections.map((selection) => ({
       anchor: view.editor.offsetToPos(selection.startOffset),
       head: view.editor.offsetToPos(selection.endOffset)

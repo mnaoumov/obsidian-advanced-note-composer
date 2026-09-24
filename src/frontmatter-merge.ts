@@ -68,7 +68,7 @@ export interface MergeRecursivelyParams {
 export function extractFrontmatter($string: string): ExtractFrontmatterResult {
   const frontmatterInfo = getFrontMatterInfo($string);
   // NOTE: on a parse failure this resets `frontmatterInfo.contentStart` to 0, which is what keeps the
-  // Broken block in the content below.
+  // broken block in the content below.
   const frontmatter = safeParseFrontmatter(frontmatterInfo);
 
   return {

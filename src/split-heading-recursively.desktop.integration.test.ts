@@ -125,7 +125,7 @@ describe('split heading recursively', () => {
             confirmationText,
             contents,
             // A note the command must never have created: `ScopedA` is the heading a whole-note run would
-            // Have taken first.
+            // have taken first.
             didCreateSiblingNote: app.vault.getAbstractFileByPath('ScopedA/ScopedA.md') !== null,
             sourceContent: await app.vault.read(sourceFile)
           };

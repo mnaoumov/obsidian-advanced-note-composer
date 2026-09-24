@@ -23,7 +23,7 @@ import { describeStall } from './merge-suite-stall.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this is a folder-merge (file-move) flow. It runs desktop-only, matching the plugin's
-// Established integration convention (no Android emulator wired for it).
+// established integration convention (no Android emulator wired for it).
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-no-active-leaf-cycling.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 const NOTE_COUNT = 12;
@@ -38,14 +38,14 @@ const NOTE_COUNT = 12;
  */
 const MERGE_TIMEOUT_IN_MILLISECONDS = 90_000;
 // The picker is a modal opening in front of the user; it is not the load-sensitive part, so it gets its own
-// Much tighter budget and fails saying so.
+// much tighter budget and fails saying so.
 const PICKER_TIMEOUT_IN_MILLISECONDS = 30_000;
 // Above the sum of the budgets above, so a genuine stall reports the NAMED poll timeout rather than losing
-// The race to a bare vitest timeout that says only that time ran out.
+// the race to a bare vitest timeout that says only that time ran out.
 const TEST_TIMEOUT_IN_MILLISECONDS = 180_000;
 const RENDER_DELAY_IN_MILLISECONDS = 300;
 // Small enough that a batch of `vault.create` calls cannot approach the CDP cap on its own, even while the
-// Vault is still being indexed.
+// vault is still being indexed.
 const NOTE_CREATION_BATCH_SIZE = 4;
 const SOURCE_FOLDER = 'cyc-src';
 const TARGET_FOLDER = 'cyc-tgt';
@@ -69,10 +69,10 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
 
     try {
       // The bug of issue #106 only manifests with `Should open note after merge` ON: a single-file merge
-      // Opens the merged note, but a folder merge used to open EVERY merged note in turn (the "visual
-      // Cycling"). Turn it on so the test fails loudly if the per-file open ever comes back. One eval per
-      // Toggle: a settings-tab round trip is a page navigation plus render delays, and paying for two of
-      // Them in one eval is exactly the kind of accumulation the cap punishes.
+      // opens the merged note, but a folder merge used to open EVERY merged note in turn (the "visual
+      // cycling"). Turn it on so the test fails loudly if the per-file open ever comes back. One eval per
+      // toggle: a settings-tab round trip is a page navigation plus render delays, and paying for two of
+      // them in one eval is exactly the kind of accumulation the cap punishes.
       for (const toggle of [{ name: 'Should ask before merging', shouldEnable: false }, { name: 'Should open note after merge', shouldEnable: true }]) {
         await evalInObsidian({
           async callback({ app, findSettingItem, pluginId, renderDelayInMilliseconds, settingName, shouldEnable }) {
@@ -143,7 +143,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
           await app.vault.create(`${targetFolder}/hub.md`, '# Hub\n\nSee [[note-0]].\n');
 
           // The merge-folder command derives its source folder from the ACTIVE file's parent, so open a note
-          // Inside the source folder (the real user flow: trigger merge-folder from a note in the folder).
+          // inside the source folder (the real user flow: trigger merge-folder from a note in the folder).
           const activeSourceNote = app.vault.getAbstractFileByPath(`${sourceFolder}/note-0.md`);
           if (!(activeSourceNote instanceof obsidianModule.TFile)) {
             throw new TypeError('Active source note missing.');
@@ -173,7 +173,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         vaultPath
       });
       // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the waits
-      // Below would blame a slow merge for a merge that was never allowed to start.
+      // below would blame a slow merge for a merge that was never allowed to start.
       expect(wasCommandStarted).toBe(true);
 
       await pollInObsidian({
@@ -243,7 +243,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
       expect(mergeStatus.sourceGone).toBe(true);
       expect(mergeStatus.mergedCount).toBe(NOTE_COUNT);
       // ...and it did so WITHOUT opening/cycling through any merged note (issue #106 regression guard). The
-      // Recording holds every activation, so a failure names the notes that were walked through, in order;
+      // recording holds every activation, so a failure names the notes that were walked through, in order;
       // Activations outside this suite's target folder are some other suite's, since the vault is shared.
       expect(recording.filter((activation) => activation.startsWith(`${TARGET_FOLDER}/note-`))).toEqual([]);
     } finally {

@@ -63,7 +63,7 @@ describe('same-note extract via the split picker', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Extracting into the note you are already in is a MERGE into an existing note, so since the
-          // Create/merge switch made the mode explicit (issue #227) the picker offers the source note in
+          // create/merge switch made the mode explicit (issue #227) the picker offers the source note in
           // `Merge` mode only - `Create` would make a second note named after the query instead.
           switchToMergeMode();
           await sleep(RENDER_DELAY_IN_MILLISECONDS);

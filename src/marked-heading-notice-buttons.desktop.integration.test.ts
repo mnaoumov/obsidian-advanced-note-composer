@@ -69,11 +69,11 @@ describe('marked heading notice buttons', () => {
     const wasOriginalShouldAsk = await didSetToggle(ASK_BEFORE_SPLITTING_TOGGLE, true);
     try {
       // A plain SELECTION mark: the two heading actions must NOT be offered, since there is no heading
-      // The buttons could act on.
+      // the buttons could act on.
       const selectionMarkLabels = await readSelectionMarkLabels();
 
       // Each button hands off to the existing command, which needs the mark (and its mutation-blocking lock
-      // On the note) released first.
+      // on the note) released first.
       const split = await driveHeadingAction('Split heading recursively...', 'Split heading recursively');
       const reorder = await driveHeadingAction('Reorder headings...', 'Reorder headings');
 
@@ -171,8 +171,8 @@ async function driveHeadingAction(label: string, title: string): Promise<Heading
        */
       const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
       // `Notice.hide()` animates the element out, so the notice is still in the DOM for a moment after the
-      // Mark is released. This one gives up rather than throwing, because whether it went away is the
-      // Observation - so it is the one wait here that must be allowed to run out.
+      // mark is released. This one gives up rather than throwing, because whether it went away is the
+      // observation - so it is the one wait here that must be allowed to run out.
       const NOTICE_TIMEOUT_IN_MILLISECONDS = 5000;
 
       const sourceFile = await resetFile(sourcePath, sourceContent);

@@ -34,7 +34,7 @@ afterEach(() => {
 
 describe('openConfirmDialogModal', () => {
   // Issue #201: three flows opened their confirmation dialog through `openModal` and shipped without a
-  // Minimize button. The opener is what makes that impossible to write, so it is what gets pinned here.
+  // minimize button. The opener is what makes that impossible to write, so it is what gets pinned here.
   it('adds a minimize button to every confirmation dialog', () => {
     const openSpy = vi.spyOn(Modal.prototype, 'open').mockImplementation(noop);
     const modal = createConfirmDialogModal();

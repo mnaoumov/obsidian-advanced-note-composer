@@ -18,7 +18,7 @@ describe('applyPropertiesWrittenDuringRun', () => {
 
   it('should keep a property the template wrote while it ran', () => {
     // The `processFrontMatter` case: the note gained `aliases` mid-run, and the render — computed from the
-    // Note as it stood before that — knows nothing about it.
+    // note as it stood before that — knows nothing about it.
     const result = applyPropertiesWrittenDuringRun({
       contentAfterRun: '---\naliases:\n  - A\n  - B\n---\n<%* … -%>\n# raw\n',
       contentBeforeRun: '<%* … -%>\n# raw\n',
@@ -61,7 +61,7 @@ describe('applyPropertiesWrittenDuringRun', () => {
 
   it('should ignore a mid-run edit that changed no property', () => {
     // The render stays authoritative for the note's TEXT: a template that rewrites its own body while
-    // Rendering it has no coherent answer, so the body written mid-run is discarded.
+    // rendering it has no coherent answer, so the body written mid-run is discarded.
     const result = applyPropertiesWrittenDuringRun({
       contentAfterRun: 'appended by the template\n',
       contentBeforeRun: 'original\n',

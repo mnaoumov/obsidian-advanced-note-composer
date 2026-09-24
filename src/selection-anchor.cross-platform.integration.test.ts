@@ -102,7 +102,7 @@ describe('selection anchor (issue #266)', () => {
             throw new Error('No active markdown view.');
           }
           // Through the editor, not `vault.modify`: this vault is shared, so the note may already be open
-          // With a stale buffer that an offset-based selection would silently read instead.
+          // with a stale buffer that an offset-based selection would silently read instead.
           view.editor.setValue(source);
           return view.editor;
         }
@@ -123,14 +123,14 @@ describe('selection anchor (issue #266)', () => {
     });
 
     // Anchoring the FAR end and finishing at the near one is the ordinary case on a phone, where the caret
-    // Is placed by tapping and taps do not arrive in document order.
+    // is placed by tapping and taps do not arrive in document order.
     expect(result.backwards).toEqual({
       isEndAvailable: true,
       selectedText: EXPECTED_SELECTION
     });
 
     // Same text as the two cases above, despite seven characters being inserted above the anchor: the
-    // Anchor tracked the edit. An unmapped offset selects from character 4 of the NEW document instead.
+    // anchor tracked the edit. An unmapped offset selects from character 4 of the NEW document instead.
     expect(result.afterEditInBetween).toEqual({
       isEndAvailable: true,
       selectedText: EXPECTED_SELECTION
@@ -168,7 +168,7 @@ describe('selection anchor (issue #266)', () => {
         view.editor.setSelection(anchorPosition, anchorPosition);
 
         // With nothing anchored, the two commands that consume an anchor are not offered — so on a phone
-        // They stay out of the command palette until they can actually do something.
+        // they stay out of the command palette until they can actually do something.
         const isEndAvailableWithNoAnchor = isAvailable('end-selection', view);
         const isCancelAvailableWithNoAnchor = isAvailable('cancel-selection', view);
 
@@ -195,12 +195,12 @@ describe('selection anchor (issue #266)', () => {
         const isMarkerVisible = !!markerStyle && markerStyle.display !== 'none' && Number.parseFloat(markerStyle.width) > 0;
 
         // Opening another note drops the anchor: Obsidian reuses one editor per leaf across file switches,
-        // So an anchor left behind would map into a DIFFERENT document and select text nobody pointed at.
+        // so an anchor left behind would map into a DIFFERENT document and select text nobody pointed at.
         const otherView = await openNote(otherPath, 'a different note');
         const isEndAvailableInAnotherNote = isAvailable('end-selection', otherView);
 
         // Coming back is the assertion that carries the weight. In the other note the command is refused
-        // Anyway, because the anchored note is not this one — only returning to the anchored note can tell
+        // anyway, because the anchored note is not this one — only returning to the anchored note can tell
         // A dropped anchor from one that merely does not apply where you are standing.
         const reopened = await openNote(path, source);
         const isEndAvailableAfterComingBack = isAvailable('end-selection', reopened);
@@ -251,14 +251,14 @@ describe('selection anchor (issue #266)', () => {
           const existing = app.vault.getAbstractFileByPath(notePath);
           const file: TFile = existing instanceof obsidianModule.TFile ? existing : await app.vault.create(notePath, content);
           // Re-opening the note that is already showing is a no-op that fires NO `file-open` at all, and
-          // This vault is shared, so the fixture may well already be active from an earlier suite.
+          // this vault is shared, so the fixture may well already be active from an earlier suite.
           const isAlreadyActive = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === notePath;
           const openCountBefore = openedPaths.filter((openedPath) => openedPath === notePath).length;
           await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === notePath, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           if (!isAlreadyActive) {
             // The view being live is not enough — every `file-open` subscriber, the plugin's included, has
-            // To have seen the event before the next line asks about its effect.
+            // to have seen the event before the next line asks about its effect.
             await waitUntil({
               message: `file-open never fired for ${notePath}`,
               predicate: () => openedPaths.filter((openedPath) => openedPath === notePath).length > openCountBefore,
@@ -288,7 +288,7 @@ describe('selection anchor (issue #266)', () => {
       isCancelAvailableWhileArmed: true,
       isCancelAvailableWithNoAnchor: false,
       // Dropped when the note was left, and not restored by coming back — an anchor lives only as long as
-      // You stay in the note you set it in.
+      // you stay in the note you set it in.
       isEndAvailableAfterComingBack: false,
       isEndAvailableInAnotherNote: false,
       isEndAvailableWithNoAnchor: false,

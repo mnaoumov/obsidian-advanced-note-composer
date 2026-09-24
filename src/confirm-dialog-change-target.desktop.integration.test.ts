@@ -79,7 +79,7 @@ describe('change target from the split confirmation dialog', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Read the source from the live editor buffer (the removal is applied there before it is
-          // Auto-saved to disk); the targets are transaction-written, so read those from the vault.
+          // auto-saved to disk); the targets are transaction-written, so read those from the vault.
           const sourceContent = editor.getValue();
           const targetAContent = await app.vault.read(targetA);
           const targetBContent = await app.vault.read(targetB);
@@ -118,7 +118,7 @@ describe('change target from the split confirmation dialog', () => {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');

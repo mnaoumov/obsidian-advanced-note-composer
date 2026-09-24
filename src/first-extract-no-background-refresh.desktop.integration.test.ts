@@ -24,9 +24,9 @@ describe('first extract does not refresh the background (issue #102)', () => {
         const other = await resetFile('issue-102-other.md', 'other body');
 
         // Open three tabs (other, target, source) with source last so it is active. Background tabs are
-        // What let the regression manifest: before the fix, rendering the confirm dialog's internal links
-        // Warmed obsidian-dev-utils' link handlers by briefly creating/activating/detaching a leaf, which
-        // Transiently switched the active tab to a background one and back.
+        // what let the regression manifest: before the fix, rendering the confirm dialog's internal links
+        // warmed obsidian-dev-utils' link handlers by briefly creating/activating/detaching a leaf, which
+        // transiently switched the active tab to a background one and back.
         await app.workspace.getLeaf('tab').openFile(other);
         await app.workspace.getLeaf('tab').openFile(target);
         const sourceEditor = await openInNewTabAndGetEditor(source);
@@ -115,7 +115,7 @@ describe('first extract does not refresh the background (issue #102)', () => {
     });
 
     // The source note stays active the whole time: opening the picker and the confirm dialog never
-    // Switches the active tab to a background note.
+    // switches the active tab to a background note.
     expect(result.activeBefore).toBe('issue-102-source.md');
     expect(result.activeWhenPickerOpen).toBe('issue-102-source.md');
     expect(result.activeWhenConfirmOpen).toBe('issue-102-source.md');

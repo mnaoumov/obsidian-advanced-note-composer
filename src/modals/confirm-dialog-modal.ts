@@ -128,8 +128,8 @@ export class ConfirmDialogModal extends Modal {
     this.containerEl.addClass('mod-confirmation');
     // ONE action row, the shape Obsidian's own confirmation dialogs have (issue #281). 5.11.0 had moved
     // `Don't ask again` / `Change target` / `Switch to smart cut & paste` onto a separate bordered strip
-    // Above this row, and two users independently found the dialog harder to read for it — so the row is
-    // Back, and only the `Alt` shortcuts that strip introduced are kept, named in each control's tooltip.
+    // above this row, and two users independently found the dialog harder to read for it — so the row is
+    // back, and only the `Alt` shortcuts that strip introduced are kept, named in each control's tooltip.
     // The checkbox is rendered on mobile as well: it works by touch, and it replaces the combined
     // "<verb> and don't ask again" button the mobile layout used to hand-roll.
     const buttonContainerEl = this.modalEl.createDiv('modal-button-container');

@@ -466,7 +466,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     const params = createMockParams(2, false);
     const handler = toTestable(new SplitNoteByHeadingsEditorCommandHandler(params));
     // The Cancel button on the progress notice aborts the run's controller; the loop checks it before
-    // Every heading, so an abort taken as the notice appears stops it before the first split.
+    // every heading, so an abort taken as the notice appears stops it before the first split.
     cancelOnProgressNotice(params.pluginNoticeComponent);
     mockGetCacheSafe.mockResolvedValue(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] }));
 

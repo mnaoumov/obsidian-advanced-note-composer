@@ -3,16 +3,16 @@ import { registerDemoVaultCoverageSuite } from 'obsidian-dev-utils/script-utils/
 import { getRootFolder } from 'obsidian-dev-utils/script-utils/root';
 
 // Keeps the in-repo `demo-vault/` in sync with the plugin's public surface WITHOUT
-// Launching Obsidian: it reflects the real config from source and asserts every
-// Setting is documented in a note, and that the guard note/member still exist
+// launching Obsidian: it reflects the real config from source and asserts every
+// setting is documented in a note, and that the guard note/member still exist
 // (rename drift). The vault IS this plugin's documentation, so nothing else checks
-// That a setting reaches a reader; the plugin's runtime behavior is covered by the
-// Desktop integration tests.
+// that a setting reaches a reader; the plugin's runtime behavior is covered by the
+// desktop integration tests.
 registerDemoVaultCoverageSuite({
   authoring: {
     // `Materials/` is the data the walkthroughs operate on, not part of the learning path, so its
-    // Deeper notes are not reachable from `00 Start.md` and are not meant to be. The ones listed here
-    // Exist only to give a command something to act on.
+    // deeper notes are not reachable from `00 Start.md` and are not meant to be. The ones listed here
+    // exist only to give a command something to act on.
     excludedNotes: [
       'README.md',
       'Materials/17 Swap file/Swap examples/Folder A/Note A.md',
@@ -34,7 +34,7 @@ registerDemoVaultCoverageSuite({
        */
       'Materials/40 Auto-number splits/Folder example/Recursive source.md',
       // The already-numbered neighbors the auto-numbering reads its `1 + max` from. They are the
-      // Background of the two sources the walkthrough DOES link, and nothing is done to them.
+      // background of the two sources the walkthrough DOES link, and nothing is done to them.
       'Materials/40 Auto-number splits/Folder example/1. A/!.md',
       'Materials/40 Auto-number splits/Folder example/3. B/!.md',
       'Materials/40 Auto-number splits/Folder example/4. C/!.md',
@@ -43,7 +43,7 @@ registerDemoVaultCoverageSuite({
       'Materials/40 Auto-number splits/Note example/4. C.md',
       // The same background for issue #273: the already-numbered neighbors a relocated item reads its
       // `1 + max` from, plus the one note that travels INSIDE a promoted folder. The walkthrough links the
-      // Two notes the reader actually opens; nothing is done to these.
+      // two notes the reader actually opens; nothing is done to these.
       'Materials/41 Auto-number moves/Flatten example/1. Existing/!.md',
       'Materials/41 Auto-number moves/Flatten example/2. First note.md',
       'Materials/41 Auto-number moves/Flatten example/3. Another/!.md',

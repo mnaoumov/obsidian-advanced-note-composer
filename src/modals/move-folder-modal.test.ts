@@ -29,7 +29,7 @@ import { selectFolder } from './select-folder-modal.ts';
 
 vi.mock('./select-folder-modal.ts', async (importOriginal) => {
   // Partially mocked: the cancellation test still drives the REAL picker, while the filter test only needs
-  // The parameters it was handed.
+  // the parameters it was handed.
   const original = await importOriginal<typeof import('./select-folder-modal.ts')>();
   return { selectFolder: vi.fn(original.selectFolder) };
 });
@@ -136,7 +136,7 @@ describe('selectTargetFolderForMove', () => {
 
   it('should filter the shared picker by the move rules', async () => {
     // Since the picker itself was extracted to `select-folder-modal.ts` (issue #205), the move-specific part
-    // Is exactly this callback — so it is asserted here rather than left to the suggester's internals.
+    // is exactly this callback — so it is asserted here rather than left to the suggester's internals.
     const app = App.createConfigured__({
       files: {
         'other/x.md': 'x',

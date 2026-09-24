@@ -23,20 +23,20 @@ import {
 import { describeStall } from './merge-suite-stall.ts';
 
 // Desktop-only: this is a folder-contents merge (file-delete) flow, matching the plugin's established
-// Integration convention.
+// integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-no-active-leaf-cycling.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 // The assertion is about WHETHER merged notes get opened, never about how fast, so a loaded machine must not
-// Be able to fail it. Each phase below is its own short eval and the waiting is done from Node, so this
-// Budget is the one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap it used to
-// Hide behind.
+// be able to fail it. Each phase below is its own short eval and the waiting is done from Node, so this
+// budget is the one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap it used to
+// hide behind.
 const MERGE_TIMEOUT_IN_MILLISECONDS = 90_000;
 // Above the budget used below, so a genuine stall reports the NAMED poll timeout rather than losing the race
-// To a bare vitest timeout.
+// to a bare vitest timeout.
 const TEST_TIMEOUT_IN_MILLISECONDS = 180_000;
 const RENDER_DELAY_IN_MILLISECONDS = 400;
 // Enough notes that a per-note open would be unmistakable in the recording rather than a single stray
-// Activation, and few enough that the merge stays well inside the budget above.
+// activation, and few enough that the merge stays well inside the budget above.
 const NOTE_COUNT = 8;
 // Notes in the sub-folder, so the recursive walk merges notes the flat listing never sees.
 const NESTED_NOTE_COUNT = 2;
@@ -45,10 +45,10 @@ const OPEN_TAB_COUNT = 4;
 // Small enough that a batch of `vault.create` calls cannot approach the CDP cap on its own.
 const NOTE_CREATION_BATCH_SIZE = 4;
 // What the recorder writes when a leaf change carries no file at all - the leaf being emptied rather than
-// Pointed at another note. Kept as a value rather than `null`, so the recording reads as an ordered log.
+// pointed at another note. Kept as a value rather than `null`, so the recording reads as an ordered log.
 const NO_FILE = '<no file>';
 // Unique across the aggregate on purpose: one temp vault is shared by every suite, so a generic basename
-// Would make another suite's `[[link]]` ambiguous.
+// would make another suite's `[[link]]` ambiguous.
 const SOURCE_FOLDER = 'cif-cycle-src';
 const SUB_FOLDER = `${SOURCE_FOLDER}/nested`;
 const MERGED_NOTE_PATH = `${SOURCE_FOLDER}.md`;
@@ -185,7 +185,7 @@ describe('merge folder contents into a single file does not cycle the active lea
             );
           }
           // ...and a note OUTSIDE the folder linking in, so backlink rewriting runs against a note the merge
-          // Is not deleting - the one link-rewrite path that could touch an open, surviving editor.
+          // is not deleting - the one link-rewrite path that could touch an open, surviving editor.
           await app.vault.create(hubNotePath, '# Hub\n\nSee [[cif-note-1]].\n');
         },
         input: { hubNotePath: HUB_NOTE_PATH, nestedNoteCount: NESTED_NOTE_COUNT, subFolder: SUB_FOLDER },
@@ -225,13 +225,13 @@ describe('merge folder contents into a single file does not cycle the active lea
           await sleep(renderDelayInMilliseconds);
 
           // EVERY activation, not only the interesting ones: when this comes back non-empty it is the
-          // Recorded order that names the cause, and a filtered recording would have thrown that away.
+          // recorded order that names the cause, and a filtered recording would have thrown that away.
           context.recording = [];
           context.eventRef = startActivationRecorder({ app, noFile, recording: context.recording });
 
           // Installed BEFORE the merge is kicked off, because notices auto-hide: the aggregate-only stall
-          // This suite has reports the state at the 90 s timeout, by which point any notice that
-          // Explained it has removed itself. Only the log can still say what appeared and when.
+          // this suite has reports the state at the 90 s timeout, by which point any notice that
+          // explained it has removed itself. Only the log can still say what appeared and when.
           context.noticeLog = [];
           context.noticeObserver = startNoticeRecorder({ noticeLog: context.noticeLog });
         },
@@ -272,7 +272,7 @@ describe('merge folder contents into a single file does not cycle the active lea
       });
       expect(commandStart.shouldAskBeforeMerging).toBe(false);
       // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the wait
-      // Below would blame a slow merge for a merge that was never allowed to start.
+      // below would blame a slow merge for a merge that was never allowed to start.
       expect(commandStart.wasCommandStarted).toBe(true);
 
       await pollInObsidian({
@@ -306,7 +306,7 @@ describe('merge folder contents into a single file does not cycle the active lea
           return {
             activePath: app.workspace.getActiveFile()?.path ?? null,
             // Proof the recording above is of a merge that actually happened: every note's heading landed in
-            // The merged note. Without this an early bail-out would look like "no cycling" and pass.
+            // the merged note. Without this an early bail-out would look like "no cycling" and pass.
             mergedHeadingCount: [...mergedContent.matchAll(/^# (?:Note|Nested) /gm)].length,
             recording: [...context.recording ?? []],
             sourceGone: app.vault.getAbstractFileByPath(sourceFolder) === null
@@ -339,7 +339,7 @@ describe('merge folder contents into a single file does not cycle the active lea
        */
       expect(result.recording.filter((activation) => isOwnNote(activation))).toEqual([]);
       // ...and the user is not LEFT in one either. With the open-after setting off nothing takes them to the
-      // Merged note; the setting is what changes that, and it has its own suite.
+      // merged note; the setting is what changes that, and it has its own suite.
       expect(isOwnNote(result.activePath ?? NO_FILE)).toBe(false);
     } finally {
       await evalInObsidian({
@@ -348,7 +348,7 @@ describe('merge folder contents into a single file does not cycle the active lea
             app.workspace.offref(context.eventRef);
           }
           // The aggregate shares one Obsidian, so an observer left connected would keep collecting every
-          // Later suite's notices into a context nobody reads.
+          // later suite's notices into a context nobody reads.
           context.noticeObserver?.disconnect();
           // The merged note and the hub land at the vault root, which the whole aggregate shares.
           await trashIfExists({ app, path: mergedNotePath });

@@ -103,7 +103,7 @@ function createMockFile(basename: string, path?: string, parentPath?: null | str
     parent: parentPath === null
       ? null
       // `getParentPrefix` is read since issue #238: a note picked in `Create` mode names the folder its
-      // Parent is, so any mock note can now end up being asked where it lives.
+      // parent is, so any mock note can now end up being asked where it lives.
       : strictProxy({ getParentPrefix: (): string => `${resolvedParentPath}/`, path: resolvedParentPath }),
     path: resolvedPath
   });
@@ -151,7 +151,7 @@ describe('SplitItemSelector', () => {
 
       expect(result.isNewTargetFile).toBe(true);
       // The highlighted note is never merged into — but since issue #238 it does say WHERE the new note
-      // Goes, so the created path carries its folder.
+      // goes, so the created path carries its folder.
       expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('/folder/new note.md', 'source.md');
     });
 
@@ -500,7 +500,7 @@ describe('SplitItemSelector', () => {
       const pluginSettingsComponent = createMockPluginSettingsComponent();
       const sourceFile = createMockFile('source', 'source.md');
       // Not a `strictProxy`: a `Create` now asks any chosen item which folder it names (issue #238), so it
-      // Reads `file` / `item` on a row that carries neither.
+      // reads `file` / `item` on a row that carries neither.
       const item = mockItem({
         type: 'bookmark'
       });
@@ -805,7 +805,7 @@ describe('SplitItemSelector', () => {
 
     // Issue #238. Picking an existing note in `Create` mode used to do nothing at all — the reporter clicked
     // A note and their extract was created wherever Obsidian's new-file resolution put it. The row now
-    // Answers WHERE, which is the only question a named creation has left.
+    // answers WHERE, which is the only question a named creation has left.
     it('should create the new note in the folder of the note picked in create mode', async () => {
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
@@ -891,7 +891,7 @@ describe('SplitItemSelector', () => {
 
     it('should prefer the folder the user was asked for over the one they merely picked', async () => {
       // The folder prompt (issue #238) and the recursive split's changed root (issue #205) are both answers
-      // To a question the user was ASKED; a highlighted row is one they only implied.
+      // to a question the user was ASKED; a highlighted row is one they only implied.
       const app = createMockApp();
       const pluginSettingsComponent = createMockPluginSettingsComponent({
         shouldAddInvalidTitleToNoteAlias: false
@@ -933,7 +933,7 @@ describe('SplitItemSelector', () => {
         item: strictProxy<Item>({ file: createMockFile('picked', 'picked-folder/picked.md', 'picked-folder'), type: 'file' }),
         pluginSettingsComponent,
         // The picker only offers the source's own folder in this mode, so the two agree in practice; the
-        // Assertion pins which one is consulted.
+        // assertion pins which one is consulted.
         shouldAllowOnlyCurrentFolder: true,
         shouldTreatTitleAsPath: true,
         sourceFile: createMockFile('source', 'my-folder/source.md', 'my-folder'),
@@ -1401,7 +1401,7 @@ describe('SplitItemSelector', () => {
 
     it('should move the new note into a folder when the caller forces it, even with the setting off', async () => {
       // The recursive split (issue #79) builds a folder tree, which IS the feature, so it cannot be at the
-      // Mercy of `Should split into folder`.
+      // mercy of `Should split into folder`.
       const newFile = createMockFile('new-file', 'folder/new-file.md');
       const app = createMockApp();
       vi.mocked(app.fileManager.createNewMarkdownFileFromLinktext).mockResolvedValue(newFile);
@@ -1568,8 +1568,8 @@ describe('SplitItemSelector', () => {
     });
 
     // Issue #227. The note has not been renamed into its folder yet at this point, so a folder token left
-    // To resolve against the note's own parent would name `folder` — the folder ABOVE the one being
-    // Created, which is never what a name for a note inside it means.
+    // to resolve against the note's own parent would name `folder` — the folder ABOVE the one being
+    // created, which is never what a name for a note inside it means.
     it('should resolve the folder tokens against the folder being created, not the note\'s current parent', async () => {
       const { app, newFile, selector } = createSelector({ settingsOverrides: { splitIntoFolderNoteNameTemplate: '{{folderName}} notes' } });
 

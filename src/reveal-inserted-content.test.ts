@@ -23,7 +23,7 @@ import {
 describe('resolveInsertedTextStartOffset', () => {
   it('should trust the recorded offset when the content really is there', () => {
     // `test` appears TWICE, and the recorded offset points at the second one. Taking the offset is the only
-    // Way to land on the copy that was actually written (issue #175).
+    // way to land on the copy that was actually written (issue #175).
     expect(resolveInsertedTextStartOffset({
       editorValue: 'a test here and a test there',
       insertedContent: 'test',
@@ -33,7 +33,7 @@ describe('resolveInsertedTextStartOffset', () => {
 
   it('should skip the template\'s own leading whitespace so the cursor lands on the text', () => {
     // The shipped `mergeTemplate` is `\n\n{{content}}`, so the recorded string starts with blank lines the
-    // User did not write and should not be sent to.
+    // user did not write and should not be sent to.
     expect(resolveInsertedTextStartOffset({
       editorValue: 'body\n\nmoved',
       insertedContent: '\n\nmoved',
@@ -61,7 +61,7 @@ describe('resolveInsertedTextStartOffset', () => {
 
   it('should fall back to the TRIMMED content when the padded string is nowhere to be found', () => {
     // What the heading-aware merge writes is the content re-wrapped section by section, so the padded string
-    // It recorded never appears verbatim — only its trimmed form does.
+    // it recorded never appears verbatim — only its trimmed form does.
     expect(resolveInsertedTextStartOffset({
       editorValue: 'intro\n\nmoved\n',
       insertedContent: '\n\n\n\nmoved\n\n\n\n',
@@ -71,7 +71,7 @@ describe('resolveInsertedTextStartOffset', () => {
 
   it('should give up rather than answer 0 for whitespace-only content', () => {
     // `indexOf('')` answers 0, which would silently send the cursor to the top of the note and read as a
-    // Jump that went to the wrong place rather than as one that did not happen.
+    // jump that went to the wrong place rather than as one that did not happen.
     expect(resolveInsertedTextStartOffset({
       editorValue: 'body',
       insertedContent: ' '.repeat(3),
@@ -97,13 +97,13 @@ describe('resolveInsertedContentRange', () => {
     });
 
     // Start past the template's blank lines, end just after the last character of the text — the trailing
-    // Newline the template contributed is not part of what the user extracted.
+    // newline the template contributed is not part of what the user extracted.
     expect(range).toEqual({ endPos: { ch: 17, line: 0 }, startPos: { ch: 7, line: 0 } });
   });
 
   it('should span the trimmed content reached through the fallback search', () => {
     // The padded string the heading-aware merge recorded is nowhere in the note, but its trimmed form is —
-    // And the range has to cover that text rather than the padding that never made it in.
+    // and the range has to cover that text rather than the padding that never made it in.
     const range = resolveInsertedContentRange({
       editor: createEditorDouble('intro\nmoved text'),
       insertedContent: '\n\nmoved text\n\n',

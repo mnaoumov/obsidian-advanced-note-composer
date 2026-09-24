@@ -10,14 +10,14 @@ import {
 
 // Desktop-only, matching the plugin's established integration convention. Version coverage: it drives only public APIs
 // (`Vault`, the `file-menu` workspace event) plus the plugin's own settings component, with no dependence on
-// Minified Obsidian internals, so verifying on public-latest is sufficient.
+// minified Obsidian internals, so verifying on public-latest is sufficient.
 // Isolation:
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-excluded.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 const PLUGIN_NAME = 'Advanced Note Composer';
 
 // Minimal shape of the plugin's settings component reached at runtime, used to set and restore the exclude
-// Paths (the same walker `exclude-paths-typing.desktop.integration.test.ts` uses).
+// paths (the same walker `exclude-paths-typing.desktop.integration.test.ts` uses).
 interface ComponentTreeNode {
   _children?: ComponentTreeNode[];
   editAndSave?: unknown;
@@ -102,9 +102,9 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           await app.vault.create('t366-excluded/t366-note.md', 'See ![[t366-pic.png]].');
 
           // 2. Configured: the only child folder is named after Obsidian's own `attachmentFolderPath`, with
-          // No exclusion configured for it at all. Since issue #213 that setting is not consulted here at
-          // All, so this shape keeps its entries — it is the pin on that withdrawal. It nests one deeper so
-          // That the setting stays the only thing that could take the recursive entry away (issue #230).
+          // no exclusion configured for it at all. Since issue #213 that setting is not consulted here at
+          // all, so this shape keeps its entries — it is the pin on that withdrawal. It nests one deeper so
+          // that the setting stays the only thing that could take the recursive entry away (issue #230).
           await app.vault.createFolder('t366-configured');
           await app.vault.createFolder('t366-configured/t366-cfg-assets');
           await app.vault.createBinary('t366-configured/t366-cfg-assets/t366-pic2.png', new ArrayBuffer(4));
@@ -113,7 +113,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
           await app.vault.create('t366-configured/t366-note2.md', 'See ![[t366-pic2.png]].');
 
           // 3. The control: the same shape plus an ordinary child folder, which the commands CAN promote —
-          // Nesting for the same reason as above.
+          // nesting for the same reason as above.
           await app.vault.createFolder('t366-control');
           await app.vault.createFolder('t366-control/t366-cfg-assets');
           await app.vault.createBinary('t366-control/t366-cfg-assets/t366-pic3.png', new ArrayBuffer(4));
@@ -141,7 +141,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
             app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
           } else {
             // The real member lives on `Vault.prototype`; the stub only shadowed it on the instance, so the
-            // Instance property has to go rather than be overwritten with a copy.
+            // instance property has to go rather than be overwritten with a copy.
             Reflect.deleteProperty(app.vault, 'getAvailablePathForAttachments');
           }
         }
@@ -209,7 +209,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
          */
         function stubAttachmentLocationPlugin(): void {
           // `bind` keeps the real call signature, so the native resolution still works for anything that
-          // Invokes it — only the `extended` member beside it is new.
+          // invokes it — only the `extended` member beside it is new.
           const patched = originalGetAvailablePathForAttachments.bind(app.vault);
           Object.assign(patched, { extended: resolveExtendedAttachmentPath });
           app.vault.getAvailablePathForAttachments = patched;
@@ -239,7 +239,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
     });
 
     // The user's own exclusion is enough, with no attachment resolution possible at all. `Flatten folder...`
-    // Stays: it still promotes the note, and an excluded child is simply left out of what it moves.
+    // stays: it still promotes the note, and an excluded child is simply left out of what it moves.
     expect(result.excludedTitles).toStrictEqual(['Flatten folder...']);
     /*
      * Issue #213: Obsidian's own `attachmentFolderPath` is NOT consulted once a plugin owns the resolution,
@@ -253,7 +253,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
       'Flatten folder recursively (all folders at any depth)...'
     ]);
     // One ordinary child folder is enough to bring both folder-only entries back, and `t366-sub` nests, so
-    // The recursive entry survives issue #210's duplicate rule as well.
+    // the recursive entry survives issue #210's duplicate rule as well.
     expect(result.controlTitles).toStrictEqual([
       'Flatten folder...',
       'Flatten folder (child folders only)...',

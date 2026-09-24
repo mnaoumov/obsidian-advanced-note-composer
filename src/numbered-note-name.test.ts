@@ -101,7 +101,7 @@ describe('applyNumberedNoteName', () => {
 
   it('should de-duplicate against a note already holding the numbered name', async () => {
     // The sibling is numbered `2.` and something unrelated already occupies `2. D`, so the rename cannot
-    // Simply take it.
+    // simply take it.
     expect(
       await renumber({
         'parent/1. A.md': 'a',
@@ -134,7 +134,7 @@ describe('applyNumberedNoteName', () => {
 
   it('should leave the note alone when the template reproduces its current name', async () => {
     // Only reachable through a hand-edited `data.json` — the settings validator requires `{{index}}` — but
-    // Without the guard the rename would de-duplicate the note against ITSELF and produce `D 1.md`.
+    // without the guard the rename would de-duplicate the note against ITSELF and produce `D 1.md`.
     expect(
       await renumber({
         'parent/D.md': 'd'
@@ -144,7 +144,7 @@ describe('applyNumberedNoteName', () => {
 
   it('should leave the note alone when the template renders to nothing', async () => {
     // `{{name}}` and `{{path}}` are what this template PRODUCES, so they resolve to nothing here; the
-    // Validator rejects them, and a hand-edited setting must not leave the note nameless.
+    // validator rejects them, and a hand-edited setting must not leave the note nameless.
     expect(
       await renumber({
         'parent/D.md': 'd'
@@ -154,8 +154,8 @@ describe('applyNumberedNoteName', () => {
 
   it('should scan the vault root for a note reporting no parent at all', async () => {
     // `TFile.parent` is nullable in the API even though a note in a vault always has one, so the fallback
-    // Is defensive — but it has to be the ROOT rather than nothing, or there would be no folder to read
-    // Siblings from and no prefix to rename into.
+    // is defensive — but it has to be the ROOT rather than nothing, or there would be no folder to read
+    // siblings from and no prefix to rename into.
     const renameFile = vi.fn(() => noopAsync());
     const app = strictProxy<AppOriginal>({
       fileManager: strictProxy({ renameFile }),

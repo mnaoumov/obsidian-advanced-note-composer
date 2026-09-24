@@ -133,8 +133,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
       return false;
     }
     // Whether an excluded folder may be a destination is its OWN setting since issue #253, not a side
-    // Effect of `Should always merge excluded items` — that one decides what a merge swallows, and a user
-    // Who wanted excluded items merged rather than skipped was getting excluded destinations offered too.
+    // effect of `Should always merge excluded items` — that one decides what a merge swallows, and a user
+    // who wanted excluded items merged rather than skipped was getting excluded destinations offered too.
     if (!this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations && this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
       return false;
     }
@@ -150,12 +150,12 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
 
 export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
   // The confirmation dialog can send the flow back to the folder picker ("Change target"); loop until the
-  // User confirms the merge or cancels.
+  // user confirms the merge or cancels.
   for (;;) {
     const targetFolder = await new Promise<null | TFolder>((promiseResolve) => {
       // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
-      // Chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the merge
-      // Was triggered on.
+      // chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the merge
+      // was triggered on.
       openModal(
         new MergeFolderModal({
           ...params,

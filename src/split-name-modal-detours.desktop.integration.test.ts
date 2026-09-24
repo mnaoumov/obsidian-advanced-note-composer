@@ -81,9 +81,9 @@ describe('the name box\'s detours (issue #280)', () => {
             settings.shouldSplitHeadingsAutomatically = false;
           });
           // The box names a note the user is INVENTING, so it must follow `Editor > Spellcheck` the way the
-          // Dev-utils `prompt()` it replaces did (issue #233). Turned ON here because Obsidian's own
+          // dev-utils `prompt()` it replaces did (issue #233). Turned ON here because Obsidian's own
           // `AbstractTextComponent` hardcodes `spellcheck="false"`: with the setting off, a box that had
-          // Lost the fix would be indistinguishable from one that still has it.
+          // lost the fix would be indistinguishable from one that still has it.
           app.vault.setConfig('spellcheck', true);
 
           await ensureFolder(FIRST_FOLDER_PATH);
@@ -107,14 +107,14 @@ describe('the name box\'s detours (issue #280)', () => {
           const detourLabels = getDetourButtons().map((button) => button.firstElementChild?.textContent ?? '');
           const isSwitchToMergeEnabled = !getDetourButton('Switch to merge')?.hasAttribute('disabled');
           // The folder already chosen is stated on the box, so `Change target folder` is not asking the user
-          // To change something they cannot see.
+          // to change something they cannot see.
           const chosenFolderText = nameBoxEl?.querySelector('.advanced-note-composer-split-note-name-folder')?.textContent ?? '';
           const nameBoxSpellcheck = getNameInput()?.getAttribute('spellcheck') ?? '<no name input>';
 
           typeName(NEW_NOTE_NAME);
           // Taken by SHORTCUT rather than by click, so both routes into the same action are proved: the sibling
-          // Case presses the other button. A strip control registers its handler on the modal's scope and its
-          // Button separately, and only one of the two is exercised by a click.
+          // case presses the other button. A strip control registers its handler on the modal's scope and its
+          // button separately, and only one of the two is exercised by a click.
           await pressKey({ key: 'c', modifiers: ['Alt'] });
 
           // Back to the folder list, which is the detour's whole point.
@@ -295,7 +295,7 @@ describe('the name box\'s detours (issue #280)', () => {
     });
 
     // Exactly one minimize button, beside the native close button — the ask, and the reason the box is a
-    // Modal of this plugin's own rather than a bare dev-utils `prompt()`.
+    // modal of this plugin's own rather than a bare dev-utils `prompt()`.
     expect(result.minimizeButtonCount).toBe(1);
 
     expect(result.detourLabels).toStrictEqual(['Change target folder', 'Switch to merge']);
@@ -309,7 +309,7 @@ describe('the name box\'s detours (issue #280)', () => {
     expect(result.reopenedFolderText).toBe('The new note goes in name-detours-second.');
 
     // The name typed before the detour survives it — losing it turns "let me just change the folder" into a
-    // Retype.
+    // retype.
     expect(result.reopenedName).toBe('name-detours-created');
 
     // And the note lands in the SECOND folder: the detour's answer wins over the one it replaced.
@@ -380,7 +380,7 @@ describe('the name box\'s detours (issue #280)', () => {
           const switchToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           const isToggleOn = switchToggle?.classList.contains('is-enabled') ?? false;
           // `Merge` opens EMPTY rather than holding the name that was being invented: that name is for a
-          // Note which does not exist, and `Merge` searches notes that do (issue #237).
+          // note which does not exist, and `Merge` searches notes that do (issue #237).
           const pickerInitialValue = getPromptInput()?.value ?? '<no picker input>';
 
           const pickerInput = getPromptInput();

@@ -58,13 +58,13 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const SOURCE_PATH = 'split-picker-mode-seed-source.md';
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
-        // Make another suite's link ambiguous - and this is also the note the picker must NOT create.
+        // make another suite's link ambiguous - and this is also the note the picker must NOT create.
         const HEADING = 'split-picker-mode-seed-heading';
         const SOURCE_CONTENT = `# Note\n\n## ${HEADING}\nseed body one\nseed body two\n`;
         const HEADING_LINE_INDEX = 2;
         const HEADING_COUNT = 2;
         // Whatever the user types while merging is a search for an existing note, not a name - so it must
-        // Survive a round trip through `Create` just as the heading survives one through `Merge`.
+        // survive a round trip through `Create` just as the heading survives one through `Merge`.
         const MERGE_SEARCH = 'split-picker-mode-seed-merge-search';
 
         const settingsComponent = findSettingsComponent();
@@ -72,7 +72,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
         try {
           await settingsComponent.editAndSave((settings) => {
             // The picker has to actually OPEN: with headings split automatically, `Extract this heading...`
-            // Skips it entirely and there is no box to observe.
+            // skips it entirely and there is no box to observe.
             settings.shouldSplitHeadingsAutomatically = false;
             settings.defaultSplitTargetMode = 'Create';
           });
@@ -80,7 +80,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so a line-based cursor would
-          // Otherwise land in the previous run's text.
+          // otherwise land in the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -100,13 +100,13 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Read the seed BEFORE anything is flipped: without it every assertion below would pass just as
-          // Well against a picker that was never seeded at all.
+          // well against a picker that was never seeded at all.
           const seededValueInCreateMode = readPickerValue();
 
           await flipSwitch();
           const valueAfterSwitchingToMerge = readPickerValue();
           // Issue #260: a CLICK on the switch used to leave focus on the switch, so the next thing typed
-          // Went nowhere. `Alt+M` never had the problem — a key press leaves focus where it was.
+          // went nowhere. `Alt+M` never had the problem — a key press leaves focus where it was.
           const isBoxFocusedAfterClickingSwitch = activeDocument.activeElement === getPickerInput();
 
           typeIntoPicker(MERGE_SEARCH);
@@ -132,7 +132,7 @@ describe('the split/extract picker\'s box is remembered per mode (issue #237)', 
             valueAfterSwitchingToMerge,
             valueAfterSwitchingToMergeAgain,
             // Cancelling must leave the vault alone - a note named after the heading would mean the picker
-            // Chose something on the way out.
+            // chose something on the way out.
             wasHeadingNoteCreated: app.vault.getAbstractFileByPath(`${HEADING}.md`) !== null
           };
         } finally {

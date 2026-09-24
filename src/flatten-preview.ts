@@ -120,7 +120,7 @@ function resolveTargetPath(params: ResolveTargetPathParams): string {
   const movedName = movedNameSequence.resolveName(child);
   let targetPath = getAvailablePathForAbstractFile(app, child, join(parentFolder.path, movedName));
   // A folder has no extension, so its counter goes at the end of the whole name — otherwise a folder
-  // Called `v1.2` would be de-duplicated as if `.2` were an extension.
+  // called `v1.2` would be de-duplicated as if `.2` were an extension.
   const extension = isFolder(child) ? '' : extname(movedName);
   const stem = extension ? basename(movedName, extension) : movedName;
   let counter = 1;

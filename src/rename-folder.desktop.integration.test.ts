@@ -60,16 +60,16 @@ describe('rename folder', () => {
         }
 
         // The prompt is seeded with the name WITHOUT its index — the number is the sequence's, not
-        // Something to be retyped.
+        // something to be retyped.
         const seededValue = nameInput.value;
 
         nameInput.value = TYPED_NAME;
         // The modal tracks its value through the component's change handler, so a bare `value` assignment
-        // Would be accepted and then submitted as the seeded name.
+        // would be accepted and then submitted as the seeded name.
         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
 
         // The prompt validates ASYNCHRONOUSLY and refuses to submit while the input is invalid, so clicking
-        // Before the validation settles is silently ignored.
+        // before the validation settles is silently ignored.
         await waitUntil({
           message: 'the typed folder name never became valid',
           predicate: () => nameInput.checkValidity()
@@ -82,9 +82,9 @@ describe('rename folder', () => {
         okButton.click();
 
         // Waits for the LAST thing the operation does, not the first: the folder rename lands before the
-        // Folder note is renamed and its properties rewritten, so waiting on the folder alone would read
-        // The note mid-flight. A throwing wait would discard everything observed so far, so give up quietly
-        // And let the assertions outside Obsidian report what actually happened.
+        // folder note is renamed and its properties rewritten, so waiting on the folder alone would read
+        // the note mid-flight. A throwing wait would discard everything observed so far, so give up quietly
+        // and let the assertions outside Obsidian report what actually happened.
         try {
           await waitUntil({
             message: 'the folder note was not renamed and rewritten',
@@ -112,7 +112,7 @@ describe('rename folder', () => {
             .sort(),
           folderNoteContent: folderNoteFile ? await app.vault.read(folderNoteFile) : null,
           // The rest of the folder came along untouched, so the rename moved the folder rather than
-          // Rebuilding it.
+          // rebuilding it.
           innerContent: innerFile ? await app.vault.read(innerFile) : null,
           // Nothing is left under the old name.
           oldFolderExists: app.vault.getFolderByPath(`${ROOT}/${OLD_FOLDER_NAME}`) !== null,
@@ -121,7 +121,7 @@ describe('rename folder', () => {
 
         function clickMenuItem(menuToSearch: MenuLike, title: string): void {
           // Identified by its rendered text, the way the other folder-menu tests do — `MenuItem` exposes no
-          // Title of its own.
+          // title of its own.
           const itemEl = menuToSearch.items.find((candidate) => candidate.dom?.textContent === title)?.dom;
           if (!itemEl) {
             const available = menuToSearch.items.map((candidate) => candidate.dom?.textContent ?? '').join(' | ');
@@ -153,11 +153,11 @@ describe('rename folder', () => {
     expect(result.folderNoteContent).not.toBeNull();
 
     // `title` takes the new name WITH its index. Written unquoted: `1. Beta` is a plain YAML scalar, so it
-    // Reads back as that string with no quoting needed.
+    // reads back as that string with no quoting needed.
     expect(result.folderNoteContent).toContain('title: 1. Beta');
 
     // The DERIVED alias was swapped for the new name's, and the hand-written one survived untouched — the
-    // Whole point of swapping one entry rather than rewriting the list.
+    // whole point of swapping one entry rather than rewriting the list.
     expect(result.folderNoteContent).toContain('- Beta');
     expect(result.folderNoteContent).not.toContain('- Alpha');
     expect(result.folderNoteContent).toContain('- my own alias');

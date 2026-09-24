@@ -200,8 +200,8 @@ beforeAll(async () => {
   setupDiagnostics = await evalInObsidian({
     async callback({ app, fontSizeInPixels, lib: { waitUntil }, subjectNotePath }) {
       // A closure runs inside ONE Appium `execute/sync` call, which WebDriver
-      // Caps around 30s. A longer wait in here dies as an opaque `script
-      // Timeout` rather than a readable failure, so keep every wait under it.
+      // caps around 30s. A longer wait in here dies as an opaque `script
+      // timeout` rather than a readable failure, so keep every wait under it.
       const SETTLE_TIMEOUT_IN_MILLISECONDS = 20_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
 
@@ -222,13 +222,13 @@ beforeAll(async () => {
 
       // Smaller type, so the taller dialogs fit the frame — see
       // `MOBILE_FONT_SIZE_IN_PIXELS`. Setting the config alone changes nothing
-      // On screen; the applier is what re-renders.
+      // on screen; the applier is what re-renders.
       app.vault.setConfig('baseFontSize', fontSizeInPixels);
       const fontApp: unknown = app;
       (fontApp as FontSizeApp).updateFontSize();
 
       // The note's own `# Project plan` heading already titles it, so Obsidian's
-      // Inline title renders the name twice.
+      // inline title renders the name twice.
       app.vault.setConfig('showInlineTitle', false);
       const inlineTitleApp: unknown = app;
       (inlineTitleApp as InlineTitleApp).updateInlineTitleDisplay();
@@ -245,23 +245,23 @@ beforeAll(async () => {
 describe('mobile store screenshots', () => {
   it('opens the note the shots are framed on', () => {
     // Surfaced as an assertion because vitest swallows console output from an
-    // Integration worker, and a silently-wrong layout produces bad images
-    // Without a single failure.
+    // integration worker, and a silently-wrong layout produces bad images
+    // without a single failure.
     expect(setupDiagnostics).toMatchObject({ isNoteOpen: true });
   });
 
   it('1 - the note the whole flow starts from', async () => {
     // The only shot that does not run a command, so it is the only one that does
-    // Not go through the dismissal `openCommandDialog` does first — and this
-    // Plugin greets a fresh install with a "Release notes" dialog, which is what
-    // Got photographed instead of the note.
+    // not go through the dismissal `openCommandDialog` does first — and this
+    // plugin greets a fresh install with a "Release notes" dialog, which is what
+    // got photographed instead of the note.
     await dismissDialogs();
     await shoot(1, 'One long note, five sections');
   });
 
   it('2 - the extract picker', async () => {
     // Opened seeded with the heading's own name, which is what the new note will
-    // Be called — the frame shows the name being chosen, not an empty search.
+    // be called — the frame shows the name being chosen, not an empty search.
     await runPickerAndCapture('extract-this-heading', 2, 'Extract a heading into its own note, linked in place');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 
@@ -279,10 +279,10 @@ describe('mobile store screenshots', () => {
 
   it('6 - the single-heading split preview', async () => {
     // The same machinery scoped to ONE heading, which is the far more common
-    // Everyday use. Every shot in this set escapes its dialog rather than
-    // Confirming it: the harness pushes files into a vault that persists on the
-    // Device between runs and is never cleared, so one confirmed split would
-    // Leave its produced notes behind for every later run to trip over.
+    // everyday use. Every shot in this set escapes its dialog rather than
+    // confirming it: the harness pushes files into a vault that persists on the
+    // device between runs and is never cleared, so one confirmed split would
+    // leave its produced notes behind for every later run to trip over.
     await runCommandAndCapture('split-heading-recursively', 6, 'Or split just one heading, and all it contains');
   });
 
@@ -394,7 +394,7 @@ async function lowerSoftKeyboard(): Promise<void> {
   }
 
   // One retry, because the first BACK can land while the IME is still animating
-  // Up from the focus that raised it, and an IME mid-animation swallows it.
+  // up from the focus that raised it, and an IME mid-animation swallows it.
   await pressBackAndSettle();
   if (await checkIsSoftKeyboardShown()) {
     throw new Error('The soft keyboard would not retract.');
@@ -421,9 +421,9 @@ async function openCommandDialog(params: OpenCommandDialogParams): Promise<Opene
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
 
       // Close anything already open — on first load this plugin shows a release
-      // Notes dialog, and waiting for "a modal" happily photographed THAT
-      // Instead of the one the command opens. Waiting for the count to reach
-      // Zero and then one is what ties the captured dialog to this command.
+      // notes dialog, and waiting for "a modal" happily photographed THAT
+      // instead of the one the command opens. Waiting for the count to reach
+      // zero and then one is what ties the captured dialog to this command.
       await pressKey({ key: 'Escape' });
 
       await waitUntil({
@@ -441,8 +441,8 @@ async function openCommandDialog(params: OpenCommandDialogParams): Promise<Opene
       await leaf.openFile(file);
 
       // Several of these commands act on the heading under the cursor, so the
-      // Cursor has to be ON one or the command is a no-op and the shot is of an
-      // Ordinary editor.
+      // cursor has to be ON one or the command is a no-op and the shot is of an
+      // ordinary editor.
       const view: unknown = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
       (view as CursorEditorView | null)?.editor.setCursor(headingLine, 0);
 
@@ -456,11 +456,11 @@ async function openCommandDialog(params: OpenCommandDialogParams): Promise<Opene
 
       if (shouldRevealSuggester) {
         // Obsidian's phone suggester renders full height and expects the on-screen
-        // Keyboard to have scrolled it into place. Without one the dialog sits off
-        // The bottom of the frame with an empty list above it; re-dispatching
+        // keyboard to have scrolled it into place. Without one the dialog sits off
+        // the bottom of the frame with an empty list above it; re-dispatching
         // `input` makes it render its matches, and scrolling puts it back in frame.
         // The keyboard frames never take this path: with a real IME up it would
-        // Fight the scroll the IME itself performs.
+        // fight the scroll the IME itself performs.
         const promptInput = document.querySelector('.prompt-input');
         if (promptInput instanceof HTMLInputElement) {
           promptInput.dispatchEvent(new Event('input'));
@@ -551,8 +551,8 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
  */
 async function runPickerAndCapture(commandId: string, index: number, caption: string): Promise<void> {
   // The wrapper spans the whole shot, so the device setting is live before the
-  // Picker's field takes focus, and the device is put back exactly as it was
-  // Found even if the capture throws.
+  // picker's field takes focus, and the device is put back exactly as it was
+  // found even if the capture throws.
   await withSoftKeyboardEnabled({
     async callback() {
       const opened = await openCommandDialog({ commandId, shouldRevealSuggester: false });
@@ -616,10 +616,10 @@ async function shootWithSoftKeyboard(index: number, caption: string): Promise<vo
   await hideCaret();
 
   // The touch that raises the IME lands in the middle of the field, and when it
-  // Lands inside TEXT Chromium draws a selection handle under the caret, which
-  // The framebuffer photographs. So the `Extract` picker's seeded name is taken
-  // Out for the touch and put back afterwards (later harness versions do this
-  // Themselves; 12.x does not).
+  // lands inside TEXT Chromium draws a selection handle under the caret, which
+  // the framebuffer photographs. So the `Extract` picker's seeded name is taken
+  // out for the touch and put back afterwards (later harness versions do this
+  // themselves; 12.x does not).
   const query = await setPromptInputValue('');
 
   await raiseSoftKeyboard({
@@ -631,7 +631,7 @@ async function shootWithSoftKeyboard(index: number, caption: string): Promise<vo
   await setPromptInputValue(query);
 
   // The write-back says nothing about the rows the suggester re-renders off it,
-  // And the frame is the painted result, so it waits for the paint.
+  // and the frame is the painted result, so it waits for the paint.
   await sleepInNode(KEYBOARD_SETTLE_DELAY_IN_MILLISECONDS);
 
   await writeFrame(index, caption, await captureDeviceScreenshot({ deviceId }));
@@ -650,15 +650,15 @@ function vaultPath(): string {
  */
 async function writeFrame(index: number, caption: string, captured: Uint8Array): Promise<void> {
   // The AVD is 900x1600, so the device frame IS the store's size. Asserting it
-  // Here is what keeps that true: run this against any other AVD and it fails
-  // Loudly instead of quietly shipping an off-spec image.
+  // here is what keeps that true: run this against any other AVD and it fails
+  // loudly instead of quietly shipping an off-spec image.
   expect(readPngDimensions(captured)).toStrictEqual({
     heightInPixels: HEIGHT_IN_PIXELS,
     widthInPixels: WIDTH_IN_PIXELS
   });
 
   // Captioned AFTER capture, so the frame stays an untouched screenshot and
-  // Rewording a label needs no re-shoot.
+  // rewording a label needs no re-shoot.
   const labeled = await labelScreenshot(captured, { text: caption });
 
   mkdirSync(IMAGES_DIRECTORY, { recursive: true });

@@ -14,7 +14,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 // This suite drives the REAL dialog DOM against a real Obsidian to prove the wiring (issue #74).
 // Version coverage: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
 // `.modal-button-container` DOM), not Obsidian-internals/version-sensitive, so verifying against the
-// Default (currently-installed public-latest) build suffices; no separate catalyst run is required.
+// default (currently-installed public-latest) build suffices; no separate catalyst run is required.
 
 const PLUGIN_ID = 'advanced-note-composer';
 

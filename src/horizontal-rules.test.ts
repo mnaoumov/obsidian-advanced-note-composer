@@ -19,7 +19,7 @@ import { getSelectionBetweenHorizontalRules } from './horizontal-rules.ts';
 
 // The unit tests hand-build the `sections` array, so they only verify the range math given a parsed cache.
 // Real Obsidian tagging of `---` / `***` / `___` / spaced rules as `thematicBreak` sections (and NOT
-// Frontmatter delimiters or `---` inside code fences) is confirmed by the desktop integration test.
+// frontmatter delimiters or `---` inside code fences) is confirmed by the desktop integration test.
 
 function createMockApp(cache: CachedMetadata | null): App {
   return strictProxy<App>({

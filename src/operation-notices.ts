@@ -68,7 +68,7 @@ export interface BuildOperationNoticeContentParams {
    * @default `undefined`
    */
   // `this: void` because it is a standalone callback, never a method of these params — which is also what
-  // Lets it be destructured and handed on without tripping `unbound-method`.
+  // lets it be destructured and handed on without tripping `unbound-method`.
   readonly onTargetLinkClick?: (this: void) => Promise<void>;
 
   /**
@@ -225,7 +225,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
       fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile, pluginSettingsComponent }));
     } else {
       // Deliberately NOT `getPath()`: that resolves the path against the vault, and the whole reason this
-      // Branch exists is that the source is already gone from it.
+      // branch exists is that the source is already gone from it.
       appendCodeBlock(fragmentEl, typeof sourcePathOrAbstractFile === 'string' ? sourcePathOrAbstractFile : sourcePathOrAbstractFile.path);
     }
     if (targetPathOrAbstractFile !== undefined) {

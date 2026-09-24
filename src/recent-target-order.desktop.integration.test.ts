@@ -12,10 +12,10 @@ import {
 } from 'vitest';
 
 // Desktop-only: this drives a real folder move and the real folder-picker suggester DOM, matching the
-// Plugin's established integration convention (no Android emulator is wired for it). It is the only proof
-// That issue #206 works end to end — the unit tests pin the ordering function, not the recording.
+// plugin's established integration convention (no Android emulator is wired for it). It is the only proof
+// that issue #206 works end to end — the unit tests pin the ordering function, not the recording.
 // File-move suites can hit the documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`)
-// When several run in one aggregate; if this stalls in the aggregate it must still pass alone.
+// when several run in one aggregate; if this stalls in the aggregate it must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/recent-target-order.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -76,7 +76,7 @@ describe('recent target ordering (issues #206, #256)', () => {
         try {
           await settingsComponent.editAndSave((settings) => {
             // Flat menu items (no submenu) so the folder commands are directly in `menu.items`, and no
-            // Confirmation dialog between the picker and the move.
+            // confirmation dialog between the picker and the move.
             settings.shouldAddCommandsToSubmenu = false;
             settings.shouldAskBeforeMovingFolder = false;
           });
@@ -86,9 +86,9 @@ describe('recent target ordering (issues #206, #256)', () => {
           }
 
           // `rt-src` is moved into `rt-dst` — which nobody ever opens a note in, so Obsidian's own recency
-          // Knows nothing about it. `rt-here` holds the note we end up ON, which is what issue #158 puts
-          // First and what a recorded target has to outrank. `rt-other` is only ever the folder the picker
-          // Is opened on, so it is the operation's source and never an offered target itself.
+          // knows nothing about it. `rt-here` holds the note we end up ON, which is what issue #158 puts
+          // first and what a recorded target has to outrank. `rt-other` is only ever the folder the picker
+          // is opened on, so it is the operation's source and never an offered target itself.
           await app.vault.createFolder('rt-src');
           const noteInSrc = await app.vault.create('rt-src/note-in-src.md', 'src body');
           await app.vault.createFolder('rt-dst');
@@ -146,10 +146,10 @@ describe('recent target ordering (issues #206, #256)', () => {
           });
 
           // Go back to a note in a THIRD folder, so the folder we are ON is not the one we targeted — the
-          // Case the reporter is in, and the only one where #206 and #158 disagree.
+          // case the reporter is in, and the only one where #206 and #158 disagree.
           await openFile(noteHere);
           // The view is live before Obsidian has finished dispatching `file-open`, and that event is what
-          // Records the visit — reading the picker on the strength of the view alone races the recording.
+          // records the visit — reading the picker on the strength of the view alone races the recording.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const suggestionsAfterMove = await pickerSuggestions();
@@ -252,7 +252,7 @@ describe('recent target ordering (issues #206, #256)', () => {
 
     // The premise: a folder nobody has opened a note in does not lead the picker on its own. Stated as
     // "not first" rather than as a fixed index — an earlier suite in the aggregate run may have recorded
-    // Targets of its own, and the rest of the list is whatever the vault has been through.
+    // targets of its own, and the rest of the list is whatever the vault has been through.
     expect(result.suggestionsBeforeMove[0]).not.toBe('rt-dst');
 
     /*

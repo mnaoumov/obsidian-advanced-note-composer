@@ -382,7 +382,7 @@ describe('MoveMarkedSelectionHereEditorCommandHandler', () => {
       // (issue #144); only the top/bottom moves are configurable.
       expect($arguments.shouldJumpToMovedContent).toBe(true);
       // The kind both marks this as a smart cut & paste move and selects its template: the at-cursor move
-      // Has no override of its own, so it always takes the shared template (issue #174).
+      // has no override of its own, so it always takes the shared template (issue #174).
       expect($arguments.smartCutAndPasteMoveKind).toBe(SmartCutAndPasteMoveKind.AtCursor);
       expect($arguments.sourceFile).toBe(resolvedSource);
       expect($arguments.targetCursorOffset).toBe(42);

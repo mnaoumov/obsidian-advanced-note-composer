@@ -12,9 +12,9 @@ import {
 } from 'vitest';
 
 // Issue #201: the minimize button existed only on some confirmation menus. It is now a property of the
-// Opener (`openConfirmDialogModal`), not of each flow, so this file pins both ends of the rule against a
-// Real Obsidian: every menu that asks the user to approve an operation carries the button, and the initial
-// Pickers still do not (issue #125).
+// opener (`openConfirmDialogModal`), not of each flow, so this file pins both ends of the rule against a
+// real Obsidian: every menu that asks the user to approve an operation carries the button, and the initial
+// pickers still do not (issue #125).
 // Desktop-only, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/minimize-button.desktop.integration.test.ts`.
 
@@ -84,7 +84,7 @@ describe('minimize button', () => {
         };
 
         // Cancel the merge via the plugin's own unlock command. Aborting the setup flow closes the
-        // Locked modal and releases the source-file lock, leaving no lingering modal or lock behind.
+        // locked modal and releases the source-file lock, leaving no lingering modal or lock behind.
         app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
         await waitUntil({ predicate: () => document.querySelector('.prompt') === null });
 
@@ -202,7 +202,7 @@ describe('minimize button', () => {
             app.commands.executeCommandById(`${pluginId}:move-marked-selection-here-advanced`);
           });
           // The paste-options modal is only the OPTIONS step — cancelling it leaves the mark (and the
-          // Source-note lock) in place, so the mark has to be dropped explicitly.
+          // source-note lock) in place, so the mark has to be dropped explicitly.
           app.commands.executeCommandById(`${pluginId}:cancel-move`);
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -314,10 +314,10 @@ describe('minimize button', () => {
           }
           nameInput.value = name;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           // The prompt validates ASYNCHRONOUSLY and starts out invalid, so a click before it settles is
-          // Silently ignored.
+          // silently ignored.
           await waitUntil({
             message: 'the typed folder name never became valid',
             predicate: () => nameInput.checkValidity(),
@@ -396,11 +396,11 @@ describe('minimize button', () => {
 
           const barEl = document.querySelector('.minimized-modal-bar');
           // The bar reuses the modal's own title, and the source note is readable behind it — the whole
-          // Point of the feature (issue #201).
+          // point of the feature (issue #201).
           const barTitle = barEl?.querySelector('.minimized-modal-bar-title')?.textContent ?? null;
           const hasRestoreButton = barEl?.querySelector('.restore-button') !== null && barEl?.querySelector('.restore-button') !== undefined;
           // The dialog this bar parked, not merely "a modal container" — the computed display is the
-          // Ground truth for it being out of the way, backdrop included.
+          // ground truth for it being out of the way, backdrop included.
           const dialogEl = minimizeButton.closest('.modal-container');
           const isDialogHidden = dialogEl instanceof HTMLElement && activeWindow.getComputedStyle(dialogEl).display === 'none';
 

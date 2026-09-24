@@ -123,7 +123,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
     // Cheapest answers first: both are a property of the folder itself, and they spare the subtree walk
-    // Below on every folder-menu open.
+    // below on every folder-menu open.
     if (folder.isRoot() || isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
@@ -191,9 +191,9 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     }
 
     // Issue #186: the merged-away note has released the configured path, so claim it. Guarded on the path
-    // Actually being free, because the merge may have been partial - an ignored note is never merged away and
-    // Keeps its name. The adapter is asked rather than the vault index, because the index is what the merge
-    // Has just been mutating and it is the filesystem that decides whether the rename can land.
+    // actually being free, because the merge may have been partial - an ignored note is never merged away and
+    // keeps its name. The adapter is asked rather than the vault index, because the index is what the merge
+    // has just been mutating and it is the filesystem that decides whether the rename can land.
     if (targetFile.path !== targetPath && !await this.app.vault.adapter.exists(targetPath)) {
       await this.app.fileManager.renameFile(targetFile, targetPath);
     }
@@ -302,7 +302,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
     // A folder merge has no note of its own to offer Templater as context (issue #196), so the
     // `Name transform template` falls back to the shared chain — the open note, else the note last open,
-    // Else the note last written (issue #218; before it, no open note meant this merge refused outright).
+    // else the note last written (issue #218; before it, no open note meant this merge refused outright).
     const fixedNoteName = await transformAndFixFileName({
       app: this.app,
       contextFile: null,
@@ -381,9 +381,9 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       }
 
       // Issue #186: the note occupying the configured path may be one of the notes being merged, in which case it
-      // Is gone by the time the merge finishes and the configured name is free after all. The note still has to be
+      // is gone by the time the merge finishes and the configured name is free after all. The note still has to be
       // CREATED somewhere else (the path is occupied right now), so it is created de-duplicated and renamed at the
-      // End. A clash with a note that is NOT being merged is a real one and keeps its de-duplicated name.
+      // end. A clash with a note that is NOT being merged is a real one and keeps its de-duplicated name.
       const pathToCreate = getAvailablePath(this.app, desiredPath);
       const isDesiredPathFreedByMerge = pathToCreate !== desiredPath && sourceMdFiles.some((file) => file.path === desiredPath);
       const targetPath = isDesiredPathFreedByMerge ? desiredPath : pathToCreate;
@@ -399,8 +399,8 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
         const selectedFolder = await selectFolder({
           app: this.app,
           // Same question the other merge pickers ask since issue #253 — may the merge land on an excluded
-          // Path? — and answered by the same setting, so this detour cannot offer a different set than the
-          // Merge pickers do.
+          // path? — and answered by the same setting, so this detour cannot offer a different set than the
+          // merge pickers do.
           isAllowedFolder: (candidateFolder) =>
             this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations
             || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path, CommandCategory.Merge),
@@ -429,7 +429,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
  */
 function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
   // Seeded with the folder itself and collected into a set, because whether `recurseChildren` yields the
-  // Folder it was given is not something to depend on.
+  // folder it was given is not something to depend on.
   const folderPaths = new Set<string>([folder.path]);
   Vault.recurseChildren(folder, (child) => {
     if (isFolder(child)) {
@@ -492,7 +492,7 @@ function countMergeableNotes(folder: TFolder, isMergeableNote: (file: TFile) => 
   }
 
   // Resolved only once the folder's own notes have failed to settle it, so a folder that already holds
-  // Two of them never pays for the array.
+  // two of them never pays for the array.
   const subFolders = folder.children.filter(isFolder);
   for (const subFolder of subFolders) {
     count += countMergeableNotes(subFolder, isMergeableNote, limit - count);

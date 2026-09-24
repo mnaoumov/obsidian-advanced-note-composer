@@ -33,7 +33,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 
 import { InsertMode } from '../insert-mode.ts';
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the move
-// Proceeds without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
+// proceeds without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
 import { selectTargetFolderForMove } from '../modals/move-folder-modal.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
 import { MoveFolderCommandHandler } from './move-folder-command-handler.ts';
@@ -77,13 +77,13 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 }));
 
 // A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span
-// Would let a missing second link pass unnoticed.
+// would let a missing second link pass unnoticed.
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
 // The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
-// One, and render its body directly to cover the content builder.
+// one, and render its body directly to cover the content builder.
 vi.mock('../modals/confirm-dialog-modal.ts', () => ({
   ConfirmDialogModal: class {
     public readonly params: CapturedConfirmParams;
@@ -102,7 +102,7 @@ vi.mock('../modals/move-folder-modal.ts', () => ({
 vi.mock('../open-minimizable-modal.ts', () => ({
   openConfirmDialogModal: vi.fn(() => {
     // The "Change target" loop can open the dialog more than once, so the results are a script; a round
-    // The test did not script falls back to a plain cancel.
+    // the test did not script falls back to a plain cancel.
     capturedConfirmParams?.promiseResolve(confirmResults.shift() ?? createConfirmResult(false));
   })
 }));
@@ -121,7 +121,7 @@ afterEach(() => {
   capturedConfirmParams = null;
   confirmResults = [];
   // The module mocks are created once for the whole file, so their call history has to be dropped between
-  // Tests; `restoreAllMocks` only undoes the per-test spies.
+  // tests; `restoreAllMocks` only undoes the per-test spies.
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
@@ -147,7 +147,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
       settings: strictProxy<PluginSettings>({
         isPathIgnored: () => false,
         // The shipped defaults (issue #273): empty is the opt-out, so every case that does not name them
-        // Moves the folder under exactly the pre-#273 name.
+        // moves the folder under exactly the pre-#273 name.
         numberedMovedFolderNameTemplate: '',
         numberedMovedNoteNameTemplate: '',
         shouldAddCommandsToSubmenu: true,
@@ -401,7 +401,7 @@ describe('MoveFolderCommandHandler', () => {
 
   it('should name the auto-numbered result in the confirmation body (issue #273)', async () => {
     // The dialog otherwise names the folder only as it is TODAY, so the user would meet `4. a` for the
-    // First time in the file explorer — the surprise the flatten dialog's `old → new` arrow prevents.
+    // first time in the file explorer — the surprise the flatten dialog's `old → new` arrow prevents.
     initApp({
       'dst/3. three/y.md': 'three body',
       'parent/a/note.md': 'note body'

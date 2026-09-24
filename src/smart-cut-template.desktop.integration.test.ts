@@ -60,7 +60,7 @@ describe('Smart cut & paste template', () => {
       const toTop = await markAndMove('anc-dir-top', 'move-marked-selection-to-top-of-file');
       const toBottom = await markAndMove('anc-dir-bottom', 'move-marked-selection-to-bottom-of-file');
       // The at-cursor move has no override of its own, so it must still take the shared template even
-      // With both edge overrides set.
+      // with both edge overrides set.
       const atCursor = await markAndMove('anc-dir-cursor', MOVE_HERE_COMMAND_ID);
 
       // Emptying one override sends that direction back to the shared template, leaving the other alone.

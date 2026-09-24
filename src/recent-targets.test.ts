@@ -37,13 +37,13 @@ describe('recordRecentTarget', () => {
 
   it('should accept a path, which is what a swap or a move has to pass', () => {
     // A swap/move mutates `TAbstractFile.path`, so those flows record the path they captured before the
-    // Rename rather than the object.
+    // rename rather than the object.
     recordRecentTarget('Some/Folder');
     expect(getRecentTargetPaths()).toStrictEqual(['Some/Folder']);
   });
 
   // Targeting the same folder again has to re-head it: a second operation into it is the strongest signal
-  // There is that it should be offered first (issue #206).
+  // there is that it should be offered first (issue #206).
   it('should re-head a target that is recorded again', () => {
     recordRecentTarget(FOLDER_A);
     recordRecentTarget(FOLDER_B);

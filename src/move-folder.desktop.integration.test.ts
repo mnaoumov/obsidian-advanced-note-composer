@@ -10,9 +10,9 @@ import {
 
 // Desktop-only: this is a file/folder-move flow driven through the real folder-picker suggester DOM.
 // It runs desktop-only, matching the plugin's established integration convention (no Android emulator
-// Wired for it). File-move suites can hit the documented headless rename wall
+// wired for it). File-move suites can hit the documented headless rename wall
 // (`renameFile`/`metadataCache.onCleanCache`) when several run in one aggregate; if this stalls in the
-// Aggregate, it is `it.skip`-ped and must still pass alone.
+// aggregate, it is `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/move-folder.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -51,7 +51,7 @@ describe('move folder to... (issue #73)', () => {
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeMovingFolder;
         try {
           // Skip the confirmation dialog (issue #154, on by default) so the move runs straight from the
-          // Picker; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
+          // picker; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeMovingFolder = false;
           });
@@ -63,9 +63,9 @@ describe('move folder to... (issue #73)', () => {
 
           // `mv-src` is the folder to move; `mv-dst` is the destination; `mv-link.md` links into `mv-src`.
           // The note's basename is prefixed for THIS suite: the link below is unqualified, so it resolves by
-          // Basename across the whole vault the aggregate shares - and a leftover note of the same name from
-          // Another suite (`recent-target-order` moves one, and this file's own second test creates one) makes
-          // The resolution ambiguous, which is decided by cache order rather than by the move under test.
+          // basename across the whole vault the aggregate shares - and a leftover note of the same name from
+          // another suite (`recent-target-order` moves one, and this file's own second test creates one) makes
+          // the resolution ambiguous, which is decided by cache order rather than by the move under test.
           await app.vault.createFolder('mv-src');
           const noteInSrc = await app.vault.create('mv-src/mv-note.md', 'inner body');
           await app.vault.createFolder('mv-dst');
@@ -110,8 +110,8 @@ describe('move folder to... (issue #73)', () => {
           const isMovedIntoTarget = app.vault.getAbstractFileByPath('mv-dst/mv-src/mv-note.md') !== null;
           const isOldLocationGone = app.vault.getAbstractFileByPath('mv-src') === null;
           // The inbound link now resolves to the folder's new location (links updated by the move). Reported
-          // As the resolved PATH rather than as a boolean, so a failure names what it resolved to instead of
-          // Just `expected false to be true`.
+          // as the resolved PATH rather than as a boolean, so a failure names what it resolved to instead of
+          // just `expected false to be true`.
           const linkDestinationPath = app.metadataCache.getFirstLinkpathDest('mv-note', 'mv-link.md')?.path ?? null;
 
           return { linkDestinationPath, movedIntoTarget: isMovedIntoTarget, oldLocationGone: isOldLocationGone };
@@ -180,8 +180,8 @@ describe('move folder to... (issue #73)', () => {
         await trashIfExists('rf-older');
 
         // `rf-src` is the folder to move (its active note is the source, so `rf-src` itself is never an
-        // Offered target); `rf-older` and `rf-recent` hold notes we open in that order, so their folders
-        // Become recently-opened valid targets, `rf-recent` being the more recent of the two.
+        // offered target); `rf-older` and `rf-recent` hold notes we open in that order, so their folders
+        // become recently-opened valid targets, `rf-recent` being the more recent of the two.
         await app.vault.createFolder('rf-src');
         const noteInSrc = await app.vault.create('rf-src/note-in-src.md', 'src body');
         await app.vault.createFolder('rf-recent');
@@ -210,7 +210,7 @@ describe('move folder to... (issue #73)', () => {
         }
 
         // The expectations are stated outright, NOT derived from `getRecentFiles()` the way the
-        // Production code does — deriving them made this test pass under ANY ordering (issue #158).
+        // production code does — deriving them made this test pass under ANY ordering (issue #158).
         return {
           olderIndex: suggestions.indexOf('rf-older'),
           recentIndex: suggestions.indexOf('rf-recent')
@@ -236,12 +236,12 @@ describe('move folder to... (issue #73)', () => {
     });
 
     // The picker front-loads the recently-opened folders, most-recent-first. `rf-src` holds the active
-    // Note but is the folder being moved, so it is not an offered target and the folder of the note we
-    // Were on just before it — `rf-recent` — comes ahead of the earlier `rf-older`. (Other folders
-    // Visited by the previous test in this file can sit between them, hence the index compare.)
-    // The claim is relative rather than "`rf-recent` is suggestion #0": since issue #206 the folders a
-    // Completed operation targeted rank above every recently-opened one, and the move this file's first
-    // Test performs records one — which says nothing about the recent-order behavior under test here.
+    // note but is the folder being moved, so it is not an offered target and the folder of the note we
+    // were on just before it — `rf-recent` — comes ahead of the earlier `rf-older`. (Other folders
+    // visited by the previous test in this file can sit between them, hence the index compare.)
+    // the claim is relative rather than "`rf-recent` is suggestion #0": since issue #206 the folders a
+    // completed operation targeted rank above every recently-opened one, and the move this file's first
+    // test performs records one — which says nothing about the recent-order behavior under test here.
     // Issue #206's own ordering is pinned by `recent-target-order.desktop.integration.test.ts`.
     expect(result.recentIndex).toBeGreaterThan(-1);
     expect(result.recentIndex).toBeLessThan(result.olderIndex);

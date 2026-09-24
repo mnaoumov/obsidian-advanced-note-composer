@@ -222,7 +222,7 @@ describe('RenameHeadingEditorCommandHandler', () => {
 
     it('should return when no heading was resolved', async () => {
       const handler = toTestable(new RenameHeadingEditorCommandHandler(createMockParams()));
-      // ExecuteEditor without a prior canExecuteEditor leaves the resolved heading unset.
+      // executeEditor without a prior canExecuteEditor leaves the resolved heading unset.
       await handler.executeEditor(createMockEditor(0), createMockContext(FILE));
       expect(mockPrompt).not.toHaveBeenCalled();
     });

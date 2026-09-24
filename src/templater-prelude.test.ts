@@ -40,7 +40,7 @@ describe('buildTemplaterPrelude', () => {
 
   it('should keep the index a number, so it can be used in arithmetic', () => {
     // `<% TOKENS.index + 1 %>` has to add, not concatenate — the whole reason the values are injected as
-    // Source rather than substituted as text.
+    // source rather than substituted as text.
     expect(buildTemplaterPrelude(TOKENS)).toContain('"index":1');
   });
 
@@ -65,8 +65,8 @@ describe('buildTemplaterPrelude', () => {
 
   it('should declare TOKENS before anything a template could reference it from', () => {
     // The whole placement contract in one assertion: callers prepend this, so the `const` can never sit in
-    // The temporal dead zone of a command above it — which is what made `aliases: <% TOKENS.… %>` in a
-    // Note's own frontmatter abandon the entire note.
+    // the temporal dead zone of a command above it — which is what made `aliases: <% TOKENS.… %>` in a
+    // note's own frontmatter abandon the entire note.
     expect(buildTemplaterPrelude(TOKENS).startsWith('<%*\nconst TOKENS = {')).toBe(true);
   });
 });

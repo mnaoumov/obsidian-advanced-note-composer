@@ -213,7 +213,7 @@ describe('picker recency order (issue #248)', () => {
           openMovePicker(getFolder(movedName));
           await waitForPicker();
           // Clicked rather than Enter-ed: the suggester's Enter handling is Obsidian-internal, while a
-          // Click on the item is exactly what a user does and is what the modal listens for.
+          // click on the item is exactly what a user does and is what the modal listens for.
           const targetSuggestion = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]
             .find((el) => el.textContent === targetName);
           if (!targetSuggestion) {

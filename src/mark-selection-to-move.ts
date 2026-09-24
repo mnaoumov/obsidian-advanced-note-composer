@@ -57,8 +57,8 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
     abortController,
     mode: params.shouldLockAllNotes ? 'subtree' : 'file',
     // When the source note is unlocked, its abort tears this mark down too — but only while it is still
-    // The current mark, since a later re-mark installs its own controller and must not be cleared by
-    // This one (identity-guarded on the unique controller).
+    // the current mark, since a later re-mark installs its own controller and must not be cleared by
+    // this one (identity-guarded on the unique controller).
     onUnlockRequested: () => {
       if (params.moveSelectionBuffer.get()?.abortController === abortController) {
         params.moveSelectionBuffer.clear();
@@ -72,7 +72,7 @@ export function markSelectionToMove(params: MarkSelectionToMoveParams): void {
 
   const notice = params.moveNoticeComponent.showNotice({
     // The notice is built here, BEFORE the mark below reaches the buffer, so the heading has to be handed
-    // To it rather than read back from there — the heading-only buttons would otherwise never appear.
+    // to it rather than read back from there — the heading-only buttons would otherwise never appear.
     markedHeading: params.markedHeading,
     sourceFile: params.sourceFile
   });

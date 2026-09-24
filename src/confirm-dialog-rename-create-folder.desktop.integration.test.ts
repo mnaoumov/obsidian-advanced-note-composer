@@ -6,11 +6,11 @@ import {
 } from 'vitest';
 
 // Issue #200: the `Create folder with notes...` confirmation had no way to change a name. It is the one place
-// The difference between what was typed and what gets created is visible, so it is the one place a rename can
-// Still matter. This pins both halves against real Obsidian: renaming the FOLDER rebuilds the whole plan (the
-// Token-derived note names follow it), while a note renamed earlier keeps its typed name through that
-// Rebuild — the half no unit test can prove, because the buttons live in the dialog body and the prompts are
-// Real modals.
+// the difference between what was typed and what gets created is visible, so it is the one place a rename can
+// still matter. This pins both halves against real Obsidian: renaming the FOLDER rebuilds the whole plan (the
+// token-derived note names follow it), while a note renamed earlier keeps its typed name through that
+// rebuild — the half no unit test can prove, because the buttons live in the dialog body and the prompts are
+// real modals.
 // Desktop-only: folder flows, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/confirm-dialog-rename-create-folder.desktop.integration.test.ts`.
 
@@ -60,7 +60,7 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           await settingsComponent.editAndSave((settings) => {
             settings.newFolderNameTemplate = '{{index}}. {{safeFolderName}}';
             // Two notes: the first is named from the folder (so it must FOLLOW a folder rename), the second is
-            // Named literally (so renaming it must SURVIVE one).
+            // named literally (so renaming it must SURVIVE one).
             settings.newFolderContentTemplate = '{{file}} {{safeFolderName}}.md\n# {{folderName}}\n{{file}} tasks.md\n- [ ] todo';
             settings.shouldAskBeforeCreatingFolder = true;
             settings.shouldOpenNoteAfterCreatingFolder = false;
@@ -111,7 +111,7 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           findButton('Create')?.click();
 
           // A throwing wait would discard everything observed so far, so give up quietly and let the
-          // Assertions outside Obsidian report what actually happened.
+          // assertions outside Obsidian report what actually happened.
           try {
             await waitUntil({
               message: 'the renamed folder was not created',
@@ -197,7 +197,7 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           const nameInput = getPromptInput();
           nameInput.value = name;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as the seeded name.
+          // would be accepted and then submitted as the seeded name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           // The prompt validates ASYNCHRONOUSLY, so a click before it settles is silently ignored.
           await waitUntil({

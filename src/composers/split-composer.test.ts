@@ -120,7 +120,7 @@ interface SameNoteComposerParams {
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
-// Would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL.
+// would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL.
 vi.mock(
   'obsidian-dev-utils/obsidian/metadata-cache',
   async (importOriginal) => ({
@@ -134,7 +134,7 @@ vi.mock(
 );
 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
-// Reach into unmocked App internals (embedRegistry). Not the behavior under test.
+// reach into unmocked App internals (embedRegistry). Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi
     .fn()
@@ -149,7 +149,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 // Kept REAL, only wrapped, so the notice content still renders exactly as it does in production — the spy is
-// Just how the test reaches the `onTargetLinkClick` the composer handed over (issue #232).
+// just how the test reaches the `onTargetLinkClick` the composer handed over (issue #232).
 vi.mock('../operation-notices.ts', async (importOriginal) => {
   const original = await importOriginal<typeof import('../operation-notices.ts')>();
   return {
@@ -159,17 +159,17 @@ vi.mock('../operation-notices.ts', async (importOriginal) => {
 });
 
 // Only the RENAME is stubbed (it has its own suite in `attachments.test.ts`, against the real vault, and
-// The end-to-end move is pinned by `split-attachments.desktop.integration.test.ts`). The COLLECTION stays
-// Real, so what these tests assert is the composer's own job: which attachments the extracted range owns
-// And which notes they move between (issue #239).
+// the end-to-end move is pinned by `split-attachments.desktop.integration.test.ts`). The COLLECTION stays
+// real, so what these tests assert is the composer's own job: which attachments the extracted range owns
+// and which notes they move between (issue #239).
 vi.mock('../attachments.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../attachments.ts')>()),
   relocateAttachments: vi.fn().mockResolvedValue(undefined)
 }));
 
 // The hand-off to Custom Attachment Location reaches a plugin that is not installed in a unit run, and
-// It has its own suite. What this one asserts is that the composer asks, with the right note, at the
-// Right moment (issue #246).
+// it has its own suite. What this one asserts is that the composer asks, with the right note, at the
+// right moment (issue #246).
 vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../custom-attachment-location.ts')>()),
   checkIsCustomAttachmentLocationAvailable: vi.fn().mockReturnValue(true),
@@ -177,7 +177,7 @@ vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
 }));
 
 // `revealInsertedContent` polls a live workspace for a MarkdownView; what this suite asserts is that the
-// Composer asks for the right thing, not that the poll works (its locator has its own suite).
+// composer asks for the right thing, not that the poll works (its locator has its own suite).
 vi.mock('../reveal-inserted-content.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../reveal-inserted-content.ts')>()),
   placeCaretFromEnd: vi.fn().mockResolvedValue(undefined),
@@ -195,7 +195,7 @@ beforeEach(() => {
     }
   }).asOriginalType__();
   // Test-mocks' MetadataCache is a strict proxy with no indexer; the frontmatter merge's
-  // ProcessFrontMatter triggers a recompute, so stub it to a no-op.
+  // processFrontMatter triggers a recompute, so stub it to a no-op.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
@@ -275,7 +275,7 @@ function createPluginSettingsComponentStub(
       shouldIncludeFrontmatterWhenSplittingByDefault: false,
       shouldMergeHeadingsByDefault: false,
       // The shipped default, so every test in this suite runs the collection the way a user does. The
-      // Fixture notes reference nothing, so it collects nothing and no relocation is attempted.
+      // fixture notes reference nothing, so it collects nothing and no relocation is attempted.
       shouldMoveAttachmentsWhenSplitting: true,
       shouldOpenTargetNoteAfterSplit: false,
       shouldRunTemplaterOnDestinationFile: false,
@@ -308,7 +308,7 @@ function getTargetFile(): TFile {
 
 // Only the composer params that must be omitted (not passed as `undefined`) under
 // `exactOptionalPropertyTypes` when the test does not set them. Extracted to keep `createComposer`
-// Below the cyclomatic-complexity limit.
+// below the cyclomatic-complexity limit.
 function optionalComposerParams(options?: CreateComposerOptions): OptionalComposerParams {
   return normalizeOptionalProperties<OptionalComposerParams>({
     insertToken: options?.insertToken,
@@ -440,7 +440,7 @@ describe('splitFile', () => {
 
   it('should extract the captured selectedText, never the live (possibly rebound) editor selection', async () => {
     // Regression for the file-switch corruption: the leaf may navigate away during the modal, rebinding
-    // The composer's `editor` to another note. The composer must use the captured text and never re-read
+    // the composer's `editor` to another note. The composer must use the captured text and never re-read
     // `editor.getSelection()`.
     const editor = createEditorDouble();
     const composer = createComposer({
@@ -541,7 +541,7 @@ describe('splitFile', () => {
 
   it('should write the NAMED template into a note created from an empty extract (issue #244)', async () => {
     // The follow-up to the test above: naming a template is how `Create empty note at cursor...` says the
-    // Created note should be filled with the `Split template` rather than left blank.
+    // created note should be filled with the `Split template` rather than left blank.
     vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue('[[target]]');
     const editor = createEditorDouble();
     const composer = createComposer({
@@ -607,7 +607,7 @@ describe('splitFile', () => {
 
   it('should still replace its token when a MOVE has nothing to move (issue #244)', async () => {
     // The `insertToken` half of the empty-extract guard: the token is already in the target, and only the
-    // Insert removes it — skipping that would leave the raw token sitting in the note.
+    // insert removes it — skipping that would leave the raw token sitting in the note.
     const editor = createEditorDouble();
     const composer = createComposer({
       capturedSelections: [{ endOffset: 5, startOffset: 5 }],
@@ -642,7 +642,7 @@ describe('splitFile', () => {
 
   it('should abort the split and leave the target unchanged when a file is modified during the operation', async () => {
     // Bump the source mtime after the capture (the first body statement is the console-debug call) but
-    // Before the unchanged re-check, simulating an external edit mid-operation.
+    // before the unchanged re-check, simulating an external edit mid-operation.
     const sourceFile = getSourceFile();
     const consoleDebugComponent = strictProxy<ConsoleDebugComponent>({
       consoleDebug: vi.fn(() => {
@@ -660,8 +660,8 @@ describe('splitFile', () => {
 
   it('should swallow the cancellation and roll back when aborted mid-operation', async () => {
     // A failing operation whose abort flag is set is treated as a user cancellation: the thrown error is
-    // Swallowed (resolves, not rejects) and the transaction rolls the vault back. The invalid mode makes
-    // The body throw AFTER the target insert, so the rollback must restore the target.
+    // swallowed (resolves, not rejects) and the transaction rolls the vault back. The invalid mode makes
+    // the body throw AFTER the target insert, so the rollback must restore the target.
     const editor = createEditorDouble();
     const composer = createComposer({
       editor,
@@ -722,7 +722,7 @@ describe('splitFile', () => {
     vi.mocked(reOpenedEditor.getCursor).mockReturnValue({ ch: 3, line: 42 });
     const setEphemeralStateMock = vi.fn();
     // `file: null` keeps the resource lock's status-bar reconcile (which also calls getActiveViewOfType)
-    // From resolving a lock owner, so it early-returns instead of reaching into the view's containerEl.
+    // from resolving a lock owner, so it early-returns instead of reaching into the view's containerEl.
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
       strictProxy<MarkdownView>({
         editor: reOpenedEditor,
@@ -778,7 +778,7 @@ describe('splitFile move mode', () => {
       selectedText: 'MOVED',
       settingsOverrides: {
         // `shouldMergeHeadingsByDefault: true` proves the token flow still takes the positional-insert
-        // Path (it never heading-merges), and KeepOriginalFrontmatter isolates the inserted content.
+        // path (it never heading-merges), and KeepOriginalFrontmatter isolates the inserted content.
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.KeepOriginalFrontmatter,
         shouldMergeHeadingsByDefault: true,
         textAfterExtractionMode: TextAfterExtractionMode.None
@@ -852,7 +852,7 @@ describe('splitFile move mode', () => {
     await composer.splitFile();
 
     // Token 'TK' (length 2) inserted at offset 0 shifts the captured selection [7,11) to [9,13), so the
-    // Re-opened source restores the shifted range and removes the originally-marked text.
+    // re-opened source restores the shifted range and removes the originally-marked text.
     expect(editor.setSelections).toHaveBeenCalledWith([
       { anchor: { ch: 9, line: 0 }, head: { ch: 13, line: 0 } }
     ]);
@@ -946,14 +946,14 @@ describe('splitFile move mode', () => {
     const targetEditor = createEditorDouble();
     // The freshly opened target shows the moved text; the cursor selects exactly it (offset 7..12 in
     // 'target MOVED'). The selection is computed from the (whitespace-trimmed) content string that
-    // Replaced the insert token, located in the live editor value.
+    // replaced the insert token, located in the live editor value.
     vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
     const setEphemeralStateMock = vi.fn();
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
       strictProxy<MarkdownView>({
         // A real `file` is what makes the view resolve as the TARGET note; the resource lock's
-        // Status-bar reconcile then reads `containerEl.ownerDocument` (there is no status bar in
-        // Jsdom, so it early-returns).
+        // status-bar reconcile then reads `containerEl.ownerDocument` (there is no status bar in
+        // jsdom, so it early-returns).
         containerEl: createDiv(),
         editor: targetEditor,
         file: getTargetFile(),
@@ -990,10 +990,10 @@ describe('splitFile move mode', () => {
 
   it('selects the moved content itself, not an earlier identical occurrence (issue #175)', async () => {
     // The reporter moved the word `test` to the BOTTOM of a note that already said 'This is a test'
-    // Earlier, so a first-occurrence search landed the cursor on THAT copy instead of on the moved
-    // Text — which is why the same move to the TOP looked fine (there the moved copy IS the first
-    // Occurrence). Here the target already opens with 'MOVED' and 'MOVED' is moved to the very end, so
-    // The moved copy is the SECOND occurrence, at offset 10.
+    // earlier, so a first-occurrence search landed the cursor on THAT copy instead of on the moved
+    // text — which is why the same move to the TOP looked fine (there the moved copy IS the first
+    // occurrence). Here the target already opens with 'MOVED' and 'MOVED' is moved to the very end, so
+    // the moved copy is the SECOND occurrence, at offset 10.
     await app.vault.modify(getTargetFile(), 'MOVED here');
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('MOVED hereMOVED');
@@ -1027,7 +1027,7 @@ describe('splitFile move mode', () => {
 
   it('falls back to searching for the moved content when the pinned offset no longer matches', async () => {
     // A write that lands after the move (the frontmatter merge) can shift the body out from under the
-    // Recorded offset, so the search fallback still has to find it.
+    // recorded offset, so the search fallback still has to find it.
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('PREFIX target MOVED');
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
@@ -1061,7 +1061,7 @@ describe('splitFile move mode', () => {
 
   it('falls back to the trimmed moved text when the template whitespace did not survive', async () => {
     // The reporter's own template shape: `{{content}}\n`. If the trailing newline is normalized away in
-    // The target, the exact templated string is gone but the text itself is still there.
+    // the target, the exact templated string is gone but the text itself is still there.
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('PREFIX target MOVED');
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
@@ -1095,7 +1095,7 @@ describe('splitFile move mode', () => {
 
   it('gives up rather than jumping to the top when whitespace-only moved content cannot be located', async () => {
     // `indexOf('')` answers 0, which would send the cursor to the top of the note — a wrong jump is
-    // Worse than no jump.
+    // worse than no jump.
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('no-whitespace-here');
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
@@ -1132,7 +1132,7 @@ describe('splitFile move mode', () => {
 
   it('places a collapsed cursor and shows a notice instead of selecting, in Notice feedback mode (issue #176)', async () => {
     // A selection in the target is indistinguishable from the highlight on a still-marked selection,
-    // So this mode moves the cursor onto the moved text without selecting it and says so in a notice.
+    // so this mode moves the cursor onto the moved text without selecting it and says so in a notice.
     const targetEditor = createEditorDouble();
     vi.mocked(targetEditor.getValue).mockReturnValue('target MOVED');
     vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(
@@ -1214,7 +1214,7 @@ describe('splitFile move mode', () => {
   it('inserts a `$&` in the moved text literally instead of expanding it as a replacement pattern', async () => {
     // The token is swapped for the moved content via `String.replace`, whose string replacement treats
     // `$&`/`$'`/`` $` `` as back-references — so moving text containing them used to write the matched
-    // Token back instead of the text.
+    // token back instead of the text.
     const composer = createComposer({
       capturedSelections: [{ endOffset: 2, startOffset: 0 }],
       editor: createEditorDouble(),
@@ -1490,7 +1490,7 @@ describe('splitFile same-note extract', () => {
 
   it('should synthesize a move token and append the selection to the bottom of the same note', async () => {
     // No `insertToken` and no `targetCursorOffset`: the constructor synthesizes a token and the offset
-    // Is derived from `insertMode` (Append = end of note). 'source body' is 11 chars, selection [0,6).
+    // is derived from `insertMode` (Append = end of note). 'source body' is 11 chars, selection [0,6).
     const composer = createSameNoteComposer({
       capturedSelections: [{ endOffset: 6, startOffset: 0 }],
       insertMode: InsertMode.Append
@@ -1507,7 +1507,7 @@ describe('splitFile same-note extract', () => {
 
   it('should derive the top offset from prepend and place the selection after any frontmatter', async () => {
     // No frontmatter, so the top offset is 0; selection [7,11) ('body') is after it and shifts by the
-    // Token length, so the re-opened source removes it and the moved content lands at the top.
+    // token length, so the re-opened source removes it and the moved content lands at the top.
     const composer = createSameNoteComposer({
       capturedSelections: [{ endOffset: 11, startOffset: 7 }],
       insertMode: InsertMode.Prepend
@@ -1523,7 +1523,7 @@ describe('splitFile same-note extract', () => {
   it('should abort with a notice when the derived insert point falls inside the moved selection', async () => {
     const pluginNoticeComponent = createPluginNoticeComponentStub();
     // A pinned offset (7) strictly inside the captured selection [0,11): the token would be removed with
-    // The source. The move aborts and nothing is written.
+    // the source. The move aborts and nothing is written.
     const composer = createSameNoteComposer({
       capturedSelections: [{ endOffset: 11, startOffset: 0 }],
       insertMode: InsertMode.Append,
@@ -1757,7 +1757,7 @@ describe('SplitComposer getTemplate', () => {
       },
       smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind.AtCursor,
       // The recursive split hands over the identity template so nothing is added until its deferred
-      // Template pass runs.
+      // template pass runs.
       templateOverride: '{{content}}'
     });
 
@@ -1772,9 +1772,9 @@ describe('SplitComposer getTemplate', () => {
 
 describe('padEdgeMoveTemplate', () => {
   // Issue #179. The shipped default is `mergeTemplate: '\n\n{{content}}'` — a LEADING separator only —
-  // So a top move glued the block onto the note's existing first line. The reporter's own
+  // so a top move glued the block onto the note's existing first line. The reporter's own
   // `'{{content}}\n'` is the mirror image and merged at the bottom instead. Both must be padded, or the
-  // Half that is not padded stays broken.
+  // half that is not padded stays broken.
   it('should add the missing trailing break to the shipped default, which merged at the top', () => {
     expect(padEdgeMoveTemplate('\n\n{{content}}', SmartCutAndPasteMoveKind.ToTop)).toBe('\n\n{{content}}\n');
   });
@@ -1792,7 +1792,7 @@ describe('padEdgeMoveTemplate', () => {
   });
 
   // An at-cursor paste is inserted at a token the user placed mid-line. Forcing a break onto either end
-  // Would break the case that move exists for, so it is deliberately out of scope.
+  // would break the case that move exists for, so it is deliberately out of scope.
   it('should leave an at-cursor move without padding', () => {
     expect(padEdgeMoveTemplate('{{content}}', SmartCutAndPasteMoveKind.AtCursor)).toBe('{{content}}');
   });
@@ -1878,8 +1878,8 @@ describe('SplitComposer updateEditorSelections', () => {
       .mockResolvedValueOnce('source [^fn1]\n[^fn1]: footnote')
       .mockResolvedValueOnce('target content');
     // Fn1's only ref is inside the selection (offset 0-11), so fn1 is copied and then removed from the
-    // Source, adding its definition range as a removal selection. fn2's ref and definition are both
-    // Outside the selection, so fn2 is neither removed nor restored (exercising the skip branch).
+    // source, adding its definition range as a removal selection. fn2's ref and definition are both
+    // outside the selection, so fn2 is neither removed nor restored (exercising the skip branch).
     vi.mocked(getCacheSafe).mockResolvedValue({
       features: [],
       footnoteRefs: [
@@ -1944,7 +1944,7 @@ describe('SplitComposer updateEditorSelections', () => {
       .mockResolvedValueOnce('before [^fn1] selected [^fn1]: definition after')
       .mockResolvedValueOnce('target content');
     // One ref is outside the selection (kept) and one is inside (copied) — fn1 lands in both Keep and
-    // Copy — and its definition is inside the selection, so fn1 is a "restore" (removeSelectionRange).
+    // copy — and its definition is inside the selection, so fn1 is a "restore" (removeSelectionRange).
     vi.mocked(getCacheSafe).mockResolvedValue({
       features: [],
       footnoteRefs: [
@@ -2045,7 +2045,7 @@ describe('splitFile frontmatter-only extract', () => {
     const targetContent = await app.vault.adapter.read('target.md');
     const targetBody = targetContent.slice(getFrontMatterInfo(targetContent).contentStart);
     // The raw YAML lines land in the BODY, and the source keeps the ordinary `Text after extraction`
-    // Residual instead of a rewritten frontmatter block.
+    // residual instead of a rewritten frontmatter block.
     expect(targetBody).toContain('  - alpha');
     expect(editor.replaceSelection).toHaveBeenCalledWith('');
   });
@@ -2103,10 +2103,10 @@ describe('splitFile completion notice link', () => {
     await ensureNonNullable(getTargetLinkClickAction())();
 
     // Read off the recorded call rather than matched with `objectContaining`: pretty-format probes every
-    // Property of a mismatch, and a `strictProxy` TFile throws on the first unmocked one.
+    // property of a mismatch, and a `strictProxy` TFile throws on the first unmocked one.
     const revealParams = ensureNonNullable(vi.mocked(revealInsertedContent).mock.lastCall)[0];
     // The DESTINATION note, and the exact string that was written into it — not a heading anchor, which
-    // Only `Extract this heading...` could ever have supplied.
+    // only `Extract this heading...` could ever have supplied.
     expect(vi.mocked(revealInsertedContent)).toHaveBeenCalledOnce();
     expect(revealParams.file).toBe(getTargetFile());
     expect(revealParams.insertedContent).toBe('EXTRACTED-CONTENT');

@@ -78,9 +78,9 @@ export async function findSettingItemInObsidian(params: FindSettingItemInObsidia
   }
 
   // Ask the declarations which pages lead to the row, rather than opening every page until it turns up: a
-  // Suite that flips several settings pays that walk on every single lookup, which is what timed out
+  // suite that flips several settings pays that walk on every single lookup, which is what timed out
   // `smart-cut-notice-settings` at 30 s. The answer is the page names from the top level down, empty for a
-  // Row that is on the top level itself, and `null` when nothing declares it.
+  // row that is on the top level itself, and `null` when nothing declares it.
   function findPagePath(items: SettingDefinitionItem[]): null | string[] {
     for (const item of items) {
       if (!('items' in item)) {

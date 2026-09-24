@@ -154,7 +154,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   private isMergeIgnored(sourcePath: string, targetPath: string): boolean {
     const { settings } = this.pluginSettingsComponent;
     // When the user opts in, excluded/ignored items are merged too (issue #150), so nothing is skipped
-    // And no "ignored" notice is shown for them.
+    // and no "ignored" notice is shown for them.
     if (settings.shouldAlwaysMergeExcludedItems) {
       return false;
     }
@@ -162,9 +162,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       return true;
     }
     // A target path here is the SOURCE ITEM'S OWN PATH mirrored under the destination folder, so it is
-    // Excluded mostly when the destination itself is — and that destination is one the picker was allowed
-    // To offer since issue #253. Skipping every item would silently undo the pick, so the setting that
-    // Offered it clears this half too.
+    // excluded mostly when the destination itself is — and that destination is one the picker was allowed
+    // to offer since issue #253. Skipping every item would silently undo the pick, so the setting that
+    // offered it clears this half too.
     return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath, CommandCategory.Merge);
   }
 
@@ -211,11 +211,11 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     // The merge landed, so the folder it merged into counts as clicked-on for the next picker (issue
     // #206). Recorded here rather than by the per-note merges inside the transaction: those run on an
-    // Injected transaction that can still roll back, and the folder is what the user chose.
+    // injected transaction that can still roll back, and the folder is what the user chose.
     recordRecentTarget(targetFolder);
 
     // The source folder is gone by now (its emptied sub-folders are trashed), so it is named as plain
-    // Text — an unresolved link to it would create a note at that path when clicked.
+    // text — an unresolved link to it would create a note at that path when clicked.
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,
@@ -382,15 +382,15 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
         pluginSettingsComponent: this.pluginSettingsComponent,
         resourceLockComponent: this.resourceLockComponent,
         // A folder merge must NOT open each merged note in turn — that per-file open is the "visual
-        // Cycling" of issue #106 (the active tab flickers through every target note). The single-file
-        // Merge keeps honoring the `shouldOpenNoteAfterMerge` setting; the batch suppresses it.
+        // cycling" of issue #106 (the active tab flickers through every target note). The single-file
+        // merge keeps honoring the `shouldOpenNoteAfterMerge` setting; the batch suppresses it.
         // Mirrors {@link isMergeIgnored}: a target path here is a source item's own path under the
-        // Destination, so either opting into merging excluded items (issue #150) or into an excluded
-        // Destination (issue #253) has to let the composer write it.
+        // destination, so either opting into merging excluded items (issue #150) or into an excluded
+        // destination (issue #253) has to let the composer write it.
         shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldAlwaysMergeExcludedItems
           || this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations,
         // Every non-note file of the folder is moved structurally below, mirroring the source layout, so
-        // The per-note attachment relocation of a single-file merge would move them a second time.
+        // the per-note attachment relocation of a single-file merge would move them a second time.
         shouldMoveAttachments: false,
         shouldOpenAfterMerge: false,
         shouldShowNotice: false,

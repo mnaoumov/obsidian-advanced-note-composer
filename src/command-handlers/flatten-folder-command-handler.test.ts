@@ -79,7 +79,7 @@ interface Testable {
 }
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
-// Unmocked App internals. Not the behavior under test.
+// unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -92,13 +92,13 @@ vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
 }));
 
 // A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span
-// Would let a missing second link pass unnoticed.
+// would let a missing second link pass unnoticed.
 vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
 // The confirmation dialog is v8-ignored modal UI; capture its params so the flow can be driven without
-// One, and render its body directly to cover the content builder.
+// one, and render its body directly to cover the content builder.
 vi.mock('../modals/confirm-dialog-modal.ts', () => ({
   ConfirmDialogModal: class {
     public readonly params: CapturedConfirmParams;
@@ -138,7 +138,7 @@ afterEach(() => {
   confirmResult = createConfirmResult(false);
   confirmResults = [];
   // The module mocks are created once for the whole file, so their call history has to be dropped between
-  // Tests; `restoreAllMocks` only undoes the per-test spies.
+  // tests; `restoreAllMocks` only undoes the per-test spies.
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
@@ -179,7 +179,7 @@ function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
         attachmentExtensions: ['.excalidraw.md'],
         isPathIgnored: () => false,
         // The shipped defaults (issue #273): empty is the opt-out, so every case that does not name them
-        // Flattens under exactly the pre-#273 names.
+        // flattens under exactly the pre-#273 names.
         numberedMovedFolderNameTemplate: '',
         numberedMovedNoteNameTemplate: '',
         shouldAddCommandsToSubmenu: true,
@@ -219,8 +219,8 @@ function initApp(files: Record<string, string>, attachmentFolderPath = './'): vo
 
 describe('FlattenFolderCommandHandler', () => {
   // Issue #177: one command per mode. The `AllChildren` id is deliberately the ORIGINAL `flatten-folder`,
-  // Because a hotkey is bound to an id and hotkeys cannot be migrated — keeping the id on the default mode
-  // Is the only thing that preserves any existing binding. Changing it would silently unbind users.
+  // because a hotkey is bound to an id and hotkeys cannot be migrated — keeping the id on the default mode
+  // is the only thing that preserves any existing binding. Changing it would silently unbind users.
   it('should expose its command identity, keeping the original id for the default mode', () => {
     initApp({});
     const { handler } = createHandler();
@@ -324,8 +324,8 @@ describe('FlattenFolderCommandHandler', () => {
 
   it('should de-duplicate each child against the names its siblings already took', async () => {
     // The same fixture `flatten-preview.test.ts` previews: the first rename takes `note 1.md`, so the
-    // Second child is de-duplicated off its OWN name. Asserted here against the real renames, so the
-    // Dialog's preview and the flatten cannot disagree.
+    // second child is de-duplicated off its OWN name. Asserted here against the real renames, so the
+    // dialog's preview and the flatten cannot disagree.
     initApp({
       'parent/a/note.md': 'inner body',
       'parent/a/note 1.md': 'inner one body',
@@ -352,7 +352,7 @@ describe('FlattenFolderCommandHandler', () => {
     await handler.executeFolder(getFolder('parent/a'));
 
     // `1, 3` continues at `4` and `5` — the gap is not backfilled and the two promoted folders do not both
-    // Take `4`, which is what re-reading `1 + max` per item would have produced.
+    // take `4`, which is what re-reading `1 + max` per item would have produced.
     expect(await app.vault.adapter.read('parent/4. b/deep.md')).toBe('b body');
     expect(await app.vault.adapter.read('parent/5. c/deep.md')).toBe('c body');
     // The destination's own folders are untouched.
@@ -560,7 +560,7 @@ describe('FlattenFolderCommandHandler', () => {
 
     it('should allow the source current parent, unlike a move', () => {
       // The whole difference from `isAllowedMoveTarget`: the parent is flatten's DEFAULT destination, so
-      // Offering it is how the user goes back to a plain flatten after changing their mind.
+      // offering it is how the user goes back to a plain flatten after changing their mind.
       initApp({ 'parent/a/note.md': 'body' });
       const pluginSettingsComponent = createSettingsComponentStub(() => false);
       expect(isAllowedFlattenDestination({ app, pluginSettingsComponent, sourceFolder: getFolder('parent/a'), targetFolder: getFolder('parent') })).toBe(true);
@@ -601,7 +601,7 @@ describe('FlattenFolderCommandHandler', () => {
     const { handler } = createHandler();
 
     // Simulate the user clicking the lock indicator's Unlock mid-operation: the first rename aborts the
-    // Folder-lock's controller, so the next iteration's abort check rolls the transaction back.
+    // folder-lock's controller, so the next iteration's abort check rolls the transaction back.
     const originalRename = app.fileManager.renameFile.bind(app.fileManager);
     let hasAborted = false;
     vi.spyOn(app.fileManager, 'renameFile').mockImplementation(async (file, newPath) => {
@@ -640,7 +640,7 @@ describe('FlattenFolderCommandHandler', () => {
 
     it('should allow a folder with a child folder in a folder-only mode', () => {
       // The folder keeps a file of its own and the child folder nests, so neither mode merely repeats a
-      // Simpler one (issue #210) and each is judged on the child folder alone, as issues #170/#171 intend.
+      // simpler one (issue #210) and each is judged on the child folder alone, as issues #170/#171 intend.
       initApp({
         'parent/a/note.md': 'note',
         'parent/a/sub/deeper/deepest.md': 'deepest'
@@ -655,7 +655,7 @@ describe('FlattenFolderCommandHandler', () => {
         'parent/a/note.md': 'note'
       }, './attachments');
       // Nothing would move, so the command is not offered at all — instead of being offered and answering
-      // With a notice.
+      // with a notice.
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
     });
@@ -669,8 +669,8 @@ describe('FlattenFolderCommandHandler', () => {
       // The resolution is genuinely asynchronous now, so a synchronous menu pass cannot know the answer.
       // Behavior is unchanged there: the command is offered and `executeFolder` explains with a notice.
       // The attachment folder nests, so what the recursive variant may promote is not settled by the shape
-      // Of the tree either (issue #230) — leaving the attachment question the only open one, which is what
-      // This test is about.
+      // of the tree either (issue #230) — leaving the attachment question the only open one, which is what
+      // this test is about.
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -729,7 +729,7 @@ describe('FlattenFolderCommandHandler', () => {
       const { handler, showNotice } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
 
       // An attachment-location plugin owns the resolution, so `canExecuteFolder` cannot run it: it offers
-      // The command, and this is where the user finds out nothing would move (issue #185).
+      // the command, and this is where the user finds out nothing would move (issue #185).
       expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       await handler.executeFolder(getFolder('parent/a'));
 
@@ -833,7 +833,7 @@ describe('FlattenFolderCommandHandler', () => {
     it('should keep offering the folder-only modes when only the configured attachment folder says otherwise, under an attachment-location plugin (issue #213)', () => {
       initApp({
         // The attachment folder nests, so the recursive variant is not settled by the shape of the tree
-        // Either (issue #230) and the configured folder stays the only thing that could refuse it.
+        // either (issue #230) and the configured folder stays the only thing that could refuse it.
         'parent/a/assets/deeper/pic.png': 'PIC',
         'parent/a/note.md': 'note'
       }, './assets');
@@ -855,12 +855,12 @@ describe('FlattenFolderCommandHandler', () => {
         'parent/a/note.md': 'note',
         'parent/a/sub/deep.md': 'deep',
         // Nested, so the recursive variant is judged on the parked path alone rather than on the shape of
-        // The tree (issue #230).
+        // the tree (issue #230).
         'parent/a/sub/deeper/deepest.md': 'deepest'
       });
       stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
       // The reporter's vault verbatim: the path Custom Attachment Location last resolved for the note it
-      // Had just created and opened, sitting inside the folder that was created with it.
+      // had just created and opened, sitting inside the folder that was created with it.
       app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
 
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
@@ -896,7 +896,7 @@ describe('FlattenFolderCommandHandler', () => {
         'parent/a/sub/deep.md': 'deep'
       });
       // The reported case: there IS something to promote, but `ChildFoldersOnly` already promotes exactly
-      // It, so the recursive entry says nothing new.
+      // it, so the recursive entry says nothing new.
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -916,7 +916,7 @@ describe('FlattenFolderCommandHandler', () => {
         'parent/a/sub/hidden/buried.md': 'buried'
       });
       // Judged by what would MOVE, not by the shape of the tree: the nested folder is excluded, so the
-      // Recursive mode would promote the same single folder `ChildFoldersOnly` promotes.
+      // recursive mode would promote the same single folder `ChildFoldersOnly` promotes.
       expect(
         createHandler({
           flattenMode: FlattenMode.AllFoldersRecursively,
@@ -928,7 +928,7 @@ describe('FlattenFolderCommandHandler', () => {
     it('should refuse the child-folders-only mode when the folder holds nothing but folders', () => {
       initApp({ 'parent/a/sub/deep.md': 'deep' });
       // Nothing stays behind, so this repeats `Flatten folder...` — which keeps its entry, being the one
-      // The original command id and any hotkey are bound to.
+      // the original command id and any hotkey are bound to.
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
       expect(createHandler().handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -936,7 +936,7 @@ describe('FlattenFolderCommandHandler', () => {
     it('should keep the recursive mode when the child-folders-only mode is itself a duplicate', () => {
       initApp({ 'parent/a/sub/deeper/deepest.md': 'deepest' });
       // A folder of folders: the middle variant drops out while the recursive one still promotes a folder
-      // Neither of the other two would.
+      // neither of the other two would.
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });
@@ -966,7 +966,7 @@ describe('FlattenFolderCommandHandler', () => {
       });
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
       // Judged, not suppressed: the shape rules the entry out above and back in here, while the attachment
-      // Question stays as unanswerable as ever.
+      // question stays as unanswerable as ever.
       expect(createHandler({ flattenMode: FlattenMode.AllFoldersRecursively }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
       expect(createHandler({ flattenMode: FlattenMode.ChildFoldersOnly }).handler.canExecuteFolder(getFolder('parent/a'))).toBe(true);
     });

@@ -30,7 +30,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
-// Proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
+// proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
 import {
@@ -159,7 +159,7 @@ function getFolder(path: string): TFolder {
 }
 
 // Whole lines, not substrings: `# 1` is also a substring of `## 1 1`. The notes these cases merge carry no
-// Headings of their own, so every `#` line in the result is a folder heading.
+// headings of their own, so every `#` line in the result is a folder heading.
 function getHeadingLines(mergedContent: string): string[] {
   return mergedContent.split('\n').filter((line) => line.startsWith('#'));
 }
@@ -168,7 +168,7 @@ function initApp(files: Record<string, string>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   // No `attachmentFolderPath` is set: the mocks default it to the vault root exactly as Obsidian does, and
-  // That is where a merged note's attachments belong once the notes under the folder are gone.
+  // that is where a merged note's attachments belong once the notes under the folder are gone.
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
 }
@@ -207,7 +207,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   });
 
   // Issue #209. Merging a lone note into a brand-new note reproduces it under the folder's name, so the
-  // Command is not offered at all - and neither is it for a folder with nothing to merge.
+  // command is not offered at all - and neither is it for a folder with nothing to merge.
   describe('folders with too few mergeable notes (issue #209)', () => {
     it('should refuse a folder holding a single note', () => {
       initApp({ 'src/a.md': 'alpha body' });
@@ -304,8 +304,8 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   });
 
   // Issue #178. The report is ambiguous — it says the note "is moved to default folder right away" AND
-  // Asks to keep it in the parent folder, which is what already happened — so all three positions are
-  // Offered rather than one of the two readings being guessed at.
+  // asks to keep it in the parent folder, which is what already happened — so all three positions are
+  // offered rather than one of the two readings being guessed at.
   describe('merged note location (issue #178)', () => {
     it('should create the note beside the folder by default, which is the existing behavior', async () => {
       initApp({ 'parent/src/a.md': 'alpha body' });
@@ -366,9 +366,9 @@ describe('MergeFolderIntoFileCommandHandler', () => {
         mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.DefaultNewNoteLocation
       });
       // `newFileLocation` / `newFileFolderPath` are modeled by neither obsidian-typings nor
-      // Obsidian-test-mocks, so the RESOLUTION itself can only be exercised in an integration test.
+      // obsidian-test-mocks, so the RESOLUTION itself can only be exercised in an integration test.
       // What is asserted here is that this mode routes through Obsidian's own resolver at all, with the
-      // Folder path and the note's file name, rather than computing a path of its own.
+      // folder path and the note's file name, rather than computing a path of its own.
       const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent')
         .mockReturnValue(getFolder('Inbox'));
       mockConfirm.mockResolvedValue('confirmed');
@@ -382,7 +382,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   });
 
   // Issue #186. The de-duplication from #178 must not fire against a note that the merge is about to
-  // Consume: that clash resolves itself, so bumping the name leaves the user with a note they did not ask for.
+  // consume: that clash resolves itself, so bumping the name leaves the user with a note they did not ask for.
   describe('configured name already taken (issue #186)', () => {
     it('should keep the configured name when the note holding it is itself being merged', async () => {
       initApp({
@@ -432,7 +432,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       });
       const { handler } = createHandler({
         // The clashing note is ignored, so it is still there when the merge finishes and the configured
-        // Name never becomes free.
+        // name never becomes free.
         isPathIgnored: (path: string) => path === 'parent/src/Overview.md',
         mergeFolderIntoFileLocation: MergeFolderIntoFileLocation.InsideFolder,
         mergeFolderIntoFileNoteNameTemplate: 'Overview',
@@ -520,7 +520,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     const merged = await app.vault.adapter.read('src.md');
     // The root's own note keeps its heading level; each sub-folder is headed at its depth, and the notes
-    // Inside are demoted by that depth so the outline nests instead of competing.
+    // inside are demoted by that depth so the outline nests instead of competing.
     expect(merged).toContain('# Intro');
     expect(merged).toContain('# api');
     expect(merged).toContain('## Get');
@@ -560,7 +560,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
   it('should head a sub-folder that holds no notes at all (issue #168)', async () => {
     // The reporter's vault shape: the last sub-folder is empty, so no note path mentions it and its
-    // Heading has no source note to be written in front of.
+    // heading has no source note to be written in front of.
     initApp({
       'src/1/note.md': 'one body',
       'src/note.md': 'root body'
@@ -593,8 +593,8 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
   describe('note-less sub-folder headings (issue #181)', () => {
     // `mergeTemplate` is the production default rather than the suite's bare `'{{content}}'`: a heading
-    // Block ends without a newline of its own, so the bare template would glue the next note's body onto
-    // The heading line - an artifact of the stub, not of the merge, and it would hide the heading lines.
+    // block ends without a newline of its own, so the bare template would glue the next note's body onto
+    // the heading line - an artifact of the stub, not of the merge, and it would hide the heading lines.
     const HEADING_SETTINGS: Partial<PluginSettings> = {
       mergeTemplate: '\n\n{{content}}',
       shouldConvertFoldersToHeadingsWhenMergingFolder: true
@@ -602,7 +602,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     it('should not head a sub-folder that holds only attachments', async () => {
       // The reporter's shape: an attachment folder contributes nothing to the merged note, so heading it
-      // Puts a folder in the outline whose entire content was never merged.
+      // puts a folder in the outline whose entire content was never merged.
       initApp({
         'src/api/get.md': 'get body',
         'src/attachments/img.png': 'PIC',
@@ -618,7 +618,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     it('should not head an attachment-only sub-folder at the tail of the walk', async () => {
       // A folder visited after the LAST note goes through `trailingHeadings`, a different branch from one
-      // Flushed in front of a following note.
+      // flushed in front of a following note.
       initApp({
         'src/note.md': 'root body',
         'src/zz-attachments/img.png': 'PIC'
@@ -633,7 +633,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     it('should still head a completely empty sub-folder beside an attachment-only one', async () => {
       // Pins issue #168 against the #181 fix: "holds nothing" and "holds only attachments" are the two
-      // Sides of the same predicate and must not collapse into one answer.
+      // sides of the same predicate and must not collapse into one answer.
       initApp({
         'src/attachments/img.png': 'PIC',
         'src/note.md': 'root body'
@@ -663,7 +663,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     it('should drop an empty folder nested inside an attachment-only one along with its parent', async () => {
       // Classified as a subtree rather than folder by folder: `## nested` under no `# attachments` at all
-      // Would be worse than losing it.
+      // would be worse than losing it.
       initApp({
         'src/attachments/img.png': 'PIC',
         'src/note.md': 'root body'
@@ -679,7 +679,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     it('should not head a sub-folder holding only a markdown-shaped attachment', async () => {
       // The predicate has to ask the same "is this a note to merge" question the walk's files go through,
-      // Not merely whether the file is markdown.
+      // not merely whether the file is markdown.
       initApp({
         'src/drawings/sketch.excalidraw.md': 'raw excalidraw payload',
         'src/note.md': 'root body'
@@ -723,7 +723,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     await handler.executeFolder(getFolder('src'));
 
     // Issue #167: the merged folder itself survives even though it is now empty, while every folder under
-    // It - however deep - is gone.
+    // it - however deep - is gone.
     expect(app.vault.getFolderByPath('src/api/v2')).toBeNull();
     expect(app.vault.getFolderByPath('src/api')).toBeNull();
     expect(app.vault.getFolderByPath('src')).not.toBeNull();
@@ -746,7 +746,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     await handler.executeFolder(getFolder('src'));
 
     // The image is unreferenced and not at any note's attachment path, so it stays - and so must its
-    // Folder, and therefore the merged folder above it.
+    // folder, and therefore the merged folder above it.
     expect(app.vault.getFolderByPath('src/api')).not.toBeNull();
     expect(app.vault.getFolderByPath('src')).not.toBeNull();
   });
@@ -930,7 +930,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   it('should let an unknown token in the note-name template through, since it is not a transform failure', async () => {
     // The catch above is narrow on purpose: only a `NameTransformError` becomes a notice, so a broken
     // `Merge folder into file note name template` still fails loudly rather than being reported as a
-    // Transform problem (issue #203).
+    // transform problem (issue #203).
     initApp({ 'src/a.md': 'alpha body' });
     const { handler } = createHandler({ mergeFolderIntoFileNoteNameTemplate: '{{nope}}' });
     mockConfirm.mockResolvedValue('confirmed');
@@ -962,7 +962,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   });
 
   // Issue #205: the merged note's location comes from `Merge folder into file location`, and "Change
-  // Target" overrides it for this run only.
+  // target" overrides it for this run only.
   describe('change target', () => {
     it('should create the merged note in the folder picked from the dialog', async () => {
       initApp({
@@ -1026,7 +1026,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
   });
 
   // Issue #212. The merged note is what the command produced, so the user can be put in it — ONE open, at
-  // The very end, layered above the per-note `shouldOpenAfterMerge: false` that issue #106 requires.
+  // the very end, layered above the per-note `shouldOpenAfterMerge: false` that issue #106 requires.
   describe('opening the merged note (issue #212)', () => {
     it('should not open anything by default', async () => {
       initApp({
@@ -1058,7 +1058,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
     });
 
     // The open runs AFTER the issue-#186 rename, so it lands in the note at its final path rather than at
-    // The de-duplicated one it was created under.
+    // the de-duplicated one it was created under.
     it('should open the merged note at its final path when the configured name was freed by the merge', async () => {
       initApp({
         'parent/src/a.md': 'alpha body',

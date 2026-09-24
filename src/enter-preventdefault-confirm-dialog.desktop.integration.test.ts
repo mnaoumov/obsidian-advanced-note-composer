@@ -85,7 +85,7 @@ describe('Enter on the merge confirmation dialog is preventDefault-ed (issue #14
           }
 
           // Read AFTER the dispatch has finished: the event object keeps the verdict, so this sees what
-          // Every handler did to it, including a `Scope` handler that stops propagation on its way.
+          // every handler did to it, including a `Scope` handler that stops propagation on its way.
           const wasDefaultPrevented = capturedEnter.value?.defaultPrevented ?? false;
 
           const isMergeCompleted = app.vault.getAbstractFileByPath('mf142-src') === null

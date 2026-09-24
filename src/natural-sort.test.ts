@@ -9,7 +9,7 @@ import { compareNatural } from './natural-sort.ts';
 describe('compareNatural', () => {
   it('should order the numbers a name is built from numerically, not as text', () => {
     // Issue #208: with 50 numbered folders the reporter saw `5.` land after `30.`, because `'30.' < '5.'`
-    // As text.
+    // as text.
     expect(['30. Thirty', '5. Five', '10. Ten', '2. Two'].sort(compareNatural)).toStrictEqual([
       '2. Two',
       '5. Five',

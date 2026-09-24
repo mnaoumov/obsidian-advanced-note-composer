@@ -68,8 +68,8 @@ export async function setUpTemplaterExample(app: App): Promise<void> {
   await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
 
   // Disabled first rather than patched in place: this one replaces a template the plugin reads at
-  // Load time, so nothing should hold stale settings while the file changes. Enabling again picks
-  // Them up with no window reload at all.
+  // load time, so nothing should hold stale settings while the file changes. Enabling again picks
+  // them up with no window reload at all.
   await disableCommunityPlugin({ app, pluginId: PLUGIN_ID });
   await configureCommunityPlugin({
     app,

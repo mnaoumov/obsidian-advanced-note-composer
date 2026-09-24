@@ -61,7 +61,7 @@ vi.mock('obsidian', async (importOriginal) => {
   }
 
   // Captured on construction: the dialog builds its own Cancel button, so there is no other way to
-  // Reach the component (and the mock button reacts to `simulateClick__`, not to a DOM click).
+  // reach the component (and the mock button reacts to `simulateClick__`, not to a DOM click).
   class CapturingButtonComponent extends original.ButtonComponent {
     public constructor(containerEl: HTMLElement) {
       super(containerEl);
@@ -169,7 +169,7 @@ describe('showOperationProgressModal', () => {
 
     handle[Symbol.dispose]();
     // Disposing is not closing: this is the whole point of the request, since the reporter's own
-    // Mock-up closed here and left the links still updating.
+    // mock-up closed here and left the links still updating.
     expect(getModal().isOpen).toBe(true);
 
     resolveFlush();

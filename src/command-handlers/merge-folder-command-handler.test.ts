@@ -34,7 +34,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the merge
-// Proceeds without opening a suggest modal. Everything else (vault, lock, transaction, composer) is REAL.
+// proceeds without opening a suggest modal. Everything else (vault, lock, transaction, composer) is REAL.
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
@@ -71,7 +71,7 @@ interface Testable {
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
-// Would otherwise poll forever. Everything else stays REAL.
+// would otherwise poll forever. Everything else stays REAL.
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
@@ -80,7 +80,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 }));
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
-// Unmocked App internals. Not the behavior under test.
+// unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -438,7 +438,7 @@ describe('MergeFolderCommandHandler', () => {
     await handler.executeFolder(getFolder('src'));
 
     // Test-mocks does not prune the in-memory tree on adapter moves, so src/sub still "has children"
-    // And is therefore not trashed.
+    // and is therefore not trashed.
     expect(await app.vault.adapter.exists('src/sub')).toBe(true);
   });
 
@@ -452,7 +452,7 @@ describe('MergeFolderCommandHandler', () => {
     mockSelectTargetFolder.mockResolvedValue(getFolder('dst'));
 
     // Simulate the user clicking the lock indicator's Unlock mid-operation: the first source read
-    // Aborts the folder-lock's controller, so the next throwIfAborted rolls the spanning transaction back.
+    // aborts the folder-lock's controller, so the next throwIfAborted rolls the spanning transaction back.
     const originalRead = app.vault.read.bind(app.vault);
     let hasAborted = false;
     vi.spyOn(app.vault, 'read').mockImplementation((file) => {
@@ -542,7 +542,7 @@ describe('MergeFolderCommandHandler', () => {
 
   it('should not trash an empty source subfolder that is itself a mapped merge target', async () => {
     // With the target nested inside the source, one empty source subfolder (`s/y`) maps onto another
-    // Empty source subfolder (`s/x/y`). The latter must survive because it is a destination of the merge.
+    // empty source subfolder (`s/x/y`). The latter must survive because it is a destination of the merge.
     initApp({});
     await app.vault.createFolder('s');
     await app.vault.createFolder('s/x');
@@ -592,7 +592,7 @@ describe('MergeFolderCommandHandler', () => {
       await handler.executeFolder(getFolder('A'));
 
       // The incoming `B` arrived under a de-duplicated name, and `C` came with it — the whole
-      // Point of mapping a folder from its parent's destination rather than from its source path.
+      // point of mapping a folder from its parent's destination rather than from its source path.
       expect(await app.vault.adapter.read('E/B 1/C/chapter.md')).toContain('chapter body');
       // The destination's own `B` was not touched: nothing was poured into it and nothing moved out.
       expect(await app.vault.adapter.read('E/B/F/existing.md')).toBe('existing body');
@@ -667,7 +667,7 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   // Issue #215. ONE open once the merge has landed — never the per-note open of issue #106, which stays
-  // Suppressed whatever `Should open note after merge` says.
+  // suppressed whatever `Should open note after merge` says.
   describe('opening the first note of the destination folder (issue #215)', () => {
     it('should not open anything by default', async () => {
       initApp({ 'src/sub/a.md': 'a body' });
@@ -683,8 +683,8 @@ describe('MergeFolderCommandHandler', () => {
     });
 
     // Naturally, not textually: `5.` before `30.` (issue #208's comparator), and a note that was already in
-    // The destination competes on equal terms with the merged ones — what is asked for is the first note in
-    // The folder, not the first note of the merge.
+    // the destination competes on equal terms with the merged ones — what is asked for is the first note in
+    // the folder, not the first note of the merge.
     it('should open the naturally-first note, counting notes that were already there', async () => {
       initApp({
         'dst/30. alpha.md': 'alpha body',
@@ -701,7 +701,7 @@ describe('MergeFolderCommandHandler', () => {
     });
 
     // Folder-grouped, like the file explorer: a note sitting in the folder itself beats one buried in a
-    // Sub-folder, however the two paths would sort against each other.
+    // sub-folder, however the two paths would sort against each other.
     it('should prefer the folder\'s own note over one in a sub-folder', async () => {
       initApp({
         'dst/sub/aaa.md': 'aaa body',

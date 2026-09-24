@@ -72,7 +72,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 // The prompt is v8-ignored UI; capture its params so the seeded value can be asserted, and answer it with
-// Whatever the test says the user typed. The REAL validator still runs, through `validateTypedName`.
+// whatever the test says the user typed. The REAL validator still runs, through `validateTypedName`.
 vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
   prompt: vi.fn().mockImplementation((params: PromptParams) => {
     promptParams = params;

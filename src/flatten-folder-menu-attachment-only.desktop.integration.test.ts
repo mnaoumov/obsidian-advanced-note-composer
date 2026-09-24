@@ -64,7 +64,7 @@ describe('flatten folder menu with an attachment-only folder (issue #185)', () =
           await app.vault.create('att-only-plain/att-only-note2.md', 'See ![[att-only-pic2.png]].');
           await app.vault.createFolder('att-only-plain/att-only-sub');
           // Nested, so the recursive variant is not a duplicate of the child-folders-only one and the
-          // Control keeps expecting all three entries (issue #210).
+          // control keeps expecting all three entries (issue #210).
           await app.vault.createFolder('att-only-plain/att-only-sub/att-only-deeper');
           await app.vault.create('att-only-plain/att-only-sub/att-only-deep.md', 'deep body');
 
@@ -121,7 +121,7 @@ describe('flatten folder menu with an attachment-only folder (issue #185)', () =
     });
 
     // The two folder-only commands are gone; `Flatten folder...` stays, because it promotes every direct
-    // Child — the attachment folder and the note alike — and therefore still has something to do.
+    // child — the attachment folder and the note alike — and therefore still has something to do.
     expect(result.attachmentOnlyTitles).toStrictEqual(['Flatten folder...']);
     // One ordinary child folder is enough to bring both of them back.
     expect(result.plainSubFolderTitles).toStrictEqual([

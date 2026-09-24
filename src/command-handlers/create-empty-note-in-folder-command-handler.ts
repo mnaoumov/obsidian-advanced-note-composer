@@ -166,10 +166,10 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
           })
         : null,
       // The name is typed from scratch here, so it is cleaned the way `Create folder with notes...` cleans a
-      // Typed folder name (issue #283).
+      // typed folder name (issue #283).
       shouldCleanTypedName: true,
       // The destination was chosen by the right-click, so a typed `/` is a character in a name rather than a
-      // Path to descend into.
+      // path to descend into.
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -177,13 +177,13 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
     const templateTail = await this.applySplitTemplate(file);
 
     // The user asked for a note in a place they pointed at, with no cursor to preserve — so it opens. The
-    // Editor command deliberately does not (`shouldOpenTargetNoteAfterSplit`, off by default), which is what
-    // Makes the ghost-note workflow of issue #244 work.
+    // editor command deliberately does not (`shouldOpenTargetNoteAfterSplit`, off by default), which is what
+    // makes the ghost-note workflow of issue #244 work.
     await openFileAfterOperation({ app: this.app, file });
 
     if (templateTail !== null) {
       // The note came out holding the template, so the caret goes where its `{{content}}` was rather than
-      // Wherever the freshly opened note happens to put it.
+      // wherever the freshly opened note happens to put it.
       await placeCaretFromEnd({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
@@ -193,7 +193,7 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
     }
 
     // The folder the note landed in is the destination the user chose, so it counts as clicked-on for the
-    // Next picker (issue #206).
+    // next picker (issue #206).
     recordRecentTarget(parentFolder);
 
     showOperationCompletionNotice({
@@ -237,8 +237,8 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
   private async applySplitTemplate(file: TFile): Promise<null | string> {
     const template = this.pluginSettingsComponent.settings.splitTemplate;
     // An empty `Split template` means the note stays genuinely empty, which is what this command shipped
-    // Doing. `Merge template` is deliberately not the fallback the split chain makes it: wrapping it around
-    // No content is what would leave two blank lines behind.
+    // doing. `Merge template` is deliberately not the fallback the split chain makes it: wrapping it around
+    // no content is what would leave two blank lines behind.
     if (!template) {
       return null;
     }

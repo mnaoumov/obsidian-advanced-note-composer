@@ -57,7 +57,7 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
    */
   protected override getSmartCutAndPasteMoveKind(): SmartCutAndPasteMoveKind {
     // No exhaustiveness check here: the constructor already rejected any other mode, so a `default`
-    // Branch would be unreachable.
+    // branch would be unreachable.
     return this.insertMode === InsertMode.Prepend
       ? SmartCutAndPasteMoveKind.ToTop
       : SmartCutAndPasteMoveKind.ToBottom;
@@ -81,7 +81,7 @@ export class MoveMarkedSelectionToEdgeEditorCommandHandler extends MoveMarkedSel
   protected override shouldJumpToMovedContent(): boolean {
     const settings = this.pluginSettingsComponent.settings;
     // No exhaustiveness check here: the constructor already rejected any other mode, so a `default`
-    // Branch would be unreachable.
+    // branch would be unreachable.
     return this.insertMode === InsertMode.Prepend
       ? settings.shouldJumpToMovedContentToTop
       : settings.shouldJumpToMovedContentToBottom;

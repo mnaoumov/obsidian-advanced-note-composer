@@ -68,7 +68,7 @@ describe('merging into an excluded target file (issue #240)', () => {
             settings.mergeExcludePaths = ['t492-excluded'];
             settings.shouldAskBeforeMerging = false;
             // The target sits in a sub-folder, so leaving this on would hide it for a reason that has
-            // Nothing to do with what is under test.
+            // nothing to do with what is under test.
             settings.shouldAllowOnlyCurrentFolderByDefault = false;
             settings.shouldAlwaysMergeExcludedItems = false;
             settings.shouldOfferExcludedPathsAsMergeDestinations = false;
@@ -77,7 +77,7 @@ describe('merging into an excluded target file (issue #240)', () => {
           const isOfferedWhenOff = await didPickerOfferTarget(source);
 
           // Issue #253's regression guard, mirrored from the folder side: merging excluded ITEMS must not
-          // Also offer an excluded DESTINATION.
+          // also offer an excluded DESTINATION.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAlwaysMergeExcludedItems = true;
           });

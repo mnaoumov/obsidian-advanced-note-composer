@@ -96,8 +96,8 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
             settings.textAfterExtractionMode = 'link';
             settings.splitTemplate = splitTemplate;
             // The caret is only observable in an editor, and this is the setting that opens one. Left OFF
-            // The template is still written — that is the ghost-note workflow — but there is nothing to
-            // Put a caret in.
+            // the template is still written — that is the ghost-note workflow — but there is nothing to
+            // put a caret in.
             settings.shouldOpenTargetNoteAfterSplit = true;
           });
 
@@ -105,7 +105,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so an offset-based cursor
-          // Would otherwise land in the previous run's text.
+          // would otherwise land in the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -133,7 +133,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
 
           const ghostEditor = await waitForEditor(GHOST_PATH, ghostContent);
           // The caret is placed once the editor holds the content, so give that step its own beat rather
-          // Than waiting on the offset itself — a timed-out wait would throw away the value it observed.
+          // than waiting on the offset itself — a timed-out wait would throw away the value it observed.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           return {
@@ -306,7 +306,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
           });
           const note = app.vault.getAbstractFileByPath(NOTE_PATH);
           // Read AFTER the template has been applied: the note is created first and templated in its own
-          // Transaction, so a read racing that write would see the empty note.
+          // transaction, so a read racing that write would see the empty note.
           await waitUntil({
             message: 'the created note was never templated',
             predicate: async () => note instanceof obsidianModule.TFile && (await app.vault.read(note)) !== ''
@@ -383,10 +383,10 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
           }
           nameInput.value = name;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           // The prompt validates ASYNCHRONOUSLY and starts out invalid, so a click before it settles is
-          // Silently ignored.
+          // silently ignored.
           await waitUntil({
             message: 'the typed note name never became valid',
             predicate: () => nameInput.checkValidity()
@@ -410,7 +410,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
     });
 
     // No source note here, so the `from` half of the template resolves empty — which is the whole reason
-    // The token resolver had to accept a `null` source.
+    // the token resolver had to accept a `null` source.
     expect(result.noteContent).toBe('# create-empty-note-template-in-folder\n\n\n\nfrom [[]]');
 
     const tail = '\n\nfrom [[]]';

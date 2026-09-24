@@ -57,7 +57,7 @@ function createMockApp(createdFile: TFile): App {
         return noopAsync();
       }),
       // Auto-numbering (issue #269) renames the created note in place; every other flow here leaves it
-      // Where it was made.
+      // where it was made.
       renameFile: vi.fn(() => noopAsync())
     }),
     vault: strictProxy({
@@ -195,7 +195,7 @@ describe('createNoteFromTypedName', () => {
 
   it('should judge the title by the name the relocation left behind', async () => {
     // What `SplitItemSelector`'s own-folder move does: the note is renamed to `Overview`, so the typed name
-    // Is no longer its title and has to be recorded (issue #153).
+    // is no longer its title and has to be recorded (issue #153).
     const app = createMockApp(createMockFile('Ghost'));
     const relocateNote = vi.fn().mockResolvedValue('Overview');
 
@@ -307,7 +307,7 @@ describe('createNoteFromTypedName', () => {
 
     it('should leave the note unnumbered when it DID go into a folder of its own', async () => {
       // Issue #269's "instead": the number belongs on the folder there, and `move-into-own-folder.ts` is
-      // What puts it on. Numbering both would write it twice into the same path.
+      // what puts it on. Numbering both would write it twice into the same path.
       const app = createMockApp(createMockFile('Ghost'));
 
       await createNoteFromTypedName({

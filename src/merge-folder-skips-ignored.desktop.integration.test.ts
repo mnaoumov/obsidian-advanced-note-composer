@@ -11,14 +11,14 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this is a folder-merge (file-move) flow. It runs desktop-only, matching the plugin's
-// Established integration convention (no Android emulator wired for it). File-move suites can hit the
-// Documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run in one
-// Aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
+// established integration convention (no Android emulator wired for it). File-move suites can hit the
+// documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run in one
+// aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-skips-ignored.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
 // Minimal shape of the plugin's settings component reached at runtime to set an ignored path (there is
-// No settings-tab UI control for a single ignored path, so the live component's `editAndSave` is used).
+// no settings-tab UI control for a single ignored path, so the live component's `editAndSave` is used).
 interface ComponentTreeNode {
   _children?: ComponentTreeNode[];
   editAndSave?: unknown;

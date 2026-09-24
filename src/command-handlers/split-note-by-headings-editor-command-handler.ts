@@ -93,7 +93,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       return;
     }
     // The individual splits are silent (`isMultipleSplit`), so the batch reports itself once — a progress
-    // Notice for the whole run and one completion notice naming how many notes it produced (issue #182).
+    // notice for the whole run and one completion notice naming how many notes it produced (issue #182).
     const abortController = new AbortController();
     const progressNotice = showOperationProgressNotice({
       abortController,
@@ -110,7 +110,7 @@ export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandle
       pluginSettingsComponent: this.pluginSettingsComponent
     });
     // Collected rather than counted: the completion notice names the notes it created, in the order they
-    // Were created (issue #235), and their number is the count it always reported.
+    // were created (issue #235), and their number is the count it always reported.
     const createdFiles: TFile[] = [];
 
     try {

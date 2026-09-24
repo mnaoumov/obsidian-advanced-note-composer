@@ -49,7 +49,7 @@ describe('switch to smart cut from the split confirmation dialog', () => {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');
@@ -155,7 +155,7 @@ describe('switch to smart cut from the split confirmation dialog', () => {
     });
 
     // The confirmation dialog showed the switch button, and Alt+S marked the selection (permanent
-    // Notice) and opened the target...
+    // notice) and opened the target...
     expect(result.switchButtonPresent).toBe(true);
     expect(result.markNoticeShown).toBe(true);
     expect(result.activePath).toBe('confirm-switch-target.md');

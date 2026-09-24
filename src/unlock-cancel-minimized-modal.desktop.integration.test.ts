@@ -20,8 +20,8 @@ describe('cancel a pending extract from the minimized modal bar', () => {
         const SETTLE_IN_MILLISECONDS = 400;
 
         // Start an `Extract current selection...` on the source note. `prepareForSplitFile` acquires a
-        // Lock on the source note (making its editor read-only and showing the lock indicator) and opens
-        // The minimizable split picker. This reproduces issue #130: an extract whose modal is minimized.
+        // lock on the source note (making its editor read-only and showing the lock indicator) and opens
+        // the minimizable split picker. This reproduces issue #130: an extract whose modal is minimized.
         const source = await resetFile('cancel-it.md', 'AAA BBB CCC');
         const sourceEditor = await openAndGetEditor(source);
         sourceEditor.setSelection(sourceEditor.offsetToPos(4), sourceEditor.offsetToPos(7));

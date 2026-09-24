@@ -25,7 +25,7 @@ describe('reorder child folders', () => {
         const ROOT = 'Reorder child folders';
 
         // A folder whose children are numbered out of the order they will be left in, each holding a
-        // Folder note named after its folder (the `Auto` fallback layout) with a `title` to rewrite.
+        // folder note named after its folder (the `Auto` fallback layout) with a `title` to rewrite.
         await removeFolder(ROOT);
         await app.vault.createFolder(ROOT);
         for (const [index, name] of ['Alpha', 'Beta', 'Gamma'].entries()) {
@@ -40,7 +40,7 @@ describe('reorder child folders', () => {
         }
 
         // Driven through the folder MENU, which is how the command is actually reached: the palette path
-        // Resolves the parent from Obsidian's own new-note location, not from this folder.
+        // resolves the parent from Obsidian's own new-note location, not from this folder.
         const menu = new obsidianModule.Menu();
         app.workspace.trigger('file-menu', menu, rootFolder, 'file-explorer-context-menu');
         clickMenuItem(menu, 'Reorder child folders...');
@@ -64,7 +64,7 @@ describe('reorder child folders', () => {
         clickReorder();
 
         // Waits for the LAST thing the operation does, not the first: the folder renames land before the
-        // Folder notes are renamed and retitled, so waiting on the folder alone reads the notes mid-flight
+        // folder notes are renamed and retitled, so waiting on the folder alone reads the notes mid-flight
         // — which is exactly what made this flake in the aggregate run and pass on its own.
         await waitUntil({
           message: 'folders were not renumbered and retitled',
@@ -112,7 +112,7 @@ describe('reorder child folders', () => {
 
         function clickMenuItem(menuToSearch: MenuLike, title: string): void {
           // Identified by its rendered text, the way the other folder-menu tests do — `MenuItem` exposes no
-          // Title of its own.
+          // title of its own.
           const itemEl = menuToSearch.items.find((candidate) => candidate.dom?.textContent === title)?.dom;
           if (!itemEl) {
             const available = menuToSearch.items.map((candidate) => candidate.dom?.textContent ?? '').join(' | ');
@@ -150,12 +150,12 @@ describe('reorder child folders', () => {
     expect(result.folderNames).toEqual(['1. Beta', '2. Gamma', '3. Alpha']);
 
     // Each folder note's `title` follows its folder, index included. Written unquoted: `1. Beta` is a
-    // Plain YAML scalar, so it reads back as that string with no quoting needed.
+    // plain YAML scalar, so it reads back as that string with no quoting needed.
     expect(result.titles).toEqual(['1. Beta', '2. Gamma', '3. Alpha']);
 
     // `aliases` keep their VALUE — the reorder rewrites the title and nothing else. The quoting is
-    // Normalized (`- "Alpha"` comes back as `- Alpha`) because writing one property re-serializes the
-    // Whole frontmatter block, which is how every other property write in this plugin behaves.
+    // normalized (`- "Alpha"` comes back as `- Alpha`) because writing one property re-serializes the
+    // whole frontmatter block, which is how every other property write in this plugin behaves.
     expect(result.aliasesContent).toContain('- Alpha');
     expect(result.aliasesContent).toContain('Alpha body');
   });

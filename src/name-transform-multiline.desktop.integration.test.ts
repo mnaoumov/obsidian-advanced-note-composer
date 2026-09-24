@@ -116,7 +116,7 @@ describe('name transform producing a multi-line name (issue #203)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Anything the extraction managed to create would be named after the heading, so this is the
-          // Whole "nothing was created" question — the source note itself is named differently.
+          // whole "nothing was created" question — the source note itself is named differently.
           const createdPaths = app.vault.getMarkdownFiles()
             .map((file) => file.path)
             .filter((path) => path.includes('NtMultiline'));

@@ -77,10 +77,10 @@ export interface SplitTemplateSettings {
 
 interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   // The source selection offsets and selected text, captured BEFORE any modal opened, while `editor`
-  // Still showed the source note. They must NOT be re-read from `editor` inside the operation: the
-  // Editor is the leaf's instance, and if the user navigated that leaf to another note during the
-  // Setup flow (e.g. while the minimizable confirmation modal was minimized), the same `editor`
-  // Object now reflects THAT note — re-reading it would extract the wrong note's content.
+  // still showed the source note. They must NOT be re-read from `editor` inside the operation: the
+  // editor is the leaf's instance, and if the user navigated that leaf to another note during the
+  // setup flow (e.g. while the minimizable confirmation modal was minimized), the same `editor`
+  // object now reflects THAT note — re-reading it would extract the wrong note's content.
   readonly capturedSelections: Selection[];
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly editor: Editor;
@@ -91,7 +91,7 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 
   // Whether a smart cut & paste move lands the cursor on the moved content in the target (issue #144).
   // Decided by the command handler, since only it knows which move this is: a move AT THE CURSOR always
-  // Jumps, while the top/bottom moves each read their own setting. Ignored unless
+  // jumps, while the top/bottom moves each read their own setting. Ignored unless
   // `smartCutAndPasteMoveKind` is set.
   readonly shouldJumpToMovedContent?: boolean;
 
@@ -104,9 +104,9 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 
   // Which smart cut & paste move this split is (mark → move here / at cursor / to top / bottom). Its
   // PRESENCE marks the split as a smart cut & paste move at all, so `getTemplate` prefers the smart cut &
-  // Paste templates (the per-direction override, then the shared one, then the split → merge chain when
-  // Both are empty — issue #174). Ordinary split-to-new-file extracts leave it unset. Supplied by the
-  // Command handler, since only it knows which move this is.
+  // paste templates (the per-direction override, then the shared one, then the split → merge chain when
+  // both are empty — issue #174). Ordinary split-to-new-file extracts leave it unset. Supplied by the
+  // command handler, since only it knows which move this is.
   readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
 
   // The end of the target range the move flow replaces with the token. When greater than
@@ -116,25 +116,25 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
 
   // The offset in the target note where the move flow inserts the token. With an `insertToken` set,
   // `null`/omitted means derive the offset from `insertMode` (top = just after frontmatter, bottom =
-  // End of note) — used by the top/bottom move commands and same-note extract; a number pins it to a
-  // Specific offset (the paste cursor of `Move marked selection here`). Ignored without an `insertToken`.
+  // end of note) — used by the top/bottom move commands and same-note extract; a number pins it to a
+  // specific offset (the paste cursor of `Move marked selection here`). Ignored without an `insertToken`.
   readonly targetCursorOffset?: null | number;
 
   // Overrides the template resolution entirely for this operation, whatever the settings say. Set by the
-  // Recursive split, which passes the identity template so its structural passes write the extracted
-  // Content untouched and the real template is applied to each produced note afterwards, once its own
-  // Children are gone (issue #172 — see `applySplitTemplateToNotes`).
+  // recursive split, which passes the identity template so its structural passes write the extracted
+  // content untouched and the real template is applied to each produced note afterwards, once its own
+  // children are gone (issue #172 — see `applySplitTemplateToNotes`).
   //
   // A real override (anything but the identity template) also UN-SKIPS the empty-extract write: a caller
-  // That names a template for an extract of nothing is asking for that template to be written, which is
-  // Exactly what `Create empty note at cursor...` asks for once a `Split template` is configured (#244).
+  // that names a template for an extract of nothing is asking for that template to be written, which is
+  // exactly what `Create empty note at cursor...` asks for once a `Split template` is configured (#244).
   // The rule is deliberately tied to the override rather than to the resolved template, so an ordinary
-  // Empty extract — `Extract after cursor` with the cursor at EOF — keeps writing nothing instead of
-  // Regressing to the two blank lines the shipped `mergeTemplate` would leave around no content.
+  // empty extract — `Extract after cursor` with the cursor at EOF — keeps writing nothing instead of
+  // regressing to the two blank lines the shipped `mergeTemplate` would leave around no content.
   readonly templateOverride?: string;
 
   // Overrides the `Text after extraction` setting for this operation (used by the move flow, where a
-  // Same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
+  // same-note move resolves to `None` unless overridden). Falls back to the setting when omitted.
   readonly textAfterExtractionMode?: TextAfterExtractionMode;
 }
 
@@ -160,10 +160,10 @@ export class SplitComposer extends ComposerBase {
 
   public constructor(params: SplitComposerConstructorParams) {
     // A same-note split IS a move: the append/prepend path would write the note before removing the
-    // Source selection, collapsing the editor selection so the removal becomes a no-op (turning the
-    // Move into a copy). So synthesize a token (unless one was passed) to route it through the proven
-    // Same-note-move ordering. Footnote-fixing and frontmatter-inclusion are meaningless within one
-    // Note — footnote-fixing would even rename the moved ref and leave it dangling — so force them off.
+    // source selection, collapsing the editor selection so the removal becomes a no-op (turning the
+    // move into a copy). So synthesize a token (unless one was passed) to route it through the proven
+    // same-note-move ordering. Footnote-fixing and frontmatter-inclusion are meaningless within one
+    // note — footnote-fixing would even rename the moved ref and leave it dangling — so force them off.
     const isSameFile = params.sourceFile === params.targetFile;
     const settings = params.pluginSettingsComponent.settings;
     super({
@@ -187,7 +187,7 @@ export class SplitComposer extends ComposerBase {
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
     this.templateOverride = params.templateOverride;
     // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
-    // Opted in — mirroring the `Move marked selection here` handler.
+    // opted in — mirroring the `Move marked selection here` handler.
     this.textAfterExtractionMode = params.textAfterExtractionMode
       ?? (isSameFile && !settings.shouldApplyTextAfterExtractionToSameFile
         ? TextAfterExtractionMode.None
@@ -200,9 +200,9 @@ export class SplitComposer extends ComposerBase {
     }
 
     // Collected before the transaction so every attachment can be locked alongside the two notes: an
-    // External change to one of them must abort the split just as a change to a note does. Read off the
-    // Source note's cache while it still holds the extracted text — after the extraction those references
-    // Live in the target instead.
+    // external change to one of them must abort the split just as a change to a note does. Read off the
+    // source note's cache while it still holds the extracted text — after the extraction those references
+    // live in the target instead.
     const attachmentsToRelocate = this.shouldMoveAttachments
       ? collectAttachmentsReferencedBySelections({
         app: this.app,
@@ -231,33 +231,33 @@ export class SplitComposer extends ComposerBase {
 
           if (!await this.checkFilesUnchanged(mtimes)) {
             // The pre-flight guard tripped (an external change): abort so nothing is committed and the
-            // Post-split open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
+            // post-split open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
             this.abortController.abort();
             return;
           }
 
           // A selection taken entirely from the source note's own frontmatter is merged into the TARGET's
-          // Frontmatter instead of being pasted as raw YAML into its body (issue #183). Resolved before the
-          // Token is placed, so the same-note case is refused before anything is written.
+          // frontmatter instead of being pasted as raw YAML into its body (issue #183). Resolved before the
+          // token is placed, so the same-note case is refused before anything is written.
           const frontmatterExtraction = await this.resolveFrontmatterExtraction();
           if (frontmatterExtraction && this.sourceFile === this.targetFile) {
             // Moving properties from a note into that same note has nowhere to go: they are already there,
-            // And the only insert points a same-note extract offers are in the body.
+            // and the only insert points a same-note extract offers are in the body.
             this.pluginNoticeComponent.showNotice('Cannot extract a note\'s properties into that same note.');
             this.abortController.abort();
             return;
           }
 
           // Move flow: place the token at the insert point in the target note FIRST, inside the
-          // Transaction (so rollback captures the pre-token content). The processed content later
-          // Replaces the token by string match, so the insert point survives the source-selection
-          // Removal even when the target IS the source note.
+          // transaction (so rollback captures the pre-token content). The processed content later
+          // replaces the token by string match, so the insert point survives the source-selection
+          // removal even when the target IS the source note.
           if (this.insertToken !== null) {
             const wasTokenInserted = await this.insertTokenIntoTargetFile(vaultTransaction);
             if (!wasTokenInserted) {
               // The insert point falls inside the text being moved (a same-note move of a selection that
-              // Spans the frontmatter boundary, sent to the top). The token would be removed with the
-              // Source, losing the content — so abort with a notice instead of corrupting the note.
+              // spans the frontmatter boundary, sent to the top). The token would be removed with the
+              // source, losing the content — so abort with a notice instead of corrupting the note.
               this.pluginNoticeComponent.showNotice('Cannot move a selection to the top of a note when the selection spans the note\'s frontmatter.');
               this.abortController.abort();
               return;
@@ -266,20 +266,20 @@ export class SplitComposer extends ComposerBase {
 
           // Snapshot the source note as a rollback restore point BEFORE any edit. The destructive
           // Editor.replaceSelection below is an editor edit, not a vault op the transaction can capture,
-          // So an identity process() records a restore-to-original inverse without changing the content.
+          // so an identity process() records a restore-to-original inverse without changing the content.
           // Done before the re-open so the (no-op) write cannot disturb the restored selections.
           await vaultTransaction.process(this.sourceFile, (content) => content);
 
           // Re-open the source note and restore the captured selections FIRST, before any edit, so every
-          // Editor operation (footnote fix-up, the destructive replace) targets the source note even if
-          // The active leaf navigated to another note during the setup flow (e.g. while the minimizable
-          // Confirmation modal was minimized).
+          // editor operation (footnote fix-up, the destructive replace) targets the source note even if
+          // the active leaf navigated to another note during the setup flow (e.g. while the minimizable
+          // confirmation modal was minimized).
           await this.reopenSourceFileAndRestoreSelections();
 
           if (frontmatterExtraction) {
             // Frontmatter-only extract: hand the selected properties over as a frontmatter block so the
-            // Target's own merge strategy applies to them, then rewrite the source's YAML region with what
-            // Is left. `textAfterExtractionMode` is not consulted — a link or an embed is not valid YAML.
+            // target's own merge strategy applies to them, then rewrite the source's YAML region with what
+            // is left. `textAfterExtractionMode` is not consulted — a link or an embed is not valid YAML.
             await this.insertIntoTargetFile({
               contentToInsert: `---\n${frontmatterExtraction.extractedYaml}\n---\n`,
               isFrontmatterOnlyExtract: true,
@@ -288,28 +288,28 @@ export class SplitComposer extends ComposerBase {
             this.replaceSourceFrontmatter(frontmatterExtraction);
           } else if (this.isSameNoteMove()) {
             // Same-note move: the target write is on the note the editor shows, and it collapses the
-            // Editor selection — so a later `replaceSelection` would be a no-op (leaving the source text
-            // In place, turning the move into a copy). Remove the source FIRST; the write reads the
-            // Post-removal buffer, so the removal survives. Footnote definitions need no cleanup here:
+            // editor selection — so a later `replaceSelection` would be a no-op (leaving the source text
+            // in place, turning the move into a copy). Remove the source FIRST; the write reads the
+            // post-removal buffer, so the removal survives. Footnote definitions need no cleanup here:
             // Refs and defs both remain in the same note, so they stay resolved.
             this.replaceSourceSelection();
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
           } else if (this.isEmptyExtract() && !this.shouldWriteEmptyExtractTemplate()) {
             // Nothing was extracted and no template was named for the note being created, so nothing is
-            // Written into the target (issue #244). Running the insert anyway would wrap the template around
-            // Empty content and leave its separators behind — with the shipped `mergeTemplate`
+            // written into the target (issue #244). Running the insert anyway would wrap the template around
+            // empty content and leave its separators behind — with the shipped `mergeTemplate`
             // (`\n\n{{content}}`) a note asked to be EMPTY would open holding two blank lines. The source
-            // Still gets its residual, which is the whole point of the flow: the note is created and the
-            // Link is left at the cursor.
+            // still gets its residual, which is the whole point of the flow: the note is created and the
+            // link is left at the cursor.
             this.replaceSourceSelection();
           } else {
             // Cross-note (and split/extract): insert first so `fixFootnotes` can extend the editor
-            // Selection to also cover orphaned footnote definitions, which the single `replaceSelection`
-            // Then removes from the source along with the extracted text. The target write is a different
-            // File, so it does not disturb the source editor selection.
+            // selection to also cover orphaned footnote definitions, which the single `replaceSelection`
+            // then removes from the source along with the extracted text. The target write is a different
+            // file, so it does not disturb the source editor selection.
             //
             // A templated empty create (#244) lands here too, with `selectedText` empty: the write is the
-            // Template itself, and `{{content}}` interpolates to nothing.
+            // template itself, and `{{content}}` interpolates to nothing.
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
             this.replaceSourceSelection();
           }
@@ -335,21 +335,21 @@ export class SplitComposer extends ComposerBase {
       }
 
       // Hung off the committed transaction rather than off a timer: by here the target note is written
-      // And its links are updated, so the other plugin reads a finished note. Deliberately AFTER the
-      // Abort check, since a rolled-back split has nothing to collect (issue #246).
+      // and its links are updated, so the other plugin reads a finished note. Deliberately AFTER the
+      // abort check, since a rolled-back split has nothing to collect (issue #246).
       this.collectAttachmentsWithCustomAttachmentLocation();
 
       // A batch split records nothing: `prepareForSplitFile` resolves each produced note's location from
-      // The settings with no picker involved, so there is no target the user CHOSE to remember, and
-      // Recording every note of a recursive run would bury the list under one operation's output (issue
+      // the settings with no picker involved, so there is no target the user CHOSE to remember, and
+      // recording every note of a recursive run would bury the list under one operation's output (issue
       // #206). The recursive split records the root folder the user picked, once, itself. A smart cut &
-      // Paste move is a single operation with a real destination, so it does record.
+      // paste move is a single operation with a real destination, so it does record.
       if (!this.isMultipleSplit) {
         this.recordTargetFileAsRecent();
       }
 
       // A batch split reports once for the whole run (the command handler does it), and a smart cut &
-      // Paste move is reported by `applyMovedContentFeedback` through its own
+      // paste move is reported by `applyMovedContentFeedback` through its own
       // `smartCutAndPasteCompletionFeedback` setting — reporting either here would say it twice.
       if (!this.isMultipleSplit && !this.smartCutAndPasteMoveKind) {
         showOperationCompletionNotice({
@@ -363,20 +363,20 @@ export class SplitComposer extends ComposerBase {
         await openFileAfterOperation({ app: this.app, file: this.targetFile });
 
         // For a smart cut & paste move (mark → move here / at cursor / to top / bottom), land the cursor
-        // On the moved content in the freshly opened target note, instead of leaving it wherever the
-        // Opened note happened to place it (issue #144).
+        // on the moved content in the freshly opened target note, instead of leaving it wherever the
+        // opened note happened to place it (issue #144).
         // Whether to jump is decided by the command handler (a move at the cursor always does; the
-        // Top/bottom moves each read their own setting), because moving a selection out of the way is a
-        // Different intent from moving it to work on it. When off, the cursor stays where the selection
-        // Was cut from — `revealCursor` above already brought it into view.
+        // top/bottom moves each read their own setting), because moving a selection out of the way is a
+        // different intent from moving it to work on it. When off, the cursor stays where the selection
+        // was cut from — `revealCursor` above already brought it into view.
         if (this.smartCutAndPasteMoveKind && this.shouldJumpToMovedContent) {
           await this.revealMovedContentInTarget();
         }
 
         // A note created from a template opens with the caret where its `{{content}}` sat (issue #244).
         // Only reachable with `shouldOpenTargetNoteAfterSplit` on, because there is no editor to put a
-        // Caret in otherwise — leaving that setting off is the ghost-note workflow, where the point is that
-        // The cursor never moves at all.
+        // caret in otherwise — leaving that setting off is the ghost-note workflow, where the point is that
+        // the cursor never moves at all.
         if (this.shouldWriteEmptyExtractTemplate()) {
           await this.placeCaretAtTemplateContent();
         }
@@ -425,7 +425,7 @@ export class SplitComposer extends ComposerBase {
         insertedContent,
         insertedContentOffset,
         // The click hands the open to Obsidian and returns, so this poll has to outlast the open itself,
-        // Not just the editor load the default budget assumes.
+        // not just the editor load the default budget assumes.
         timeoutInMilliseconds: POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS
       });
     };
@@ -433,14 +433,14 @@ export class SplitComposer extends ComposerBase {
 
   protected override getTemplate(): string {
     // An explicit override wins over every setting: the caller is taking templating over entirely (the
-    // Recursive split defers it — see `applySplitTemplateToNotes`), so it is not padded either.
+    // recursive split defers it — see `applySplitTemplateToNotes`), so it is not padded either.
     if (this.templateOverride !== undefined) {
       return this.templateOverride;
     }
 
     // Padding is applied to whatever the chain resolves, NOT only to the smart cut & paste branch: the
-    // Reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
-    // The chain falls all the way through to `mergeTemplate`. See `padEdgeMoveTemplate`.
+    // reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
+    // the chain falls all the way through to `mergeTemplate`. See `padEdgeMoveTemplate`.
     return padEdgeMoveTemplate(this.resolveConfiguredTemplate(), this.smartCutAndPasteMoveKind);
   }
 
@@ -486,11 +486,11 @@ export class SplitComposer extends ComposerBase {
 
     if (shouldSelect) {
       // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
-      // Collapses the selection.
+      // collapses the selection.
       editor.setSelection(range.startPos, range.endPos);
     } else {
       // Collapsed caret: the cursor still travels to the moved text, but nothing is highlighted, so it
-      // Cannot be mistaken for the still-pending marked selection.
+      // cannot be mistaken for the still-pending marked selection.
       editor.setCursor(range.startPos);
     }
     editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
@@ -503,8 +503,8 @@ export class SplitComposer extends ComposerBase {
       await createFragmentAsync(async (f) => {
         f.appendText('Moved the marked selection into ');
         // A completion notice like the ones `buildOperationNoticeContent` builds, so its link reveals the
-        // Destination in the file explorer the same way (issue #232). No jump action: the cursor is already
-        // On the moved content by the time this notice is shown.
+        // destination in the file explorer the same way (issue #232). No jump action: the cursor is already
+        // on the moved content by the time this notice is shown.
         f.append(
           await renderOperationNoticeLink({
             app: this.app,
@@ -578,7 +578,7 @@ export class SplitComposer extends ComposerBase {
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
     const insertToken = ensureNonNullable(this.insertToken);
     // A pinned `targetCursorOffset` (the paste cursor) is used as-is; otherwise the offset is derived
-    // From `insertMode` against the pre-token content (bottom = end of note, top = after frontmatter).
+    // from `insertMode` against the pre-token content (bottom = end of note, top = after frontmatter).
     const startOffset = this.targetCursorOffset
       ?? resolveInsertOffset(await this.app.vault.read(this.targetFile), this.insertMode);
     // The token replaces `[startOffset, endOffset]`; with no selection to replace the range is empty
@@ -587,7 +587,7 @@ export class SplitComposer extends ComposerBase {
 
     if (this.sourceFile === this.targetFile && this.isRangeOverlappingCapturedSelection({ endOffset, startOffset })) {
       // The insert range overlaps the text being moved, which will be removed — the token (and thus the
-      // Moved content) would be lost. The caller aborts with a notice.
+      // moved content) would be lost. The caller aborts with a notice.
       return false;
     }
 
@@ -601,9 +601,9 @@ export class SplitComposer extends ComposerBase {
     }
 
     // Same-note move: replacing `[startOffset, endOffset]` with the token shifted every offset at or
-    // After the range by `delta`. Shift the captured selection offsets so the re-opened source selects
-    // The original text. The range is guaranteed not to overlap the selection (checked above), so each
-    // Selection shifts wholly or not at all.
+    // after the range by `delta`. Shift the captured selection offsets so the re-opened source selects
+    // the original text. The range is guaranteed not to overlap the selection (checked above), so each
+    // selection shifts wholly or not at all.
     const delta = insertToken.length - (endOffset - startOffset);
     this.capturedSelections = this.capturedSelections.map((selection) =>
       endOffset <= selection.startOffset
@@ -811,8 +811,8 @@ export class SplitComposer extends ComposerBase {
    */
   private resolveConfiguredTemplate(): string {
     // A smart cut & paste move prefers its own template — the override for its direction, then the shared
-    // One. When both are empty, fall through to the ordinary split → merge resolution below (the documented
-    // Fallback chain).
+    // one. When both are empty, fall through to the ordinary split → merge resolution below (the documented
+    // fallback chain).
     if (this.smartCutAndPasteMoveKind) {
       const smartCutAndPasteTemplate = resolveSmartCutAndPasteTemplate(this.pluginSettingsComponent.settings, this.smartCutAndPasteMoveKind);
       if (smartCutAndPasteTemplate) {
@@ -997,9 +997,9 @@ export function padEdgeMoveTemplate(template: string, kind: SmartCutAndPasteMove
  */
 export function resolveSmartCutAndPasteTemplate(settings: SmartCutAndPasteTemplateSettings, kind: SmartCutAndPasteMoveKind): string {
   // A `Record` keyed by the enum rather than a `switch`, so a new member becomes a compile error instead of
-  // An unreachable `default` branch the 100 % coverage gate could never reach. `AtCursor` has no override BY
+  // an unreachable `default` branch the 100 % coverage gate could never reach. `AtCursor` has no override BY
   // CONSTRUCTION — the shared template IS its template — so it maps to the empty string and `||` falls
-  // Straight through, keeping this a single expression with no special-case branch.
+  // straight through, keeping this a single expression with no special-case branch.
   const overrides: Record<SmartCutAndPasteMoveKind, string> = {
     [SmartCutAndPasteMoveKind.AtCursor]: '',
     [SmartCutAndPasteMoveKind.ToBottom]: settings.smartCutAndPasteToBottomTemplate,

@@ -27,8 +27,8 @@ interface MenuLike {
 }
 
 // Issue #231. The reorder modal offers TWO ways to move a row, and only the arrow buttons were ever
-// Tested — so a drop that silently did nothing shipped in 5.9.0 and was reported by a user. Dragging
-// Therefore gets its own behavioral test, driven through the real modal in a real Obsidian.
+// tested — so a drop that silently did nothing shipped in 5.9.0 and was reported by a user. Dragging
+// therefore gets its own behavioral test, driven through the real modal in a real Obsidian.
 describe('reorder drag and drop', () => {
   it('should move a heading section when its row is dropped onto another row', async () => {
     const result = await evalInObsidian({
@@ -73,11 +73,11 @@ describe('reorder drag and drop', () => {
         }
 
         // A synthetic-but-complete drag: a real `DataTransfer` carried through the same
-        // Dragstart -> dragover -> drop -> dragend sequence Obsidian's drag manager listens for, so every
-        // Listener the modal registers runs exactly as it does under a real pointer drag.
+        // dragstart -> dragover -> drop -> dragend sequence Obsidian's drag manager listens for, so every
+        // listener the modal registers runs exactly as it does under a real pointer drag.
         // These dispatches are a PERMANENT exception to the trusted-input convention: `sendInputEvent`
-        // Can express a pointer move or a click, but it cannot express a drag, so there is no trusted
-        // Equivalent of this sequence to convert to.
+        // can express a pointer move or a click, but it cannot express a drag, so there is no trusted
+        // equivalent of this sequence to convert to.
         /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;
@@ -148,20 +148,20 @@ describe('reorder drag and drop', () => {
     });
 
     // The drag is accepted on both passes: a `preventDefault`ed dragover is what makes the row a drop
-    // Target at all, and a `preventDefault`ed drop is what claims the drop.
+    // target at all, and a `preventDefault`ed drop is what claims the drop.
     expect(result.drag.isDragOverAccepted).toBe(true);
     expect(result.drag.isDropAccepted).toBe(true);
 
     // Obsidian's drag manager seeds the drag data store. An empty one is the state Obsidian explicitly
-    // Guards against for its own drags, so assert we are on the guarded path rather than beside it.
+    // guards against for its own drags, so assert we are on the guarded path rather than beside it.
     expect(result.drag.typesAfterDragStart).toContain('text/plain');
 
     // The row under the pointer shows WHERE the drop will land — below it, since the pointer is past its
-    // Midpoint.
+    // midpoint.
     expect(result.drag.targetClassesWhileOver).toContain('advanced-note-composer-reorder-drag-over-after');
 
     // The list re-renders in the dropped order immediately, before the operation is confirmed: the modal
-    // Is the preview. This is the assertion issue #231 was about — the drop used to do nothing at all.
+    // is the preview. This is the assertion issue #231 was about — the drop used to do nothing at all.
     expect(result.drag.rowLabelsAfterDrop).toEqual(['B', 'C', 'A']);
 
     // And confirming it writes that order to the note.
@@ -211,12 +211,12 @@ describe('reorder drag and drop', () => {
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
         // The note can never join the folder sequence: the file explorer sorts folders above files, so a
-        // Merged order could not be displayed as claimed.
+        // merged order could not be displayed as claimed.
         const drag = dragRowOnto('Draft', 'Alpha', true);
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
         // Close it: this test confirms nothing, and a modal left open would block every suite that runs
-        // After it in the shared instance.
+        // after it in the shared instance.
         clickCancel();
         await waitUntil({
           message: 'reorder modal did not close',
@@ -242,8 +242,8 @@ describe('reorder drag and drop', () => {
         }
 
         // A PERMANENT exception to the trusted-input convention, as in the suite above: `sendInputEvent`
-        // Can express a pointer move or a click, but it cannot express a drag, so this sequence has no
-        // Trusted equivalent to convert to.
+        // can express a pointer move or a click, but it cannot express a drag, so this sequence has no
+        // trusted equivalent to convert to.
         /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         function dragRowOnto(sourceLabel: string, targetLabel: string, shouldDropAfter: boolean): DragOutcome {
           const AFTER_FRACTION = 0.75;

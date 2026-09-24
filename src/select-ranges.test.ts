@@ -62,7 +62,7 @@ describe('getHeadingContentSelection', () => {
   });
 
   // The LAST heading of a note is reported differently: its end stays at the document's final line even
-  // When everything below it is blank, so the line count alone cannot answer this one.
+  // when everything below it is blank, so the line count alone cannot answer this one.
   it('returns null when the section below the heading is only blank lines', () => {
     expect(getHeadingContentSelection({ editor: createEditor('  \n\n  '), headingInfo: headingInfo(3, 9) })).toBeNull();
   });
@@ -74,7 +74,7 @@ describe('normalizeSelectionRange', () => {
   });
 
   // Anchoring and then moving the caret BACKWARDS is ordinary, not an edge case — on a phone the caret is
-  // Placed by tapping, and taps do not arrive in document order.
+  // placed by tapping, and taps do not arrive in document order.
   it('swaps an anchor that follows the cursor', () => {
     expect(normalizeSelectionRange(11, 4)).toEqual({ fromOffset: 4, toOffset: 11 });
   });
@@ -109,7 +109,7 @@ describe('resolveEnclosingHeadingInfo', () => {
   });
 
   // Line 0 is falsy — the lookup must test for `null`, not for truthiness, or a heading on the note's
-  // First line would report as "no heading" and both heading select commands would vanish there.
+  // first line would report as "no heading" and both heading select commands would vanish there.
   it('resolves a heading on the very first line', () => {
     const info = headingInfo(0, 5);
     mockGetEnclosingHeadingLine.mockReturnValue(0);

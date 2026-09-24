@@ -9,8 +9,8 @@ import {
 } from 'vitest';
 
 // Desktop-only: this is a folder-contents merge (file-delete) flow, matching the plugin's established
-// Integration convention. File-move/delete suites can hit the documented headless rename wall when several
-// Run in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
+// integration convention. File-move/delete suites can hit the documented headless rename wall when several
+// run in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -233,7 +233,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
     // The template named the note, so the default `<Folder Name>.md` was never used.
     expect(result.defaultNameUnused).toBe(true);
     // A note directly in the merged folder keeps its own heading level; each sub-folder is headed at its
-    // Depth and the notes inside it are demoted to match.
+    // depth and the notes inside it are demoted to match.
     expect(result.hasUntouchedIntro).toBe(true);
     expect(result.hasFolderHeading).toBe(true);
     expect(result.hasDemotedGet).toBe(true);
@@ -254,7 +254,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
             settings.shouldConvertFoldersToHeadingsWhenMergingFolder = true;
             settings.mergeFolderIntoFileNoteNameTemplate = '';
             // The reporter's own setting - and the folder cleanup it triggers is this test's completion
-            // Signal, since the merged note EXISTS (empty) before the merge writes anything into it.
+            // signal, since the merged note EXISTS (empty) before the merge writes anything into it.
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
           });
 
@@ -262,7 +262,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           await trashIfExists('empty-headings-src.md');
 
           // The reporter's own tree: sibling `3` holds nothing at all, so no note path mentions it and
-          // Its heading has no source note to be written in front of.
+          // its heading has no source note to be written in front of.
           await app.vault.createFolder('empty-headings-src');
           await app.vault.createFolder('empty-headings-src/1');
           await app.vault.createFolder('empty-headings-src/1/1 1');
@@ -299,7 +299,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
 
           // No source note carries a heading of its own, so every `#` line in the result is a folder
-          // Heading. Compared as whole lines: `# 1` is also a substring of `## 1 1`.
+          // heading. Compared as whole lines: `# 1` is also a substring of `## 1 1`.
           return { headingLines: mergedContent.split('\n').filter((line) => line.startsWith('#')) };
         } finally {
           await settingsComponent.editAndSave((settings) => {
@@ -368,7 +368,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
             settings.shouldConvertFoldersToHeadingsWhenMergingFolder = true;
             settings.mergeFolderIntoFileNoteNameTemplate = '';
             // Left where they are, so the case stays about CLASSIFYING the folder rather than about the
-            // Relocation emptying it. `Delete` is what makes the emptied note folder the commit signal.
+            // relocation emptying it. `Delete` is what makes the emptied note folder the commit signal.
             settings.shouldMoveAttachmentsWhenMergingFolder = false;
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
             settings.attachmentExtensions = ['.excalidraw.md'];
@@ -378,7 +378,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           await trashIfExists('attachment-headings-src.md');
 
           // The reporter's shape, plus the #168 case beside it: `attachments` holds a file but no note,
-          // While `empty` holds nothing at all - the two must not get the same answer.
+          // while `empty` holds nothing at all - the two must not get the same answer.
           await app.vault.createFolder('attachment-headings-src');
           await app.vault.createFolder('attachment-headings-src/1');
           await app.vault.createFolder('attachment-headings-src/attachments');
@@ -411,7 +411,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
           const mergedContent = merged && merged instanceof obsidianModule.TFile ? await app.vault.read(merged) : '';
 
           // No source note carries a heading of its own, so every `#` line is a folder heading. Compared
-          // As whole lines, like the #168 case.
+          // as whole lines, like the #168 case.
           return {
             attachmentKept: app.vault.getAbstractFileByPath('attachment-headings-src/attachments/img.png') !== null,
             headingLines: mergedContent.split('\n').filter((line) => line.startsWith('#'))
@@ -469,7 +469,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
     });
 
     // `attachments` contributed nothing to the merged note, so it leaves no heading - while `empty`, which
-    // Issue #168 asked for, still gets one.
+    // issue #168 asked for, still gets one.
     expect(result.headingLines).toEqual(['# 1', '# empty']);
     expect(result.attachmentKept).toBe(true);
   });
@@ -504,7 +504,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
             predicate: () => app.vault.getAbstractFileByPath('keep-src.md') !== null
           });
           // The folder cleanup runs after the transaction commits, so the sub-folder goes away strictly
-          // After the merged note appears - wait for that rather than for the note alone.
+          // after the merged note appears - wait for that rather than for the note alone.
           await waitUntil({
             message: 'the emptied sub-folder was not deleted',
             predicate: () => app.vault.getAbstractFileByPath('keep-src/sub') === null
@@ -705,7 +705,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
           });
           // Obsidian's own default: attachments live at the vault root, which is where the merged note's
-          // Attachments belong once it is created beside the folder.
+          // attachments belong once it is created beside the folder.
           app.vault.setConfig('attachmentFolderPath', '/');
 
           await trashIfExists('attach-src');
@@ -718,11 +718,11 @@ describe('merge folder contents into a single file (issue #92)', () => {
           await app.vault.createBinary('attach-src/sub/pic.png', new ArrayBuffer(4));
           await app.vault.create('attach-src/sketch.excalidraw.md', 'raw excalidraw payload');
           // The note sits directly in the merged folder: the command resolves the folder from the ACTIVE
-          // File's parent, so opening a note in `sub` would merge `sub` instead.
+          // file's parent, so opening a note in `sub` would merge `sub` instead.
           const note = await app.vault.create('attach-src/note.md', '![[pic.png]]\nnote body');
           // A SECOND ordinary note, because the drawing is not one: issue #209 stopped offering the command
-          // For a folder holding fewer than two MERGEABLE notes, and `sketch.excalidraw.md` — the whole point
-          // Of this case — counts as an attachment, so `note.md` alone would leave the folder below the bar.
+          // for a folder holding fewer than two MERGEABLE notes, and `sketch.excalidraw.md` — the whole point
+          // of this case — counts as an attachment, so `note.md` alone would leave the folder below the bar.
           await app.vault.create('attach-src/second.md', 'second body');
 
           await openFile(note);
@@ -818,7 +818,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
     expect(result.drawingNotMerged).toBe(true);
     expect(result.drawingKept).toBe(true);
     // The referenced image followed the notes into the merged note's attachment folder (the vault root),
-    // Which is what lets the emptied sub-folder be deleted.
+    // which is what lets the emptied sub-folder be deleted.
     expect(result.picMoved).toBe(true);
     expect(result.subFolderGone).toBe(true);
   });

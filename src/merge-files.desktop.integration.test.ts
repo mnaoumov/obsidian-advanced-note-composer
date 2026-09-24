@@ -7,9 +7,9 @@ import {
 } from 'vitest';
 
 // Desktop-only: this multi-select merge is a file-delete flow driven through the real `files-menu`
-// Context-menu item + the target picker. File-delete suites can hit the documented headless rename wall
-// When several run in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still
-// Pass alone.
+// context-menu item + the target picker. File-delete suites can hit the documented headless rename wall
+// when several run in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still
+// pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-files.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 

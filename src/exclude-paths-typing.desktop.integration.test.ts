@@ -9,19 +9,19 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this drives the plugin settings tab, which is where the report came from (matching the
-// Plugin's established integration convention; no Android emulator is wired for it). Version coverage: it uses only
-// The stable settings-tab DOM (`.setting-item` / `textarea`) and public APIs, with no dependence on
-// Minified Obsidian internals or serialization formats, so verifying on public-latest is sufficient.
+// plugin's established integration convention; no Android emulator is wired for it). Version coverage: it uses only
+// the stable settings-tab DOM (`.setting-item` / `textarea`) and public APIs, with no dependence on
+// minified Obsidian internals or serialization formats, so verifying on public-latest is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/exclude-paths-typing.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
 // The value from issue #155, typed by hand. Its prefixes `/^Inbox\/` and `/^Inbox\/[^\/` both start AND
-// End with `/`, so they read as finished regular expression literals whose inner source does not parse.
+// end with `/`, so they read as finished regular expression literals whose inner source does not parse.
 const REPORTED_EXCLUDE_PATH = String.raw`/^Inbox\/[^\/]*$/`;
 const INCOMPLETE_EXCLUDE_PATH = String.raw`/^Inbox\/`;
 
 // Minimal shape of the plugin's settings component reached at runtime, used only to restore the original
-// Exclude paths afterwards (the same walker `merge-folder-skips-ignored.desktop.integration.test.ts` uses).
+// exclude paths afterwards (the same walker `merge-folder-skips-ignored.desktop.integration.test.ts` uses).
 interface ComponentTreeNode {
   _children?: ComponentTreeNode[];
   editAndSave?: unknown;
@@ -70,11 +70,11 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
           const textAreaEl = await openExcludePathsTextArea();
           await setValue(textAreaEl, '');
           // Clearing the field makes the tab write the default value back into the component from a
-          // Debounced handler. Let that land BEFORE typing, or it would clobber the first keystrokes.
+          // debounced handler. Let that land BEFORE typing, or it would clobber the first keystrokes.
           await sleep(SETTLE_DELAY_IN_MILLISECONDS);
 
           // Type the reported value one character at a time. Each `input` event is what makes the
-          // Settings tab call `setProperty`, which is the code path that used to throw mid-typing.
+          // settings tab call `setProperty`, which is the code path that used to throw mid-typing.
           const noticesWhileTyping: string[] = [];
           for (let length = 1; length <= completeValue.length; length++) {
             await setValue(textAreaEl, completeValue.slice(0, length));
@@ -83,10 +83,10 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
           }
 
           // The debounced save must actually reach disk: the bug also broke `saveToFile`, because the
-          // Half-applied setter re-threw from the `cloneState` round trip. Reading the file back is the
-          // Only observation that covers that second failure surface. Every wait from here on gives up
-          // Instead of throwing (`waitOrGiveUp`) — what it waits for IS the thing under test, and a
-          // Thrown timeout would abort the closure and hide the notices collected above.
+          // half-applied setter re-threw from the `cloneState` round trip. Reading the file back is the
+          // only observation that covers that second failure surface. Every wait from here on gives up
+          // instead of throwing (`waitOrGiveUp`) — what it waits for IS the thing under test, and a
+          // thrown timeout would abort the closure and hide the notices collected above.
           await waitOrGiveUp(async () => {
             const excludePaths = await readSavedExcludePaths();
             return excludePaths.includes(completeValue);
@@ -96,7 +96,7 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
           const validationMessageForCompleteValue = textAreaEl.validationMessage;
 
           // An entry left incomplete is now REPORTED. Without this the whole list would quietly fall back
-          // To its default pattern (obsidian-dev-utils 88.4.0) and silently stop excluding anything.
+          // to its default pattern (obsidian-dev-utils 88.4.0) and silently stop excluding anything.
           await setValue(textAreaEl, incompleteValue);
           await waitOrGiveUp(() => textAreaEl.validationMessage !== '');
           const validationMessageForIncompleteValue = textAreaEl.validationMessage;
@@ -135,7 +135,7 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
         }
 
         // Notices render into `activeDocument`, which is NOT `document` once a detached window exists —
-        // Query both so the check cannot pass merely by looking in the wrong place.
+        // query both so the check cannot pass merely by looking in the wrong place.
         function noticeTexts(): string[] {
           const texts: string[] = [];
           for (const doc of new Set([activeDocument, document])) {

@@ -438,7 +438,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     });
 
     // Resolved WITHOUT the folder tokens: this is the template that produces them. The settings validator
-    // Rejects `{{folderName}}` / `{{folderPath}}` here, so nothing can silently render as nothing.
+    // rejects `{{folderName}}` / `{{folderPath}}` here, so nothing can silently render as nothing.
     const desiredFolderName = resolveCreateFolderTemplateTokens({
       template: settings.newFolderNameTemplate,
       tokens: {
@@ -453,12 +453,12 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     }).trim();
 
     // `normalizePath` is load-bearing for the vault ROOT, whose `path` is `/` — joining onto it yields a
-    // Leading slash, and a note created at `/1. Notes/x.md` is not the same path as the folder Obsidian
-    // Actually made.
+    // leading slash, and a note created at `/1. Notes/x.md` is not the same path as the folder Obsidian
+    // actually made.
     const folderPath = getAvailableFolderPath(this.app, normalizePath(join(parentFolder.path, desiredFolderName || safeFolderName)));
     const tokens: CreateFolderTemplateTokens = {
       // Read back from the de-duplicated PATH rather than from the template's own result, so a folder that
-      // Collided and became `1. Notes 1` says so in its own notes.
+      // collided and became `1. Notes 1` says so in its own notes.
       folderName: basename(folderPath),
       folderPath,
       index,
@@ -490,8 +490,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     const settings = this.pluginSettingsComponent.settings;
     return await new Promise<CreateConfirmResult>((promiseResolve) => {
       // Assigned as soon as the modal exists, which is long before any button can be clicked. A function
-      // Rather than a nullable modal reference, so the rename handler needs no `?.` — a branch whose false
-      // Arm nothing could ever reach, and the coverage gate is at 100 %.
+      // rather than a nullable modal reference, so the rename handler needs no `?.` — a branch whose false
+      // arm nothing could ever reach, and the coverage gate is at 100 %.
       let closeModal: (this: void) => void = noop;
 
       function requestRename(renameRequest: RenameRequest): void {
@@ -523,7 +523,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         canReselectTarget: true,
         confirmButtonText: 'Create',
         // Handed straight through: the shared modal knows nothing about renaming, so every result IT produces
-        // Simply carries no request.
+        // simply carries no request.
         promiseResolve,
         title: 'Create folder with notes'
       });
@@ -557,7 +557,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
           pluginSettingsComponent: this.pluginSettingsComponent,
           preposition: 'in',
           // The folder does not exist yet, so it is plain text: an internal link to a missing path renders
-          // Unresolved, and clicking one CREATES it.
+          // unresolved, and clicking one CREATES it.
           shouldLinkSource: false,
           sourcePathOrAbstractFile: folderPath,
           targetPathOrAbstractFile: parentFolder,
@@ -611,7 +611,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       rawName: rawFolderName,
       settings: this.pluginSettingsComponent.settings,
       // This prompt names a folder that does not exist yet, so the typed text is all there is and the
-      // Setting decides. `Rename folder...` opts out instead — it seeds the prompt with an existing name.
+      // setting decides. `Rename folder...` opts out instead — it seeds the prompt with an existing name.
       shouldTitleCase: this.pluginSettingsComponent.settings.shouldTitleCaseCreatedFolderName
     });
   }
@@ -636,7 +636,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       replacement: settings.replacement,
       shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,
       // The note name is written by the template author, not typed under time pressure, so it is taken
-      // Literally — capitalizing `!.md` into `!.Md` would be actively wrong.
+      // literally — capitalizing `!.md` into `!.Md` would be actively wrong.
       shouldTitleCase: false
     });
     if (!fixedName) {
@@ -860,8 +860,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         this.app.workspace.trigger('templater:overwrite-file', { content, file });
       } catch (error) {
         // Templater's own entry point swallows this into a notice that names neither the note nor the
-        // Template, and leaves the note unrendered. The note is kept the same way — it already exists and
-        // The remaining notes still deserve their turn — but the message says which one failed.
+        // template, and leaves the note unrendered. The note is kept the same way — it already exists and
+        // the remaining notes still deserve their turn — but the message says which one failed.
         this.pluginNoticeComponent.showNotice(createFragment((f) => {
           f.appendText('Advanced Note Composer: Templater failed on ');
           appendCodeBlock(f, file.path);
@@ -945,7 +945,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     }
 
     // Case-insensitively: the vault would treat `Alpha.md` and `alpha.md` as the same note on Windows and
-    // MacOS, so accepting one as "different" would just move the collision to the write.
+    // macOS, so accepting one as "different" would just move the collision to the write.
     if (otherNoteNames.some((otherNoteName) => otherNoteName.toLowerCase() === normalizedName.toLowerCase())) {
       return 'Another note in this folder is already named that';
     }
@@ -1014,7 +1014,7 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   fragment.appendText(': ');
   // The destination always exists, so it is a link like every other confirmation dialog's paths (issue
   // #165) — clicking a folder link reveals it in the file explorer, it never creates anything. The root is
-  // Labelled `/`, matching the picker's own `getItemText`.
+  // labelled `/`, matching the picker's own `getItemText`.
   fragment.append(
     await renderInternalLink({
       app,

@@ -166,7 +166,7 @@ describe('resolveTemplateTokens', () => {
   });
 
   // Issue #244 — `Create empty note in folder...` creates a note out of nothing, so there is no note it
-  // Came FROM and the three `from` tokens have nothing to name.
+  // came FROM and the three `from` tokens have nothing to name.
   it('should resolve the source tokens to nothing when there is no source note', () => {
     expect(resolveTemplateTokens({
       content: '',
@@ -206,7 +206,7 @@ describe('resolveTemplateTokens', () => {
   });
 
   // Issue #227 — the `Create folder with notes...` folder vocabulary, resolved against the folder the
-  // Target note ends up in.
+  // target note ends up in.
   describe('folder tokens', () => {
     const FOLDER_NAME_TEMPLATE = '{{index}}. {{safeFolderName}}';
 
@@ -292,7 +292,7 @@ describe('resolveTemplateTokens', () => {
     });
 
     // The `Split into folder note name template` is resolved before the note is renamed into the folder
-    // Being created, so it names that folder explicitly.
+    // being created, so it names that folder explicitly.
     it('should name the overriding folder instead of the note\'s current parent', () => {
       expect(resolveWithFolderOverride('{{folderName}} | {{folderPath}} | {{safeFolderName}}', 'Notes/9. Beta')).toBe('9. Beta | Notes/9. Beta | Beta');
     });

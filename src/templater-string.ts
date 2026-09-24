@@ -189,7 +189,7 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
  */
 export function resolveTemplaterContextFile(app: App, contextFile: null | TFile): null | TFile {
   // The active file is taken as it comes, `isMarkdownFile` unchecked: with a canvas focused it is what the
-  // Run has always reported on, and narrowing that now would be a second, unasked-for change.
+  // run has always reported on, and narrowing that now would be a second, unasked-for change.
   return contextFile
     ?? app.workspace.getActiveFile()
     ?? resolveMostRecentlyOpenedNote(app)

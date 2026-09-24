@@ -11,8 +11,8 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only, for the same reason as `command-blocking-per-category.desktop.integration.test.ts`: it
-// Drives the settings tab and a folder context menu, both desktop-only surfaces here. Version coverage: settings-gated
-// Filtering with no dependence on minified internals or version-sensitive DOM, so public-latest suffices.
+// drives the settings tab and a folder context menu, both desktop-only surfaces here. Version coverage: settings-gated
+// filtering with no dependence on minified internals or version-sensitive DOM, so public-latest suffices.
 // Isolation: `npx vitest run --project integration-tests:desktop src/content-exclusion-per-category.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -44,7 +44,7 @@ describe('per-category content exclusion (issue #270)', () => {
         const EXCLUDED_FOLDER = `${ROOT}/2. Beta`;
 
         // Three numbered siblings, the same fixture shape `reorder-child-folders` uses — the modal lists
-        // Them by name without their numbers.
+        // them by name without their numbers.
         await removeFolder(ROOT);
         await app.vault.createFolder(ROOT);
         for (const [index, name] of ['Alpha', 'Beta', 'Gamma'].entries()) {
@@ -54,14 +54,14 @@ describe('per-category content exclusion (issue #270)', () => {
         const nothingConfigured = await readReorderRows();
 
         // The reporter's own case, in the vault: one category's content list drops the folder from that
-        // Command and leaves the rest of the plugin using it.
+        // command and leaves the rest of the plugin using it.
         await setPaths('Reorder exclude paths', EXCLUDED_FOLDER);
         const reorderExcluded = await readReorderRows();
 
         // The isolation that #249's per-category pair could not give: the SAME path under a different
-        // Category's content list changes nothing here. Before the per-category split this would have had
-        // To be the all-commands `Exclude paths` list, which took the folder away from every command at
-        // Once — and which issue #271 has since retired outright.
+        // category's content list changes nothing here. Before the per-category split this would have had
+        // to be the all-commands `Exclude paths` list, which took the folder away from every command at
+        // once — and which issue #271 has since retired outright.
         await setPaths('Reorder exclude paths', '');
         await setPaths('Merge exclude paths', EXCLUDED_FOLDER);
         const mergeExcludedOnly = await readReorderRows();
@@ -76,7 +76,7 @@ describe('per-category content exclusion (issue #270)', () => {
 
         function clickMenuItem(menuToSearch: MenuLike, title: string): void {
           // Identified by rendered text, the way the other folder-menu tests do — `MenuItem` exposes no
-          // Title of its own.
+          // title of its own.
           const itemEl = menuToSearch.items.find((candidate) => candidate.dom?.textContent === title)?.dom;
           if (!itemEl) {
             const available = menuToSearch.items.map((candidate) => candidate.dom?.textContent ?? '').join(' | ');
@@ -103,7 +103,7 @@ describe('per-category content exclusion (issue #270)', () => {
           }
 
           // Through the folder MENU, which is how the command is actually reached: the palette path
-          // Resolves the parent from Obsidian's own new-note location, not from this folder.
+          // resolves the parent from Obsidian's own new-note location, not from this folder.
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, rootFolder, 'file-explorer-context-menu');
           clickMenuItem(menu, 'Reorder child folders...');
@@ -119,7 +119,7 @@ describe('per-category content exclusion (issue #270)', () => {
             .map((itemEl) => itemEl.dataset['rowLabel']);
 
           // Discarded rather than confirmed: nothing here is about performing a reorder, and a confirmed
-          // One would renumber the fixture out from under the next probe.
+          // one would renumber the fixture out from under the next probe.
           await pressKey({ key: 'Escape' });
           await waitUntil({
             message: 'Escape did not close the reorder modal',
@@ -156,14 +156,14 @@ describe('per-category content exclusion (issue #270)', () => {
     });
 
     // All three siblings are reorderable while nothing is configured, so the assertions below are not
-    // Vacuous.
+    // vacuous.
     expect(result.nothingConfigured).toEqual(['Alpha', 'Beta', 'Gamma']);
 
     // `Reorder exclude paths` takes the one folder out of the reorder modal — the reporter's ask.
     expect(result.reorderExcluded).toEqual(['Alpha', 'Gamma']);
 
     // And a different category's list over the same path leaves the reorder untouched. This is the
-    // Assertion that fails if the category is ever dropped on the way to `isPathIgnored`.
+    // assertion that fails if the category is ever dropped on the way to `isPathIgnored`.
     expect(result.mergeExcludedOnly).toEqual(['Alpha', 'Beta', 'Gamma']);
 
     expect(result.restored).toEqual(['Alpha', 'Beta', 'Gamma']);
@@ -199,7 +199,7 @@ describe('excluding a folder by itself alone (issue #279)', () => {
         const regexNotices = readNoticeTexts().slice(noticeCountBefore);
 
         // The control: a plain path covers the folder AND its subtree, so every sibling is excluded and the
-        // Command has nothing left to reorder there.
+        // command has nothing left to reorder there.
         await setPaths('Reorder exclude paths', INBOX);
         const isOfferedUnderPlainPath = buildMenuTitles().includes(REORDER_SIBLINGS);
 
@@ -303,7 +303,7 @@ describe('excluding a folder by itself alone (issue #279)', () => {
     expect(result.regexNotices.filter((text) => text.includes('ignored in the plugin settings'))).toEqual([]);
 
     // The plain path keeps excluding the subtree, and it is that exclusion which removes the entry: the
-    // Command is offered again once the list is empty.
+    // command is offered again once the list is empty.
     expect(result.isOfferedUnderPlainPath).toBe(false);
     expect(result.isOfferedWithNothingConfigured).toBe(true);
   });

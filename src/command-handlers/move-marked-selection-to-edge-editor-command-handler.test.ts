@@ -242,7 +242,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
   });
 
   // Each direction is its own template kind, so a handler that reported the wrong one would silently apply
-  // The other direction's template override (issue #174).
+  // the other direction's template override (issue #174).
   describe('getSmartCutAndPasteMoveKind (issue #174)', () => {
     async function captureMoveKind(insertMode: InsertMode): Promise<SmartCutAndPasteMoveKind> {
       const source = createMockFile('source.md');
@@ -265,7 +265,7 @@ describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
   });
 
   // Each direction reads its OWN setting, so a test that only flipped one of them would pass against a
-  // Handler that read the wrong one — hence the cross cases (top off / bottom on, and the reverse).
+  // handler that read the wrong one — hence the cross cases (top off / bottom on, and the reverse).
   describe('shouldJumpToMovedContent (issue #144)', () => {
     async function checkJumpFlag(options: CreateMockParamsOptions): Promise<boolean> {
       const source = createMockFile('source.md');

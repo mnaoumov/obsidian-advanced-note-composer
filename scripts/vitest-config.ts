@@ -110,7 +110,7 @@ export const config = defineObsidianPluginVitestConfig({
           include: [DESKTOP_CAPTURE_TEST_FILES],
           name: 'capture-screenshots:desktop',
           // Capturing is what these suites are FOR: emptying the vault under them would change the PNGs
-          // They write into `images/`, which is a committed artifact and no part of this reset's subject.
+          // they write into `images/`, which is a committed artifact and no part of this reset's subject.
           setupFiles: withoutVaultReset(context.desktop.setupFiles)
         }
       },

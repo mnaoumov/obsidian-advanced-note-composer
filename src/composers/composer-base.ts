@@ -392,8 +392,8 @@ export abstract class ComposerBase {
     const { backlinksToFix, updatedFilePaths, updatedLinks } = params;
     for (const backlinkPath of backlinksToFix.keys()) {
       // A folder merge relocates each merged note through the transaction staging folder, and the metadata
-      // Cache can still report such a note as a backlink source after it is gone. Editing links in a file
-      // That no longer exists throws and aborts (and rolls back) the whole merge, so skip vanished sources.
+      // cache can still report such a note as a backlink source after it is gone. Editing links in a file
+      // that no longer exists throws and aborts (and rolls back) the whole merge, so skip vanished sources.
       if (!this.app.vault.getFileByPath(backlinkPath)) {
         continue;
       }
@@ -467,7 +467,7 @@ export abstract class ComposerBase {
 
     if (!isFrontmatterOnlyExtract) {
       // Demote BEFORE the template is applied, so only the note's own outline moves: any heading the
-      // Template itself contributes was written at the level the user wanted it at.
+      // template itself contributes was written at the level the user wanted it at.
       targetContentToInsert = this.applyTemplate(demoteHeadings(newContent, this.headingLevelShift));
       const templateExtraction = this.extractFrontmatter(targetContentToInsert);
       templateFrontmatter = templateExtraction.frontmatter;
@@ -482,12 +482,12 @@ export abstract class ComposerBase {
       if (originalTitle === undefined) {
         // The target note has no `title`. For a brand-new (empty) target file, the operation decides via
         // `shouldKeepSourceTitleForNewTargetFile` (a merge relocates the whole source note, so it keeps
-        // The source title; a split's new-file title is governed by `frontmatterTitleMode` instead). For
-        // An existing target that has no title, the `shouldUseSourceTitleWhenTargetHasNoTitle` governs.
+        // the source title; a split's new-file title is governed by `frontmatterTitleMode` instead). For
+        // an existing target that has no title, the `shouldUseSourceTitleWhenTargetHasNoTitle` governs.
         // Otherwise the merged-in source title is discarded.
         // A frontmatter-only extract always keeps it: the rule above exists because a merge/split carries
-        // The whole source frontmatter INCIDENTALLY, while here the user pointed at that very property, so
-        // Dropping it would silently lose exactly what was asked for.
+        // the whole source frontmatter INCIDENTALLY, while here the user pointed at that very property, so
+        // dropping it would silently lose exactly what was asked for.
         const shouldKeepSourceTitle = isFrontmatterOnlyExtract || (this.isNewTargetFile
           ? this.shouldKeepSourceTitleForNewTargetFile
           : this.pluginSettingsComponent.settings.shouldUseSourceTitleWhenTargetHasNoTitle);
@@ -561,7 +561,7 @@ export abstract class ComposerBase {
       content: targetContentToInsert,
       // What `{{safeFolderName}}` / `{{index}}` read the target's folder number back through (issue #227).
       // The target note is where it is going to stay by now, so its own parent is the folder those tokens
-      // Name and no override is needed.
+      // name and no override is needed.
       folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
       sourceFile: this.sourceFile,
       targetFile: this.targetFile,
@@ -704,17 +704,17 @@ export abstract class ComposerBase {
     if (this.insertToken !== null) {
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
       // Remember the inserted string AND the offset it lands at, so the move flow can select exactly
-      // The moved region afterwards rather than the first string that happens to look like it
+      // the moved region afterwards rather than the first string that happens to look like it
       // (issue #175). The replacement is a function so a `$&`/`$'` sequence inside the moved text is
-      // Inserted literally instead of being expanded as a replacement pattern.
+      // inserted literally instead of being expanded as a replacement pattern.
       this.insertedContent = contentToInsert;
       this.insertedContentOffset = existingContent.indexOf(this.insertToken);
       return existingContent.replace(this.insertToken, () => contentToInsert);
     }
     const offset = resolveInsertOffset(existingContent, this.insertMode);
     // The ordinary extract/merge append (or prepend) knows its own splice point exactly, so it records the
-    // Same pair the move flow does — that is what lets the completion notice's destination link land on
-    // The extracted content instead of at the top of the note (issue #232).
+    // same pair the move flow does — that is what lets the completion notice's destination link land on
+    // the extracted content instead of at the top of the note (issue #232).
     this.insertedContent = contentToInsert;
     this.insertedContentOffset = offset;
     return `${existingContent.slice(0, offset)}${contentToInsert}${existingContent.slice(offset)}`;
@@ -726,27 +726,27 @@ export abstract class ComposerBase {
     }
     if (!this.shouldMergeHeadings || this.insertToken !== null) {
       // Route the write through the transaction (which captures the old content and registers the
-      // Restore) so a merge/split can be rolled back. This replicates FileManager.insertIntoFile's
-      // Frontmatter-aware positioning in insertContent rather than calling it directly, because the
-      // Transaction must own the write to be able to reverse it. The move (insertToken) flow always
-      // Takes this path — it is a positional insert at the token, not a heading merge.
+      // restore) so a merge/split can be rolled back. This replicates FileManager.insertIntoFile's
+      // frontmatter-aware positioning in insertContent rather than calling it directly, because the
+      // transaction must own the write to be able to reverse it. The move (insertToken) flow always
+      // takes this path — it is a positional insert at the token, not a heading merge.
       await vaultTransaction.process(this.targetFile, (targetFileContent) => this.insertContent({ contentToInsert: targetContentToInsert, existingContent: targetFileContent }));
       return;
     }
 
     // The heading-aware merge interleaves the inserted note under whichever headings the target already
-    // Has, so there is no single splice offset to record — only the string, which the locator falls back
-    // To searching for. The exact string will NOT be found (`wrapText` below trims each section and
-    // Re-applies the template around it), but its TRIMMED form still is whenever the note stayed one
-    // Block — which is the locator's documented last-resort fallback. A merge that really did split the
-    // Content across headings matches nothing and leaves the destination link opening the note at its
-    // Top, exactly as it did before issue #232.
+    // has, so there is no single splice offset to record — only the string, which the locator falls back
+    // to searching for. The exact string will NOT be found (`wrapText` below trims each section and
+    // re-applies the template around it), but its TRIMMED form still is whenever the note stayed one
+    // block — which is the locator's documented last-resort fallback. A merge that really did split the
+    // content across headings matches nothing and leaves the destination link opening the note at its
+    // top, exactly as it did before issue #232.
     this.insertedContent = targetContentToInsert;
     this.insertedContentOffset = null;
 
     // VaultTransaction.process takes a synchronous content provider, but building the heading-merged
-    // Content is async (parseMarkdownHeadingDocument), so compute it first and apply it via modify,
-    // Which captures the old content for rollback exactly as process does.
+    // content is async (parseMarkdownHeadingDocument), so compute it first and apply it via modify,
+    // which captures the old content for rollback exactly as process does.
     const targetFileContent = await this.app.vault.read(this.targetFile);
     const targetFileDocument = await parseMarkdownHeadingDocument(this.app, targetFileContent);
     const targetContentDocumentToInsert = await parseMarkdownHeadingDocument(this.app, targetContentToInsert);
@@ -790,8 +790,8 @@ export abstract class ComposerBase {
       }
       case FrontmatterMergeStrategy.MergeAndPreferOriginalValues: {
         // Issue #187: the original frontmatter has to stay the object being merged INTO, otherwise the
-        // Destination note's property order is replaced by the incoming note's. Value preference is expressed
-        // By the flag rather than by swapping the arguments.
+        // destination note's property order is replaced by the incoming note's. Value preference is expressed
+        // by the flag rather than by swapping the arguments.
         return mergeRecursively({ newObject: newFrontmatter, oldObject: originalFrontmatter, shouldPreferOldValues: true });
       }
       case FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter: {

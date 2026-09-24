@@ -66,7 +66,7 @@ describe('choosing the folder before the name (issue #261)', () => {
         const NEW_NOTE_NAME = 'folder-then-name-created';
         const EXPECTED_PATH = `${FOLDER_PATH}/${NEW_NOTE_NAME}.md`;
         // A note that already exists and whose name SHARES the prefix being typed. In the picker it would
-        // Have been offered as a suggestion; the point of #261 is that the name box has no such list.
+        // have been offered as a suggestion; the point of #261 is that the name box has no such list.
         const DECOY_PATH = `${FOLDER_PATH}/${NEW_NOTE_NAME}-decoy.md`;
         const SOURCE_CONTENT = 'alpha FOLDER-THEN-NAME-BODY omega\n';
         const SELECTED_TEXT = 'FOLDER-THEN-NAME-BODY';
@@ -78,7 +78,7 @@ describe('choosing the folder before the name (issue #261)', () => {
             settings.shouldChooseFolderBeforeNameWhenSplitting = true;
             settings.defaultSplitTargetMode = 'Create';
             // Straight through to the split: the confirmation dialog is another suite's subject, and a
-            // Confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
+            // confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
             settings.shouldAskBeforeSplitting = false;
             // The #238 prompt must not ask a second time for a folder this flow already chose.
             settings.shouldAskForTargetFolderWhenSplitting = true;
@@ -104,7 +104,7 @@ describe('choosing the folder before the name (issue #261)', () => {
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
 
           // FIRST prompt: the folder picker. The target picker would have had `.prompt-input` too, so the
-          // Placeholder is what tells them apart.
+          // placeholder is what tells them apart.
           await waitUntil({
             message: 'the folder prompt did not open',
             predicate: () => getPromptInput() !== null,
@@ -243,7 +243,7 @@ describe('choosing the folder before the name (issue #261)', () => {
           }
           nameInput.value = name;
           // The box tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           const createButton = [...document.querySelectorAll('.advanced-note-composer-split-note-name-modal .modal-button-container button')]
             .find((el) => el.textContent === 'Create');

@@ -30,7 +30,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target file so the swap
-// Proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swap) is REAL.
+// proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swap) is REAL.
 import { selectFileForSwap } from '../modals/swap-file-modal.ts';
 import { SwapFileCommandHandler } from './swap-file-command-handler.ts';
 
@@ -51,7 +51,7 @@ interface Testable {
 }
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does
-// Not reach into unmocked App internals. Not the behavior under test.
+// not reach into unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -109,7 +109,7 @@ function getFile(path: string): TFile {
 function initApp(files: Record<string, string>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   // Test-mocks' Vault.getAvailablePath echoes the input with no de-duplication, but the two-file swap's
-  // Temp-path shuffle needs a genuinely free path. Provide a faithful existence-checking stub (an
+  // temp-path shuffle needs a genuinely free path. Provide a faithful existence-checking stub (an
   // Obsidian-API double, not a source workaround).
   vi.spyOn(app.vault, 'getAvailablePath').mockImplementation((basePath, extension) => {
     const suffix = extension ? `.${extension}` : '';
@@ -191,7 +191,7 @@ describe('SwapFileCommandHandler', () => {
     mockSelectFileForSwap.mockResolvedValue(getFile('target.md'));
 
     // Simulate the user clicking the lock indicator's Unlock mid-operation: aborting the shared
-    // Controller cancels the operation, and the broken rename triggers the spanning transaction rollback.
+    // controller cancels the operation, and the broken rename triggers the spanning transaction rollback.
     vi.spyOn(app.fileManager, 'renameFile').mockImplementationOnce(() => {
       requestResourceUnlockForPath(app, 'source.md');
       throw new Error('cancelled');

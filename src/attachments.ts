@@ -254,7 +254,7 @@ export function collectAttachmentsReferencedBySelections(params: CollectAttachme
 
   const cache = app.metadataCache.getFileCache(sourceFile);
   // Embeds and links in one pass: the reported case is an embedded image, but a heading that merely LINKS
-  // To its PDF owns it just as much.
+  // to its PDF owns it just as much.
   /* v8 ignore next 2 -- defensive ?? for a note the metadata cache has not indexed yet. */
   const references = [...cache?.embeds ?? [], ...cache?.links ?? []];
 
@@ -270,7 +270,7 @@ export function collectAttachmentsReferencedBySelections(params: CollectAttachme
 
     if (!isSelected(reference.position, selections)) {
       // Anything the note still points at after the extraction keeps it here, whether or not it is an
-      // Attachment — the check below only ever asks about paths, so classifying it would be wasted work.
+      // attachment — the check below only ever asks about paths, so classifying it would be wasted work.
       pathsReferencedByTheRemainder.add(linkedFile.path);
       continue;
     }
@@ -358,7 +358,7 @@ export async function relocateAttachments(params: RelocateAttachmentsParams): Pr
   const { app, relocations, vaultTransaction } = params;
   for (const relocation of relocations) {
     // Asked BEFORE resolving a destination: the destination is de-duplicated against the vault, and an
-    // Attachment already at its proper path collides with ITSELF, so resolving first would rename
+    // attachment already at its proper path collides with ITSELF, so resolving first would rename
     // `img.png` to `img 1.png` on every run. This is exactly what `isAtProperAttachmentPath` is for.
     const isAlreadyAtProperPath = await isAtProperAttachmentPath({
       app,
@@ -453,13 +453,13 @@ function isAncestorOrSelf(ancestorFolderPath: string, folderPath: string): boole
 
 function isAttachmentFile(file: TFile, attachmentExtensions: readonly string[]): boolean {
   // The markdown gate stays: a non-markdown file is an attachment whatever the configured extensions
-  // Say, and only a markdown-shaped one has to prove itself against them.
+  // say, and only a markdown-shaped one has to prove itself against them.
   return !isMarkdownFile(file) || isTreatedAsAttachment({ attachmentExtensions, pathOrFile: file });
 }
 
 function isSelected(position: Pos, selections: readonly Selection[]): boolean {
   // Wholly inside, matching `ComposerBase`'s own rule: a reference straddling the boundary is not part of
-  // What gets extracted, so the note keeps pointing at it.
+  // what gets extracted, so the note keeps pointing at it.
   return selections.some((selection) => selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset);
 }
 

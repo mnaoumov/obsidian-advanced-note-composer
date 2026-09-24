@@ -247,9 +247,9 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
 
     if (itemsToMove.length === 0) {
       // Only reachable in a folder-only mode, and only in a vault where an attachment-location plugin owns
-      // The resolution: everywhere else `canExecuteFolder` already answered this synchronously and never
-      // Offered the command (issue #185) — both of the other reasons a folder is left alone (excluded, or
-      // The configured attachment folder) are themselves synchronous.
+      // the resolution: everywhere else `canExecuteFolder` already answered this synchronously and never
+      // offered the command (issue #185) — both of the other reasons a folder is left alone (excluded, or
+      // the configured attachment folder) are themselves synchronous.
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('There is nothing to flatten in ');
@@ -316,7 +316,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     }
 
     // The flatten landed, so the folder its items were promoted into counts as clicked-on for the next
-    // Picker (issue #206).
+    // picker (issue #206).
     recordRecentTarget(parentFolder);
 
     showOperationCompletionNotice({
@@ -565,8 +565,8 @@ async function buildFlattenConfirmContent(params: BuildFlattenConfirmContentPara
   appendCodeBlock(fragment, 'Destination');
   fragment.appendText(': ');
   // The destination always exists (it is the folder's own parent), so it is a link like every other
-  // Confirmation dialog's paths (issue #165) — clicking a folder link reveals it in the file explorer,
-  // It never creates anything. The root is labelled `/`, matching the move picker's `getItemText`.
+  // confirmation dialog's paths (issue #165) — clicking a folder link reveals it in the file explorer,
+  // it never creates anything. The root is labelled `/`, matching the move picker's `getItemText`.
   fragment.append(
     await renderInternalLink({
       app,

@@ -228,9 +228,9 @@ class ReorderModal extends Modal {
 
     // No `Escape` registration, deliberately: Obsidian's own `Modal` already closes on `Escape` AND
     // `preventDefault`s it, so registering one here is dead code — established by mutation (deleting it
-    // Left every assertion in `reorder-modal-escape.desktop.integration.test.ts` green), not by
-    // Reading. Do not re-add it; what cancelling has to get right lives in `onClose` below, and that IS
-    // Covered.
+    // left every assertion in `reorder-modal-escape.desktop.integration.test.ts` green), not by
+    // reading. Do not re-add it; what cancelling has to get right lives in `onClose` below, and that IS
+    // covered.
   }
 
   public override onClose(): void {
@@ -349,9 +349,9 @@ class ReorderModal extends Modal {
     itemEl.style.marginInlineStart = `${(row.depth * DEPTH_INDENT_IN_PIXELS).toString()}px`;
 
     // Obsidian's own drag manager rather than hand-rolled `dragstart`/`dragover`/`drop` listeners: it
-    // Marks the element draggable, seeds the drag data store (an empty one is what Obsidian guards
-    // Against for its own drags), registers `dragenter` alongside `dragover`, applies the `dropEffect`,
-    // And draws the ghost — so a reorder drag looks and behaves like every other drag in the app.
+    // marks the element draggable, seeds the drag data store (an empty one is what Obsidian guards
+    // against for its own drags), registers `dragenter` alongside `dragover`, applies the `dropEffect`,
+    // and draws the ghost — so a reorder drag looks and behaves like every other drag in the app.
     const dragSource: ReorderDragSource = { groupKey: row.groupKey, rowId: row.id };
     this.app.dragManager.handleDrag(itemEl, () => ({
       icon: DRAG_HANDLE_ICON_ID,
@@ -362,7 +362,7 @@ class ReorderModal extends Modal {
     this.app.dragManager.handleDrop(itemEl, (event, draggable, isOver) => {
       const droppedSource = toReorderDragSource(draggable);
       // Refusing by returning `null` leaves the event un-`preventDefault`ed, which is what declines a row
-      // From another group — and a file dragged in from the explorer — instead of accepting it.
+      // from another group — and a file dragged in from the explorer — instead of accepting it.
       if (droppedSource?.groupKey !== row.groupKey) {
         return null;
       }
@@ -371,7 +371,7 @@ class ReorderModal extends Modal {
       return { action: null, dropEffect: 'move' };
     });
     // A drag abandoned outside any row ends without a drop, so the last insertion line has to be cleared
-    // Here; `dragend` fires on the row the drag started from.
+    // here; `dragend` fires on the row the drag started from.
     itemEl.addEventListener('dragend', () => {
       this.clearDropIndicators();
     });

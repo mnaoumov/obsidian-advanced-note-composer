@@ -54,7 +54,7 @@ describe('Smart cut & paste notice settings', () => {
     await setToggles(ALL_TOGGLES, true);
 
     // "Switch to split/extract" is always shown (independent of the three move-button toggles), so it
-    // Leads every non-empty list.
+    // leads every non-empty list.
     expect(allOn).toEqual([
       'Switch to split/extract',
       'Move marked selection to top of file',

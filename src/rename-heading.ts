@@ -16,14 +16,14 @@ import {
 import { parseLink } from 'obsidian-dev-utils/obsidian/parse-link';
 
 // Mirrors Obsidian's internal heading normalization used to MATCH a heading against a link subpath
-// Segment (the core `rename this heading` command lowercases and replaces these characters with a
-// Space, then collapses whitespace). Two heading texts are "the same heading" when their normalized
-// Forms are equal, so a link's stored subpath segment can be matched to the heading being renamed.
+// segment (the core `rename this heading` command lowercases and replaces these characters with a
+// space, then collapses whitespace). Two heading texts are "the same heading" when their normalized
+// forms are equal, so a link's stored subpath segment can be matched to the heading being renamed.
 const HEADING_MATCH_STRIP_REGEXP = /[!"#$%&()*+,.:;<=>?@^`{|}~/[\]\\\r\n]/g;
 
 // Mirrors Obsidian's sanitization of a heading written INTO a link subpath: characters that would
-// Break the subpath (`:`, `#`, `|`, `^`, `\`, newlines, `%%`, `[[`, `]`) are replaced with a space
-// And whitespace collapsed. This is applied to the NEW heading text before it is spliced into a link.
+// break the subpath (`:`, `#`, `|`, `^`, `\`, newlines, `%%`, `[[`, `]`) are replaced with a space
+// and whitespace collapsed. This is applied to the NEW heading text before it is spliced into a link.
 const SUBPATH_SANITIZE_REGEXP = /(?:[:#|^\\\r\n]|%%|\[\[|]])/g;
 
 const WHITESPACE_RUN_REGEXP = /\s+/g;
@@ -201,7 +201,7 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
   } = params;
 
   // Collected in a `const` array (not a reassigned counter) so the per-file link converter closure can
-  // Safely record rewrites without an unsafe reference to a loop-mutated variable.
+  // safely record rewrites without an unsafe reference to a loop-mutated variable.
   const rewrittenLinks: string[] = [];
 
   await editBacklinks({

@@ -129,7 +129,7 @@ describe('moveIntoOwnFolder', () => {
 
     it('should fall back to the note\'s name when the template renders to nothing', async () => {
       // `{{folderName}}` is what this template PRODUCES, so it resolves to nothing here; the validator
-      // Rejects it, and a hand-edited setting must not leave the folder nameless.
+      // rejects it, and a hand-edited setting must not leave the folder nameless.
       expect(
         await wrap({
           'parent/D.md': 'd'
@@ -139,8 +139,8 @@ describe('moveIntoOwnFolder', () => {
 
     it('should scan the vault root for a note reporting no parent at all', async () => {
       // `TFile.parent` is nullable in the API even though a note in a vault always has one, so the
-      // Fallback is defensive — but it has to be the ROOT rather than nothing, or there would be no
-      // Folder to read the sibling numbering from.
+      // fallback is defensive — but it has to be the ROOT rather than nothing, or there would be no
+      // folder to read the sibling numbering from.
       const renameFile = vi.fn(() => noopAsync());
       const app = strictProxy<AppOriginal>({
         fileManager: strictProxy({ renameFile }),

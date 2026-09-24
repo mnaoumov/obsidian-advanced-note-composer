@@ -99,7 +99,7 @@ describe('SelectThisHeadingContentEditorCommandHandler', () => {
   });
 
   // A heading with nothing under it has no content to select, so the command stays out of the palette
-  // Rather than selecting an empty range.
+  // rather than selecting an empty range.
   it('is unavailable on a heading with no body', () => {
     mockResolveEnclosingHeadingInfo.mockReturnValue(HEADING_INFO);
     mockGetHeadingContentSelection.mockReturnValue(null);

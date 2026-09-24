@@ -93,8 +93,8 @@ function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPlu
 async function triggerLayoutReadyAndWait(triggerLayoutReady: () => void): Promise<void> {
   // `LayoutReadyComponent.onload` schedules a `window.setTimeout(0)` that fire-and-forgets
   // `onLayoutReady` via the real `invokeAsyncSafely`. Flush that one-shot timer with fake
-  // Timers so the tracked async operation is registered, then settle it deterministically
-  // Via the async-operation-tracking setup file instead of racing a real `setTimeout(0)`.
+  // timers so the tracked async operation is registered, then settle it deterministically
+  // via the async-operation-tracking setup file instead of racing a real `setTimeout(0)`.
   vi.useFakeTimers();
   try {
     triggerLayoutReady();

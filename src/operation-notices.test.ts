@@ -42,7 +42,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 // The dialog opens a real Obsidian Modal and has its own suite; what this one asserts is which of the
-// Two progress reporters the setting picks.
+// two progress reporters the setting picks.
 vi.mock('./operation-progress-modal.ts', () => ({
   showOperationProgressModal: vi.fn()
 }));
@@ -245,7 +245,7 @@ describe('buildOperationNoticeContent', () => {
     });
 
     // The source stays linked — a split leaves a residual link to everything it produced in the note it
-    // Split, so it is the index this list is the shortcut past.
+    // split, so it is the index this list is the shortcut past.
     expect(fragment.textContent).toBe('Split note [alpha.md] into 1 note(s): [bravo.md].');
   });
 
@@ -300,7 +300,7 @@ describe('renderOperationNoticeLink', () => {
     const { forwardedParams } = await renderLink({ path: 'charlie', pluginSettingsComponent: folderNoteSettingsComponent });
 
     // The settings' own answer to which note describes a folder — the same one `Rename folder...` and the
-    // Reorder commands keep in step.
+    // reorder commands keep in step.
     expect(forwardedParams.folderNote?.location).toBe(FolderNoteLocation.InsideFolder);
     expect(forwardedParams.folderNote?.resolveName?.(folder)).toBe('charlie');
   });
@@ -316,7 +316,7 @@ describe('renderOperationNoticeLink', () => {
     });
 
     // Read at CLICK time through the callback, so a template changed after the notice was shown still
-    // Applies — and a vault that names every folder note `index` is not answered with `charlie`.
+    // applies — and a vault that names every folder note `index` is not answered with `charlie`.
     expect(forwardedParams.folderNote?.resolveName?.(folder)).toBe('index');
   });
 
@@ -421,18 +421,18 @@ describe('showOperationProgressNotice', () => {
     expect(result).toBe(handle);
     expect(showNoticeAfterDelay).not.toHaveBeenCalled();
     // Field by field rather than `objectContaining`: the app is a strict proxy, and a failed deep
-    // Comparison would try to print it.
+    // comparison would try to print it.
     const params = vi.mocked(showOperationProgressModal).mock.calls[0]?.[0];
     expect(params?.abortController).toBe(abortController);
     expect(params?.app).toBe(app);
     // The dialog resolves the same lazy content provider the notice would have. Identity is not the
-    // Point and would not hold: the provider builds a fresh fragment per call.
+    // point and would not hold: the provider builds a fresh fragment per call.
     await expect(params?.content()).resolves.toBeInstanceOf(DocumentFragment);
   });
 
   it('should give the dialog its own abort controller when the operation has none', () => {
     // The dialog always offers Cancel, so it needs something to abort even when the operation would
-    // Not have offered one.
+    // not have offered one.
     vi.mocked(showOperationProgressModal).mockReturnValue(strictProxy<PluginNoticeComponentDelayedNotice>({}));
     const settingsComponent = createPluginSettingsComponent(true, true);
 

@@ -85,7 +85,7 @@ class MergeFilesModal extends FuzzySuggestModal<TFile> {
       return false;
     }
     // Which notes a merge may swallow (`Should always merge excluded items`) and which it may be poured
-    // Into are separate settings since issue #253; this picker asks only the second.
+    // into are separate settings since issue #253; this picker asks only the second.
     if (this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations) {
       return true;
     }
@@ -106,7 +106,7 @@ export async function selectTargetFileForMergeFiles(params: SelectTargetFileForM
   for (;;) {
     const targetFile = await new Promise<null | TFile>((promiseResolve) => {
       // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
-      // Chosen yet, so minimizing serves no purpose.
+      // chosen yet, so minimizing serves no purpose.
       openModal(
         new MergeFilesModal({
           ...params,

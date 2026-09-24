@@ -114,12 +114,12 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
 
 export async function selectFileForSwap(params: SelectFileForSwapParams): Promise<null | TFile> {
   // The confirmation dialog can send the flow back to the file picker ("Change target"); loop until the
-  // User confirms the swap or cancels.
+  // user confirms the swap or cancels.
   for (;;) {
     const targetFile = await new Promise<null | TFile>((promiseResolve) => {
       // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
-      // Chosen yet, so minimizing serves no purpose and risks the user forgetting which note the swap was
-      // Triggered on.
+      // chosen yet, so minimizing serves no purpose and risks the user forgetting which note the swap was
+      // triggered on.
       const modal = new SwapFileModal({
         ...params,
         promiseResolve

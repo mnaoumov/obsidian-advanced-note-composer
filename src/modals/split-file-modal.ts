@@ -476,9 +476,9 @@ class SplitFileModal extends SuggestModalBase {
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
     // A flow with nothing to merge opens in `Create` whatever the setting says (issue #244) — the setting
-    // Chooses between two modes, and here only one of them exists. A caller-supplied mode wins over the
-    // Setting but not over that (issue #280): `Switch to merge` in the folder-then-name name box is a
-    // Fresher answer than `defaultSplitTargetMode`, and cannot reach a flow that has nothing to merge.
+    // chooses between two modes, and here only one of them exists. A caller-supplied mode wins over the
+    // setting but not over that (issue #280): `Switch to merge` in the folder-then-name name box is a
+    // fresher answer than `defaultSplitTargetMode`, and cannot reach a flow that has nothing to merge.
     this.splitTargetMode = this.canMergeIntoExistingNote
       ? (params.initialSplitTargetMode ?? this.pluginSettingsComponent.settings.defaultSplitTargetMode)
       : SplitTargetMode.Create;
@@ -515,7 +515,7 @@ class SplitFileModal extends SuggestModalBase {
   public override onOpen(): void {
     super.onOpen();
     // The base seeded the box with the caller's value; the mode the picker OPENS in decides whether that
-    // Value belongs there at all (issue #237) — a `Merge` default must not open holding a heading name.
+    // value belongs there at all (issue #237) — a `Merge` default must not open holding a heading name.
     this.inputEl.value = this.inputValueBySplitTargetMode[this.splitTargetMode];
     this.updateSuggestions();
     /*
@@ -580,7 +580,7 @@ class SplitFileModal extends SuggestModalBase {
         return;
       }
       // The hint is already on screen (it tracks the same condition); refreshing keeps them in step if the
-      // Box was changed without an `input` event.
+      // box was changed without an `input` event.
       this.refreshNameRequiredHint();
       return;
     }
@@ -618,15 +618,15 @@ class SplitFileModal extends SuggestModalBase {
     this.allowCreateNewFile = isCreate;
     // The split picker offers the current note so a selection can be extracted to its top/bottom
     // (Enter = bottom, Shift+Enter = top), reusing the same-note-move machinery. Issue #184 asked for it to
-    // Go away, so it is a setting rather than a removal: it is the only route to a same-note top/bottom
-    // Extraction, which "Switch to smart cut & paste" does NOT replace (that moves to an arbitrary cursor
-    // Position instead).
+    // go away, so it is a setting rather than a removal: it is the only route to a same-note top/bottom
+    // extraction, which "Switch to smart cut & paste" does NOT replace (that moves to an arbitrary cursor
+    // position instead).
     this.shouldAllowSameFile = !isCreate && this.pluginSettingsComponent.settings.shouldOfferCurrentNoteWhenSplitting;
     this.shouldShowUnresolved = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
     // The box is a name to invent in `Create` and a note to find in `Merge`, and only the first is worth
-    // Spell-checking. Doing it HERE rather than on each surface that flips the mode is what keeps the
-    // Attribute from disagreeing with the switch: this is already the one place the mode is applied,
-    // Reached from the constructor, `Alt+M`, the toggle, and `Mod+Enter` alike.
+    // spell-checking. Doing it HERE rather than on each surface that flips the mode is what keeps the
+    // attribute from disagreeing with the switch: this is already the one place the mode is applied,
+    // reached from the constructor, `Alt+M`, the toggle, and `Mod+Enter` alike.
     this.refreshSpellcheck();
   }
 
@@ -641,8 +641,8 @@ class SplitFileModal extends SuggestModalBase {
       modifiers: ['Mod'],
       onKey: ($event) => {
         // The switch must never disagree with what is about to happen, so forcing a creation MOVES it
-        // Rather than overriding it behind the user's back (issue #227). What was typed is the name to
-        // Create, so it moves with the switch instead of being swapped for `Create`'s remembered text.
+        // rather than overriding it behind the user's back (issue #227). What was typed is the name to
+        // create, so it moves with the switch instead of being swapped for `Create`'s remembered text.
         this.setSplitTargetMode({ shouldCarryOverInputValue: true, splitTargetMode: SplitTargetMode.Create });
         // Deliberately NOT `selectActiveSuggestion`: forcing a creation is about what was TYPED, and in
         // `Merge` mode there is no creatable suggestion to select — the list offers only existing notes.
@@ -670,9 +670,9 @@ class SplitFileModal extends SuggestModalBase {
     });
 
     // Registered alongside the switch it mirrors, which since issue #258 is always on screen — so the
-    // Shortcut is too, and `ModalCommandBuilder.build` only decides whether its purpose line is
-    // Printed in the instruction bar. A flow that cannot merge at all still drops it (issue #244): an
-    // Invisible shortcut into a mode the flow forbids is worse than no shortcut.
+    // shortcut is too, and `ModalCommandBuilder.build` only decides whether its purpose line is
+    // printed in the instruction bar. A flow that cannot merge at all still drops it (issue #244): an
+    // invisible shortcut into a mode the flow forbids is worse than no shortcut.
     if (this.canMergeIntoExistingNote) {
       builder.addKeyboardCommand({
         key: 'm',
@@ -917,7 +917,7 @@ class SplitFileModal extends SuggestModalBase {
     this.modalEl.prepend(switchContainerEl);
     this.splitTargetModeSetting = new Setting(switchContainerEl)
       // Shown DISABLED rather than hidden when merging is unavailable (issue #244): a row that says why the
-      // Only option is a creation answers the question a missing row would raise.
+      // only option is a creation answers the question a missing row would raise.
       .setDesc(
         this.canMergeIntoExistingNote
           ? 'Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)'
@@ -972,8 +972,8 @@ class SplitFileModal extends SuggestModalBase {
     }
 
     // The ONE place the mode changes is also the one place the refusal has to live (issue #244), so a flow
-    // With nothing to merge cannot be talked into `Merge` by any surface — including a disabled toggle that
-    // Some future Obsidian version lets through.
+    // with nothing to merge cannot be talked into `Merge` by any surface — including a disabled toggle that
+    // some future Obsidian version lets through.
     if (!this.canMergeIntoExistingNote && splitTargetMode === SplitTargetMode.Merge) {
       return;
     }
@@ -1023,8 +1023,8 @@ class SplitFileModal extends SuggestModalBase {
 export async function prepareForSplitFile(params: PrepareForSplitFileParams): Promise<null | PrepareForSplitFileResult> {
   // Capture the source selection and its text NOW, before the (minimizable) modal opens, while
   // `params.editor` still shows the source note. If the user navigates that leaf to another note
-  // During the modal, the same editor object would then reflect THAT note — so the operation must
-  // Use this snapshot, never re-read the live editor.
+  // during the modal, the same editor object would then reflect THAT note — so the operation must
+  // use this snapshot, never re-read the live editor.
   const capturedSelections = getSelections(params.editor);
   const selectedText = params.editor.getSelection();
 
@@ -1036,7 +1036,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   using _sourceLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Split note', pathOrFile: params.sourceFile });
 
   // Highlight the captured selection in the source note for the whole (minimizable) setup flow, so the
-  // User can see exactly what is being extracted while they pick the target. Released on return.
+  // user can see exactly what is being extracted while they pick the target. Released on return.
   using _highlight = params.selectionHighlightComponent?.addHighlight(params.sourceFile, capturedSelections);
 
   let heading = params.heading;
@@ -1046,7 +1046,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   heading ??= extractHeading(params.editor);
 
   // The "switch to smart cut" action is offered only when the caller wired the marked-selection buffer,
-  // Its notice component, and the highlight component (all needed by markSelectionToMove).
+  // its notice component, and the highlight component (all needed by markSelectionToMove).
   const canSwitchToSmartCut = Boolean(params.moveNoticeComponent && params.moveSelectionBuffer && params.selectionHighlightComponent);
 
   /*
@@ -1058,17 +1058,17 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
   let shouldSkipModalThisPass = Boolean(params.shouldSkipModal);
 
   // The confirmation dialog can send the flow back to the target picker ("Change target"); loop until
-  // The user confirms the split, cancels, or switches to smart cut. `pickerSeed` seeds the picker input:
+  // the user confirms the split, cancels, or switches to smart cut. `pickerSeed` seeds the picker input:
   // The heading initially, then the previously-chosen target's query when the picker is reopened.
   let pickerSeed = heading;
   // What KIND of seed that is, which is what decides whether it belongs in `Merge` too (issue #237). The
-  // Heading names a note to CREATE; the previously-chosen target the reopened picker is seeded with is a
-  // Real target, so that one seeds both modes.
+  // heading names a note to CREATE; the previously-chosen target the reopened picker is seeded with is a
+  // real target, so that one seeds both modes.
   let isPickerSeedNewNoteName = true;
 
   for (;;) {
     // Capture the picker seed in a per-iteration const so the modal-opening closure does not close over
-    // The mutable `pickerSeed` (reassigned below on "Change target").
+    // the mutable `pickerSeed` (reassigned below on "Change target").
     const currentSeed = pickerSeed;
     const isCurrentSeedNewNoteName = isPickerSeedNewNoteName;
 
@@ -1090,14 +1090,14 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
 
     if (splitFileModalResult.action === 'switch-to-smart-cut') {
       // Behave as if `Mark selection to move` had been invoked on the source selection, and stay on the
-      // Source note. The picker has no confirmed target — only a merely-highlighted suggestion the user
-      // Never chose — so opening it would switch the active note unexpectedly (issue #141).
+      // source note. The picker has no confirmed target — only a merely-highlighted suggestion the user
+      // never chose — so opening it would switch the active note unexpectedly (issue #141).
       // `canSwitchToSmartCut` guarantees both collaborators are present.
       markSelectionToMove({
         app: params.app,
         capturedSelections,
         // What is switched over is a split's captured SELECTION, so the mark is a plain one even when the
-        // Split itself was heading-driven.
+        // split itself was heading-driven.
         markedHeading: null,
         moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
         moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
@@ -1120,10 +1120,10 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     });
 
     // Name first, path second (issue #238): once the name is settled, ASK where the note goes instead of
-    // Letting the destination fall out of a setting, a typed path, or Obsidian's default new-note location.
+    // letting the destination fall out of a setting, a typed path, or Obsidian's default new-note location.
     const targetParentFolderResult = chosenParentFolder
       // Already answered, by the prompt that came BEFORE the name (issue #261). Asking again would put
-      // The same question on screen twice in one pass.
+      // the same question on screen twice in one pass.
       ? { folder: chosenParentFolder }
       : await selectTargetParentFolder({
         abortController,
@@ -1134,7 +1134,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
 
     if (!targetParentFolderResult) {
       // The folder prompt was dismissed. That is "never mind, let me fix the name", not "abandon the
-      // Operation" — so the picker reopens holding what was typed, exactly like "Change target" does.
+      // operation" — so the picker reopens holding what was typed, exactly like "Change target" does.
       pickerSeed = splitFileModalResult.inputValue;
       isPickerSeedNewNoteName = true;
       continue;
@@ -1170,7 +1170,7 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
         pluginSettingsComponent: params.pluginSettingsComponent,
         shouldSkipConfirmation: Boolean(params.shouldSkipConfirmation),
         // The PER-PASS flag: once "Change target" has reopened the picker, this is an ordinary picked
-        // Split, so `shouldSplitHeadingsAutomatically` must no longer suppress its confirmation.
+        // split, so `shouldSplitHeadingsAutomatically` must no longer suppress its confirmation.
         shouldSkipModal: shouldSkipModalThisPass
       })
     ) {
@@ -1190,28 +1190,28 @@ export async function prepareForSplitFile(params: PrepareForSplitFileParams): Pr
     /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
     if (confirmDialogResult.shouldReselectTarget) {
       // Go back to the target picker: discard the abandoned target (trash it when it was freshly
-      // Created for this choice) and preselect the previous choice on reopen. `confirmSplit` already
-      // Released the target lock, so reopening the picker re-locks only the next target.
+      // created for this choice) and preselect the previous choice on reopen. `confirmSplit` already
+      // released the target lock, so reopening the picker re-locks only the next target.
       if (prepareForSplitFileResult.isNewTargetFile) {
         await trashSafe(params.app, prepareForSplitFileResult.targetFile);
       }
       pickerSeed = splitFileModalResult.inputValue;
       // The seed is now the target the user already chose, not a name to create — so it seeds a `Merge`
-      // Search too (issue #237).
+      // search too (issue #237).
       isPickerSeedNewNoteName = false;
       // A heading-driven split skipped the picker on the first pass; asking to change the target is asking
-      // For that picker, so the next pass shows it seeded with the heading (issue #205).
+      // for that picker, so the next pass shows it seeded with the heading (issue #205).
       shouldSkipModalThisPass = false;
       continue;
     }
     if (confirmDialogResult.shouldSwitchToSmartCut) {
       // Switch to smart cut from the confirmation dialog: the target is already resolved, so mark the
-      // Selection to move and open that target instead of splitting.
+      // selection to move and open that target instead of splitting.
       markSelectionToMove({
         app: params.app,
         capturedSelections,
         // What is switched over is a split's captured SELECTION, so the mark is a plain one even when the
-        // Split itself was heading-driven.
+        // split itself was heading-driven.
         markedHeading: null,
         moveNoticeComponent: ensureNonNullable(params.moveNoticeComponent),
         moveSelectionBuffer: ensureNonNullable(params.moveSelectionBuffer),
@@ -1316,7 +1316,7 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
         app,
         buildContent: (fragment): Promise<void> => buildSplitConfirmContent({ app, editor, fragment, sourceFile, targetFile }),
         // Always available: every split has a picker, even the heading-driven flows that skipped it on the
-        // First pass (issue #205).
+        // first pass (issue #205).
         canReselectTarget: true,
         confirmButtonText: 'Split',
         promiseResolve,
@@ -1418,7 +1418,7 @@ async function resolveSplitPass(params: ResolveSplitPassParams): Promise<Resolve
   }
 
   // The pair handed the pass to the picker in `Merge` (issue #280), seeded with the name that was typed —
-  // Which the picker then keeps out of the `Merge` box, since it names a note to CREATE (issue #237).
+  // which the picker then keeps out of the `Merge` box, since it names a note to CREATE (issue #237).
   const hasSwitchedToMerge = folderThenName.kind === FolderThenNameKind.SwitchedToMerge;
 
   const splitFileModalResult = await new Promise<null | SplitFileModalResult>((promiseResolve) => {
@@ -1495,13 +1495,13 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
   }
 
   // The heading a heading-driven extract came from, so the common case is one keystroke: confirm it. It
-  // Survives a `Change target folder` detour, which is the whole reason it lives outside the loop.
+  // survives a `Change target folder` detour, which is the whole reason it lives outside the loop.
   let name = params.seed ?? '';
 
   for (;;) {
     const folder = await selectFolder({
       // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
-      // Just as it closes the picker it stands in for.
+      // just as it closes the picker it stands in for.
       abortController: params.abortController,
       app: prepareParams.app,
       isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
@@ -1578,7 +1578,7 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
       sourceFile: prepareParams.sourceFile,
       splitTargetMode: splitFileModalResult.splitTargetMode,
       // The folder the user was just ASKED for outranks the caller's override: it is the more recent, and
-      // The more explicit, answer to the same question (issue #238).
+      // the more explicit, answer to the same question (issue #238).
       targetParentFolderOverride: params.targetParentFolder ?? resolveTargetParentFolderOverride(prepareParams, isPickerStillSkipped)
     }).selectItem();
   } catch (error) {
@@ -1625,7 +1625,7 @@ async function selectTargetParentFolder(params: SelectTargetParentFolderParams):
 
   const folder = await selectFolder({
     // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
-    // Just as it closes the picker the user came from.
+    // just as it closes the picker the user came from.
     abortController: params.abortController,
     app: prepareParams.app,
     isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),

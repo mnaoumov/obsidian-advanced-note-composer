@@ -152,7 +152,7 @@ describe('Action enum', () => {
 
 describe('CommandCategory enum', () => {
   // The values double as the settings-tab group headings and as the wording the demo vault uses, so they
-  // Are asserted literally rather than compared to each other (issue #249).
+  // are asserted literally rather than compared to each other (issue #249).
   it('should have Create value', () => {
     expect(CommandCategory.Create).toBe('Create');
   });
@@ -192,7 +192,7 @@ describe('CommandCategory enum', () => {
 
 describe('COMMAND_CATEGORIES', () => {
   // The list is spelled out, so this is what catches a category added to the enum without a place in the
-  // Settings tab, the settings that back it, and the table below.
+  // settings tab, the settings that back it, and the table below.
   it('should list every CommandCategory member exactly once', () => {
     const enumValues = Object.keys(CommandCategory).map((key) => getEnumValue(CommandCategory, key));
     expect([...COMMAND_CATEGORIES].sort()).toEqual(enumValues.sort());
@@ -210,7 +210,7 @@ describe('COMMAND_CATEGORIES', () => {
 
 describe('COMMAND_MENU_PLACEMENTS', () => {
   // The list is spelled out, so this is what catches a placement added to the enum and left out of the
-  // List the validator checks against — which would make the new member the one value it rejects.
+  // list the validator checks against — which would make the new member the one value it rejects.
   it('should list every CommandMenuPlacement member exactly once', () => {
     const enumValues = Object.keys(CommandMenuPlacement).map((key) => getEnumValue(CommandMenuPlacement, key));
     expect([...COMMAND_MENU_PLACEMENTS].sort()).toEqual(enumValues.sort());
@@ -299,7 +299,7 @@ describe('PluginSettings', () => {
   it('should have correct default values', () => {
     const settings = new PluginSettings();
     // Every per-category pair of the command-visibility filter starts empty (issues #198 / #249), which is
-    // What reproduces the removed `shouldBlockCommandsOnExcludedPaths` toggle's off-by-default behavior:
+    // what reproduces the removed `shouldBlockCommandsOnExcludedPaths` toggle's off-by-default behavior:
     // Nothing is blocked.
     for (const { excludePathsPropertyName, includePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
       expect(settings[excludePathsPropertyName]).toEqual([]);
@@ -307,7 +307,7 @@ describe('PluginSettings', () => {
     }
     expect(settings.defaultFrontmatterMergeStrategy).toBe(FrontmatterMergeStrategy.MergeAndPreferNewValues);
     // `Create` is the common extract-to-a-new-note case and what the picker did before the switch existed
-    // Whenever the typed name matched nothing (issue #227), so the new key needs no legacy converter.
+    // whenever the typed name matched nothing (issue #227), so the new key needs no legacy converter.
     expect(settings.defaultSplitTargetMode).toBe(SplitTargetMode.Create);
     expect(settings.frontmatterTitleMode).toBe(FrontmatterTitleMode.UseForInvalidTitleOnly);
     // `BesideFolder` IS the pre-#178 behavior, which is what makes the new setting need no legacy converter.
@@ -339,7 +339,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldLockAllNotesWhenMarkingSelection).toBe(false);
     expect(settings.shouldMergeHeadingsByDefault).toBe(false);
     // Both default OFF, so an existing vault behaves exactly as it did before issues #212 / #215 and
-    // Neither needs a legacy-settings converter.
+    // neither needs a legacy-settings converter.
     expect(settings.shouldOpenFirstNoteAfterMergingFolder).toBe(false);
     expect(settings.shouldOpenNoteAfterMerge).toBe(false);
     expect(settings.shouldOpenNoteAfterMergingFolderIntoFile).toBe(false);
@@ -360,7 +360,7 @@ describe('PluginSettings', () => {
     expect(settings.shouldUseSourceTitleWhenTargetHasNoTitle).toBe(false);
     expect(settings.smartCutAndPasteTemplate).toBe('');
     // Both overrides default to empty, which reproduces the pre-#174 behavior exactly (the shared template
-    // Applies to every direction) — that is what makes them need no legacy converter.
+    // applies to every direction) — that is what makes them need no legacy converter.
     expect(settings.smartCutAndPasteToBottomTemplate).toBe('');
     expect(settings.smartCutAndPasteToTopTemplate).toBe('');
     expect(settings.splitIntoFolderNoteNameTemplate).toBe('');
@@ -437,7 +437,7 @@ describe('PluginSettings.shouldBlockCommandOnPath', () => {
   });
 
   // Issue #198's actual ask: a path excluded from merges/splits keeps its commands unless it is ALSO
-  // Listed in the command filter. Before the split, one list drove both.
+  // listed in the command filter. Before the split, one list drove both.
   it('should not block a path that is only in the content exclude list', () => {
     const settings = new PluginSettings();
     settings.mergeExcludePaths = ['secret'];
@@ -504,8 +504,8 @@ describe('PluginSettings per-category command path lists (issue #249)', () => {
   });
 
   // The reporter's third example: block everything on a path except one category, spelled as the other
-  // Eight exclude lists. Since issue #271 that IS the only way to say it — there is no all-commands list
-  // To exclude from and then carve an exception out of.
+  // eight exclude lists. Since issue #271 that IS the only way to say it — there is no all-commands list
+  // to exclude from and then carve an exception out of.
   it('should leave exactly one category offered when the other eight exclude the path', () => {
     const settings = new PluginSettings();
     for (const { commandCategory, excludePathsPropertyName } of COMMAND_CATEGORY_PATH_PROPERTIES) {
@@ -572,8 +572,8 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
   });
 
   // The reporter's own case (issue #270): the templates folder must stay out of the reorder modal while
-  // Every other command keeps working on it. This is the assertion that would fail with #249's
-  // Per-category pair, which only hides commands.
+  // every other command keeps working on it. This is the assertion that would fail with #249's
+  // per-category pair, which only hides commands.
   it('should exclude a folder from one category while the others still use it', () => {
     const settings = new PluginSettings();
     settings.reorderExcludePaths = ['Templates'];
@@ -584,7 +584,7 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
   });
 
   // Within one category the exclude list wins over its own include list — that is `PathSettings`' own
-  // Rule, and it is what stops "list it in both" reading as an exception.
+  // rule, and it is what stops "list it in both" reading as an exception.
   it('should keep a category include list from re-opening a path its own exclude list names', () => {
     const settings = new PluginSettings();
     settings.mergeExcludePaths = ['Archive'];
@@ -609,8 +609,8 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
   });
 
   // `Select` has no content pair, so it must still be ANSWERABLE — `false`, from the two empty lists its
-  // Map entry holds — rather than throwing on a missing entry. This is what keeps `isPathIgnored` total
-  // Over the enum.
+  // map entry holds — rather than throwing on a missing entry. This is what keeps `isPathIgnored` total
+  // over the enum.
   it('should answer false for Select, which has no content pair to consult', () => {
     const settings = new PluginSettings();
     expect(settings.isPathIgnored('anywhere/note.md', CommandCategory.Select)).toBe(false);
@@ -619,7 +619,7 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
   });
 
   // The two filters stay apart: excluding a path from a category's CONTENT does not hide its commands
-  // There, which is the whole point of #198 having split them.
+  // there, which is the whole point of #198 having split them.
   it('should keep a content list independent of the command-visibility filter', () => {
     const settings = new PluginSettings();
     settings.reorderExcludePaths = ['Templates'];
@@ -655,7 +655,7 @@ describe('COMMAND_CATEGORY_PATH_SETTING_NAMES (issue #271)', () => {
   });
 
   // `Select` and `Rename` are the categories without a content pair, and the omission has to stay deliberate: an
-  // Entry that merely forgot its pair would leave a category's content lists unreachable and never migrated.
+  // entry that merely forgot its pair would leave a category's content lists unreachable and never migrated.
   it('should leave the content pair out for Select and Rename alone', () => {
     for (const commandCategory of COMMAND_CATEGORIES) {
       const pathSettingNames = COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory);

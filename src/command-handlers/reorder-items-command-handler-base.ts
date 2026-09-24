@@ -172,10 +172,10 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
 
     // Deliberately NO `isPathIgnored(parentFolder.path)` refusal here (issue #279). A reorder renames the
     // CHILDREN and never the folder holding them, and `collectItems` already filters every child through the
-    // Content filter. So a plain-path exclude (`Inbox`, which covers its whole subtree) still leaves nothing
-    // To reorder and the command is not offered at all, while `/^Inbox$/` — the documented way to exclude
-    // The folder itself but not its contents — keeps its children reorderable. The refusal that stood here
-    // Read that anchored regex as covering the contents too, AFTER the menu had already offered the command.
+    // content filter. So a plain-path exclude (`Inbox`, which covers its whole subtree) still leaves nothing
+    // to reorder and the command is not offered at all, while `/^Inbox$/` — the documented way to exclude
+    // the folder itself but not its contents — keeps its children reorderable. The refusal that stood here
+    // read that anchored regex as covering the contents too, AFTER the menu had already offered the command.
     const settings = this.pluginSettingsComponent.settings;
     const model = new ReorderItemsModel({
       fileItems: this.collectItems(parentFolder, ReorderItemKind.File),
@@ -192,8 +192,8 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       model,
       title: `Reorder ${parentFolder.isRoot() ? '/' : parentFolder.name}`,
       // No checkbox when per-operation overrides are turned off (issue #242) — the settings page is then the
-      // Only place the choice is made. The model is already seeded from the same setting above, so hiding the
-      // Control cannot change what the reorder does.
+      // only place the choice is made. The model is already seeded from the same setting above, so hiding the
+      // control cannot change what the reorder does.
       toggle: settings.shouldShowModalInstructions
         ? {
           isEnabled: settings.shouldIncludeFilesWhenReorderingByDefault,
@@ -270,7 +270,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       parentFolderPath: parentFolder.path
     }).map((item): PlannedReorderItem =>
       // The LIVE object, captured now rather than looked up later: Obsidian renames in place, so this same
-      // Instance carries the new path afterwards. Every later step therefore needs no lookup — and no
+      // instance carries the new path afterwards. Every later step therefore needs no lookup — and no
       // "what if it is gone" branch that nothing could reach.
       kind === ReorderItemKind.File
         ? { file: ensureNonNullable(this.app.vault.getFileByPath(item.oldPath)), item, kind }
@@ -386,7 +386,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       // `Folder notes` install with `syncFolderName` on may already have renamed it outright.
       const noteParentPath = ensureNonNullable(folderNote.parent).path;
       // Never empty: `collectFolderNotes` only recorded this note because the same name resolved to one, and
-      // The only token it can carry is the folder's own name.
+      // the only token it can carry is the folder's own name.
       const newNoteName = config.resolveName(folder).trim();
       const newNotePath = normalizePath(join(noteParentPath, `${newNoteName}.${folderNote.extension}`));
       if (newNotePath === folderNote.path) {
@@ -427,7 +427,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
         app: this.app,
         body: async (vaultTransaction) => {
           // Captured BEFORE anything is renamed: a folder note named after its folder can only be found
-          // Under the folder's OLD name.
+          // under the folder's OLD name.
           const folderNotesByOldPath = this.collectFolderNotes(plan);
 
           const kindsByNewPath = new Map(plan.map((plannedItem) => [plannedItem.item.newPath, plannedItem.kind]));
@@ -453,7 +453,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       }
       if (error instanceof TemplateRenderError) {
         // A misconfigured title template (issue #284): the transaction has rolled the reorder back, and the
-        // Message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
+        // message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
         this.pluginNoticeComponent.showNotice(error.message);
         return false;
       }

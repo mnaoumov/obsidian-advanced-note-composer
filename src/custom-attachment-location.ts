@@ -82,7 +82,7 @@ function findCustomAttachmentLocationPlugin(app: App): CustomAttachmentLocationP
   }
 
   // Checked rather than assumed: the entry point was added in a later version than the plugin itself,
-  // So a user can perfectly well have the plugin without having the method.
+  // so a user can perfectly well have the plugin without having the method.
   const candidate = plugin as Partial<CustomAttachmentLocationPluginLike>;
   if (typeof candidate.collectAttachmentsInAbstractFiles !== 'function') {
     return null;

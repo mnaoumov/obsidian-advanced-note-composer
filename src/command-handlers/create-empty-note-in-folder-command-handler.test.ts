@@ -89,7 +89,7 @@ vi.mock('../apply-split-template.ts', () => ({
 }));
 
 // The caret placement polls a live Obsidian workspace for a `MarkdownView`, so a unit test would sit
-// Through its whole give-up budget waiting for one that never appears.
+// through its whole give-up budget waiting for one that never appears.
 vi.mock('../reveal-inserted-content.ts', () => ({
   placeCaretFromEnd: vi.fn()
 }));
@@ -292,7 +292,7 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
       expect(relocateNote).not.toBeNull();
       await relocateNote?.(createdFile);
       // `sourceFile: null` is the whole difference from the split flow: there is no note this creation
-      // Came from, so the note-name template's source-flavored tokens resolve to nothing.
+      // came from, so the note-name template's source-flavored tokens resolve to nothing.
       expect(mockMoveIntoOwnFolder).toHaveBeenCalledWith({
         app,
         file: createdFile,
@@ -303,7 +303,7 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
   });
 
   // Issue #244's follow-up: a configured `Split template` fills the created note, and its `{{content}}`
-  // Marks where the caret goes once the note opens.
+  // marks where the caret goes once the note opens.
   describe('the split template', () => {
     const TEMPLATE = '# {{newTitle}}\n\n{{content}}\n\nfrom [[{{fromTitle}}]]';
 
@@ -355,9 +355,9 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
       await handler.executeFolder(createMockFolder('Parent'));
 
       // The `from` half resolves empty — there is no source note — and the tail is what the note now ends
-      // With, so the caret sits immediately before it. Read off `lastCall` rather than matched with
+      // with, so the caret sits immediately before it. Read off `lastCall` rather than matched with
       // `objectContaining`, which serializes the strict-proxy `app`/`file` and throws on their unmocked
-      // Properties.
+      // properties.
       const caretParams = ensureNonNullable(mockPlaceCaretFromEnd.mock.lastCall)[0];
       expect(caretParams.tail).toBe('\n\nfrom [[]]');
       expect(caretParams.file).toBe(createdFile);

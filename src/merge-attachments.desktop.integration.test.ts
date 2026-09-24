@@ -10,7 +10,7 @@ import {
 
 // Desktop-only: both flows move/delete files, matching the plugin's established integration convention.
 // File-move suites can hit the documented headless rename wall when several run in one aggregate; if this
-// Stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
+// stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-attachments.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -51,7 +51,7 @@ describe('attachments in a merge (issue #161)', () => {
           await app.vault.createFolder('md-attach-src');
           await app.vault.createFolder('md-attach-dst');
           // The destination already holds a drawing of the same name: merging the two would concatenate
-          // Two raw payloads and corrupt it.
+          // two raw payloads and corrupt it.
           await app.vault.create('md-attach-dst/sketch.excalidraw.md', 'destination payload');
           await app.vault.create('md-attach-src/sketch.excalidraw.md', 'source payload');
           const note = await app.vault.create('md-attach-src/note.md', 'note body');

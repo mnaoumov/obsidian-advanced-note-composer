@@ -62,7 +62,7 @@ describe('split into folder note name', () => {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // Forced rather than waited for: the `Enter to create` row is absent whenever ANYTHING fuzzy-matches
-          // The typed name, so waiting for it made this suite depend on the shared vault's contents.
+          // the typed name, so waiting for it made this suite depend on the shared vault's contents.
           input.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
 

@@ -129,7 +129,7 @@ class SplitNoteNameModal extends Modal {
   public override onClose(): void {
     super.onClose();
     // A close with no action recorded is a dismissal — `Escape`, the native X, or the minimized bar's
-    // Cancel. That abandons the split, exactly as dismissing the `prompt()` this replaces did.
+    // cancel. That abandons the split, exactly as dismissing the `prompt()` this replaces did.
     this.promiseResolve(this.resolvedResult);
   }
 
@@ -138,7 +138,7 @@ class SplitNoteNameModal extends Modal {
     this.setTitle('Enter note name');
     // The box's own handle, for the plugin's stylesheet and for the desktop suite that drives its buttons.
     // It stood in for a dev-utils `prompt()`, whose `.prompt-modal` class the flow's tests used to select
-    // On, so something has to name it or those selectors have nothing to find.
+    // on, so something has to name it or those selectors have nothing to find.
     this.modalEl.addClass('advanced-note-composer-split-note-name-modal');
 
     this.contentEl.createDiv({
@@ -151,9 +151,9 @@ class SplitNoteNameModal extends Modal {
     textComponent.setPlaceholder('Note name');
     this.inputEl = textComponent.inputEl;
     // The box names a note the user is INVENTING, so it follows `Editor > Spellcheck` exactly as the
-    // Dev-utils `prompt()` it replaces has since issue #233, and as the picker's box does in `Create`.
+    // dev-utils `prompt()` it replaces has since issue #233, and as the picker's box does in `Create`.
     // `AbstractTextComponent` forces `spellcheck="false"` on every text component, so this has to be
-    // Applied here or the attribute the setting asks for never lands.
+    // applied here or the attribute the setting asks for never lands.
     applySpellcheckMode({
       app: this.app,
       element: this.inputEl,
@@ -177,7 +177,7 @@ class SplitNoteNameModal extends Modal {
     this.refreshNameRequiredHint();
 
     // Built BEFORE the action row so the two detours sit above `Create` / `Cancel`, which is the ordering
-    // The confirmation dialog already establishes: options first, actions last.
+    // the confirmation dialog already establishes: options first, actions last.
     this.buildCommands();
 
     const buttonContainerEl = this.modalEl.createDiv('modal-button-container');
@@ -229,7 +229,7 @@ class SplitNoteNameModal extends Modal {
         this.switchToMerge();
       },
       // `checkIsAvailable` disables the BUTTON and nothing else, so the shortcut needs the same guard
-      // Spelled out or it reaches an action whose button is visibly disabled.
+      // spelled out or it reaches an action whose button is visibly disabled.
       onKey: () => {
         if (!this.canMergeIntoExistingNote) {
           return true;
@@ -246,7 +246,7 @@ class SplitNoteNameModal extends Modal {
   private create(): void {
     if (this.isNameMissing()) {
       // The hint is already on screen (it tracks the same condition); refreshing keeps them in step if the
-      // Box was changed without an `input` event.
+      // box was changed without an `input` event.
       this.refreshNameRequiredHint();
       return;
     }

@@ -115,7 +115,7 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           const source = await app.vault.create(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over the file, so an offset-based selection
-          // Would otherwise grab the previous run's text.
+          // would otherwise grab the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -170,8 +170,8 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           };
         } finally {
           // The vault is SHARED by the whole aggregate run, and what this test creates is numbered notes
-          // Carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
-          // Offer a row it does not expect. Leave nothing behind.
+          // carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
+          // offer a row it does not expect. Leave nothing behind.
           await trashIfExists(ROOT_FOLDER);
           await settingsComponent.editAndSave((settings) => {
             settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
@@ -327,8 +327,8 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           };
         } finally {
           // The vault is SHARED by the whole aggregate run, and what this test creates is numbered notes
-          // Carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
-          // Offer a row it does not expect. Leave nothing behind.
+          // carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
+          // offer a row it does not expect. Leave nothing behind.
           await trashIfExists(ROOT_FOLDER);
           await settingsComponent.editAndSave((settings) => {
             settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
@@ -456,7 +456,7 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           await settingsComponent.editAndSave((settings) => {
             settings.numberedSplitFolderNameTemplate = folderNameTemplate;
             // A recursive split ALWAYS makes folders, whatever `Should split into folder` says, so the
-            // Note template must never get a look in â leaving it set is what proves that.
+            // note template must never get a look in â leaving it set is what proves that.
             settings.numberedSplitNoteNameTemplate = '';
             settings.shouldSplitIntoFolder = false;
             settings.shouldAskBeforeSplitting = false;
@@ -482,7 +482,7 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           editor.setCursor({ ch: 0, line: 0 });
 
           // A cache-gated command silently no-ops if the headings are not indexed yet, and the timeout
-          // Then blames the split.
+          // then blames the split.
           await waitUntil({
             message: 'the metadata cache did not index the source headings',
             predicate: () => (app.metadataCache.getFileCache(source)?.headings ?? []).length === HEADING_COUNT
@@ -504,8 +504,8 @@ describe('auto-numbering what a split creates (issue #269)', () => {
           return { rootChildNames };
         } finally {
           // The vault is SHARED by the whole aggregate run, and what this test creates is numbered notes
-          // Carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
-          // Offer a row it does not expect. Leave nothing behind.
+          // carrying the typed name as an ALIAS — which is exactly what would make a later suite's picker
+          // offer a row it does not expect. Leave nothing behind.
           await trashIfExists(ROOT_FOLDER);
           await settingsComponent.editAndSave((settings) => {
             settings.defaultSplitTargetMode = original.defaultSplitTargetMode;

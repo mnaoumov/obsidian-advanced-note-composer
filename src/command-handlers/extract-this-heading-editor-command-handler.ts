@@ -107,7 +107,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
       app: this.app,
       editor,
       // The enclosing heading names the new note. When splitting headings automatically, it also replaces
-      // The target picker entirely (issue #79); otherwise it merely seeds the picker input, exactly as
+      // the target picker entirely (issue #79); otherwise it merely seeds the picker input, exactly as
       // `extractHeading` did before.
       heading: this.headingInfo.heading,
       moveNoticeComponent: this.moveNoticeComponent,
@@ -165,7 +165,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
   protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
     // The selection gate above is about which command the user means, not about which menu was raised, so
-    // It holds here too.
+    // it holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
       commandId: this.id,
       mode,

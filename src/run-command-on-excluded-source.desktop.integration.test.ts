@@ -62,7 +62,7 @@ describe('running a command on a note the content filter excludes (issue #288)',
             settings.mergeExcludePaths = [EXCLUDED_FOLDER];
             settings.shouldAskBeforeMerging = false;
             // The notes sit in different folders, so leaving this on would filter the picker for a reason
-            // That has nothing to do with what is under test.
+            // that has nothing to do with what is under test.
             settings.shouldAllowOnlyCurrentFolderByDefault = false;
           });
 
@@ -187,7 +187,7 @@ describe('running a command on a note the content filter excludes (issue #288)',
     expect(result.isTargetOffered).toBe(true);
     expect(result.isExcludedNoteOffered).toBe(false);
     // Before #288 the merge refused with an "ignored in the plugin settings" notice and never opened the
-    // Picker, so this wait timed out; now the note is merged away into the target it was run against.
+    // picker, so this wait timed out; now the note is merged away into the target it was run against.
     expect(result.excludedNoteExists).toBe(false);
     expect(result.targetContent).toContain('inbox body');
     expect(result.targetContent).toContain('target body');

@@ -97,7 +97,7 @@ export function recordRecentVisit(visitedFile: PathOrAbstractFile): void {
  */
 function recordRecentPath(path: string): void {
   // Pointing at the same folder again has to re-head it rather than leave it wherever it already sat, so
-  // The earlier copy is dropped instead of the new one being skipped as a duplicate.
+  // the earlier copy is dropped instead of the new one being skipped as a duplicate.
   const existingIndex = recentTargetPaths.indexOf(path);
   if (existingIndex !== -1) {
     recentTargetPaths.splice(existingIndex, 1);

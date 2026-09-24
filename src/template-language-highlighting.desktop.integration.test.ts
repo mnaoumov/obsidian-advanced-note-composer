@@ -32,7 +32,7 @@ describe('tokenized-string template language', () => {
     });
 
     // The settings tab's code-highlighter fields render exactly this markup, so this asserts what the
-    // User sees: each part of `{{title:YYYY-MM-DD}}` carries its own token class.
+    // user sees: each part of `{{title:YYYY-MM-DD}}` carries its own token class.
     expect(result.html).toContain('class="token prefix regex"');
     expect(result.html).toContain('class="token token number"');
     expect(result.html).toContain('class="token formatDelimiter regex"');

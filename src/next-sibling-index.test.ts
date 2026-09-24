@@ -43,7 +43,7 @@ function nextIndex(files: Record<string, string>, nameTemplate = DEFAULT_NAME_TE
 describe('buildNumberedSiblingRegExp', () => {
   it('should widen every non-index token, so any numbered sibling matches', () => {
     // Substituting the real name instead would only match a folder of the SAME name, so nothing would ever
-    // Be found and every folder would be numbered 1.
+    // be found and every folder would be numbered 1.
     const regExp = ensureNonNullable(buildNumberedSiblingRegExp(DEFAULT_NAME_TEMPLATE));
     expect(regExp.source).toBe(String.raw`^(?<Index>\d+)\. .*$`);
   });

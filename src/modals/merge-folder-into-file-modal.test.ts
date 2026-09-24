@@ -149,7 +149,7 @@ describe('confirmMergeFolderIntoFile', () => {
     await promise;
 
     // The folder exists, so it stays a link; the target note is created only after this dialog is confirmed,
-    // So linking it would let a click create it.
+    // so linking it would let a click create it.
     expect(mockRenderInternalLink).toHaveBeenCalledOnce();
     expect(mockRenderInternalLink).toHaveBeenCalledWith(expect.objectContaining({ pathOrAbstractFile: 'src' }));
     expect(mockAppendCodeBlock).toHaveBeenCalledWith(expect.anything(), 'src.md');

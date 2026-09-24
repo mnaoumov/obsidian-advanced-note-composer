@@ -124,7 +124,7 @@ describe('offering the current note in the split picker (issue #184)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Extracting into the note you are already in is a MERGE into an existing note, so since the
-          // Create/merge switch made the mode explicit (issue #227) this setting only decides anything in
+          // create/merge switch made the mode explicit (issue #227) this setting only decides anything in
           // `Merge` mode - `Create` never offers an existing note as a target.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
@@ -140,7 +140,7 @@ describe('offering the current note in the split picker (issue #184)', () => {
             throw new TypeError('No split picker input.');
           }
           // Query for the shared prefix so both notes are candidates: the OTHER note appearing is what proves
-          // The picker actually ran its search, rather than the current note being missing for some other reason.
+          // the picker actually ran its search, rather than the current note being missing for some other reason.
           input.value = 'split-picker-current';
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({

@@ -67,7 +67,7 @@ export function parseFolderContentTemplate(template: string): readonly FolderCon
     }
 
     // The text above the FIRST marker has no marker of its own, so it is only kept when it actually holds
-    // Something — otherwise every template that starts with a blank line would grow a stray empty note.
+    // something — otherwise every template that starts with a blank line would grow a stray empty note.
     if (hasSeenMarker) {
       sections.push(buildSection(nameTemplate, contentLines));
     } else {

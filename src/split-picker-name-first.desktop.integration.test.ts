@@ -61,7 +61,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
         const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
-        // Make another suite's link ambiguous.
+        // make another suite's link ambiguous.
         const SOURCE_PATH = 'split-picker-name-first-source.md';
         const SIBLING_PATH = 'split-picker-name-first-folder/split-picker-name-first-sibling.md';
         const HEADING = 'split-picker-name-first-heading';
@@ -76,7 +76,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
         try {
           await settingsComponent.editAndSave((settings) => {
             // The picker has to actually OPEN: with headings split automatically, `Extract this heading...`
-            // Skips it entirely and there is no box to observe.
+            // skips it entirely and there is no box to observe.
             settings.shouldSplitHeadingsAutomatically = false;
             settings.defaultSplitTargetMode = 'Create';
           });
@@ -86,11 +86,11 @@ describe('the split/extract picker asks for a name before a destination (issue #
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
 
           // Opening the sibling FIRST puts it in Obsidian's recent files, which is what the picker offers
-          // While the box is empty - so the reporter's "click a note with no name typed" has a row to click.
+          // while the box is empty - so the reporter's "click a note with no name typed" has a row to click.
           await openAndGetEditor(sibling);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so a line-based cursor would
-          // Otherwise land in the previous run's text.
+          // otherwise land in the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -133,7 +133,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           const isPickerOpenAfterEnter = document.querySelector('.prompt') !== null;
 
           // A space is still no name: `fixFileName` would have turned it into `Untitled` exactly as an
-          // Empty box does.
+          // empty box does.
           const BLANK_NAME_LENGTH = 3;
           typeIntoPicker(' '.repeat(BLANK_NAME_LENGTH));
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -283,8 +283,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
         const SIBLING_NAME = 'split-picker-name-first-picked-sibling';
         const SIBLING_PATH = `${FOLDER_PATH}/${SIBLING_NAME}.md`;
         // A PREFIX of the sibling's name, deliberately: the picker's list is what the typed name matches,
-        // So a name sharing nothing with any note offers no row to pick. This is the real shape of the
-        // Interaction - a new note named near an existing one, dropped into that one's folder.
+        // so a name sharing nothing with any note offers no row to pick. This is the real shape of the
+        // interaction - a new note named near an existing one, dropped into that one's folder.
         const NEW_NOTE_NAME = 'split-picker-name-first-picked-sib';
         const EXPECTED_PATH = `${FOLDER_PATH}/${NEW_NOTE_NAME}.md`;
         const HEADING = 'split-picker-name-first-picked-heading';
@@ -299,7 +299,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
             settings.shouldSplitHeadingsAutomatically = false;
             settings.defaultSplitTargetMode = 'Create';
             // Straight through to the split: the confirmation dialog is a different suite's subject, and a
-            // Confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
+            // confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
             settings.shouldAskBeforeSplitting = false;
             // Both would decide the destination themselves, which is the thing under test here.
             settings.shouldAllowOnlyCurrentFolderByDefault = false;
@@ -337,7 +337,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // ...then pick the sibling it matched. In `Create` mode that row is not a note to write into -
-          // It says WHERE the new note goes.
+          // it says WHERE the new note goes.
           const siblingRow = [...document.querySelectorAll<HTMLElement>('.suggestion-item')]
             .find((row) => row.textContent.includes(SIBLING_NAME));
           if (!siblingRow) {
@@ -353,7 +353,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           const wasCreatedBesideThePickedNote = app.vault.getAbstractFileByPath(EXPECTED_PATH) !== null;
           // The old behavior, spelled out: the picked row ignored, the note dropped wherever Obsidian's
-          // New-file resolution puts one.
+          // new-file resolution puts one.
           const wasCreatedAtTheDefaultLocation = app.vault.getAbstractFileByPath(`${NEW_NOTE_NAME}.md`) !== null;
           const siblingContent = await app.vault.read(sibling);
           const wasSiblingMergedInto = siblingContent.includes('picked body one');
@@ -493,7 +493,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
             settings.shouldSplitHeadingsAutomatically = false;
             settings.defaultSplitTargetMode = 'Create';
             // Straight through to the split: the confirmation dialog is a different suite's subject, and a
-            // Confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
+            // confirmed one re-arms `shouldAskBeforeSplitting` in the shared `data.json`.
             settings.shouldAskBeforeSplitting = false;
             // Both would decide the destination themselves, which is the thing under test here.
             settings.shouldAllowOnlyCurrentFolderByDefault = false;
@@ -542,7 +542,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Nothing typed — the box is seeded with the heading name, so it has to be cleared to be the
-          // Reporter's case.
+          // reporter's case.
           const seededFirstRow = document.querySelector('.suggestion-item');
           typeIntoPicker('');
 

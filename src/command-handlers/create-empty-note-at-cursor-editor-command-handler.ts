@@ -85,8 +85,8 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
     }
 
     // Collapse to the cursor BEFORE anything captures the selection. Without this the flow would extract
-    // Nothing (this command never reads the selected text) and then overwrite the selected text with the
-    // Residual link — losing content the user never asked to move.
+    // nothing (this command never reads the selected text) and then overwrite the selected text with the
+    // residual link — losing content the user never asked to move.
     editor.setSelection(editor.getCursor());
 
     const prepareForSplitFileResult = await prepareForSplitFile({
@@ -124,11 +124,11 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
       sourceFile: file,
       targetFile: prepareForSplitFileResult.targetFile,
       // The created note is filled with the `Split template`, and its `{{content}}` — interpolating to
-      // Nothing, since nothing was extracted — is where the caret goes when the note opens (#244). Naming
-      // The template is also what tells the composer to write it at all; the identity template stands for
+      // nothing, since nothing was extracted — is where the caret goes when the note opens (#244). Naming
+      // the template is also what tells the composer to write it at all; the identity template stands for
       // "no template configured", which leaves the note genuinely empty. `Merge template` is deliberately
       // NOT the fallback here: wrapping it around no content is what left two blank lines in a note asked
-      // To be empty.
+      // to be empty.
       templateOverride: this.pluginSettingsComponent.settings.splitTemplate || CONTENT_ONLY_TEMPLATE
     });
     await composer.splitFile();
@@ -158,7 +158,7 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
 
   protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
     // The selection gate above is about which command the user means, not about which menu was raised, so
-    // It holds here too.
+    // it holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
       commandId: this.id,
       mode,

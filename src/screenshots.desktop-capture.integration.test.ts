@@ -110,7 +110,7 @@ beforeAll(async () => {
       });
 
       // The dialogs are the subject; the file explorer and an empty right dock
-      // Would otherwise take a third of the frame behind them.
+      // would otherwise take a third of the frame behind them.
       app.workspace.leftSplit.collapse();
       app.workspace.rightSplit.collapse();
 
@@ -128,9 +128,9 @@ beforeAll(async () => {
 describe('desktop store screenshots', () => {
   it('1 - the recursive-split preview', async () => {
     // NOT `open-split-modal`, despite the name: that command is the smart-cut
-    // Handoff and `canExecute()`s only while a selection is marked, so it opens
-    // Nothing here. This one previews the whole folder tree the split will
-    // Create, which is the plugin's argument in a single frame.
+    // handoff and `canExecute()`s only while a selection is marked, so it opens
+    // nothing here. This one previews the whole folder tree the split will
+    // create, which is the plugin's argument in a single frame.
     await runCommandAndCapture('split-note-by-headings-recursively', 1, 'Split a note into one file per heading, nested');
   });
 
@@ -189,9 +189,9 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       const MODAL_TIMEOUT_IN_MILLISECONDS = 10_000;
 
       // Close anything already open — on first load this plugin shows a release
-      // Notes dialog, and waiting for "a modal" happily photographed THAT
-      // Instead of the one the command opens. Waiting for the count to reach
-      // Zero and then one is what ties the captured dialog to this command.
+      // notes dialog, and waiting for "a modal" happily photographed THAT
+      // instead of the one the command opens. Waiting for the count to reach
+      // zero and then one is what ties the captured dialog to this command.
       await pressKey({ key: 'Escape' });
 
       await waitUntil({
@@ -201,10 +201,10 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       });
 
       // Let the PREVIOUS shot's capture finish settling before opening this
-      // Shot's dialog. `captureObsidianScreenshot` overrides the device metrics
-      // And clears them again, and the re-layout that lands afterwards closes a
-      // Modal opened too soon after it — which is why every shot that followed a
-      // Successful capture photographed an empty frame.
+      // shot's dialog. `captureObsidianScreenshot` overrides the device metrics
+      // and clears them again, and the re-layout that lands afterwards closes a
+      // modal opened too soon after it — which is why every shot that followed a
+      // successful capture photographed an empty frame.
       const RESIZE_SETTLE_DELAY_IN_MILLISECONDS = 2000;
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
@@ -217,8 +217,8 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       await leaf.openFile(file);
 
       // Several of these commands act on the heading under the cursor, so the
-      // Cursor has to be ON one or the command is a no-op and the shot is of an
-      // Ordinary editor.
+      // cursor has to be ON one or the command is a no-op and the shot is of an
+      // ordinary editor.
       const view: unknown = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
       (view as CursorEditorView | null)?.editor.setCursor(headingLine, 0);
 
@@ -237,7 +237,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
       // A command that silently does nothing photographs whatever is on screen.
       // Read from the CONTAINER, not `.modal`: several of these commands open an
       // Obsidian suggester, which renders `.prompt` markup and has no `.modal`
-      // Element at all, so probing `.modal` reported an empty dialog.
+      // element at all, so probing `.modal` reported an empty dialog.
       const container = document.querySelector('.modal-container');
       const heading = container?.querySelector('.modal-title, .prompt-title, h1, h2, .setting-item-name');
       const TITLE_LENGTH_LIMIT = 60;
@@ -267,7 +267,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
     async callback({ lib: { pressKey } }) {
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
       // Escape, never the confirm button: clicking a feature dialog's primary
-      // Action would PERFORM it, and the next shot would open over a mutated vault.
+      // action would PERFORM it, and the next shot would open over a mutated vault.
       await pressKey({ key: 'Escape' });
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },

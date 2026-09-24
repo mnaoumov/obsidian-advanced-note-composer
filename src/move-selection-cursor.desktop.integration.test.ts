@@ -14,9 +14,9 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: an editor-selection behavior on a move flow, matching the plugin's established
-// Integration convention (no Android emulator wired). Version coverage: pure editor-API behavior (`setSelection`)
-// With no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
-// Public-latest verification is sufficient.
+// integration convention (no Android emulator wired). Version coverage: pure editor-API behavior (`setSelection`)
+// with no dependence on minified Obsidian internals / version-sensitive DOM / serialization, so
+// public-latest verification is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/move-selection-cursor.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -89,8 +89,8 @@ async function moveAndReadSelection(commandToRun: string, cursorOffset: null | n
       });
 
       // Then wait for the cursor to land on the moved content (the composer selects it once the
-      // Target editor is ready). Capture the state at the moment the wait succeeds — the selection
-      // Is the observable effect under test, so the wait IS the assertion.
+      // target editor is ready). Capture the state at the moment the wait succeeds — the selection
+      // is the observable effect under test, so the wait IS the assertion.
       let activeFilePath = '';
       let selection = '';
       await waitUntil({
@@ -100,7 +100,7 @@ async function moveAndReadSelection(commandToRun: string, cursorOffset: null | n
           activeFilePath = view?.file?.path ?? '';
           selection = view?.editor.getSelection() ?? '';
           // Require the TARGET to be active (the source transiently shows the restored marked
-          // Selection mid-operation, which also reads as 'MOVED').
+          // selection mid-operation, which also reads as 'MOVED').
           return activeFilePath === target.path && selection === 'MOVED';
         },
         timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
@@ -174,9 +174,9 @@ describe('cursor follows the moved content (issue #144)', () => {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 8000;
         const SETTLE_IN_MILLISECONDS = 400;
         // The target already contains the moved text — with the same blank-line prefix the default
-        // Template adds — BEFORE the paste cursor, which sits at the very end of the note. That is the
-        // Reporter's note shape: moving to the top looked right only because the moved copy happened to
-        // Be the first match.
+        // template adds — BEFORE the paste cursor, which sits at the very end of the note. That is the
+        // reporter's note shape: moving to the top looked right only because the moved copy happened to
+        // be the first match.
         const TARGET_CONTENT = 'top\n\nMOVED here\n\nend';
 
         const source = await resetFile('cursor-occurrence-source.md', 'AAA MOVED CCC');
@@ -193,7 +193,7 @@ describe('cursor follows the moved content (issue #144)', () => {
         app.commands.executeCommandById(`${pluginId}:move-marked-selection-here`);
 
         // Capture the observations as the wait succeeds and assert on them OUTSIDE, so a timeout does
-        // Not throw away what was already seen.
+        // not throw away what was already seen.
         let activeFilePath = '';
         let firstOccurrenceOffset = -1;
         let lastOccurrenceOffset = -1;
@@ -285,7 +285,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           app.commands.executeCommandById(`${pluginId}:move-marked-selection-here`);
 
           // Notices auto-hide, so read them as the wait succeeds rather than afterwards. Notices render
-          // Into `activeDocument`, not `document`.
+          // into `activeDocument`, not `document`.
           let movedTextOffset = -1;
           let noticeTexts: string[] = [];
           let selection = '';
@@ -383,8 +383,8 @@ describe('cursor follows the moved content (issue #144)', () => {
   });
 
   // The off case, plus the proof that a move AT THE CURSOR ignores these settings entirely. The test
-  // Above is the positive control: it proves this harness DOES observe the jump when the settings are
-  // On, so an empty selection here is a real absence rather than a missed window.
+  // above is the positive control: it proves this harness DOES observe the jump when the settings are
+  // on, so an empty selection here is a real absence rather than a missed window.
   it('leaves the cursor alone for edge moves when their jump settings are off, but still jumps at the cursor', async () => {
     await setJumpToggles(false);
     try {
@@ -395,7 +395,7 @@ describe('cursor follows the moved content (issue #144)', () => {
       const atCursor = await moveAndReadSelectionWithoutWaitingForAJump('move-marked-selection-here', 7);
 
       // Each move still happened — the wait inside only proceeds once the moved text is in the target and
-      // The target is the active note — but the edge moves left the cursor alone.
+      // the target is the active note — but the edge moves left the cursor alone.
       expect(toBottom.activeFilePath).toBe('cursor-no-jump-target.md');
       expect(toBottom.selection).toBe('');
 
@@ -437,7 +437,7 @@ async function moveAndReadSelectionWithoutWaitingForAJump(commandToRun: string, 
       const WAIT_TIMEOUT_IN_MILLISECONDS = 7000;
       const SETTLE_IN_MILLISECONDS = 400;
       // Comfortably past the jump's own timings (200 ms before the target opens, then a poll for the
-      // Moved content that gives up after 2 s), so an empty selection cannot just mean "not yet".
+      // moved content that gives up after 2 s), so an empty selection cannot just mean "not yet".
       const PAST_JUMP_DELAY_IN_MILLISECONDS = 3000;
 
       const source = await resetFile('cursor-no-jump-source.md', 'AAA MOVED CCC');
@@ -456,7 +456,7 @@ async function moveAndReadSelectionWithoutWaitingForAJump(commandToRun: string, 
       app.commands.executeCommandById(`${pluginId}:${command}`);
 
       // Wait for the move to actually land in the target and the target to be the active note (the
-      // Source transiently shows the restored marked selection mid-operation).
+      // source transiently shows the restored marked selection mid-operation).
       await waitUntil({
         message: `moved text did not arrive in the active target note for ${command}`,
         predicate: () => {

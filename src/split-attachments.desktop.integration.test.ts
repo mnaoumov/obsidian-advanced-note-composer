@@ -12,8 +12,8 @@ import {
 } from 'vitest';
 
 // Desktop-only: the flow moves files, matching the plugin's established integration convention and the
-// Merge-side counterpart (`merge-attachments.desktop.integration.test.ts`). File-move suites can hit the
-// Documented headless rename wall when several run in one aggregate; if this stalls in the aggregate it is
+// merge-side counterpart (`merge-attachments.desktop.integration.test.ts`). File-move suites can hit the
+// documented headless rename wall when several run in one aggregate; if this stalls in the aggregate it is
 // `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/split-attachments.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
@@ -59,7 +59,7 @@ describe('attachments in a split (issue #239)', () => {
           ''
         ].join('\n');
         // Inside `SplitAttachA`'s body, not on its `#` line — the enclosing heading is what the command
-        // Resolves (issue #143).
+        // resolves (issue #143).
         const CURSOR_LINE = 4;
         const EXPECTED_HEADING_COUNT = 2;
         const EXPECTED_EMBED_COUNT = 2;
@@ -73,7 +73,7 @@ describe('attachments in a split (issue #239)', () => {
             settings.shouldMoveAttachmentsWhenSplitting = true;
           });
           // Attachments live beside their note, so a heading extracted into a folder of its own has an
-          // Attachment folder of its own — without this the destination resolves to where they already are.
+          // attachment folder of its own — without this the destination resolves to where they already are.
           app.vault.setConfig('attachmentFolderPath', './');
 
           // Clean up any leftover from a previous run, so no folder or file name is de-duplicated.
@@ -87,7 +87,7 @@ describe('attachments in a split (issue #239)', () => {
           const sourceFile = await resetFile(SOURCE_PATH);
           const editor = await openAndGetEditor(sourceFile);
           // Through the editor, not `vault.modify`: an already-open buffer left over from a previous run
-          // Would otherwise keep the stale text and the cursor line would land in the wrong section.
+          // would otherwise keep the stale text and the cursor line would land in the wrong section.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'metadata cache did not index the source headings and embeds',
@@ -186,13 +186,13 @@ describe('attachments in a split (issue #239)', () => {
     });
 
     // What issue #239 asked for: the attachment the extracted heading referenced sits in the created note's
-    // Own attachment folder, and the note still points at it.
+    // own attachment folder, and the note still points at it.
     expect(result.picSourceGone).toBe(true);
     expect(result.createdContent).toContain('split-attach-pic.png');
     expect(result.createdContent).toContain('SplitAttachA');
 
     // The other half, and the reason the setting can default to on: an attachment the note left behind still
-    // References is not dragged away from it.
+    // references is not dragged away from it.
     expect(result.sharedStayed).toBe(true);
     expect(result.sharedMoved).toBe(false);
     expect(result.sourceContent).toContain('split-attach-shared.png');

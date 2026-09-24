@@ -9,18 +9,18 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 // Issue #250: loading the plugin opened a tab and closed it again. `RenderLinkHandlersWarmupComponent`
-// Called obsidian-dev-utils' `registerLinkHandlers` at layout ready, and on its first call that derived a
+// called obsidian-dev-utils' `registerLinkHandlers` at layout ready, and on its first call that derived a
 // DOM-events-handlers constructor by driving the real workspace -- create a leaf, open an arbitrary note in
-// Preview, wait, detach -- creating `__temp.md` first when the vault held no markdown files at all, which is
-// Exactly the case here. On desktop the reporter saw the resulting `file-open` / `active-leaf-change` cascade
-// Reach every other plugin; on mobile the same dance failed outright and surfaced as the plugin's
+// preview, wait, detach -- creating `__temp.md` first when the vault held no markdown files at all, which is
+// exactly the case here. On desktop the reporter saw the resulting `file-open` / `active-leaf-change` cascade
+// reach every other plugin; on mobile the same dance failed outright and surfaced as the plugin's
 // "An unhandled error occurred" notice, its stack running onLayoutReady -> registerLinkHandlers ->
-// GetDomEventsHandlersConstructor. One root cause, two symptoms. obsidian-dev-utils 95.0.0 made
+// getDomEventsHandlersConstructor. One root cause, two symptoms. obsidian-dev-utils 95.0.0 made
 // `registerLinkHandlers` synchronous and leaf-free, so the warm-up component was deleted; this pins that
-// Loading the plugin touches no leaf and writes no note.
+// loading the plugin touches no leaf and writes no note.
 //
 // Cross-platform rather than desktop-only on purpose: `manifest.json` sets `isDesktopOnly: false` and the bug
-// Bit both platforms -- mobile worse than desktop, since there it was a hard failure.
+// bit both platforms -- mobile worse than desktop, since there it was a hard failure.
 describe('plugin load creates no leaf (issue #250)', () => {
   it('re-enables without opening a tab, firing workspace events, or creating a temporary note', async () => {
     const result = await evalInObsidian({
@@ -40,7 +40,7 @@ describe('plugin load creates no leaf (issue #250)', () => {
         const workspaceEventRefs = [
           app.workspace.on('active-leaf-change', (leaf) => {
             // The event can arrive before the view has its file, so fall back to the view type rather than
-            // Reporting a bare `(none)` that says nothing about what was activated.
+            // reporting a bare `(none)` that says nothing about what was activated.
             const file = leaf?.view.getState()['file'];
             activeLeafChanges.push(typeof file === 'string' ? file : leaf?.view.getViewType() ?? '(none)');
           }),
@@ -91,13 +91,13 @@ describe('plugin load creates no leaf (issue #250)', () => {
         }
 
         // `ReleaseNotesComponent` is the other `onLayoutReady` component, and in a vault that has never shown
-        // Them it opens an alert. That is not a leaf and so cannot fail the assertions, but leaving it up would
-        // Leak a modal into whichever suite runs next against this shared vault.
+        // them it opens an alert. That is not a leaf and so cannot fail the assertions, but leaving it up would
+        // leak a modal into whichever suite runs next against this shared vault.
         //
         // Only ever dismissed through its own OK button. Detaching the container instead would tear the element
-        // Out without unwinding Obsidian's modal stack, which breaks every later modal -- a far worse failure
-        // Than the leak being guarded against, and one that would land on a different suite entirely. A modal
-        // With no OK button is not the release-notes alert and is therefore none of this test's business.
+        // out without unwinding Obsidian's modal stack, which breaks every later modal -- a far worse failure
+        // than the leak being guarded against, and one that would land on a different suite entirely. A modal
+        // with no OK button is not the release-notes alert and is therefore none of this test's business.
         function dismissOpenModals(): void {
           for (const modalEl of document.querySelectorAll('.modal-container')) {
             const okButtonEl = modalEl.querySelector('.mod-cta');
@@ -112,13 +112,13 @@ describe('plugin load creates no leaf (issue #250)', () => {
     });
 
     // Asserted as one object rather than a signal at a time so a regression reports every deviation in a
-    // Single diff instead of short-circuiting on whichever `expect` happens to come first.
+    // single diff instead of short-circuiting on whichever `expect` happens to come first.
     //
     // The events carry the weight here, and the leaf-count delta deliberately does not: the old code
-    // Detached the leaf it opened, so the count came back to where it started and a before/after
-    // Comparison saw nothing. It stays only to catch a leaf that leaks. What the reporter actually felt
-    // Is the transient -- "I have plugins that automatically trigger on new note, or focus change. So it
-    // Causes a cascade of events" -- and only a subscription that is live across the load can see it.
+    // detached the leaf it opened, so the count came back to where it started and a before/after
+    // comparison saw nothing. It stays only to catch a leaf that leaks. What the reporter actually felt
+    // is the transient -- "I have plugins that automatically trigger on new note, or focus change. So it
+    // causes a cascade of events" -- and only a subscription that is live across the load can see it.
     expect({
       activeLeafChanges: result.activeLeafChanges,
       createdPaths: result.createdPaths,

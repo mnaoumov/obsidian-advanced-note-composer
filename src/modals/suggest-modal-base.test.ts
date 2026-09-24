@@ -82,7 +82,7 @@ class TestSuggestModal extends SuggestModalBase {
   public lastChosenItem: Item | null = null;
 
   // Merge, arbitrarily: the base only forwards this to the per-category content filter (issue #270), and
-  // These tests leave every category list empty, so the value chosen changes nothing here.
+  // these tests leave every category list empty, so the value chosen changes nothing here.
   protected override get commandCategory(): CommandCategory {
     return CommandCategory.Merge;
   }
@@ -134,7 +134,7 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
       }),
       vault: strictProxy<Vault>({
         // Only ever asked for `spellcheck`, and only once the picker can create — `supportsCreate` short-
-        // Circuits ahead of it, which is why every pre-existing case here needs no value at all.
+        // circuits ahead of it, which is why every pre-existing case here needs no value at all.
         getConfig: castTo<Vault['getConfig']>(vi.fn((key: string) => key === 'spellcheck' ? isSpellcheckEnabledOption : undefined)),
         getFileByPath: vi.fn((filePath: string) => files.find((f) => f.path === filePath) ?? null),
         getFiles: vi.fn(() => files),
@@ -210,7 +210,7 @@ describe('SuggestModalBase', () => {
       });
 
       // Super.onOpen() and updateSuggestions() are Obsidian-internal and not modeled by the mock; stub
-      // Them on the SuggestModal super prototype so the real SuggestModalBase.onOpen can run.
+      // them on the SuggestModal super prototype so the real SuggestModalBase.onOpen can run.
       const superPrototype = getSuggestModalSuperPrototype(modal);
       const superOnOpen = vi.fn();
       const updateSuggestions = vi.fn();
@@ -274,7 +274,7 @@ describe('SuggestModalBase', () => {
       const modal = openCreateCapableModal({ isSpellcheckEnabled: false, supportsCreate: true });
 
       // Read in both directions on purpose: a single reading with the setting ON is indistinguishable
-      // From a box that is simply always checked, so only the pair proves it FOLLOWS the setting.
+      // from a box that is simply always checked, so only the pair proves it FOLLOWS the setting.
       expect(modal.inputEl.getAttribute('spellcheck')).toBe('false');
     });
 

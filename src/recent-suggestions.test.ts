@@ -71,7 +71,7 @@ function createApp(recentPaths: string[], activeFile: null | TFile = null): App 
 }
 
 // The recorded targets are module state shared by every test in this file, so a leak from one would
-// Silently reorder the next one's expectations.
+// silently reorder the next one's expectations.
 beforeEach(() => {
   clearRecentTargets();
 });
@@ -97,8 +97,8 @@ describe('getRecentPaths', () => {
   });
 
   // Obsidian's `RecentFileTracker` collects the file you just LEFT — `Workspace`'s active-leaf change
-  // Calls `recentFileTracker.onFileOpen(newFile, previousFile)` and the tracker collects the SECOND
-  // Argument — so the active file is never at the head of `getRecentFiles()` and has to be prepended
+  // calls `recentFileTracker.onFileOpen(newFile, previousFile)` and the tracker collects the SECOND
+  // argument — so the active file is never at the head of `getRecentFiles()` and has to be prepended
   // (issue #158).
   it('should prepend the active file, which Obsidian never puts at the head of its own recent list', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
@@ -111,8 +111,8 @@ describe('getRecentPaths', () => {
   });
 
   // Issue #206: a completed operation's target outranks even the active file. The two only disagree when
-  // The user runs a second operation without first navigating into the folder the previous one landed in,
-  // Which is precisely the case the request is about.
+  // the user runs a second operation without first navigating into the folder the previous one landed in,
+  // which is precisely the case the request is about.
   it('should put the recorded targets ahead of the active file and of Obsidian\'s own list', () => {
     const app = createApp([FILE_B1.path], FILE_C1);
     recordRecentTarget(FOLDER_A);
@@ -120,7 +120,7 @@ describe('getRecentPaths', () => {
   });
 
   // Issue #248: the same reporter then found that #206's ordering means clicking into another note no
-  // Longer moves that note's folder to the top. Both orderings are reasonable, so it is a choice.
+  // longer moves that note's folder to the top. Both orderings are reasonable, so it is a choice.
   it('should put the active file ahead of the recorded targets when asked to', () => {
     const app = createApp([FILE_B1.path], FILE_C1);
     recordRecentTarget(FOLDER_A);
@@ -130,7 +130,7 @@ describe('getRecentPaths', () => {
 
   it('should ignore the order when the picker does not want the active file at all', () => {
     // A file picker excludes the active file as the operation's own source, so there is nothing for the
-    // Two orderings to disagree about.
+    // two orderings to disagree about.
     const app = createApp([FILE_B1.path], FILE_C1);
     recordRecentTarget(FOLDER_A);
     expect(getRecentPaths({ app, pickerRecencyOrder: PickerRecencyOrder.ActiveFileFirst, shouldIncludeActiveFile: false }))
@@ -207,8 +207,8 @@ describe('reorderSuggestionsByRecentFolders', () => {
   });
 
   // Issue #158: visiting A then B then C leaves Obsidian's recent list as [B, A, ...] with C active, so
-  // Without the active file the folder the user is ON (C) is not offered first — B's folder is the
-  // Operation's source and filtered out, which is exactly how the reporter's first suggestion became A.
+  // without the active file the folder the user is ON (C) is not offered first — B's folder is the
+  // operation's source and filtered out, which is exactly how the reporter's first suggestion became A.
   it('should offer the folder of the active file first', () => {
     const app = createApp([FILE_B1.path, FILE_A1.path], FILE_C1);
     const suggestions = [suggestion(FOLDER_A), suggestion(FOLDER_C), suggestion(FOLDER_D)];
@@ -224,7 +224,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
   });
 
   // The active file can still sit somewhere further down Obsidian's list (a vault `create` collects it
-  // Too), so the de-duplication has to keep the prepended copy rather than the later one.
+  // too), so the de-duplication has to keep the prepended copy rather than the later one.
   it('should keep the folder of the active file first when it is also further down the recent list', () => {
     const app = createApp([FILE_B1.path, FILE_C1.path], FILE_C1);
     const suggestions = [suggestion(FOLDER_B), suggestion(FOLDER_C)];
@@ -252,8 +252,8 @@ describe('reorderSuggestionsByRecentFolders', () => {
   });
 
   // Issue #206: the folder a completed operation targeted leads the list — ahead of the folder of the note
-  // The user is on, which is issue #158's own first pick. This ordering is the owner's call, so it is
-  // Pinned here rather than left to fall out of the implementation.
+  // the user is on, which is issue #158's own first pick. This ordering is the owner's call, so it is
+  // pinned here rather than left to fall out of the implementation.
   it('should offer a recorded target folder ahead of the folder of the active file', () => {
     const app = createApp([FILE_A1.path], FILE_C1);
     const suggestions = [suggestion(FOLDER_A), suggestion(FOLDER_C), suggestion(FOLDER_D)];
@@ -269,7 +269,7 @@ describe('reorderSuggestionsByRecentFolders', () => {
   });
 
   // The other half of issue #206: merging a note INTO another note makes that note's folder a destination
-  // Too, which falls out of the same resolution that turns a recently-opened file into its folder.
+  // too, which falls out of the same resolution that turns a recently-opened file into its folder.
   it('should offer the parent folder of a recorded target file', () => {
     const app = createApp([], FILE_C1);
     const suggestions = [suggestion(FOLDER_B), suggestion(FOLDER_C)];
@@ -329,8 +329,8 @@ describe('reorderSuggestionsByRecentFiles', () => {
   });
 
   // Issue #206: a recorded target FILE leads a file picker, while a recorded target FOLDER resolves to
-  // Nothing here and is skipped — which is what keeps the folder half of the one recorded list out of the
-  // File pickers.
+  // nothing here and is skipped — which is what keeps the folder half of the one recorded list out of the
+  // file pickers.
   it('should offer a recorded target file first and skip a recorded target folder', () => {
     const app = createApp([FILE_A1.path]);
     const suggestions = [suggestion(FILE_A1), suggestion(FILE_B1)];
@@ -347,7 +347,7 @@ describe('reorderSuggestionsByRecentFiles', () => {
   });
 
   // A file picker's source IS the active file, and every file picker already excludes it, so the active
-  // File is deliberately NOT prepended there.
+  // file is deliberately NOT prepended there.
   it('should not prepend the active file', () => {
     const app = createApp([FILE_B1.path], FILE_A1);
     const suggestions = [suggestion(FILE_A1), suggestion(FILE_B1)];

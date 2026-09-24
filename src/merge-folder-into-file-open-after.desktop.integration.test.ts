@@ -22,15 +22,15 @@ import {
 import { describeStall } from './merge-suite-stall.ts';
 
 // Desktop-only: this is a folder-contents merge (file-delete) flow, matching the plugin's established
-// Integration convention.
+// integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-open-after.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 // The assertion is about WHETHER the merged note is opened, never about how fast, so a loaded machine must
-// Not be able to fail it. Each phase below is its own short eval and the waiting is done from Node, so this
-// Budget is the one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap.
+// not be able to fail it. Each phase below is its own short eval and the waiting is done from Node, so this
+// budget is the one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap.
 const MERGE_TIMEOUT_IN_MILLISECONDS = 90_000;
 // Above the sum of the budgets used below, so a genuine stall reports the NAMED poll timeout rather than
-// Losing the race to a bare vitest timeout.
+// losing the race to a bare vitest timeout.
 const TEST_TIMEOUT_IN_MILLISECONDS = 180_000;
 const RENDER_DELAY_IN_MILLISECONDS = 400;
 const SOURCE_FOLDER = 'open-after-src';
@@ -114,7 +114,7 @@ describe('merge folder contents into a single file opens the merged note (issue 
       await evalInObsidian({
         async callback({ app, context, lib: { waitUntil }, noFile, obsidianModule, sourceFolder, startActivationRecorder }) {
           // The folder command resolves its folder from the ACTIVE file's parent, and this is also what
-          // Makes the starting point a note OTHER than the merged one.
+          // makes the starting point a note OTHER than the merged one.
           const alpha = app.vault.getAbstractFileByPath(`${sourceFolder}/alpha.md`);
           if (!(alpha instanceof obsidianModule.TFile)) {
             throw new TypeError('The source note was not created.');
@@ -134,14 +134,14 @@ describe('merge folder contents into a single file opens the merged note (issue 
       });
 
       // The merge is kicked off and then polled from NODE, each poll its own sub-second eval, so the budget
-      // Above is enforceable instead of being cut short by the CDP cap.
+      // above is enforceable instead of being cut short by the CDP cap.
       const wasCommandStarted = await evalInObsidian({
         callback: ({ app, pluginId }) => app.commands.executeCommandById(`${pluginId}:merge-folder-into-file`),
         input: { pluginId: PLUGIN_ID },
         vaultPath
       });
       // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the waits
-      // Below would blame a slow merge for a merge that was never allowed to start.
+      // below would blame a slow merge for a merge that was never allowed to start.
       expect(wasCommandStarted).toBe(true);
 
       const mergeStatus = await pollInObsidian({
