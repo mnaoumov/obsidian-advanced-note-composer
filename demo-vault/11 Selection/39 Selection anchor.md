@@ -36,6 +36,8 @@ The selection still starts where you anchored it, not several lines off. Delete 
 
 ## Good to know
 
+- `Start selection` continues a selection you already started
+  - if text is selected when you run it, the anchor goes where that selection began, not at the cursor. When a drag stops early, run `Start selection`, tap where the selection should end, and run `End selection`. There is no need to go back to where you started.
 - One anchor exists at a time
   - running `Start selection` again moves it, rather than adding a second.
 - The anchor belongs to its note

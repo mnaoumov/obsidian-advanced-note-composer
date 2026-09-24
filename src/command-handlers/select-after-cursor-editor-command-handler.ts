@@ -21,6 +21,11 @@ interface SelectAfterCursorEditorCommandHandlerConstructorParams {
  * start-to-end instead, so the selection grows the way it reads and the handle a phone offers to adjust
  * it sits at the end the user is more likely to want to move.
  *
+ * **A live selection is RESUMED, not dropped (issue #287).** The range starts at the selection's `from`
+ * end rather than at the caret, so a selection interrupted part-way — a horizontal rule breaking a drag, a
+ * handle that let go too early — is grown to the end of the note instead of being thrown away for a fresh
+ * one starting where it stopped. With nothing selected `from` IS the caret, so that case is unchanged.
+ *
  * Unavailable with the cursor already at the very end.
  */
 export class SelectAfterCursorEditorCommandHandler extends SelectRangeEditorCommandHandlerBase {
@@ -40,14 +45,14 @@ export class SelectAfterCursorEditorCommandHandler extends SelectRangeEditorComm
       ch: editor.getLine(lastLine).length,
       line: lastLine
     };
-    const cursor = editor.getCursor();
-    if (cursor.line === end.line && cursor.ch === end.ch) {
+    const start = editor.getCursor('from');
+    if (start.line === end.line && start.ch === end.ch) {
       return null;
     }
 
     return {
       end,
-      start: cursor
+      start
     };
   }
 }

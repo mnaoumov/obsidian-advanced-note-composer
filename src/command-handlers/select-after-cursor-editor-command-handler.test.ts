@@ -46,6 +46,15 @@ function createEditor(cursor: EditorPosition): Editor {
   });
 }
 
+function createEditorWithSelection(from: EditorPosition, to: EditorPosition): Editor {
+  return strictProxy<Editor>({
+    getCursor: vi.fn((which?: string) => (which === 'from' ? from : to)),
+    getLine: vi.fn().mockReturnValue(LAST_LINE_TEXT),
+    lastLine: vi.fn().mockReturnValue(LAST_LINE),
+    setSelection: vi.fn()
+  });
+}
+
 function createHandler(): TestableHandler {
   const settings = strictProxy<PluginSettings>({
     commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
@@ -80,6 +89,20 @@ describe('SelectAfterCursorEditorCommandHandler', () => {
     createHandler().executeEditor(editor, createContext());
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(cursor, DOCUMENT_END);
+  });
+
+  /*
+   * Issue #287: a selection interrupted part-way is RESUMED from where it began, not dropped for a fresh
+   * one starting at the caret — which, with the selection's head sitting at its end, is where it stopped.
+   */
+  it('grows a live selection from its start instead of restarting at the caret', () => {
+    const from = { ch: 13, line: 2 };
+    const to = { ch: 0, line: 4 };
+    const editor = createEditorWithSelection(from, to);
+
+    createHandler().executeEditor(editor, createContext());
+
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(from, DOCUMENT_END);
   });
 
   it('is available anywhere but the very end of the note', () => {

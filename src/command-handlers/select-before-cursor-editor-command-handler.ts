@@ -17,6 +17,10 @@ interface SelectBeforeCursorEditorCommandHandlerConstructorParams {
  * Selects everything from the top of the note down to the cursor (issue #266) — the selection
  * `Extract before cursor...` makes before opening its split modal.
  *
+ * **A live selection is RESUMED, not dropped (issue #287)** — the mirror of `Select after cursor`: the
+ * range ends at the selection's `to` end rather than at the caret, so an interrupted selection is grown
+ * to the top of the note. With nothing selected `to` IS the caret, so that case is unchanged.
+ *
  * Unavailable with the cursor already at the very top, where there is nothing above it to select.
  */
 export class SelectBeforeCursorEditorCommandHandler extends SelectRangeEditorCommandHandlerBase {
@@ -31,17 +35,17 @@ export class SelectBeforeCursorEditorCommandHandler extends SelectRangeEditorCom
   }
 
   protected override resolveRange(editor: Editor): null | SelectionRange {
-    const cursor = editor.getCursor();
+    const end = editor.getCursor('to');
     const start = {
       ch: 0,
       line: 0
     };
-    if (cursor.line === start.line && cursor.ch === start.ch) {
+    if (end.line === start.line && end.ch === start.ch) {
       return null;
     }
 
     return {
-      end: cursor,
+      end,
       start
     };
   }

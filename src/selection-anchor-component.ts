@@ -197,6 +197,11 @@ export class SelectionAnchorComponent extends ComponentEx {
   /**
    * Anchors at the given editor's cursor, replacing any anchor held anywhere else.
    *
+   * With a selection live, the anchor goes at that selection's own ANCHOR end — where it was begun — and
+   * not at its head (issue #287). A selection interrupted part-way is thereby RESUMED: `Start selection`,
+   * tap the far end, `End selection`, with no trip back to where the partial selection started. With
+   * nothing selected the anchor and the head are the same point, so that case is unchanged.
+   *
    * @param editor - The editor to anchor in.
    * @param file - The note that editor shows.
    */
@@ -207,7 +212,7 @@ export class SelectionAnchorComponent extends ComponentEx {
     this.anchoredPath = file.path;
     const editorView = editor.cm;
     editorView.dispatch({
-      effects: replaceSelectionAnchorEffect.of(buildSelectionAnchorDecorations(editorView.state.selection.main.head))
+      effects: replaceSelectionAnchorEffect.of(buildSelectionAnchorDecorations(editorView.state.selection.main.anchor))
     });
   }
 

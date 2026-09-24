@@ -42,6 +42,13 @@ function createEditor(cursor: EditorPosition): Editor {
   });
 }
 
+function createEditorWithSelection(from: EditorPosition, to: EditorPosition): Editor {
+  return strictProxy<Editor>({
+    getCursor: vi.fn((which?: string) => (which === 'to' ? to : from)),
+    setSelection: vi.fn()
+  });
+}
+
 function createHandler(): TestableHandler {
   const settings = strictProxy<PluginSettings>({
     commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
@@ -71,6 +78,17 @@ describe('SelectBeforeCursorEditorCommandHandler', () => {
     createHandler().executeEditor(editor, createContext());
 
     expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(DOCUMENT_START, cursor);
+  });
+
+  // Issue #287: the mirror of `Select after cursor` — a live selection is grown to the top, keeping its end.
+  it('grows a live selection up to the top instead of restarting at the caret', () => {
+    const from = { ch: 2, line: 5 };
+    const to = { ch: 9, line: 8 };
+    const editor = createEditorWithSelection(from, to);
+
+    createHandler().executeEditor(editor, createContext());
+
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith(DOCUMENT_START, to);
   });
 
   it('is available anywhere but the very start of the note', () => {
