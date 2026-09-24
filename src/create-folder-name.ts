@@ -21,6 +21,21 @@ const TITLE_CASE_UNIT_REG_EXP = /(?<Separator>\s+|-)/;
 const WHITESPACE_RUN_REG_EXP = /\s+/g;
 
 /**
+ * Parameters for {@link cleanTypedName}.
+ */
+export interface CleanTypedNameParams {
+  /**
+   * The name exactly as the user typed it.
+   */
+  readonly rawName: string;
+
+  /**
+   * Whether the Title Case pass runs.
+   */
+  readonly shouldTitleCase: boolean;
+}
+
+/**
  * Parameters for {@link normalizeTypedFolderName}.
  */
 export interface NormalizeTypedFolderNameParams {
@@ -43,6 +58,26 @@ export interface NormalizeTypedFolderNameParams {
    * Whether the Title Case pass runs (the `shouldTitleCaseCreatedFolderName` setting).
    */
   readonly shouldTitleCase: boolean;
+}
+
+/**
+ * The cleaning half of {@link normalizeTypedFolderName}, everything BEFORE the invalid-character pass: trim,
+ * drop leading/trailing dots, collapse every whitespace run to one space, and optionally Title Case.
+ *
+ * Exported on its own because a typed NOTE name is cleaned by the same rules (issue #283) but then goes
+ * through `createNoteFromTypedName`, which owns the name transform and the invalid-character pass for notes.
+ *
+ * @param params - The typed name and whether to Title Case it.
+ * @returns The cleaned name, or an empty string when nothing but whitespace and dots was typed.
+ */
+export function cleanTypedName(params: CleanTypedNameParams): string {
+  const collapsedName = params.rawName
+    .trim()
+    .replaceAll(LEADING_OR_TRAILING_DOTS_REG_EXP, '')
+    .replaceAll(WHITESPACE_RUN_REG_EXP, ' ')
+    .trim();
+
+  return params.shouldTitleCase ? toTitleCase(collapsedName) : collapsedName;
 }
 
 /**
@@ -70,17 +105,10 @@ export function normalizeTypedFolderName(params: NormalizeTypedFolderNameParams)
     shouldTitleCase
   } = params;
 
-  const collapsedName = rawName
-    .trim()
-    .replaceAll(LEADING_OR_TRAILING_DOTS_REG_EXP, '')
-    .replaceAll(WHITESPACE_RUN_REG_EXP, ' ')
-    .trim();
-
-  if (!collapsedName) {
+  const casedName = cleanTypedName({ rawName, shouldTitleCase });
+  if (!casedName) {
     return '';
   }
-
-  const casedName = shouldTitleCase ? toTitleCase(collapsedName) : collapsedName;
 
   return fixFileName({
     fileName: casedName,

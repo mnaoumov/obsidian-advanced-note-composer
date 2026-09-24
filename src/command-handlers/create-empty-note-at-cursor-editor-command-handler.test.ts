@@ -189,6 +189,7 @@ describe('CreateEmptyNoteAtCursorEditorCommandHandler', () => {
       pluginNoticeComponent: params.pluginNoticeComponent,
       pluginSettingsComponent: params.pluginSettingsComponent,
       resourceLockComponent: params.resourceLockComponent,
+      shouldCleanTypedName: true,
       sourceFile: file
     });
     expect(MockSplitComposer).not.toHaveBeenCalled();

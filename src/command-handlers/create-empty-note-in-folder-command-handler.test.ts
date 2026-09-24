@@ -62,7 +62,8 @@ vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
   prompt: vi.fn()
 }));
 
-vi.mock('../create-note.ts', () => ({
+vi.mock(import('../create-note.ts'), async (importOriginal) => ({
+  ...await importOriginal(),
   createNoteFromTypedName: vi.fn()
 }));
 
@@ -130,6 +131,7 @@ function createHandler(settingsOverrides: Partial<PluginSettings> = {}, activeFi
       shouldBlockCommandOnPath: vi.fn().mockReturnValue(false),
       shouldReplaceInvalidTitleCharacters: true,
       shouldSplitIntoFolder: false,
+      shouldTitleCaseCreatedNoteName: false,
       splitTemplate: '',
       ...settingsOverrides
     })
@@ -251,6 +253,8 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
       // With `Should split into folder` off the note is created where it was asked for, and a typed
       // `/` is a character rather than a path to descend into.
       relocateNote: null,
+      // Typed from scratch, so it is cleaned (issue #283).
+      shouldCleanTypedName: true,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });

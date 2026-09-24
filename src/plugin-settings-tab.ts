@@ -1900,6 +1900,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             }
           }),
           this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether the note name typed into ');
+              appendCodeBlock(f, 'Create empty note at cursor...');
+              f.appendText(' or ');
+              appendCodeBlock(f, 'Create empty note in folder...');
+              f.appendText(' is capitalized, by the same rule as the folder name above.');
+              f.createEl('br');
+              f.appendText('Trimming, stripping leading and trailing dots, and collapsing repeated whitespace always happen for those two commands.');
+            }),
+            name: 'Should capitalize the created note name',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldTitleCaseCreatedNoteName', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
             desc: 'Whether to open the created note. With several notes declared, the first one is opened.',
             name: 'Should open note after creating folder',
             render: (setting) => {

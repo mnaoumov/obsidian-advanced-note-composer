@@ -190,6 +190,14 @@ interface PrepareForSplitFileParams {
   readonly shouldAllowOnlyCurrentFolderOverride?: boolean;
 
   /**
+   * Cleans the typed name of a note this split CREATES (issue #283) — trim, leading/trailing dots, collapsed
+   * whitespace, and Title Case per `shouldTitleCaseCreatedNoteName`. Set only by
+   * `Create empty note at cursor...`, whose name is typed from scratch; an ordinary split is usually named
+   * after a heading, and its output must not change. Defaults to `false`.
+   */
+  readonly shouldCleanTypedName?: boolean;
+
+  /**
    * Puts the new note into its own folder even when the `shouldSplitIntoFolder` setting is off. Set by the
    * recursive split, whose folder tree IS the feature, so it cannot be at the mercy of that setting.
    */
@@ -1468,7 +1476,8 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
  *
  * Nothing is done about name CLEANING here, because nothing needs to be: `createNoteFromTypedName`,
  * which every creation goes through, already applies the name transform, replaces invalid characters and
- * records what was typed as an alias / `title`.
+ * records what was typed as an alias / `title` — and, for `Create empty note at cursor...`, cleans the
+ * spacing and casing too (issue #283).
  *
  * @param params - The prepare parameters, the seed for the name box, and whether the picker is skipped.
  * @returns What the pair did — see {@link FolderThenNameKind}.
@@ -1561,6 +1570,7 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
       item: splitFileModalResult.item,
       pluginSettingsComponent: prepareParams.pluginSettingsComponent,
       shouldAllowOnlyCurrentFolder: splitFileModalResult.shouldAllowOnlyCurrentFolder,
+      shouldCleanTypedName: prepareParams.shouldCleanTypedName ?? false,
       shouldForceSplitIntoFolder: prepareParams.shouldForceSplitIntoFolder ?? false,
       /* v8 ignore start -- short-circuit branch depends on heading being falsy. */
       shouldTreatTitleAsPath: !heading && splitFileModalResult.shouldTreatTitleAsPath,

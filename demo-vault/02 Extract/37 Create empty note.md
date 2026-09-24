@@ -40,6 +40,10 @@ Three things worth knowing:
 - **It is not in the menu while you have text selected.** The command collapses the selection to the cursor before it does anything — that collapse is what keeps it from replacing the selected text with the new note's link — so a mis-click on a highlighted passage would look like it ate the selection. It still runs from the command palette and its hotkey with a selection active, exactly like the extracts that hide themselves the same way.
 - **The cursor needs the note to be open to land in.** `Create empty note in folder...` always opens what it made, so it always lands. `Create empty note at cursor...` only opens the note when `Should open target note after split` is on — with it off you still get the template, and your cursor deliberately never leaves the note you were typing in.
 
+## The name you type is tidied up
+
+Both commands clean the name before creating anything: surrounding spaces and dots go, and a run of spaces between words becomes one. Typing `weekly      review` with a few spaces around it creates `weekly review`. Turn on `Should capitalize the created note name` (settings page `Create`) and it becomes `Weekly Review` — a word already in capitals, like `API`, is left alone. The same cleaning applies to a folder named in [22 Create folder with notes](<../06 Folder operations/22 Create folder with notes.md>); an ordinary extract, which names its note after a heading, is left exactly as it was.
+
 ## The switch is fixed to `Create`
 
 The picker's create/merge switch — [10 Create or merge when splitting](<../03 Split/10 Create or merge when splitting.md>) — is shown but cannot be flipped here, and says why: there is no content to merge into an existing note, so creating one is the only thing this command can do. It stays on `Create` even when `Default split target mode` says otherwise.
