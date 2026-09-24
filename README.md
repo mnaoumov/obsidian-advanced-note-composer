@@ -17,10 +17,12 @@ Obsidian's core [`Note composer`](https://help.obsidian.md/plugins/note-composer
 <a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-desktop-4.png"><img src="images/screenshots/screenshot-desktop-4.png" alt="Rename a heading and every link to it" width="600"></a>
 <a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-desktop-5.png"><img src="images/screenshots/screenshot-desktop-5.png" alt="Merge this note into another" width="600"></a>
 <a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="One long note, five sections" width="270"></a>
-<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="Reorder a note by moving whole sections" width="270"></a>
-<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="Rename a heading and every link to it" width="270"></a>
-<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-4.png"><img src="images/screenshots/screenshot-mobile-4.png" alt="Split it into one file per heading, nested" width="270"></a>
-<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-5.png"><img src="images/screenshots/screenshot-mobile-5.png" alt="Or split just one heading, and all it contains" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="Extract a heading into its own note, linked in place" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="Reorder a note by moving whole sections" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-4.png"><img src="images/screenshots/screenshot-mobile-4.png" alt="Rename a heading and every link to it" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-5.png"><img src="images/screenshots/screenshot-mobile-5.png" alt="Split it into one file per heading, nested" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-6.png"><img src="images/screenshots/screenshot-mobile-6.png" alt="Or split just one heading, and all it contains" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-advanced-note-composer/blob/HEAD/images/screenshots/screenshot-mobile-7.png"><img src="images/screenshots/screenshot-mobile-7.png" alt="Merge this note into another" width="270"></a>
 </div>
 
 </details>
