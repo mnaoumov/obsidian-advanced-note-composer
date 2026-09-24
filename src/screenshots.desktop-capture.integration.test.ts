@@ -258,7 +258,7 @@ async function runCommandAndCapture(commandId: string, index: number, caption: s
   });
 
   expect(modalTitle).toMatchObject({ wasExecuted: true });
-  expect(modalTitle.title).not.toBe('Release notes');
+  expect(modalTitle.title).not.toBe('Advanced Note Composer release notes');
   expect(modalTitle.title).not.toBe('(empty)');
 
   await shoot(index, caption);

@@ -495,7 +495,7 @@ async function openCommandDialog(params: OpenCommandDialogParams): Promise<Opene
   });
 
   expect(opened).toMatchObject({ wasExecuted: true });
-  expect(opened.title).not.toBe('Release notes');
+  expect(opened.title).not.toBe('Advanced Note Composer release notes');
   expect(opened.title).not.toBe('(empty)');
   return opened;
 }

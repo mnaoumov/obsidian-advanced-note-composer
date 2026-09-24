@@ -511,6 +511,7 @@ export class Plugin extends PluginBase {
     this.addChild(
       new ReleaseNotesComponent({
         app: this.app,
+        pluginName: this.manifest.name,
         pluginSettingsComponent
       })
     );

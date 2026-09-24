@@ -8,15 +8,18 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 interface ReleaseNotesComponentConstructorParams {
   readonly app: App;
+  readonly pluginName: string;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 export class ReleaseNotesComponent extends LayoutReadyComponent {
+  private readonly pluginName: string;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: ReleaseNotesComponentConstructorParams) {
     super(params.app);
 
+    this.pluginName = params.pluginName;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -89,7 +92,9 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
     await alert({
       app: this.app,
       message: releaseNotes,
-      title: 'Release notes'
+      // Issue #286: the headings are bare version numbers, which identify nothing to someone with dozens of
+      // Plugins installed, so the popup names the plugin it belongs to.
+      title: `${this.pluginName} release notes`
     });
   }
 }
