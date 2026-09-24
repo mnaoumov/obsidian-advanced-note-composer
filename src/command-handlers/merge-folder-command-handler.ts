@@ -251,7 +251,14 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];
 
+    // Real Obsidian's `recurseChildren` visits the folder it was given as well (the mocks do not), and the
+    // parent-derived mapping below would send THAT folder to `<target>/<source name>` - moving the whole
+    // source inside the target instead of merging it. So the source folder is never collected here: it is
+    // seeded onto the target in the map, and trashed explicitly, last, below.
     Vault.recurseChildren(sourceFolder, (child) => {
+      if (child === sourceFolder) {
+        return;
+      }
       if (isFolder(child)) {
         sourceSubfolders.push(child);
         return;
@@ -269,7 +276,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     /* v8 ignore start -- sort comparator is only called with 2+ subfolders. */
     sourceSubfolders.sort((a, b) => this.depth(b) - this.depth(a));
     /* v8 ignore stop */
-    const subfoldersMap = new Map<string, string>();
+    const subfoldersMap = new Map<string, string>([[sourceFolder.path, targetFolder.path]]);
 
     /*
      * Mapped SHALLOWEST-first, so every folder's destination is derived from the destination its PARENT
@@ -325,7 +332,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       await vaultTransaction.rename(sourceOtherFile, targetFilePath);
     }
 
-    for (const sourceSubfolder of sourceSubfolders) {
+    // Deepest first, and the source folder itself last: a parent only empties once its children are gone.
+    for (const sourceSubfolder of [...sourceSubfolders, sourceFolder]) {
       this.throwIfAborted(abortController);
       if (sourceSubfolder.children.length > 0) {
         continue;
