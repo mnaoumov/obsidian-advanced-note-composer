@@ -251,7 +251,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const sourceMdFiles: TFile[] = [];
     const sourceOtherFiles: TFile[] = [];
 
-    // Real Obsidian's `recurseChildren` visits the folder it was given as well (the mocks do not), and the
+    // Obsidian's `recurseChildren` visits the folder it was given as well, and the
     // parent-derived mapping below would send THAT folder to `<target>/<source name>` - moving the whole
     // source inside the target instead of merging it. So the source folder is never collected here: it is
     // seeded onto the target in the map, and trashed explicitly, last, below.

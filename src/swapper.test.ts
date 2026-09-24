@@ -26,6 +26,7 @@ beforeEach(() => {
 
 describe('swap', () => {
   it('should exchange the content of two files', async () => {
+    await app.vault.createFolder('folder');
     await app.vault.create('folder/a.md', 'A body');
     await app.vault.create('folder/b.md', 'B body');
 

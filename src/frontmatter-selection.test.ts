@@ -27,6 +27,8 @@ const ALIASES_NOTE = [
   ''
 ].join('\n');
 
+// Obsidian's `getFrontMatterInfo` keeps the newline before the closing `---` in `frontmatter`, so the
+// remainder ends in one and the region it replaces runs up to the fence itself.
 describe('extractFrontmatterSelection', () => {
   function extract(content: string, ...selections: Selection[]): ExtractionSummary | null {
     const result = extractFrontmatterSelection({ content, selections });
@@ -51,7 +53,7 @@ describe('extractFrontmatterSelection', () => {
     // land on the two `aliases` items rather than on a fragment of YAML text.
     expect(extract(ALIASES_NOTE, selectText(ALIASES_NOTE, 'pha', 'bravo'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha\n  - bravo',
-      remainingYaml: 'aliases:\n  - charlie\ntags:\n  - x'
+      remainingYaml: 'aliases:\n  - charlie\ntags:\n  - x\n'
     });
   });
 
@@ -59,14 +61,14 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'aliases:', '  - alpha', '  - bravo', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, 'aliases:', '  - bravo'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha\n  - bravo',
-      remainingYaml: 'tags:\n  - x'
+      remainingYaml: 'tags:\n  - x\n'
     });
   });
 
   it('should drop a key line left with no values of its own', () => {
     expect(extract(ALIASES_NOTE, selectText(ALIASES_NOTE, '  - alpha', 'charlie'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha\n  - bravo\n  - charlie',
-      remainingYaml: 'tags:\n  - x'
+      remainingYaml: 'tags:\n  - x\n'
     });
   });
 
@@ -74,7 +76,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'title: My Note', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, 'My', 'My'))).toEqual({
       extractedYaml: 'title: My Note',
-      remainingYaml: 'tags:\n  - x'
+      remainingYaml: 'tags:\n  - x\n'
     });
   });
 
@@ -82,7 +84,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'meta:', '  author:', '    name: Bob', '    age: 42', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '    name: Bob', '    name: Bob'))).toEqual({
       extractedYaml: 'meta:\n  author:\n    name: Bob',
-      remainingYaml: 'meta:\n  author:\n    age: 42'
+      remainingYaml: 'meta:\n  author:\n    age: 42\n'
     });
   });
 
@@ -90,7 +92,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'meta:', '  author:', '    name: Bob', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '    name: Bob', '    name: Bob'))).toEqual({
       extractedYaml: 'meta:\n  author:\n    name: Bob',
-      remainingYaml: 'tags:\n  - x'
+      remainingYaml: 'tags:\n  - x\n'
     });
   });
 
@@ -98,7 +100,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'aliases:', '- alpha', '- bravo', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '- alpha', '- alpha'))).toEqual({
       extractedYaml: 'aliases:\n- alpha',
-      remainingYaml: 'aliases:\n- bravo'
+      remainingYaml: 'aliases:\n- bravo\n'
     });
   });
 
@@ -106,7 +108,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'aliases:', '  # the good ones', '  - alpha', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
-      remainingYaml: '  # the good ones'
+      remainingYaml: '  # the good ones\n'
     });
   });
 
@@ -114,7 +116,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'aliases:', '', '  - alpha', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
-      remainingYaml: ''
+      remainingYaml: '\n'
     });
   });
 
@@ -122,7 +124,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', 'aliases:', 'title: My Note', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, 'title: My Note', 'title: My Note'))).toEqual({
       extractedYaml: 'title: My Note',
-      remainingYaml: 'aliases:'
+      remainingYaml: 'aliases:\n'
     });
   });
 
@@ -130,7 +132,7 @@ describe('extractFrontmatterSelection', () => {
     const content = ['---', '# who wrote this', 'author: Bob', 'aliases:', '  - alpha', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
-      remainingYaml: '# who wrote this\nauthor: Bob'
+      remainingYaml: '# who wrote this\nauthor: Bob\n'
     });
   });
 
@@ -144,7 +146,7 @@ describe('extractFrontmatterSelection', () => {
       )
     ).toEqual({
       extractedYaml: 'title: My Note\naliases:\n  - bravo',
-      remainingYaml: 'aliases:\n  - alpha'
+      remainingYaml: 'aliases:\n  - alpha\n'
     });
   });
 
@@ -154,7 +156,7 @@ describe('extractFrontmatterSelection', () => {
       selections: [selectText(ALIASES_NOTE, '  - alpha', '  - alpha')]
     });
     expect(result?.frontmatterStartOffset).toBe(ALIASES_NOTE.indexOf('aliases:'));
-    expect(result?.frontmatterEndOffset).toBe(ALIASES_NOTE.indexOf('\n---\n\nbody'));
+    expect(result?.frontmatterEndOffset).toBe(ALIASES_NOTE.indexOf('---\n\nbody'));
   });
 
   it('should ignore a note without frontmatter', () => {
