@@ -483,6 +483,24 @@ export class PluginSettings {
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 
   /**
+   * Folder names that `Merge current folder with another folder...` must never merge into a destination
+   * folder of the same name (issue #267). Such a folder arrives under a de-duplicated name instead, and
+   * takes its whole subtree with it: merging `A` into `E` with `A/B/C` and an existing `E/B/F` leaves
+   * `E/B 1/C` beside the untouched `E/B/F`.
+   *
+   * Empty by default, so nothing changes for a vault that has not asked. Read through
+   * `shouldKeepFolderNameSeparate`, which owns the two entry forms — a plain name, or a
+   * `/regular expression/` literal — and is where the name-vs-path decision is written down.
+   *
+   * Deliberately NOT part of the category's `Merge include paths` / `Merge exclude paths` pair, and it
+   * must not be folded into them later: those decide what a merge may TOUCH, and a listed path is
+   * skipped. This list never skips anything — the folder is merged, under another name. One entry
+   * meaning "skip" in one row and "rename and carry on" in another is the shape bug #253 came back to
+   * complain about.
+   */
+  public keepSeparateFolderNames: string[] = [];
+
+  /**
    * Where a folder merge creates the merged note (issue #178). Defaults to `BesideFolder`, which is the
    * existing behavior, so no `registerLegacySettingsConverter` is needed — the same reasoning as
    * `flattenMode` and `shouldSplitRecursivelyIntoDefaultNewNoteFolder`.

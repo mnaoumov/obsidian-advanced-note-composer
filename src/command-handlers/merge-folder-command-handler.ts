@@ -28,15 +28,14 @@ import {
   getOrCreateFileSafe,
   isChildOrSelf
 } from 'obsidian-dev-utils/obsidian/vault';
-import {
-  join,
-  relative
-} from 'obsidian-dev-utils/path';
+import { join } from 'obsidian-dev-utils/path';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
+import { shouldKeepFolderNameSeparate } from '../keep-separate-folder-names.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 import { compareNatural } from '../natural-sort.ts';
@@ -282,9 +281,29 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     /* v8 ignore stop */
     const subfoldersMap = new Map<string, string>();
 
-    for (const sourceSubfolder of sourceSubfolders) {
-      const relativePath = relative(sourceFolder.path, sourceSubfolder.path);
-      const targetSubfolderPath = join(targetFolder.path, relativePath);
+    /*
+     * Mapped SHALLOWEST-first, so every folder's destination is derived from the destination its PARENT
+     * was given rather than from its path under the source folder. That is what lets a folder kept
+     * separate by issue #267 take its whole subtree with it: `A/B` renamed to `E/B 1` puts `A/B/C` at
+     * `E/B 1/C`, which a `relative(sourceFolder, subfolder)` mapping could not express. The array itself
+     * stays deepest-first — the trashing loop below needs that order — so this is its reverse rather
+     * than a second sort.
+     */
+    for (const sourceSubfolder of [...sourceSubfolders].reverse()) {
+      /* v8 ignore start -- defensive ?? on parent?.path. */
+      const parentTargetFolderPath = subfoldersMap.get(sourceSubfolder.parent?.path ?? '') ?? targetFolder.path;
+      /* v8 ignore stop */
+      const desiredTargetSubfolderPath = join(parentTargetFolderPath, sourceSubfolder.name);
+      // A folder the user listed is never poured into a same-named folder of the destination (issue
+      // #267). `getAvailableFolderPath` answers both halves at once: it hands the desired path straight
+      // back when nothing occupies it, so an unlisted folder and a listed one with no clash behave
+      // identically and only a real collision produces ` 1`.
+      const targetSubfolderPath = shouldKeepFolderNameSeparate({
+          folderName: sourceSubfolder.name,
+          keepSeparateFolderNames: this.pluginSettingsComponent.settings.keepSeparateFolderNames
+        })
+        ? getAvailableFolderPath(this.app, desiredTargetSubfolderPath)
+        : desiredTargetSubfolderPath;
       await vaultTransaction.createFolder(targetSubfolderPath);
       subfoldersMap.set(sourceSubfolder.path, targetSubfolderPath);
     }

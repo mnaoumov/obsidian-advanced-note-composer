@@ -503,7 +503,8 @@ describe('PluginSettingsTab', () => {
     expect(containers.get('Merge current folder with another folder')).toEqual([
       'Should include child folders when merging folders',
       'Should include parent folders when merging folders',
-      'Should open the first note after merging folders'
+      'Should open the first note after merging folders',
+      'Folder names to keep separate'
     ]);
   });
 

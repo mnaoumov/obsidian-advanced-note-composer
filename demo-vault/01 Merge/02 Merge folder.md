@@ -43,3 +43,20 @@ caption: Always merge excluded items
 ---
 await require('/demoSetup.ts').changeSettings(app, { shouldAlwaysMergeExcludedItems: true });
 ```
+
+## Keeping folders separate
+
+Some folders are not meant to be poured together, however alike their names. List a folder name under **Folder names to keep separate** and a merge will never combine it with a folder of the same name in the destination - the incoming one arrives numbered instead, bringing everything under it along.
+
+With `B` listed, merging `A` (holding `A/B/C`) into an `E` that already holds `E/B/F` leaves you `E/B 1/C` beside the untouched `E/B/F`. Without it, the two `B` folders become one.
+
+Each entry is a folder name on its own line, or a `/regular expression/` matched against the name - not the path, so it applies at every depth. A regular expression is unanchored, so `/^Archive$/` is the form that matches that one name and nothing else.
+
+Nothing is skipped here: every listed folder is still merged, only under another name. Which notes and folders a merge may touch at all is **Merge include paths** / **Merge exclude paths** instead.
+
+```code-button
+---
+caption: Keep folders named B separate
+---
+await require('/demoSetup.ts').changeSettings(app, { keepSeparateFolderNames: ['B'] });
+```
