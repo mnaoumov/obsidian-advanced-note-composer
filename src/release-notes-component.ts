@@ -24,6 +24,11 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
   }
 
   protected override async onLayoutReady(): Promise<void> {
+    // Issue #293: when the plugin is enabled AFTER the layout is ready (on-demand-plugins, or enabling it from
+    // Community plugins), this runs one tick after load, while `data.json` is still being read. Until then
+    // `releaseNotesShown` is the DEFAULT empty list, so every note would be shown again on every restart.
+    await this.pluginSettingsComponent.whenLoadedFromFile();
+
     // Only show the release notes when the enhanced built-in `Note composer` core plugin is enabled (issue #95).
     // When it is disabled, nothing is shown and no version is persisted.
     // This makes the notes appear the first time the user later enables the core plugin.
