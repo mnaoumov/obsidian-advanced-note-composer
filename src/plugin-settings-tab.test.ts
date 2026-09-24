@@ -197,8 +197,8 @@ describe('PluginSettingsTab', () => {
       'group:Common',
       'page:Merge',
       'page:Split/extract',
-      // Its own page since issue #271, next to the split/extract commands whose ranges it shares. Two
-      // path rows and nothing else: a select writes nothing, so it has no content pair.
+      // Its own page since issue #271, next to the split/extract commands whose ranges it shares. Its
+      // path section has two rows: a select writes nothing, so it has no content pair.
       'page:Select',
       'page:Swap',
       'page:Smart cut & paste',
@@ -206,9 +206,6 @@ describe('PluginSettingsTab', () => {
       // `Title` page into it — two adjacent entries the reporter read as one section — so there is one
       // entry here where there were two.
       'page:Frontmatter',
-      // Its own page since issue #254: thirty commands, each with two toggles, would swamp any page that
-      // also had to hold something else.
-      'page:Command menu placement',
       // Issue #225 folded two top-level headers into one `Include/exclude` page; issue #271 retired that
       // page in turn, moving each category's path rows onto the page of the commands they govern.
       'page:Move/flatten folders',
@@ -230,19 +227,11 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
 
     expect(collectPageSections(tab)).toEqual({
-      // Issue #254: one section per category, holding a row per command rather than one dropdown for all of
-      // them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
-      'Command menu placement': [
-        'Split/extract command menus',
-        'Select command menus',
-        'Create command menus',
-        'Smart cut & paste command menus',
-        'Swap command menus',
-        'Rename command menus',
-        'Reorder command menus'
-      ],
-      // Issue #271 moved the `Create` category's path rows here, in a section of their own.
-      'Create': ['Create include/exclude paths'],
+      // Issue #271 moved the `Create` category's path rows here, in a section of their own, and issue #278
+      // put its menu placement beside them. Every command page with a menu-placeable command leads its
+      // two per-category sections with that one. `Merge` and `Move/flatten` have none — no command of
+      // either reaches an editor menu.
+      'Create': ['Create command menus', 'Create include/exclude paths'],
       'Folder note': [],
       // Issue #272 merged the `Title` page in, and the merged page groups by TOPIC rather than by which
       // page a row came from: `Title` leads, because the rows that shape a file name are what the frontmatter
@@ -260,19 +249,19 @@ describe('PluginSettingsTab', () => {
         'Merge include/exclude paths'
       ],
       'Move/flatten folders': ['Move/flatten include/exclude paths'],
-      // `Rename` and `Select` hold nothing but their path rows, so those sit on the page directly — a
-      // page holding nothing but one entry to another page is a detour.
-      'Rename': [],
-      'Reorder': ['Reorder include/exclude paths'],
-      'Select': [],
+      // `Rename` and `Select` held nothing but their path rows, flat on the page, until issue #278 gave
+      // each a second section.
+      'Rename': ['Rename command menus', 'Rename include/exclude paths'],
+      'Reorder': ['Reorder command menus', 'Reorder include/exclude paths'],
+      'Select': ['Select command menus', 'Select include/exclude paths'],
       // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
-      'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file', 'Smart cut & paste include/exclude paths'],
-      'Split/extract': ['Split/extract include/exclude paths'],
+      'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file', 'Smart cut & paste command menus', 'Smart cut & paste include/exclude paths'],
+      'Split/extract': ['Split/extract command menus', 'Split/extract include/exclude paths'],
       // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
       // shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
       // the folder rows name their own target type — so the headings only mislabelled the first row.
       // Issue #282 did not bring them back: the page is four rows, and only its path rows are a section.
-      'Swap': ['Swap include/exclude paths'],
+      'Swap': ['Swap command menus', 'Swap include/exclude paths'],
       'UI': []
     });
   });
@@ -297,23 +286,21 @@ describe('PluginSettingsTab', () => {
         `${commandCategory} command exclude paths`
       ];
 
-      // `Rename` and `Select` have no group of their own, so their rows are the whole of their page —
-      // whose name IS the category, which is what makes the fallback lookup work for both of them.
-      const container = containers.get(`${commandCategory} include/exclude paths`) ?? containers.get(commandCategory);
-      expect(container).toEqual(rowNames);
+      expect(containers.get(`${commandCategory} include/exclude paths`)).toEqual(rowNames);
     }
   });
 
   /*
-   * Issue #254 moved placement off the path groups entirely: it is chosen one COMMAND at a time now, on
-   * its own page, so a category's path group holds nothing but its path rows.
+   * Issue #254 moved placement off the path groups entirely: it is chosen one COMMAND at a time now, in a
+   * section of its own (on its category's page since issue #278), so a category's path group holds nothing
+   * but its path rows.
    */
   it('should give every menu-placeable command a row of its own, grouped by category', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
     for (const commandCategory of menuPlaceableCommandCategories()) {
-      expect(containers.get(`${commandCategory} include/exclude paths`) ?? containers.get(commandCategory) ?? [])
+      expect(containers.get(`${commandCategory} include/exclude paths`) ?? [])
         .not.toContain(`${commandCategory} command menu placement`);
     }
 

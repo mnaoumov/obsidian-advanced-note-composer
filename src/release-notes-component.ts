@@ -95,6 +95,13 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText(' moved to the ');
         appendCodeBlock(f, 'UI');
         f.appendText(' page. Every setting keeps its value.');
+        f.createEl('br');
+        // Issue #278: a top-level page the user navigates by disappeared.
+        f.appendText('The ');
+        appendCodeBlock(f, 'Command menu placement');
+        f.appendText(' settings page is gone: each ');
+        appendCodeBlock(f, '<Category> command menus');
+        f.appendText(' section moved to the page of its own commands, next to its include/exclude paths. Every setting keeps its value.');
       })
     };
 

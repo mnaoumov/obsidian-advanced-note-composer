@@ -23,10 +23,7 @@ import {
   MenuKind,
   withMenuIncludedInPlacement
 } from './command-menu-placement.ts';
-import {
-  menuPlaceableCommandCategories,
-  menuPlaceableCommandsOfCategory
-} from './menu-placeable-commands.ts';
+import { menuPlaceableCommandsOfCategory } from './menu-placeable-commands.ts';
 import {
   Action,
   COMMAND_CATEGORY_PATH_SETTING_NAMES,
@@ -1097,6 +1094,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
+          this.commandMenuPlacementSettingPage(CommandCategory.SplitAndExtract),
           this.commandCategoryPathSettingPage(CommandCategory.SplitAndExtract)
         ],
         name: 'Split/extract'
@@ -1104,12 +1102,15 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       this.settingPage({
         /*
          * The select commands' own page since issue #271, sitting next to `Split/extract` because they
-         * share its ranges. It holds TWO rows rather than four, and nothing else: a select writes nothing,
-         * so it never consults the content filter and has no content pair to show. With nothing else on
-         * the page the rows sit on it directly, without a heading.
+         * share its ranges. Its path section holds TWO rows rather than four: a select writes nothing, so
+         * it never consults the content filter and has no content pair to show. Those rows sat on the page
+         * directly until issue #278 gave it a second section, the menu placement of its commands.
          */
-        desc: 'Where the select commands are offered. They only move the caret, so there is nothing for them to include or exclude as content.',
-        items: this.commandCategoryPathSettings(CommandCategory.Select),
+        desc: 'Which menus offer the select commands, and where they are offered. They only move the caret, so there is nothing for them to include or exclude as content.',
+        items: [
+          this.commandMenuPlacementSettingPage(CommandCategory.Select),
+          this.commandCategoryPathSettingPage(CommandCategory.Select)
+        ],
         name: 'Select'
       }),
       this.settingPage({
@@ -1162,6 +1163,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
+          this.commandMenuPlacementSettingPage(CommandCategory.Swap),
           this.commandCategoryPathSettingPage(CommandCategory.Swap)
         ],
         name: 'Swap'
@@ -1459,6 +1461,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             ],
             name: 'To bottom of file'
           }),
+          this.commandMenuPlacementSettingPage(CommandCategory.SmartCutAndPaste),
           this.commandCategoryPathSettingPage(CommandCategory.SmartCutAndPaste)
         ],
         name: 'Smart cut & paste'
@@ -1731,17 +1734,6 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Frontmatter'
       }),
       this.settingPage({
-        desc: 'Which of the two editor context menus offers each command — one command at a time.',
-        items: menuPlaceableCommandCategories().map((commandCategory) =>
-          this.settingPage({
-            desc: `Which editor context menu offers each ${commandCategory} command.`,
-            items: menuPlaceableCommandsOfCategory(commandCategory).map((command) => this.commandMenuPlacementSetting(command)),
-            name: `${commandCategory} command menus`
-          })
-        ),
-        name: 'Command menu placement'
-      }),
-      this.settingPage({
         desc: 'Moving a folder into another one, flattening a folder into its parent, and numbering what either one relocates.',
         items: [
           this.settingEx({
@@ -2001,6 +1993,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
+          this.commandMenuPlacementSettingPage(CommandCategory.Create),
           this.commandCategoryPathSettingPage(CommandCategory.Create)
         ],
         // Renamed from `Create folder with notes` by issue #271: the page now also carries the path rows
@@ -2009,10 +2002,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Create'
       }),
       this.settingPage({
-        // `Rename` holds nothing but its path rows, so they sit on the page directly rather than under a
-        // heading — a separator with nothing to separate is noise.
-        desc: 'Where Rename folder... and Rename heading are offered, and what they may rename.',
-        items: this.commandCategoryPathSettings(CommandCategory.Rename),
+        // `Rename` held nothing but its path rows, which sat on the page directly, until issue #278 gave it a
+        // second section: the menu placement of `Rename heading`.
+        desc: 'Which menus offer Rename heading, and where Rename folder... and Rename heading are offered.',
+        items: [
+          this.commandMenuPlacementSettingPage(CommandCategory.Rename),
+          this.commandCategoryPathSettingPage(CommandCategory.Rename)
+        ],
         name: 'Rename'
       }),
       this.settingPage({
@@ -2220,6 +2216,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
+          this.commandMenuPlacementSettingPage(CommandCategory.Reorder),
           this.commandCategoryPathSettingPage(CommandCategory.Reorder)
         ],
         name: 'Reorder'
@@ -2423,9 +2420,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
    *
    * They were a headed group on the category's page until #282, whose reporter asked for every section
    * inside a section to be something to click into rather than something to scroll past; the path boxes
-   * are the longest rows a page has, so they are the section that cost the most scrolling. A page whose
-   * only content is these rows — `Rename` and `Select` — takes {@link commandCategoryPathSettings}
-   * directly instead, because a page holding nothing but one entry to another page is a detour.
+   * are the longest rows a page has, so they are the section that cost the most scrolling. `Rename` and
+   * `Select` took {@link commandCategoryPathSettings} directly until issue #278, while these rows were the
+   * only thing on their pages; the menu placement section beside them made them a section like any other.
    *
    * It names the category even though it sits on that category's own page, for the reason the row names
    * do: a bare `Include/exclude paths` would be seven identical entries across seven pages, and Obsidian's
@@ -2628,6 +2625,29 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         this.addMenuPlacementToggle(setting, command, MenuKind.EditorMenu);
         this.addMenuPlacementToggle(setting, command, MenuKind.ViewportMenu);
       }
+    });
+  }
+
+  /**
+   * One category's menu placement rows on a page of their own, nested inside that category's page (issue
+   * #278).
+   *
+   * Until #278 every category's placement page sat under one top-level `Command menu placement` page, the
+   * way the path lists sat under `Include/exclude` until issue #271; the reporter asked for the same move,
+   * so a command family's page now holds everything that configures it.
+   *
+   * It names the category for the reason {@link commandCategoryPathSettingPage} does: Obsidian's settings
+   * search offers no page context to tell seven identically named entries apart.
+   *
+   * @param commandCategory - The category whose commands are wanted. It must have at least one
+   * menu-placeable command, or the page would be empty.
+   * @returns The page definition.
+   */
+  private commandMenuPlacementSettingPage(commandCategory: CommandCategory): SettingDefinitionPage {
+    return this.settingPage({
+      desc: `Which editor context menu offers each ${commandCategory} command.`,
+      items: menuPlaceableCommandsOfCategory(commandCategory).map((command) => this.commandMenuPlacementSetting(command)),
+      name: `${commandCategory} command menus`
     });
   }
 

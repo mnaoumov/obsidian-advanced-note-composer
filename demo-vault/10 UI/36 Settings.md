@@ -202,7 +202,7 @@ Every category except `Select` and `Rename` also has a pair for the *first* filt
 
 ## Command menu placement
 
-Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Every command that reaches an editor menu picks which of the two it appears in, on its own settings row with a toggle each. Both off still leaves the command in the command palette and on its hotkey, which is what separates it from the exclude paths above.
+Obsidian has two context menus over an open note, and they never both answer one right-click: the editor menu on the text, and the smaller `Readable line length` / `Line numbers` / `Inline title` menu on the empty margin beside it — and on the line-number gutter. Every command that reaches an editor menu picks which of the two it appears in, on its own settings row with a toggle each. The rows are on the page of each command's own category, in a `<Category> command menus` section next to its include/exclude paths. Both off still leaves the command in the command palette and on its hotkey, which is what separates it from the exclude paths above.
 
 `Merge` and `Move/flatten` have no rows here: every command in them is a file- or folder-menu command, so there is no editor menu for them to be placed in.
 

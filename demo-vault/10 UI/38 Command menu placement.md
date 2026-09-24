@@ -11,7 +11,7 @@ The first menu gets long. This plugin alone can put nine items in it, and they s
 
 1. Turn on `Settings -> Editor -> Readable line length`, so there is a margin to right-click.
 2. Right-click this note's text. `Split note by headings recursively...` is in the menu, near the bottom.
-3. Open the plugin settings, go to `Command menu placement`, open `Split/extract command menus`, and on the `Split note by headings recursively...` row turn `Editor menu` off and `Margin` on.
+3. Open the plugin settings, go to `Split/extract`, open `Split/extract command menus`, and on the `Split note by headings recursively...` row turn `Editor menu` off and `Margin` on.
 4. Right-click the text again — that one command is gone, and every other extract and split is still there.
 5. Right-click the empty margin to the left or right of the text. There it is, under Obsidian's three view toggles.
 
@@ -34,11 +34,11 @@ Both off is not the same as listing a path in `Split/extract command exclude pat
 
 ## Which commands can be placed
 
-Every command that reaches an editor menu at all, grouped on the page by the category it belongs to — `Split/extract`, `Create`, `Smart cut & paste`, `Swap`, `Rename` and `Reorder`.
+Every command that reaches an editor menu at all. Each category's rows are on that category's own settings page, in a `<Category> command menus` section next to its include/exclude paths — `Split/extract`, `Select`, `Create`, `Smart cut & paste`, `Swap`, `Rename` and `Reorder`.
 
 `Merge` and `Move/flatten` have no rows. Every command in them is invoked from a file or folder in the file explorer, not from inside a note, so there is no editor menu for them to be placed in.
 
-The category headings are there to find a row by, and nothing more: placing one command never moves the rest of its group. That was the whole point of the change — the recursive split could not be demoted to the margin without taking every extract with it.
+The category sections are there to find a row by, and nothing more: placing one command never moves the rest of its group. That was the whole point of the change — the recursive split could not be demoted to the margin without taking every extract with it.
 
 ## What placement does not change
 
