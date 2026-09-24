@@ -433,6 +433,9 @@ export class SplitComposer extends ComposerBase {
         file: this.targetFile,
         insertedContent,
         insertedContentOffset,
+        // The link leaves the explorer reveal to this action, so the editor can be put back in front
+        // only once that reveal has finished (issue #263).
+        shouldRevealInFileExplorer: true,
         // The click hands the open to Obsidian and returns, so this poll has to outlast the open itself,
         // not just the editor load the default budget assumes.
         timeoutInMilliseconds: POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS

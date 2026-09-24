@@ -29,6 +29,7 @@ import type {
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { MarkdownView } from 'obsidian';
+import { noopAsync } from 'obsidian-dev-utils/function';
 
 /**
  * How long to wait between polls for the destination note's editor.
@@ -112,9 +113,10 @@ export interface PollForInsertedContentParams {
   readonly consoleDebugComponent: ConsoleDebugComponent;
 
   /**
-   * The note the content was written into. The active view must be showing THIS file before an offset is
-   * applied to it — the open is asynchronous, and applying the offset to whatever note happens to be on
-   * screen would select arbitrary text in the wrong file.
+   * The note the content was written into. A view must be showing THIS file before an offset is applied to
+   * it — the open is asynchronous, and applying the offset to whatever note happens to be on screen would
+   * select arbitrary text in the wrong file. The active view is preferred; another leaf showing the note
+   * counts only while the file explorer (or another non-markdown view) holds the focus.
    */
   readonly file: TFile;
 
@@ -164,6 +166,19 @@ export interface ResolveInsertedTextStartOffsetParams {
  * Parameters for {@link revealInsertedContent}.
  */
 export interface RevealInsertedContentParams extends PollForInsertedContentParams {
+  /**
+   * Whether the destination is also REVEALED in the file explorer, with the editor put back in front
+   * only once that reveal has finished (issue #263).
+   *
+   * The notice link asks for this instead of letting dev-utils' `renderInternalLink` reveal the file,
+   * because the two must be ORDERED: the file explorer's reveal makes its own leaf the active one (and
+   * does so twice, the second time a frame later), so an activation that is not sequenced after it is
+   * simply undone.
+   *
+   * @default `false`
+   */
+  readonly shouldRevealInFileExplorer?: boolean;
+
   /**
    * Whether the inserted content is left SELECTED, rather than the cursor merely collapsed onto its start.
    *
@@ -241,9 +256,9 @@ export async function pollForInsertedContent(params: PollForInsertedContentParam
   const timeoutInMilliseconds = params.timeoutInMilliseconds ?? POLL_TIMEOUT_IN_MILLISECONDS;
 
   for (let elapsed = 0; elapsed <= timeoutInMilliseconds; elapsed += POLL_INTERVAL_IN_MILLISECONDS) {
-    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    const view = findMarkdownViewShowingFile(app, file);
     // A view still loading (no file yet) simply fails the check and is retried on the next poll.
-    if (view?.file?.path === file.path) {
+    if (view) {
       const range = resolveInsertedContentRange({ editor: view.editor, insertedContent, insertedContentOffset });
       if (range) {
         return { editor: view.editor, range, view };
@@ -334,7 +349,14 @@ export function resolveInsertedTextStartOffset(params: ResolveInsertedTextStartO
  */
 /* v8 ignore start -- drives a live Obsidian editor; verified via integration. */
 export async function revealInsertedContent(params: RevealInsertedContentParams): Promise<void> {
+  const { app, file } = params;
+  const shouldRevealInFileExplorer = params.shouldRevealInFileExplorer ?? false;
+
+  // Started BEFORE the poll, so the explorer highlights the note as promptly as dev-utils' own reveal did,
+  // and awaited AFTER it, so nothing below can run before the explorer is done taking the focus.
+  const revealPromise = shouldRevealInFileExplorer ? revealFileInFileExplorer(app, file) : noopAsync();
   const located = await pollForInsertedContent(params);
+  await revealPromise;
   if (!located) {
     return;
   }
@@ -352,25 +374,96 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
   editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
 
   /*
-   * Issue #263: put the FOCUS in that editor too, or a repeat click leaves the selection invisible.
+   * Issue #263: put the FOCUS in that editor too, or the selection is invisible.
    *
-   * The selection itself was never the problem — it is re-applied on every click, which a desktop probe
-   * confirmed. What differs is where the focus is. The FIRST click opens the note, so the editor takes
-   * focus and the selection is drawn. On a repeat click the note is already open and the notice's link
-   * only REVEALS it in the file explorer, which ends up the active leaf — the editor keeps a selection
-   * nobody can see, and the reporter reads that as "the content is not highlighted any more".
+   * The selection itself was never the problem — it is re-applied on every click. What differs is where
+   * the focus is: the notice's link also REVEALS the note in the file explorer, and that reveal makes the
+   * explorer the active leaf, so the editor keeps a selection nobody can see and the reporter reads that
+   * as "the content is not highlighted any more".
    *
-   * Harmless on the paths that do not need it: the smart cut & paste move already has the user in this
-   * editor, so this is what is already true there.
-   *
-   * TWO things had to be right, and each was found by probing rather than by reading:
+   * Three things had to be right, each found by probing rather than by reading:
    * - `setActiveLeaf`, not `editor.focus()`. Focusing the editor does not make its leaf the ACTIVE one,
-   *   so the workspace still answers the file explorer and the highlight still is not what the user is
-   *   looking at.
-   * - DEFERRED by a tick. Obsidian's own reveal lands after this handler, so an immediate activation is
-   *   simply overwritten — the same ordering as the picker's focus in issue #262.
+   *   so the workspace still answers the file explorer.
+   * - ORDERED after the reveal, not merely deferred. 5.11.0 waited one poll interval (50 ms) and hoped the
+   *   reveal had landed by then. With a synthetic `click()` it had, which is why its test passed; with a
+   *   real mouse click it had not, and the explorer took the focus back on every repeat click — what the
+   *   reporter's video shows. The reveal is `revealLeaf` (asynchronous) → `setActiveLeaf(explorer)` → a
+   *   `nextFrame` that activates the explorer AGAIN, so both its promise and the frame after it are awaited.
+   * - Harmless on the paths that do not reveal: the smart cut & paste move already has the user in this
+   *   editor, so this is what is already true there.
    */
-  await sleep(POLL_INTERVAL_IN_MILLISECONDS);
-  params.app.workspace.setActiveLeaf(view.leaf, { focus: true });
+  if (shouldRevealInFileExplorer) {
+    await waitForNextFrame();
+    await waitForNextFrame();
+  } else {
+    await sleep(POLL_INTERVAL_IN_MILLISECONDS);
+  }
+  app.workspace.setActiveLeaf(view.leaf, { focus: true });
+}
+/* v8 ignore stop */
+
+/**
+ * Finds the markdown view showing `file`.
+ *
+ * The ACTIVE view is preferred, and is the only answer while a markdown view is active: that is the one a
+ * link click opens the note into. Only when something else — the file explorer, which the notice link
+ * reveals the note in — holds the focus is another leaf showing the note accepted, because
+ * `getActiveViewOfType` then answers `null` for an editor that is perfectly usable (issue #263).
+ *
+ * @param app - The Obsidian app.
+ * @param file - The note.
+ * @returns The view, or `null` when no markdown view shows the note (yet).
+ */
+/* v8 ignore start -- reads a live Obsidian workspace; verified via integration. */
+function findMarkdownViewShowingFile(app: App, file: TFile): MarkdownView | null {
+  const activeView = app.workspace.getActiveViewOfType(MarkdownView);
+  if (activeView) {
+    return activeView.file?.path === file.path ? activeView : null;
+  }
+
+  let bestView: MarkdownView | null = null;
+  let bestActiveTime = -1;
+  for (const leaf of app.workspace.getLeavesOfType('markdown')) {
+    const { view } = leaf;
+    if (view instanceof MarkdownView && view.file?.path === file.path && leaf.activeTime > bestActiveTime) {
+      bestView = view;
+      bestActiveTime = leaf.activeTime;
+    }
+  }
+  return bestView;
+}
+/* v8 ignore stop */
+
+/**
+ * Reveals `file` in the file explorer, resolving once the explorer has finished doing so.
+ *
+ * The same call dev-utils' `renderInternalLink` makes for `shouldRevealFile`, except AWAITED: the core
+ * plugin's `revealInFolder` is typed `void` but is asynchronous at runtime (it awaits `revealLeaf` before
+ * activating the explorer), and awaiting it is what lets the caller order its own activation after it.
+ * A disabled file explorer reveals nothing and resolves at once.
+ *
+ * @param app - The Obsidian app.
+ * @param file - The note to reveal.
+ * @returns A {@link Promise} that resolves once the reveal has finished.
+ */
+/* v8 ignore start -- drives the live file explorer; verified via integration. */
+async function revealFileInFileExplorer(app: App, file: TFile): Promise<void> {
+  const result: unknown = app.internalPlugins.getEnabledPluginById('file-explorer')?.revealInFolder(file);
+  await result;
+}
+/* v8 ignore stop */
+
+/**
+ * Resolves on the next animation frame.
+ *
+ * @returns A {@link Promise} that resolves on the next frame.
+ */
+/* v8 ignore start -- needs a real rendering loop; verified via integration. */
+async function waitForNextFrame(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      resolve();
+    });
+  });
 }
 /* v8 ignore stop */

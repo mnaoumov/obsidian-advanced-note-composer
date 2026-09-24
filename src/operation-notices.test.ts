@@ -320,6 +320,14 @@ describe('renderOperationNoticeLink', () => {
     expect(forwardedParams.folderNote?.resolveName?.(folder)).toBe('index');
   });
 
+  it('should leave the file reveal to a link\'s own click action, so it can order its focus after it (#263)', async () => {
+    const { forwardedParams } = await renderLink({ onClick: vi.fn().mockResolvedValue(undefined), path: 'alpha.md' });
+
+    // The dev-utils reveal is fire-and-forget; the extract's jump reveals the note itself and only then puts
+    // the editor back in front, which an activation racing that reveal cannot do.
+    expect(forwardedParams.shouldRevealFile).toBe(false);
+  });
+
   it('should run the extra click action', async () => {
     const onClick = vi.fn().mockResolvedValue(undefined);
 

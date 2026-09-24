@@ -44,7 +44,7 @@ interface SettingsCarrier {
 describe('extract completion notice link (issue #232)', () => {
   it('jumps to the extracted content and reveals the destination when clicked', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { clickMouse, pressKey, waitUntil }, obsidianModule, pluginId }) {
         /**
          * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
          * cap, not at it. Before this shared budget it declared 51 000 ms, so the eval could only ever die
@@ -57,6 +57,12 @@ describe('extract completion notice link (issue #232)', () => {
         // Kept well under the 30 s a single `evalInObsidian` closure gets, even if both waits time out.
         const OPEN_TIMEOUT_IN_MILLISECONDS = 5000;
         const SETTLE_BEFORE_CLICK_IN_MILLISECONDS = 1000;
+        /**
+         * How long after the selection appears the focus is read again. The file explorer's reveal takes the
+         * focus in two steps, the second a frame later, so a read the instant the selection shows up can
+         * precede the step that undoes it (issue #263 reopened: 5.11.0 passed here and failed for the user).
+         */
+        const SETTLE_AFTER_REVEAL_IN_MILLISECONDS = 500;
         const EXTRACTED_TEXT = 'EXTRACTED-BY-ISSUE-232';
         const DESTINATION_BASENAME = 'issue-232-destination';
         const DESTINATION_PATH = `${DESTINATION_BASENAME}.md`;
@@ -115,8 +121,16 @@ describe('extract completion notice link (issue #232)', () => {
           // failing.
           await sleep(SETTLE_BEFORE_CLICK_IN_MILLISECONDS);
 
+          // The explorer has to be on screen for its reveal to compete for the focus, as it is in the
+          // reporter's video.
+          app.workspace.leftSplit.expand();
+          const fileExplorerLeaf = app.workspace.getLeavesOfType('file-explorer')[0];
+          if (fileExplorerLeaf) {
+            await app.workspace.revealLeaf(fileExplorerLeaf);
+          }
+
           const activeBeforeClick = app.workspace.getActiveFile()?.path ?? '';
-          noticeLinkEl?.click();
+          await clickLink(noticeLinkEl);
 
           // Give-up wrapper around both waits: the assertions below report what the click actually
           // achieved, and a throw out of this closure would discard exactly that evidence.
@@ -144,9 +158,11 @@ describe('extract completion notice link (issue #232)', () => {
            * the selection first so a stale one from the first click cannot pass for a fresh reveal.
            */
           const selectionAfterFirstClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '';
+          await sleep(SETTLE_AFTER_REVEAL_IN_MILLISECONDS);
+          const focusAfterFirstClick = readDestinationFocus();
           const viewBeforeSecondClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           viewBeforeSecondClick?.editor.setCursor({ ch: 0, line: 0 });
-          noticeLinkEl?.click();
+          await clickLink(noticeLinkEl);
           try {
             await waitUntil({
               message: 'the extracted content was never re-selected on the second click',
@@ -157,6 +173,8 @@ describe('extract completion notice link (issue #232)', () => {
             // Reported through the returned state.
           }
           const selectionAfterSecondClick = readDestinationSelection();
+          await sleep(SETTLE_AFTER_REVEAL_IN_MILLISECONDS);
+          const focusAfterSecondClick = readDestinationFocus();
           // The point of #263: the editor is BACK, so the selection is something the user can see. A
           // repeat click leaves the file explorer active without this.
           const isMarkdownViewActiveAfterSecondClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null;
@@ -167,6 +185,10 @@ describe('extract completion notice link (issue #232)', () => {
             // Reported alongside the selection so a failure says WHICH thing went wrong: an empty editor is
             // Obsidian's open having raced the write, a populated one with no selection is the jump.
             destinationEditorValue: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue() ?? '',
+            // Read after the reveal has had time to finish: the ACTIVE leaf and the editor's own focus are
+            // what decide whether the selection is drawn at all.
+            focusAfterFirstClick,
+            focusAfterSecondClick,
             // `getActiveViewOfType` answers `null` once a non-markdown leaf (the file explorer) is the
             // active one, which is exactly the focus question `revealInFolder` raises — it "opens the view
             // if it is not already open/visible".
@@ -209,6 +231,39 @@ describe('extract completion notice link (issue #232)', () => {
           // nothing whatsoever.
           inputEl.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
+        }
+
+        /**
+         * Clicks the link with TRUSTED mouse input. A synthetic `click()` is not good enough here: it is what
+         * let 5.11.0 pass this suite while every real repeat click left the file explorer holding the focus.
+         *
+         * The link can wrap onto a second line inside the notice, so its bounding box's centre can land on the
+         * SOURCE link on the line above; the centre of its last line box is always on the link itself.
+         *
+         * @param linkEl - The link, or `null` when the notice never showed one.
+         */
+        async function clickLink(linkEl: HTMLElement | null): Promise<void> {
+          const lineBoxes = linkEl ? [...linkEl.getClientRects()] : [];
+          const lastLineBox = lineBoxes.at(-1);
+          if (lastLineBox) {
+            await clickMouse({ x: lastLineBox.x + lastLineBox.width / 2, y: lastLineBox.y + lastLineBox.height / 2 });
+          }
+        }
+
+        /**
+         * Where the focus is once the click has settled, as one string so a failure names the whole state.
+         *
+         * @returns `<active leaf's view type>|<does the destination's editor have the focus>`.
+         */
+        function readDestinationFocus(): string {
+          let hasFocus = false;
+          for (const leaf of app.workspace.getLeavesOfType('markdown')) {
+            const view = leaf.view;
+            if (view instanceof obsidianModule.MarkdownView && view.file?.path === DESTINATION_PATH) {
+              hasFocus = view.editor.hasFocus();
+            }
+          }
+          return `${app.workspace.getActiveViewOfType(obsidianModule.View)?.getViewType() ?? ''}|${String(hasFocus)}`;
         }
 
         /**
@@ -344,6 +399,11 @@ describe('extract completion notice link (issue #232)', () => {
     // rather than only the first time.
     expect(result.selectionAfterSecondClick).toBe('EXTRACTED-BY-ISSUE-232');
     expect(result.isMarkdownViewActiveAfterSecondClick).toBe(true);
+    // Issue #263 reopened: still true once the file explorer's reveal has finished, and the editor itself
+    // holds the focus — the two things that make the selection VISIBLE. 5.11.0 failed both on every real
+    // repeat click.
+    expect(result.focusAfterFirstClick).toBe('markdown|true');
+    expect(result.focusAfterSecondClick).toBe('markdown|true');
 
     expect(result.revealedPaths).toContain('issue-232-destination.md');
     // The editor is still the active view: `revealInFolder` "opens the view if it is not already
