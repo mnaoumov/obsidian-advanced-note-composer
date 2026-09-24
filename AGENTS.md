@@ -158,7 +158,7 @@ The former integration-only branches are now fully unit-covered against `obsidia
 
 ## Testing notes
 
-### Why the mobile frames do NOT raise the soft keyboard
+### Why the rename-heading frame does NOT raise the soft keyboard
 
 The rename-heading frame ends on a focused field with its text selected, so it looks like a candidate for the device-capture-with-a-keyboard treatment the command-palette frames in sibling plugins now use. **It was implemented, run on a real device, and reverted.** Recording why, because the frame alone does not show it and the next reader would reasonably try again:
 
@@ -167,6 +167,14 @@ The rename-heading frame ends on a focused field with its text selected, so it l
 
 So the frame keeps `captureObsidianScreenshot`, which photographs the page: no status bar, no clock, no selection toolbar, and byte-reproducible.
 
-### The pickers this suite drops are a different question, and still open
+### The two picker frames DO raise it, and that is not a contradiction
 
-The file header explains that the `Extract` and `Merge` pickers are left out because they "render as a full-height empty list unless a real on-screen keyboard has focused them — which no script can arrange". **A script can arrange it now**: those pickers are Obsidian suggesters, whose field is anchored to the bottom of the viewport, and that is the one shape the harness's `raiseSoftKeyboard` handles correctly — a sibling plugin's suggester frames were re-captured this way and improved markedly. Restoring those two shots is therefore possible; it is a new pair of frames rather than a change to an existing one, so it is tracked separately rather than done here.
+The mobile set is seven frames, and `2` (`Extract this heading...`) and `7` (`Merge file...`) are taken with the soft keyboard up, through the device framebuffer. They were left out until then because a suggester without a keyboard renders as a full-height empty list. A suggester's field is anchored to the bottom of the viewport and its list grows upward from it, which is the one shape `raiseSoftKeyboard` handles correctly. A centred `prompt` like the rename dialog is not that shape. So the rule is per shape, not per suite: suggesters get the keyboard, dialogs keep the page capture.
+
+Three things the suite does around those two frames are load-bearing:
+
+- **The keyboard goes back down after each picker.** The dialog frames that follow are page captures, and the IME would otherwise leave them rendered into the viewport it shrank. The reorder frame, which comes straight after the extract picker, came back byte-identical to its pre-change capture, which is how that was checked.
+- **The seeded `Timeline` is taken out of the field for the touch and written back.** A touch that lands inside text makes Chromium draw a selection handle, and the framebuffer photographs it. `obsidian-integration-testing` 12.x does not empty the field itself; later majors do, which is when this local step can go.
+- **The `input` re-dispatch plus `scrollIntoView` workaround is skipped for the keyboard frames.** With a real IME up, the IME does the scrolling. The five dialog frames still take the workaround path. None of them is a suggester, so it changes nothing for them, and it was left rather than removed without a measurement.
+
+**The two keyboard frames are not byte-reproducible**: the status-bar clock and battery are in them. The harness's `paintOutStatusBar` fixes that, but it arrived in a later `obsidian-integration-testing` major than this repo is on, so it comes with that bump.
