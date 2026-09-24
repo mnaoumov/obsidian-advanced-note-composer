@@ -2,7 +2,10 @@ import type { InternalPlugins } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 
 import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
-import { noopAsync } from 'obsidian-dev-utils/function';
+import {
+  noop,
+  noopAsync
+} from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
@@ -29,6 +32,7 @@ interface MockPluginSettingsComponentResult {
   readonly editAndSave: ReturnType<typeof vi.fn>;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly settings: PluginSettings;
+  readonly whenLoadedFromFile: ReturnType<typeof vi.fn>;
 }
 
 vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
@@ -68,10 +72,15 @@ function createMockApp(isNoteComposerEnabled = true): MockAppResult {
   };
 }
 
-function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPluginSettingsComponentResult {
+function createMockPluginSettingsComponent(
+  releaseNotesShown: string[],
+  loadedFromFilePromise: Promise<void> = noopAsync()
+): MockPluginSettingsComponentResult {
   const settings = strictProxy<PluginSettings>({
     releaseNotesShown
   });
+
+  const whenLoadedFromFile = vi.fn((): Promise<void> => loadedFromFilePromise);
 
   const editAndSave = vi.fn().mockImplementation((callback: (settings: PluginSettings) => void): Promise<void> => {
     callback(settings);
@@ -80,13 +89,15 @@ function createMockPluginSettingsComponent(releaseNotesShown: string[]): MockPlu
 
   const pluginSettingsComponent = strictProxy<PluginSettingsComponent>({
     editAndSave,
-    settings
+    settings,
+    whenLoadedFromFile
   });
 
   return {
     editAndSave,
     pluginSettingsComponent,
-    settings
+    settings,
+    whenLoadedFromFile
   };
 }
 
@@ -130,6 +141,43 @@ describe('ReleaseNotesComponent', () => {
       expect(settings.releaseNotesShown).toContain('5.12.0');
       expect(mockAlert).toHaveBeenCalledTimes(1);
       expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Advanced Note Composer release notes' }));
+    });
+
+    // Issue #293: a loader such as on-demand-plugins enables the plugin AFTER the layout is ready, so the
+    // layout-ready handler fires one tick after load, while `data.json` is still being read. Reading
+    // `releaseNotesShown` then answers with the DEFAULT empty list, and the notes reappear on every restart.
+    it('should wait for the settings to be loaded from the file before deciding what was already shown', async () => {
+      const { app, triggerLayoutReady } = createMockApp();
+      let resolveLoadedFromFile: () => void = noop;
+      const loadedFromFilePromise = new Promise<void>((resolve) => {
+        resolveLoadedFromFile = resolve;
+      });
+      const { editAndSave, pluginSettingsComponent, settings, whenLoadedFromFile } = createMockPluginSettingsComponent(
+        [],
+        loadedFromFilePromise
+      );
+      const component = new ReleaseNotesComponent({
+        app,
+        pluginName: PLUGIN_NAME,
+        pluginSettingsComponent
+      });
+
+      component.load();
+      vi.useFakeTimers();
+      try {
+        triggerLayoutReady();
+        vi.runAllTimers();
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(whenLoadedFromFile).toHaveBeenCalledTimes(1);
+      settings.releaseNotesShown = ['3.0.0', '5.11.0', '5.12.0'];
+      resolveLoadedFromFile();
+      await waitForAllAsyncOperations();
+
+      expect(editAndSave).not.toHaveBeenCalled();
+      expect(mockAlert).not.toHaveBeenCalled();
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
