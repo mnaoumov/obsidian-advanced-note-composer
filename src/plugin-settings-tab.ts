@@ -152,7 +152,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         heading: 'Merge/split/extract strategies',
         items: [
           this.settingEx({
-            desc: 'Default setting for whether to fix footnotes. Can be changed in the merge/split modal dialog.',
+            desc: createFragment((f) => {
+              f.appendText('Default setting for whether to fix footnotes. Can be changed in the merge/split modal dialog.');
+              f.createEl('br');
+              f.appendText('Also applies to every smart cut & paste move, which has no dialog of its own to change it in.');
+            }),
             name: 'Should fix footnotes',
             render: (setting) => {
               setting.addToggle((toggle) => {
@@ -174,6 +178,12 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText('Whether to run ');
               f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
               f.appendText(' on the destination file after merging/splitting, so Templater commands in the merge and split templates run.');
+              f.createEl('br');
+              f.appendText('Also applies to the notes ');
+              appendCodeBlock(f, 'Create folder with notes...');
+              f.appendText(' and ');
+              appendCodeBlock(f, 'Create empty note in folder...');
+              f.appendText(' create, and to every note a recursive split or a folder merge produces.');
               f.createEl('br');
               f.appendText('The name transform and the folder-note and reordered-note property templates do not need it: a Templater command in one of those always runs.');
             }),

@@ -80,7 +80,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldIncludeFrontmatterWhenSplittingByDefault`
   - carry the source's properties into the new note.
 - `shouldFixFootnotesByDefault`
-  - renumber and move footnotes that travel with the extracted text.
+  - renumber and move footnotes that travel with the extracted text. On `Merge/split/extract strategies`, because merging and every smart cut & paste move read it too.
 - `shouldKeepHeadingsWhenSplittingContent`
   - keep each heading line in the note it produced, rather than dropping it.
 - `textAfterExtractionMode`
@@ -235,7 +235,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `shouldOpenNoteAfterCreatingFolder`
   - open the first declared note once the folder is created.
 - `shouldRunTemplaterOnDestinationFile`
-  - hand each created note to Templater, with the plugin's own tokens already substituted.
+  - hand each created note to Templater, with the plugin's own tokens already substituted. On `Merge/split/extract strategies`, because merges, splits and `Create empty note in folder...` read it too.
 
 ## Reorder
 
