@@ -66,6 +66,7 @@ That is enough for the three things people usually want:
 The section above hides commands. This one is the same idea applied to the **other** filter: what a command may *touch*.
 
 - **Keep a folder out of one command's dialogs.** Put the folder path in `Reorder -> Reorder exclude paths`. The reorder modal stops listing it, while merges, splits and renames go on using it exactly as before.
+- **Keep a folder out of the reorder, but keep reordering what is inside it.** Put `/^Inbox$/` (or `/(^|.*\/)Inbox$/` for an `Inbox` at any depth) in `Reorder -> Reorder exclude paths`. The regular expression matches the folder itself and nothing under it, so `Inbox` is never renumbered, while `Reorder sibling folders` on a folder inside it still reorders that row. A plain `Inbox` would exclude its whole subtree, and the reorder commands would then have nothing left to reorder there.
 - **Let one command work only in one place.** Put the folder path in `Merge -> Merge include paths`. The merge commands then touch nothing outside that folder, and no other command notices.
 
 The **Reorder include/exclude paths** group holds four boxes, and the two halves answer different questions — worth keeping straight:
