@@ -769,7 +769,9 @@ export class PluginSettings {
    * under it at all.
    *
    * Applies only while {@link defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is
-   * asking for the picker, and the pair has nothing to offer them that the picker does not.
+   * asking for the picker, and the pair has nothing to offer them that the picker does not. It is the
+   * EFFECTIVE mode that counts, though: a flow with nothing to merge (`Create empty note at cursor...`)
+   * opens in `Create` whatever {@link defaultSplitTargetMode} says, so the pair applies there too.
    *
    * **Merging is NOT off the table on this path, since issue #280.** It was, and that was the reporter's
    * complaint: the `Create` / `Merge` switch lives in the picker this replaces, so with the setting on a

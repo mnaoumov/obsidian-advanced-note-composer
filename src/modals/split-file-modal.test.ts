@@ -1008,6 +1008,39 @@ describe('prepareForSplitFile', () => {
       expect(mockOpenMinimizableModal.mock.calls.length).toBeGreaterThan(0);
     });
 
+    it('should still run under a merge default when the flow cannot merge', async () => {
+      // `Create empty note at cursor...` opens in `Create` whatever the default says (issue #244), so the
+      // gate must read that EFFECTIVE mode: reading the raw `Merge` default left the picker stuck in a
+      // `Create` it could not leave, with the setting on and doing nothing.
+      mockSelectFolder.mockResolvedValue(chosenFolder);
+      mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
+      const sourceFile = createMockFile('folder/source.md');
+      const editor = createMockEditor();
+      const resourceLockComponent = createMockResourceLockComponent();
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        defaultSplitTargetMode: SplitTargetMode.Merge,
+        shouldAskBeforeSplitting: false,
+        shouldChooseFolderBeforeNameWhenSplitting: true
+      });
+
+      const result = await prepareForSplitFile({
+        app,
+        canMergeIntoExistingNote: false,
+        editor,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        sourceFile
+      });
+
+      expect(result).not.toBeNull();
+      expect(mockOpenMinimizableModal.mock.calls).toHaveLength(0);
+      expect(mockSelectFolder).toHaveBeenCalledTimes(1);
+      expect(mockOpenSplitNoteNameModal).toHaveBeenCalledTimes(1);
+      expect(capturedSplitItemSelectorParams?.splitTargetMode).toBe(SplitTargetMode.Create);
+    });
+
     it('should stay out of the way of a heading-driven split', async () => {
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();

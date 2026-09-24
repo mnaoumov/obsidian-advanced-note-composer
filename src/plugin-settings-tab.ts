@@ -992,7 +992,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendCodeBlock(f, 'Create');
               f.appendText(': a default of ');
               appendCodeBlock(f, 'Merge');
-              f.appendText(' is asking for the picker.');
+              f.appendText(' is asking for the picker. ');
+              appendCodeBlock(f, 'Create empty note at cursor...');
+              f.appendText(' can only ever create, so it applies there whatever the default mode is.');
               f.createEl('br');
               f.appendText('The name box still offers ');
               appendCodeBlock(f, 'Change target folder');
