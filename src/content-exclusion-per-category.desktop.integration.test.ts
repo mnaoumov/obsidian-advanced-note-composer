@@ -169,3 +169,142 @@ describe('per-category content exclusion (issue #270)', () => {
     expect(result.restored).toEqual(['Alpha', 'Beta', 'Gamma']);
   });
 });
+
+describe('excluding a folder by itself alone (issue #279)', () => {
+  it('keeps the folders inside it reorderable, while a plain-path exclude still takes the command away', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * One reorder modal is opened and closed, so the closure declares exactly two ceilings: 5 000 ms in
+         * total, far under the transport's ~30 s per-closure cap.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
+        const ROOT = 'Excluded by itself alone';
+        const INBOX = `${ROOT}/Inbox`;
+        const INBOX_CHILD = `${INBOX}/Alpha`;
+        const REORDER_SIBLINGS = 'Reorder sibling folders...';
+
+        await removeFolder(ROOT);
+        await app.vault.createFolder(ROOT);
+        await app.vault.createFolder(INBOX);
+        await app.vault.createFolder(INBOX_CHILD);
+        await app.vault.createFolder(`${INBOX}/Beta`);
+
+        // The reporter's exact value: anchored with `$`, so it matches `Inbox` and nothing inside it.
+        await setPaths('Reorder exclude paths', String.raw`/(^|.*\/)Inbox$/`);
+        const noticeCountBefore = readNoticeTexts().length;
+        const regexRows = await readSiblingRows();
+        const regexNotices = readNoticeTexts().slice(noticeCountBefore);
+
+        // The control: a plain path covers the folder AND its subtree, so every sibling is excluded and the
+        // Command has nothing left to reorder there.
+        await setPaths('Reorder exclude paths', INBOX);
+        const isOfferedUnderPlainPath = buildMenuTitles().includes(REORDER_SIBLINGS);
+
+        await setPaths('Reorder exclude paths', '');
+        const isOfferedWithNothingConfigured = buildMenuTitles().includes(REORDER_SIBLINGS);
+
+        await removeFolder(ROOT);
+
+        return { isOfferedUnderPlainPath, isOfferedWithNothingConfigured, regexNotices, regexRows };
+
+        function buildMenu(): MenuLike {
+          const folder = app.vault.getFolderByPath(INBOX_CHILD);
+          if (!(folder instanceof obsidianModule.TFolder)) {
+            throw new TypeError(`No folder at ${INBOX_CHILD}.`);
+          }
+          const menu = new obsidianModule.Menu();
+          app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
+          return menu;
+        }
+
+        function buildMenuTitles(): string[] {
+          const menu = buildMenu();
+          const titles = menu.items.map((candidate) => candidate.dom?.textContent ?? '');
+          menu.hide();
+          return titles;
+        }
+
+        async function openSettingTab(): Promise<PluginSettingsTab> {
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const settingTab = app.setting.pluginTabs.find((tab) => tab.id === pluginId);
+          if (!settingTab) {
+            throw new Error('Settings tab was not found.');
+          }
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return settingTab as PluginSettingsTab;
+        }
+
+        function readNoticeTexts(): string[] {
+          // Notices render into `activeDocument`, not the `document` a closure sees by default.
+          return [...activeDocument.querySelectorAll<HTMLElement>('.notice')].map((noticeEl) => noticeEl.textContent);
+        }
+
+        async function readSiblingRows(): Promise<(string | undefined)[]> {
+          const menu = buildMenu();
+          const itemEl = menu.items.find((candidate) => candidate.dom?.textContent === REORDER_SIBLINGS)?.dom;
+          if (!itemEl) {
+            menu.hide();
+            throw new TypeError(`No menu item "${REORDER_SIBLINGS}".`);
+          }
+          itemEl.click();
+
+          await waitUntil({
+            message: 'reorder modal did not open',
+            predicate: () => document.querySelector('.advanced-note-composer-reorder-list') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const rowLabels = [...document.querySelectorAll<HTMLElement>('.advanced-note-composer-reorder-item')]
+            .map((rowEl) => rowEl.dataset['rowLabel']);
+
+          // Discarded rather than confirmed: renaming the fixture is not what this asks about.
+          await pressKey({ key: 'Escape' });
+          await waitUntil({
+            message: 'Escape did not close the reorder modal',
+            predicate: () => document.querySelector('.advanced-note-composer-reorder-list') === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+
+          return rowLabels;
+        }
+
+        async function removeFolder(path: string): Promise<void> {
+          const existing = app.vault.getFolderByPath(path);
+          if (existing) {
+            await app.fileManager.trashFile(existing);
+          }
+        }
+
+        async function setPaths(settingName: string, value: string): Promise<void> {
+          const settingTab = await openSettingTab();
+          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
+          const textAreaEl = settingItem?.querySelector('textarea');
+          if (!(textAreaEl instanceof HTMLTextAreaElement)) {
+            throw new TypeError(`"${settingName}" text area was not found.`);
+          }
+          textAreaEl.value = value;
+          textAreaEl.dispatchEvent(new Event('input'));
+          await sleep(EDIT_SAVE_DELAY_IN_MILLISECONDS);
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        }
+      },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // The reporter's ask: the siblings inside the excluded folder open in the modal, with no refusal notice.
+    expect(result.regexRows).toEqual(['Alpha', 'Beta']);
+    expect(result.regexNotices.filter((text) => text.includes('ignored in the plugin settings'))).toEqual([]);
+
+    // The plain path keeps excluding the subtree, and it is that exclusion which removes the entry: the
+    // Command is offered again once the list is empty.
+    expect(result.isOfferedUnderPlainPath).toBe(false);
+    expect(result.isOfferedWithNothingConfigured).toBe(true);
+  });
+});

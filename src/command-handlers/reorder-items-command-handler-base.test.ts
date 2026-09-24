@@ -33,7 +33,6 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 import type { ReorderItemsCommandHandlerParams } from './reorder-items-command-handler-base.ts';
 
-import { didConfirmReorderModal } from '../modals/reorder-modal.ts';
 import { ReorderChildFoldersCommandHandler } from './reorder-child-folders-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './reorder-sibling-folders-command-handler.ts';
 
@@ -77,8 +76,6 @@ vi.mock('../modals/reorder-modal.ts', () => ({
     return Promise.resolve(isConfirmed);
   })
 }));
-
-const mockDidConfirmReorderModal = vi.mocked(didConfirmReorderModal);
 
 let app: AppOriginal;
 let driveModal: ((params: DidConfirmReorderModalParams) => void) | null = null;
@@ -134,15 +131,30 @@ describe('ReorderChildFoldersCommandHandler', () => {
     expect(handler.canExecuteFolder(getFolder('parent'))).toBe(false);
   });
 
-  it('should refuse an ignored folder with a notice', async () => {
+  it('should be unavailable when every child is ignored, as a plain-path exclude of the folder makes them', () => {
     initApp({
       'parent/1. Alpha/note.md': 'a',
       'parent/2. Beta/note.md': 'b'
     });
-    const { handler, showNotice } = createChildHandler({ isPathIgnored: () => true });
+    const { handler } = createChildHandler({ isPathIgnored: (path: string) => path === 'parent' || path.startsWith('parent/') });
+    expect(handler.canExecuteFolder(getFolder('parent'))).toBe(false);
+  });
+
+  it('should reorder the contents of a folder excluded by itself alone (issue #279)', async () => {
+    initApp({
+      'parent/1. Alpha/note.md': 'a',
+      'parent/2. Beta/note.md': 'b'
+    });
+    // What `/(^|.*\/)parent$/` matches: the folder, and nothing inside it.
+    const { handler } = createChildHandler({ isPathIgnored: (path: string) => path === 'parent' });
+    driveModal = (params): void => {
+      moveRowDown(params, 'Alpha');
+    };
+
+    expect(handler.canExecuteFolder(getFolder('parent'))).toBe(true);
     await handler.executeFolder(getFolder('parent'));
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockDidConfirmReorderModal).not.toHaveBeenCalled();
+
+    expect(getChildFolderNames('parent')).toEqual(['1. Beta', '2. Alpha']);
   });
 
   it('should renumber every child folder when one is moved', async () => {
@@ -564,6 +576,20 @@ describe('ReorderSiblingFoldersCommandHandler', () => {
     expect(getChildFolderNames('parent')).toEqual(['1. Alpha', '2. Beta']);
     // Its own child is untouched: this command numbers the row the folder lives in.
     expect(getChildFolderNames('parent/1. Alpha')).toEqual(['inner']);
+  });
+
+  it('should reorder the siblings inside a folder excluded by itself alone (issue #279)', async () => {
+    initApp({
+      'Inbox/Alpha/note.md': 'a',
+      'Inbox/Beta/note.md': 'b'
+    });
+    // The reporter's `/(^|.*\/)Inbox$/`: `Inbox` itself, and none of the folders inside it.
+    const { handler } = createSiblingHandler({ isPathIgnored: (path: string) => path === 'Inbox' });
+
+    expect(handler.canExecuteFolder(getFolder('Inbox/Alpha'))).toBe(true);
+    await handler.executeFolder(getFolder('Inbox/Alpha'));
+
+    expect(getChildFolderNames('Inbox')).toEqual(['1. Alpha', '2. Beta']);
   });
 
   it('should offer the top-level folders when a root folder is clicked', async () => {

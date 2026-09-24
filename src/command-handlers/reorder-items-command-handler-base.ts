@@ -162,17 +162,12 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       return;
     }
 
-    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Reorder)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot reorder the contents of ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: parentFolder }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
+    // Deliberately NO `isPathIgnored(parentFolder.path)` refusal here (issue #279). A reorder renames the
+    // CHILDREN and never the folder holding them, and `collectItems` already filters every child through the
+    // Content filter. So a plain-path exclude (`Inbox`, which covers its whole subtree) still leaves nothing
+    // To reorder and the command is not offered at all, while `/^Inbox$/` — the documented way to exclude
+    // The folder itself but not its contents — keeps its children reorderable. The refusal that stood here
+    // Read that anchored regex as covering the contents too, AFTER the menu had already offered the command.
     const settings = this.pluginSettingsComponent.settings;
     const model = new ReorderItemsModel({
       fileItems: this.collectItems(parentFolder, ReorderItemKind.File),
