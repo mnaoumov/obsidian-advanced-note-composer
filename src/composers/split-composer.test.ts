@@ -42,6 +42,7 @@ import {
   checkIsCustomAttachmentLocationAvailable,
   collectAttachmentsWithCustomAttachmentLocation
 } from '../custom-attachment-location.ts';
+import { buildExtractedSubpathPredicate } from '../extracted-link-targets.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { buildOperationNoticeContent } from '../operation-notices.ts';
 import {
@@ -165,6 +166,16 @@ vi.mock('../operation-notices.ts', async (importOriginal) => {
 // the end-to-end move is pinned by `split-attachments.desktop.integration.test.ts`). The COLLECTION stays
 // real, so what these tests assert is the composer's own job: which attachments the extracted range owns
 // and which notes they move between (issue #239).
+// Kept REAL by default; the source-side link redirecting of issue #291 overrides it per test, because the
+// test-mocks `resolveSubpath` resolves nothing.
+vi.mock('../extracted-link-targets.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../extracted-link-targets.ts')>();
+  return {
+    ...original,
+    buildExtractedSubpathPredicate: vi.fn(original.buildExtractedSubpathPredicate)
+  };
+});
+
 vi.mock('../attachments.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../attachments.ts')>()),
   relocateAttachments: vi.fn().mockResolvedValue(undefined)
@@ -1886,6 +1897,7 @@ describe('SplitComposer updateEditorSelections', () => {
     const setSelectionsMock = vi.fn();
     const editor = strictProxy<Editor>({
       getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      getValue: vi.fn().mockReturnValue(''),
       listSelections: vi
         .fn()
         .mockReturnValue([
@@ -1952,6 +1964,7 @@ describe('SplitComposer updateEditorSelections', () => {
     const setSelectionsMock = vi.fn();
     const editor = strictProxy<Editor>({
       getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      getValue: vi.fn().mockReturnValue(''),
       listSelections: vi
         .fn()
         .mockReturnValue([
@@ -2150,3 +2163,55 @@ function getTargetLinkClickAction(): (() => Promise<void>) | undefined {
   const completionCall = calls.find(([callParams]) => !(callParams.isLoading ?? false));
   return ensureNonNullable(completionCall)[0].onTargetLinkClick;
 }
+
+describe('SplitComposer source links to extracted headings (issue #291)', () => {
+  afterEach(async () => {
+    const actual = await vi.importActual<typeof import('../extracted-link-targets.ts')>('../extracted-link-targets.ts');
+    vi.mocked(buildExtractedSubpathPredicate).mockImplementation(actual.buildExtractedSubpathPredicate);
+  });
+
+  it('should point a link left in the source at the target when its heading was extracted, and leave the rest', async () => {
+    app.vault.setConfig('newLinkFormat', 'absolute');
+    app.vault.setConfig('useMarkdownLinks', false);
+    vi.mocked(buildExtractedSubpathPredicate).mockReturnValue((subpath) => subpath === '#B');
+    // The suite stubs the parser out; this test needs it, to find the links in the editor's content.
+    delete castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'];
+    const transaction = vi.fn();
+    // The selection overlaps the first body link: that one is the content being moved, and is left for the
+    // target's own rewrite. After it: an extracted heading, a heading that stayed, and a link to another note.
+    // The links name the note explicitly because the test-mocks resolver does not resolve a bare `[[#B]]` to
+    // the note it sits in, as Obsidian does (the integration suite covers that form).
+    // A property link leads the note: it has no position in the body, so it is not the editor's to rewrite.
+    const frontmatter = '---\nup: "[[source#B]]"\n---\n';
+    const content = `${frontmatter}[[source#B]] x See [[source#B]] [[source#C]] [[target]]`;
+    const editor = strictProxy<Editor>({
+      getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      getValue: vi.fn().mockReturnValue(content),
+      listSelections: vi.fn().mockReturnValue([{ anchor: { ch: frontmatter.length + 11, line: 0 }, head: { ch: frontmatter.length, line: 0 } }]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: MockPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      scrollIntoView: vi.fn(),
+      setCursor: vi.fn(),
+      setSelection: vi.fn(),
+      setSelections: vi.fn(),
+      transaction
+    });
+
+    await createComposer({ editor }).splitFile();
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith({
+      changes: [{ from: { ch: frontmatter.length + 19, line: 0 }, text: '[[target#B]]', to: { ch: frontmatter.length + 31, line: 0 } }]
+    });
+  });
+
+  it('should leave the editor untouched when no link points at an extracted heading', async () => {
+    vi.mocked(buildExtractedSubpathPredicate).mockReturnValue(() => false);
+    const editor = createEditorDouble();
+
+    await createComposer({ editor }).splitFile();
+
+    expect(vi.mocked(editor.replaceSelection)).toHaveBeenCalled();
+  });
+});
