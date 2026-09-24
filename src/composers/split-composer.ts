@@ -9,6 +9,7 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 
 import { isReferenceCache } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { MarkdownView } from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   editLinksInContent,
@@ -35,10 +36,7 @@ import {
   relocateAttachments
 } from '../attachments.ts';
 import { resolveTemplateTail } from '../create-note-template.ts';
-import {
-  checkIsCustomAttachmentLocationAvailable,
-  collectAttachmentsWithCustomAttachmentLocation
-} from '../custom-attachment-location.ts';
+import { collectAttachmentsWithCustomAttachmentLocation } from '../custom-attachment-location.ts';
 import { extractFrontmatterSelection } from '../frontmatter-selection.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { createMoveToken } from '../move-token.ts';
@@ -574,17 +572,20 @@ export class SplitComposer extends ComposerBase {
       return;
     }
 
-    if (!checkIsCustomAttachmentLocationAvailable(this.app)) {
+    const collectPromise = collectAttachmentsWithCustomAttachmentLocation({
+      abstractFiles: [this.targetFile],
+      app: this.app
+    });
+    if (collectPromise === null) {
       this.consoleDebugComponent.consoleDebug(
         'Skipped collecting attachments after the split: the Custom Attachment Location plugin is not available.'
       );
       return;
     }
 
-    collectAttachmentsWithCustomAttachmentLocation({
-      abstractFiles: [this.targetFile],
-      app: this.app
-    });
+    // Not awaited: the split has already landed, and the collect may stop to ask the user about a shared
+    // attachment, which must not hold the split's own completion notice back.
+    invokeAsyncSafely(() => collectPromise);
   }
 
   private async insertTokenIntoTargetFile(vaultTransaction: VaultTransaction): Promise<boolean> {
