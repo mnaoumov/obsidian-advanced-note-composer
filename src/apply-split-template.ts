@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import type { DestinationTemplaterRunner } from './destination-templater.ts';
 import type { Frontmatter } from './frontmatter-merge.ts';
 
 import {
@@ -44,6 +45,13 @@ export interface ApplySplitTemplateToNotesParams {
   readonly resourceLockComponent: ResourceLockComponent;
 
   /**
+   * What runs Templater over each templated note, or `null` when it is not to be run — resolved once by the
+   * caller through `resolveDestinationTemplaterRunner` from `Should run templater on destination file`
+   * (issue #284).
+   */
+  readonly runTemplater: DestinationTemplaterRunner | null;
+
+  /**
    * The template to apply, already resolved from the settings (see `resolveSplitTemplateForNewTargetFile`).
    */
   readonly template: string;
@@ -81,6 +89,9 @@ interface ApplySplitTemplateToNoteParams {
  * child with two copies (issue #172). Deferring the template until the note's children are gone is what
  * makes "every produced note is templated exactly once" true.
  *
+ * Each note is then run through Templater when the caller asks for it, since this is the only place those
+ * notes ever hold the template's own `<% %>` commands (issue #284).
+ *
  * @param params - The notes to template and the template to apply.
  * @returns A {@link Promise} that resolves when every note has been templated.
  */
@@ -90,10 +101,12 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
     folderNameTemplate,
     notes,
     resourceLockComponent,
+    runTemplater,
     template
   } = params;
 
-  // Nothing to add, so leave every note exactly as the split wrote it.
+  // Nothing to add, so leave every note exactly as the split wrote it. Templater has nothing new to run
+  // Either: the recursive split's own composers already ran it over each note's content.
   if (template === CONTENT_ONLY_TEMPLATE) {
     return;
   }
@@ -106,6 +119,11 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
       resourceLockComponent,
       template
     });
+
+    // AFTER the note's transaction has committed and released its lock (issue #284): Templater writes the
+    // Note itself, and it is the template just written that holds the commands to run. An ordinary split runs
+    // It at the same point relative to the template — once the destination holds it.
+    await runTemplater?.(note.file);
   }
 }
 

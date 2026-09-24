@@ -23,6 +23,7 @@ import {
   createNoteFromTypedName,
   resolveTypedNoteName
 } from '../create-note.ts';
+import { resolveDestinationTemplaterRunner } from '../destination-templater.ts';
 import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import {
@@ -252,6 +253,12 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
         sourceFile: null
       }],
       resourceLockComponent: this.resourceLockComponent,
+      runTemplater: resolveDestinationTemplaterRunner({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        shouldRunTemplater: this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile,
+        shouldWarnIfMissing: true
+      }),
       template
     });
 

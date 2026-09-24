@@ -32,6 +32,10 @@ import type {
   RenumberedItem,
   ReorderItemInput
 } from '../reorder-items.ts';
+import type {
+  CreateFolderTemplateTokens,
+  ReorderedFileTemplateTokens
+} from '../template-tokens.ts';
 
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
@@ -61,6 +65,10 @@ import {
   resolveCreateFolderTemplateTokens,
   resolveReorderedFileTemplateTokens
 } from '../template-tokens.ts';
+import {
+  renderSingleLineValueWithTemplater,
+  TemplateRenderError
+} from '../templater-string.ts';
 
 /**
  * Parameters for {@link ReorderItemsCommandHandlerBase} — what a concrete reorder command passes, plus the
@@ -443,6 +451,12 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
         // The operation was cancelled (user or external change); the transaction has rolled back.
         return false;
       }
+      if (error instanceof TemplateRenderError) {
+        // A misconfigured title template (issue #284): the transaction has rolled the reorder back, and the
+        // Message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
+        this.pluginNoticeComponent.showNotice(error.message);
+        return false;
+      }
       throw error;
     } finally {
       progressNotice?.[Symbol.dispose]();
@@ -489,51 +503,56 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
   }
 
   /**
-   * Renders the `title` an item's note should carry, through its kind's own template and vocabulary.
+   * Renders the `title` an item's note should carry, through its kind's own template and vocabulary — the
+   * plugin's own `{{tokens}}` first, then Templater when a `<%` survives them (issue #284), with the note being
+   * titled as `tp.file`.
    *
    * @param plannedItem - The renumbered item.
-   * @returns The title, or an empty string when this kind's template is empty — the opt-out that leaves the
-   * property alone.
+   * @param template - Its kind's title template, known to be non-empty.
+   * @param noteFile - The note the title is written into.
+   * @returns The title; empty when the template rendered to nothing, which leaves the property alone.
    */
-  private resolveTitle(plannedItem: PlannedReorderItem): string {
+  private async resolveTitle(plannedItem: PlannedReorderItem, template: string, noteFile: TFile): Promise<string> {
     const { item, kind } = plannedItem;
-    const settings = this.pluginSettingsComponent.settings;
-    const template = kind === ReorderItemKind.File ? settings.reorderedFileTitleTemplate : settings.folderNoteTitleTemplate;
-    if (!template) {
-      return '';
-    }
-
     const parentFolderPath = item.newPath.slice(0, Math.max(0, item.newPath.lastIndexOf('/')));
     const parentFolder = basename(parentFolderPath);
 
     if (kind === ReorderItemKind.File) {
       const extensionIndex = item.newName.lastIndexOf('.');
-      return resolveReorderedFileTemplateTokens({
-        template,
-        tokens: {
-          extension: item.newName.slice(extensionIndex),
-          index: item.index,
-          name: item.newName.slice(0, extensionIndex),
-          parentFolder,
-          parentFolderPath,
-          path: item.newPath,
-          safeName: item.baseName
-        }
-      }).trim();
-    }
-
-    return resolveCreateFolderTemplateTokens({
-      template,
-      tokens: {
-        folderName: item.newName,
-        folderPath: item.newPath,
+      const tokens: ReorderedFileTemplateTokens = {
+        extension: item.newName.slice(extensionIndex),
         index: item.index,
+        name: item.newName.slice(0, extensionIndex),
         parentFolder,
         parentFolderPath,
-        rawFolderName: '',
-        safeFolderName: item.baseName
-      }
-    }).trim();
+        path: item.newPath,
+        safeName: item.baseName
+      };
+      return await renderSingleLineValueWithTemplater({
+        app: this.app,
+        contextFile: noteFile,
+        resolvedTemplate: resolveReorderedFileTemplateTokens({ template, tokens }),
+        settingName: 'Reordered file title template',
+        tokens
+      });
+    }
+
+    const tokens: CreateFolderTemplateTokens = {
+      folderName: item.newName,
+      folderPath: item.newPath,
+      index: item.index,
+      parentFolder,
+      parentFolderPath,
+      rawFolderName: '',
+      safeFolderName: item.baseName
+    };
+    return await renderSingleLineValueWithTemplater({
+      app: this.app,
+      contextFile: noteFile,
+      resolvedTemplate: resolveCreateFolderTemplateTokens({ template, tokens }),
+      settingName: 'Folder note title template',
+      tokens
+    });
   }
 
   /**
@@ -550,14 +569,21 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
    * @param vaultTransaction - The transaction owning the operation.
    */
   private async writeTitles(plan: readonly PlannedReorderItem[], vaultTransaction: VaultTransaction): Promise<void> {
+    const settings = this.pluginSettingsComponent.settings;
     for (const plannedItem of plan) {
-      const title = this.resolveTitle(plannedItem);
-      if (!title) {
+      // An empty template is the kind's opt-out, checked before anything is resolved.
+      const template = plannedItem.kind === ReorderItemKind.File ? settings.reorderedFileTitleTemplate : settings.folderNoteTitleTemplate;
+      if (!template) {
         continue;
       }
 
       const noteFile = this.resolveNoteToTitle(plannedItem);
       if (!noteFile) {
+        continue;
+      }
+
+      const title = await this.resolveTitle(plannedItem, template, noteFile);
+      if (!title) {
         continue;
       }
 

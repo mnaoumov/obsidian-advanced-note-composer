@@ -32,6 +32,7 @@ import {
   resolveSplitTemplateForNewTargetFile,
   SplitComposer
 } from '../composers/split-composer.ts';
+import { resolveDestinationTemplaterRunner } from '../destination-templater.ts';
 import {
   findNextHeadingToSplit,
   MAX_HEADING_LEVEL
@@ -274,6 +275,13 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
       notes: createdNotes,
       resourceLockComponent: this.resourceLockComponent,
+      runTemplater: resolveDestinationTemplaterRunner({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        shouldRunTemplater: this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile,
+        // Every pass's composer has already reported a missing Templater for this run.
+        shouldWarnIfMissing: false
+      }),
       template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
     });
 

@@ -17,6 +17,8 @@ import {
   vi
 } from 'vitest';
 
+import type { DestinationTemplaterRunner } from './destination-templater.ts';
+
 import {
   applySplitTemplateToNotes,
   CONTENT_ONLY_TEMPLATE
@@ -55,12 +57,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function apply(template: string, notePath = NOTE_PATH): Promise<void> {
+async function apply(template: string, notePath = NOTE_PATH, runTemplater: DestinationTemplaterRunner | null = null): Promise<void> {
   await applySplitTemplateToNotes({
     app,
     folderNameTemplate: FOLDER_NAME_TEMPLATE,
     notes: [{ file: getFile(notePath), sourceFile: getFile(PARENT_PATH) }],
     resourceLockComponent,
+    runTemplater,
     template
   });
 }
@@ -99,6 +102,7 @@ describe('applySplitTemplateToNotes', () => {
         { file: getFile(PARENT_PATH), sourceFile: getFile(NOTE_PATH) }
       ],
       resourceLockComponent,
+      runTemplater: null,
       template: '{{content}}\n\nfrom {{fromTitle}}'
     });
 
@@ -149,6 +153,30 @@ describe('applySplitTemplateToNotes', () => {
     await apply('---\ntitle: Template Title\n---\n{{content}}');
 
     expect(await read()).not.toContain('Template Title');
+  });
+
+  // Issue #284: the template's own Templater commands are only ever in the note from here on, so this is
+  // The one place they can be run — after the template is written, never before.
+  it('should run Templater over each templated note once the template is in it', async () => {
+    const contentsSeenByTemplater: string[] = [];
+    const runTemplater = vi.fn(async (file: TFile) => {
+      contentsSeenByTemplater.push(await app.vault.read(file));
+    });
+
+    await apply('{{content}}\n\n<% tp.date.now() %>', NOTE_PATH, runTemplater);
+
+    expect(runTemplater).toHaveBeenCalledTimes(1);
+    expect(contentsSeenByTemplater).toEqual(['## Child\n\nchild body\n\n<% tp.date.now() %>']);
+  });
+
+  it('should not run Templater for the identity template, whose composers already ran it', async () => {
+    const runTemplater = vi.fn(async () => {
+      // Never called.
+    });
+
+    await apply(CONTENT_ONLY_TEMPLATE, NOTE_PATH, runTemplater);
+
+    expect(runTemplater).not.toHaveBeenCalled();
   });
 
   it('should keep a leading separator out of the frontmatter position', async () => {

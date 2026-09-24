@@ -38,6 +38,10 @@ There are three base template settings: **Merge template**, **Split template**, 
 
 **Split template** also fills the notes the two create commands make — see [37 Create empty note](<../02 Extract/37 Create empty note.md>). Nothing was extracted there, so `{{content}}` interpolates to nothing and instead marks **where the cursor goes** in the created note. Two differences from the chain above: an empty **Split template** does *not* fall back to **Merge template** (the note is simply left empty), and for `Create empty note in folder...` the `{{fromTitle}}` / `{{fromPath}}` / `{{fromParentFolder}}` tokens come out empty, because that note was not split out of any note.
 
+### Templater commands
+
+With [Templater](https://silentvoid13.github.io/Templater/) installed and **Should run templater on destination file** on, a template may also hold Templater commands such as `<% tp.date.now("YYYY-MM-DD") %>`. They run once the note holds the template, in every split — including `Split note by headings recursively...`, `Split heading recursively...` and `Create empty note in folder...`, which fill the template in after the notes exist.
+
 Smart cut and paste can also be templated **per direction** - see [25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>).
 
 ## Try it
