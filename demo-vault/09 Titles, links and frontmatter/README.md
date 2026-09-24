@@ -1,6 +1,6 @@
 # Titles, links and frontmatter
 
-The parts every merge, split and extract have in common. A note that moves takes its links, its title and its properties with it, and each of those needs a decision: rewrite the link, clean up the title, reconcile the properties, wrap the result in a template. These five notes cover those decisions once, for all the commands.
+The parts every merge, split and extract have in common. A note that moves takes its links, its title and its properties with it, and each of those needs a decision: rewrite the link, clean up the title, reconcile the properties, wrap the result in a template. These six notes cover those decisions once, for all the commands.
 
 | Note | What it covers |
 | --- | --- |
@@ -9,3 +9,4 @@ The parts every merge, split and extract have in common. A note that moves takes
 | [29 Treat title as path](<./29 Treat title as path.md>) | A title containing `/` becoming a real folder path |
 | [30 Frontmatter merge strategy](<./30 Frontmatter merge strategy.md>) | The five ways two notes' properties can be reconciled |
 | [31 Templates](<./31 Templates.md>) | Wrapping merged and split content, and every token available |
+| [42 Heading links](<./42 Heading links.md>) | Links between a note's own headings, kept pointing at the right note when it is split |

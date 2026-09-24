@@ -23,9 +23,12 @@ import {
 } from 'obsidian-dev-utils/object-utils';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import {
+  convertLink,
   editLinks,
-  updateLink,
-  updateLinksInContent
+  editLinksInContent,
+  extractLinkFile,
+  splitSubpath,
+  updateLink
 } from 'obsidian-dev-utils/obsidian/link';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import {
@@ -43,6 +46,7 @@ import type {
 import type { BuildOperationNoticeContentParams } from '../operation-notices.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { buildExtractedSubpathPredicate } from '../extracted-link-targets.ts';
 import { demoteHeadings } from '../folder-headings.ts';
 import {
   extractFrontmatter,
@@ -316,6 +320,21 @@ export abstract class ComposerBase {
   }
 
   /**
+   * Builds the predicate answering whether a link to a subpath of the source note follows the content this
+   * operation moves (issue #291). Read off the source note's cache as it stands BEFORE the operation, which
+   * is what the captured selections describe.
+   *
+   * @returns The predicate.
+   */
+  protected async buildExtractedSubpathPredicate(): Promise<(subpath: string) => boolean> {
+    return buildExtractedSubpathPredicate({
+      cache: this.app.metadataCache.getFileCache(this.sourceFile),
+      isWholeNoteMoved: this.prepareBacklinkSubpaths().has(''),
+      ranges: await this.getSelections()
+    });
+  }
+
+  /**
    * Builds the progress notice content describing the operation from the source note to the target
    * note, with clickable links to both and a loading indicator. Passed to
    * {@link PluginNoticeComponent.showNoticeAfterDelay}, which keeps the links clickable without
@@ -395,6 +414,12 @@ export abstract class ComposerBase {
       // cache can still report such a note as a backlink source after it is gone. Editing links in a file
       // that no longer exists throws and aborts (and rolls back) the whole merge, so skip vanished sources.
       if (!this.app.vault.getFileByPath(backlinkPath)) {
+        continue;
+      }
+
+      // The source note's links to itself are not backlinks to fix on disk: its content is being rewritten
+      // through the editor in the same operation, which would overwrite a write made here (issue #291).
+      if (backlinkPath === this.sourceFile.path) {
         continue;
       }
 
@@ -665,12 +690,48 @@ export abstract class ComposerBase {
     return targetContentToInsert;
   }
 
+  /**
+   * Rewrites the links in the content being moved so they keep resolving from the target note.
+   *
+   * A link to a heading or block of the source note that is moved ALONG WITH it travels with it (issue
+   * #291): a same-note `[[#X]]` is left exactly as written, since `X` lands in the same note it does, and a
+   * link naming the source note is pointed at the target. Resolving it against the source instead — what
+   * every other link gets — would aim it at the note `X` is leaving, which is how a recursive split used to
+   * leave every heading-to-heading link of a note dangling.
+   *
+   * @param targetContentToInsert - The content being moved.
+   * @returns The content with its links rewritten.
+   */
   private async fixLinks(targetContentToInsert: string): Promise<string> {
-    return await updateLinksInContent({
+    const isExtractedSubpath = await this.buildExtractedSubpathPredicate();
+    return await editLinksInContent({
       app: this.app,
       content: targetContentToInsert,
-      newSourcePathOrFile: this.targetFile,
-      oldSourcePathOrFile: this.sourceFile
+      linkConverter: (link) => {
+        const { linkPath, subpath } = splitSubpath(link.link);
+        const linkedFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.sourceFile });
+        if (linkedFile === this.sourceFile && isExtractedSubpath(subpath)) {
+          if (linkPath === '') {
+            return;
+          }
+
+          return updateLink({
+            app: this.app,
+            link,
+            newSourcePathOrFile: this.targetFile,
+            newTargetPathOrFile: this.targetFile,
+            oldSourcePathOrFile: this.sourceFile,
+            oldTargetPathOrFile: this.sourceFile
+          });
+        }
+
+        return convertLink({
+          app: this.app,
+          link,
+          newSourcePathOrFile: this.targetFile,
+          oldSourcePathOrFile: this.sourceFile
+        });
+      }
     });
   }
 
@@ -831,26 +892,7 @@ export abstract class ComposerBase {
 
   /* v8 ignore start -- prepareBacklinksToFix contains defensive ?? on Map.get() and cache properties. */
   private async prepareBacklinksToFix(): Promise<Map<string, string[]>> {
-    const selections = await this.getSelections();
-    const cache = this.app.metadataCache.getFileCache(this.sourceFile) ?? {};
-    const subpaths = this.prepareBacklinkSubpaths();
-
-    for (const heading of cache.headings ?? []) {
-      if (!this.isSelected(heading.position, selections)) {
-        continue;
-      }
-
-      subpaths.add(`#${heading.heading}`);
-    }
-
-    for (const block of Object.values(cache.blocks ?? {})) {
-      if (!this.isSelected(block.position, selections)) {
-        continue;
-      }
-
-      subpaths.add(`#^${block.id}`);
-    }
-
+    const isExtractedSubpath = await this.buildExtractedSubpathPredicate();
     const backlinks = await getBacklinksForFileSafe({ app: this.app, pathOrFile: this.sourceFile });
     const backlinksToFix = new Map<string, string[]>();
 
@@ -858,7 +900,7 @@ export abstract class ComposerBase {
       const links = backlinks.get(backlinkPath) ?? [];
       for (const link of links) {
         const { subpath } = parseLinktext(link.link);
-        if (!subpaths.has(subpath)) {
+        if (!isExtractedSubpath(subpath)) {
           continue;
         }
 

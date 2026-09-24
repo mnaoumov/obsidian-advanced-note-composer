@@ -1,13 +1,21 @@
 import type {
   Editor,
+  EditorChange,
   EditorSelection,
   Pos
 } from 'obsidian';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
+import { isReferenceCache } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { MarkdownView } from 'obsidian';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
+import {
+  editLinksInContent,
+  extractLinkFile,
+  splitSubpath,
+  updateLink
+} from 'obsidian-dev-utils/obsidian/link';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
@@ -311,6 +319,7 @@ export class SplitComposer extends ComposerBase {
             // A templated empty create (#244) lands here too, with `selectedText` empty: the write is the
             // template itself, and `{{content}}` interpolates to nothing.
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
+            await this.redirectSourceLinksToExtractedContent();
             this.replaceSourceSelection();
           }
 
@@ -657,6 +666,65 @@ export class SplitComposer extends ComposerBase {
         template: this.getTemplate()
       })
     });
+  }
+
+  /**
+   * Points the links LEFT in the source note at the note that now holds what they link to (issue #291).
+   *
+   * A same-note `[[#X]]` whose heading (or block) was just extracted would otherwise dangle: `X` is no
+   * longer in this note. It is rewritten through the source EDITOR, for the same reason the extraction
+   * itself is — the note's content belongs to the editor buffer for the whole operation, so a write to the
+   * file on disk would be overwritten by it. The changes are applied as one editor transaction, which maps
+   * the live selections through them, so the `replaceSelection` that follows still removes exactly the
+   * extracted text. A link inside a selection is left alone: it is the content being moved, and
+   * {@link ComposerBase} has already rewritten its copy in the target.
+   */
+  private async redirectSourceLinksToExtractedContent(): Promise<void> {
+    const isExtractedSubpath = await this.buildExtractedSubpathPredicate();
+    const selectionRanges = this.editor.listSelections().map((selection) => {
+      const anchorOffset = this.editor.posToOffset(selection.anchor);
+      const headOffset = this.editor.posToOffset(selection.head);
+      return { endOffset: Math.max(anchorOffset, headOffset), startOffset: Math.min(anchorOffset, headOffset) };
+    });
+    const changes: EditorChange[] = [];
+
+    await editLinksInContent({
+      app: this.app,
+      content: this.editor.getValue(),
+      linkConverter: (link) => {
+        // A frontmatter link carries no position in the body, so there is nothing for the editor to replace.
+        if (!isReferenceCache(link)) {
+          return;
+        }
+
+        const startOffset = link.position.start.offset;
+        const endOffset = link.position.end.offset;
+        if (selectionRanges.some((range) => range.startOffset < endOffset && startOffset < range.endOffset)) {
+          return;
+        }
+
+        const linkedFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.sourceFile });
+        if (linkedFile !== this.sourceFile || !isExtractedSubpath(splitSubpath(link.link).subpath)) {
+          return;
+        }
+
+        changes.push({
+          from: this.editor.offsetToPos(startOffset),
+          text: updateLink({
+            app: this.app,
+            link,
+            newSourcePathOrFile: this.sourceFile,
+            newTargetPathOrFile: this.targetFile,
+            oldTargetPathOrFile: this.sourceFile
+          }),
+          to: this.editor.offsetToPos(endOffset)
+        });
+      }
+    });
+
+    if (changes.length > 0) {
+      this.editor.transaction({ changes });
+    }
   }
 
   /**
