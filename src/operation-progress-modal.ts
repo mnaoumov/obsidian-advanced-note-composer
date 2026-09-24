@@ -78,7 +78,7 @@ class OperationProgressModal extends Modal {
   public constructor(app: App, private readonly abortController: AbortController) {
     super(app);
     // Built here rather than in `onOpen` so it is never absent: a body that might not exist yet would
-    // Need a guard on every write, and that guard would be unreachable in practice.
+    // need a guard on every write, and that guard would be unreachable in practice.
     this.bodyEl = this.contentEl.createDiv();
   }
 
@@ -101,7 +101,7 @@ class OperationProgressModal extends Modal {
 
   public override onOpen(): void {
     // Obsidian's own close affordance would be a lie while the operation runs, so it goes away rather
-    // Than sitting there refusing to work.
+    // than sitting there refusing to work.
     this.modalEl.querySelector('.modal-close-button')?.remove();
     this.titleEl.setText('Working...');
     this.contentEl.createDiv({ cls: 'advanced-note-composer-operation-progress-bar' }, (bar) => {
@@ -109,7 +109,7 @@ class OperationProgressModal extends Modal {
     });
 
     // Blocking the vault without offering a way out would be a trap. The notice carries a Cancel
-    // Button for the same reason, and this is the dialog's version of it.
+    // button for the same reason, and this is the dialog's version of it.
     new ButtonComponent(this.contentEl.createDiv({ cls: 'advanced-note-composer-operation-progress-buttons' }))
       .setButtonText('Cancel')
       .onClick(() => {
@@ -176,8 +176,8 @@ export function showOperationProgressModal(params: ShowOperationProgressModalPar
           ]);
         } catch (error) {
           // Reported rather than rethrown: whatever failed in the queue has its own error path, and
-          // Turning it into an unhandled async error here would add noise without giving the vault back
-          // Any sooner. Giving the vault back is this dialog's only remaining job.
+          // turning it into an unhandled async error here would add noise without giving the vault back
+          // any sooner. Giving the vault back is this dialog's only remaining job.
           console.warn('Failed to wait for queued work to drain before closing the progress dialog.', error);
         } finally {
           modal.closeWhenDone();

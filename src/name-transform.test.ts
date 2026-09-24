@@ -102,7 +102,7 @@ describe('applyNameTransform', () => {
 
   it('should fall back to the most recently opened note when nothing is open (issue #218)', async () => {
     // A folder command has no note of its own to offer, so before #218 a configured template refused it
-    // Outright whenever the user had nothing focused.
+    // outright whenever the user had nothing focused.
     const app = createApp({ files: { 'newest.md': 'newest', 'recent.md': 'recent' } });
     const templater = installTemplater(app);
     templater.parseTemplate.mockResolvedValue('A - B');
@@ -144,7 +144,7 @@ describe('applyNameTransform', () => {
 
   it('should break a modification-time tie on the path, so the same vault always picks the same note', async () => {
     // `Create folder with notes...` writes its notes in the same millisecond by the handful. The vault is
-    // Seeded in REVERSE path order, so picking `a.md` can only be the tie-break and not the walk order.
+    // seeded in REVERSE path order, so picking `a.md` can only be the tie-break and not the walk order.
     // eslint-disable-next-line perfectionist/sort-objects -- The unsorted order IS the fixture: the mock vault walks its files in insertion order.
     const app = createApp({ files: { 'b.md': 'b', 'a.md': 'a' } });
     const templater = installTemplater(app);
@@ -197,7 +197,7 @@ describe('applyNameTransform', () => {
 
   it('should refuse a multi-line result, which is a name no file system can hold (issue #203)', async () => {
     // Issue #203's reporter wrote one Templater command per line; this is the same shape through the
-    // Plugin's own token pass, which is why the token path has to refuse it too.
+    // plugin's own token pass, which is why the token path has to refuse it too.
     const app = createApp();
     await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: '{{rawString}}\n{{rawString}}' }))
       .rejects.toThrow('Name transform template produced a multi-line name: \'A: B\' / \'A: B\'.');
@@ -207,7 +207,7 @@ describe('applyNameTransform', () => {
     const app = createApp();
     const templater = installTemplater(app);
     // The two lines the reporter's own template produced, blank line included — a blank line is neither a
-    // Name nor part of one, so it is left out of the message.
+    // name nor part of one, so it is left out of the message.
     templater.parseTemplate.mockResolvedValue('A - B\n\nA: B');
 
     await expect(applyNameTransform({ app, contextFile: getFile(app, 'note.md'), rawString: 'A: B', template: MAPPING_TEMPLATE }))
@@ -261,8 +261,8 @@ describe('transformAndFixFileName', () => {
 function createApp(overrides?: CreateAppOverrides): AppOriginal {
   const app = App.createConfigured__({ files: overrides?.files ?? { 'note.md': 'note' } }).asOriginalType__();
   // `getRecentFiles` is not part of the mock's surface, and the Templater-context fallback chain consults it
-  // Whenever no note is open (issue #218) — stubbed empty for every test, so only the tests that care about
-  // It say so. No plugin is registered here, which is the "Templater is missing" case.
+  // whenever no note is open (issue #218) — stubbed empty for every test, so only the tests that care about
+  // it say so. No plugin is registered here, which is the "Templater is missing" case.
   installRecentFiles(app, []);
   return app;
 }

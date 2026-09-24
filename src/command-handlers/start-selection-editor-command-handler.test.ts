@@ -72,7 +72,7 @@ describe('StartSelectionEditorCommandHandler', () => {
     const { handler } = createHandler();
     expect(handler.id).toBe('start-selection');
     // Prefixed like the two other stateful families (`Smart cut & paste:`, `Swap selections:`), which is
-    // What tells the palette these three commands belong to one multi-step flow.
+    // what tells the palette these three commands belong to one multi-step flow.
     expect(handler.name).toBe('Selection anchor: Start selection');
     expect(handler.icon).toBe('lucide-text-cursor');
   });

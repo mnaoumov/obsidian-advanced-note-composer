@@ -167,12 +167,12 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
 
 export async function selectTargetFolderForSwap(params: SelectTargetFolderForSwapParams): Promise<null | SwapFolderModalResult> {
   // The confirmation dialog can send the flow back to the folder picker ("Change target"); loop until the
-  // User confirms the swap or cancels.
+  // user confirms the swap or cancels.
   for (;;) {
     const result = await new Promise<null | SwapFolderModalResult>((promiseResolve) => {
       // The initial picker is opened plainly (no minimize button, issue #125): a target has not been
-      // Chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the swap was
-      // Triggered on.
+      // chosen yet, so minimizing serves no purpose and risks the user forgetting which folder the swap was
+      // triggered on.
       const modal = new SwapFolderModal({
         ...params,
         promiseResolve

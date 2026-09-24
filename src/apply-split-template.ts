@@ -106,7 +106,7 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
   } = params;
 
   // Nothing to add, so leave every note exactly as the split wrote it. Templater has nothing new to run
-  // Either: the recursive split's own composers already ran it over each note's content.
+  // either: the recursive split's own composers already ran it over each note's content.
   if (template === CONTENT_ONLY_TEMPLATE) {
     return;
   }
@@ -121,8 +121,8 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
     });
 
     // AFTER the note's transaction has committed and released its lock (issue #284): Templater writes the
-    // Note itself, and it is the template just written that holds the commands to run. An ordinary split runs
-    // It at the same point relative to the template — once the destination holds it.
+    // note itself, and it is the template just written that holds the commands to run. An ordinary split runs
+    // it at the same point relative to the template — once the destination holds it.
     await runTemplater?.(note.file);
   }
 }
@@ -153,7 +153,7 @@ async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams):
       const { content: body, frontmatter: originalFrontmatter } = extractFrontmatter(content);
       // The note's own frontmatter block is left in place, so a note that carries one (a
       // `frontmatterTitleMode` title, an included source frontmatter) keeps it untouched unless the
-      // Template has frontmatter of its own to merge in.
+      // template has frontmatter of its own to merge in.
       const originalFrontmatterBlock = content.slice(0, content.length - body.length);
 
       const templatedContent = resolveTemplateTokens({
@@ -166,7 +166,7 @@ async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams):
       const { content: newBody, frontmatter: templateFrontmatter } = extractFrontmatter(templatedContent);
 
       // Without a frontmatter block above it, a body starting with `---` would be read back as this note's
-      // Frontmatter — the same guard `insertIntoTargetFileImpl` applies.
+      // frontmatter — the same guard `insertIntoTargetFileImpl` applies.
       const shouldGuardLeadingSeparator = !originalFrontmatterBlock && newBody.startsWith('---\n');
       await vaultTransaction.process(
         note.file,
@@ -181,7 +181,7 @@ async function applySplitTemplateToNote(params: ApplySplitTemplateToNoteParams):
       await app.fileManager.processFrontMatter(note.file, (frontmatter: Frontmatter) => {
         mergeRecursively({ newObject: templateFrontmatter, oldObject: frontmatter });
         // A split's new-file title is governed by `frontmatterTitleMode`, not by what is merged in, so the
-        // Note's own title wins and a note that had none stays without one — mirroring the title rule in
+        // note's own title wins and a note that had none stays without one — mirroring the title rule in
         // `insertIntoTargetFile` for a split into a brand-new target file.
         if (originalTitle === undefined) {
           delete frontmatter.title;

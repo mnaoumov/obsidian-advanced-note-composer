@@ -31,7 +31,7 @@ describe('merge folder preserves a child note title (issue #114)', () => {
         const isOriginalShouldAsk = await didSetAskBeforeMerging(true);
         try {
           // Source folder holds a child note carrying a `title`; the target folder exists but has no
-          // Note of the same name, so the merge creates a brand-new target file (isNewTargetFile === true).
+          // note of the same name, so the merge creates a brand-new target file (isNewTargetFile === true).
           const sourceNote = await resetFile('mt-src/note.md', '---\ntitle: Child Title\n---\nchild body');
           await resetFile('mt-dst/other.md', 'other body');
           // Guarantee the target has no colliding note (a prior run's merge could have left one behind).

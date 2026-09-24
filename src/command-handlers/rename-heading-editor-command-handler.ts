@@ -156,7 +156,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
     } catch (error) {
       if (abortController.signal.aborted) {
         // The operation was cancelled (user or external change); the transaction has rolled back. The
-        // Progress notice's Cancel button is what makes this reachable at all.
+        // progress notice's Cancel button is what makes this reachable at all.
         return;
       }
       throw error;
@@ -165,7 +165,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
     }
 
     // One notice rather than two: the updated-link count is a detail OF the rename, not a separate
-    // Operation, and it is omitted entirely when nothing linked to the heading.
+    // operation, and it is omitted entirely when nothing linked to the heading.
     showOperationCompletionNotice({
       content: await buildOperationNoticeContent({
         app: this.app,

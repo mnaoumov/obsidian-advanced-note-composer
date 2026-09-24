@@ -86,7 +86,7 @@ describe('findNextHeadingToSplit', () => {
 
   it('should return null when every heading is above the minimum level', () => {
     // Recursing into an extracted note passes `minLevel` past that note's own title heading; when nothing
-    // Deeper is left, there is nothing more to split.
+    // deeper is left, there is nothing more to split.
     expect(findNextHeadingToSplit([createHeading(1, 'A', 0), createHeading(2, 'B', 10)], 3)).toBeNull();
   });
 

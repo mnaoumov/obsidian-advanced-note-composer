@@ -23,22 +23,22 @@ import {
 import { describeStall } from './merge-suite-stall.ts';
 
 // Desktop-only: this is a folder-merge (file-move) flow, matching the plugin's established integration
-// Convention.
+// convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-open-first-note.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 // The assertion is about WHICH note is opened, never about how fast, so a loaded machine must not be able to
-// Fail it. Each phase below is its own short eval and the waiting is done from Node, so this budget is the
-// One that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap it used to hide behind.
+// fail it. Each phase below is its own short eval and the waiting is done from Node, so this budget is the
+// one that actually applies - see `merge-suite-in-obsidian.ts` for the 30 s CDP cap it used to hide behind.
 const MERGE_TIMEOUT_IN_MILLISECONDS = 90_000;
 const PICKER_TIMEOUT_IN_MILLISECONDS = 30_000;
 // Above the sum of the budgets above, so a genuine stall reports the NAMED poll timeout rather than losing
-// The race to a bare vitest timeout.
+// the race to a bare vitest timeout.
 const TEST_TIMEOUT_IN_MILLISECONDS = 180_000;
 const RENDER_DELAY_IN_MILLISECONDS = 400;
 const SOURCE_FOLDER = 'first-note-src';
 const TARGET_FOLDER = 'first-note-tgt';
 // `5.` before `30.`: text order would put the appendix first, and neither of them is the note the merge
-// Itself moved — what is asked for is the first note IN the folder.
+// itself moved — what is asked for is the first note IN the folder.
 const EXPECTED_FIRST_NOTE_PATH = `${TARGET_FOLDER}/5. Middle.md`;
 const NO_FILE = '<no file>';
 
@@ -138,7 +138,7 @@ describe('folder merge opens the first note of the destination folder (issue #21
         vaultPath
       });
       // A refused command (a `canExecute` guard turning false) is a SILENT no-op, so without this the waits
-      // Below would blame a slow merge for a merge that was never allowed to start.
+      // below would blame a slow merge for a merge that was never allowed to start.
       expect(wasCommandStarted).toBe(true);
 
       await pollInObsidian({
@@ -163,8 +163,8 @@ describe('folder merge opens the first note of the destination folder (issue #21
       });
 
       // `Should ask before merging` is off, so the merge runs directly. The source folder vanishing is the
-      // Post-commit signal; the open runs after it. Both waits are polled from NODE, each poll its own
-      // Sub-second eval, so neither can be cut short by the CDP cap.
+      // post-commit signal; the open runs after it. Both waits are polled from NODE, each poll its own
+      // sub-second eval, so neither can be cut short by the CDP cap.
       const mergeStatus = await pollInObsidian({
         input: { sourceFolder: SOURCE_FOLDER, targetFolder: TARGET_FOLDER },
         poll: ({ app, sourceFolder, targetFolder }) => ({
@@ -215,10 +215,10 @@ describe('folder merge opens the first note of the destination folder (issue #21
       // The merge actually happened...
       expect(mergeStatus.mergedNoteLanded).toBe(true);
       // ...and it ended in the destination folder's naturally-first note, which is one that was already there
-      // Rather than the note the merge moved.
+      // rather than the note the merge moved.
       expect(activePath).toBe(EXPECTED_FIRST_NOTE_PATH);
       // ...having been taken there exactly once. The recording holds EVERY activation, so a second, unwanted
-      // Open is not just a count but a named entry in the failure message.
+      // open is not just a count but a named entry in the failure message.
       expect(recording.filter((activation) => activation === EXPECTED_FIRST_NOTE_PATH)).toHaveLength(1);
     } finally {
       await evalInObsidian({

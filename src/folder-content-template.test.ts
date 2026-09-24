@@ -37,7 +37,7 @@ describe('parseFolderContentTemplate', () => {
 
     it('should keep tokens inside a name unresolved for the caller', () => {
       // The name may itself contain tokens; nothing nests, because the marker is a bare `{{file}}` and the
-      // Name is simply the rest of the line.
+      // name is simply the rest of the line.
       const sections = parseFolderContentTemplate('{{file}} {{safeFolderName}}.md\n# {{folderName}}');
       expect(sections).toEqual([{
         contentTemplate: '# {{folderName}}\n',
@@ -93,7 +93,7 @@ describe('parseFolderContentTemplate', () => {
   describe('content normalization', () => {
     it('should end every non-empty note with exactly one newline', () => {
       // Otherwise an inner note would lose the newline the next marker line consumed, while the last note
-      // Kept the template's own trailing one.
+      // kept the template's own trailing one.
       const sections = parseFolderContentTemplate('{{file}} a.md\nalpha\n\n\n{{file}} b.md\nbeta\n');
       expect(sections).toEqual([
         { contentTemplate: 'alpha\n', nameTemplate: 'a.md' },

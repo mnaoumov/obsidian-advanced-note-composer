@@ -7,7 +7,7 @@ import {
 } from 'vitest';
 
 // Desktop-only: it drives the plugin settings tab, matching this plugin's established convention for
-// Settings-tab suites (no Android emulator is wired for them).
+// settings-tab suites (no Android emulator is wired for them).
 // Version coverage: it uses only the stable settings-tab DOM (`.setting-item` / `.setting-item-name` /
 // `.setting-item-chevron`) and the public `app.setting` navigation, with no dependence on minified
 // Obsidian internals, so verifying on public-latest is sufficient.
@@ -34,10 +34,10 @@ interface NavigationResult {
 }
 
 // Issues #220-#226 turned the tab from sixteen stacked headers into a short list of pages, and issue #282
-// Turned every section INSIDE a page into a page of its own. This is the real-Obsidian half of
+// turned every section INSIDE a page into a page of its own. This is the real-Obsidian half of
 // `plugin-settings-tab.test.ts`: the unit test pins the DECLARED tree, and this one proves Obsidian actually
-// Renders it that way, that a page can be walked into, and that a page inside a page can be walked into and
-// Back out of again.
+// renders it that way, that a page can be walked into, and that a page inside a page can be walked into and
+// back out of again.
 describe('settings page navigation', () => {
   it('should open folded to the page entries and reveal a page contents when one is opened', async () => {
     const result = await evalInObsidian({
@@ -74,8 +74,8 @@ describe('settings page navigation', () => {
         const subPageDescription = describeEntry('All merges');
 
         // Issue #282: the page inside the page. Opening it must stack on top of `Merge`, and closing it must
-        // Land back on `Merge` rather than on the top level - that is what makes it navigation rather than a
-        // Second way to reach the same rows.
+        // land back on `Merge` rather than on the top level - that is what makes it navigation rather than a
+        // second way to reach the same rows.
         await openPage('All merges', 'Merge template');
         const allMergesRows = currentPageRowNames();
         const depthInsideSubPage = app.setting.pageStack.length;
@@ -96,7 +96,7 @@ describe('settings page navigation', () => {
         await closePage();
 
         // Issue #272: the page that ABSORBED another one. A row is not in the DOM until its page is opened,
-        // So the waits below are themselves the proof that `Name transform template` left the retired
+        // so the waits below are themselves the proof that `Name transform template` left the retired
         // `Title` page and is reached through the `Title` section instead.
         await openPage('Frontmatter', 'Title');
         const frontmatterSubheadings = collectSubheadings();
@@ -137,8 +137,8 @@ describe('settings page navigation', () => {
         // A heading is a `.setting-item-heading` inside the page's `.setting-group`, NOT the group itself:
         // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
         // (verified against the rendered `Swap` page), so counting groups reports a heading a flat page
-        // Does not have — it returned the first ROW's name. The positive half of this selector is the unit
-        // Test's `should render only the two root headings`.
+        // does not have — it returned the first ROW's name. The positive half of this selector is the unit
+        // test's `should render only the two root headings`.
         function collectSubheadings(): string[] {
           return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-heading .setting-item-name') ?? [])]
             .map((el) => el.textContent)
@@ -146,7 +146,7 @@ describe('settings page navigation', () => {
         }
 
         // Scoped to the page on screen: Obsidian keeps the page it came from in the DOM underneath, so a
-        // Modal-wide query would also return the rows of every page below it on the stack.
+        // modal-wide query would also return the rows of every page below it on the stack.
         function currentPageRowNames(): string[] {
           return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
             .map((el) => el.textContent)
@@ -195,12 +195,12 @@ describe('settings page navigation', () => {
     expect(result.onOpen).toContain('Merge');
     expect(result.onOpen).toContain('Frontmatter');
     // Issue #271 retired the `Include/exclude` page and gave the two categories that had no page of their
-    // Own one each; every other category's path rows moved onto the page of its commands.
+    // own one each; every other category's path rows moved onto the page of its commands.
     expect(result.onOpen).not.toContain('Include/exclude');
     expect(result.onOpen).toContain('Select');
     expect(result.onOpen).toContain('Rename');
     // Issue #272: `Title` is no longer an entry of the top level — it lives INSIDE `Frontmatter`, and is not
-    // In the DOM until that page is opened, which is what makes this assertion meaningful rather than vacuous.
+    // in the DOM until that page is opened, which is what makes this assertion meaningful rather than vacuous.
     expect(result.onOpen).not.toContain('Title');
     expect(result.onOpen).not.toContain('Merge folders');
     expect(result.onOpen).not.toContain('Command include/exclude paths');
@@ -208,12 +208,12 @@ describe('settings page navigation', () => {
     expect(result.onOpen).not.toContain('Merge template');
 
     // Issue #224 asked for a description of what merging is on the expanded header; issue #282's sub-pages
-    // Carry one too, which is all the user sees of a section before clicking into it.
+    // carry one too, which is all the user sees of a section before clicking into it.
     expect(result.pageDescription).toContain('Merging');
     expect(result.subPageDescription).toContain('merge');
 
     // Issue #282: `Merge` holds no heading any more, only the five entries issues #240 and #271 gave it -
-    // Each of them a page to click into rather than a stretch of rows to scroll past.
+    // each of them a page to click into rather than a stretch of rows to scroll past.
     const MERGE_SECTIONS = [
       'All merges',
       'Merge file',
@@ -248,7 +248,7 @@ describe('settings page navigation', () => {
       'Replacement string',
       'Should treat title as path',
       // The three that moved off the old frontmatter set: they write or read the frontmatter `title`, which
-      // Is what the rows above exist to preserve when a name cannot become a file name.
+      // is what the rows above exist to preserve when a name cannot become a file name.
       'Frontmatter title mode',
       'Should use source title when destination has none',
       'Should add invalid title to note aliases'
@@ -260,8 +260,8 @@ describe('settings page navigation', () => {
     ]);
 
     // Issue #243: the lock row sits FLAT above the sections because it governs the mark rather than any one
-    // Notice or move direction. Obsidian renders a flat row and page entries on one page - the mixed shape
-    // Works, which is the whole point of asserting it here.
+    // notice or move direction. Obsidian renders a flat row and page entries on one page - the mixed shape
+    // works, which is the whole point of asserting it here.
     expect(result.smartCutSubheadings).toEqual([]);
     expect(result.smartCutRows).toEqual([
       'Should lock all notes when marking selection',

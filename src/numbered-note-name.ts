@@ -71,7 +71,7 @@ export async function applyNumberedNoteName(params: ApplyNumberedNoteNameParams)
       index: resolveNextSiblingIndex({ kind: ReorderItemKind.File, nameTemplate: template, parentFolder }),
       // The template IS the name, so the tokens naming its result resolve to nothing — the same rule
       // `Create folder with notes...` follows for its own name template, and the settings validator
-      // Rejects both keys here.
+      // rejects both keys here.
       name: '',
       parentFolder: parentFolder.name,
       parentFolderPath: parentFolder.path,

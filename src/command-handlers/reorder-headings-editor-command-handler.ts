@@ -92,7 +92,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
 
     const newContent = joinReorderedSections(split, order);
     // Hoisted out of the `runLockedTransaction` call so the progress notice's Cancel button has a
-    // Controller to abort.
+    // controller to abort.
     const abortController = new AbortController();
     const progressNotice = showOperationProgressNotice({
       abortController,

@@ -9,7 +9,7 @@ import {
 } from 'vitest';
 
 // Desktop-only: it drives a real folder-move flow and reads the rendered notice out of the DOM, neither
-// Of which the Android transport covers.
+// of which the Android transport covers.
 // Isolation: `npx vitest run --project integration-tests:desktop src/operation-notices.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -48,7 +48,7 @@ describe('operation notices (issue #182)', () => {
          */
         const WAIT_TIMEOUT_IN_MILLISECONDS = 3750;
         // Doubles as the silence window for the setting-off run: long enough that a notice would have
-        // Rendered had one been shown, so timing out there means none was.
+        // rendered had one been shown, so timing out there means none was.
         const NOTICE_TIMEOUT_IN_MILLISECONDS = 5000;
 
         const settingsComponent = findSettingsComponent();
@@ -57,7 +57,7 @@ describe('operation notices (issue #182)', () => {
         try {
           await settingsComponent.editAndSave((settings) => {
             // The confirmation dialog is covered elsewhere; skipping it lets the flatten run straight
-            // From the command, so the notice is the only thing this test has to wait on.
+            // from the command, so the notice is the only thing this test has to wait on.
             settings.shouldAskBeforeFlattening = false;
             settings.shouldShowOperationNotices = true;
           });
@@ -159,7 +159,7 @@ describe('operation notices (issue #182)', () => {
             });
           } catch {
             // Give-up wrapper: the caller asserts on what was (not) captured, so a timeout must not
-            // Discard the observation by throwing out of the closure.
+            // discard the observation by throwing out of the closure.
             return null;
           }
           return findOperationNoticeText(prefix);

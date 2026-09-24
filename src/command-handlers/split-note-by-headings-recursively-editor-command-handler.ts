@@ -59,7 +59,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
       return false;
     }
     // Unlike the level-scoped commands, this one is not tied to the cursor: it restructures the whole
-    // Note, so any heading anywhere in it is enough.
+    // note, so any heading anywhere in it is enough.
     return (cache.headings ?? []).length > 0;
   }
 

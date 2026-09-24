@@ -6,9 +6,9 @@ import {
 } from 'vitest';
 
 // Desktop-only: the flow is driven through a real modal (the name prompt), and since issue #194 the
-// Palette's destination comes from Obsidian's own `newFileLocation` / `newFileFolderPath`, which are
-// Modeled by neither `obsidian-typings` nor `obsidian-test-mocks` — so the resolution can only be
-// Exercised here.
+// palette's destination comes from Obsidian's own `newFileLocation` / `newFileFolderPath`, which are
+// modeled by neither `obsidian-typings` nor `obsidian-test-mocks` — so the resolution can only be
+// exercised here.
 // Isolation: `npx vitest run --project integration-tests:desktop src/create-folder-with-notes.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -39,10 +39,10 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         const PARENT_PATH = 'create-parent';
         // Exercises every normalization rule at once: the surrounding and repeated whitespace collapse, `api`
-        // Is capitalized, the all-caps `TEST` survives as an acronym, and `*` is replaced.
+        // is capitalized, the all-caps `TEST` survives as an acronym, and `*` is replaced.
         const TYPED_NAME = '  api   TEST  x*y ';
         // The two spellings the whole design turns on: the folder carries the index, the note named after it
-        // Does not.
+        // does not.
         const EXPECTED_SAFE_NAME = 'Api TEST X_y';
         const EXPECTED_FOLDER_NAME = `2. ${EXPECTED_SAFE_NAME}`;
         const EXPECTED_FOLDER_PATH = `${PARENT_PATH}/${EXPECTED_FOLDER_NAME}`;
@@ -80,7 +80,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
 
           // The whole point of issue #194: the palette is given NO folder, and the destination comes from
           // Obsidian's own setting. `folder` is the mode that pins it somewhere specific, so the folder
-          // Landing in `PARENT_PATH` is only explicable by this resolution having run.
+          // landing in `PARENT_PATH` is only explicable by this resolution having run.
           app.vault.setConfig('newFileLocation', 'folder');
           app.vault.setConfig('newFileFolderPath', PARENT_PATH);
 
@@ -106,11 +106,11 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           }
           nameInput.value = TYPED_NAME;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
 
           // The prompt validates ASYNCHRONOUSLY and refuses to submit while the input is invalid. It opens
-          // Empty, so it starts out invalid — clicking before the validation settles is silently ignored.
+          // empty, so it starts out invalid — clicking before the validation settles is silently ignored.
           await waitUntil({
             message: 'the typed folder name never became valid',
             predicate: () => nameInput.checkValidity()
@@ -123,7 +123,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           okButton.click();
 
           // A throwing wait would discard everything observed so far, so give up quietly and let the
-          // Assertions outside Obsidian report what actually happened.
+          // assertions outside Obsidian report what actually happened.
           try {
             await waitUntil({
               message: 'the folder and its notes were not created',
@@ -140,7 +140,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           return {
             activeFilePath: app.workspace.getActiveFile()?.path ?? null,
             // The parent's whole content: proves the numbering continued rather than colliding, and that
-            // Nothing else was created along the way.
+            // nothing else was created along the way.
             actualChildren: app.vault.getFolderByPath(PARENT_PATH)?.children.map((child) => child.path).sort() ?? [],
             folderExists: app.vault.getFolderByPath(EXPECTED_FOLDER_PATH) !== null,
             folderNoteContent: folderNoteFile ? await app.vault.read(folderNoteFile) : null,
@@ -191,15 +191,15 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
 
     // Asserted first, because it is the assertion that says what happened when the rest fail: the typed
     // `api TEST x*y` became `2. Api TEST X_y` — capitalized, acronym intact, `*` replaced, numbered after
-    // The `1.` sibling — and nothing else appeared beside it.
+    // the `1.` sibling — and nothing else appeared beside it.
     expect(result.actualChildren).toEqual(['create-parent/1. Existing', 'create-parent/2. Api TEST X_y']);
     expect(result.folderExists).toBe(true);
     // Issue #194: the folder landed in the folder `newFileFolderPath` names, and the name prompt was the
-    // Only modal in the flow.
+    // only modal in the flow.
     expect(result.wasSuggesterOpen).toBe(false);
     expect(result.siblingUntouched).toBe(true);
     // `{{folderName}}` carries the index, `{{safeFolderName}}` does not — the distinction the
-    // Reporter's own output depends on.
+    // reporter's own output depends on.
     expect(result.folderNoteContent).toBe('---\ntitle: "2. Api TEST X_y"\naliases:\n  - Api TEST X_y\n---\n\n- [ ] refine\n');
     expect(result.namedNoteContent).toBe('# 2. Api TEST X_y\n');
     // The FIRST note declared is the one that opens.
@@ -211,7 +211,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
       async callback({ app, lib: { waitUntil }, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Already normalized, so a folder appearing under this exact name is unambiguous evidence that
-        // Cancel did not create anything.
+        // cancel did not create anything.
         const TYPED_NAME = 'Prompt Validity Probe';
 
         /*
@@ -232,7 +232,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
             predicate: () => document.querySelector('.prompt-modal .text-box') !== null
           });
           // The modal validates on open through `invokeAsyncSafely`, so the count only means anything
-          // Once that has had a chance to run — reading it synchronously would pass even unfixed.
+          // once that has had a chance to run — reading it synchronously would pass even unfixed.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const callCountOnOpen = reportValidityCallCount;
 
@@ -245,7 +245,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
           const nameInput = requirePromptInput();
           nameInput.value = TYPED_NAME;
           // The modal tracks its value through the component's change handler, so a bare `value`
-          // Assignment would never reach the validator.
+          // assignment would never reach the validator.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
             message: 'the typed folder name never became valid',
@@ -322,7 +322,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
         const WAIT_TIMEOUT_IN_MILLISECONDS = 4000;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Already normalized, so a folder appearing under this exact name is unambiguous evidence that
-        // Cancel did not create anything.
+        // cancel did not create anything.
         const TYPED_NAME = 'Prompt Outline Probe';
 
         try {

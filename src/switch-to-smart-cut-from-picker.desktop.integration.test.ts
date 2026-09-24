@@ -30,8 +30,8 @@ describe('switch to smart cut from the split/extract picker', () => {
 
         const source = await resetFile('picker-switch-source.md', 'alpha bravo charlie');
         // A distinctly-named target so it becomes the picker's highlighted suggestion once typed. Under
-        // The pre-fix behavior, switching to smart cut from the picker opened this merely-highlighted
-        // Suggestion, switching the active note away from the source (issue #141).
+        // the pre-fix behavior, switching to smart cut from the picker opened this merely-highlighted
+        // suggestion, switching the active note away from the source (issue #141).
         const target = await resetFile('picker-switch-target.md', 'target body');
 
         // Open the source, select "bravo", and mark it for a smart cut & paste move.
@@ -63,7 +63,7 @@ describe('switch to smart cut from the split/extract picker', () => {
         switchButton?.click();
 
         // The mark is re-established (permanent notice) and the picker closes — but the active note must
-        // Stay on the source, NOT switch to the merely-highlighted target.
+        // stay on the source, NOT switch to the merely-highlighted target.
         await waitUntil({ predicate: () => document.querySelector('.prompt') === null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await waitUntil({ predicate: () => findMarkNotice() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);

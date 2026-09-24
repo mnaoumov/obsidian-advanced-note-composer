@@ -88,7 +88,7 @@ describe('collectAttachmentsOwnedByNote', () => {
 
   it('should leave an unreferenced neighbor alone', () => {
     // A note shares its folder with its neighbors, so an unreferenced file beside it is nobody's
-    // Attachment — unlike a folder merge, which is moving the whole folder anyway.
+    // attachment — unlike a folder merge, which is moving the whole folder anyway.
     initApp({
       'Docs/note.md': 'body',
       'Docs/stray.png': 'PIC'
@@ -337,7 +337,7 @@ describe('collectAttachmentsToRelocate', () => {
 
   it('should attribute a file referenced by two notes to the first of them', async () => {
     // The notes sort after the image on purpose: the mock resolves a link when the note is created, so
-    // The image has to exist first for either note to reference it.
+    // the image has to exist first for either note to reference it.
     initApp({
       'Docs/img.png': 'PIC',
       'Docs/x.md': '![[img.png]]',

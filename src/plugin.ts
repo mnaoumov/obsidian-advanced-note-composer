@@ -97,13 +97,13 @@ export class Plugin extends PluginBase {
     );
 
     // What a completed operation targeted (issue #206) and every note opened since (issue #256) share ONE
-    // Time-ordered log, which is what lets the pickers head with whichever happened last. It is
-    // Deliberately session-only, so it is dropped on unload — a reload starts from Obsidian's own recency,
-    // Never from the previous session's operations.
+    // time-ordered log, which is what lets the pickers head with whichever happened last. It is
+    // deliberately session-only, so it is dropped on unload — a reload starts from Obsidian's own recency,
+    // never from the previous session's operations.
     this.register(clearRecentTargets);
     // `file-open` rather than `active-leaf-change`: the question is which NOTE the user went to, and a
-    // Leaf change carrying the same file (splitting, focusing another pane on it) is not a move to
-    // Anywhere new. It fires with `null` when the last note is closed, which records nothing.
+    // leaf change carrying the same file (splitting, focusing another pane on it) is not a move to
+    // anywhere new. It fires with `null` when the last note is closed, which records nothing.
     this.registerEvent(this.app.workspace.on('file-open', (file) => {
       if (file) {
         recordRecentVisit(file);
@@ -121,14 +121,14 @@ export class Plugin extends PluginBase {
     });
 
     // Holds the first side of a pending selection swap (no lock is held while marked). Clear it on
-    // Unload so a stale mark never survives a reload.
+    // unload so a stale mark never survives a reload.
     const swapSelectionBuffer = new SwapSelectionBuffer();
     this.register(() => {
       swapSelectionBuffer.clear();
     });
 
     // Persistently highlights the captured selection of a pending smart-cut mark or split/extract setup
-    // In its source note. The editor extension must be registered for the field to exist in every editor.
+    // in its source note. The editor extension must be registered for the field to exist in every editor.
     const selectionHighlightComponent = this.addChild(new SelectionHighlightComponent({ app: this.app }));
     this.registerEditorExtension(selectionHighlightComponent.getEditorExtension());
 
@@ -139,13 +139,13 @@ export class Plugin extends PluginBase {
     this.registerEditorExtension(selectionAnchorComponent.getEditorExtension());
 
     // The three move commands are created up front so the marked-selection notice can offer them as
-    // Buttons (and reflect their availability) — see MoveNoticeComponent.
+    // buttons (and reflect their availability) — see MoveNoticeComponent.
     // Every handler that both backs a notice button AND is registered as a command is built through a
-    // Builder rather than shared. Since obsidian-dev-utils 90 a command handler instance cannot be
-    // Registered twice, and the factory below runs once per menu surface, so handing it the same instance
-    // Throws and the whole plugin fails to load. The notice keeps its own unregistered instance: it calls
-    // The handler directly (canExecuteInActiveEditor / executeInActiveEditor / cancelMove), which reads
-    // Constructor state only, exactly like the already-unregistered swapMarkedSelectionHandler below.
+    // builder rather than shared. Since obsidian-dev-utils 90 a command handler instance cannot be
+    // registered twice, and the factory below runs once per menu surface, so handing it the same instance
+    // throws and the whole plugin fails to load. The notice keeps its own unregistered instance: it calls
+    // the handler directly (canExecuteInActiveEditor / executeInActiveEditor / cancelMove), which reads
+    // constructor state only, exactly like the already-unregistered swapMarkedSelectionHandler below.
     const buildMoveAtCursorHandler = (isAdvanced: boolean): MoveMarkedSelectionHereEditorCommandHandler =>
       new MoveMarkedSelectionHereEditorCommandHandler({
         app: this.app,
@@ -172,8 +172,8 @@ export class Plugin extends PluginBase {
         pluginNoticeComponent: this.pluginNoticeComponent
       });
     // The two heading-only notice buttons drive these EXISTING commands (issues #228/#229) rather than
-    // Reimplementing them, so they are built the same way: one unregistered instance for the notice, and a
-    // Separate registered one below.
+    // reimplementing them, so they are built the same way: one unregistered instance for the notice, and a
+    // separate registered one below.
     const buildSplitHeadingRecursivelyEditorCommandHandler = (): SplitHeadingRecursivelyEditorCommandHandler =>
       new SplitHeadingRecursivelyEditorCommandHandler({
         app: this.app,
@@ -196,7 +196,7 @@ export class Plugin extends PluginBase {
     const cancelMoveCommandHandler = buildCancelMoveCommandHandler();
 
     // Backs the notice's `Swap with selection` button only (not registered as a command, so no hotkey
-    // And no main-editor key interception).
+    // and no main-editor key interception).
     const swapMarkedSelectionHandler = new SwapMarkedSelectionEditorCommandHandler({
       app: this.app,
       moveSelectionBuffer,
@@ -306,10 +306,10 @@ export class Plugin extends PluginBase {
         selectionHighlightComponent
       }),
       // The selection-only commands (issue #266): the same ranges the extracts above compute, set on the
-      // Editor and nothing more. They exist because touch selection on Android fails the reporter roughly
-      // Four times in five, which makes every selection-first feature — smart cut & paste above all —
-      // Unreachable there; his workaround was to run an extract and CANCEL its modal to keep the
-      // Selection it had made.
+      // editor and nothing more. They exist because touch selection on Android fails the reporter roughly
+      // four times in five, which makes every selection-first feature — smart cut & paste above all —
+      // unreachable there; his workaround was to run an extract and CANCEL its modal to keep the
+      // selection it had made.
       new SelectThisHeadingEditorCommandHandler({
         app: this.app,
         pluginSettingsComponent
@@ -331,7 +331,7 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent
       }),
       // The anchor trio covers the ARBITRARY range the five above cannot: mark one end, move the caret,
-      // Mark the other. Tapping to place a caret is the gesture that still works on his phone.
+      // mark the other. Tapping to place a caret is the gesture that still works on his phone.
       new StartSelectionEditorCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
@@ -358,7 +358,7 @@ export class Plugin extends PluginBase {
         selectionHighlightComponent
       }),
       // The same mark, scoped to the heading the cursor is in — heading line, body and everything nested
-      // Under it (issue #229).
+      // under it (issue #229).
       new MarkHeadingToMoveEditorCommandHandler({
         app: this.app,
         moveNoticeComponent,
@@ -412,7 +412,7 @@ export class Plugin extends PluginBase {
         swapSelectionBuffer
       }),
       // One command per flatten variant, so the variant is chosen at invocation time from the folder menu
-      // Rather than pre-committed in settings (issue #177). `AllChildren` keeps the original
+      // rather than pre-committed in settings (issue #177). `AllChildren` keeps the original
       // `flatten-folder` id so existing hotkeys survive.
       ...FLATTEN_MODES.map((flattenMode) =>
         new FlattenFolderCommandHandler({
@@ -474,7 +474,7 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       // The same recursion scoped to the heading the cursor is in, leaving the note's other headings
-      // Intact (issue #228).
+      // intact (issue #228).
       buildSplitHeadingRecursivelyEditorCommandHandler(),
       ...HEADING_LEVELS.flatMap((headingLevel) => [
         new SplitNoteByHeadingsEditorCommandHandler({
@@ -497,7 +497,7 @@ export class Plugin extends PluginBase {
     ]);
 
     // The token half admits a comma-separated argument list (`{{prev,2}}`), which core's own word-character
-    // Default does not; the format half admits the hyphens a date format carries.
+    // default does not; the format half admits the hyphens a date format carries.
     this.addChild(
       new TemplatesLanguageComponent({
         formatSource: /[a-zA-Z0-9_,-]+/,

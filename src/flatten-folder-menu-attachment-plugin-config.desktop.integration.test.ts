@@ -10,7 +10,7 @@ import {
 
 // Desktop-only, matching the plugin's established integration convention. Version coverage: it drives only public APIs
 // (`Vault`, the `file-menu` workspace event), with no dependence on minified Obsidian internals, so
-// Verifying on public-latest is sufficient.
+// verifying on public-latest is sufficient.
 // Isolation:
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-attachment-plugin-config.desktop.integration.test.ts`.
 const PLUGIN_NAME = 'Advanced Note Composer';
@@ -75,9 +75,9 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           await trashIfExists('t423-parked-elsewhere');
 
           // 1. The reported shape: an ordinary folder with an ordinary child folder holding its own note —
-          // Nothing about it is an attachment folder. The child folder nests one deeper so that the parked
-          // Path is the only thing that could take the recursive entry away (issue #230 answers the nesting
-          // Question from the tree, plugin or not).
+          // nothing about it is an attachment folder. The child folder nests one deeper so that the parked
+          // path is the only thing that could take the recursive entry away (issue #230 answers the nesting
+          // question from the tree, plugin or not).
           await app.vault.createFolder('t423-parked');
           await app.vault.create('t423-parked/t423-stays.md', 'the note that stays behind');
           await app.vault.createFolder('t423-parked/t423-created');
@@ -86,7 +86,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           await app.vault.create('t423-parked/t423-created/t423-deeper/t423-deepest.md', 'the nested note');
 
           // 2. The same, to be probed while the parked path names something unrelated — so a passing test
-          // Cannot be explained by the setting simply being ignored for this folder in particular.
+          // cannot be explained by the setting simply being ignored for this folder in particular.
           await app.vault.createFolder('t423-parked-elsewhere');
           await app.vault.create('t423-parked-elsewhere/t423-stays2.md', 'the note that stays behind');
           await app.vault.createFolder('t423-parked-elsewhere/t423-created2');
@@ -95,7 +95,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           await app.vault.create('t423-parked-elsewhere/t423-created2/t423-deeper2/t423-deepest2.md', 'the nested note');
 
           // What CAL leaves behind once the just-created note is the active one: an absolute path INSIDE
-          // The folder the command created.
+          // the folder the command created.
           app.vault.setConfig('attachmentFolderPath', 't423-parked/t423-created/@');
           const parkedAncestorTitles = collectFlattenTitles(getFolder('t423-parked'));
 
@@ -109,7 +109,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
             app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
           } else {
             // The real member lives on `Vault.prototype`; the stub only shadowed it on the instance, so the
-            // Instance property has to go rather than be overwritten with a copy.
+            // instance property has to go rather than be overwritten with a copy.
             Reflect.deleteProperty(app.vault, 'getAvailablePathForAttachments');
           }
         }
@@ -168,7 +168,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
          */
         function stubAttachmentLocationPlugin(): void {
           // `bind` keeps the real call signature, so the native resolution still works for anything that
-          // Invokes it — only the `extended` member beside it is new.
+          // invokes it — only the `extended` member beside it is new.
           const patched = originalGetAvailablePathForAttachments.bind(app.vault);
           Object.assign(patched, { extended: resolveExtendedAttachmentPath });
           app.vault.getAvailablePathForAttachments = patched;

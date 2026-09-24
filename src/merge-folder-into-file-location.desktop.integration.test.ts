@@ -9,7 +9,7 @@ import {
 } from 'vitest';
 
 // Desktop-only, matching the sibling merge-folder suite: this is a folder-contents merge (file-delete)
-// Flow. Isolation:
+// flow. Isolation:
 // `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-location.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -193,7 +193,7 @@ describe('merged note location (issue #178)', () => {
     expect(result.mergedFolderSurvivesInsideMode).toBe(true);
 
     // Reading (b): wherever Obsidian itself would put a new note. This is the assertion that cannot be
-    // Made in a unit test, because the mocks do not model `newFileLocation` / `newFileFolderPath`.
+    // made in a unit test, because the mocks do not model `newFileLocation` / `newFileFolderPath`.
     expect(result.defaultNewNoteLocationPath).toBe('loc-inbox/loc-default.md');
   });
 });

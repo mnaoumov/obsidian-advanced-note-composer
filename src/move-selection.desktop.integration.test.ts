@@ -75,7 +75,7 @@ describe('move marked selection', () => {
         const sameNote = editorValueFor('move-it-same.md') ?? '';
 
         // Once the mark is released (by the move), the permanent notice is hidden again and the
-        // Persistent highlight is removed from every editor.
+        // persistent highlight is removed from every editor.
         await sleep(NOTICE_REMOVAL_IN_MILLISECONDS);
         const isMarkNoticeGoneAfterMoves = findMarkNotice() === null;
         const isHighlightGoneAfterMoves = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
@@ -125,15 +125,15 @@ describe('move marked selection', () => {
     });
 
     // Cross-file: the moved text was inserted at the cursor (which was before "end"), not appended, and
-    // Left the source. It lands after the default `\n\n{{content}}` template prefix, so assert position
-    // Relative to "end" rather than an exact offset.
+    // left the source. It lands after the default `\n\n{{content}}` template prefix, so assert position
+    // relative to "end" rather than an exact offset.
     expect(result.crossFileTarget).toContain('BBB');
     expect(result.crossFileTarget).toContain('end');
     expect(result.crossFileTarget.indexOf('BBB')).toBeLessThan(result.crossFileTarget.indexOf('end'));
     expect(result.crossFileSource).not.toContain('BBB');
 
     // Same-note: the marked "one" was removed from the front and re-inserted at the end cursor. With
-    // The default setting, a same-note move leaves nothing (no meaningless self-link) in its place.
+    // the default setting, a same-note move leaves nothing (no meaningless self-link) in its place.
     expect(result.sameNote).toContain('one');
     expect(result.sameNote.startsWith('one ')).toBe(false);
     expect(result.sameNote.endsWith('one')).toBe(true);
@@ -142,7 +142,7 @@ describe('move marked selection', () => {
     expect(result.sameNote.match(/one/g)?.length).toBe(1);
 
     // The mark notice is permanent and branded "Smart cut & paste", offering the move buttons, then is
-    // Hidden once the mark is released.
+    // hidden once the mark is released.
     expect(result.markNoticeText).toContain('Smart cut & paste');
     expect(result.markNoticeButtonTexts).toEqual([
       'Switch to split/extract',
@@ -155,7 +155,7 @@ describe('move marked selection', () => {
     expect(result.markNoticeGoneAfterMoves).toBe(true);
 
     // The marked selection is persistently highlighted while marked, and the highlight is removed once
-    // The mark is released.
+    // the mark is released.
     expect(result.highlightAfterMark).toBeGreaterThan(0);
     expect(result.highlightGoneAfterMoves).toBe(true);
   });

@@ -46,7 +46,7 @@ interface TestableHandler {
 }
 
 // Partial rather than a bare factory: `plugin-settings.ts` reaches dev-utils' folder-note module, which
-// Imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
+// imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
 // `undefined` and the whole suite fails to load.
 vi.mock(import('obsidian-dev-utils/obsidian/file-system'), async (importOriginal) => ({
   ...await importOriginal(),
@@ -224,8 +224,8 @@ describe('MergeFileCommandHandler', () => {
   });
 
   // Issue #240 made an excluded destination reachable at all; issue #253 moved the decision onto its own
-  // Setting, so what the picker was allowed to OFFER is exactly what the composer is allowed to write
-  // Into. The composer defaults the flag to `false`, which is why NOT passing it looked like working code.
+  // setting, so what the picker was allowed to OFFER is exactly what the composer is allowed to write
+  // into. The composer defaults the flag to `false`, which is why NOT passing it looked like working code.
   it('should let the merge into an excluded target through when excluded destinations are offered', async () => {
     const params = createMockParams(false, true, false, true);
     const handler = toTestable(new MergeFileCommandHandler(params));

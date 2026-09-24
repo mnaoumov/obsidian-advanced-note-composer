@@ -68,7 +68,7 @@ function createContext(): TestContext {
         if (params.abortController) {
           capturedAbortControllers.push(params.abortController);
           // Mirror the real library's `shouldReleaseOnAbort` + `onUnlockRequested`: aborting the
-          // Controller invokes the unlock callback so the consumer can tear its state down.
+          // controller invokes the unlock callback so the consumer can tear its state down.
           params.abortController.signal.addEventListener('abort', () => {
             params.onUnlockRequested?.();
           }, { once: true });

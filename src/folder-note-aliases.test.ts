@@ -29,7 +29,7 @@ describe('swapDerivedAlias', () => {
 
   it('should drop the duplicate a rename back onto a listed name would create', () => {
     // Renaming `Alpha` back to `Beta` while `Beta` is still listed further down leaves ONE entry, at the
-    // Derived alias's own position.
+    // derived alias's own position.
     expect(swapDerivedAlias({
       existingAliases: ['Alpha', 'mine', 'Beta'],
       newAlias: 'Beta',

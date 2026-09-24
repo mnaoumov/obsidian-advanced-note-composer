@@ -36,7 +36,7 @@ describe('split headings automatically', () => {
         const SOURCE_CONTENT = `Intro text\n\n## ${HEADING}\n\nbody of the auto heading\n`;
 
         // `Should ask before splitting` stays ON: the whole point is that the new setting bypasses both
-        // The target picker AND the confirmation dialog for a heading-driven split.
+        // the target picker AND the confirmation dialog for a heading-driven split.
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', true);
         const isOriginalShouldSplitHeadingsAutomatically = await didSetToggle('Should split headings automatically', true);
         const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
@@ -49,7 +49,7 @@ describe('split headings automatically', () => {
           const editor = await openAndGetEditor(sourceFile);
 
           // The command is gated on the metadata cache knowing the note's headings; running it before the
-          // Cache indexes the just-written note would silently no-op.
+          // cache indexes the just-written note would silently no-op.
           await waitUntil({
             message: 'metadata cache did not index the source heading',
             predicate: () => (app.metadataCache.getFileCache(sourceFile)?.headings ?? []).some((heading) => heading.heading === HEADING)
@@ -170,7 +170,7 @@ describe('split headings automatically', () => {
         const SOURCE_CONTENT = `Intro text\n\n${HEADINGS.map((heading) => `## ${heading}\n\nbody of ${heading}\n`).join('\n')}`;
 
         // Same as above: `Should ask before splitting` stays ON, so a surviving confirmation dialog would
-        // Stall the batch after the first heading.
+        // stall the batch after the first heading.
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', true);
         const isOriginalShouldSplitHeadingsAutomatically = await didSetToggle('Should split headings automatically', true);
         const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);

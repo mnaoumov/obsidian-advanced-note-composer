@@ -242,7 +242,7 @@ describe('clean the typed name of a created empty note (issue #283)', () => {
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
           // Waits on ANY new note rather than the expected one, so a wrong name is reported by the assertions
-          // Outside rather than as a timeout here.
+          // outside rather than as a timeout here.
           await waitUntil({
             message: 'no note was created',
             predicate: () => app.vault.getMarkdownFiles().some((file) => !existingPaths.has(file.path)),

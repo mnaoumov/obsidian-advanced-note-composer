@@ -60,7 +60,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
         const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive on purpose: the whole aggregate run shares ONE vault, so a generic name here would
-        // Make another suite's link ambiguous.
+        // make another suite's link ambiguous.
         const SOURCE_PATH = 'split-mode-remembered-source.md';
         const TARGET_BASENAME = 'split-mode-remembered-target';
         const TARGET_PATH = `${TARGET_BASENAME}.md`;
@@ -73,7 +73,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeSplitting = false;
             // The baseline the reopened picker has to have MOVED away from. Read back below rather than
-            // Assumed: a suite that confirmed a dialog earlier can leave this setting anywhere.
+            // assumed: a suite that confirmed a dialog earlier can leave this setting anywhere.
             settings.defaultSplitTargetMode = 'Create';
           });
           const modeBeforeAnything = settingsComponent.settings.defaultSplitTargetMode;
@@ -102,7 +102,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The extraction rewrites the SOURCE note too, so waiting for that is what proves the operation
-          // Ran rather than the modal merely closing.
+          // ran rather than the modal merely closing.
           await waitUntil({
             message: 'the selection was not extracted out of the source note',
             predicate: () => !editor.getValue().includes('bravo charlie'),
@@ -136,7 +136,7 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
         } finally {
           await settingsComponent.editAndSave((settings) => {
             // This feature WRITES to the shared `data.json`, so leaving either key behind would decide the
-            // Mode for every later split suite in the aggregate run.
+            // mode for every later split suite in the aggregate run.
             settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
             settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
           });
@@ -232,8 +232,8 @@ describe('the split/extract picker remembers the mode it was left in (issue #245
           }
           await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
           // Reset through the EDITOR, not the vault: the previous run left a link where `bravo` was, and an
-          // Open buffer wins over `vault.modify` - selecting by offset against a stale buffer would extract
-          // That link instead of the word.
+          // open buffer wins over `vault.modify` - selecting by offset against a stale buffer would extract
+          // that link instead of the word.
           view.editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',

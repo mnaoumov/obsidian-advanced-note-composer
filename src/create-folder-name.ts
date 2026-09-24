@@ -115,7 +115,7 @@ export function normalizeTypedFolderName(params: NormalizeTypedFolderNameParams)
     replacement,
     shouldReplaceInvalidCharacters,
     // A typed folder name names ONE folder: a `/` in it collapses into the name instead of silently
-    // Creating a nested tree the prompt never showed.
+    // creating a nested tree the prompt never showed.
     shouldTreatTitleAsPath: false
   });
 }

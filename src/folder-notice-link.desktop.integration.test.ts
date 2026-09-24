@@ -7,7 +7,7 @@ import {
 } from 'vitest';
 
 // Desktop-only: it reads a rendered notice out of the DOM and clicks it, neither of which the Android
-// Transport covers.
+// transport covers.
 // Isolation: `npx vitest run --project integration-tests:desktop src/folder-notice-link.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -58,7 +58,7 @@ describe('folder operation notice link (issue #234)', () => {
         const seenNoticeTexts = new Set<string>();
 
         // A folder note named after its folder — the `Auto` fallback layout, and the one the rename keeps in
-        // Step, so it still IS the folder note under the new name.
+        // step, so it still IS the folder note under the new name.
         await removeFolder(ROOT);
         await app.vault.createFolder(ROOT);
         await app.vault.createFolder(`${ROOT}/${OLD_FOLDER_NAME}`);
@@ -66,7 +66,7 @@ describe('folder operation notice link (issue #234)', () => {
         const control = await app.vault.create(CONTROL_PATH, 'control body\n');
 
         // Somewhere else to be clicked FROM: without it the folder note could be the active file already and
-        // The assertion would pass without the link having done anything.
+        // the assertion would pass without the link having done anything.
         await app.workspace.getLeaf(false).openFile(control);
         await waitUntil({
           message: 'the control note did not open',
@@ -97,10 +97,10 @@ describe('folder operation notice link (issue #234)', () => {
         }
         nameInput.value = TYPED_NAME;
         // The modal tracks its value through the component's change handler, so a bare `value` assignment
-        // Would be accepted and then submitted as the seeded name.
+        // would be accepted and then submitted as the seeded name.
         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
         // The prompt validates ASYNCHRONOUSLY and refuses to submit while the input is invalid, so clicking
-        // Before the validation settles is silently ignored.
+        // before the validation settles is silently ignored.
         await waitUntil({
           message: 'the typed folder name never became valid',
           predicate: () => nameInput.checkValidity(),
@@ -116,7 +116,7 @@ describe('folder operation notice link (issue #234)', () => {
         const noticeLinkEl = await waitForNoticeLink(NEW_FOLDER_PATH);
 
         // The folder note is renamed AFTER the folder, and it is the thing the click has to find — so the
-        // Click waits for it rather than for the folder alone.
+        // click waits for it rather than for the folder alone.
         try {
           await waitUntil({
             message: `the folder note was never renamed to ${NEW_FOLDER_NOTE_PATH}`,
@@ -128,15 +128,15 @@ describe('folder operation notice link (issue #234)', () => {
         }
 
         // Let the vault settle before clicking, the same pause `extract-notice-link` needs: the operation has
-        // Just renamed a folder and rewritten a note, and an open into the middle of Obsidian's reaction to
-        // That shows an empty editor. A real user cannot click a notice within milliseconds of it rendering.
+        // just renamed a folder and rewritten a note, and an open into the middle of Obsidian's reaction to
+        // that shows an empty editor. A real user cannot click a notice within milliseconds of it rendering.
         await sleep(SETTLE_BEFORE_CLICK_IN_MILLISECONDS);
 
         const activeBeforeClick = app.workspace.getActiveFile()?.path ?? '';
         noticeLinkEl?.click();
 
         // Give-up wrapper: the assertions below report what the click actually achieved, and a throw out of
-        // This closure would discard exactly that evidence.
+        // this closure would discard exactly that evidence.
         try {
           await waitUntil({
             message: 'the folder note did not open',
@@ -151,16 +151,16 @@ describe('folder operation notice link (issue #234)', () => {
           activeBeforeClick,
           activeFileAfterClick: app.workspace.getActiveFile()?.path ?? '',
           // Reported alongside the active file so a failure says WHICH thing went wrong: an empty editor is
-          // The open having raced the rename, a populated control note is the click having done nothing.
+          // the open having raced the rename, a populated control note is the click having done nothing.
           editorValueAfterClick: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue() ?? '',
           // Every item under this run's root carrying the class the explorer marks a reveal with, so a
-          // Failed assertion says WHAT was highlighted instead of merely that the expected thing was not.
+          // failed assertion says WHAT was highlighted instead of merely that the expected thing was not.
           explorerMarks: [...activeDocument.querySelectorAll<HTMLElement>('[data-path]')]
             .filter((el) => (el.dataset['path'] ?? '').startsWith(ROOT) && el.className.includes('has-focus'))
             .map((el) => `${el.dataset['path'] ?? ''} :: ${el.className}`),
           folderNoteExists: app.vault.getFileByPath(NEW_FOLDER_NOTE_PATH) !== null,
           // `getActiveViewOfType` answers `null` once a non-markdown leaf (the file explorer) is the active
-          // One, which is the focus question revealing raises.
+          // one, which is the focus question revealing raises.
           isMarkdownViewActive: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null,
           noticeTexts: [...seenNoticeTexts],
           // `has-focus` is what the explorer marks a REVEAL with, on a file as on a folder — where
@@ -172,7 +172,7 @@ describe('folder operation notice link (issue #234)', () => {
 
         function clickMenuItem(menuToSearch: MenuLike, title: string): void {
           // Identified by its rendered text, the way the other folder-menu tests do — `MenuItem` exposes no
-          // Title of its own.
+          // title of its own.
           const itemEl = menuToSearch.items.find((candidate) => candidate.dom?.textContent === title)?.dom;
           if (!itemEl) {
             const available = menuToSearch.items.map((candidate) => candidate.dom?.textContent ?? '').join(' | ');
@@ -204,7 +204,7 @@ describe('folder operation notice link (issue #234)', () => {
             });
           } catch {
             // Give-up wrapper: the caller reports what WAS observed, which a throw out of the closure would
-            // Discard.
+            // discard.
             return null;
           }
           return findLink();
@@ -212,10 +212,10 @@ describe('folder operation notice link (issue #234)', () => {
           function findLink(): HTMLElement | null {
             for (const noticeEl of activeDocument.querySelectorAll('.notice')) {
               // Accumulated across polls: a Notice auto-hides, so reading them only once at the end can
-              // Report an empty list for a notice that really did appear.
+              // report an empty list for a notice that really did appear.
               seenNoticeTexts.add(noticeEl.textContent);
               // `includes`, not `startsWith`: `PluginNoticeComponent` puts the plugin's name on its own line
-              // Above the message.
+              // above the message.
               if (!noticeEl.textContent.includes('Renamed folder ')) {
                 continue;
               }
@@ -234,7 +234,7 @@ describe('folder operation notice link (issue #234)', () => {
     });
 
     // Surfaced first: every later assertion is meaningless if the notice never named the renamed folder, and
-    // The accumulated notice texts are what says why.
+    // the accumulated notice texts are what says why.
     expect({ noticeTexts: result.noticeTexts, wasNoticeLinkFound: result.wasNoticeLinkFound })
       .toMatchObject({ wasNoticeLinkFound: true });
     expect(result.folderNoteExists).toBe(true);
@@ -245,9 +245,9 @@ describe('folder operation notice link (issue #234)', () => {
       .toMatchObject({ activeFileAfterClick: 'Folder notice link/1. Beta 234/1. Beta 234.md' });
 
     // The FOLDER NOTE is what the explorer highlights, not the folder: since `obsidian-dev-utils` 94.2.0 the
-    // Reveal follows the thing the click actually opens, and falls back to the folder only when that note is
-    // Hidden in the explorer (or the folder has none). Revealing the note expands the folder holding it, so
-    // The folder is still on screen — it is simply no longer the marked item.
+    // reveal follows the thing the click actually opens, and falls back to the folder only when that note is
+    // hidden in the explorer (or the folder has none). Revealing the note expands the folder holding it, so
+    // the folder is still on screen — it is simply no longer the marked item.
     expect({ explorerMarks: result.explorerMarks, revealedPaths: result.revealedPaths })
       .toMatchObject({ revealedPaths: expect.arrayContaining(['Folder notice link/1. Beta 234/1. Beta 234.md']) as string[] });
 

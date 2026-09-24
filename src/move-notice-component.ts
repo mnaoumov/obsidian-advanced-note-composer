@@ -129,7 +129,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   public override onload(): void {
     super.onload();
     // Re-evaluate button availability whenever the user switches note (top/bottom/at-cursor validity
-    // Depends on the active note) or moves the caret (at-cursor validity depends on the caret position).
+    // depends on the active note) or moves the caret (at-cursor validity depends on the caret position).
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
       this.refreshButtons();
     }));
@@ -202,10 +202,10 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     });
 
     // No `isPermanent`: `shouldHideOnClick: false` already gives the notice an infinite duration and puts
-    // It in `PluginNoticeMode.Separate`, so no later notice can replace it — and dev-utils 93 throws on the
-    // Combination, since a permanent notice needs the shared slot that a separate one deliberately avoids.
+    // it in `PluginNoticeMode.Separate`, so no later notice can replace it — and dev-utils 93 throws on the
+    // combination, since a permanent notice needs the shared slot that a separate one deliberately avoids.
     // Permanence would be wrong here anyway: it outlives the plugin, while the mark this notice reports
-    // Dies with it.
+    // dies with it.
     const notice = this.pluginNoticeComponent.showNotice(message, {
       shouldHideOnClick: false,
       shouldShowCloseButton: false
@@ -274,7 +274,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       if (settings.shouldShowSplitHeadingRecursivelyButton) {
         definitions.push({
           // A leaf heading is deliberately still offered: it produces `X/X.md`, exactly what the command
-          // Does at a leaf when driven from the menu.
+          // does at a leaf when driven from the menu.
           getIsEnabled: null,
           label: 'Split heading recursively...',
           onClick: (): void => {
@@ -285,7 +285,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
       if (settings.shouldShowReorderHeadingsButton) {
         definitions.push({
           // Enablement is read off the MARKED note, not the active editor (unlike the move buttons): this
-          // Button acts on the source note wherever the user happens to be.
+          // button acts on the source note wherever the user happens to be.
           getIsEnabled: () => hasReorderableSiblings(this.app.metadataCache.getFileCache(sourceFile)?.headings ?? []),
           label: 'Reorder headings...',
           onClick: (): void => {

@@ -105,9 +105,9 @@ async function swapFolder(params: SwapFolderParams): Promise<void> {
     await vaultTransaction.rename(targetFolder, targetFolderWithSourceName);
 
     // Only the source folder can need a second rename: it is renamed first (into the still-occupied
-    // Target slot, so it lands on a de-duplicated name), then retried onto the now-freed name once the
-    // Target has vacated it. The target itself always renames into the source's already-vacated slot, so
-    // It lands cleanly on its first attempt and never needs a symmetric retry.
+    // target slot, so it lands on a de-duplicated name), then retried onto the now-freed name once the
+    // target has vacated it. The target itself always renames into the source's already-vacated slot, so
+    // it lands cleanly on its first attempt and never needs a symmetric retry.
     if (sourceFolder.name !== targetFolderName && getFolderOrNull({ app, pathOrFolder: sourceFolderWithTargetName }) === null) {
       await vaultTransaction.rename(sourceFolder, sourceFolderWithTargetName);
     }

@@ -67,7 +67,7 @@ describe('property order when extracting a property value (issue #187)', () => {
         ].join('\n');
 
         // Deliberately NOT alphabetical, and `aliases` (the property being merged into) sits in the middle
-        // Rather than at either end, so a rebuilt object cannot accidentally land on the right order.
+        // rather than at either end, so a rebuilt object cannot accidentally land on the right order.
         const targetContent = [
           '---',
           'zulu: 1',
@@ -140,7 +140,7 @@ describe('property order when extracting a property value (issue #187)', () => {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');

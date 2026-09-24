@@ -117,7 +117,7 @@ describe('buildRenumberPlan', () => {
 
   it('should keep the name unchanged when the template renders nothing at all', () => {
     // A template with no `{{index}}` cannot renumber, so the name comes back whole rather than emptied —
-    // The settings validator refuses such a template, and this is what happens if one reaches here anyway.
+    // the settings validator refuses such a template, and this is what happens if one reaches here anyway.
     expect(toNewNames(buildFolderPlan(['3. Alpha'], ' '.repeat(3)))).toEqual(['3. Alpha']);
   });
 
@@ -154,7 +154,7 @@ describe('buildRenameSteps', () => {
 
   it('should rename into a name only once its current holder has moved away', () => {
     // Both carry the base name `Alpha`, so the unnumbered one is renamed INTO the name the numbered one
-    // Still holds — it has to move first.
+    // still holds — it has to move first.
     expect(toSteps(['Alpha', '1. Alpha'])).toEqual([
       'Root/Parent/1. Alpha -> Root/Parent/2. Alpha',
       'Root/Parent/Alpha -> Root/Parent/1. Alpha'

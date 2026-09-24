@@ -90,7 +90,7 @@ describe('createMovedNameSequence', () => {
 
     it('should leave the name alone when the template renders to nothing', () => {
       // Unreachable from the settings UI — the validator requires `{{index}}` and the base token — but the
-      // Template is a parameter here, and a name is never allowed to become the empty string.
+      // template is a parameter here, and a name is never allowed to become the empty string.
       expect(resolveNames(
         {
           'dst/keep.md': 'keep',
@@ -158,7 +158,7 @@ describe('createMovedNameSequence', () => {
 
     it('should advance the number across a batch instead of answering the same one twice', () => {
       // The whole reason the sequence counts rather than re-reading the vault: the flatten preview has no
-      // Vault state to read, so a re-read would give every promoted folder the same number.
+      // vault state to read, so a re-read would give every promoted folder the same number.
       expect(resolveNames(
         {
           'dst/2. two/x.md': 'two',
@@ -226,7 +226,7 @@ describe('createMovedNameSequence', () => {
 
     it('should run notes and folders as two independent sequences', () => {
       // A numbered folder beside a numbered note belongs to the other sequence, so neither counter can be
-      // Nudged by the other — the rule `next-sibling-index.ts` already states for the scan.
+      // nudged by the other — the rule `next-sibling-index.ts` already states for the scan.
       expect(resolveNames(
         {
           'dst/4. four.md': 'four',
@@ -245,7 +245,7 @@ describe('createMovedNameSequence', () => {
 
     it('should leave a non-markdown file alone, and let it consume no number', () => {
       // An attachment is in no sequence at all, so it is neither renamed nor allowed to push the note that
-      // Follows it off the number it should get.
+      // follows it off the number it should get.
       expect(resolveNames(
         {
           'dst/1. one.md': 'one',

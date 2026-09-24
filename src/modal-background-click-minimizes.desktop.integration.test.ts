@@ -9,13 +9,13 @@ import {
 } from 'vitest';
 
 // Issue #202: a click on the dimmed background behind a confirmation menu cancelled the whole pending
-// Operation. A stray click is not a deliberate cancel, so a minimizable modal now parks itself on the
-// Floating bar instead. The fix itself lives upstream in `obsidian-dev-utils` (>= 92.0.0,
+// operation. A stray click is not a deliberate cancel, so a minimizable modal now parks itself on the
+// floating bar instead. The fix itself lives upstream in `obsidian-dev-utils` (>= 92.0.0,
 // `shouldMinimizeOnClickOutside`, default `true`), which is why nothing in `src/` changed — this file is
-// What pins the behavior the plugin actually ships.
+// what pins the behavior the plugin actually ships.
 // All three sides of the rule are covered here, because the value is in the SPLIT: the background click
-// Minimizes a wrapped dialog, `Escape` still cancels it, and a plain picker is still dismissed by the
-// Same click (issue #125).
+// minimizes a wrapped dialog, `Escape` still cancels it, and a plain picker is still dismissed by the
+// same click (issue #125).
 // Desktop-only, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/modal-background-click-minimizes.desktop.integration.test.ts`.
 
@@ -119,8 +119,8 @@ describe('modal background click', () => {
           }
 
           // Obsidian registers its dismissal on this very element inside the `Modal` constructor, so this
-          // Is the gesture the reporter performs. Without the wrapper's capture-phase guard it CLOSES the
-          // Dialog, cancelling the flatten.
+          // is the gesture the reporter performs. Without the wrapper's capture-phase guard it CLOSES the
+          // dialog, cancelling the flatten.
           const backgroundPoint = findOwnPoint(backgroundEl);
           await clickMouse({ x: backgroundPoint.x, y: backgroundPoint.y });
           await waitUntil({ message: 'the background click did not minimize the dialog', predicate: () => document.querySelector('.minimized-modal-bar') !== null });
@@ -128,7 +128,7 @@ describe('modal background click', () => {
 
           isBarShown = document.querySelector('.minimized-modal-bar') !== null;
           // Still open — the click parked the operation rather than throwing it away — and really out of
-          // The way, backdrop included.
+          // the way, backdrop included.
           isDialogStillOpen = containerEl.isConnected;
           isDialogHidden = activeWindow.getComputedStyle(containerEl).display === 'none';
 
@@ -149,7 +149,7 @@ describe('modal background click', () => {
           didFlatten = true;
         } catch (error) {
           // A throwing wait would otherwise discard every observation made above, leaving the failure
-          // Reported against the wrong step.
+          // reported against the wrong step.
           errors.push(String(error));
         } finally {
           findButton('Cancel')?.click();
@@ -290,7 +290,7 @@ describe('modal background click', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // A keypress is deliberate in a way a background click is not, so this half of the behavior is
-          // Untouched by issue #202 and must stay that way.
+          // untouched by issue #202 and must stay that way.
           await pressKey({ key: 'Escape' });
           await waitUntil({ message: 'Escape did not close the flatten dialog', predicate: () => findButton('Flatten') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -404,8 +404,8 @@ describe('modal background click', () => {
           wasPromptOpen = true;
 
           // The initial pickers are never wrapped (issue #125), so they keep Obsidian's native
-          // Close-on-background-click. This is the boundary that makes the #202 split deliberate rather
-          // Than an oversight.
+          // close-on-background-click. This is the boundary that makes the #202 split deliberate rather
+          // than an oversight.
           const containerEl = document.querySelector('.prompt')?.closest('.modal-container');
           const backgroundEl = containerEl?.querySelector<HTMLElement>('.modal-bg');
           if (!backgroundEl) {
@@ -422,7 +422,7 @@ describe('modal background click', () => {
           errors.push(String(error));
         } finally {
           // Dismissing the picker aborts the setup flow and releases the source lock; the command is the
-          // Belt-and-braces path for the case where the click did not dismiss it at all.
+          // belt-and-braces path for the case where the click did not dismiss it at all.
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await trashIfExists('mbg-picker-source.md');

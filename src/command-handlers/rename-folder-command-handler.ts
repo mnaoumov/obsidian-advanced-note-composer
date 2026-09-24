@@ -223,7 +223,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     const requestedFolderName = parsedOldName.index === null
       ? safeFolderName
       // The folder keeps the number it already had, rendered through the very template that reads it back,
-      // So the separator and the padding follow the vault's own scheme rather than being reassembled here.
+      // so the separator and the padding follow the vault's own scheme rather than being reassembled here.
       : resolveCreateFolderTemplateTokens({
         template: nameTemplate,
         tokens: buildTokens({
@@ -242,7 +242,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     const newFolderPath = getAvailableFolderPath(this.app, normalizePath(join(parentFolder.path, requestedFolderName)));
     // Read back off the PATH rather than trusting the requested name: a sibling already called that makes
     // `getAvailableFolderPath` hand back `Beta 1`, and the properties must describe the folder that will
-    // Actually exist.
+    // actually exist.
     const newFolderName = basename(newFolderPath);
     const parsedNewName = parseNumberedName({ baseTokenKey, name: newFolderName, nameTemplate });
 
@@ -280,7 +280,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       settings: this.pluginSettingsComponent.settings,
       // Deliberately NOT `shouldTitleCaseCreatedFolderName`: this prompt is seeded with the folder's
       // EXISTING name, so title-casing would re-case a name the user never retyped — merely confirming the
-      // Dialog would turn `iOS` into `Ios`.
+      // dialog would turn `iOS` into `Ios`.
       shouldTitleCase: false
     });
   }
@@ -317,7 +317,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
         app: this.app,
         body: async (vaultTransaction) => {
           // Captured BEFORE the rename: a folder note named after its folder can only be found under the
-          // Folder's OLD name.
+          // folder's OLD name.
           const folderNote = this.resolveFolderNote(folder);
 
           await vaultTransaction.rename(folder, plan.newFolderPath);
@@ -338,7 +338,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       }
       if (error instanceof TemplateRenderError) {
         // A misconfigured property template (issue #284): the transaction has rolled the rename back, and the
-        // Message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
+        // message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
         this.pluginNoticeComponent.showNotice(error.message);
         return false;
       }
@@ -376,7 +376,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     // `Folder notes` install with `syncFolderName` on may already have renamed it outright.
     const noteParentPath = ensureNonNullable(folderNote.parent).path;
     // Never empty: the note was found because this same name resolved to one, and the only token it can
-    // Carry is the folder's own name.
+    // carry is the folder's own name.
     const newNoteName = config.resolveName(folder).trim();
     const newNotePath = normalizePath(join(noteParentPath, `${newNoteName}.${folderNote.extension}`));
     if (newNotePath === folderNote.path) {
@@ -456,8 +456,8 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     }
 
     // Rendered with the OLD tokens so the entry it names can be found and swapped out. A template whose
-    // Templater half is not a function of the tokens (a date, say) renders differently this time, so the old
-    // Entry is not found and the note simply gains the new one — `swapDerivedAlias`'s safe direction.
+    // templater half is not a function of the tokens (a date, say) renders differently this time, so the old
+    // entry is not found and the note simply gains the new one — `swapDerivedAlias`'s safe direction.
     const oldAlias = await renderTemplate({
       app: this.app,
       noteFile,

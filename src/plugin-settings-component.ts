@@ -203,11 +203,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       }
 
       // `markdownAttachmentSubExtensions` configured invented SUB-extensions matched against the base
-      // Name of a markdown file, so `excalidraw` meant exactly `*.excalidraw.md`. Its successor
+      // name of a markdown file, so `excalidraw` meant exactly `*.excalidraw.md`. Its successor
       // `attachmentExtensions` configures REAL extensions matched against the whole name, which is what
       // `obsidian-dev-utils` `isTreatedAsAttachment` takes. Appending `.md` is therefore the faithful
-      // Conversion — and the migration is mandatory rather than cosmetic, because a bare `excalidraw`
-      // Survives the shared predicate's normalization only to match nothing at all.
+      // conversion — and the migration is mandatory rather than cosmetic, because a bare `excalidraw`
+      // survives the shared predicate's normalization only to match nothing at all.
       if (legacySettings.markdownAttachmentSubExtensions !== undefined) {
         legacySettings.attachmentExtensions = legacySettings.markdownAttachmentSubExtensions
           .map((subExtension) => subExtension.trim().replace(/^\.+/, ''))
@@ -217,11 +217,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 
       // `shouldBlockCommandsOnExcludedPaths` made command blocking borrow the CONTENT filter's lists;
       // Issue #198 gave command visibility a filter of its own, so the toggle is gone. Seeding both halves
-      // Of the new filter from the old lists is what keeps an upgraded vault behaving identically: the old
-      // Blocking fired on `isPathIgnored`, which already accounted for `includePaths`, so copying only the
-      // Exclude half would silently un-block everything outside a configured include list. With the toggle
-      // Off there is nothing to carry over — two empty lists ARE that behavior — so the key is simply
-      // Dropped (obsidian-dev-utils deletes it from the record, since it is no longer a plugin setting).
+      // of the new filter from the old lists is what keeps an upgraded vault behaving identically: the old
+      // blocking fired on `isPathIgnored`, which already accounted for `includePaths`, so copying only the
+      // exclude half would silently un-block everything outside a configured include list. With the toggle
+      // off there is nothing to carry over — two empty lists ARE that behavior — so the key is simply
+      // dropped (obsidian-dev-utils deletes it from the record, since it is no longer a plugin setting).
       if (legacySettings.shouldBlockCommandsOnExcludedPaths) {
         legacySettings.commandIncludePaths = legacySettings.includePaths ?? [];
         legacySettings.commandExcludePaths = legacySettings.excludePaths ?? [];
@@ -296,10 +296,10 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     });
 
     // Only the token keys are checked. There is deliberately NO invalid-character check on the literal
-    // Text, unlike every other name-shaped template here: emitting a `:` or a ` - ` is the entire point of
+    // text, unlike every other name-shaped template here: emitting a `:` or a ` - ` is the entire point of
     // A transform, and whatever it leaves invalid is answered downstream by
     // `shouldReplaceInvalidTitleCharacters`. Templater syntax cannot be validated statically at all — a
-    // Broken template surfaces when it runs, in the prompt that refuses the name.
+    // broken template surfaces when it runs, in the prompt that refuses the name.
     this.registerValidator('nameTransformTemplate', (value): MaybeReturn<string> => {
       const unknownKey = findUnknownTokenKey(value, (probe) => {
         resolveNameTransformTokens({ template: probe, tokens: SAMPLE_NAME_TRANSFORM_TOKENS });
@@ -346,11 +346,11 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('newFolderContentTemplate', validateCreateFolderContentTemplate);
 
     // The folder note's own name follows the same rules as the plugin's two other note-name templates —
-    // Same vocabulary, same "must be one file-name segment" constraint (issue #216).
+    // same vocabulary, same "must be one file-name segment" constraint (issue #216).
     this.registerValidator('folderNoteNameTemplate', validateNoteNameTemplate);
 
     // The auto-numbering templates — the split pair (issue #269) and the relocation pair (issue #273) —
-    // Each take their kind's reorder rules, with empty allowed as the opt-out; see
+    // each take their kind's reorder rules, with empty allowed as the opt-out; see
     // `validateOptionalNumberedNameTemplate`.
     this.registerValidator('numberedSplitFolderNameTemplate', validateNumberedSplitFolderNameTemplate);
     this.registerValidator('numberedSplitNoteNameTemplate', validateNumberedSplitNoteNameTemplate);
@@ -365,12 +365,12 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
 
     // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
-    // Validator that fallback is invisible, so a single broken entry would silently stop the other
-    // Entries from matching. The validator is the obsidian-dev-utils export, not a local copy.
+    // validator that fallback is invisible, so a single broken entry would silently stop the other
+    // entries from matching. The validator is the obsidian-dev-utils export, not a local copy.
     //
     // Every list below is per-category since issue #271 retired the all-commands `includePaths` /
     // `excludePaths` / `commandIncludePaths` / `commandExcludePaths` quartet these used to narrow; the
-    // Converter above fans an upgrading vault's entries out across them.
+    // converter above fans an upgrading vault's entries out across them.
     this.registerValidator('createCommandIncludePaths', pathsValidator);
     this.registerValidator('createCommandExcludePaths', pathsValidator);
     this.registerValidator('mergeCommandIncludePaths', pathsValidator);
@@ -389,16 +389,16 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('swapCommandExcludePaths', pathsValidator);
 
     // The `Select` pair was missing from the block above since issue #249 — the list is spelled out
-    // Literally, because `registerValidator` needs a property-name literal, and nine categories written
-    // By hand lost one. A broken regex in those two boxes therefore fell back silently, exactly the
-    // Failure the validator exists to prevent. `plugin-settings-component.test.ts` now asserts the
-    // Registered set against the two derived setting-name types, so a tenth category cannot repeat it.
+    // literally, because `registerValidator` needs a property-name literal, and nine categories written
+    // by hand lost one. A broken regex in those two boxes therefore fell back silently, exactly the
+    // failure the validator exists to prevent. `plugin-settings-component.test.ts` now asserts the
+    // registered set against the two derived setting-name types, so a tenth category cannot repeat it.
     this.registerValidator('selectCommandIncludePaths', pathsValidator);
     this.registerValidator('selectCommandExcludePaths', pathsValidator);
 
     // Each category's own CONTENT pair (issue #270) is the same kind of list again — the reporter's
-    // Screenshot was of the then-`Include paths` / `Exclude paths` rows, so these decide what the
-    // Category's commands may TOUCH rather than where they are offered.
+    // screenshot was of the then-`Include paths` / `Exclude paths` rows, so these decide what the
+    // category's commands may TOUCH rather than where they are offered.
     this.registerValidator('createIncludePaths', pathsValidator);
     this.registerValidator('createExcludePaths', pathsValidator);
     this.registerValidator('mergeIncludePaths', pathsValidator);
@@ -560,7 +560,7 @@ function foldRetiredRenameContentPaths(
   );
 
   // A vault that had blocking on already fanned the same retired entries into this list through the
-  // Command half, so an entry it holds is not added a second time.
+  // command half, so an entry it holds is not added a second time.
   const renameCommandExcludePaths = legacySettings.renameCommandExcludePaths ?? [];
   fanOutRetiredExcludePaths(
     legacySettings,

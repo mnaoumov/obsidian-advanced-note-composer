@@ -11,8 +11,8 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Issue #205's own example: "Change target" was rendered-but-disabled for flatten. Flatten has no picker of
-// Its own, so this proves the INVERTED loop (derived default -> dialog -> picker on demand -> dialog again)
-// Against a real Obsidian; the unit tests mock `selectFolder`, so only this exercises the real suggester.
+// its own, so this proves the INVERTED loop (derived default -> dialog -> picker on demand -> dialog again)
+// against a real Obsidian; the unit tests mock `selectFolder`, so only this exercises the real suggester.
 // Desktop-only: folder flows, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/confirm-dialog-change-target-flatten.desktop.integration.test.ts`.
 

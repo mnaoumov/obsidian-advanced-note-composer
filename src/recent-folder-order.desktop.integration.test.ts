@@ -18,9 +18,9 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 // Desktop-only: this drives the file-explorer folder context menu and the real folder-picker suggester
 // DOM, matching the plugin's established integration convention (no Android emulator is wired for it).
 // Version coverage: the behavior under test depends on an Obsidian INTERNAL — `RecentFileTracker` collects the file
-// You just LEFT, not the one you just opened — so it must be verified on both ends; a change there would
-// Silently reorder every picker. Run on BOTH: catalyst-latest 1.13.4 and public-latest 1.12.7, green on
-// Each. Pin the other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
+// you just LEFT, not the one you just opened — so it must be verified on both ends; a change there would
+// silently reorder every picker. Run on BOTH: catalyst-latest 1.13.4 and public-latest 1.12.7, green on
+// each. Pin the other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
 // Isolation: `npx vitest run --project integration-tests:desktop src/recent-folder-order.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -75,7 +75,7 @@ describe('recent folder ordering (issue #158)', () => {
           await openFile(getFile('rc-c/rc-c.md'));
 
           // Obsidian's own recent list, for the record: its head is the note we LEFT (`rc-b`), never the
-          // Note we are on (`rc-c`).
+          // note we are on (`rc-c`).
           const recentPaths = app.workspace.getRecentFiles({ showMarkdown: true }).slice(0, 2);
 
           // The commands are triggered on `rc-b`, so `rc-b` is the source and is never offered.
@@ -183,14 +183,14 @@ describe('recent folder ordering (issue #158)', () => {
     });
 
     // The premise this fix rests on: Obsidian's recent list is headed by the note we LEFT, never by the
-    // Note we are on. If this ever changes, the fix below needs revisiting.
+    // note we are on. If this ever changes, the fix below needs revisiting.
     expect(result.recentPaths[0]).toBe('rc-b/rc-b.md');
 
     // Both folder pickers put the folder of the note we are on (`rc-c`) ahead of `rc-a` — the reported bug
-    // Was that the FIRST suggestion was `rc-a`, the least recently visited of the three. The claim is
-    // Relative rather than "`rc-c` is suggestion #0", because since issue #206 the folders a completed
-    // Operation targeted rank above even the active file's folder, and an earlier suite in the aggregate
-    // Run may have recorded some — which says nothing about the ordering under test here.
+    // was that the FIRST suggestion was `rc-a`, the least recently visited of the three. The claim is
+    // relative rather than "`rc-c` is suggestion #0", because since issue #206 the folders a completed
+    // operation targeted rank above even the active file's folder, and an earlier suite in the aggregate
+    // run may have recorded some — which says nothing about the ordering under test here.
     for (const suggestions of [result.mergeSuggestions, result.moveSuggestions]) {
       expect(suggestions.indexOf('rc-c')).toBeGreaterThan(-1);
       expect(suggestions.indexOf('rc-a')).toBeGreaterThan(-1);

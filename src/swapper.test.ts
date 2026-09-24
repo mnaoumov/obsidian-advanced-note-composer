@@ -32,7 +32,7 @@ describe('swap', () => {
     await runSwap(getFile('folder/a.md'), getFile('folder/b.md'), false);
 
     // Assert via the adapter: the transaction stages moves through app.vault.adapter and test-mocks
-    // Does not sync the in-memory vault tree from those adapter-level moves.
+    // does not sync the in-memory vault tree from those adapter-level moves.
     expect(await app.vault.adapter.read('folder/a.md')).toBe('B body');
     expect(await app.vault.adapter.read('folder/b.md')).toBe('A body');
   });
@@ -73,12 +73,12 @@ describe('swap', () => {
 
   it('should preserve every child when swapping two differently-named sibling folders', async () => {
     // Two sibling folders with different names. The differently-named branch first exchanges the folder
-    // Names (which, now that test-mocks 3.5.0 cascades a folder rename to its descendants, carries the
-    // Children along), then the child-swap phase moves the children back. For siblings these two phases
-    // Compose to the identity, so the observable outcome is that every file stays where it started --
-    // The point of this test is that a differently-named swap with children completes without data loss.
+    // names (which, now that test-mocks 3.5.0 cascades a folder rename to its descendants, carries the
+    // children along), then the child-swap phase moves the children back. For siblings these two phases
+    // compose to the identity, so the observable outcome is that every file stays where it started --
+    // the point of this test is that a differently-named swap with children completes without data loss.
     // Reaching this branch also exercises the first (source) name-retry: the source rename collides with
-    // The still-occupied target slot, lands on a de-duplicated path, then retries onto the freed name.
+    // the still-occupied target slot, lands on a de-duplicated path, then retries onto the freed name.
     await app.vault.createFolder('parent/alpha');
     await app.vault.createFolder('parent/beta');
     await app.vault.create('parent/alpha/a1.md', 'A1');
@@ -92,8 +92,8 @@ describe('swap', () => {
 
   it('should swap a folder with a differently-named ancestor folder that contains it', async () => {
     // The target (root/a) contains the source (root/a/mid/src) several levels down. The differently-named
-    // Branch exchanges their names, then the child-swap phase relocates the descendants. In the target's
-    // Child loop, the branch that skips a child which itself contains the source is exercised here.
+    // branch exchanges their names, then the child-swap phase relocates the descendants. In the target's
+    // child loop, the branch that skips a child which itself contains the source is exercised here.
     await app.vault.createFolder('root/a/mid/src');
     await app.vault.create('root/a/mid/src/s1.md', 'S1');
     await app.vault.create('root/a/o.md', 'O');
@@ -101,7 +101,7 @@ describe('swap', () => {
     await runSwap(getFolder('root/a/mid/src'), getFolder('root/a'), true);
 
     // The source folder's file surfaces directly under the swapped-in name, the target's own file is
-    // Pushed down into the relocated subtree, and no data is lost.
+    // pushed down into the relocated subtree, and no data is lost.
     expect(await app.vault.adapter.read('root/src/s1.md')).toBe('S1');
     expect(await app.vault.adapter.read('root/src/mid/a/o.md')).toBe('O');
     expect(await app.vault.adapter.exists('root/a')).toBe(false);
@@ -109,8 +109,8 @@ describe('swap', () => {
 
   it('should swap a folder with a differently-named descendant folder it directly contains', async () => {
     // The source (w/outer) directly contains the target (w/outer/inner). After the name exchange, the
-    // Final target-folder rename restores the target onto its captured path, and the source's child loop
-    // Then skips the child that is no longer staged under the temporary folder.
+    // final target-folder rename restores the target onto its captured path, and the source's child loop
+    // then skips the child that is no longer staged under the temporary folder.
     await app.vault.createFolder('w/outer/inner/deep');
     await app.vault.create('w/outer/o1.md', 'O1');
     await app.vault.create('w/outer/inner/i1.md', 'I1');

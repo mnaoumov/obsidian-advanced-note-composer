@@ -12,7 +12,7 @@ import {
 } from 'vitest';
 
 // Desktop-only: it reads a rendered notice out of the DOM and clicks it, neither of which the Android
-// Transport covers.
+// transport covers.
 // Isolation: `npx vitest run --project integration-tests:desktop src/extract-notice-link.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -72,7 +72,7 @@ describe('extract completion notice link (issue #232)', () => {
         try {
           await settingsComponent.editAndSave((settings) => {
             // No confirmation dialog in the way, and the destination deliberately NOT opened by the split
-            // Itself — the notice link is the only thing that can open it.
+            // itself — the notice link is the only thing that can open it.
             settings.shouldAskBeforeSplitting = false;
             settings.shouldOpenTargetNoteAfterSplit = false;
             settings.shouldShowOperationNotices = true;
@@ -82,7 +82,7 @@ describe('extract completion notice link (issue #232)', () => {
           const source = await resetFile('issue-232-source.md', SOURCE_CONTENT);
           const sourceEditor = await openAndGetEditor(source);
           // Reset through the EDITOR, not the vault: an open buffer would keep the previous run's text and
-          // The offsets below would then select the wrong characters.
+          // the offsets below would then select the wrong characters.
           sourceEditor.setValue(SOURCE_CONTENT);
           const startOffset = SOURCE_CONTENT.indexOf(EXTRACTED_TEXT);
           sourceEditor.setSelection(
@@ -96,8 +96,8 @@ describe('extract completion notice link (issue #232)', () => {
           const noticeLinkEl = await waitForNoticeLink(DESTINATION_PATH);
 
           // The notice can be up before the metadata cache has indexed the note the split just created,
-          // And a wikilink to a path the cache does not know yet resolves as unresolved — so clicking it
-          // Would take the "create the note" branch instead of opening the one that is already there.
+          // and a wikilink to a path the cache does not know yet resolves as unresolved — so clicking it
+          // would take the "create the note" branch instead of opening the one that is already there.
           await waitUntil({
             message: `metadata cache never indexed ${DESTINATION_PATH}`,
             predicate: () => {
@@ -108,29 +108,29 @@ describe('extract completion notice link (issue #232)', () => {
           });
 
           // Let the vault settle before clicking. The split has just created, written and re-read notes,
-          // And Obsidian's own open into the middle of that reaction shows the note before its content is
-          // There — the same race `open-after-operation.ts` centralizes its delay for. A real user cannot
-          // Click a notice within milliseconds of it rendering; without this pause the suite hit an empty
-          // Destination editor in roughly half its runs, which is the open being early, not the jump
-          // Failing.
+          // and Obsidian's own open into the middle of that reaction shows the note before its content is
+          // there — the same race `open-after-operation.ts` centralizes its delay for. A real user cannot
+          // click a notice within milliseconds of it rendering; without this pause the suite hit an empty
+          // destination editor in roughly half its runs, which is the open being early, not the jump
+          // failing.
           await sleep(SETTLE_BEFORE_CLICK_IN_MILLISECONDS);
 
           const activeBeforeClick = app.workspace.getActiveFile()?.path ?? '';
           noticeLinkEl?.click();
 
           // Give-up wrapper around both waits: the assertions below report what the click actually
-          // Achieved, and a throw out of this closure would discard exactly that evidence.
+          // achieved, and a throw out of this closure would discard exactly that evidence.
           try {
             await waitUntil({
               message: 'the destination note did not open',
               predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === DESTINATION_PATH,
               // Above the 5 s default: the open is Obsidian's own, behind a freshly created note and a
-              // Metadata cache still settling, and it was seen to exceed 5 s on a loaded machine.
+              // metadata cache still settling, and it was seen to exceed 5 s on a loaded machine.
               timeoutInMilliseconds: OPEN_TIMEOUT_IN_MILLISECONDS
             });
             await waitUntil({
               // The selection is applied by a poll that has to see the destination's editor first, so it is
-              // Waited for rather than read the instant the note opens.
+              // waited for rather than read the instant the note opens.
               message: 'the extracted content was never selected in the destination',
               predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() !== '',
               timeoutInMilliseconds: OPEN_TIMEOUT_IN_MILLISECONDS
@@ -158,7 +158,7 @@ describe('extract completion notice link (issue #232)', () => {
           }
           const selectionAfterSecondClick = readDestinationSelection();
           // The point of #263: the editor is BACK, so the selection is something the user can see. A
-          // Repeat click leaves the file explorer active without this.
+          // repeat click leaves the file explorer active without this.
           const isMarkdownViewActiveAfterSecondClick = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null;
 
           return {
@@ -168,8 +168,8 @@ describe('extract completion notice link (issue #232)', () => {
             // Obsidian's open having raced the write, a populated one with no selection is the jump.
             destinationEditorValue: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue() ?? '',
             // `getActiveViewOfType` answers `null` once a non-markdown leaf (the file explorer) is the
-            // Active one, which is exactly the focus question `revealInFolder` raises — it "opens the view
-            // If it is not already open/visible".
+            // active one, which is exactly the focus question `revealInFolder` raises — it "opens the view
+            // if it is not already open/visible".
             isMarkdownViewActive: app.workspace.getActiveViewOfType(obsidianModule.MarkdownView) !== null,
             isMarkdownViewActiveAfterSecondClick,
             noticeTexts: [...seenNoticeTexts],
@@ -205,8 +205,8 @@ describe('extract completion notice link (issue #232)', () => {
           inputEl.dispatchEvent(new Event('input', { bubbles: true }));
 
           // `Mod+Enter` chooses with no item at all, which is the same path the `Enter to create` row takes —
-          // And unlike that row it is always available, since the row is pushed only when the search matched
-          // Nothing whatsoever.
+          // and unlike that row it is always available, since the row is pushed only when the search matched
+          // nothing whatsoever.
           inputEl.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
         }
@@ -296,7 +296,7 @@ describe('extract completion notice link (issue #232)', () => {
             });
           } catch {
             // Give-up wrapper: the caller reports what WAS observed, which a throw out of the closure
-            // Would discard.
+            // would discard.
             return null;
           }
           return findLink();
@@ -304,10 +304,10 @@ describe('extract completion notice link (issue #232)', () => {
           function findLink(): HTMLElement | null {
             for (const noticeEl of activeDocument.querySelectorAll('.notice')) {
               // Accumulated across polls: a Notice auto-hides, so reading them only once at the end can
-              // Report an empty list for a notice that really did appear.
+              // report an empty list for a notice that really did appear.
               seenNoticeTexts.add(noticeEl.textContent);
               // `includes`, not `startsWith`: `PluginNoticeComponent` puts the plugin's name on its own
-              // Line above the message.
+              // line above the message.
               if (!noticeEl.textContent.includes('Split note ')) {
                 continue;
               }
@@ -327,9 +327,9 @@ describe('extract completion notice link (issue #232)', () => {
 
     // Surfaced first: every later assertion is meaningless if the notice never named the destination.
     // Surfaced first: every later assertion is meaningless if the notice never named the destination, and
-    // The accumulated notice texts are what says why.
+    // the accumulated notice texts are what says why.
     // Surfaced first: every later assertion is meaningless if the notice never named the destination, and
-    // The accumulated notice texts are what says why.
+    // the accumulated notice texts are what says why.
     expect({ noticeTexts: result.noticeTexts, wasNoticeLinkFound: result.wasNoticeLinkFound })
       .toMatchObject({ wasNoticeLinkFound: true });
     // The click, and only the click, opened the destination.
@@ -339,15 +339,15 @@ describe('extract completion notice link (issue #232)', () => {
     expect({ destinationEditorValue: result.destinationEditorValue, selectionAfterClick: result.selectionAfterClick })
       .toMatchObject({ selectionAfterClick: 'EXTRACTED-BY-ISSUE-232' });
     // And the destination is highlighted in the file explorer, matching the folder-side behavior the
-    // Reporter asked for consistency with.
+    // reporter asked for consistency with.
     // Issue #263: clicking again re-selects the content, so the notice keeps working as a way back to it
-    // Rather than only the first time.
+    // rather than only the first time.
     expect(result.selectionAfterSecondClick).toBe('EXTRACTED-BY-ISSUE-232');
     expect(result.isMarkdownViewActiveAfterSecondClick).toBe(true);
 
     expect(result.revealedPaths).toContain('issue-232-destination.md');
     // The editor is still the active view: `revealInFolder` "opens the view if it is not already
-    // Open/visible", so this is the assertion that it does not leave the user parked in the file explorer.
+    // open/visible", so this is the assertion that it does not leave the user parked in the file explorer.
     expect(result.isMarkdownViewActive).toBe(true);
   });
 });

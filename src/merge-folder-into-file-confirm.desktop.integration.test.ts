@@ -9,15 +9,15 @@ import {
 } from 'vitest';
 
 // The merge-folder-into-file confirmation dialog is v8-ignored modal UI (`modals/merge-folder-into-file-modal.ts`),
-// So this drives the REAL dialog DOM against a real Obsidian (issue #166). The merged note is created only
+// so this drives the REAL dialog DOM against a real Obsidian (issue #166). The merged note is created only
 // AFTER the dialog is confirmed, so rendering its path as an internal link made a click CREATE it — the
-// Settled rule is `link when the path already exists, code block when it does not`, and only a real Obsidian
-// Proves which element type came out (the unit test mocks both renderers).
+// settled rule is `link when the path already exists, code block when it does not`, and only a real Obsidian
+// proves which element type came out (the unit test mocks both renderers).
 // Separate from `merge-folder-into-file.desktop.integration.test.ts` on purpose: this case cancels, so it
-// Never moves or deletes a file and stays clear of the headless rename wall that suite warns about.
+// never moves or deletes a file and stays clear of the headless rename wall that suite warns about.
 // Version coverage: this asserts public-API modal DOM (`.modal-content` `code`/`a`), not Obsidian internals, so one end
-// Would suffice — but it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7. Pin the
-// Other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
+// would suffice — but it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7. Pin the
+// other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-into-file-confirm.desktop.integration.test.ts`.
 
 const PLUGIN_ID = 'advanced-note-composer';
@@ -56,7 +56,7 @@ describe('merge folder into file confirmation dialog (issue #166)', () => {
           await app.vault.createFolder('merge-confirm');
           const note = await app.vault.create('merge-confirm/note.md', 'note body');
           // Two notes, because issue #209 stopped offering the command for a folder holding fewer: this
-          // Case is about what the dialog RENDERS, so it needs the dialog to open at all.
+          // case is about what the dialog RENDERS, so it needs the dialog to open at all.
           await app.vault.create('merge-confirm/other.md', 'other body');
           await openFile(note);
 
@@ -66,7 +66,7 @@ describe('merge folder into file confirmation dialog (issue #166)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // The folder exists, so it is the ONE anchor in the body; the target note does not exist yet, so it
-          // Must be a code block among the field labels.
+          // must be a code block among the field labels.
           const linkTexts = [...document.querySelectorAll('.modal-content a')].map((el) => el.textContent);
           const codeTexts = [...document.querySelectorAll('.modal-content code')].map((el) => el.textContent);
 

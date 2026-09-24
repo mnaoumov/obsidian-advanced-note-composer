@@ -68,7 +68,7 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so an offset-based selection
-          // Against a stale buffer would grab the previous run's text.
+          // against a stale buffer would grab the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -85,8 +85,8 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // Both are rendered by the picker itself: the switch in `onOpen`, the button by the minimizable
-          // Wrapper. Waiting for them is what makes a missing element a readable failure rather than a null
-          // Rect.
+          // wrapper. Waiting for them is what makes a missing element a readable failure rather than a null
+          // rect.
           await waitUntil({
             message: 'the create/merge switch never rendered',
             predicate: () => document.querySelector('.advanced-note-composer-split-target-mode .setting-item') !== null,
@@ -103,9 +103,9 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           const atDefaultWidth = readGeometry();
 
           // Both the button and the reserved corner are anchored to the modal's right edge, so a narrow
-          // Window is where a reservation measured against the wide layout would break. The prompt's width
-          // Is what the window width decides, so narrowing the element itself is the same test without
-          // Resizing Obsidian out from under the other suites.
+          // window is where a reservation measured against the wide layout would break. The prompt's width
+          // is what the window width decides, so narrowing the element itself is the same test without
+          // resizing Obsidian out from under the other suites.
           const promptEl = document.querySelector('.prompt');
           if (!(promptEl instanceof HTMLElement)) {
             throw new TypeError('No split picker prompt element.');
@@ -119,7 +119,7 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
           return { atDefaultWidth, atNarrowWidth };
         } finally {
           // Cancelling the setup flow closes the locked picker and releases the source-file lock, leaving no
-          // Lingering modal or lock behind.
+          // lingering modal or lock behind.
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
           await waitUntil({
             message: 'the split picker did not close',
@@ -150,7 +150,7 @@ describe('the split/extract picker\'s create/merge switch and minimize button (i
         function readGeometry(): PickerGeometry {
           return {
             // The absolutely-positioned button, and the row's CONTENT box - the padded container itself
-            // Spans the whole modal width and is expected to sit behind the button.
+            // spans the whole modal width and is expected to sit behind the button.
             minimizeButton: readRect('.prompt .minimize-button'),
             switchControl: readRect('.advanced-note-composer-split-target-mode .checkbox-container'),
             switchRow: readRect('.advanced-note-composer-split-target-mode .setting-item')

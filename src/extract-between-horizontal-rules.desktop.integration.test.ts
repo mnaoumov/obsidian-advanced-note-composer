@@ -31,7 +31,7 @@ describe('extract between horizontal rules', () => {
          */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Two different rule spellings (`---` and `***`) prove Obsidian's parser tags both as thematicBreak
-        // Sections, which is what the command keys off. `middle` sits between them.
+        // sections, which is what the command keys off. `middle` sits between them.
         const SOURCE = 'intro\n\n---\n\nmiddle\n\n***\n\nouter';
         const MIDDLE_LINE = 4;
 
@@ -42,7 +42,7 @@ describe('extract between horizontal rules', () => {
           editor.setCursor({ ch: 0, line: MIDDLE_LINE });
 
           // The command keys off the metadata cache's `thematicBreak` Sections, so it stays disabled until
-          // The cache has indexed the note just written. Executing before that silently does nothing.
+          // the cache has indexed the note just written. Executing before that silently does nothing.
           await waitUntil({
             message: 'metadata cache did not index the horizontal rules',
             predicate: () => (app.metadataCache.getFileCache(file)?.sections ?? []).some((section) => section.type === 'thematicBreak')
@@ -58,7 +58,7 @@ describe('extract between horizontal rules', () => {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');
@@ -74,7 +74,7 @@ describe('extract between horizontal rules', () => {
             predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(file.basename))
           });
           // The suggester needs a beat to mark the matching suggestion active; dispatching Enter the
-          // Instant the element appears races that and selects nothing.
+          // instant the element appears races that and selects nothing.
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           input.focus();
           await pressKey({ key: 'Enter' });

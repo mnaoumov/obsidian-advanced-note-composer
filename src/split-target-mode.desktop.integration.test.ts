@@ -88,12 +88,12 @@ const CREATED_BESIDE_TARGET_PATH = `${TARGET_BASENAME} 1.md`;
 const FORCED_BASENAME = 'split-mode-forced';
 const FORCED_PATH = `${FORCED_BASENAME}.md`;
 // Matches no note in the vault, so it is the name that tells the two modes apart: `Create` offers
-// To make it, `Merge` offers nothing at all.
+// to make it, `Merge` offers nothing at all.
 const UNKNOWN_NAME = 'split-mode-nothing-matches-this';
 const SOURCE_CONTENT = 'alpha bravo charlie\n';
 // The option checkboxes the instruction bar renders, in order: `Include frontmatter`, `Treat title
-// As path`, `Fix footnotes`, `Allow only current folder`, `Merge headings`, `Allow split into
-// Unresolved path`.
+// as path`, `Fix footnotes`, `Allow only current folder`, `Merge headings`, `Allow split into
+// unresolved path`.
 const TREAT_TITLE_AS_PATH_CHECKBOX_INDEX = 1;
 const UNRESOLVED_PATH_CHECKBOX_INDEX = 5;
 
@@ -126,7 +126,7 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
       expect(create.observations.isTreatTitleAsPathDisabled).toBe(false);
       expect(create.observations.isUnresolvedPathDisabled).toBe(false);
       // The SAME typed name - one an existing note already holds - now makes a new note beside it instead of
-      // Merging into it, which is the whole point of stating the mode.
+      // merging into it, which is the whole point of stating the mode.
       expect(create.contentAfter).toContain('bravo');
 
       // `Mod+Enter` still forces a creation FROM `Merge` mode, where there is no creatable suggestion at all.
@@ -197,7 +197,7 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
           recordCurrentMode(spellcheckByMode);
 
           // The box has the cursor when the picker opens (issue #262), and `Alt+M` needs it to still be
-          // There; focusing again costs nothing and makes that independent of the opening focus race.
+          // there; focusing again costs nothing and makes that independent of the opening focus race.
           requirePickerInput().focus();
           await pressKey({ key: 'm', modifiers: ['Alt'] });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -222,7 +222,7 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
           const isMerge = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container')?.classList.contains('is-enabled') ?? false;
           // The ATTRIBUTE, not the `spellcheck` IDL property: the value being corrected is the hardcoded
           // `spellcheck: "false"` Obsidian writes onto every `SuggestModal` input, and the IDL property
-          // Reports an inherited default for an element carrying no attribute at all.
+          // reports an inherited default for an element carrying no attribute at all.
           spellcheckByMode[isMerge ? 'Merge' : 'Create'] = requirePickerInput().getAttribute('spellcheck');
         }
 
@@ -253,7 +253,7 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
           await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so an offset-based
-          // Selection against a stale buffer would grab the previous reading's text.
+          // selection against a stale buffer would grab the previous reading's text.
           view.editor.setValue(SPELLCHECK_SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -268,12 +268,12 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
     });
 
     // `Create` is a name being invented, so it follows the setting exactly as every other name prompt in
-    // The plugin does (issue #233) - rather than keeping the `spellcheck="false"` Obsidian hardcodes onto
-    // Every `SuggestModal` input.
+    // the plugin does (issue #233) - rather than keeping the `spellcheck="false"` Obsidian hardcodes onto
+    // every `SuggestModal` input.
     expect(result.whenEnabled['Create']).toBe('true');
     // `Merge` is a search box for notes that already exist. Nothing there is prose, so it stays unchecked
-    // Even with the setting on - which is also what proves the `Create` reading came from the MODE and not
-    // From the box simply always being checked.
+    // even with the setting on - which is also what proves the `Create` reading came from the MODE and not
+    // from the box simply always being checked.
     expect(result.whenEnabled['Merge']).toBe('false');
     // ...and turning the vault setting off turns `Create` off too, which is what makes it the user's call.
     expect(result.whenDisabled['Create']).toBe('false');
@@ -358,8 +358,8 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
       const source = await ensureFile(sourcePath, sourceContent);
       const editor = await openAndGetEditor(source);
       // Reset the source through the EDITOR, not the vault: the previous run left a link where `bravo`
-      // Was, and an open buffer wins over `vault.modify` - selecting by offset against a stale buffer
-      // Would extract that link instead of the word.
+      // was, and an open buffer wins over `vault.modify` - selecting by offset against a stale buffer
+      // would extract that link instead of the word.
       editor.setValue(sourceContent);
       await waitUntil({
         message: 'the source editor did not catch up with the reset content',
@@ -417,7 +417,7 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
         timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
       });
       // The extraction rewrites the SOURCE note too, so waiting for that is what proves the operation
-      // Ran rather than the modal merely closing.
+      // ran rather than the modal merely closing.
       await waitUntil({
         message: 'the selection was not extracted out of the source note',
         predicate: () => !editor.getValue().includes('bravo charlie'),

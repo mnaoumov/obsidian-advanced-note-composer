@@ -137,7 +137,7 @@ vi.mock('../open-minimizable-modal.ts', () => ({
     }
 
     // The `Rename` buttons live in the dialog BODY (issue #200), not in its button container, so driving one
-    // Means building the content and clicking the real button.
+    // means building the content and clicking the real button.
     invokeAsyncSafely(async () => {
       const fragment = createFragment();
       await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
@@ -381,8 +381,8 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should de-duplicate a colliding folder name and report the real one to the notes', async () => {
       // An un-numbered template is what makes a collision reachable at all: with `{{index}}` the sequence
-      // Moves on instead. `{{folderName}}` then has to follow the de-duplicated PATH, not the template's
-      // Own result.
+      // moves on instead. `{{folderName}}` then has to follow the de-duplicated PATH, not the template's
+      // own result.
       initApp({ 'parent/Alpha/a.md': 'a' });
       mockPrompt.mockResolvedValue('alpha');
       const { handler } = createHandler({
@@ -602,7 +602,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const validate = castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
 
       // The message names the setting that failed — a bare `boom` from deep inside Templater told the user
-      // Nothing about where to go and fix it (issue #203).
+      // nothing about where to go and fix it (issue #203).
       expect(await validate('alpha')).toBe('Name transform template failed: boom');
     });
   });
@@ -659,7 +659,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should resolve with an empty source path when no note is open', async () => {
       // The command is offered with nothing open, which is the one case `Same folder as current file` has
-      // No answer for — Obsidian's own resolver falls back to the vault root for it.
+      // no answer for — Obsidian's own resolver falls back to the vault root for it.
       initApp({ 'note.md': 'note' });
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
       const getNewFileParent = vi.spyOn(app.fileManager, 'getNewFileParent').mockReturnValue(app.vault.getRoot());
@@ -674,7 +674,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should refuse when the resolved folder is ignored', async () => {
       // Obsidian points at a folder the plugin is told to ignore. The refusal states that contradiction
-      // Rather than silently creating the folder somewhere else.
+      // rather than silently creating the folder somewhere else.
       initApp({ 'parent/note.md': 'note' });
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
       vi.spyOn(app.fileManager, 'getNewFileParent').mockReturnValue(getFolder('parent'));
@@ -732,7 +732,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     });
 
     // Issue #199: the parent folder is decided before the command starts (right-clicked, or Obsidian's
-    // Default new-note location), so "Change target" is the only way to move it without starting over.
+    // default new-note location), so "Change target" is the only way to move it without starting over.
     it('should create the folder under the parent picked from the dialog', async () => {
       initApp({
         'elsewhere/other.md': 'other',
@@ -755,7 +755,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should renumber the folder against the NEW parent siblings', async () => {
       // The whole plan is rebuilt around the picked parent: the index counts ITS children, not the old
-      // Parent's, so the previewed name is the one the write actually produces.
+      // parent's, so the previewed name is the one the write actually produces.
       initApp({
         'elsewhere/1. Existing/x.md': 'x',
         'parent/note.md': 'note'
@@ -809,7 +809,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
   });
 
   // Issue #200: the dialog previews a name that is not what was typed, so it is the one place a rename can
-  // Still change the outcome. The folder's `Rename` rebuilds the whole plan; a note's overrides that row.
+  // still change the outcome. The folder's `Rename` rebuilds the whole plan; a note's overrides that row.
   describe('renaming from the confirmation dialog (issue #200)', () => {
     it('should rebuild the plan around the folder name typed into Rename', async () => {
       initApp({ 'parent/note.md': 'note' });
@@ -869,7 +869,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       expect(mockPrompt.mock.calls[1]?.[0]).toMatchObject({ defaultValue: 'second.md', okButtonText: 'Rename' });
 
       // The prompt's validator knows about the OTHER planned notes, so a collision is refused up front
-      // Rather than silently de-duplicated into `first 1.md` by the write.
+      // rather than silently de-duplicated into `first 1.md` by the write.
       const validate = castTo<(value: string) => Promise<unknown>>(ensureNonNullable(mockPrompt.mock.calls[1]?.[0]).valueValidator);
       expect(await validate('first')).toBe('Another note in this folder is already named that');
     });
@@ -888,7 +888,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should keep a renamed note when the folder is renamed afterwards', async () => {
       // The user named that note deliberately; re-deriving it from `{{safeFolderName}}` would silently undo
-      // Them, so the override outlives the rebuild.
+      // them, so the override outlives the rebuild.
       initApp({ 'parent/note.md': 'note' });
       mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('kept').mockResolvedValueOnce('beta');
       renameButtonClicks = [1, 0];
@@ -935,8 +935,8 @@ describe('CreateFolderWithNotesCommandHandler', () => {
   });
 
   // Issue #214: the same reporter who asked for the buttons wants them turn-off-able, so a vault whose note
-  // Names come from the content template cannot deviate from it by accident. Two independent flags, because
-  // The folder name was TYPED and normalization rewrites it, while the note names are the template's own.
+  // names come from the content template cannot deviate from it by accident. Two independent flags, because
+  // the folder name was TYPED and normalization rewrites it, while the note names are the template's own.
   describe('hiding the Rename buttons (issue #214)', () => {
     it('should drop only the note buttons when the note flag is off', async () => {
       expect(await renderConfirmButtonCount({ shouldShowRenameButtonForCreatedNotes: false })).toBe(1);
@@ -957,7 +957,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should still route a surviving note button to its own row', async () => {
       // The buttons are indexed positionally, so hiding the folder's shifts every note's — the remaining
-      // Ones must still rename the row they sit beside.
+      // ones must still rename the row they sit beside.
       initApp({ 'parent/note.md': 'note' });
       mockPrompt.mockResolvedValueOnce('alpha').mockResolvedValueOnce('renamed');
       // With the folder button gone, `0` is the FIRST note's.
@@ -1115,7 +1115,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       expect(parsedTemplate.endsWith('# 1. Alpha\n')).toBe(true);
 
       // The note on disk NEVER holds the prelude — that is what keeps its frontmatter real for the
-      // Metadata cache, and therefore what keeps `tp.frontmatter` working.
+      // metadata cache, and therefore what keeps `tp.frontmatter` working.
       expect(await readNote('parent/1. Alpha/n.md')).toBe('rendered\n');
       expect(startTask).toHaveBeenCalledWith('parent/1. Alpha/n.md');
       expect(endTask).toHaveBeenCalledWith('parent/1. Alpha/n.md');
@@ -1148,7 +1148,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
       // Not the LAST notice — the operation still completes, so its completion notice comes after this one.
       // The path is rendered with `appendCodeBlock`, which contributes nothing to `textContent` under the
-      // Mocks (the completion notice loses its names the same way), so only the message is asserted here.
+      // mocks (the completion notice loses its names the same way), so only the message is asserted here.
       const noticeTexts = showNotice.mock.calls.map((call) => {
         const content = call[0];
         return typeof content === 'string' ? content : content.textContent;

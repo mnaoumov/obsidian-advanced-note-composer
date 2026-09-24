@@ -38,7 +38,7 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText(' core plugin. You can safely switch it off to avoid duplicated functionality.');
       }),
       // Issue #271 moved settings a user may have configured, so it is announced rather than left to be
-      // Discovered as "my exclusions disappeared" — the entries did move, but not to a page of that name.
+      // discovered as "my exclusions disappeared" — the entries did move, but not to a page of that name.
       '5.11.0': createFragment((f) => {
         f.appendText('The ');
         appendCodeBlock(f, 'Include/exclude');
@@ -55,7 +55,7 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText('The four boxes that covered every command at once have been retired. Whatever you had listed in them was copied into every command\'s own boxes, so nothing changes until you edit them.');
         f.createEl('br');
         // Issue #272 moves no setting VALUE, but it does remove an entry the user navigates by, which is
-        // The same thing to anyone looking for a row where they last saw it.
+        // the same thing to anyone looking for a row where they last saw it.
         f.appendText('The ');
         appendCodeBlock(f, 'Title');
         f.appendText(' settings page has been merged into ');
@@ -67,7 +67,7 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
         f.appendText('. Every setting keeps its value.');
       }),
       // Issue #288 changes what a setting the user already configured DOES, which is exactly what goes
-      // Unnoticed until a command that used to refuse quietly runs.
+      // unnoticed until a command that used to refuse quietly runs.
       '5.12.0': createFragment((f) => {
         f.appendText('The ');
         appendCodeBlock(f, '<Category> exclude paths');
@@ -112,7 +112,7 @@ export class ReleaseNotesComponent extends LayoutReadyComponent {
       app: this.app,
       message: releaseNotes,
       // Issue #286: the headings are bare version numbers, which identify nothing to someone with dozens of
-      // Plugins installed, so the popup names the plugin it belongs to.
+      // plugins installed, so the popup names the plugin it belongs to.
       title: `${this.pluginName} release notes`
     });
   }

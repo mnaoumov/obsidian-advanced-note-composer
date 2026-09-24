@@ -335,7 +335,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
     });
 
     // The OLD alias was rendered through Templater too, which is why `ALPHA` is found and swapped for `BETA`
-    // While the hand-written alias survives.
+    // while the hand-written alias survives.
     expect(result.noteContent).toContain('- BETA');
     expect(result.noteContent).not.toContain('ALPHA');
     expect(result.noteContent).toContain('- my own alias');

@@ -114,7 +114,7 @@ export function createMovedNameSequence(params: CreateMovedNameSequenceParams): 
   return {
     resolveName(abstractFile: TAbstractFile): string {
       // The SAME classification the sibling scan uses (`next-sibling-index.ts`), so an item can never be
-      // Given a number that no later scan would read back — an attachment is not part of a note sequence.
+      // given a number that no later scan would read back — an attachment is not part of a note sequence.
       const kind = resolveSequenceKind(abstractFile);
       if (kind === null) {
         return abstractFile.name;
@@ -127,8 +127,8 @@ export function createMovedNameSequence(params: CreateMovedNameSequenceParams): 
 
       const { baseName: currentBaseName, extension } = resolveItemName(abstractFile);
       // Read back through the very template that will write the new one, so an item that already carries an
-      // Index is RENUMBERED rather than prefixed a second time. An item that never had one simply keeps its
-      // Whole name as the base.
+      // index is RENUMBERED rather than prefixed a second time. An item that never had one simply keeps its
+      // whole name as the base.
       const { baseName } = parseNumberedName({
         baseTokenKey: BASE_TOKEN_KEYS[kind],
         name: currentBaseName,
@@ -149,8 +149,8 @@ export function createMovedNameSequence(params: CreateMovedNameSequenceParams): 
       }).trim();
 
       // A template rendering to nothing leaves the item exactly as it was. The settings validator makes that
-      // Unreachable from the UI — it requires `{{index}}` and the base token — but this module takes the
-      // Template as a parameter, so the name is never allowed to become an empty string.
+      // unreachable from the UI — it requires `{{index}}` and the base token — but this module takes the
+      // template as a parameter, so the name is never allowed to become an empty string.
       return renderedName ? `${renderedName}${extension}` : abstractFile.name;
     }
   };

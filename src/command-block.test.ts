@@ -65,7 +65,7 @@ describe('isEditorCommandBlocked', () => {
   });
 
   // Issue #198: the two filters are independent, so merely excluding a path from merges/splits must NOT
-  // Hide its commands — they stay visible and refuse with a notice on trigger.
+  // hide its commands — they stay visible and refuse with a notice on trigger.
   it('should not block a path that is only in the content exclude paths', () => {
     const pluginSettingsComponent = createComponent({ mergeExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext('secret/note.md'), pluginSettingsComponent })).toBe(false);
@@ -77,7 +77,7 @@ describe('isEditorCommandBlocked', () => {
   });
 
   // Issue #249: the helper must hand the asking command's category to the settings, or every command
-  // Would keep sharing one answer.
+  // would keep sharing one answer.
   it('should block only the category whose own exclude paths cover the active path', () => {
     const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['secret'] });
     expect(isEditorCommandBlocked({ commandCategory: CommandCategory.Merge, context: createContext('secret/note.md'), pluginSettingsComponent })).toBe(true);

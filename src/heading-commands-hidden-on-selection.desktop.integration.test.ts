@@ -16,11 +16,11 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this exercises the editor context menu + command palette, which are desktop-only
-// Surfaces here (matching the plugin's established single-file integration convention; no Android
-// Emulator is wired for it). Version coverage: this feature is pure plugin logic (it reads
+// surfaces here (matching the plugin's established single-file integration convention; no Android
+// emulator is wired for it). Version coverage: this feature is pure plugin logic (it reads
 // `Editor.somethingSelected()` to decide whether to add a menu item) with no dependence on minified
 // Obsidian internals, version-sensitive DOM, or serialization formats, so verifying on public-latest is
-// Sufficient; there is nothing internals-specific to differ on catalyst.
+// sufficient; there is nothing internals-specific to differ on catalyst.
 // Isolation: `npx vitest run --project integration-tests:desktop src/heading-commands-hidden-on-selection.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -54,7 +54,7 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
         const SPLIT_BY_H2_ITEM_TITLE = 'Split note by headings - H2';
         const RECURSIVE_SPLIT_COMMAND_ID = `${pluginId}:split-note-by-headings-recursively`;
         // The scoped variant (issue #228) follows the same rule, and its title is not a substring of the
-        // Whole-note one, so `includes` cannot confuse the two.
+        // whole-note one, so `includes` cannot confuse the two.
         const SCOPED_SPLIT_ITEM_TITLE = 'Split heading recursively';
         const SCOPED_SPLIT_COMMAND_ID = `${pluginId}:split-heading-recursively`;
         const NOTE_PATH = 'anc-selection-menu-visibility.md';
@@ -187,8 +187,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
 
     // Caret in the heading's body with nothing selected: the heading commands are offered, and both
     // `Extract this heading...` and `Split heading recursively...` work from the body rather than only
-    // The `#` line (issue #143) — which is what makes right-clicking a section the entry point for
-    // Issue #228, with no menu surface of its own.
+    // the `#` line (issue #143) — which is what makes right-clicking a section the entry point for
+    // issue #228, with no menu surface of its own.
     expect(result.caretInBody.isRecursiveSplitInMenu).toBe(true);
     expect(result.caretInBody.isScopedSplitInMenu).toBe(true);
     expect(result.caretInBody.isExtractThisHeadingInMenu).toBe(true);
@@ -208,7 +208,7 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
     expect(result.selectionInBody.isScopedSplitAvailable).toBe(true);
 
     // The level-scoped items keep their own rule (issue #94): shown whenever the selection intersects a
-    // Heading of that level, selection or not.
+    // heading of that level, selection or not.
     expect(result.caretInBody.isSplitByH2InMenu).toBe(true);
     expect(result.selectionInBody.isSplitByH2InMenu).toBe(true);
   });

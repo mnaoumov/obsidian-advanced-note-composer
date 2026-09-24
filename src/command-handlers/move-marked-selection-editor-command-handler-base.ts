@@ -125,9 +125,9 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
     }
 
     // Same-note move: forbid an insert range that overlaps the marked selection — the moved content
-    // Would be removed along with the source. The bottom offset (end of note) can never be inside a
-    // Selection; the top offset (after frontmatter) can when the selection spans the frontmatter
-    // Boundary; the at-cursor range can when the user selected text overlapping the marked selection.
+    // would be removed along with the source. The bottom offset (end of note) can never be inside a
+    // selection; the top offset (after frontmatter) can when the selection spans the frontmatter
+    // boundary; the at-cursor range can when the user selected text overlapping the marked selection.
     const insertion = this.resolveInsertion(editor);
     const startOffset = insertion.targetCursorOffset ?? resolveInsertOffset(editor.getValue(), insertion.insertMode);
     const endOffset = insertion.targetCursorEndOffset ?? startOffset;
@@ -169,7 +169,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
 
     const isSameFile = sourceFile.path === targetFile.path;
     // A same-note move would otherwise leave a self-link (or self-embed) in place of the moved text,
-    // Which is meaningless — so default to leaving nothing unless the user opted in via settings.
+    // which is meaningless — so default to leaving nothing unless the user opted in via settings.
     const defaultTextAfterExtractionMode = isSameFile && !this.pluginSettingsComponent.settings.shouldApplyTextAfterExtractionToSameFile
       ? TextAfterExtractionMode.None
       : this.pluginSettingsComponent.settings.textAfterExtractionMode;
@@ -183,8 +183,8 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
     const insertToken = createMoveToken();
 
     // Release the held source lock before the composer runs — `splitFile` acquires its own source +
-    // Target locks. The captured data is read from `marked` (a local), so clearing first is safe,
-    // Makes the move one-shot, and leaves no dangling mark if the move fails.
+    // target locks. The captured data is read from `marked` (a local), so clearing first is safe,
+    // makes the move one-shot, and leaves no dangling mark if the move fails.
     this.moveSelectionBuffer.clear();
 
     const composer = new SplitComposer({

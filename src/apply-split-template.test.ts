@@ -44,8 +44,8 @@ beforeEach(() => {
     }
   }).asOriginalType__();
   // Test-mocks' MetadataCache is a strict proxy with no indexer; `processFrontMatter` triggers a recompute,
-  // So stub it to a no-op. Its markdown parser also throws on some perfectly valid content (a `---`
-  // Thematic break), and every vault write triggers it — stub that too, since indexing is not under test.
+  // so stub it to a no-op. Its markdown parser also throws on some perfectly valid content (a `---`
+  // thematic break), and every vault write triggers it — stub that too, since indexing is not under test.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   castTo<GenericObject>(app.metadataCache)['parseFileMetadata'] = vi.fn().mockReturnValue({});
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
@@ -111,7 +111,7 @@ describe('applySplitTemplateToNotes', () => {
   });
 
   // Issue #227: a recursive split's produced note sits in the folder the run built for it, so the folder
-  // Tokens name that folder — which is the whole point of giving the split template this vocabulary.
+  // tokens name that folder — which is the whole point of giving the split template this vocabulary.
   it('should resolve the folder tokens against each produced note\'s own folder', async () => {
     await apply('# {{folderName}}\n\nin {{folderPath}}\n\n{{content}}');
 
@@ -156,7 +156,7 @@ describe('applySplitTemplateToNotes', () => {
   });
 
   // Issue #284: the template's own Templater commands are only ever in the note from here on, so this is
-  // The one place they can be run — after the template is written, never before.
+  // the one place they can be run — after the template is written, never before.
   it('should run Templater over each templated note once the template is in it', async () => {
     const contentsSeenByTemplater: string[] = [];
     const runTemplater = vi.fn(async (file: TFile) => {

@@ -7,15 +7,15 @@ import {
 } from 'vitest';
 
 // The reorder modal's `Escape` was never exercised — the same shape of gap that let issue #231's
-// Broken drag ship, and issue #142 is the precedent for a real defect in exactly this handler shape (a
-// Keymap handler that does not `return false` leaks the key past the modal). Driven with the harness's
+// broken drag ship, and issue #142 is the precedent for a real defect in exactly this handler shape (a
+// keymap handler that does not `return false` leaks the key past the modal). Driven with the harness's
 // TRUSTED `pressKey`, so the key travels the real input pipeline a user's does.
 //
 // Verified by mutation, so the scope of what this pins is known rather than assumed. The modal
-// Registers no `Escape` handler at all — writing this test is what proved the one it used to have to
-// Be dead code, since Obsidian's `Modal` already closes on `Escape` and preventDefaults it. What this
-// Pins instead is the cancel contract in `onClose`: making it resolve `true` (a confirm) writes the
-// Reordered note and fails here.
+// registers no `Escape` handler at all — writing this test is what proved the one it used to have to
+// be dead code, since Obsidian's `Modal` already closes on `Escape` and preventDefaults it. What this
+// pins instead is the cancel contract in `onClose`: making it resolve `true` (a confirm) writes the
+// reordered note and fails here.
 const PLUGIN_ID = 'advanced-note-composer';
 
 const NOTE_CONTENT = '# A\naaa\n\n# B\nbbb\n\n# C\nccc\n';
@@ -35,11 +35,11 @@ describe('reorder modal keyboard paths', () => {
          */
         const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         // The callback is serialized into the Obsidian process, so it cannot reach this file's
-        // Module scope — everything it needs arrives through `input` or is declared right here.
+        // module scope — everything it needs arrives through `input` or is declared right here.
         const HEADING_COUNT = 3;
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Comfortably past the time the reorder itself takes, so "nothing was written" cannot just
-        // Mean "not yet".
+        // mean "not yet".
         const PAST_REORDER_DELAY_IN_MILLISECONDS = 3000;
 
         const existing = app.vault.getAbstractFileByPath(notePath);
@@ -58,7 +58,7 @@ describe('reorder modal keyboard paths', () => {
         view.editor.setValue(noteContent);
 
         // The command reads the heading cache; firing it before the cache catches up makes it silently
-        // No-op and the timeout then blames the modal instead of the cache.
+        // no-op and the timeout then blames the modal instead of the cache.
         await waitUntil({
           message: 'heading cache not ready',
           predicate: () => (app.metadataCache.getFileCache(file)?.headings?.length ?? 0) === HEADING_COUNT,
@@ -74,7 +74,7 @@ describe('reorder modal keyboard paths', () => {
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
         // Move "A" down FIRST, so the modal really is holding a pending change. Without it the
-        // Assertion below would hold even for a modal that had nothing to write on confirm.
+        // assertion below would hold even for a modal that had nothing to write on confirm.
         moveRowDown('A');
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
         const rowLabelsAfterMove = readRowLabels();
@@ -82,11 +82,11 @@ describe('reorder modal keyboard paths', () => {
         const editorValueBeforeEscape = view.editor.getValue();
 
         // Obsidian's keymap listens on `window` in the CAPTURE phase and stops propagation, so a
-        // Bubble-phase listener never sees the key at all. A capture listener registered here runs
-        // After Obsidian's (same target, same phase — registration order) and therefore reads the
-        // Outcome off the SAME trusted key press: `preventDefault`-ed exactly when the handler returned
+        // bubble-phase listener never sees the key at all. A capture listener registered here runs
+        // after Obsidian's (same target, same phase — registration order) and therefore reads the
+        // outcome off the SAME trusted key press: `preventDefault`-ed exactly when the handler returned
         // `false`. That is the issue #142 contract, and nothing else observes it — the modal holds the
-        // Focus, so a key that leaks has no visible effect to assert on.
+        // focus, so a key that leaks has no visible effect to assert on.
         let wasDefaultPrevented = false;
         window.addEventListener('keydown', captureEscape, { capture: true });
         try {
@@ -150,7 +150,7 @@ describe('reorder modal keyboard paths', () => {
     expect(result.noteContentAfterEscape.indexOf('# B')).toBeLessThan(result.noteContentAfterEscape.indexOf('# C'));
 
     // The handler returned `false`, so the key was preventDefault-ed and cannot leak past the modal
-    // Into the editor underneath (issue #142). This is the ONLY assertion here that pins that.
+    // into the editor underneath (issue #142). This is the ONLY assertion here that pins that.
     expect(result.wasDefaultPrevented).toBe(true);
 
     expect(result.editorValueAfterEscape).toBe(result.editorValueBeforeEscape);

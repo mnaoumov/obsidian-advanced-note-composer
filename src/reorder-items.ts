@@ -213,9 +213,9 @@ export function buildRenameSteps(params: BuildRenameStepsParams): readonly Renam
     }
 
     // Every remaining item is blocked by another remaining item: a cycle. Park one member so the rest of
-    // The cycle can unwind, and give it its real name once the list has drained.
+    // the cycle can unwind, and give it its real name once the list has drained.
     // `ensureNonNullable` rather than an `if`: the loop condition guarantees a first entry, so a guard
-    // Here would be a branch nothing can reach — and the throw lives inside the helper (G10t).
+    // here would be a branch nothing can reach — and the throw lives inside the helper (G10t).
     const cycledItem = ensureNonNullable(pendingItemsByCurrentPath.values().next().value);
     const temporaryPath = resolveTemporaryPath(cycledItem.newPath);
     steps.push({ fromPath: cycledItem.oldPath, isTemporary: true, toPath: temporaryPath });
@@ -277,7 +277,7 @@ export function buildRenumberPlan(params: BuildRenumberPlanParams): readonly Ren
       index,
       newName,
       // `normalizePath` is load-bearing for the vault ROOT, whose `path` is `/` — joining onto it would
-      // Otherwise yield a leading slash, which is not the path the item actually has.
+      // otherwise yield a leading slash, which is not the path the item actually has.
       newPath: normalizePath(join(parentFolderPath, newName)),
       oldPath: item.path
     };

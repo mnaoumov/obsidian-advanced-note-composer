@@ -40,7 +40,7 @@ interface AbortableComposer {
 // Return-value stubs for the two metadata reads test-mocks does not fully model: the backlink index
 // (getBacklinksForFileSafe) and frontmatter extraction (getFrontmatterSafe). getCacheSafe runs for
 // REAL against test-mocks' synchronous indexer, so editLinks sees the target's links; the vault, lock,
-// Transaction, and link rewriting are all real too.
+// transaction, and link rewriting are all real too.
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
@@ -48,7 +48,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 }));
 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
-// Reach into unmocked App internals (embedRegistry). Not the behavior under test.
+// reach into unmocked App internals (embedRegistry). Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -97,7 +97,7 @@ function createPluginNoticeComponentStub(): PluginNoticeComponent {
     showNotice: vi.fn(),
     showNoticeAfterDelay: vi.fn().mockImplementation((params: PluginNoticeComponentShowNoticeAfterDelayParams) => {
       // Invoke the lazy content builder so the progress-notice content is exercised (it would only run
-      // In the real component after the delay elapses); fire-and-forget — its result is not under test.
+      // in the real component after the delay elapses); fire-and-forget — its result is not under test.
       invokeAsyncSafely(async () => {
         await castTo<() => Promise<unknown>>(params.content)();
       });
@@ -170,7 +170,7 @@ describe('MergeComposer', () => {
     it('should abort and not trash the source when a file is modified during the operation', async () => {
       const composer = createComposer();
       // Simulate an external edit to the source while the operation is in progress: bump its mtime
-      // Between the mtime capture and the unchanged-check.
+      // between the mtime capture and the unchanged-check.
       vi.spyOn(app.vault, 'read').mockImplementation((file) => {
         ensureNonNullable(app.vault.getFileByPath('source.md')).stat.mtime += 1;
         return Promise.resolve(castTo<TFile>(file).path === 'source.md' ? 'source body' : 'target body');
@@ -232,12 +232,12 @@ describe('MergeComposer', () => {
 
     it('should rewrite a target link that resolved to the merged-away source and leave others alone', async () => {
       // The target links to both the source and an unrelated note. After the merge folds the source
-      // Into the target, the [[source]] backlink must be rewritten to the surviving target note, while
-      // The [[other]] link (which does not resolve to the source) is left untouched.
+      // into the target, the [[source]] backlink must be rewritten to the surviving target note, while
+      // the [[other]] link (which does not resolve to the source) is left untouched.
       await app.vault.create('other.md', 'other body');
       await app.vault.modify(getTargetFile(), 'target body\n[[source]]\n[[other]]\n');
       // Link-format resolution (getNewLinkFormat / shouldUseWikilinks) reads Vault.getConfig, which
-      // Test-mocks does not model; absolute format plus wikilinks emits a plain [[target]] wikilink.
+      // test-mocks does not model; absolute format plus wikilinks emits a plain [[target]] wikilink.
       castTo<GenericObject>(app.vault)['getConfig'] = vi.fn((key: string) => {
         switch (key) {
           case 'newLinkFormat': {
@@ -295,7 +295,7 @@ describe('MergeComposer', () => {
 
     it('should honor an attachment-location plugin\'s destination', async () => {
       // What issue #161 asked for: the destination comes from whatever patched Obsidian's attachment
-      // Resolution (e.g. Custom Attachment Location), without this plugin knowing that plugin exists.
+      // resolution (e.g. Custom Attachment Location), without this plugin knowing that plugin exists.
       initAttachmentApp({}, (notePath) => `Assets/${notePath.replace(/\.md$/, '')}`);
 
       await createAttachmentComposer().mergeFile();
@@ -342,10 +342,10 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
     }
   }).asOriginalType__();
   // Attachments live beside their note unless a plugin says otherwise, so the merge has to move the
-  // Image out of `Docs` and into `Other`.
+  // image out of `Docs` and into `Other`.
   app.vault.setConfig('attachmentFolderPath', './');
   // The link settings the rewriting behind a moved attachment reads carry no modeled default; absolute
-  // Wikilinks are the deterministic choice, since `shortest` would depend on the rest of the fixture vault.
+  // wikilinks are the deterministic choice, since `shortest` would depend on the rest of the fixture vault.
   app.vault.setConfig('newLinkFormat', 'absolute');
   app.vault.setConfig('useMarkdownLinks', false);
   if (resolveAttachmentFolderPathForNote) {
@@ -366,7 +366,7 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
 function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (notePath: string) => string): void {
   function extended(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
     // A real attachment-location plugin also handles a note-less resolution; these tests never ask for one,
-    // So fail loudly rather than invent a fallback folder.
+    // so fail loudly rather than invent a fallback folder.
     const notePath = getPath(app, ensureNonNullable(params.notePathOrFile));
     const folderPath = resolveAttachmentFolderPathForNote(notePath);
     const basePath = folderPath === '' ? params.attachmentFileBaseName : `${folderPath}/${params.attachmentFileBaseName}`;

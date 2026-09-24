@@ -6,9 +6,9 @@ import {
 } from 'vitest';
 
 // Issue #199: `Change target` did nothing in the `Create folder with notes...` confirmation. Its parent is
-// Decided BEFORE the user is asked (the right-clicked folder, or Obsidian's default new-note location), so
-// The dialog is the only place it can be changed. This also pins the half the unit tests cannot: the whole
-// Plan is REBUILT for the picked parent, so `{{index}}` counts the NEW parent's children.
+// decided BEFORE the user is asked (the right-clicked folder, or Obsidian's default new-note location), so
+// the dialog is the only place it can be changed. This also pins the half the unit tests cannot: the whole
+// plan is REBUILT for the picked parent, so `{{index}}` counts the NEW parent's children.
 // Desktop-only: folder flows, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/confirm-dialog-change-target-create-folder.desktop.integration.test.ts`.
 
@@ -108,7 +108,7 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           findButton('Create')?.click();
 
           // A throwing wait would discard everything observed so far, so give up quietly and let the
-          // Assertions outside Obsidian report what actually happened.
+          // assertions outside Obsidian report what actually happened.
           try {
             await waitUntil({
               message: 'the folder was not created under the picked parent',
@@ -190,10 +190,10 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
           }
           nameInput.value = name;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           // The prompt validates ASYNCHRONOUSLY and starts out invalid, so a click before it settles is
-          // Silently ignored.
+          // silently ignored.
           await waitUntil({
             message: 'the typed folder name never became valid',
             predicate: () => nameInput.checkValidity(),

@@ -323,7 +323,7 @@ export function startNoticeRecorderInObsidian(params: StartNoticeRecorderInObsid
     for (const mutation of mutations) {
       for (const addedNode of mutation.addedNodes) {
         // The notice container itself is added on the first notice, so a subtree query is needed as well as
-        // The node's own match - otherwise the very first notice of a run is the one that goes unrecorded.
+        // the node's own match - otherwise the very first notice of a run is the one that goes unrecorded.
         if (addedNode.nodeType !== ELEMENT_NODE_TYPE) {
           continue;
         }

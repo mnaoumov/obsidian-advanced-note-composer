@@ -69,7 +69,7 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
 }));
 
 // The modal is v8-ignored UI; capture its params so the flow can be driven by moving rows on the REAL
-// Model it was handed, which is what makes these tests exercise the model and the handler together.
+// model it was handed, which is what makes these tests exercise the model and the handler together.
 vi.mock('../modals/reorder-modal.ts', () => ({
   didConfirmReorderModal: vi.fn().mockImplementation((params: DidConfirmReorderModalParams) => {
     driveModal?.(params);
@@ -457,7 +457,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
   it('should lead with the numbered folder even when it sorts last in the vault, and renumber in the template\'s own shape', async () => {
     // With the index written as a SUFFIX, the numbered folder is the later child — the mirror image of
-    // The prefix case above, and the only way the comparator meets the pair in this direction.
+    // the prefix case above, and the only way the comparator meets the pair in this direction.
     initApp({
       'parent/Alpha/note.md': 'a',
       'parent/Beta (1)/note.md': 'b'

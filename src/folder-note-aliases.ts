@@ -52,8 +52,8 @@ export function swapDerivedAlias(params: SwapDerivedAliasParams): string[] {
   }
 
   // Written at the old alias's own position, so a rename never reorders the property. The filter then drops
-  // Any OTHER copy of the new alias, which is how a rename back to a name still listed further down leaves
-  // One entry rather than two.
+  // any OTHER copy of the new alias, which is how a rename back to a name still listed further down leaves
+  // one entry rather than two.
   return aliases
     .map((alias, index) => (index === oldAliasIndex ? newAlias : alias))
     .filter((alias, index) => index === oldAliasIndex || alias !== newAlias);

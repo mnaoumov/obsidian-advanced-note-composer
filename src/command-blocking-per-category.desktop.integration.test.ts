@@ -16,8 +16,8 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only, for the same reason as `command-blocking.desktop.integration.test.ts`: it drives the
-// Command palette's check callback, a desktop-only surface here. Version coverage: settings-gated `canExecute*` logic
-// With no dependence on minified internals or version-sensitive DOM, so public-latest is sufficient.
+// command palette's check callback, a desktop-only surface here. Version coverage: settings-gated `canExecute*` logic
+// with no dependence on minified internals or version-sensitive DOM, so public-latest is sufficient.
 // Isolation: `npx vitest run --project integration-tests:desktop src/command-blocking-per-category.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -159,20 +159,20 @@ describe('per-category command blocking (issue #249)', () => {
         const blockedFile = await ensureMarkdownFile(BLOCKED_NOTE, 'alpha bravo charlie');
 
         // The reporter's second and third examples: name the categories to block, and whatever is left
-        // Unlisted stays offered. Here `Smart cut & paste` is the one kept.
+        // unlisted stays offered. Here `Smart cut & paste` is the one kept.
         await setPaths('Create command exclude paths', BLOCKED_FOLDER);
         await setPaths('Swap command exclude paths', BLOCKED_FOLDER);
         await setPaths('Split/extract command exclude paths', BLOCKED_FOLDER);
         const restBlocked = await probeCategories(blockedFile);
 
         // Since issue #271 there is no all-commands list to reach the kept category with: hiding it too
-        // Means naming it, which is exactly the change — every path is listed under the commands it
-        // Affects and nowhere else.
+        // means naming it, which is exactly the change — every path is listed under the commands it
+        // affects and nowhere else.
         await setPaths('Smart cut & paste command exclude paths', BLOCKED_FOLDER);
         const everyCategoryBlocked = await probeCategories(blockedFile);
 
         // Within a category the exclude list wins over its own include list, so listing the path in both
-        // Is not an exception that brings the commands back.
+        // is not an exception that brings the commands back.
         await setPaths('Create command include paths', BLOCKED_FOLDER);
         const categoryExcludeWinsOverItsInclude = await probeCategories(blockedFile);
 

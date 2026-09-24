@@ -87,7 +87,7 @@ export async function normalizeTypedFolderNameWithTransform(params: NormalizeTyp
     rawName: await applyNameTransform({
       app,
       // These commands work on a folder, so they have no note of their own to offer — the Templater context
-      // Is left to the shared fallback chain, which does not require one to be open (issue #218).
+      // is left to the shared fallback chain, which does not require one to be open (issue #218).
       contextFile: null,
       rawString: rawName,
       template: settings.nameTransformTemplate
@@ -125,7 +125,7 @@ export async function validateTypedFolderName(params: ValidateTypedFolderNamePar
   }
 
   // Only reachable with `Should replace invalid title characters` off, which leaves the characters in
-  // Place for the user to fix — the same choice the reporter's own plugin makes.
+  // place for the user to fix — the same choice the reporter's own plugin makes.
   if (new RegExp(INVALID_CHARACTERS_REG_EXP.source).test(normalizedName)) {
     return 'Folder name contains invalid characters';
   }

@@ -185,7 +185,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   });
 
   // The sources that will actually be merged away, as opposed to the ignored ones, which are left exactly
-  // As they are - both their attachments and their open tabs.
+  // as they are - both their attachments and their open tabs.
   const notesToMerge = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
   const attachmentsToRelocate = await collectAttachments({
     app,
@@ -224,7 +224,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       app,
       body: async (vaultTransaction) => {
         // Attachments move FIRST, while their notes still exist: the vault's own rename then fixes the
-        // Links in those notes, and each merge's link rewriting re-resolves them against the target.
+        // links in those notes, and each merge's link rewriting re-resolves them against the target.
         await relocateAttachments({
           app,
           relocations: attachmentsToRelocate.map((attachment) => ({
@@ -248,7 +248,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             continue;
           }
           // Headings are flushed only once a source actually reaches the merge, so a folder whose notes
-          // Are all skipped never leaves an empty heading behind in the target.
+          // are all skipped never leaves an empty heading behind in the target.
           if (pendingHeadings.length > 0) {
             const headingBlock = buildHeadingBlock(pendingHeadings);
             pendingHeadings.length = 0;
@@ -263,12 +263,12 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             pluginSettingsComponent,
             resourceLockComponent,
             // The whole batch shares ONE target: a per-file open would flicker the active tab through
-            // Every merged note (issue #106), and a per-file notice would spam. The batch reports once.
+            // every merged note (issue #106), and a per-file notice would spam. The batch reports once.
             // Follows the picker that chose the target (issue #253): an excluded destination the picker
-            // Was allowed to offer must not then be refused by the composer's own guard.
+            // was allowed to offer must not then be refused by the composer's own guard.
             shouldMergeIgnoredTarget: settings.shouldOfferExcludedPathsAsMergeDestinations,
             // The batch relocates the attachments itself, once, before the first merge (see above), so
-            // The composer's own per-note relocation would move them a second time.
+            // the composer's own per-note relocation would move them a second time.
             shouldMoveAttachments: false,
             shouldOpenAfterMerge: false,
             shouldShowNotice: false,
@@ -297,7 +297,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     });
   } catch (error) {
     // The transaction has rolled back, so every merged-away note is back on disk - and so must be the tabs
-    // Closed for them above, or a cancelled merge would leave the workspace quietly rearranged.
+    // closed for them above, or a cancelled merge would leave the workspace quietly rearranged.
     await reopenClosedLeaves(app, closedNoteLeaves);
     if (abortController.signal.aborted) {
       // The operation was cancelled (user or external change); the transaction has rolled back.
@@ -310,7 +310,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
 
   if (mergedCount > 0) {
     // The batch records its target once for the whole run, for the same reason it reports once: the
-    // Per-note composers run on the injected transaction and deliberately record nothing (issue #206).
+    // per-note composers run on the injected transaction and deliberately record nothing (issue #206).
     recordRecentTarget(targetFile);
 
     // The batch reports once for the whole run — every `MergeComposer` in it was constructed with
@@ -418,7 +418,7 @@ async function collectAttachments(params: CollectAttachmentsParams): Promise<Att
 function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, sourcePath: string, targetPath: string): boolean {
   const { settings } = pluginSettingsComponent;
   // Source and target are decided by their own settings since issue #253 — what a merge may swallow, and
-  // Where it may land. Mirrors `MergeFolderCommandHandler.isMergeIgnored`.
+  // where it may land. Mirrors `MergeFolderCommandHandler.isMergeIgnored`.
   if (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath, CommandCategory.Merge)) {
     return true;
   }

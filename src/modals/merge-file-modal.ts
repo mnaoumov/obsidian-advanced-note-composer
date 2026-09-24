@@ -274,13 +274,13 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
   using _sourceLock = params.resourceLockComponent.lockForPath({ abortController, operationName: 'Merge notes', pathOrFile: params.sourceFile });
 
   // The confirmation dialog can send the flow back to the target picker ("Change target"); loop until
-  // The user confirms the merge or cancels. `pickerSeed` seeds the picker input with the previously-chosen
-  // Target's query when the picker is reopened.
+  // the user confirms the merge or cancels. `pickerSeed` seeds the picker input with the previously-chosen
+  // target's query when the picker is reopened.
   let pickerSeed = '';
 
   for (;;) {
     // Capture the picker seed in a per-iteration const so the modal-opening closure does not close over
-    // The mutable `pickerSeed` (reassigned below on "Change target").
+    // the mutable `pickerSeed` (reassigned below on "Change target").
     const currentSeed = pickerSeed;
 
     const result = await new Promise<MergeFileModalResult | null>((promiseResolve) => {
@@ -290,7 +290,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
         promiseResolve
       });
       // The initial picker is opened plainly (no minimize button): a target has not been chosen yet, so
-      // Minimizing serves no purpose and risks the user forgetting which note the merge was triggered on
+      // minimizing serves no purpose and risks the user forgetting which note the merge was triggered on
       // (issue #125). The abort still closes it so an unlock request cancels the flow.
       openModal(modal, abortController);
     });
@@ -334,8 +334,8 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
     /* v8 ignore start -- requires ConfirmDialogModal to resolve, which is untestable in unit tests. */
     if (confirmDialogResult.shouldReselectTarget) {
       // Go back to the target picker: discard the abandoned target (trash it when it was freshly created
-      // For this choice) and preselect the previous choice on reopen. `confirmMerge` already released the
-      // Target lock, so reopening the picker re-locks only the next target.
+      // for this choice) and preselect the previous choice on reopen. `confirmMerge` already released the
+      // target lock, so reopening the picker re-locks only the next target.
       if (prepareForMergeFileResult.isNewTargetFile) {
         await trashSafe(params.app, prepareForMergeFileResult.targetFile);
       }
@@ -390,7 +390,7 @@ async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams):
 async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogModalResult> {
   // The target note is now known; lock it too while the (minimizable) confirmation dialog is open.
   // Released when this function returns, before the merge runs (and before the picker is reopened when the
-  // User chooses "Change target").
+  // user chooses "Change target").
   using _targetLock = params.resourceLockComponent.lockForPath({ abortController: params.abortController, operationName: 'Merge notes', pathOrFile: params.targetFile });
 
   const {

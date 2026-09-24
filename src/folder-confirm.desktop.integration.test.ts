@@ -11,14 +11,14 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // The flatten/move confirmation dialogs are v8-ignored modal UI (see flatten-folder-command-handler.ts /
-// Move-folder-command-handler.ts); this suite drives the REAL dialog DOM against a real Obsidian to prove
-// The wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
+// move-folder-command-handler.ts); this suite drives the REAL dialog DOM against a real Obsidian to prove
+// the wiring (issue #154). The cancel cases are the load-bearing ones: they are what the report is about.
 // The confirm cases additionally assert that both paths render as real anchors (issue #165) — the unit
-// Tests mock `renderInternalLink`, so only a real Obsidian proves its folder branch produces an `<a>`.
+// tests mock `renderInternalLink`, so only a real Obsidian proves its folder branch produces an `<a>`.
 // Version coverage: this is public-API modal/settings logic (Modal + ButtonComponent + the stable
 // `.modal-button-container` DOM), not Obsidian-internals/version-sensitive, so one end would suffice —
-// But it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7, 4/4 on each. Pin the
-// Other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
+// but it was run on BOTH anyway: catalyst-latest 1.13.4 and public-latest 1.12.7, 4/4 on each. Pin the
+// other end with the desktop project's `environmentOptions.obsidianTransport.obsidianVersion`.
 // Desktop-only: folder-move flows, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/folder-confirm.desktop.integration.test.ts`.
 
@@ -47,10 +47,10 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           const isConfirmButtonPresent = findButton('Flatten') !== null;
           const isListsTheItem = [...document.querySelectorAll('.modal-content code')].some((el) => el.textContent === 'fc-note.md');
           // Issue #205: flatten's destination defaults to the folder's own parent but is not fixed to it,
-          // So "Change target" is enabled here like on every other confirmation dialog.
+          // so "Change target" is enabled here like on every other confirmation dialog.
           const isChangeTargetDisabled = findButton('Change target')?.disabled ?? false;
           // Issue #165: the folder AND its destination are both clickable links. `fc-flat` is top-level,
-          // So its destination is the vault root, which is labelled `/` (its own path is blank).
+          // so its destination is the vault root, which is labelled `/` (its own path is blank).
           const linkTexts = [...document.querySelectorAll('.modal-content a')].map((el) => el.textContent);
 
           findButton('Flatten')?.click();

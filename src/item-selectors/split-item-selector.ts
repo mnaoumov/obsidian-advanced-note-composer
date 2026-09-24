@@ -73,8 +73,8 @@ export class SplitItemSelector extends ItemSelectorBase {
     if (this.splitTargetMode === SplitTargetMode.Merge) {
       const targetFile = resolveExistingItemFile(this.app, this.item);
       // The picker offers nothing creatable in this mode — no `Enter to create` row, no unresolved links —
-      // So an item without a file behind it cannot be chosen. Refusing rather than falling through to the
-      // Create branch is what keeps an explicit `Merge` from quietly creating a note nobody asked for.
+      // so an item without a file behind it cannot be chosen. Refusing rather than falling through to the
+      // create branch is what keeps an explicit `Merge` from quietly creating a note nobody asked for.
       if (!targetFile) {
         throw new Error('File not found');
       }

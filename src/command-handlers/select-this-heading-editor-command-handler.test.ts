@@ -74,7 +74,7 @@ describe('SelectThisHeadingEditorCommandHandler', () => {
     const handler = createHandler();
     expect(handler.id).toBe('select-this-heading');
     // No trailing `...`: in this plugin that suffix marks a command that opens a modal, and this one does
-    // Not — which is the entire point of issue #266.
+    // not — which is the entire point of issue #266.
     expect(handler.name).toBe('Select this heading');
     expect(handler.icon).toBe('lucide-heading');
   });
@@ -95,7 +95,7 @@ describe('SelectThisHeadingEditorCommandHandler', () => {
   });
 
   // The same range `Extract this heading...` sets before opening its modal — the reporter was getting it
-  // By running that extract and cancelling the modal.
+  // by running that extract and cancelling the modal.
   it('selects the heading line together with its whole section', () => {
     mockResolveEnclosingHeadingInfo.mockReturnValue(HEADING_INFO);
     const editor = createEditor();

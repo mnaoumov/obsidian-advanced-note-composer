@@ -48,7 +48,7 @@ describe('extractFrontmatterSelection', () => {
 
   it('should reconstruct the property key over a selection of some of its values', () => {
     // The reporter's own gesture: the selection starts mid-value, so whole-line expansion is what makes it
-    // Land on the two `aliases` items rather than on a fragment of YAML text.
+    // land on the two `aliases` items rather than on a fragment of YAML text.
     expect(extract(ALIASES_NOTE, selectText(ALIASES_NOTE, 'pha', 'bravo'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha\n  - bravo',
       remainingYaml: 'aliases:\n  - charlie\ntags:\n  - x'
@@ -183,7 +183,7 @@ describe('extractFrontmatterSelection', () => {
 
   it('should ignore a selection whose lines are not a YAML map', () => {
     // The `- alpha` line has no key line to belong to — the one above it carries a value of its own — so it
-    // Stays an orphaned sequence item, which is not a set of properties.
+    // stays an orphaned sequence item, which is not a set of properties.
     const content = ['---', 'title: My Note', '- alpha', '---', '', 'body', ''].join('\n');
     expect(extract(content, selectText(content, '- alpha', '- alpha'))).toBeNull();
   });

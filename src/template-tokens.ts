@@ -430,9 +430,9 @@ export function resolveTemplateTokens(params: ResolveTemplateTokensParams): stri
   const { content, sourceFile, targetFile, template } = params;
 
   // Resolved ON DEMAND, and memoized for the second folder token in the same template. A template with no
-  // Folder token must not read the target note's folder or build a numbering pattern at all — the folder
-  // Keys are an addition to a vocabulary every merge and split already resolves, so paying for them
-  // Unconditionally would make every template that predates them do work it has no use for.
+  // folder token must not read the target note's folder or build a numbering pattern at all — the folder
+  // keys are an addition to a vocabulary every merge and split already resolves, so paying for them
+  // unconditionally would make every template that predates them do work it has no use for.
   let folderTokens: null | TargetFolderTokens = null;
 
   function getFolderTokens(): TargetFolderTokens {
@@ -450,8 +450,8 @@ export function resolveTemplateTokens(params: ResolveTemplateTokensParams): stri
         return getFolderTokens().folderPath;
       }
       // The three `from` tokens are the only ones a source note backs, and each answers for itself rather
-      // Than being resolved together up front: a shared eager read would touch the source note even for a
-      // Template that names none of them.
+      // than being resolved together up front: a shared eager read would touch the source note even for a
+      // template that names none of them.
       case 'fromParentFolder'.toLowerCase(): {
         return sourceFile ? getParentFolderName(sourceFile) : '';
       }
@@ -479,7 +479,7 @@ export function resolveTemplateTokens(params: ResolveTemplateTokensParams): stri
       }
       case 'index': {
         // An unnumbered folder has no number to render, and none to pad either — `{{index:000}}` over
-        // Nothing would be `000`, a number the folder does not carry.
+        // nothing would be `000`, a number the folder does not carry.
         const { index } = getFolderTokens();
         return index === null ? '' : formatIndex(index, format);
       }
@@ -575,7 +575,7 @@ function resolveTargetFolderTokens(params: ResolveTemplateTokensParams): TargetF
     baseTokenKey: FOLDER_BASE_TOKEN_KEY,
     name: folderName,
     // An absent template describes no numbered name at all, so `parseNumberedName` reports the name whole
-    // With no index — which IS "this folder is not numbered".
+    // with no index — which IS "this folder is not numbered".
     nameTemplate: folderNameTemplate ?? ''
   });
 

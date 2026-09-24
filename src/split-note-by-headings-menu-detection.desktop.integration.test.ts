@@ -16,11 +16,11 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this exercises the editor context menu + command palette, which are desktop-only
-// Surfaces here (matching the plugin's established single-file integration convention; no Android
-// Emulator is wired for it). Version coverage: this feature is pure plugin logic (it intersects the note's
+// surfaces here (matching the plugin's established single-file integration convention; no Android
+// emulator is wired for it). Version coverage: this feature is pure plugin logic (it intersects the note's
 // `metadataCache` headings with the editor selection/cursor range to gate a menu item) with no
-// Dependence on minified Obsidian internals, version-sensitive DOM, or serialization formats, so
-// Verifying on public-latest is sufficient; there is nothing internals-specific to differ on catalyst.
+// dependence on minified Obsidian internals, version-sensitive DOM, or serialization formats, so
+// verifying on public-latest is sufficient; there is nothing internals-specific to differ on catalyst.
 // Isolation: `npx vitest run --project integration-tests:desktop src/split-note-by-headings-menu-detection.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 

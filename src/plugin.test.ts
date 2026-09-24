@@ -184,7 +184,7 @@ vi.mock('./release-notes-component.ts', () => ({
 
 // Since obsidian-dev-utils 93.2.0 the universal components live in a private `components` bag behind
 // PROTECTED accessors, not in `_`-prefixed backing fields — assigning the old fields silently registered
-// Nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
+// nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
 interface PluginInternals {
   commandHandlerComponent: CommandHandlerComponent;
   consoleDebugComponent: ConsoleDebugComponent;
@@ -197,8 +197,8 @@ interface PluginInternals {
 function createMockApp(): App {
   return strictProxy<App>({
     // `onloadImpl` subscribes to `file-open` to keep the pickers' recency log current (issue #256). The
-    // Ref is a plain object rather than a `strictProxy`: Obsidian reads its internals when the
-    // Subscription is released on unload, and a strict mock would throw on the first one.
+    // ref is a plain object rather than a `strictProxy`: Obsidian reads its internals when the
+    // subscription is released on unload, and a strict mock would throw on the first one.
     workspace: strictProxy({
       offref: vi.fn(),
       on: vi.fn().mockReturnValue(castTo<EventRef>({}))
@@ -230,15 +230,15 @@ describe('Plugin', () => {
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     // The plugin's own settings component must REPLACE the placeholder one obsidian-dev-utils 93.2.0
-    // Registers, or every dev-utils helper reading `plugin.pluginSettingsComponent` sees empty settings.
+    // registers, or every dev-utils helper reading `plugin.pluginSettingsComponent` sees empty settings.
     expect(internals.pluginSettingsComponent).toBeInstanceOf(PluginSettingsComponent);
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
 
     // `registerCommandHandlers` takes a FACTORY, so the handler list is only built when the component
-    // Calls it. Build it here, or the array never executes and every handler construction — including the
-    // Two spread-generated batches — goes unverified. The handler classes are mocked in this suite, so
-    // The assertion is on the shape of the list, not on command identities; those are pinned by each
-    // Handler's own suite.
+    // calls it. Build it here, or the array never executes and every handler construction — including the
+    // two spread-generated batches — goes unverified. The handler classes are mocked in this suite, so
+    // the assertion is on the shape of the list, not on command identities; those are pinned by each
+    // handler's own suite.
     const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
     const commandHandlers = buildCommandHandlers();
     // 40 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
@@ -247,7 +247,7 @@ describe('Plugin', () => {
     expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TemplatesLanguageComponent).toHaveBeenCalledOnce();
     // The two vocabulary additions this plugin's dialect needs over core's Templates language: a
-    // Comma-separated argument list in the token half, and hyphens in the format half.
+    // comma-separated argument list in the token half, and hyphens in the format half.
     expect(TemplatesLanguageComponent).toHaveBeenCalledWith({
       formatSource: /[a-zA-Z0-9_,-]+/,
       language: TOKENIZED_STRING_LANGUAGE,
@@ -274,9 +274,9 @@ describe('Plugin', () => {
     await internals.onloadImpl();
 
     // CommandHandlerComponent calls the factory once per menu surface, and since obsidian-dev-utils 90 a
-    // Command handler instance cannot be registered twice — so a factory closing over an instance built
-    // Outside it throws and the whole plugin fails to load in real Obsidian. Unit tests never caught that
-    // While they called the factory only once, which is exactly how it shipped.
+    // command handler instance cannot be registered twice — so a factory closing over an instance built
+    // outside it throws and the whole plugin fails to load in real Obsidian. Unit tests never caught that
+    // while they called the factory only once, which is exactly how it shipped.
     const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
     const firstBatch = buildCommandHandlers();
     const secondBatch = buildCommandHandlers();

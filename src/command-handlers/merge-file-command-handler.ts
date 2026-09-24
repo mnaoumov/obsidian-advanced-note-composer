@@ -88,7 +88,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeHeadings: result.shouldMergeHeadings,
       // Follows the picker that chose the target: whatever the picker was allowed to OFFER, the merge must
-      // Be allowed to land in (issue #253), or picking an excluded destination would end in a refusal.
+      // be allowed to land in (issue #253), or picking an excluded destination would end in a refusal.
       // The SOURCE gate in `canExecuteFile` stays — neither setting decides where a command is offered.
       shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations,
       sourceFile: file,
@@ -99,7 +99,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
 
   protected override async executeFiles(files: TFile[]): Promise<void> {
     // Multi-select (files-menu) merge: pick one target, then merge every selected note into it in one
-    // Reversible transaction (issue #92). The picker excludes the selected sources and ignored files.
+    // reversible transaction (issue #92). The picker excludes the selected sources and ignored files.
     const sourceFiles = this.mergeableFiles(files);
     if (sourceFiles.length < MIN_MERGEABLE_FILE_COUNT) {
       return;

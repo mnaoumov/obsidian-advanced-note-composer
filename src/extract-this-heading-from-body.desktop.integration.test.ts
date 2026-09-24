@@ -14,9 +14,9 @@ import {
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: `Extract this heading...` is a cross-platform editor command, but this plugin's
-// Behavioral integration suites all run desktop-only (there is no Android emulator wired for this
-// Feature and the plugin follows the established desktop-only integration convention). The command
-// Itself is platform-agnostic, so the desktop run exercises the real logic on every platform.
+// behavioral integration suites all run desktop-only (there is no Android emulator wired for this
+// feature and the plugin follows the established desktop-only integration convention). The command
+// itself is platform-agnostic, so the desktop run exercises the real logic on every platform.
 const PLUGIN_ID = 'advanced-note-composer';
 
 describe('extract this heading from the body (issue #143)', () => {
@@ -39,7 +39,7 @@ describe('extract this heading from the body (issue #143)', () => {
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
           // A note with two same-level sections. The cursor will be placed on a BODY line of the
-          // Second section (never on its `## Extract me` heading line) to prove issue #143's fix.
+          // second section (never on its `## Extract me` heading line) to prove issue #143's fix.
           const sourceFile = await resetFile(
             'extract-heading-body.md',
             '# Note\n\n## Keep me\nkeep body\n\n## Extract me\nextract body one\nextract body two\n'
@@ -71,8 +71,8 @@ describe('extract this heading from the body (issue #143)', () => {
           input.value = TARGET_BASENAME;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           // `Mod+Enter` forces the creation from the typed name. Waiting for the `Enter to create` row instead
-          // Made this depend on the vault holding nothing that fuzzy-matches it, which the shared vault does
-          // Not guarantee.
+          // made this depend on the vault holding nothing that fuzzy-matches it, which the shared vault does
+          // not guarantee.
           input.focus();
           await pressKey({ key: 'Enter', modifiers: ['Mod'] });
 
@@ -81,7 +81,7 @@ describe('extract this heading from the body (issue #143)', () => {
             predicate: () => app.vault.getAbstractFileByPath(`${TARGET_BASENAME}.md`) !== null
           });
           // The source-note edit (section removed, link left in its place) lives in the editor buffer
-          // First (the on-disk save is debounced), so wait on and read the live buffer, not `vault.read`.
+          // first (the on-disk save is debounced), so wait on and read the live buffer, not `vault.read`.
           await waitUntil({
             message: 'source section was not extracted out of the source note',
             predicate: () => !editor.getValue().includes('extract body one')

@@ -61,11 +61,11 @@ describe('select commands (issue #266)', () => {
           throw new Error('The fixture view has no file.');
         }
         // `vault.modify` leaves an already-open buffer stale, and this vault is shared with every other
-        // Suite, so the note may well be open from an earlier run.
+        // suite, so the note may well be open from an earlier run.
         editor.setValue(SOURCE);
 
         // Both heading commands and the horizontal-rule one read the metadata cache. Run before it has
-        // Indexed the note and they simply refuse, which surfaces as a wrong range rather than an error.
+        // indexed the note and they simply refuse, which surfaces as a wrong range rather than an error.
         await waitUntil({
           message: 'metadata cache did not index the fixture headings',
           predicate: () => (app.metadataCache.getFileCache(fixtureFile)?.headings ?? []).length === EXPECTED_HEADING_COUNT
@@ -179,7 +179,7 @@ describe('select commands (issue #266)', () => {
     expect(result.betweenRules.selectedText).not.toContain('---');
 
     // A command with nothing to select is not offered at all, which keeps it out of the command palette —
-    // Worth real money on a phone, where filtering the palette means typing.
+    // worth real money on a phone, where filtering the palette means typing.
     expect({
       isAfterCursorAvailableAtEndOfNote: result.isAfterCursorAvailableAtEndOfNote,
       isBeforeCursorAvailableAtStartOfNote: result.isBeforeCursorAvailableAtStartOfNote,

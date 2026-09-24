@@ -49,8 +49,8 @@ class PasteOptionsModal extends Modal {
     this.promiseResolve = params.promiseResolve;
 
     // `Enter` only. There is deliberately NO `Escape` registration: Obsidian's own `Modal` already
-    // Closes on `Escape` AND `preventDefault`s it, so registering one here is dead code — established
-    // By mutation (deleting it left every assertion in
+    // closes on `Escape` AND `preventDefault`s it, so registering one here is dead code — established
+    // by mutation (deleting it left every assertion in
     // `paste-options-modal-keys.desktop.integration.test.ts` green), not by reading. Do not re-add it;
     // What cancelling has to get right lives in `onClose` below, and that IS covered.
     this.scope.register([], 'Enter', () => {

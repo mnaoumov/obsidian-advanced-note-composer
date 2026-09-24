@@ -42,7 +42,7 @@ describe('split template folder tokens (issue #227)', () => {
         const RENDER_IN_MILLISECONDS = 150;
 
         // Every folder token at once, each labelled, so one produced note proves all of them — and the
-        // Index is bracketed so "no number" is distinguishable from "the number 0".
+        // index is bracketed so "no number" is distinguishable from "the number 0".
         const TEMPLATE = 'NAME:{{folderName}}|PATH:{{folderPath}}|SAFE:{{safeFolderName}}|IDX:[{{index}}]|PARENT:{{parentFolder}}\n\n{{content}}';
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
@@ -70,12 +70,12 @@ describe('split template folder tokens (issue #227)', () => {
         async function extractInto(newNoteName: string, sourceKey: string): Promise<string> {
           const notePath = `${newNoteName}/${newNoteName}.md`;
           // The source note's own name must NOT contain the typed text: it would fuzzy-match it in the
-          // Picker and take the active suggestion, so Enter would extract into the source note instead of
-          // Creating anything.
+          // picker and take the active suggestion, so Enter would extract into the source note instead of
+          // creating anything.
           const sourcePath = `anc-227-source-${sourceKey}.md`;
 
           // Leftovers from a previous run would make the folder name de-duplicate to `… 1`, which is a
-          // Different name from the one the assertions expect.
+          // different name from the one the assertions expect.
           await removeIfExists(notePath);
           await removeIfExists(newNoteName);
 
@@ -110,7 +110,7 @@ describe('split template folder tokens (issue #227)', () => {
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The note is created before it is templated, so its existence is not the thing to wait for —
-          // The template's own text landing in it is.
+          // the template's own text landing in it is.
           await waitUntil({
             message: `split template was not applied to ${notePath}`,
             predicate: async () => {
@@ -216,7 +216,7 @@ describe('split template folder tokens (issue #227)', () => {
     expect(result.numbered).toContain('SAFE:Alpha 227');
     expect(result.numbered).toContain('IDX:[1]');
     // `{{folderName}}` and the long-standing `{{parentFolder}}` name the same folder here, which is what
-    // Lets a template written for `Create folder with notes...` be pasted in unchanged.
+    // lets a template written for `Create folder with notes...` be pasted in unchanged.
     expect(result.numbered).toContain('PARENT:1. Alpha 227');
     // The extracted content is still there — the tokens are added to the template, not instead of it.
     expect(result.numbered).toContain('fragment');

@@ -173,7 +173,7 @@ export function getRecentPaths(params: GetRecentPathsParams): string[] {
 
   // Whether the folder you are looking at RIGHT NOW outranks your recent activity — the whole of issue
   // #248. Since issue #256 the other side of this choice is a time-ordered log rather than a pile of
-  // Targets, so `RecentTargetsFirst` no longer means "a target, however old".
+  // targets, so `RecentTargetsFirst` no longer means "a target, however old".
   if (pickerRecencyOrder === PickerRecencyOrder.ActiveFileFirst) {
     return [activeFilePath, ...recentTargetPaths, ...recentFilePaths];
   }
@@ -235,8 +235,8 @@ export function reorderSuggestionsByRecentFolders(params: ReorderSuggestionsByRe
     pickerRecencyOrder,
     query,
     // A recorded target is resolved as the folder itself when it IS one, and otherwise as the parent of the
-    // Target file — which is how "the folder a note was merged into counts as clicked on" falls out of the
-    // Same lookup that turns a recently-opened file into its folder (issue #206).
+    // target file — which is how "the folder a note was merged into counts as clicked on" falls out of the
+    // same lookup that turns a recently-opened file into its folder (issue #206).
     resolveItem: (path) => app.vault.getFolderByPath(path) ?? app.vault.getFileByPath(path)?.parent ?? null,
     // The folder the user is on is exactly what the picker is expected to offer first (issue #158), and
     // Obsidian's recent list never contains the active file.

@@ -48,13 +48,13 @@ describe('switch to split/extract from the smart-cut notice', () => {
           await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'open-split-target.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
 
           // Click the notice's "Switch to split/extract" button: it clears the mark, re-opens the source
-          // With the selection restored, and opens the split picker.
+          // with the selection restored, and opens the split picker.
           findSwitchButton()?.click();
           await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // Issue #262: reached this way, the box has to be ready to type into. It was the create/merge
-          // Switch that held focus — it is PREPENDED to the modal, so it is the first focusable thing in it.
+          // switch that held focus — it is PREPENDED to the modal, so it is the first focusable thing in it.
           const isPickerInputFocused = activeDocument.activeElement === document.querySelector('.prompt-input');
 
           const activePathWhenPickerOpen = app.workspace.getActiveFile()?.path ?? '';
@@ -62,13 +62,13 @@ describe('switch to split/extract from the smart-cut notice', () => {
           const isMarkNoticeGone = findSwitchButton() === null;
 
           // Choose the target in the picker (Enter = move to bottom); "ask before splitting" is off so it
-          // Completes immediately.
+          // completes immediately.
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');
@@ -84,7 +84,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           await pressKey({ key: 'Enter' });
 
           // The moved text lands in the target and is removed from the source; the source edit reaches
-          // The open editor buffer first, so wait for the vault file to reflect both sides.
+          // the open editor buffer first, so wait for the vault file to reflect both sides.
           await waitUntil({
             predicate: async () => {
               const content = await app.vault.read(target);
@@ -166,7 +166,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
     });
 
     // The notice offered the switch button; clicking it re-opened the source (dismissing the mark
-    // Notice) with "bravo" restored as the selection and the split picker open.
+    // notice) with "bravo" restored as the selection and the split picker open.
     expect(result.switchButtonPresent).toBe(true);
     expect(result.markNoticeGone).toBe(true);
     // Issue #262: the box is focused when the picker is reached from the smart-cut notice.

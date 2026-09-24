@@ -72,7 +72,7 @@ describe('command menu placement (issues #252, #254)', () => {
         ].join('\n');
         // Since issue #254 the placement row IS the command, and carries a toggle per menu.
         // A sibling in the SAME category that this note offers with no selection made — issue #188 hides
-        // The selection-driven extracts, which would fail here for a reason that is not placement.
+        // the selection-driven extracts, which would fail here for a reason that is not placement.
         const SIBLING_ITEM_TITLE = 'Split note by headings - H1';
         const SOURCE_MODE = 'source';
         const PREVIEW_MODE = 'preview';
@@ -95,7 +95,7 @@ describe('command menu placement (issues #252, #254)', () => {
         return {
           afterRestore,
           // Issue #254's own guarantee: the table the settings page renders from names commands Obsidian
-          // Has actually registered, which is the drift a spelled-out list is exposed to.
+          // has actually registered, which is the drift a spelled-out list is exposed to.
           missingCommandIds: menuPlaceableCommandIds.filter((commandId) => !app.commands.findCommand(`${pluginId}:${commandId}`)),
           whileInEditorMenu,
           whileOnMargin

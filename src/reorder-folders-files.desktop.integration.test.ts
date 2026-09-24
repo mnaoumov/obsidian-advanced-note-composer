@@ -113,7 +113,7 @@ describe('reorder folders and files', () => {
     expect(result.groupTitles).toEqual(['Folders', 'Files']);
 
     // Two INDEPENDENT sequences, each numbered from 1 — the file explorer sorts folders above files, so a
-    // Single merged numbering could never be shown in the order it claims.
+    // single merged numbering could never be shown in the order it claims.
     expect(result.folderNames).toEqual(['1. Alpha', '2. Beta']);
     expect(result.fileNames).toEqual(['1. Draft.md', '2. Notes.md']);
   });

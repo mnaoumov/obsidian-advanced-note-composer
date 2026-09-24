@@ -100,7 +100,7 @@ describe('buildFlattenPreviewRows', () => {
 
   it('should not hand the same name to two children', () => {
     // `note.md` is pushed to `note 1.md` by the existing sibling, which is exactly what the SECOND child
-    // Is already called — so a preview that only asked the vault would promise both the same name.
+    // is already called — so a preview that only asked the vault would promise both the same name.
     initApp({
       'parent/a/note.md': 'inner',
       'parent/a/note 1.md': 'inner one',
@@ -111,7 +111,7 @@ describe('buildFlattenPreviewRows', () => {
     const targetNames = rows.map((row) => row.targetName);
     expect(new Set(targetNames).size).toBe(rows.length);
     // Exactly what the flatten itself produces: the first rename occupies `note 1.md`, so the second child
-    // Is de-duplicated off ITS own name (`note 1` + ` 1`), not off `note`.
+    // is de-duplicated off ITS own name (`note 1` + ` 1`), not off `note`.
     expect(rows).toContainEqual({ isRenamed: true, name: 'note.md', targetName: 'note 1.md' });
     expect(rows).toContainEqual({ isRenamed: true, name: 'note 1.md', targetName: 'note 1 1.md' });
   });
@@ -134,7 +134,7 @@ describe('buildFlattenPreviewRows', () => {
 
   it('should append a folder\'s de-duplication counter after a dot in its name, not inside it', () => {
     // `getAvailablePath` would read `.2` as an extension and produce `v1 1.2`; a folder has no extension,
-    // So the counter belongs at the end (issues #170/#171 made folder moves the common case).
+    // so the counter belongs at the end (issues #170/#171 made folder moves the common case).
     initApp({
       'parent/a/v1.2/deep.md': 'deep',
       'parent/v1.2/other.md': 'other'
@@ -145,7 +145,7 @@ describe('buildFlattenPreviewRows', () => {
 
   it('should name a deeply nested item by its path relative to the flattened folder', () => {
     // Under the recursive mode two promoted folders can share a base name, so the row has to say which is
-    // Which — and the second one still shows the de-duplicated name it will actually get.
+    // which — and the second one still shows the de-duplicated name it will actually get.
     initApp({
       'parent/a/b/x/deep.md': 'deep',
       'parent/a/y/x/other.md': 'other'
@@ -154,7 +154,7 @@ describe('buildFlattenPreviewRows', () => {
     const rows = buildRowsFor('parent/a', collectFoldersRecursively(getFolder('parent/a')));
     expect(rows).toContainEqual({ isRenamed: false, name: 'b', targetName: 'b' });
     // A nested item's `name` is its relative path, so it differs from `targetName` without being renamed —
-    // Which is exactly why the dialog's arrow reads `isRenamed` instead of comparing the two.
+    // which is exactly why the dialog's arrow reads `isRenamed` instead of comparing the two.
     expect(rows).toContainEqual({ isRenamed: false, name: 'b/x', targetName: 'x' });
     expect(rows).toContainEqual({ isRenamed: false, name: 'y', targetName: 'y' });
     expect(rows).toContainEqual({ isRenamed: true, name: 'y/x', targetName: 'x 1' });
@@ -162,8 +162,8 @@ describe('buildFlattenPreviewRows', () => {
 
   it('should preview the auto-numbered name, advancing across the batch', () => {
     // The destination's folders run `1, 3` — with the flattened folder `a` itself unnumbered — so the two
-    // Promoted folders continue at `4` and `5`. A gap is never backfilled (issue #269's rule, issue #273's
-    // Commands), and the count ADVANCES: the second folder cannot re-read `1 + max` and get `4` again.
+    // promoted folders continue at `4` and `5`. A gap is never backfilled (issue #269's rule, issue #273's
+    // commands), and the count ADVANCES: the second folder cannot re-read `1 + max` and get `4` again.
     initApp({
       'parent/1. one/x.md': 'one',
       'parent/3. three/y.md': 'three',
@@ -189,7 +189,7 @@ describe('buildFlattenPreviewRows', () => {
 
   it('should number notes on their own sequence and leave an attachment alone', () => {
     // Folders and notes are two sequences, and a non-markdown file belongs to neither — so the note
-    // Continues `2, 5` at `6` while the image keeps the name it has.
+    // continues `2, 5` at `6` while the image keeps the name it has.
     initApp({
       'parent/2. two.md': 'two',
       'parent/5. five.md': 'five',

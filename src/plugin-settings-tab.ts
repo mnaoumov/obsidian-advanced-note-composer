@@ -1118,8 +1118,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         // Issue #241 removed the `Swap file` / `Swap folders` subheadings issue #226 had given this page.
         // `Should ask before swapping` applies to both kinds of swap, so it belonged to neither, and
         // `Swap file` held nothing else; the three folder rows name their own target type, so the headings
-        // Carried nothing their names lack. The `Merge` page keeps its sections (issue #240, sub-pages since
-        // Issue #282) — there each row genuinely belongs to exactly one command.
+        // carried nothing their names lack. The `Merge` page keeps its sections (issue #240, sub-pages since
+        // issue #282) — there each row genuinely belongs to exactly one command.
         items: [
           this.settingEx({
             desc: 'Whether to show a confirmation dialog before swapping files or folders.',
@@ -1171,10 +1171,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         desc: 'Mark a selection in one note, then move it to the cursor, the top, or the bottom of another note.',
         items: [
           // Issue #243 moved this row off the `Split/extract` page: no split or extract ever reads it —
-          // Both of the split modal's uses are its `switch to smart cut` paths, which mark the selection
-          // Through the same `markSelectionToMove()` helper the two mark commands use. It sits FLAT on the
-          // Page, above the nested pages, because it governs the mark itself rather than any one notice or
-          // Move direction.
+          // both of the split modal's uses are its `switch to smart cut` paths, which mark the selection
+          // through the same `markSelectionToMove()` helper the two mark commands use. It sits FLAT on the
+          // page, above the nested pages, because it governs the mark itself rather than any one notice or
+          // move direction.
           this.settingEx({
             desc: createFragment((f) => {
               f.appendText('When you run ');
@@ -1465,13 +1465,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Smart cut & paste'
       }),
       // Issue #223 gave the frontmatter rows a page of their own and issue #272 merged the `Title` page
-      // Into it: the two entries sat next to each other and read as one section. The rows are regrouped by
+      // into it: the two entries sat next to each other and read as one section. The rows are regrouped by
       // TOPIC rather than by the page they came from, so the three that write or read the frontmatter
       // `title` (`Frontmatter title mode`, `Should use source title when destination has none`, `Should add
-      // Invalid title to note aliases`) moved under `Title` with the rows that shape the file name, leaving
+      // invalid title to note aliases`) moved under `Title` with the rows that shape the file name, leaving
       // `Frontmatter` the three that concern the property block itself. Regrouping by origin would have kept
-      // The very split the reporter objected to, one level down. Issue #282 made both groups nested pages,
-      // And the inner one is `Frontmatter properties` so the page does not hold an entry named after itself.
+      // the very split the reporter objected to, one level down. Issue #282 made both groups nested pages,
+      // and the inner one is `Frontmatter properties` so the page does not hold an entry named after itself.
       this.settingPage({
         desc: 'How a name you type becomes the file name of the note it creates, and how properties are carried across when notes are merged, split, or extracted.',
         items: [
@@ -2005,13 +2005,13 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           this.commandCategoryPathSettingPage(CommandCategory.Create)
         ],
         // Renamed from `Create folder with notes` by issue #271: the page now also carries the path rows
-        // Of the whole `Create` category, which covers the two create-empty-note commands as well, so a
-        // Name that promised only the folder command would have under-sold half of it.
+        // of the whole `Create` category, which covers the two create-empty-note commands as well, so a
+        // name that promised only the folder command would have under-sold half of it.
         name: 'Create'
       }),
       this.settingPage({
         // `Rename` holds nothing but its path rows, so they sit on the page directly rather than under a
-        // Heading — a separator with nothing to separate is noise.
+        // heading — a separator with nothing to separate is noise.
         desc: 'Where Rename folder... and Rename heading are offered, and what they may rename.',
         items: this.commandCategoryPathSettings(CommandCategory.Rename),
         name: 'Rename'
@@ -2046,7 +2046,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                 this.bind({
                   onChanged: () => {
                     // The name row is meaningless while the location is Auto (that plugin supplies the
-                    // Name too) or None.
+                    // name too) or None.
                     this.refreshDomState();
                   },
                   propertyName: 'folderNoteLocation',

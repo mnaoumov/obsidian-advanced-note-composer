@@ -118,7 +118,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
 
     // The swap landed, so the folder it was swapped with counts as clicked-on for the next picker (issue
     // #206). The captured PATH is recorded, not the folder object: the swap renames both sides, so the
-    // Object now reports the source's old path.
+    // object now reports the source's old path.
     recordRecentTarget(targetPath);
 
     showOperationCompletionNotice({

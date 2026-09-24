@@ -137,7 +137,7 @@ export async function describeStall(params: DescribeStallParams): Promise<Error>
         };
       } catch (settingsError) {
         // Reported rather than thrown: the settings are one line of the evidence, and losing the whole
-        // Snapshot because of them would put the run back to reporting only that time ran out.
+        // snapshot because of them would put the run back to reporting only that time ran out.
         settings = `unavailable: ${String(settingsError)}`;
       }
 

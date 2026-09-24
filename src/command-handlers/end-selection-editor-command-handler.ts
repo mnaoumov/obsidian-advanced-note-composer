@@ -54,7 +54,7 @@ export class EndSelectionEditorCommandHandler extends SelectRangeEditorCommandHa
   protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {
     super.executeEditor(editor, context);
     // The anchor is consumed either way: it named one end of a selection that has now been made, and
-    // Leaving it armed would make the next `End selection` reach back to a point the user is done with.
+    // leaving it armed would make the next `End selection` reach back to a point the user is done with.
     this.selectionAnchorComponent.clearAnchor();
   }
 

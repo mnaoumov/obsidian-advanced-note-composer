@@ -11,9 +11,9 @@ import {
 // Desktop-only: the whole point is what the REAL folder picker offers, which no unit test can see —
 // `MergeFolderModal` is `v8 ignore`d UI code.
 // This is the folder-side counterpart of `merge-file-excluded-target.desktop.integration.test.ts`. Since
-// Issue #253 the destination question has its own setting, `Should offer excluded paths as merge
-// Destinations`: turning on `Should always merge excluded items` decides only what a merge SWALLOWS and
-// Must leave every merge picker filtering excluded paths, which is what the reporter of #253 saw fail.
+// issue #253 the destination question has its own setting, `Should offer excluded paths as merge
+// destinations`: turning on `Should always merge excluded items` decides only what a merge SWALLOWS and
+// must leave every merge picker filtering excluded paths, which is what the reporter of #253 saw fail.
 // Isolation: `npx vitest run --project integration-tests:desktop src/merge-folder-excluded-target.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -75,7 +75,7 @@ describe('merging into an excluded target folder', () => {
             settings.mergeExcludePaths = [TARGET_FOLDER_PATH];
             settings.shouldAskBeforeMerging = false;
             // Both folders sit at the vault root, so neither of these filters can hide the target for a
-            // Reason that has nothing to do with what is under test.
+            // reason that has nothing to do with what is under test.
             settings.shouldIncludeChildFoldersWhenMergingByDefault = true;
             settings.shouldIncludeParentFoldersWhenMergingByDefault = true;
             settings.shouldAlwaysMergeExcludedItems = false;
@@ -85,7 +85,7 @@ describe('merging into an excluded target folder', () => {
           const isOfferedWhenOff = await didPickerOfferTarget(sourceNote);
 
           // Issue #253's regression guard: opting into merging excluded ITEMS must not also offer an
-          // Excluded DESTINATION. This is the reporter's exact configuration.
+          // excluded DESTINATION. This is the reporter's exact configuration.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAlwaysMergeExcludedItems = true;
           });
@@ -230,7 +230,7 @@ describe('merging into an excluded target folder', () => {
     // With both settings off the excluded folder is not offered at all.
     expect(result.offeredWhenOff).toBe(false);
     // Nor is it offered merely because excluded ITEMS are always merged — issue #253, the reporter's own
-    // Configuration, and the whole reason the one setting became two.
+    // configuration, and the whole reason the one setting became two.
     expect(result.offeredWhenSwallowingOnly).toBe(false);
     // Only the setting that actually asks the destination question offers it...
     expect(result.offeredWhenOn).toBe(true);

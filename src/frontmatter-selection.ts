@@ -117,7 +117,7 @@ class FrontmatterSelectionExtractor {
     }
 
     // The whole selection must sit inside the YAML region. Its end is measured from the block's own text
-    // Rather than from `to`, so the region this returns and the lines it was built from cannot disagree.
+    // rather than from `to`, so the region this returns and the lines it was built from cannot disagree.
     const frontmatterEndOffset = this.frontmatterInfo.from + this.frontmatterInfo.frontmatter.length;
     const isEverySelectionInsideFrontmatter = selections.every((selection) => selection.startOffset >= this.frontmatterInfo.from && selection.endOffset <= frontmatterEndOffset);
     if (!isEverySelectionInsideFrontmatter) {

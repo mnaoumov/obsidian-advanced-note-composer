@@ -73,7 +73,7 @@ describe('create an empty note (issue #244)', () => {
          */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
         // Distinctive names: the whole aggregate run shares ONE vault, so a generic one would make another
-        // Suite's link ambiguous.
+        // suite's link ambiguous.
         const SOURCE_PATH = 'create-empty-note-source.md';
         const GHOST_NAME = 'create-empty-note-ghost';
         const GHOST_PATH = `${GHOST_NAME}.md`;
@@ -93,7 +93,7 @@ describe('create an empty note (issue #244)', () => {
             // The switch is only rendered alongside the instructions it belongs to.
             settings.shouldShowModalInstructions = true;
             // Deliberately the WRONG mode: this flow has nothing to merge, so it must open in `Create`
-            // Whatever the setting says.
+            // whatever the setting says.
             settings.defaultSplitTargetMode = 'Merge';
           });
 
@@ -101,7 +101,7 @@ describe('create an empty note (issue #244)', () => {
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
           const editor = await openAndGetEditor(source);
           // Reset through the EDITOR: an open buffer wins over `vault.modify`, so an offset-based cursor
-          // Would otherwise land in the previous run's text.
+          // would otherwise land in the previous run's text.
           editor.setValue(SOURCE_CONTENT);
           await waitUntil({
             message: 'the source editor did not catch up with the reset content',
@@ -233,7 +233,7 @@ describe('create an empty note (issue #244)', () => {
     });
 
     // The switch cannot be flipped to `Merge`, and says why — with `defaultSplitTargetMode` set to `Merge`,
-    // Which the flow has to override.
+    // which the flow has to override.
     expect(result.isModeToggleOn).toBe(false);
     expect(result.isModeToggleDisabled).toBe(true);
     expect(result.modeDescription).toContain('nothing to merge');
@@ -267,7 +267,7 @@ describe('create an empty note (issue #244)', () => {
         const NOTE_NAME = 'create-empty-note-in-folder-ghost';
         const NOTE_PATH = `${FOLDER_PATH}/${NOTE_NAME}.md`;
         // Issue #255: with `Should split into folder` on, the same command wraps the note in a folder of
-        // Its own — which is a folder note, in one step.
+        // its own — which is a folder note, in one step.
         const FOLDER_NOTE_NAME = 'create-empty-note-folder-note';
         const FOLDER_NOTE_PATH = `${FOLDER_PATH}/${FOLDER_NOTE_NAME}/${FOLDER_NOTE_NAME}.md`;
         const MENU_ITEM_TITLE = 'Create empty note in folder...';
@@ -390,10 +390,10 @@ describe('create an empty note (issue #244)', () => {
           }
           nameInput.value = name;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be accepted and then submitted as an empty name.
+          // would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
           // The prompt validates ASYNCHRONOUSLY and starts out invalid, so a click before it settles is
-          // Silently ignored.
+          // silently ignored.
           await waitUntil({
             message: 'the typed note name never became valid',
             predicate: () => nameInput.checkValidity(),

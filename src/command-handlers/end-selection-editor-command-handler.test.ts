@@ -111,7 +111,7 @@ describe('EndSelectionEditorCommandHandler', () => {
   });
 
   // Anchoring and then moving the caret BACKWARDS is ordinary on a phone, where the caret is placed by
-  // Tapping and taps do not arrive in document order.
+  // tapping and taps do not arrive in document order.
   it('selects from the cursor forwards to an anchor that follows it', () => {
     const { handler } = createHandler(90);
     const editor = createEditor();

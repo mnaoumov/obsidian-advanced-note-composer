@@ -74,7 +74,7 @@ describe('checkShouldAddCommandToEditorMenu', () => {
   });
 
   // A `data.json` hand-edited to an unknown placement bypasses the type system. `PluginSettings` answers
-  // The default for it rather than letting it reach the `assertNever` guard inside a menu handler.
+  // the default for it rather than letting it reach the `assertNever` guard inside a menu handler.
   it('should fall back to the editor menu for a placement that is not a known member', () => {
     const pluginSettingsComponent = createComponent(castTo<CommandMenuPlacement>('bogus'));
     expect(checkShouldAddCommandToEditorMenu({ commandId: RECURSIVE_SPLIT_COMMAND_ID, pluginSettingsComponent })).toBe(true);

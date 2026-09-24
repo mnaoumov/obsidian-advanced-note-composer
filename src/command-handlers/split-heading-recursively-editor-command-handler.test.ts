@@ -402,7 +402,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     const handler = toTestable(new SplitHeadingRecursivelyEditorCommandHandler(params));
 
     // The run is resolved against a note that still has `B`; by the time the root pass reads the cache
-    // Again, it is gone — so there is nothing to extract and nothing is created.
+    // again, it is gone — so there is nothing to extract and nothing is created.
     scriptCaches(createCache(createSiblingHeadings()), createCache([createHeading(2, 0, 'A')]));
     setActiveEditor(params.app, createMockEditor());
 
@@ -434,12 +434,12 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     // Two splits: the chosen heading, then its own sub-heading. `A` and `C` are never touched — a
-    // Whole-note recursive split of the same note would have produced four notes.
+    // whole-note recursive split of the same note would have produced four notes.
     expect(MockSplitComposer).toHaveBeenCalledTimes(2);
     expect(MockSplitComposer.mock.calls[0]?.[0].sourceFile).toBe(file);
     expect(MockSplitComposer.mock.calls[1]?.[0].sourceFile).toBe(childFile);
     // The notice names the ROOT note only (issue #235): the grandchild is counted, and reached from inside
-    // The note it was split out of.
+    // the note it was split out of.
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 2 note(s): [test/B/B.md].');
   });
 
@@ -454,7 +454,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
     // `A` sits at the same (shallowest) level and comes first in document order, so a whole-note run would
-    // Have taken it — the cursor's line is what selects `B` instead.
+    // have taken it — the cursor's line is what selects `B` instead.
     expect(mockGetSelectionUnderHeading.mock.calls[0]?.[0].lineNumber).toBe(4);
   });
 
@@ -505,7 +505,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
     const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
     // The heading is named, and the promise the dialog makes is exactly its own subtree: `B` and `B1`, at
-    // The depths they will nest at — never the untouched `A` or `C`.
+    // the depths they will nest at — never the untouched `A` or `C`.
     expect(renderedCodeBlocks).toContain('B');
     expect(renderedCodeBlocks).toContain('    B1');
     expect(renderedCodeBlocks).toContain('2');

@@ -99,7 +99,7 @@ export class ReorderItemsModel implements ReorderModel {
   public didMoveTo: ReorderModel['didMoveTo'] = (params: ReorderModelDidMoveToParams) => {
     const entries = this.findEntries(params.id);
     // Refused rather than clamped when the two rows are in different groups: the drop simply did not
-    // Happen, which is what keeps a note out of the folder sequence.
+    // happen, which is what keeps a note out of the folder sequence.
     if (!entries?.some((entry) => entry.id === params.targetId)) {
       return false;
     }
@@ -163,7 +163,7 @@ function toEntries(
   return items.map((item, position) => ({
     baseName: parseNumberedName({ baseTokenKey: BASE_TOKEN_KEYS[kind], name: item.name, nameTemplate }).baseName,
     // Ids are assigned once and never reused, so a row keeps its identity as the arrays are reordered
-    // Under it — folders take the low ids, files continue the sequence.
+    // under it — folders take the low ids, files continue the sequence.
     id: firstId + position,
     item
   }));

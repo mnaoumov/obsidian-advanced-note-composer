@@ -38,7 +38,7 @@ import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 import { FrontmatterMergeStrategy } from './plugin-settings.ts';
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
-// Would otherwise poll forever. Everything else stays REAL.
+// would otherwise poll forever. Everything else stays REAL.
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
@@ -47,7 +47,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 }));
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
-// Unmocked App internals. Not the behavior under test.
+// unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -362,7 +362,7 @@ describe('mergeFilesIntoSingleFile', () => {
 
   it('moves each source note\'s own attachments into the target\'s attachment folder (issue #161)', async () => {
     // The note sorts after the image on purpose: the mock resolves a link when the note is created, so
-    // The image has to exist first for the embed to resolve.
+    // the image has to exist first for the embed to resolve.
     initApp({
       'Docs/img.png': 'PIC',
       'Docs/zeta.md': '![[img.png]]',
@@ -421,7 +421,7 @@ describe('mergeFilesIntoSingleFile', () => {
     const { consoleDebugComponent, context, pluginNoticeComponent, pluginSettingsComponent } = createContext();
 
     // Simulate the user clicking Unlock mid-operation: the first source read aborts the shared lock
-    // Controller, so the next iteration's aborted-check rolls the spanning transaction back.
+    // controller, so the next iteration's aborted-check rolls the spanning transaction back.
     const originalRead = app.vault.read.bind(app.vault);
     let hasAborted = false;
     vi.spyOn(app.vault, 'read').mockImplementation((file) => {
@@ -534,7 +534,7 @@ describe('mergeFilesIntoSingleFile', () => {
     const alphaLeaf = openInTab('a.md');
     const bravoLeaf = openInTab('b.md');
     // A note that is not part of the merge, a tab showing no file, and a tab with no view at all: none of
-    // Them is a note being merged away, so none of them may be touched.
+    // them is a note being merged away, so none of them may be touched.
     const keepLeaf = openInTab('keep.md');
     const fileLessLeaf = openInTab('gone.md');
     const viewLessLeaf = app.workspace.getLeaf('tab');

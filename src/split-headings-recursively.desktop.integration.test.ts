@@ -25,7 +25,7 @@ const TEMPLATE_SPLIT_TEMPLATE = '# {{newTitle}}\n\n{{content}}\n\n---\nFrom: [[{
 const TEMPLATE_SOURCE_PATH = 'split-headings-recursively-template-source.md';
 
 // Minimal shape of the plugin's settings component reached at runtime, used to set `Split template` (which
-// Renders as a CodeMirror code highlighter, so driving it from the DOM is not practical) — the same walker
+// renders as a CodeMirror code highlighter, so driving it from the DOM is not practical) — the same walker
 // `exclude-paths-typing.desktop.integration.test.ts` and `merge-folder-skips-ignored…` use.
 interface ComponentTreeNode {
   _children?: ComponentTreeNode[];
@@ -284,7 +284,7 @@ describe('split headings recursively', () => {
           await settingsComponent.editAndSave((settings) => {
             settings.splitTemplate = splitTemplate;
             // The confirmation dialog is already covered by the first case; skip it so this one only
-            // Exercises the templating.
+            // exercises the templating.
             settings.shouldAskBeforeSplitting = false;
             // `Should split into folder` stays OFF: the recursive split builds the folder tree itself.
             settings.shouldSplitIntoFolder = false;
@@ -397,7 +397,7 @@ describe('split headings recursively', () => {
     expect(result.contents['TplA/TplD/TplD.md']?.startsWith('# TplD\n')).toBe(true);
 
     // And the template's trailer EXACTLY ONCE, naming the note it was split out of. Before the fix the
-    // Trailer was dragged out of a parent into its last child, so a parent had none and that child had two.
+    // trailer was dragged out of a parent into its last child, so a parent had none and that child had two.
     expect(countTrailers(result.contents['TplA/TplA.md'])).toBe(1);
     expect(countTrailers(result.contents['TplA/TplB/TplB.md'])).toBe(1);
     expect(countTrailers(result.contents['TplA/TplB/TplC/TplC.md'])).toBe(1);
@@ -455,8 +455,8 @@ describe('split headings recursively', () => {
         const originalNewFileLocation = app.vault.getConfig('newFileLocation');
         const originalNewFileFolderPath = app.vault.getConfig('newFileFolderPath');
         // `Should split into folder` stays OFF here too: the recursive split builds the folder tree itself,
-        // And the redirect must not quietly depend on that setting. The up-front dialog is covered by the
-        // First case, so it is skipped here.
+        // and the redirect must not quietly depend on that setting. The up-front dialog is covered by the
+        // first case, so it is skipped here.
         const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', false);
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
         const isOriginalShouldSplitRecursivelyIntoDefaultNewNoteFolder = await didSetToggle('Should split recursively into the default new note folder', true);

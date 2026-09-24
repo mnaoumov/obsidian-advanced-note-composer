@@ -52,7 +52,7 @@ export class HeadingReorderModel implements ReorderModel {
       dataLabel: row.section.headingText,
       depth: row.depth,
       // Every row comes from the very tree the keys were built from, so a fallback here would be a branch
-      // Nothing can reach — the throw lives inside the helper instead (G10t).
+      // nothing can reach — the throw lives inside the helper instead (G10t).
       groupKey: ensureNonNullable(groupKeysBySectionIndex.get(row.index)),
       id: row.index,
       // Headings are not a numbered sequence — nothing renames them, so there is no number to preview.
@@ -72,7 +72,7 @@ export class HeadingReorderModel implements ReorderModel {
     const position = siblings.findIndex((node) => node.index === params.id);
     const targetPosition = siblings.findIndex((node) => node.index === params.targetId);
     // A drop onto a heading with a different parent is refused rather than re-parented: this reorders
-    // Siblings, it never restructures the note.
+    // siblings, it never restructures the note.
     if (targetPosition === -1) {
       return false;
     }

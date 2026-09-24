@@ -102,7 +102,7 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
       dialogTitle: 'Split heading recursively',
       headingText: rootHeading.heading,
       // Only the chosen heading and what nests under it — which is also exactly the set of notes the run
-      // Will create, so the dialog's list doubles as the promise that the note's other headings stay put.
+      // will create, so the dialog's list doubles as the promise that the note's other headings stay put.
       previewRows: buildRecursiveSplitPreviewRows(editor.getValue(), subtree),
       progressVerb: 'Splitting heading recursively in',
       rootHeadingLine: headingLine
@@ -124,7 +124,7 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
 
   protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
     // The selection gate above is about which command the user means, not about which menu was raised, so
-    // It holds here too.
+    // it holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
       commandId: this.id,
       mode,

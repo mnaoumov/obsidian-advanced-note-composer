@@ -16,10 +16,10 @@ import type { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 // Desktop-only: this exercises the command palette + editor context menu, which are desktop-only
-// Surfaces here (matching the plugin's established integration convention; no Android emulator is
-// Wired for it). Version coverage: this feature is pure plugin logic (a settings-gated `canExecute*` guard) with
-// No dependence on minified Obsidian internals, version-sensitive DOM, or serialization formats, so
-// Verifying on public-latest is sufficient; there is nothing internals-specific to differ on catalyst.
+// surfaces here (matching the plugin's established integration convention; no Android emulator is
+// wired for it). Version coverage: this feature is pure plugin logic (a settings-gated `canExecute*` guard) with
+// no dependence on minified Obsidian internals, version-sensitive DOM, or serialization formats, so
+// verifying on public-latest is sufficient; there is nothing internals-specific to differ on catalyst.
 // Isolation: `npx vitest run --project integration-tests:desktop src/command-blocking.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -52,7 +52,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
         // Use a command that ONLY Advanced Note Composer provides (Obsidian's core Note Composer plugin
-        // Also adds an "Extract current selection..." editor-menu item, which would confuse a title match).
+        // also adds an "Extract current selection..." editor-menu item, which would confuse a title match).
         const ANC_COMMAND_TITLE = 'Mark selection to move';
         const ANC_COMMAND_ID = `${pluginId}:mark-selection-to-move`;
         const BLOCKED_FOLDER = 'anc-block-demo';

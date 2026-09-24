@@ -30,7 +30,7 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the swap
-// Proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swapper) is REAL.
+// proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swapper) is REAL.
 import { selectTargetFolderForSwap } from '../modals/swap-folder-modal.ts';
 import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 
@@ -50,7 +50,7 @@ interface Testable {
 }
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does
-// Not reach into unmocked App internals. Not the behavior under test.
+// not reach into unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -106,7 +106,7 @@ function getFolder(path: string): TFolder {
 function initApp(files: Record<string, string> = {}): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   // Test-mocks' Vault.getAvailablePath is under-modeled (it never checks existence); install a faithful
-  // Existence-checking double so temp-path collisions resolve exactly as real Obsidian would.
+  // existence-checking double so temp-path collisions resolve exactly as real Obsidian would.
   vi.spyOn(app.vault, 'getAvailablePath').mockImplementation((basePath, extension) => {
     const suffix = extension ? `.${extension}` : '';
     let candidate = `${basePath}${suffix}`;
@@ -195,7 +195,7 @@ describe('SwapFolderCommandHandler', () => {
 
   it('should swap two differently-named empty folders', async () => {
     // Test-mocks does not cascade descendant paths on a folder rename, so a differently-named swap can
-    // Only be exercised with empty folders (the rename branch of the swapper).
+    // only be exercised with empty folders (the rename branch of the swapper).
     initApp();
     // Each ancestor level must be created explicitly so test-mocks links `.parent` (the swapper reads
     // `folder.parent.path` to compute the swapped names).
@@ -231,8 +231,8 @@ describe('SwapFolderCommandHandler', () => {
     });
 
     // Simulate the user clicking the lock indicator's Unlock mid-operation: the first rename aborts the
-    // Folder-lock's controller and then fails, so the spanning transaction rolls back and the handler
-    // Swallows the cancellation.
+    // folder-lock's controller and then fails, so the spanning transaction rolls back and the handler
+    // swallows the cancellation.
     const originalRenameFile = app.fileManager.renameFile.bind(app.fileManager);
     let hasAborted = false;
     vi.spyOn(app.fileManager, 'renameFile').mockImplementation(async (file, newPath) => {

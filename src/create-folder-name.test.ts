@@ -113,7 +113,7 @@ describe('normalizeTypedFolderName', () => {
 
     it('should leave invalid characters in place when replacing is turned off', () => {
       // The caller reports this as invalid rather than silently rewriting it — the same choice the
-      // Reporter's own plugin makes.
+      // reporter's own plugin makes.
       expect(normalize('a*b', { shouldReplaceInvalidCharacters: false })).toBe('A*b');
     });
   });

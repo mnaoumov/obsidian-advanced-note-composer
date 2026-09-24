@@ -111,7 +111,7 @@ function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = tr
     resourceLockComponent: strictProxy<ResourceLockComponent>({
       lockForPath: vi.fn().mockImplementation((lockParams: ResourceLockComponentLockForPathParams) => {
         // Mirror the real library's `shouldReleaseOnAbort` + `onUnlockRequested`: aborting the
-        // Controller invokes the unlock callback so the mark tears itself down.
+        // controller invokes the unlock callback so the mark tears itself down.
         lockParams.abortController?.signal.addEventListener('abort', () => {
           lockParams.onUnlockRequested?.();
         }, { once: true });

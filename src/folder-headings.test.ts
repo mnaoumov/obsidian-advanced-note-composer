@@ -27,7 +27,7 @@ describe('buildFolderHeadingPlan', () => {
   }
 
   // Every folder down to (and including) the last segment, outermost first — what the walk visits before
-  // Reaching a note that deep.
+  // reaching a note that deep.
   function folderChain(rootPath: string, ...names: string[]): FolderHeadingPlanItem[] {
     return names.map((_name, index) => folder([rootPath, ...names.slice(0, index + 1)].join('/')));
   }
@@ -102,7 +102,7 @@ describe('buildFolderHeadingPlan', () => {
 
   it('should emit nothing extra when climbing back to an already-open folder', () => {
     // The real walk takes a folder's own notes before its sub-folders, so it never climbs back; this
-    // Guards the plan against an input that does.
+    // guards the plan against an input that does.
     expect(plan([...folderChain('Docs', 'api', 'v2'), note('Docs/api/v2/put.md'), note('Docs/api/get.md')])).toEqual({
       entries: [
         { depth: 2, headings: ['# api', '## v2'] },

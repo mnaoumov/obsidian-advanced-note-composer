@@ -70,7 +70,7 @@ interface TestFileMtimes {
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
-// Would otherwise poll forever. Everything else (vault, lock, transaction, links, heading parsing) is REAL.
+// would otherwise poll forever. Everything else (vault, lock, transaction, links, heading parsing) is REAL.
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
@@ -79,7 +79,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 }));
 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
-// Reach into unmocked App internals. Not the behavior under test.
+// reach into unmocked App internals. Not the behavior under test.
 vi.mock('obsidian-dev-utils/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
@@ -154,7 +154,7 @@ beforeEach(() => {
     }
   }).asOriginalType__();
   // Test-mocks' MetadataCache is a strict proxy with no indexer; the frontmatter merge's processFrontMatter
-  // And the heading-merge's parseMetadata both trigger a recompute, so stub it to a no-op.
+  // and the heading-merge's parseMetadata both trigger a recompute, so stub it to a no-op.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
@@ -691,7 +691,7 @@ describe('mergeFrontmatter strategies', () => {
     await composer.callInsertIntoTargetFile('---\naliases:\n  - incoming\n---\ncontent');
 
     // `aliases` is the key the incoming note also carries, and it is NOT first here - the bug moved it to the
-    // Front. (The literal above is kept sorted by `perfectionist/sort-objects`, which is still enough to catch it.)
+    // front. (The literal above is kept sorted by `perfectionist/sort-objects`, which is still enough to catch it.)
     expect(Object.keys(seeded)).toStrictEqual(['alfa', 'aliases', 'mike', 'zulu']);
     // The destination's own values come first in the union, matching the other merge strategy.
     expect(seeded['aliases']).toStrictEqual(['existing', 'incoming']);
@@ -805,7 +805,7 @@ describe('mergeFrontmatter strategies', () => {
     await composer.callInsertIntoTargetFile('---\ntitle: New Title\n---\ncontent');
 
     // The base default keeps the drop behavior even for a brand-new target file; MergeComposer overrides
-    // It (via `shouldKeepSourceTitleForNewTargetFile`) so a folder/file merge into a new note keeps it.
+    // it (via `shouldKeepSourceTitleForNewTargetFile`) so a folder/file merge into a new note keeps it.
     expect(seeded['title']).toBeUndefined();
   });
 });

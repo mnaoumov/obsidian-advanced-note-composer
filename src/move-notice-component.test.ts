@@ -224,7 +224,7 @@ describe('MoveNoticeComponent', () => {
     expect(shownNotice).toBe(notice);
     // Exact equality, not `toMatchObject`: the ABSENCE of `isPermanent` is the assertion. Combined with
     // `shouldHideOnClick: false` it throws in dev-utils 93, since that mode is `Separate` and a permanent
-    // Notice needs the shared slot.
+    // notice needs the shared slot.
     expect(capturedOptions).toEqual({
       shouldHideOnClick: false,
       shouldShowCloseButton: false
@@ -470,7 +470,7 @@ describe('MoveNoticeComponent', () => {
     await waitForAllAsyncOperations();
 
     // The mark holds a mutation-blocking lock on the note the split rewrites, so the handoff has to
-    // Release it first.
+    // release it first.
     expect(moveSelectionBuffer.hasMark()).toBe(false);
     expect(editor.setCursor).toHaveBeenCalledWith({ ch: 0, line: MARKED_HEADING_LINE });
     expect(vi.mocked(splitHeadingRecursivelyHandler.executeInActiveEditor)).toHaveBeenCalledOnce();

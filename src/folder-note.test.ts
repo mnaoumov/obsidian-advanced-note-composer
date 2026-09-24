@@ -46,7 +46,7 @@ function settingsFor(folderNoteLocation: FolderNoteLocation, folderNoteNameTempl
 describe('buildFolderNoteOptions', () => {
   it('should pass the location setting through as it stands', () => {
     // Including `Auto`: it is dev-utils' own member, so the mapping has nothing to translate — which is the
-    // Whole point of dropping the plugin-local enum.
+    // whole point of dropping the plugin-local enum.
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.Auto)).location).toBe(FolderNoteLocation.Auto);
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.ParentFolder)).location).toBe(FolderNoteLocation.ParentFolder);
   });
@@ -56,7 +56,7 @@ describe('buildFolderNoteOptions', () => {
     const folder = getFolder('alpha/bravo/charlie');
 
     // The vocabulary is what dev-utils deliberately does not have — it takes a callback precisely so the
-    // Caller's tokens stay the caller's.
+    // caller's tokens stay the caller's.
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder)).resolveName?.(folder)).toBe('charlie');
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder, '{{parentFolder}} - {{folderName}}')).resolveName?.(folder))
       .toBe('bravo - charlie');

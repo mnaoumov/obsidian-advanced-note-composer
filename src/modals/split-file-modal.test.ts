@@ -176,8 +176,8 @@ vi.mock('./suggest-modal-base.ts', async () => {
     }
 
     // The real one reads `Editor > Spellcheck` off the vault and writes an attribute on `inputEl`; both
-    // Belong to the base, so they are proved by `suggest-modal-base.test.ts` and the desktop case rather
-    // Than here, where the base is a stand-in.
+    // belong to the base, so they are proved by `suggest-modal-base.test.ts` and the desktop case rather
+    // than here, where the base is a stand-in.
     protected refreshSpellcheck(): void {
       noop();
     }
@@ -195,7 +195,7 @@ vi.mock('../headings.ts', () => ({
 
 vi.mock('./split-note-name-modal.ts', async () => {
   // The ACTION enum is real: a stand-in for it would let a test pass against a member the modal does not
-  // Have, which is the one thing these tests are for.
+  // have, which is the one thing these tests are for.
   const actual = await vi.importActual<typeof import('./split-note-name-modal.ts')>('./split-note-name-modal.ts');
   return { ...actual, openSplitNoteNameModal: vi.fn() };
 });
@@ -424,7 +424,7 @@ describe('prepareForSplitFile', () => {
 
   it('marks the selection to move and stays on the source note when switching to smart cut', async () => {
     // Switching to smart cut from the picker must NOT open any note (issue #141): the picker only has a
-    // Merely-highlighted suggestion the user never chose, so the active note must stay put.
+    // merely-highlighted suggestion the user never chose, so the active note must stay put.
     shouldAutoSwitchToSmartCut = true;
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
@@ -502,7 +502,7 @@ describe('prepareForSplitFile', () => {
 
   it('reports a refused name transform and cancels, instead of letting it escape (issue #203)', async () => {
     // With the picker skipped there is no prompt to report into, so this is the only place the user can
-    // Learn that their `Name transform template` is the reason nothing happened.
+    // learn that their `Name transform template` is the reason nothing happened.
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
@@ -557,7 +557,7 @@ describe('prepareForSplitFile', () => {
   it('should let an explicit false override win over the setting (issue #173)', async () => {
     // The override is a TRI-state resolved with `??`, so `false` is not "do not override" — it forces
     // Obsidian's own new-file location even with the setting on. That is the lever the recursive split's
-    // Root pass pulls to root its tree in the `Default location for new notes`.
+    // root pass pulls to root its tree in the `Default location for new notes`.
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
@@ -620,7 +620,7 @@ describe('prepareForSplitFile', () => {
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
     // `Merge` as the DEFAULT is what makes this meaningful: the picker never opens for a heading-driven
-    // Split, so it must still name a brand-new note after the heading (issue #227).
+    // split, so it must still name a brand-new note after the heading (issue #227).
     const pluginSettingsComponent = createMockPluginSettingsComponent({ defaultSplitTargetMode: SplitTargetMode.Merge, shouldAskBeforeSplitting: false });
 
     await prepareForSplitFile({ app, editor, heading: 'Heading', pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
@@ -644,7 +644,7 @@ describe('prepareForSplitFile', () => {
 
   it('should skip the confirmation when the caller already confirmed the whole operation', async () => {
     // The recursive split confirms once up front and then runs many splits; confirming each would be
-    // Unusable. `shouldAskBeforeSplitting` stays on, so this proves the override and not the setting.
+    // unusable. `shouldAskBeforeSplitting` stays on, so this proves the override and not the setting.
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
@@ -669,7 +669,7 @@ describe('prepareForSplitFile', () => {
 
   it('should skip the confirmation for a heading-driven split when splitting headings automatically', async () => {
     // Issue #79: a heading-driven split must run start-to-finish without prompting when the setting is on,
-    // Even though `shouldAskBeforeSplitting` would otherwise open the confirmation dialog.
+    // even though `shouldAskBeforeSplitting` would otherwise open the confirmation dialog.
     const sourceFile = createMockFile('folder/source.md');
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
@@ -793,8 +793,8 @@ describe('prepareForSplitFile', () => {
   });
 
   // Issue #238. Name first, path second: once the name is settled the flow ASKS where the note goes,
-  // Instead of the destination falling out of a setting, a typed path, or Obsidian's default new-note
-  // Location - which is where the reporter's extract silently landed.
+  // instead of the destination falling out of a setting, a typed path, or Obsidian's default new-note
+  // location - which is where the reporter's extract silently landed.
   describe('the target folder prompt', () => {
     const pickedFolder = strictProxy<TFolder>({ getParentPrefix: () => 'picked-folder/', path: 'picked-folder' });
 
@@ -838,7 +838,7 @@ describe('prepareForSplitFile', () => {
 
     it('should not ask when the picker never opened', async () => {
       // A heading-driven split derives everything from the heading and asks the user nothing, so it must
-      // Not grow a prompt of its own.
+      // not grow a prompt of its own.
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
@@ -875,7 +875,7 @@ describe('prepareForSplitFile', () => {
 
     it('should reopen the picker when the folder prompt is dismissed', async () => {
       // Dismissing is "never mind, let me fix the name", not "abandon the operation" — so the flow goes
-      // Back to the picker and asks again, rather than returning null.
+      // back to the picker and asks again, rather than returning null.
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValueOnce(null).mockResolvedValueOnce(pickedFolder);
       const sourceFile = createMockFile('folder/source.md');
@@ -964,7 +964,7 @@ describe('prepareForSplitFile', () => {
 
     it('should stay out of the way of a merge default', async () => {
       // Someone whose default is `Merge` is asking for the picker, and since issue #280 the pair has
-      // Nothing to offer them that the picker does not — its `Switch to merge` leads straight back here.
+      // nothing to offer them that the picker does not — its `Switch to merge` leads straight back here.
       shouldAutoSelect = true;
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
@@ -1019,8 +1019,8 @@ describe('prepareForSplitFile', () => {
 
     it('should hand the pass to the picker in Merge when the name box switches', async () => {
       // The whole point of the issue: with the setting on, a merge was unreachable without going back to
-      // The settings tab. Asserted on the mode the ITEM SELECTOR is given, which is what actually decides
-      // Whether an existing note can be chosen — not on the modal's internal field.
+      // the settings tab. Asserted on the mode the ITEM SELECTOR is given, which is what actually decides
+      // whether an existing note can be chosen — not on the modal's internal field.
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
@@ -1043,7 +1043,7 @@ describe('prepareForSplitFile', () => {
 
     it('should not reach Merge on a flow that has nothing to merge', async () => {
       // `Create empty note at cursor...` (issue #244). The button is disabled there, but the refusal has to
-      // Hold in the flow too: a disabled control is a statement, not a guarantee.
+      // hold in the flow too: a disabled control is a statement, not a guarantee.
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
@@ -1133,7 +1133,7 @@ describe('prepareForSplitFile', () => {
 
   describe('remembering the last split target mode (issues #245, #264)', () => {
     // What the picker WROTE, by replaying the `editAndSave` callback against a settings stand-in. The
-    // Component mock resolves without applying the edit, so the value has to be read out of the callback.
+    // component mock resolves without applying the edit, so the value has to be read out of the callback.
     async function applyRememberedMode(pluginSettingsComponent: PluginSettingsComponent): Promise<SplitTargetMode | undefined> {
       const editAndSave = vi.mocked(pluginSettingsComponent.editAndSave);
       const editor = editAndSave.mock.calls[0]?.[0];
@@ -1166,7 +1166,7 @@ describe('prepareForSplitFile', () => {
 
     it('should save nothing when the picker never opened', async () => {
       // A heading-driven split SYNTHESIZES `Create` for its heading-named note without ever showing a
-      // Switch, so saving it would reset a `Merge` default from a screen the user never saw.
+      // switch, so saving it would reset a `Merge` default from a screen the user never saw.
       const sourceFile = createMockFile('folder/source.md');
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();

@@ -73,7 +73,7 @@ export class MergeComposer extends ComposerBase {
     }
 
     // Collected before the transaction so every attachment can be locked alongside the two notes: an
-    // External change to one of them must abort the merge just as a change to a note does.
+    // external change to one of them must abort the merge just as a change to a note does.
     const attachmentsToRelocate = this.shouldMoveAttachments
       ? collectAttachmentsOwnedByNote({
         app: this.app,
@@ -102,15 +102,15 @@ export class MergeComposer extends ComposerBase {
           let sourceContent = await this.app.vault.read(this.sourceFile);
           if (!await this.checkFilesUnchanged(mtimes)) {
             // The pre-flight guard tripped (an external change): abort so nothing is committed and the
-            // Post-merge open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
+            // post-merge open below is skipped. Nothing has been mutated yet, so there is nothing to undo.
             this.abortController.abort();
             return;
           }
           if (attachmentsToRelocate.length > 0) {
             // Moved while the source note still exists, so the vault's own rename updates the links to
-            // Them inside it — hence the re-read below, which picks up the new locations before the
-            // Content is merged. It has to happen after the mtime guard above, which the plugin's own
-            // Write to the source would otherwise trip.
+            // them inside it — hence the re-read below, which picks up the new locations before the
+            // content is merged. It has to happen after the mtime guard above, which the plugin's own
+            // write to the source would otherwise trip.
             await relocateAttachments({
               app: this.app,
               relocations: attachmentsToRelocate.map((attachment) => ({
@@ -143,7 +143,7 @@ export class MergeComposer extends ComposerBase {
 
       if (this.shouldShowNotice) {
         // The source note is gone by now, so it is named as plain text — an unresolved link to it would
-        // Create it back when clicked.
+        // create it back when clicked.
         showOperationCompletionNotice({
           content: await this.buildCompletionContent('Merged', false),
           pluginNoticeComponent: this.pluginNoticeComponent,

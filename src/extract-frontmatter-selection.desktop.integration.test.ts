@@ -66,7 +66,7 @@ describe('extracting a properties selection (issue #183)', () => {
           const targetFile = await resetFile(TARGET_PATH, targetContent);
 
           // The selection starts INSIDE the first value, exactly as the reporter's screenshot shows, and
-          // Ends at the end of the second one.
+          // ends at the end of the second one.
           const editor = await openInSourceMode(sourceFile);
           editor.setSelection(
             editor.offsetToPos(sourceContent.indexOf('alpha') + 'al'.length),
@@ -92,7 +92,7 @@ describe('extracting a properties selection (issue #183)', () => {
 
           const targetFileContent = await app.vault.read(targetFile);
           // The source is rewritten through its editor, whose save to disk is debounced — so read what the
-          // User sees, exactly as the same-note extract suite does.
+          // user sees, exactly as the same-note extract suite does.
           const sourceFileContent = editorValueFor(SOURCE_PATH) ?? await app.vault.read(sourceFile);
 
           return {
@@ -118,7 +118,7 @@ describe('extracting a properties selection (issue #183)', () => {
             throw new TypeError('No split picker input.');
           }
           // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
-          // Explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
           const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
           if (!(modeToggle instanceof HTMLElement)) {
             throw new TypeError('No create/merge switch in the split picker.');
@@ -181,7 +181,7 @@ describe('extracting a properties selection (issue #183)', () => {
             throw new Error('No active markdown view.');
           }
           // Source mode: in Live Preview the properties block is a widget, so its raw YAML cannot be
-          // Selected at all — which is why this feature only ever sees a source-mode selection.
+          // selected at all — which is why this feature only ever sees a source-mode selection.
           await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           return view.editor;

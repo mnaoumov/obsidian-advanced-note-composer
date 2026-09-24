@@ -200,7 +200,7 @@ export async function placeCaretFromEnd(params: PlaceCaretFromEndParams): Promis
       const { editor } = view;
       const editorValue = editor.getValue();
       // An editor that is up but still loading holds an empty buffer, so the tail being there is what
-      // Proves the note itself arrived.
+      // proves the note itself arrived.
       if (editorValue.length > 0 && editorValue.endsWith(tail)) {
         const position = editor.offsetToPos(editorValue.length - tail.length);
         editor.setCursor(position);
@@ -276,7 +276,7 @@ export function resolveInsertedContentRange(params: ResolveInsertedContentRangeP
   }
 
   // Clamp to the document, mirroring `computeHighlightRangesForFile`: the editor is read live, so it
-  // Can be a revision behind the content the offsets were computed against.
+  // can be a revision behind the content the offsets were computed against.
   const endOffset = Math.min(startOffset + insertedContent.trim().length, editorValue.length);
   return {
     endPos: editor.offsetToPos(endOffset),
@@ -299,14 +299,14 @@ export function resolveInsertedTextStartOffset(params: ResolveInsertedTextStartO
   const leadingWhitespaceLength = insertedContent.length - insertedContent.trimStart().length;
 
   // The recorded offset pins the inserted region exactly, so it is the only candidate that cannot pick the
-  // Wrong copy (issue #175). Trusted only when the editor really does hold the inserted content there — a
-  // Later write (the frontmatter merge) can shift the body under it.
+  // wrong copy (issue #175). Trusted only when the editor really does hold the inserted content there — a
+  // later write (the frontmatter merge) can shift the body under it.
   if (insertedContentOffset !== null && editorValue.startsWith(insertedContent, insertedContentOffset)) {
     return insertedContentOffset + leadingWhitespaceLength;
   }
 
   // Fallbacks for a shifted body. Both take the FIRST occurrence, so on a note that already contains
-  // The same text they can land on the earlier copy — a last resort, never the primary path.
+  // the same text they can land on the earlier copy — a last resort, never the primary path.
   const index = editorValue.indexOf(insertedContent);
   if (index !== -1) {
     return index + leadingWhitespaceLength;
@@ -347,7 +347,7 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
   }
 
   // NOTE: do NOT follow this with `setEphemeralState({ line })` — that repositions the caret and
-  // Collapses the selection.
+  // collapses the selection.
   editor.setSelection(range.startPos, range.endPos);
   editor.scrollIntoView({ from: range.startPos, to: range.endPos }, true);
 

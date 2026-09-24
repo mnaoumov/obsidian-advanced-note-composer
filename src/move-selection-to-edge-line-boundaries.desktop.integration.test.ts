@@ -149,8 +149,8 @@ describe('a marked selection moved to an edge lands on its own line', () => {
     });
 
     // The defect stated directly: no line ever holds the moved block AND the line next to it. Asserting on
-    // The split lines rather than on a substring is what tells a moved block on its own line apart from one
-    // Glued to `ALPHA` — a `toContain('MOVEME')` passes for both.
+    // the split lines rather than on a substring is what tells a moved block on its own line apart from one
+    // glued to `ALPHA` — a `toContain('MOVEME')` passes for both.
     const notes: [string, string][] = [
       ['reporterTemplateBottom', result.reporterTemplateBottom],
       ['shippedDefaultBottom', result.shippedDefaultBottom],

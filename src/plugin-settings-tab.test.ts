@@ -185,8 +185,8 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #221 asked for collapsible headers, collapsed on open. Obsidian 1.13 has no collapsible groups
-  // And its groups do not nest, so each section is a navigable PAGE instead: the tab opens as a short
-  // List of entries, and a page holding groups is the two-level hierarchy issues #224/#225/#226 wanted.
+  // and its groups do not nest, so each section is a navigable PAGE instead: the tab opens as a short
+  // list of entries, and a page holding groups is the two-level hierarchy issues #224/#225/#226 wanted.
   it('should open as two inline groups followed by the page entries', async () => {
     const tab = await createSettingsTab();
 
@@ -196,26 +196,26 @@ describe('PluginSettingsTab', () => {
       'page:Merge',
       'page:Split/extract',
       // Its own page since issue #271, next to the split/extract commands whose ranges it shares. Two
-      // Path rows and nothing else: a select writes nothing, so it has no content pair.
+      // path rows and nothing else: a select writes nothing, so it has no content pair.
       'page:Select',
       'page:Swap',
       'page:Smart cut & paste',
       // Its own page rather than rows scattered across three others (issue #223). Issue #272 folded the
       // `Title` page into it — two adjacent entries the reporter read as one section — so there is one
-      // Entry here where there were two.
+      // entry here where there were two.
       'page:Frontmatter',
       // Its own page since issue #254: thirty commands, each with two toggles, would swamp any page that
-      // Also had to hold something else.
+      // also had to hold something else.
       'page:Command menu placement',
       // Issue #225 folded two top-level headers into one `Include/exclude` page; issue #271 retired that
-      // Page in turn, moving each category's path rows onto the page of the commands they govern.
+      // page in turn, moving each category's path rows onto the page of the commands they govern.
       'page:Move/flatten folders',
       // `Create folder with notes` until issue #271 gave it the whole `Create` category's path rows.
       'page:Create',
       // Its own page since issue #271, for the one remaining category with no page of its own.
       'page:Rename',
       // Its own page rather than rows inside `Reorder` (issue #216): what a folder note IS also answers
-      // Issue #217's rename, so it is not a reorder detail.
+      // issue #217's rename, so it is not a reorder detail.
       'page:Folder note',
       'page:Reorder',
       'page:UI'
@@ -229,7 +229,7 @@ describe('PluginSettingsTab', () => {
 
     expect(collectPageSections(tab)).toEqual({
       // Issue #254: one section per category, holding a row per command rather than one dropdown for all of
-      // Them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
+      // them. `Merge` and `Move/flatten` are absent — no command of either reaches an editor menu.
       'Command menu placement': [
         'Split/extract command menus',
         'Select command menus',
@@ -243,13 +243,13 @@ describe('PluginSettingsTab', () => {
       'Create': ['Create include/exclude paths'],
       'Folder note': [],
       // Issue #272 merged the `Title` page in, and the merged page groups by TOPIC rather than by which
-      // Page a row came from: `Title` leads, because the rows that shape a file name are what the frontmatter
+      // page a row came from: `Title` leads, because the rows that shape a file name are what the frontmatter
       // `title` rows exist to preserve. The inner one is `Frontmatter properties` since issue #282: an entry
-      // Named `Frontmatter` on the `Frontmatter` page would open a page of the same name as the one it is on.
+      // named `Frontmatter` on the `Frontmatter` page would open a page of the same name as the one it is on.
       'Frontmatter': ['Title', 'Frontmatter properties'],
       // Issue #224, resplit by issue #240: one `Merge folder` header sat over two different commands, so
-      // Six of its ten rows silently meant only the one their descriptions named. Issue #271 added the
-      // Path section at the end.
+      // six of its ten rows silently meant only the one their descriptions named. Issue #271 added the
+      // path section at the end.
       'Merge': [
         'All merges',
         'Merge file',
@@ -259,7 +259,7 @@ describe('PluginSettingsTab', () => {
       ],
       'Move/flatten folders': ['Move/flatten include/exclude paths'],
       // `Rename` and `Select` hold nothing but their path rows, so those sit on the page directly — a
-      // Page holding nothing but one entry to another page is a detour.
+      // page holding nothing but one entry to another page is a detour.
       'Rename': [],
       'Reorder': ['Reorder include/exclude paths'],
       'Select': [],
@@ -267,8 +267,8 @@ describe('PluginSettingsTab', () => {
       'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file', 'Smart cut & paste include/exclude paths'],
       'Split/extract': ['Split/extract include/exclude paths'],
       // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
-      // Shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
-      // The folder rows name their own target type — so the headings only mislabelled the first row.
+      // shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
+      // the folder rows name their own target type — so the headings only mislabelled the first row.
       // Issue #282 did not bring them back: the page is four rows, and only its path rows are a section.
       'Swap': ['Swap include/exclude paths'],
       'UI': []
@@ -276,16 +276,16 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issues #249 / #270 / #271: the enum, the settings behind it and the pages have to stay in step — a
-  // Category whose rows render nowhere is a filter the user cannot reach, and its settings would only
-  // Ever be editable by hand.
+  // category whose rows render nowhere is a filter the user cannot reach, and its settings would only
+  // ever be editable by hand.
   it('should give every command category its path rows on its own page', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
 
     for (const commandCategory of COMMAND_CATEGORIES) {
       // Four rows since issue #270, content pair first. `Select` and `Rename` are the exceptions at two rows —
-      // Neither has a content pair (a select writes nothing; a rename's only subject is what it was run on,
-      // Which the content filter stopped refusing in issue #288), so the rows would be controls read by nothing.
+      // neither has a content pair (a select writes nothing; a rename's only subject is what it was run on,
+      // which the content filter stopped refusing in issue #288), so the rows would be controls read by nothing.
       const contentRowNames = commandCategory === CommandCategory.Select || commandCategory === CommandCategory.Rename
         ? []
         : [`${commandCategory} include paths`, `${commandCategory} exclude paths`];
@@ -296,7 +296,7 @@ describe('PluginSettingsTab', () => {
       ];
 
       // `Rename` and `Select` have no group of their own, so their rows are the whole of their page —
-      // Whose name IS the category, which is what makes the fallback lookup work for both of them.
+      // whose name IS the category, which is what makes the fallback lookup work for both of them.
       const container = containers.get(`${commandCategory} include/exclude paths`) ?? containers.get(commandCategory);
       expect(container).toEqual(rowNames);
     }
@@ -366,8 +366,8 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #282: the only headed groups left are the two inline ones at the ROOT, which are not a section
-  // Inside a section (and which issue #274 settled). A headed group anywhere below them is a section the
-  // User has to scroll to again.
+  // inside a section (and which issue #274 settled). A headed group anywhere below them is a section the
+  // user has to scroll to again.
   it('should render only the two root headings', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -379,7 +379,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #220: every header that has a template leads with it, so the templates stop reading as though
-  // They were placed at random.
+  // they were placed at random.
   it('should lead every header that has a template with its templates', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -402,11 +402,11 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #223 named no settings, only screenshots — six rows that read or write frontmatter, drawn out of
-  // Three headers that each held a couple of them. Issue #272 merged the `Title` page into that page and
-  // Split the ten rows by TOPIC, so `collectContainers` keys by the two GROUP headings now rather than by
-  // The page: three of the six moved under `Title`, which is where the demo vault already documented two of
-  // Them. Both lists are asserted, because a row dropped in the move would otherwise leave one of them
-  // Passing on its own.
+  // three headers that each held a couple of them. Issue #272 merged the `Title` page into that page and
+  // split the ten rows by TOPIC, so `collectContainers` keys by the two GROUP headings now rather than by
+  // the page: three of the six moved under `Title`, which is where the demo vault already documented two of
+  // them. Both lists are asserted, because a row dropped in the move would otherwise leave one of them
+  // passing on its own.
   it('should split the merged frontmatter page into a title section and a frontmatter properties section', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
@@ -428,8 +428,8 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #241: the four swap rows sit directly on the page. The subheading assertion above proves the
-  // Groups are gone; this one proves the rows survived the flattening in their original order, so a row
-  // Added later cannot quietly bring a heading back with it.
+  // groups are gone; this one proves the rows survived the flattening in their original order, so a row
+  // added later cannot quietly bring a heading back with it.
   it('should list the swap settings flat on their page', async () => {
     const tab = await createSettingsTab();
 
@@ -442,9 +442,9 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #243: the lock row lived on `Split/extract`, but no split or extract reads it — the split
-  // Modal's two uses are its `switch to smart cut` paths, which mark through the same helper the two mark
-  // Commands use. It is the one row sitting FLAT on the smart cut page, above the groups, because it
-  // Governs the mark rather than any one notice or move direction.
+  // modal's two uses are its `switch to smart cut` paths, which mark through the same helper the two mark
+  // commands use. It is the one row sitting FLAT on the smart cut page, above the groups, because it
+  // governs the mark rather than any one notice or move direction.
   it('should put the lock-all-notes row flat on the smart cut page and not on split/extract', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
@@ -456,8 +456,8 @@ describe('PluginSettingsTab', () => {
   // Issue #240: the reporter read a description under `Merge folder` that named only
   // `Merge folder contents into a single file...` and concluded the OTHER folder merge was undocumented.
   // It was not — one header sat over both commands. Every row now belongs to the header naming the
-  // Command that reads it, and this is the assertion that keeps it that way: a row added to the wrong
-  // Group fails here rather than quietly reintroducing the ambiguity.
+  // command that reads it, and this is the assertion that keeps it that way: a row added to the wrong
+  // group fails here rather than quietly reintroducing the ambiguity.
   it('should split the merge page by the command each row belongs to', async () => {
     const tab = await createSettingsTab();
     const containers = collectContainers(tab);
@@ -490,7 +490,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // The half of issue #240 that a header alone cannot fix: a row under a command-named header must not
-  // Describe itself in terms of a DIFFERENT command, which is what sent the reporter looking.
+  // describe itself in terms of a DIFFERENT command, which is what sent the reporter looking.
   it('should name only its own command in each folder-merge description', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -538,7 +538,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #238. The prompt is opt-in on purpose: the common case is a heading-driven extract whose name is
-  // Already in the box, and a second modal on that path would cost everyone more than the bug costs anyone.
+  // already in the box, and a second modal on that path would cost everyone more than the bug costs anyone.
   it('should leave the target folder prompt off by default', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -562,7 +562,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #227: the split/extract picker's `Create`/`Merge` switch starts in the mode this setting names,
-  // And `Create` is what the picker did before the switch existed whenever the typed name matched nothing.
+  // and `Create` is what the picker did before the switch existed whenever the typed name matched nothing.
   it('should offer both split target modes, defaulting to create', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -575,7 +575,7 @@ describe('PluginSettingsTab', () => {
 
   // Issue #227: every template that resolves the note-flavored vocabulary now also resolves the
   // `Create folder with notes...` folder tokens, so each of their descriptions has to say so — a token
-  // Nobody knows about is a token nobody uses.
+  // nobody knows about is a token nobody uses.
   it('should list the folder tokens in every note template description', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -587,7 +587,7 @@ describe('PluginSettingsTab', () => {
       expect(desc).toContain('{{index}}');
       expect(desc).toContain('{{parentFolderPath}}');
       // The two the vocabulary deliberately does not carry over are named as unavailable, rather than
-      // Left to fail at split time.
+      // left to fail at split time.
       expect(desc).toContain('{{rawFolderName}}');
       expect(desc).toContain('are not available');
     }
@@ -606,7 +606,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // The advice belonged to the all-commands `Exclude paths` row until issue #271 retired it. It is not
-  // About any one category, so rather than being lost it now rides on every content-exclude row.
+  // about any one category, so rather than being lost it now rides on every content-exclude row.
   it('should keep the attachment-folder advice on every content exclude row', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -632,7 +632,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #271 deleted the four all-commands boxes. Leaving one behind would put the plugin back in the
-  // State the reporter objected to, where a path can be listed in two places that disagree.
+  // state the reporter objected to, where a path can be listed in two places that disagree.
   it('should render no all-commands path rows', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -657,7 +657,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #243: the description named only `Mark selection to move`, while `Mark heading to move` and the
-  // Split modal's switch-to-smart-cut mark through the same helper and are locked by it just as much.
+  // split modal's switch-to-smart-cut mark through the same helper and are locked by it just as much.
   it('should describe the lock-all-notes row as covering every way a selection gets marked', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
@@ -706,7 +706,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // Issue #285: emptying either folder-note property template is its opt-out, and `bind` used to write
-  // The default straight back into the setting the moment the box was cleared.
+  // the default straight back into the setting the moment the box was cleared.
   it.each(
     [
       { defaultValue: '{{folderName}}', name: 'Folder note title template', propertyName: 'folderNoteTitleTemplate' },
@@ -817,7 +817,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     renderRows(tab);
 
     // The predicate is what the tab owns; Obsidian applies it — and propagates it to the row's
-    // Components — on every render and on every `refreshDomState()`.
+    // components — on every render and on every `refreshDomState()`.
     expect(isRowDisabled(tab, 'Replacement string')).toBe(true);
   });
 
@@ -883,7 +883,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 });
 
 // Issue #247: the blocking dialog is a way of REPORTING progress, so it means nothing with progress
-// Reporting turned off.
+// reporting turned off.
 describe('shouldBlockVaultDuringOperations', () => {
   it('should enable the blocking-dialog row while operation notices are on', async () => {
     const tab = await createSettingsTab();
@@ -917,7 +917,7 @@ describe('shouldBlockVaultDuringOperations', () => {
 });
 
 // Issue #214: the two rename-button rows only mean anything while the confirmation dialog is shown, so
-// They follow `shouldAskBeforeCreatingFolder` the way the replacement string follows its own toggle.
+// they follow `shouldAskBeforeCreatingFolder` the way the replacement string follows its own toggle.
 describe('shouldAskBeforeCreatingFolder', () => {
   const RENAME_BUTTON_ROW_NAMES = [
     'Should show rename button for the created folder',

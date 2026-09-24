@@ -10,7 +10,7 @@ import {
 // Issue #214: the reporter who asked for the `Rename` buttons (issue #200) now wants them turn-off-able, so
 // A vault whose note names come from `Create folder content template` cannot deviate from it by accident.
 // Two independent flags, so this pins all four combinations against real Obsidian — and, with both off, that
-// The dialog still PREVIEWS every note and still creates exactly what it previewed. No unit test can prove it:
+// the dialog still PREVIEWS every note and still creates exactly what it previewed. No unit test can prove it:
 // The buttons live in the dialog body, and the flags are read while that body is built.
 // Desktop-only: folder flows, matching the plugin's established integration convention.
 // Isolation: `npx vitest run --project integration-tests:desktop src/confirm-dialog-rename-buttons-hidden.desktop.integration.test.ts`.
@@ -97,7 +97,7 @@ describe('hiding the rename buttons in the create-folder confirmation (issue #21
     const original = await configureSuite();
     try {
       // One dialog per combination, each cancelled — so `{{index}}` still sees no sibling and every pass
-      // Previews the same names.
+      // previews the same names.
       const bothShown = await probeConfirmDialog(true, true, false);
       const folderOnly = await probeConfirmDialog(true, false, false);
       const notesOnly = await probeConfirmDialog(false, true, false);
@@ -230,7 +230,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
 
       const renameButtonCount = document.querySelectorAll(RENAME_BUTTON_SELECTOR).length;
       // The PREVIEW is the reason the dialog exists, so hiding the buttons must not touch it: one row for
-      // The folder and one per note.
+      // the folder and one per note.
       const nameRowCount = document.querySelectorAll(NAME_ROW_SELECTOR).length;
 
       if (!shouldConfirm) {
@@ -246,7 +246,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
 
       findButton('Create')?.click();
       // A throwing wait would discard everything observed so far, so give up quietly and let the
-      // Assertions outside Obsidian report what actually happened.
+      // assertions outside Obsidian report what actually happened.
       try {
         await waitUntil({
           message: 'the folder was not created with the rename buttons hidden',
@@ -300,7 +300,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
         const nameInput = getPromptInput();
         nameInput.value = name;
         // The modal tracks its value through the component's change handler, so a bare `value` assignment
-        // Would be accepted and then submitted as the seeded name.
+        // would be accepted and then submitted as the seeded name.
         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
         // The prompt validates ASYNCHRONOUSLY, so a click before it settles is silently ignored.
         await waitUntil({

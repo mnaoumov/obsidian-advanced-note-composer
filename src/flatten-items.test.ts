@@ -167,7 +167,7 @@ describe('canFlattenModeBeDistinctSync', () => {
     });
 
     // The reported case. `ChildFoldersOnly` stays possible: a folder resolved asynchronously as an
-    // Attachment folder would be left behind and make it differ from `Flatten folder...`.
+    // attachment folder would be left behind and make it differ from `Flatten folder...`.
     expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
     expect(canBeDistinctSync('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
   });
@@ -211,7 +211,7 @@ describe('canFlattenModeBeDistinctSync', () => {
     }, './assets');
 
     // The other synchronous skip: `parent/a/sub/assets` holds the attachments of `parent/a/sub/deep.md`,
-    // Which stays inside `sub` as it is promoted.
+    // which stays inside `sub` as it is promoted.
     expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
@@ -223,7 +223,7 @@ describe('canFlattenModeBeDistinctSync', () => {
     stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
     // Necessary, not sufficient: whether `parent/a/sub/deeper` is somebody's attachment folder is exactly
-    // What this cannot know, so it defers to the collection rather than guessing.
+    // what this cannot know, so it defers to the collection rather than guessing.
     expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
   });
 });
@@ -238,7 +238,7 @@ describe('collectFlattenItems', () => {
       }, './attachments');
 
       // The original behavior is untouched by the attachment rule: an emptied folder has nothing to keep
-      // Its attachments beside, so the attachment folder is promoted like any other child.
+      // its attachments beside, so the attachment folder is promoted like any other child.
       const paths = await collectPaths('parent/a', FlattenMode.AllChildren);
       expect(paths.sort()).toStrictEqual([
         'parent/a/attachments',
@@ -287,7 +287,7 @@ describe('collectFlattenItems', () => {
 
     it('should take a child folder that holds both a note and that note\'s own attachment folder', async () => {
       // `parent/a/sub` is not protected: the note whose attachments live in `sub/attachments` travels
-      // Inside `sub`, so promoting `sub` separates nothing.
+      // inside `sub`, so promoting `sub` separates nothing.
       initApp({
         'parent/a/note.md': 'note',
         'parent/a/sub/attachments/pic.png': 'PIC',
@@ -335,7 +335,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       });
       // Custom Attachment Location and friends derive the folder from the note's NAME, which is the one
-      // Case no native mode can produce — resolved for free through `getAttachmentFolderPath` (issue #161).
+      // case no native mode can produce — resolved for free through `getAttachmentFolderPath` (issue #161).
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
       expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
@@ -343,7 +343,7 @@ describe('collectFlattenItems', () => {
 
     it('should not treat a markdown-shaped attachment as a note owning an attachment folder', async () => {
       // `drawing.excalidraw.md` is an attachment, not a note, so `attachments` belongs to nobody staying
-      // Behind and is promoted.
+      // behind and is promoted.
       initApp({
         'parent/a/attachments/pic.png': 'PIC',
         'parent/a/drawing.excalidraw.md': 'EXCALIDRAW'
@@ -362,7 +362,7 @@ describe('collectFlattenItems', () => {
       });
 
       // Shallowest-first IS the move order: `b` is promoted before `b/c`, and Obsidian's rename cascades,
-      // So `c` is simply at its promoted parent's new path by the time its turn comes.
+      // so `c` is simply at its promoted parent's new path by the time its turn comes.
       expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([
         'parent/a/b',
         'parent/a/b/c'
@@ -379,7 +379,7 @@ describe('collectFlattenItems', () => {
       }, './attachments');
 
       // `a/attachments` stays with `note.md`; `b` moves and carries `deep.md`, so `b/attachments` must not
-      // Be promoted away from it; `b/c` is an ordinary folder and moves.
+      // be promoted away from it; `b/c` is an ordinary folder and moves.
       expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([
         'parent/a/b',
         'parent/a/b/c'
@@ -505,7 +505,7 @@ describe('excluded paths', () => {
     excludePaths('parent/a/assets');
 
     // The whole point of testing exclusion BEFORE resolving: this is the reporter's vault, and the answer
-    // Here is what hides the command instead of offering one that would do nothing.
+    // here is what hides the command instead of offering one that would do nothing.
     expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
     expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
   });
@@ -531,7 +531,7 @@ describe('excluded paths', () => {
     excludePaths('parent/a/note.md');
 
     // Exclusion says "do not move this", not "this note has no attachments": dropping an excluded note from
-    // The resolution would UNPROTECT `attachments` and scatter the very files the note still owns.
+    // the resolution would UNPROTECT `attachments` and scatter the very files the note still owns.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 });
@@ -550,7 +550,7 @@ describe('configured attachment folder', () => {
     }, 'parent/a/Files');
 
     // Nothing under `parent/a` is a note, so the exact resolution has no entry to protect `Files` with — it
-    // Only ever walks notes INSIDE the flattened folder. The configured path is what catches it.
+    // only ever walks notes INSIDE the flattened folder. The configured path is what catches it.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
@@ -561,7 +561,7 @@ describe('configured attachment folder', () => {
     }, 'parent/a/x/assets');
 
     // Promoting `x` separates `x/assets` from every note in the vault just as surely as promoting the
-    // Attachment folder itself would.
+    // attachment folder itself would.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
@@ -592,7 +592,7 @@ describe('configured attachment folder', () => {
     }, './assets');
 
     // A note-relative attachment folder belongs to the notes NEXT to it. With none staying behind there is
-    // Nothing to be separated from, so an unrelated folder of that name keeps flattening.
+    // nothing to be separated from, so an unrelated folder of that name keeps flattening.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/assets']);
   });
 
@@ -650,7 +650,7 @@ describe('configured attachment folder', () => {
     app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
 
     // The exact per-note resolution keeps `sub` promotable: its own note travels inside it, so nothing is
-    // Separated from its attachments. Offering the command was therefore right, not merely permissive.
+    // separated from its attachments. Offering the command was therefore right, not merely permissive.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
@@ -715,7 +715,7 @@ describe('isFlattenModeDistinct', () => {
     });
 
     // The reported case: there is a folder to promote, but nothing nested under it, so the recursive
-    // Variant can only repeat `ChildFoldersOnly`.
+    // variant can only repeat `ChildFoldersOnly`.
     expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
@@ -737,7 +737,7 @@ describe('isFlattenModeDistinct', () => {
     excludePaths('parent/a/sub/hidden');
 
     // The tree IS nested, but the only nested folder is excluded, so the recursive mode would move exactly
-    // What `ChildFoldersOnly` moves.
+    // what `ChildFoldersOnly` moves.
     expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
@@ -745,7 +745,7 @@ describe('isFlattenModeDistinct', () => {
     initApp({ 'parent/a/sub/deeper/deepest.md': 'deepest' });
 
     // A folder of folders only: `ChildFoldersOnly` repeats `Flatten folder...` and drops out, while the
-    // Recursive variant still promotes the nested folder neither of them would.
+    // recursive variant still promotes the nested folder neither of them would.
     expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
     expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
   });

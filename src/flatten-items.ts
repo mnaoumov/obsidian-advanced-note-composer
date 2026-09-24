@@ -365,8 +365,8 @@ function collectFolders(
     }
     if (isSkippedFolder(child, context) || isProtectedFolder(child, noteAttachmentFolders)) {
       // An attachment folder is left exactly as it is, contents included — promoting something out of it
-      // Would scatter the very attachments the mode exists to keep together. The same goes, subtree
-      // Included, for a folder the user excluded.
+      // would scatter the very attachments the mode exists to keep together. The same goes, subtree
+      // included, for a folder the user excluded.
       continue;
     }
     items.push(child);
@@ -525,7 +525,7 @@ function isConfiguredAttachmentFolder(folder: TFolder, context: FlattenContext):
 
   if (absolutePath !== null) {
     // Ancestor-or-self, matching `isProtectedFolder`: promoting `Docs` separates `Docs/assets` from every
-    // Note in the vault just as surely as promoting `Docs/assets` itself would.
+    // note in the vault just as surely as promoting `Docs/assets` itself would.
     return isInsideOrEqualIgnoreCase(absolutePath, folder.path);
   }
 
@@ -534,8 +534,8 @@ function isConfiguredAttachmentFolder(folder: TFolder, context: FlattenContext):
   }
 
   // A note-relative attachment folder belongs to the notes beside it. With no note staying behind in the
-  // Parent there is nothing to be separated from, and an unrelated folder that merely shares the configured
-  // Name keeps flattening normally.
+  // parent there is nothing to be separated from, and an unrelated folder that merely shares the configured
+  // name keeps flattening normally.
   const parentFolder = folder.parent;
   /* v8 ignore start -- a non-root folder always has a parent. */
   if (!parentFolder) {
@@ -655,7 +655,7 @@ function parseAttachmentFolderConfig(app: App): AttachmentFolderConfig {
   const raw = app.vault.getConfig('attachmentFolderPath') as string | undefined;
 
   // An unset value is the vault root too — Obsidian always writes the key, but `obsidian-dev-utils` reads it
-  // Without a fallback, so absorbing it here rather than propagating `undefined` costs nothing.
+  // without a fallback, so absorbing it here rather than propagating `undefined` costs nothing.
   if (!raw || raw === '/' || raw === '.') {
     return NO_ATTACHMENT_FOLDER_CONFIG;
   }
@@ -663,7 +663,7 @@ function parseAttachmentFolderConfig(app: App): AttachmentFolderConfig {
   if (raw.startsWith('./')) {
     // Only the FIRST segment: a candidate is a direct child of the folder holding the note, so `./a/b` makes
     // `a` the folder that must stay — `b` lives inside it and travels with it. A bare `./` leaves nothing to
-    // Name, which is the plain "beside the note" mode.
+    // name, which is the plain "beside the note" mode.
     const relativeName = raw.slice('./'.length).split('/', 1)[0];
     return relativeName ? { absolutePath: null, relativeName } : NO_ATTACHMENT_FOLDER_CONFIG;
   }

@@ -9,9 +9,9 @@ import {
 } from 'vitest';
 
 // Desktop-only: this is a file/folder-move flow. It runs desktop-only, matching the plugin's
-// Established integration convention (no Android emulator wired for it). File-move suites can hit
-// The documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run
-// In one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
+// established integration convention (no Android emulator wired for it). File-move suites can hit
+// the documented headless rename wall (`renameFile`/`metadataCache.onCleanCache`) when several run
+// in one aggregate; if this stalls in the aggregate, it is `it.skip`-ped and must still pass alone.
 // Isolation: `npx vitest run --project integration-tests:desktop src/flatten-folder.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
 
@@ -40,7 +40,7 @@ describe('flatten folder (issue #105)', () => {
         const isOriginalShouldAsk = settingsComponent.settings.shouldAskBeforeFlattening;
         try {
           // Skip the confirmation dialog (issue #154, on by default) so the flatten runs straight from the
-          // Command; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
+          // command; the dialog itself is covered by `folder-confirm.desktop.integration.test.ts`.
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeFlattening = false;
           });

@@ -54,7 +54,7 @@ describe('flatten folder menu entries (issue #177)', () => {
         await app.vault.createFolder('flat-menu-src');
         await app.vault.createFolder('flat-menu-src/sub');
         // The child folder nests, and the folder keeps a file of its own, so no variant is a duplicate of a
-        // Simpler one and all three are expected to appear (issue #210).
+        // simpler one and all three are expected to appear (issue #210).
         await app.vault.createFolder('flat-menu-src/sub/deeper');
         await app.vault.create('flat-menu-src/note.md', 'body');
 
@@ -136,8 +136,8 @@ describe('flatten folder menu entries (issue #177)', () => {
     });
 
     // All three variants are reachable straight from the folder menu — the point of the issue. The
-    // Original `Flatten folder...` wording is kept for the default variant, matching its unchanged
-    // Command id so existing hotkeys survive.
+    // original `Flatten folder...` wording is kept for the default variant, matching its unchanged
+    // command id so existing hotkeys survive.
     const expectedTitles = [
       'Flatten folder...',
       'Flatten folder (child folders only)...',

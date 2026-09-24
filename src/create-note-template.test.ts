@@ -54,7 +54,7 @@ describe('resolveTemplateTail', () => {
   });
 
   // The caret goes at the first `{{content}}`; a second one is still a content token and still resolves to
-  // Nothing, so the tail it leaves behind is `bc`.
+  // nothing, so the tail it leaves behind is `bc`.
   it('should split at the FIRST content token', () => {
     expect(resolve('a{{content}}b{{content}}c')).toBe('bc');
   });
@@ -64,7 +64,7 @@ describe('resolveTemplateTail', () => {
   });
 
   // Unreachable through the settings UI — the `splitTemplate` validator refuses a non-empty template with
-  // No `{{content}}` — so this is what a hand-edited `data.json` gets: the caret at the end of the note.
+  // no `{{content}}` — so this is what a hand-edited `data.json` gets: the caret at the end of the note.
   it('should return nothing when the template has no content token at all', () => {
     expect(resolve('# Just a heading')).toBe('');
   });

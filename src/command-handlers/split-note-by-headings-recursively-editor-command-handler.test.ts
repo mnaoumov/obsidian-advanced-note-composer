@@ -463,7 +463,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
   });
 
   // Issue #205: the tree's ROOT is the one thing about a recursive split the user gets to pick — every
-  // Note's own name comes from its heading.
+  // note's own name comes from its heading.
   describe('change target', () => {
     it('should root the tree in the folder picked from the dialog', async () => {
       const params = createMockParams({ shouldAskBeforeSplitting: true });
@@ -479,7 +479,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
 
       // Root pass only — a deeper pass must keep nesting beside its own source, which IS the folder tree.
       // Read off the captured call rather than matched with `objectContaining`, whose pretty-printer walks
-      // Into the `strictProxy` folder and trips its unmocked-property guard.
+      // into the `strictProxy` folder and trips its unmocked-property guard.
       expect(mockPrepareForSplitFile.mock.calls[0]?.[0].targetParentFolderOverride).toBe(pickedFolder);
 
       const isAllowedFolder = mockSelectFolder.mock.calls[0]?.[0].isAllowedFolder;
@@ -513,7 +513,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
       mockRenderInternalLink.mockClear();
       await capturedConfirmParams?.buildContent(createFragment());
       // A control whose effect is invisible is indistinguishable from one that does nothing, which is the
-      // Complaint issue #205 is about — so the dialog names the destination.
+      // complaint issue #205 is about — so the dialog names the destination.
       const renderedLinks = mockRenderInternalLink.mock.calls.map((call) => call[0].pathOrAbstractFile);
       expect(renderedLinks).toContain(file.parent);
     });
@@ -604,7 +604,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(prepareParams?.editor).toBe(editor);
     expect(prepareParams?.heading).toBe('My Heading');
     // The three overrides are what make the folder tree nest: the new note goes beside its source, into a
-    // Folder of its own, without asking again (the whole operation was confirmed once up front).
+    // folder of its own, without asking again (the whole operation was confirmed once up front).
     expect(prepareParams?.shouldAllowOnlyCurrentFolderOverride).toBe(true);
     expect(prepareParams?.shouldForceSplitIntoFolder).toBe(true);
     expect(prepareParams?.shouldSkipConfirmation).toBe(true);
@@ -641,7 +641,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     // `shouldAllowOnlyCurrentFolderByDefault` setting says.
     expect(mockPrepareForSplitFile.mock.calls[0]?.[0].shouldAllowOnlyCurrentFolderOverride).toBe(false);
     // Every deeper pass keeps creating its note beside its source, which is what keeps the tree nesting
-    // Instead of collapsing into one flat folder.
+    // instead of collapsing into one flat folder.
     expect(mockPrepareForSplitFile.mock.calls[1]?.[0].shouldAllowOnlyCurrentFolderOverride).toBe(true);
     // The folder tree itself is unaffected by the redirection.
     expect(mockPrepareForSplitFile.mock.calls[0]?.[0].shouldForceSplitIntoFolder).toBe(true);
@@ -675,7 +675,7 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(MockSplitComposer.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     expect(mockPrepareForSplitFile.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ sourceFile: childFile }));
     // The notice names the ROOT note only (issue #235): the grandchild is counted, and reached from inside
-    // The note it was split out of.
+    // the note it was split out of.
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 2 note(s): [A/A.md].');
   });
 
@@ -732,13 +732,13 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     await handler.executeEditor(createMockEditor(), createMockContext(file));
 
     // Every structural pass writes the extracted content untouched, so nothing the template adds can be
-    // Dragged into the next note down.
+    // dragged into the next note down.
     for (const call of MockSplitComposer.mock.calls) {
       expect(call[0]).toEqual(expect.objectContaining({ templateOverride: '{{content}}' }));
     }
 
     // The real template is applied afterwards, once, per produced note — each resolved against the note it
-    // Was split OUT of, so `{{fromTitle}}` names its recursion parent rather than the run's root.
+    // was split OUT of, so `{{fromTitle}}` names its recursion parent rather than the run's root.
     expect(mockApplySplitTemplateToNotes).toHaveBeenCalledTimes(1);
     const applyParams = mockApplySplitTemplateToNotes.mock.calls[0]?.[0];
     // Compared as paths: the mock files are strict proxies, which a failure diff cannot serialize.

@@ -143,7 +143,7 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
 
   protected override shouldAddToViewportMenu(view: MarkdownView, mode: string, _source: string): boolean {
     // The selection gate above is about which command the user means, not about which menu was raised, so
-    // It holds here too.
+    // it holds here too.
     return !view.editor.somethingSelected() && checkShouldAddCommandToViewportMenu({
       commandId: this.id,
       mode,

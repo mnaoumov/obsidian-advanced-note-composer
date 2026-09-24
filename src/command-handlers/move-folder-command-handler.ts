@@ -87,11 +87,11 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
     }
 
     // Issue #273: the folder continues the destination's numbering. Resolved here rather than inside the
-    // Transaction so the confirmation dialog above and this move ask the same question of the same vault.
+    // transaction so the confirmation dialog above and this move ask the same question of the same vault.
     const targetPath = getAvailablePath(this.app, join(targetFolder.path, this.resolveMovedName(folder, targetFolder)));
 
     // Captured as a string BEFORE the move: the rename mutates `folder.path` to its destination, so the
-    // Completion notice would otherwise name the same folder on both sides.
+    // completion notice would otherwise name the same folder on both sides.
     const sourcePath = folder.path;
 
     const abortController = new AbortController();
@@ -294,8 +294,8 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
     })
   );
   // Only when the auto-numbering of issue #273 actually changes the name. The dialog otherwise names the
-  // Folder once and the user would meet `8. B` for the first time in the file explorer — the same surprise
-  // The flatten dialog's `old → new` arrow exists to prevent.
+  // folder once and the user would meet `8. B` for the first time in the file explorer — the same surprise
+  // the flatten dialog's `old → new` arrow exists to prevent.
   if (movedName !== sourceFolder.name) {
     fragment.createEl('br');
     fragment.createEl('br');

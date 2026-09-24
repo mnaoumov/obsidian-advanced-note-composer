@@ -96,7 +96,7 @@ export function resolveTemplateTail(params: ResolveTemplateTailParams): string {
  */
 function extractTailAfterContentToken(template: string): null | string {
   // A fresh instance: the shared regex carries the `g` flag, so this loop would otherwise resume from — and
-  // Leave behind — a `lastIndex` belonging to another caller.
+  // leave behind — a `lastIndex` belonging to another caller.
   const tokenRegExp = new RegExp(TEMPLATE_TOKEN_REG_EXP.source, 'g');
 
   for (let match = tokenRegExp.exec(template); match; match = tokenRegExp.exec(template)) {

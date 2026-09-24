@@ -274,9 +274,9 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     });
 
     // The run landed, so the folder the produced tree was rooted in counts as clicked-on for the next
-    // Picker (issue #206). Recorded here, once, rather than by the per-note composers: this is the only
-    // Destination in the run the user actually chose, and recording every produced note would bury the
-    // List under a single operation's output.
+    // picker (issue #206). Recorded here, once, rather than by the per-note composers: this is the only
+    // destination in the run the user actually chose, and recording every produced note would bury the
+    // list under a single operation's output.
     recordRecentTarget(rootTarget.rootFolderOverride ?? this.resolveDefaultRootFolder(file));
 
     showOperationCompletionNotice({
@@ -490,7 +490,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
         heading,
         shouldAllowOnlyCurrentFolderOverride,
         // Root pass only: the deeper passes must keep nesting beside their own source, which IS the folder
-        // Tree. `null` on an untouched run, so the setting-driven resolution above stands unchanged.
+        // tree. `null` on an untouched run, so the setting-driven resolution above stands unchanged.
         targetParentFolderOverride: params.isRootPass ? params.rootFolderOverride : null
       });
       if (!child) {
@@ -577,7 +577,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       sourceFile: file,
       targetFile: result.targetFile,
       // Write the extracted content untouched: the split template is applied to every produced note
-      // Afterwards, once its own children have been split out of it (issue #172).
+      // afterwards, once its own children have been split out of it (issue #172).
       templateOverride: CONTENT_ONLY_TEMPLATE
     });
     await composer.splitFile();

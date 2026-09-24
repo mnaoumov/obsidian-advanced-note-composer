@@ -89,7 +89,7 @@ describe('name transform with no note open (issue #218)', () => {
         const PARENT_PATH = 'name-transform-no-open-note-parent';
         const CONTEXT_PATH = 'name-transform-no-open-note-context.md';
         // A path in the recent list that no longer resolves — the chain has to walk past it, which is the
-        // Half of the resolution a vault accumulates naturally over a session of renames and deletions.
+        // half of the resolution a vault accumulates naturally over a session of renames and deletions.
         const DELETED_PATH = 'name-transform-no-open-note-deleted.md';
         const TYPED_NAME = 'Name: Alpha';
         const EXPECTED_FOLDER_NAME = 'Name - Alpha';
@@ -111,7 +111,7 @@ describe('name transform with no note open (issue #218)', () => {
           await settingsComponent.editAndSave((settings) => {
             settings.nameTransformTemplate = nameTransformTemplate;
             // One note named after the folder, no numbering, no Title Case pass: the created path is then
-            // Exactly what the transform produced, with nothing else able to have rewritten it.
+            // exactly what the transform produced, with nothing else able to have rewritten it.
             settings.newFolderNameTemplate = '{{safeFolderName}}';
             settings.newFolderContentTemplate = '';
             settings.shouldAskBeforeCreatingFolder = false;
@@ -158,7 +158,7 @@ describe('name transform with no note open (issue #218)', () => {
           }
           nameInput.value = TYPED_NAME;
           // The modal tracks its value through the component's change handler, so a bare `value` assignment
-          // Would be submitted as an empty name.
+          // would be submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
 
           /*
@@ -298,7 +298,7 @@ describe('name transform with no note open (issue #218)', () => {
     expect(result.isTypedNameValid).toBe(true);
 
     // Templater ran, and against the note last opened — the deleted path ahead of it in the recent list was
-    // Walked past rather than handed over.
+    // walked past rather than handed over.
     expect(result.wasTemplaterCalled).toBe(true);
     expect(result.recordedTargetPaths).toStrictEqual(['name-transform-no-open-note-context.md']);
 
@@ -326,7 +326,7 @@ describe('name transform with no note open (issue #218)', () => {
           const secondFile = await app.vault.create(SECOND_PATH, 'second');
 
           // Obsidian's `RecentFileTracker` collects the file you LEFT, so the first note only lands in the
-          // List once the second one is opened.
+          // list once the second one is opened.
           await openFile(firstFile);
           await openFile(secondFile);
 
@@ -446,7 +446,7 @@ describe('name transform with no note open (issue #218)', () => {
           return {
             mergedContent: mergedFile ? await app.vault.read(mergedFile) : null,
             // Every note this test is responsible for, so a merge that landed under another name says which
-            // One instead of only reporting a `null` content.
+            // one instead of only reporting a `null` content.
             mergePaths: app.vault.getMarkdownFiles().map((file) => file.path).filter((path) => path.toLowerCase().includes('name-transform-merge')).sort(),
             noticeTexts: [...noticeTexts],
             recordedTargetPaths: [...new Set(recordedTargetPaths)].sort()
@@ -486,7 +486,7 @@ describe('name transform with no note open (issue #218)', () => {
                 };
               },
               // Emulates the template this test sets, by reading `TOKENS.rawString` back out of the prelude
-              // The plugin generated — a fake returning a constant would pass with the binding broken.
+              // the plugin generated — a fake returning a constant would pass with the binding broken.
               parse_template: (_config: unknown, content: string): Promise<string> => {
                 const rawStringMatch = /"rawString":"(?<rawString>[^"]*)"/.exec(content);
                 return Promise.resolve((rawStringMatch?.groups?.['rawString'] ?? '').replaceAll('_', ' - '));
@@ -499,7 +499,7 @@ describe('name transform with no note open (issue #218)', () => {
         function findInMenu(menu: MenuLike, itemTitle: string): MenuItemLike | undefined {
           for (const item of menu.items) {
             // The title is enough to identify it — Obsidian core contributes no folder-menu item by this
-            // Name — and the `callback` requirement is what skips the submenu parent that merely contains it.
+            // name — and the `callback` requirement is what skips the submenu parent that merely contains it.
             if (item.callback && (item.dom?.textContent ?? '').includes(itemTitle)) {
               return item;
             }

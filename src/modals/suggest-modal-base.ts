@@ -398,9 +398,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   private getRecentFiles(): Item[] {
     // The per-type flags are not passed to `getRecentPaths`: `shouldIncludeFile` below applies the
-    // Same ones, so the shared superset keeps every picker reading one recent list (issue #158). The list
-    // Now leads with the plugin's own recorded operation targets (issue #206); a recorded FOLDER path is
-    // Dropped by the `getFileByPath` lookup below, exactly like a path that no longer resolves.
+    // same ones, so the shared superset keeps every picker reading one recent list (issue #158). The list
+    // now leads with the plugin's own recorded operation targets (issue #206); a recorded FOLDER path is
+    // dropped by the `getFileByPath` lookup below, exactly like a path that no longer resolves.
     const recentPaths = getRecentPaths({
       app: this.app,
       pickerRecencyOrder: this.pluginSettingsComponent.settings.pickerRecencyOrder,

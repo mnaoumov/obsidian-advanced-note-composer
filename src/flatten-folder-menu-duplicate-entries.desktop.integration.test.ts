@@ -10,7 +10,7 @@ import {
 
 // Desktop-only, matching the plugin's established integration convention. Version coverage: it drives only public APIs
 // (`Vault`, the `file-menu` workspace event), with no dependence on minified Obsidian internals, so
-// Verifying on public-latest is sufficient.
+// verifying on public-latest is sufficient.
 // Isolation:
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-duplicate-entries.desktop.integration.test.ts`.
 const PLUGIN_NAME = 'Advanced Note Composer';
@@ -69,7 +69,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
         try {
           // Attachments beside their note: no folder here is an attachment folder, so the entries are
-          // Decided by the duplicate rule alone.
+          // decided by the duplicate rule alone.
           app.vault.setConfig('attachmentFolderPath', './');
 
           await trashIfExists('t417-flat-with-file');
@@ -78,14 +78,14 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
           await trashIfExists('t417-nested-folders-only');
 
           // 1. A file of its own plus one flat child folder: the recursive variant would move that same
-          // Single folder.
+          // single folder.
           await app.vault.createFolder('t417-flat-with-file');
           await app.vault.createFolder('t417-flat-with-file/t417-sub');
           await app.vault.create('t417-flat-with-file/t417-note.md', 'body');
           await app.vault.create('t417-flat-with-file/t417-sub/t417-deep.md', 'deep body');
 
           // 2. The same, nested one level deeper: now the recursive variant promotes a folder nothing else
-          // Would.
+          // would.
           await app.vault.createFolder('t417-nested-with-file');
           await app.vault.createFolder('t417-nested-with-file/t417-sub');
           await app.vault.createFolder('t417-nested-with-file/t417-sub/t417-deeper');
@@ -93,7 +93,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
           await app.vault.create('t417-nested-with-file/t417-sub/t417-deeper/t417-deepest.md', 'deepest body');
 
           // 3. Nothing but a flat child folder: every variant moves exactly that folder, so only the
-          // Original command — the one a hotkey may be bound to — is left.
+          // original command — the one a hotkey may be bound to — is left.
           await app.vault.createFolder('t417-flat-folders-only');
           await app.vault.createFolder('t417-flat-folders-only/t417-sub');
           await app.vault.create('t417-flat-folders-only/t417-sub/t417-deep3.md', 'deep body');
@@ -200,8 +200,8 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
           await trashIfExists('t444-nested');
 
           // The reporter's vault: a note of its own plus one child folder that nests nothing. A note has to
-          // Be in there — with none, no attachment folder is resolved and the collector answers
-          // Synchronously after all.
+          // be in there — with none, no attachment folder is resolved and the collector answers
+          // synchronously after all.
           await app.vault.createFolder('t444-flat');
           await app.vault.create('t444-flat/t444-note.md', 'body');
           await app.vault.createFolder('t444-flat/t444-sub');
@@ -224,7 +224,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
             app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
           } else {
             // The real member lives on `Vault.prototype`; the stub only shadowed it on the instance, so the
-            // Instance property has to go rather than be overwritten with a copy.
+            // instance property has to go rather than be overwritten with a copy.
             Reflect.deleteProperty(app.vault, 'getAvailablePathForAttachments');
           }
         }
@@ -283,7 +283,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
          */
         function stubAttachmentLocationPlugin(): void {
           // `bind` keeps the real call signature, so the native resolution still works for anything that
-          // Invokes it — only the `extended` member beside it is new.
+          // invokes it — only the `extended` member beside it is new.
           const patched = originalGetAvailablePathForAttachments.bind(app.vault);
           Object.assign(patched, { extended: resolveExtendedAttachmentPath });
           app.vault.getAvailablePathForAttachments = patched;
@@ -301,7 +301,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
     });
 
     // The reported case. Before the fix this listed all three: the plugin's ownership of the attachment
-    // Resolution was taken to mean nothing at all could be judged.
+    // resolution was taken to mean nothing at all could be judged.
     expect(result.flatTitles).toStrictEqual([
       'Flatten folder...',
       'Flatten folder (child folders only)...'

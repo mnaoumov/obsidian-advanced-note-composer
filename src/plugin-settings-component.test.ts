@@ -403,10 +403,10 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
-    // Wording change fails here instead of silently degrading the setting's feedback.
+    // wording change fails here instead of silently degrading the setting's feedback.
     // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator,
-    // And so does every per-category pair below it (issue #249) — a broken regex there fails the same
-    // Silent all-or-nothing way.
+    // and so does every per-category pair below it (issue #249) — a broken regex there fails the same
+    // silent all-or-nothing way.
     describe.each(PATHS_VALIDATOR_PROPERTY_NAMES)('%s validator', (propertyName) => {
       it('should accept an empty list', async () => {
         const component = createComponent();
@@ -435,9 +435,9 @@ describe('PluginSettingsComponent', () => {
     });
 
     // The cases above prove that every property NAMED in the list has a validator — an unregistered one
-    // Would accept the un-parseable literal. This is the other half: that the list names every such
-    // Property. Read off the prototype rather than spelled out again, because a hand-written second copy
-    // Is exactly what let the `Select` pair go unvalidated from issue #249 until #270.
+    // would accept the un-parseable literal. This is the other half: that the list names every such
+    // property. Read off the prototype rather than spelled out again, because a hand-written second copy
+    // is exactly what let the `Select` pair go unvalidated from issue #249 until #270.
     it('should list every include/exclude settings property', () => {
       const pathListPropertyNames = Object.getOwnPropertyNames(PluginSettings.prototype)
         .filter((propertyName) => /(?:exclude|include)Paths$/i.test(propertyName))
@@ -583,8 +583,8 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Issue #198's toggle made command blocking borrow the content filter's lists, and issue #271 then
-    // Retired the all-commands lists both of them wrote to — so the old toggle now has to reach the
-    // Per-category lists, through the #271 fan-out that runs after it.
+    // retired the all-commands lists both of them wrote to — so the old toggle now has to reach the
+    // per-category lists, through the #271 fan-out that runs after it.
     it('should seed every category command list from the old lists when blocking was on', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
@@ -621,7 +621,7 @@ describe('PluginSettingsComponent', () => {
       expect(legacySettings['mergeCommandIncludePaths']).toBeUndefined();
       expect(legacySettings['shouldBlockCommandsOnExcludedPaths']).toBeUndefined();
       // The content half still moves: what was excluded from merges/splits stays excluded, one category
-      // At a time (issue #271).
+      // at a time (issue #271).
       expect(legacySettings['mergeExcludePaths']).toEqual(['secret']);
     });
 
@@ -634,7 +634,7 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Issue #271 retired the four all-commands lists. Every entry has to reach the per-category lists that
-    // Replaced them, or an upgraded vault silently loses the paths it was protecting.
+    // replaced them, or an upgraded vault silently loses the paths it was protecting.
     it('should fan a retired content exclude list out to every category with a content pair', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = { excludePaths: ['secret'] };
@@ -659,7 +659,7 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Exclude lists UNION, which is exactly faithful: `PathSettings` ORs its two halves, so one list
-    // Holding both sets excludes precisely what the retired pair excluded between them.
+    // holding both sets excludes precisely what the retired pair excluded between them.
     it('should concatenate a retired exclude list with a category list already set', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
@@ -672,8 +672,8 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Include lists cannot union: the retired pair ignored a path unless it matched BOTH lists, while one
-    // Concatenated list allows a path matching EITHER. A category that already carries include entries
-    // Therefore keeps them, and the retired half is dropped — an intersection is not expressible as a list.
+    // concatenated list allows a path matching EITHER. A category that already carries include entries
+    // therefore keeps them, and the retired half is dropped — an intersection is not expressible as a list.
     it('should seed a retired include list only into the categories that have none', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
@@ -695,7 +695,7 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Issue #288 retired Rename's content pair. All it did was refuse to rename what it covered, which is
-    // What Rename's command pair does, so its entries move there: excludes union, as every exclude does.
+    // what Rename's command pair does, so its entries move there: excludes union, as every exclude does.
     it('should fold the retired Rename content pair into the Rename command pair', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
@@ -709,7 +709,7 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Include lists cannot union, for the reason the #271 fan-out gives: a command include list already
-    // Set wins, and the retired half is dropped.
+    // set wins, and the retired half is dropped.
     it('should keep a Rename command include list already set', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = {
@@ -721,8 +721,8 @@ describe('PluginSettingsComponent', () => {
     });
 
     // A pre-#271 vault reached Rename's content pair through the all-commands content list, so that list
-    // Now reaches Rename's command pair instead — and only once, even when blocking was on and the command
-    // Half fanned the same entries in already.
+    // now reaches Rename's command pair instead — and only once, even when blocking was on and the command
+    // half fanned the same entries in already.
     it('should route a retired all-commands content list to the Rename command pair', async () => {
       const component = createComponent();
       const legacySettings: GenericObject = { excludePaths: ['secret'], includePaths: ['allowed'] };
@@ -740,8 +740,8 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Driving the REAL load pipeline, not just the converters: this is what proves the migrated keys are
-    // Recognized plugin settings that survive into `component.settings` — the per-category accessor pairs
-    // Would be silently dropped if the base did not enumerate them.
+    // recognized plugin settings that survive into `component.settings` — the per-category accessor pairs
+    // would be silently dropped if the base did not enumerate them.
     it('should carry a pre-#198 data.json through a real load with its blocking behavior intact', async () => {
       const component = await loadComponentFromRecord({
         excludePaths: ['secret'],
@@ -771,8 +771,8 @@ describe('PluginSettingsComponent', () => {
     });
 
     // Issue #249's own version of the accessor question above: the per-category pairs are getters too, so
-    // The real load pipeline is what proves they are recognized settings that survive a `data.json` rather
-    // Than values the base silently drops on the way in.
+    // the real load pipeline is what proves they are recognized settings that survive a `data.json` rather
+    // than values the base silently drops on the way in.
     it('should carry a per-category list through a real load and block only that category', async () => {
       const component = await loadComponentFromRecord({
         mergeCommandExcludePaths: ['secret']
@@ -785,7 +785,7 @@ describe('PluginSettingsComponent', () => {
     });
 
     // A `data.json` written before issue #271 carries the all-commands key and none of the per-category
-    // Ones, and must behave exactly as it did — which is the whole point of the fan-out.
+    // ones, and must behave exactly as it did — which is the whole point of the fan-out.
     it('should leave a pre-#271 data.json blocking every category as it did', async () => {
       const component = await loadComponentFromRecord({
         commandExcludePaths: ['secret']
@@ -967,7 +967,7 @@ describe('PluginSettingsComponent', () => {
     describe('numberedSplitFolderNameTemplate validator', () => {
       it('should accept an empty template, which is the default and switches numbering off', async () => {
         // The one rule these do NOT share with the reorder templates: a reorder always renames, so an
-        // Empty template would leave it with no name to write, while here empty IS the opt-out.
+        // empty template would leave it with no name to write, while here empty IS the opt-out.
         const component = createComponent();
         expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '')).toBeUndefined();
       });

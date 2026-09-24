@@ -109,7 +109,7 @@ describe('shouldShowModalInstructions', () => {
           const instructionCount = prompt ? prompt.querySelectorAll(':scope .prompt-instructions .prompt-instruction').length : 0;
 
           // Cancel the merge via the plugin's own unlock command. Aborting the setup flow closes the
-          // Locked modal and releases the source-file lock, leaving no lingering modal or lock behind.
+          // locked modal and releases the source-file lock, leaving no lingering modal or lock behind.
           app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
           await waitUntil({ predicate: () => document.querySelector('.prompt') === null });
 
@@ -127,9 +127,9 @@ describe('shouldShowModalInstructions', () => {
   });
 
   // The reorder dialog's checkbox is the one issue #242 was filed about: it lives above the list rather than
-  // In the instruction bar, so the setting used to leave it on screen. Turning the seed setting ON first is
-  // What makes the second half of this meaningful — the files still have to be listed once the control that
-  // Would have ticked the box is gone, or hiding it would have silently changed what the reorder does.
+  // in the instruction bar, so the setting used to leave it on screen. Turning the seed setting ON first is
+  // what makes the second half of this meaningful — the files still have to be listed once the control that
+  // would have ticked the box is gone, or hiding it would have silently changed what the reorder does.
   it('should hide the reorder dialog\'s Include files checkbox while still applying the configured default', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, includeFilesSettingName, lib: { waitUntil }, obsidianModule, overridesSettingName, pluginId }) {
@@ -209,7 +209,7 @@ describe('shouldShowModalInstructions', () => {
             .map((rowEl) => rowEl.dataset['rowLabel']);
 
           // Cancelled, never confirmed: a confirmed reorder would renumber the fixture and leave the next
-          // Pass reading different rows.
+          // pass reading different rows.
           clickCancel();
           await waitUntil({
             message: 'the reorder dialog did not close',
@@ -263,8 +263,8 @@ describe('shouldShowModalInstructions', () => {
   });
 
   // The split picker's `Create` / `Merge` switch overrides `defaultSplitTargetMode`, and `Alt+M` is its
-  // Keyboard twin. A keyboard command's scope registration is NOT gated by the instruction bar, so the
-  // Shortcut had to be dropped explicitly — this is what would catch it coming back.
+  // keyboard twin. A keyboard command's scope registration is NOT gated by the instruction bar, so the
+  // shortcut had to be dropped explicitly — this is what would catch it coming back.
   it('should hide the split picker\'s Create/Merge switch and leave Alt+M inert', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, overridesSettingName, pluginId }) {
@@ -294,8 +294,8 @@ describe('shouldShowModalInstructions', () => {
 
         // `Enter to create` is rendered only while the picker will CREATE, i.e. only in `Create` mode
         // (`allowCreateNewFile`), so the row IS the mode read off the DOM. The name-required hint is not
-        // Usable here: with the shortcut unregistered the `m` reaches the box, and a non-empty box hides
-        // That hint whatever the mode is.
+        // usable here: with the shortcut unregistered the `m` reaches the box, and a non-empty box hides
+        // that hint whatever the mode is.
         function isCreateMode(): boolean {
           return [...document.querySelectorAll('.suggestion-action')]
             .some((actionEl) => actionEl.textContent === 'Enter to create');

@@ -21,7 +21,7 @@ describe('unlock active note', () => {
         const NOTICE_REMOVAL_IN_MILLISECONDS = 700;
 
         // Mark "BBB" in the source note. This holds a mutation-blocking lock on the source note and
-        // Shows the permanent "Smart cut & paste" notice while the mark is pending.
+        // shows the permanent "Smart cut & paste" notice while the mark is pending.
         const source = await resetFile('unlock-it.md', 'AAA BBB CCC');
         const sourceEditor = await openAndGetEditor(source);
         sourceEditor.setSelection(sourceEditor.offsetToPos(4), sourceEditor.offsetToPos(7));

@@ -130,7 +130,7 @@ describe('an extract hands its destination note to Custom Attachment Location (i
 
         const collectedPaths: string[] = [];
         // The stand-in exposes exactly the documented entry point and nothing else, so a call proves this
-        // Plugin found it the documented way rather than by reaching into internals.
+        // plugin found it the documented way rather than by reaching into internals.
         pluginRegistry[customAttachmentLocationPluginId] = {
           collectAttachmentsInAbstractFiles(abstractFiles: CollectedAbstractFile[]): void {
             collectedPaths.push(...abstractFiles.map((abstractFile) => abstractFile.path));
@@ -171,8 +171,8 @@ describe('an extract hands its destination note to Custom Attachment Location (i
           });
 
           // The hand-off runs right after the transaction commits, so give that turn a chance to land
-          // Before reading. A miss here would show as an empty list, which is what the OFF phase expects,
-          // So the ON phase asserting a non-empty list is what makes the wait meaningful.
+          // before reading. A miss here would show as an empty list, which is what the OFF phase expects,
+          // so the ON phase asserting a non-empty list is what makes the wait meaningful.
           await waitUntil({
             message: 'the collect hand-off did not happen',
             predicate: () => !shouldCollect || collectedPaths.length > 0,
