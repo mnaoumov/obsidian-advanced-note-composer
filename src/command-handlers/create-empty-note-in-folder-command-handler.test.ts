@@ -130,6 +130,7 @@ function createHandler(settingsOverrides: Partial<PluginSettings> = {}, activeFi
       shouldAddCommandsToSubmenu: true,
       shouldBlockCommandOnPath: vi.fn().mockReturnValue(false),
       shouldReplaceInvalidTitleCharacters: true,
+      shouldRunTemplaterOnDestinationFile: false,
       shouldSplitIntoFolder: false,
       shouldTitleCaseCreatedNoteName: false,
       splitTemplate: '',
@@ -339,6 +340,8 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
         // Created out of nothing, so there is no note it came from.
         notes: [{ file: createdFile, sourceFile: null }],
         resourceLockComponent,
+        // `Should run templater on destination file` is off here, so there is no Templater run to hand over.
+        runTemplater: null,
         template: TEMPLATE
       });
     });

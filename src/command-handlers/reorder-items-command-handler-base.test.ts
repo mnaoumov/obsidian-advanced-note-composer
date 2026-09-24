@@ -258,6 +258,32 @@ describe('ReorderChildFoldersCommandHandler', () => {
     expect(await readNote('parent/2. Alpha/2. Alpha.md')).toContain('title: 1. Alpha');
   });
 
+  it('should leave the title alone when its template renders to nothing', async () => {
+    initApp({ 'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n\nbody\n', 'parent/2. Beta/2. Beta.md': '---\ntitle: 2. Beta\n---\n' });
+    const { handler } = createChildHandler({ folderNoteTitleTemplate: '  ' });
+    driveModal = (params): void => {
+      moveRowDown(params, 'Alpha');
+    };
+
+    await handler.executeFolder(getFolder('parent'));
+
+    expect(await readNote('parent/2. Alpha/2. Alpha.md')).toContain('title: 1. Alpha');
+  });
+
+  // Issue #284: a title template is rendered the way the name transform is, so a broken one refuses loudly.
+  it('should roll the reorder back and name the setting when a title template renders more than one line', async () => {
+    initApp({ 'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n', 'parent/2. Beta/2. Beta.md': '---\ntitle: 2. Beta\n---\n' });
+    const { handler, showNotice } = createChildHandler({ folderNoteTitleTemplate: '{{folderName}}\n{{folderName}}' });
+    driveModal = (params): void => {
+      moveRowDown(params, 'Alpha');
+    };
+
+    await handler.executeFolder(getFolder('parent'));
+
+    expect(getChildFolderNames('parent')).toEqual(['1. Alpha', '2. Beta']);
+    expect(showNotice).toHaveBeenCalledWith(expect.stringContaining('Folder note title template produced a multi-line value.'));
+  });
+
   it('should write nothing when the vault has no folder notes', async () => {
     initApp({
       'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n',

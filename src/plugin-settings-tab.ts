@@ -172,7 +172,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             desc: createFragment((f) => {
               f.appendText('Whether to run ');
               f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
-              f.appendText(' on the destination file after merging/splitting.');
+              f.appendText(' on the destination file after merging/splitting, so Templater commands in the merge and split templates run.');
+              f.createEl('br');
+              f.appendText('The name transform and the folder-note and reordered-note property templates do not need it: a Templater command in one of those always runs.');
             }),
             name: 'Should run templater on destination file',
             render: (setting) => {
@@ -731,6 +733,16 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText('Leave empty to reuse ');
               appendCodeBlock(f, 'Merge template');
               f.appendText(' setting.');
+              f.createEl('br');
+              f.appendText('When ');
+              appendCodeBlock(f, 'Should run templater on destination file');
+              f.appendText(' is on, Templater commands in it run once the note holds the template — in every split, including ');
+              appendCodeBlock(f, 'Split note by headings recursively...');
+              f.appendText(', ');
+              appendCodeBlock(f, 'Split heading recursively...');
+              f.appendText(' and ');
+              appendCodeBlock(f, 'Create empty note in folder...');
+              f.appendText('.');
               f.createEl('br');
               addAvailableTokens(f);
             }),
@@ -2087,6 +2099,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('Leave empty to leave the property alone.');
               f.createEl('br');
+              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName');
+              f.createEl('br');
               addReorderFolderTokens(f);
             }),
             name: 'Folder note title template',
@@ -2110,6 +2124,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText(' the alias carries no number, so renumbering would not change it anyway.');
               f.createEl('br');
               f.appendText('Leave empty to leave the property alone.');
+              f.createEl('br');
+              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName');
               f.createEl('br');
               addReorderFolderTokens(f);
             }),
@@ -2176,6 +2192,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText(' property to write into a renumbered note.');
               f.createEl('br');
               f.appendText('Empty by default, which leaves the property alone: only folders were asked for, so a reordered note is renamed and nothing else until you fill this in.');
+              f.createEl('br');
+              addPropertyTemplaterDesc(f, 'the renumbered note', 'TOKENS.safeName');
               f.createEl('br');
               addReorderFileTokens(f);
             }),
@@ -2714,6 +2732,23 @@ function addNumberedSplitNoteTokens(f: DocumentFragment): void {
   addTokenList(f, ['{{index}}', '{{safeName}}', '{{extension}}', '{{parentFolder}}', '{{parentFolderPath}}', '{{date}}', '{{time}}']);
   appendCodeBlock(f, '{{safeName}}');
   f.appendText(' is the basename the note would have had, without the number.');
+}
+
+/**
+ * Says that a property template may hold Templater code (issue #284), and what that code sees.
+ *
+ * @param f - The fragment to append to.
+ * @param noteDescription - The note `tp.file` reports on, as a phrase.
+ * @param exampleToken - A `TOKENS` member to show in the example.
+ */
+function addPropertyTemplaterDesc(f: DocumentFragment, noteDescription: string, exampleToken: string): void {
+  f.appendText('With ');
+  f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+  f.appendText(' installed it may also hold Templater commands, run once the tokens below are filled in: the tokens are available as ');
+  appendCodeBlock(f, `<% ${exampleToken} %>`);
+  f.appendText(' and ');
+  appendCodeBlock(f, 'tp.file');
+  f.appendText(` reports on ${noteDescription}. The result must be a single line.`);
 }
 
 function addReorderFileTokens(f: DocumentFragment): void {

@@ -275,6 +275,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
         shouldAskBeforeSplitting: options?.shouldAskBeforeSplitting ?? false,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options?.shouldBlockCommandOnPath ?? false),
         shouldBlockVaultDuringOperations: false,
+        shouldRunTemplaterOnDestinationFile: false,
         shouldShowOperationNotices: true,
         shouldSplitRecursivelyIntoDefaultNewNoteFolder: options?.shouldSplitRecursivelyIntoDefaultNewNoteFolder ?? false
       })

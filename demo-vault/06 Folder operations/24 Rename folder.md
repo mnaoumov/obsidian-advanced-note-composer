@@ -24,6 +24,8 @@ The folder is now `1. Revenue Review`: it kept its place in the sequence. Open i
 
 Leave the template empty to leave `aliases` alone entirely. **Folder note title template** is the same opt-out for `title`, and is shared with the reorder commands.
 
+Both templates may also hold [Templater](https://silentvoid13.github.io/Templater/) commands, which run once the `{{tokens}}` are filled in: the tokens are available as `TOKENS` (`<% TOKENS.safeFolderName.toUpperCase() %>`) and `tp.file` is the folder note. The result must be a single line; a template that produces more, or fails, is reported by name and the rename is rolled back. **Reordered file title template** works the same way, with the renumbered note as `tp.file`.
+
 ## The number is recognized, not assumed
 
 `Reordered folder name template` is what reads the existing number back and writes it around your new name, so a vault numbering its folders `007. Notes` or `Notes (7)` renames just as happily as one using the plain `1. Notes`. A folder that never had a number simply takes the name you typed.

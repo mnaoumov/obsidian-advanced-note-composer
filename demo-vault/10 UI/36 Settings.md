@@ -60,7 +60,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 ## Split and extract
 
 - `splitTemplate`
-  - wraps content split or extracted into a new note. Falls back to `mergeTemplate`.
+  - wraps content split or extracted into a new note. Falls back to `mergeTemplate`. Its Templater commands run under `shouldRunTemplaterOnDestinationFile`, recursive splits and `Create empty note in folder...` included.
 - `splitToExistingFileTemplate`
   - which action's template applies when the target already exists, so a split into an existing note can be formatted as a merge.
 - `defaultSplitTargetMode`
@@ -255,7 +255,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `folderNoteNameTemplate`
   - names the folder note when you chose the location yourself.
 - `folderNoteTitleTemplate` / `folderNoteAliasesTemplate`
-  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property alone.
+  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property alone. Both may hold Templater commands, with the folder note as `tp.file`.
 
 ## UI
 

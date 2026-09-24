@@ -1,6 +1,7 @@
 import type {
   CreateFolderTemplateTokens,
-  NameTransformTokens
+  NameTransformTokens,
+  ReorderedFileTemplateTokens
 } from './template-tokens.ts';
 
 /**
@@ -8,7 +9,7 @@ import type {
  * no implicit index signature, so a bag would not be assignable to one — and listing them keeps a new bag a
  * deliberate edit here rather than something that silently starts working.
  */
-export type TemplaterPreludeTokens = CreateFolderTemplateTokens | NameTransformTokens;
+export type TemplaterPreludeTokens = CreateFolderTemplateTokens | NameTransformTokens | ReorderedFileTemplateTokens;
 
 /**
  * The name the prelude binds the token bag to.
@@ -22,8 +23,9 @@ export const TEMPLATER_PRELUDE_VARIABLE_NAME = 'TOKENS';
 
 /**
  * Builds the Templater execution-command prelude that exposes a command's tokens to Templater code
- * (issue #191). Shared by the created notes' content and by the `Name transform template` (issue #196),
- * which parses a bare string rather than a file but needs the same `TOKENS` binding.
+ * (issue #191). Shared by the created notes' content, by the `Name transform template` (issue #196) and by the
+ * folder-note and reordered-note property templates (issue #284), which parse a bare string rather than a file
+ * but need the same `TOKENS` binding.
  *
  * Templater offers no way to pass data INTO a template run — `tp.config` carries only `template_file`,
  * `target_file`, `run_mode` and `active_file` — so the values are injected as source instead. A variable

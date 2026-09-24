@@ -1,5 +1,6 @@
 import type {
   App as AppOriginal,
+  TFile,
   TFolder
 } from 'obsidian';
 import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
@@ -39,6 +40,13 @@ import { RenameFolderCommandHandler } from './rename-folder-command-handler.ts';
 interface HandlerContext {
   handler: Testable;
   showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+}
+
+/**
+ * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
+ */
+interface PluginsRegistryTestable {
+  registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
@@ -347,6 +355,40 @@ describe('RenameFolderCommandHandler', () => {
     expect(getChildFolderNames('parent')).toEqual(['Alpha']);
   });
 
+  // Issue #284: a `<%` left after the plugin's own tokens is Templater's, with the folder note as `tp.file`.
+  it('should render a property template through Templater, with the folder note as its context', async () => {
+    initApp({ 'parent/Alpha/Alpha.md': '---\ntitle: Alpha\naliases:\n  - Alpha\n---\n' });
+    const createRunningConfig = vi.fn().mockReturnValue({});
+    const parseTemplate = vi.fn().mockImplementation((_config: unknown, content: string) => Promise.resolve(content.includes('toUpperCase') ? 'BETA\n' : 'Beta'));
+    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
+      templater: {
+        /* eslint-disable camelcase -- Templater's own API method names. */
+        create_running_config: createRunningConfig,
+        parse_template: parseTemplate
+        /* eslint-enable camelcase -- Templater's own API method names. */
+      }
+    });
+    const { handler } = createHandler({ folderNoteAliasesTemplate: '<% TOKENS.safeFolderName.toUpperCase() %>' });
+    typedName = 'Beta';
+
+    await handler.executeFolder(getFolder('parent/Alpha'));
+
+    expect(await readFrontmatterAliases('parent/Beta/Beta.md')).toContain('BETA');
+    expect(createRunningConfig.mock.calls[0]?.[1]).toBe(getFile('parent/Beta/Beta.md'));
+    expect(parseTemplate.mock.calls[0]?.[1]).toContain('"safeFolderName":"Beta"');
+  });
+
+  it('should roll the rename back and name the setting when a property template renders more than one line', async () => {
+    initApp({ 'parent/Alpha/Alpha.md': '---\ntitle: Alpha\n---\n' });
+    const { handler, showNotice } = createHandler({ folderNoteTitleTemplate: '{{folderName}}\n{{folderName}}' });
+    typedName = 'Beta';
+
+    await handler.executeFolder(getFolder('parent/Alpha'));
+
+    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(showNotice).toHaveBeenCalledWith(expect.stringContaining('Folder note title template produced a multi-line value.'));
+  });
+
   it('should report the rename once it has landed', async () => {
     initApp({ 'parent/Alpha/note.md': 'a' });
     const { handler, showNotice } = createHandler();
@@ -407,6 +449,10 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
 
 function getChildFolderNames(path: string): string[] {
   return getFolder(path).children.filter((child) => !('extension' in child)).map((child) => child.name).sort();
+}
+
+function getFile(path: string): TFile {
+  return ensureNonNullable(app.vault.getFileByPath(path));
 }
 
 function getFolder(path: string): TFolder {

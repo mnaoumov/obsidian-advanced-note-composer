@@ -49,9 +49,16 @@ import {
 } from '../reorder-items.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import {
+  renderSingleLineValueWithTemplater,
+  TemplateRenderError
+} from '../templater-string.ts';
+import {
   normalizeTypedFolderNameWithTransform,
   validateTypedFolderName
 } from '../typed-folder-name.ts';
+
+const FOLDER_NOTE_ALIASES_TEMPLATE_SETTING_NAME = 'Folder note aliases template';
+const FOLDER_NOTE_TITLE_TEMPLATE_SETTING_NAME = 'Folder note title template';
 
 /**
  * Parameters for {@link RenameFolderCommandHandler}.
@@ -80,6 +87,23 @@ interface RenamePlan {
   readonly newTokens: CreateFolderTemplateTokens;
   readonly oldFolderPath: string;
   readonly oldTokens: CreateFolderTemplateTokens;
+}
+
+interface RenderTemplateParams {
+  readonly app: App;
+
+  /**
+   * The folder note the value is written into — what `tp.file.*` reports on.
+   */
+  readonly noteFile: TFile;
+
+  /**
+   * The setting's display name, for a refusal to point at.
+   */
+  readonly settingName: string;
+
+  readonly template: string;
+  readonly tokens: CreateFolderTemplateTokens;
 }
 
 const ALIASES_PROPERTY_NAME = 'aliases';
@@ -326,6 +350,12 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
         // The operation was cancelled (user or external change); the transaction has rolled back.
         return false;
       }
+      if (error instanceof TemplateRenderError) {
+        // A misconfigured property template (issue #284): the transaction has rolled the rename back, and the
+        // Message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
+        this.pluginNoticeComponent.showNotice(error.message);
+        return false;
+      }
       throw error;
     } finally {
       progressNotice?.[Symbol.dispose]();
@@ -421,13 +451,34 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     }
 
     const settings = this.pluginSettingsComponent.settings;
-    const title = renderTemplate(settings.folderNoteTitleTemplate, plan.newTokens);
-    const newAlias = renderTemplate(settings.folderNoteAliasesTemplate, plan.newTokens);
+    const title = await renderTemplate({
+      app: this.app,
+      noteFile,
+      settingName: FOLDER_NOTE_TITLE_TEMPLATE_SETTING_NAME,
+      template: settings.folderNoteTitleTemplate,
+      tokens: plan.newTokens
+    });
+    const newAlias = await renderTemplate({
+      app: this.app,
+      noteFile,
+      settingName: FOLDER_NOTE_ALIASES_TEMPLATE_SETTING_NAME,
+      template: settings.folderNoteAliasesTemplate,
+      tokens: plan.newTokens
+    });
     if (!title && !newAlias) {
       return;
     }
 
-    const oldAlias = renderTemplate(settings.folderNoteAliasesTemplate, plan.oldTokens);
+    // Rendered with the OLD tokens so the entry it names can be found and swapped out. A template whose
+    // Templater half is not a function of the tokens (a date, say) renders differently this time, so the old
+    // Entry is not found and the note simply gains the new one — `swapDerivedAlias`'s safe direction.
+    const oldAlias = await renderTemplate({
+      app: this.app,
+      noteFile,
+      settingName: FOLDER_NOTE_ALIASES_TEMPLATE_SETTING_NAME,
+      template: settings.folderNoteAliasesTemplate,
+      tokens: plan.oldTokens
+    });
 
     await vaultTransaction.process(noteFile, (content) => {
       const frontmatter = parseFrontmatter(content);
@@ -476,17 +527,31 @@ function buildTokens(params: BuildTokensParams): CreateFolderTemplateTokens {
 }
 
 /**
- * Renders one of the folder note's property templates.
+ * Renders one of the folder note's property templates: the plugin's own `{{tokens}}` first, then Templater
+ * when a `<%` survives them (issue #284), with the folder note itself as `tp.file`.
  *
- * @param template - The template, as typed into its setting.
- * @param tokens - The values its tokens resolve to.
+ * @param params - The template, its tokens and the Templater context.
  * @returns The rendered value, or an empty string when the template is empty — the opt-out that leaves the
  * property alone.
  */
-function renderTemplate(template: string, tokens: CreateFolderTemplateTokens): string {
+async function renderTemplate(params: RenderTemplateParams): Promise<string> {
+  const {
+    app,
+    noteFile,
+    settingName,
+    template,
+    tokens
+  } = params;
+
   if (!template) {
     return '';
   }
 
-  return resolveCreateFolderTemplateTokens({ template, tokens }).trim();
+  return await renderSingleLineValueWithTemplater({
+    app,
+    contextFile: noteFile,
+    resolvedTemplate: resolveCreateFolderTemplateTokens({ template, tokens }),
+    settingName,
+    tokens
+  });
 }
