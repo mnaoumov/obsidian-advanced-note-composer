@@ -808,6 +808,52 @@ describe('mergeFrontmatter strategies', () => {
     // it (via `shouldKeepSourceTitleForNewTargetFile`) so a folder/file merge into a new note keeps it.
     expect(seeded['title']).toBeUndefined();
   });
+
+  // Issue #276: a template's own `title` is not the incidental source title the rule above drops.
+  it('should use the template title for a brand-new target file over the title it already has', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isNewTargetFile: true
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    composer.templateToReturn = '---\ntitle: Template Title\n---\n{{content}}';
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ title: 'Typed Name' });
+
+    await composer.callInsertIntoTargetFile('---\ntitle: Source Title\n---\ncontent');
+
+    expect(seeded['title']).toBe('Template Title');
+  });
+
+  it('should use the template title for a brand-new target file that has no title', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({
+      frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      isNewTargetFile: true
+    });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    composer.templateToReturn = '---\ntitle: Template Title\n---\n{{content}}';
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({});
+
+    await composer.callInsertIntoTargetFile('content');
+
+    expect(seeded['title']).toBe('Template Title');
+  });
+
+  it('should keep an existing target\'s own title over the template title', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({ frontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues });
+    composer.selectionsToReturn = [{ endOffset: 100, startOffset: 0 }];
+    composer.templateToReturn = '---\ntitle: Template Title\n---\n{{content}}';
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ title: 'Original Title' });
+
+    await composer.callInsertIntoTargetFile('content');
+
+    expect(seeded['title']).toBe('Original Title');
+  });
 });
 
 describe('safeParseFrontmatter', () => {

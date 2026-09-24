@@ -141,18 +141,36 @@ describe('applySplitTemplateToNotes', () => {
     expect(frontmatter).toContain('- b');
   });
 
-  it('should keep the note\'s own title when the template sets one too', async () => {
-    await setContent('---\ntitle: Kept Title\n---\nchild body');
+  // Issue #276: the note is brand-new, so a title the template writes on purpose beats the one
+  // `frontmatterTitleMode` gave it.
+  it('should use the template title over the note\'s own', async () => {
+    await setContent('---\ntitle: Typed Name\n---\nchild body');
 
     await apply('---\ntitle: Template Title\n---\n{{content}}');
+
+    const frontmatter = parseFrontmatter(await read());
+    expect(frontmatter).toContain('title: Template Title');
+    expect(frontmatter).not.toContain('Typed Name');
+  });
+
+  it('should use the template title when the note had none', async () => {
+    await apply('---\ntitle: Template Title\n---\n{{content}}');
+
+    expect(parseFrontmatter(await read())).toContain('title: Template Title');
+  });
+
+  it('should keep the note\'s own title when the template sets none', async () => {
+    await setContent('---\ntitle: Kept Title\n---\nchild body');
+
+    await apply('---\nstatus: done\n---\n{{content}}');
 
     expect(parseFrontmatter(await read())).toContain('title: Kept Title');
   });
 
-  it('should drop a template title when the note had none', async () => {
-    await apply('---\ntitle: Template Title\n---\n{{content}}');
+  it('should add no title when neither the note nor the template has one', async () => {
+    await apply('---\nstatus: done\n---\n{{content}}');
 
-    expect(await read()).not.toContain('Template Title');
+    expect(parseFrontmatter(await read())).not.toContain('title');
   });
 
   // Issue #284: the template's own Templater commands are only ever in the note from here on, so this is

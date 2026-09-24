@@ -34,6 +34,12 @@ The tokens of `Create folder with notes...` work here too, naming **the folder t
 
 There are three base template settings: **Merge template**, **Split template**, and **Smart cut & paste template**. Empty templates fall back up the chain: smart cut and paste falls back to split, which falls back to merge.
 
+### Properties in a template
+
+A template may start with its own properties block. Those properties are merged into the destination note, with the tokens filled in, so `index: {{index}}` or `aliases: [{{safeFolderName}}]` work like any other token.
+
+A `title` written there wins on a note the operation **creates**. It replaces the title **Frontmatter title mode** gave the note, and any `title` carried over from the source. A note that already existed keeps its own `title`, so a merge template cannot rename every note you merge into.
+
 ### `{{content}}` in a note created from nothing
 
 **Split template** also fills the notes the two create commands make — see [37 Create empty note](<../02 Extract/37 Create empty note.md>). Nothing was extracted there, so `{{content}}` interpolates to nothing and instead marks **where the cursor goes** in the created note. Two differences from the chain above: an empty **Split template** does *not* fall back to **Merge template** (the note is simply left empty), and for `Create empty note in folder...` the `{{fromTitle}}` / `{{fromPath}}` / `{{fromParentFolder}}` tokens come out empty, because that note was not split out of any note.
