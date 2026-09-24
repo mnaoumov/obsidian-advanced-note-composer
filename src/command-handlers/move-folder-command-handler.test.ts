@@ -224,14 +224,13 @@ describe('MoveFolderCommandHandler', () => {
     expect(handler.canExecuteFolder(getFolder('parent/a'))).toBe(false);
   });
 
-  it('should show a notice and not move when the folder path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'parent/a/note.md': 'note body' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'parent/a' });
+    const { handler } = createHandler({ isPathIgnored: (path) => path === 'parent/a' });
 
     await handler.executeFolder(getFolder('parent/a'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockSelectTargetFolder).not.toHaveBeenCalled();
+    expect(mockSelectTargetFolder).toHaveBeenCalled();
     expect(await app.vault.adapter.read('parent/a/note.md')).toBe('note body');
   });
 

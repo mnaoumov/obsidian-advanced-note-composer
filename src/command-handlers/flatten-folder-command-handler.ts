@@ -235,17 +235,6 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.MoveAndFlatten)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot flatten folder ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     const defaultParentFolder = folder.parent;
     /* v8 ignore start -- a non-root folder always has a parent. */
     if (!defaultParentFolder) {

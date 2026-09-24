@@ -307,28 +307,16 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     expect(mockGetCacheSafe).not.toHaveBeenCalled();
   });
 
-  it('should show notice and return when path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     const params = createMockParams(2, true);
     const handler = toTestable(new SplitNoteByHeadingsContentEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const context = createMockContext(file);
 
-    const mockFragment = strictProxy<DocumentFragment>({
-      append: vi.fn(),
-      appendChild: vi.fn(),
-      appendText: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (callback) => {
-      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
     await handler.executeEditor(editor, context);
 
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(mockGetCacheSafe).not.toHaveBeenCalled();
+    expect(mockGetCacheSafe).toHaveBeenCalled();
   });
 
   it('should break loop when getCacheSafe returns null', async () => {

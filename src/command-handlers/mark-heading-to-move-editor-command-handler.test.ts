@@ -15,9 +15,7 @@ import type {
   ResourceLockComponentLockForPathParams
 } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -68,23 +66,13 @@ interface TestableHandler {
   shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
-}));
-
 vi.mock('../composers/composer-base.ts', () => ({
   getEnclosingHeadingLine: vi.fn(),
   getSelectionUnderHeading: vi.fn()
 }));
 
-const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockGetEnclosingHeadingLine = vi.mocked(getEnclosingHeadingLine);
 const mockGetSelectionUnderHeading = vi.mocked(getSelectionUnderHeading);
-const mockRenderInternalLink = vi.mocked(renderInternalLink);
 
 const HEADING_LINE = 6;
 const HEADING_START: EditorPosition = { ch: 0, line: HEADING_LINE };
@@ -249,26 +237,14 @@ describe('MarkHeadingToMoveEditorCommandHandler', () => {
     expect(params.resourceLockComponent.lockForPath).not.toHaveBeenCalled();
   });
 
-  it('should show a notice and not mark when the path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     const params = createMockParams({ isPathIgnored: true });
     const handler = toTestable(new MarkHeadingToMoveEditorCommandHandler(params));
 
-    const mockFragment = strictProxy<DocumentFragment>({
-      append: vi.fn(),
-      appendChild: vi.fn(),
-      appendText: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (callback) => {
-      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
     await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
 
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(params.moveSelectionBuffer.hasMark()).toBe(false);
-    expect(params.resourceLockComponent.lockForPath).not.toHaveBeenCalled();
+    expect(params.moveSelectionBuffer.hasMark()).toBe(true);
+    expect(params.resourceLockComponent.lockForPath).toHaveBeenCalled();
   });
 
   it('should not mark when the cursor left the heading between the gate and the run', async () => {

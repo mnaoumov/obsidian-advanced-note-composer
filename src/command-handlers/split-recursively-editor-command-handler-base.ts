@@ -13,7 +13,6 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import { MarkdownView } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -202,17 +201,6 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     if (!file) {
       return;
     }
-    if (this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.SplitAndExtract)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot split file ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: file }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     const cache = await getCacheSafe(this.app, file);
     if (!cache) {
       return;

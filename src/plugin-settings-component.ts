@@ -161,6 +161,12 @@ class LegacySettings {
   public includePaths: string[] = [];
   public markdownAttachmentSubExtensions: string[] = [];
   public renameCommandMenuPlacement?: CommandMenuPlacement;
+
+  /**
+   * Rename's CONTENT pair, retired by issue #288: its only reader was the source refusal that issue removed.
+   */
+  public renameExcludePaths: string[] = [];
+  public renameIncludePaths: string[] = [];
   public reorderCommandMenuPlacement?: CommandMenuPlacement;
   public shouldAddInvalidTitleToFrontmatterTitleKey = true;
   public shouldBlockCommandsOnExcludedPaths = false;
@@ -246,6 +252,8 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
         fanOutRetiredIncludePaths(legacySettings, pathSettingNames.commandIncludePathsPropertyName, retiredCommandIncludePaths);
         fanOutRetiredExcludePaths(legacySettings, pathSettingNames.commandExcludePathsPropertyName, retiredCommandExcludePaths);
       }
+
+      foldRetiredRenameContentPaths(legacySettings, retiredIncludePaths, retiredExcludePaths);
 
       /*
        * Menu placement was chosen one CATEGORY at a time (issue #252) and is now chosen one COMMAND at a
@@ -397,8 +405,6 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('mergeExcludePaths', pathsValidator);
     this.registerValidator('moveAndFlattenIncludePaths', pathsValidator);
     this.registerValidator('moveAndFlattenExcludePaths', pathsValidator);
-    this.registerValidator('renameIncludePaths', pathsValidator);
-    this.registerValidator('renameExcludePaths', pathsValidator);
     this.registerValidator('reorderIncludePaths', pathsValidator);
     this.registerValidator('reorderExcludePaths', pathsValidator);
     this.registerValidator('smartCutAndPasteIncludePaths', pathsValidator);
@@ -527,6 +533,40 @@ function findUnknownTokenKey(template: string, resolveToken: (probe: string) => 
   }
 
   return undefined;
+}
+
+/**
+ * Folds Rename's retired CONTENT pair into Rename's COMMAND pair (issue #288).
+ *
+ * All that pair ever did was refuse to rename the folder or heading it covered — a rename has no picker and
+ * sweeps up nothing — which is exactly what Rename's command pair does, so its values move there rather than
+ * being dropped. The retired all-commands content lists (issue #271) used to reach Rename through that pair
+ * too, so they come along on the same terms.
+ *
+ * @param legacySettings - The settings record being migrated, edited in place.
+ * @param retiredIncludePaths - The retired all-commands content include list.
+ * @param retiredExcludePaths - The retired all-commands content exclude list.
+ */
+function foldRetiredRenameContentPaths(
+  legacySettings: LegacyPathSettings,
+  retiredIncludePaths: string[],
+  retiredExcludePaths: string[]
+): void {
+  const renameIncludePaths = legacySettings.renameIncludePaths ?? [];
+  fanOutRetiredIncludePaths(
+    legacySettings,
+    'renameCommandIncludePaths',
+    renameIncludePaths.length > 0 ? renameIncludePaths : retiredIncludePaths
+  );
+
+  // A vault that had blocking on already fanned the same retired entries into this list through the
+  // Command half, so an entry it holds is not added a second time.
+  const renameCommandExcludePaths = legacySettings.renameCommandExcludePaths ?? [];
+  fanOutRetiredExcludePaths(
+    legacySettings,
+    'renameCommandExcludePaths',
+    [...retiredExcludePaths, ...legacySettings.renameExcludePaths ?? []].filter((path) => !renameCommandExcludePaths.includes(path))
+  );
 }
 
 /**

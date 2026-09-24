@@ -9,9 +9,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -51,14 +49,6 @@ interface TestableHandler {
   shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
-}));
-
 vi.mock('../composers/composer-base.ts', () => ({
   getEnclosingHeadingLine: vi.fn(),
   getSelectionUnderHeading: vi.fn()
@@ -75,8 +65,6 @@ vi.mock('../modals/split-file-modal.ts', () => ({
   prepareForSplitFile: vi.fn()
 }));
 
-const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
-const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const MockSplitComposer = vi.mocked(SplitComposer);
 const mockGetEnclosingHeadingLine = vi.mocked(getEnclosingHeadingLine);
@@ -229,28 +217,23 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
 
-  it('should show notice and return when path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     const params = createMockParams(true);
     const handler = toTestable(new ExtractThisHeadingEditorCommandHandler(params));
     const editor = createMockEditor();
     const file = createMockFile();
     const context = createMockContext(file);
-
-    const mockFragment = strictProxy<DocumentFragment>({
-      append: vi.fn(),
-      appendChild: vi.fn(),
-      appendText: vi.fn()
+    mockGetEnclosingHeadingLine.mockReturnValue(0);
+    mockGetSelectionUnderHeading.mockReturnValue({
+      end: { ch: 0, line: 5 },
+      heading: 'My Heading',
+      start: { ch: 0, line: 0 }
     });
-    mockCreateFragmentAsync.mockImplementation(async (callback) => {
-      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
+    handler.canExecuteEditor(editor, context);
 
     await handler.executeEditor(editor, context);
 
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
+    expect(mockPrepareForSplitFile).toHaveBeenCalled();
   });
 
   it('should return early when headingInfo is undefined', async () => {

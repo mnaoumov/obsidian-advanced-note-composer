@@ -10,13 +10,11 @@ import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transac
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { normalizePath } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
 import {
   parseFrontmatter,
   setFrontmatter
 } from 'obsidian-dev-utils/obsidian/frontmatter';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import {
   basename,
@@ -155,18 +153,6 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    const settings = this.pluginSettingsComponent.settings;
-    if (settings.isPathIgnored(folder.path, CommandCategory.Rename)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot rename folder ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
-
     // Non-null by `canExecuteFolder`, which refuses the vault root — the only folder without a parent.
     const parentFolder = ensureNonNullable(folder.parent);
 

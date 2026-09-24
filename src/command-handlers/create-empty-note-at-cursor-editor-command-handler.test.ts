@@ -9,9 +9,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
@@ -45,14 +43,6 @@ interface TestableHandler {
   shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
-  createFragmentAsync: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
-  renderInternalLink: vi.fn()
-}));
-
 vi.mock('../composers/split-composer.ts', () => {
   const MockSplitComposer = vi.fn();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- vi.fn() prototype is untyped in mock factories.
@@ -64,8 +54,6 @@ vi.mock('../modals/split-file-modal.ts', () => ({
   prepareForSplitFile: vi.fn()
 }));
 
-const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
-const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockPrepareForSplitFile = vi.mocked(prepareForSplitFile);
 const MockSplitComposer = vi.mocked(SplitComposer);
 
@@ -147,27 +135,15 @@ describe('CreateEmptyNoteAtCursorEditorCommandHandler', () => {
     expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
   });
 
-  it('should show notice and return when path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     const params = createMockParams(true);
     const handler = toTestable(new CreateEmptyNoteAtCursorEditorCommandHandler(params));
     const editor = createMockEditor();
 
-    const mockFragment = strictProxy<DocumentFragment>({
-      append: vi.fn(),
-      appendChild: vi.fn(),
-      appendText: vi.fn()
-    });
-    mockCreateFragmentAsync.mockImplementation(async (callback) => {
-      await (callback as (f: DocumentFragment) => Promise<void>)(mockFragment);
-      return mockFragment;
-    });
-    mockRenderInternalLink.mockResolvedValue(createEl('a'));
-
     await handler.executeEditor(editor, createMockContext(createMockFile()));
 
-    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalled();
-    expect(vi.mocked(editor.setSelection)).not.toHaveBeenCalled();
-    expect(mockPrepareForSplitFile).not.toHaveBeenCalled();
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalled();
+    expect(mockPrepareForSplitFile).toHaveBeenCalled();
   });
 
   it('should collapse the selection to the cursor before preparing, and refuse merging', async () => {

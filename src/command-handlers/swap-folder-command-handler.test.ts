@@ -150,15 +150,13 @@ describe('SwapFolderCommandHandler', () => {
     expect(handler.canExecuteFolder(getFolder('some/folder'))).toBe(false);
   });
 
-  it('should show a notice and not swap when the folder path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'src/note.md': 'note body' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'src' });
+    const { handler } = createHandler({ isPathIgnored: (path) => path === 'src' });
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockSelectTargetFolder).not.toHaveBeenCalled();
-    // The source is untouched.
+    expect(mockSelectTargetFolder).toHaveBeenCalled();
     expect(await app.vault.adapter.read('src/note.md')).toBe('note body');
   });
 

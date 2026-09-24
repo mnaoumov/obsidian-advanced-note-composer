@@ -268,8 +268,9 @@ export interface CommandCategoryPathSettingNames {
    * The category's CONTENT pair (issue #270) — what its commands may TOUCH, as opposed to whether they
    * are offered.
    *
-   * Absent on {@link CommandCategory.Select} alone, which has no content pair because a select writes
-   * nothing and never consults that filter. Optional rather than required so that the omission is
+   * Absent on {@link CommandCategory.Select}, which has no content pair because a select writes nothing
+   * and never consults that filter, and on {@link CommandCategory.Rename}, whose content pair was read only
+   * by the source refusal issue #288 removed. Optional rather than required so that the omission is
    * expressible instead of forcing two settings wired to nothing.
    */
   readonly contentExcludePathsPropertyName?: CommandCategoryContentPathsSettingName;
@@ -292,7 +293,7 @@ export type CommandCategoryPathsSettingName = Extract<keyof PluginSettings, `${s
  *
  * Spelled out rather than built from the category name, because the accessors are real declarations that
  * must be findable by search and by the derived setting-name types — and because two of them do not follow
- * the pattern a generator would assume (`SplitAndExtract` is `split*`, `Select` has no content pair).
+ * the pattern a generator would assume (`SplitAndExtract` is `split*`, `Select` and `Rename` have no content pair).
  * `plugin-settings.test.ts` asserts an entry per category, so a tenth category cannot arrive without one.
  */
 export const COMMAND_CATEGORY_PATH_SETTING_NAMES: ReadonlyMap<CommandCategory, CommandCategoryPathSettingNames> = new Map([
@@ -316,9 +317,7 @@ export const COMMAND_CATEGORY_PATH_SETTING_NAMES: ReadonlyMap<CommandCategory, C
   }],
   [CommandCategory.Rename, {
     commandExcludePathsPropertyName: 'renameCommandExcludePaths',
-    commandIncludePathsPropertyName: 'renameCommandIncludePaths',
-    contentExcludePathsPropertyName: 'renameExcludePaths',
-    contentIncludePathsPropertyName: 'renameIncludePaths'
+    commandIncludePathsPropertyName: 'renameCommandIncludePaths'
   }],
   [CommandCategory.Reorder, {
     commandExcludePathsPropertyName: 'reorderCommandExcludePaths',
@@ -1269,29 +1268,17 @@ export class PluginSettings {
     this.commandCategoryPathSettings(CommandCategory.Rename).includePaths = value;
   }
 
-  /**
-   * Paths the {@link CommandCategory.Rename} commands never touch (issue #270) — the exclude half of
-   * that category's own CONTENT filter.
+  /*
+   * `CommandCategory.Rename` has NO content pair either, since issue #288 — see the `Select` note below
+   * for why a category without one is left out rather than wired to nothing.
+   *
+   * A rename has no picker and no swept-up contents: the only thing it touches is the folder or heading it
+   * was run on (and that folder's own folder note). Its content pair used to refuse exactly that SOURCE,
+   * which is the job of the command pair above — #288 took the source refusal out of every command, and
+   * for this category that left the pair read by nothing. Its values are folded into the command pair by
+   * the legacy converter in `plugin-settings-component.ts`, because refusing to rename there is all they
+   * ever did.
    */
-  public get renameExcludePaths(): string[] {
-    return this.categoryPathSettings(CommandCategory.Rename).excludePaths;
-  }
-
-  public set renameExcludePaths(value: string[]) {
-    this.categoryPathSettings(CommandCategory.Rename).excludePaths = value;
-  }
-
-  /**
-   * Paths the {@link CommandCategory.Rename} commands are restricted to (issue #270). Empty — the
-   * default — leaves them working wherever the exclude half above allows.
-   */
-  public get renameIncludePaths(): string[] {
-    return this.categoryPathSettings(CommandCategory.Rename).includePaths;
-  }
-
-  public set renameIncludePaths(value: string[]) {
-    this.categoryPathSettings(CommandCategory.Rename).includePaths = value;
-  }
 
   /**
    * Paths on which the {@link CommandCategory.Reorder} commands are not offered (issue #249) — the
@@ -1370,8 +1357,9 @@ export class PluginSettings {
   }
 
   /*
-   * `CommandCategory.Select` deliberately has NO content pair here — it is the one category of the nine
-   * without one, so eight categories carry sixteen accessors rather than nine carrying eighteen.
+   * `CommandCategory.Select` deliberately has NO content pair here — one of the two categories of the nine
+   * without one (`Rename` is the other, since issue #288), so seven categories carry fourteen accessors
+   * rather than nine carrying eighteen.
    *
    * A select writes nothing: it moves the caret and stops. `SelectEditorCommandHandlerBase` therefore
    * never consults the content filter at all, and says so in its own TSDoc. Exposing
@@ -1381,7 +1369,7 @@ export class PluginSettings {
    * wired to nothing is the same mistake with the wires cut.
    *
    * The map above is still seeded for all nine, so `isPathIgnored` stays TOTAL over `CommandCategory`
-   * and answers `false` for `Select` — its two empty lists ignore nothing — rather than throwing on a
+   * and answers `false` for `Select` and `Rename` — its two empty lists ignore nothing — rather than throwing on a
    * missing entry.
    */
 

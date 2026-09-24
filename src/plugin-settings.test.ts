@@ -89,11 +89,13 @@ const COMMAND_CATEGORY_PATH_PROPERTIES: readonly CommandCategoryPathProperties[]
  * The same pairing for the per-category CONTENT lists (issue #270) — what a category's commands may
  * TOUCH, as opposed to whether they are offered.
  *
- * EIGHT entries, not nine: `Select` has no content pair. A select writes nothing and never consults the
- * content filter, so the settings would be read by nothing — `plugin-settings.ts` carries the reasoning,
- * and the assertion below pins the omission to that one category so a second one cannot go missing
- * quietly.
+ * SEVEN entries, not nine: `Select` has no content pair (a select writes nothing and never consults the
+ * content filter), and neither has `Rename` since issue #288 (its only reader was the source refusal that
+ * issue removed). `plugin-settings.ts` carries the reasoning, and the assertion below pins the omission to
+ * those two categories so a third one cannot go missing quietly.
  */
+const CATEGORIES_WITHOUT_CONTENT_PAIR: ReadonlySet<CommandCategory> = new Set([CommandCategory.Rename, CommandCategory.Select]);
+
 interface CommandCategoryContentPathProperties {
   readonly commandCategory: CommandCategory;
   readonly excludePathsPropertyName: CommandCategoryContentPathsSettingName;
@@ -115,11 +117,6 @@ const COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES: readonly CommandCategoryContentP
     commandCategory: CommandCategory.MoveAndFlatten,
     excludePathsPropertyName: 'moveAndFlattenExcludePaths',
     includePathsPropertyName: 'moveAndFlattenIncludePaths'
-  },
-  {
-    commandCategory: CommandCategory.Rename,
-    excludePathsPropertyName: 'renameExcludePaths',
-    includePathsPropertyName: 'renameIncludePaths'
   },
   {
     commandCategory: CommandCategory.Reorder,
@@ -205,9 +202,9 @@ describe('COMMAND_CATEGORIES', () => {
     expect(COMMAND_CATEGORY_PATH_PROPERTIES.map((properties) => properties.commandCategory).sort()).toEqual([...COMMAND_CATEGORIES].sort());
   });
 
-  it('should have one content settings pair per category except Select', () => {
+  it('should have one content settings pair per category except Select and Rename', () => {
     const categoriesWithContentPair = COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES.map((properties) => properties.commandCategory).sort();
-    expect(categoriesWithContentPair).toEqual(COMMAND_CATEGORIES.filter((commandCategory) => commandCategory !== CommandCategory.Select).sort());
+    expect(categoriesWithContentPair).toEqual(COMMAND_CATEGORIES.filter((commandCategory) => !CATEGORIES_WITHOUT_CONTENT_PAIR.has(commandCategory)).sort());
   });
 });
 
@@ -598,15 +595,15 @@ describe('PluginSettings per-category content path lists (issue #270)', () => {
   it('should leave exactly one category using the path when every other category with a pair excludes it', () => {
     const settings = new PluginSettings();
     for (const { commandCategory, excludePathsPropertyName } of COMMAND_CATEGORY_CONTENT_PATH_PROPERTIES) {
-      if (commandCategory === CommandCategory.Rename) {
+      if (commandCategory === CommandCategory.Reorder) {
         continue;
       }
       settings[excludePathsPropertyName] = ['Archive'];
     }
 
     for (const commandCategory of COMMAND_CATEGORIES) {
-      // `Select` joins `Rename` on the allowed side because it has no exclude list to have been set.
-      const isExcluded = commandCategory !== CommandCategory.Rename && commandCategory !== CommandCategory.Select;
+      // `Select` and `Rename` join `Reorder` on the allowed side because they have no exclude list to have been set.
+      const isExcluded = commandCategory !== CommandCategory.Reorder && !CATEGORIES_WITHOUT_CONTENT_PAIR.has(commandCategory);
       expect(settings.isPathIgnored('Archive/note.md', commandCategory)).toBe(isExcluded);
     }
   });
@@ -657,14 +654,14 @@ describe('COMMAND_CATEGORY_PATH_SETTING_NAMES (issue #271)', () => {
     }
   });
 
-  // `Select` is the ONE category without a content pair, and the omission has to stay deliberate: an
+  // `Select` and `Rename` are the categories without a content pair, and the omission has to stay deliberate: an
   // Entry that merely forgot its pair would leave a category's content lists unreachable and never migrated.
-  it('should leave the content pair out for Select alone', () => {
+  it('should leave the content pair out for Select and Rename alone', () => {
     for (const commandCategory of COMMAND_CATEGORIES) {
       const pathSettingNames = COMMAND_CATEGORY_PATH_SETTING_NAMES.get(commandCategory);
       expect(pathSettingNames).toBeDefined();
-      expect(pathSettingNames?.contentExcludePathsPropertyName === undefined).toBe(commandCategory === CommandCategory.Select);
-      expect(pathSettingNames?.contentIncludePathsPropertyName === undefined).toBe(commandCategory === CommandCategory.Select);
+      expect(pathSettingNames?.contentExcludePathsPropertyName === undefined).toBe(CATEGORIES_WITHOUT_CONTENT_PAIR.has(commandCategory));
+      expect(pathSettingNames?.contentIncludePathsPropertyName === undefined).toBe(CATEGORIES_WITHOUT_CONTENT_PAIR.has(commandCategory));
     }
   });
 

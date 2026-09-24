@@ -353,7 +353,6 @@ export class Plugin extends PluginBase {
         app: this.app,
         moveNoticeComponent,
         moveSelectionBuffer,
-        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent,
         selectionHighlightComponent
@@ -364,7 +363,6 @@ export class Plugin extends PluginBase {
         app: this.app,
         moveNoticeComponent,
         moveSelectionBuffer,
-        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent,
         selectionHighlightComponent
@@ -402,7 +400,6 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       new MarkSelectionToSwapEditorCommandHandler({
-        app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         swapSelectionBuffer

@@ -109,16 +109,6 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
-      this.pluginNoticeComponent.showNotice(
-        await createFragmentAsync(async (f) => {
-          f.appendText('You cannot merge folder ');
-          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: folder }));
-          f.appendText(' because it is ignored in the plugin settings.');
-        })
-      );
-      return;
-    }
     const targetFolder = await selectTargetFolderForMergeFolder({
       app: this.app,
       pluginSettingsComponent: this.pluginSettingsComponent,

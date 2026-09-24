@@ -2,10 +2,10 @@
 
 Advanced Note Composer has **two independent path filters**, and knowing which is which is the whole trick:
 
-- **`<Category>` include paths** / **`<Category>` exclude paths** decide what those commands will *touch*. An excluded note never shows up in a merge/split picker, is refused as a target or a source, and is never moved by a folder merge or a flatten. The commands are still listed, and only pop an "ignored in the plugin settings" notice when you trigger one.
+- **`<Category>` include paths** / **`<Category>` exclude paths** decide what those commands may *pick*. An excluded note never shows up in a merge/split picker, is refused as a target, and is never swept up when a folder merge or a flatten runs on a folder above it. It does **not** stop a command you run *on* the excluded note or folder itself: you can still extract from it, merge it away, or flatten it.
 - **`<Category>` command include paths** / **`<Category>` command exclude paths** decide where those commands are *offered* at all. A path listed here loses them entirely — from the command palette and from the editor, file, and folder context menus.
 
-So you can hide the merge commands in a folder you still merge into, or keep them handy in a folder that must never be merged. Every box is empty by default, so nothing is excluded and nothing is hidden.
+So you can hide the merge commands in a folder you still merge into, or keep a folder out of every merge picker while still merging its own notes away from inside it. Every box is empty by default, so nothing is excluded and nothing is hidden.
 
 Both filters are **per command category**, and there is no longer any box that covers every command at once. Each category's boxes live on the settings page of the commands they govern: **Merge**, **Split/extract**, **Select**, **Swap**, **Smart cut & paste**, **Move/flatten folders**, **Create**, **Rename** and **Reorder**. Seven of those pages hold other settings too, so their boxes sit on a page of their own inside it, the **`<Category>` include/exclude paths** entry at the bottom; **Rename** and **Select** hold nothing else, so their boxes are the whole page.
 
@@ -21,7 +21,7 @@ If a line is not a valid regular expression, the setting says `Invalid regular e
 ## Try it
 
 1. Open the plugin settings, go to **Merge**, and open **Merge include/exclude paths**. Add a folder path (for example `Materials/02 Merge folder/Merge folder`) to **Merge exclude paths**.
-2. Open a note inside that folder and right-click it: the merge commands are still listed. Run one and it refuses with an "ignored" notice — excluded from merges, but not hidden.
+2. Open a note outside that folder and run `Merge current file with another file...`: nothing inside the folder is offered as a destination. Now open a note inside it and run the same command: it works, because excluding a path keeps it out of the picker, not away from the commands.
 3. Now add the same folder path to **Merge command exclude paths**, on the same page.
 4. Right-click the same note again, or open the command palette on it: the merge commands are gone, while every other Advanced Note Composer command is still there.
 5. Open a note that is not in that folder and confirm the merge commands are still available there.
@@ -78,7 +78,7 @@ The **Reorder include/exclude paths** page holds four boxes, and the two halves 
 
 Within one category the exclude box wins over the include box, so listing a path in both is not an exception that brings it back.
 
-`Select` is the one category with no content pair, and only two boxes on its page. The `Select ...` commands move the caret and write nothing, so there is no content for a filter to allow or refuse — a pair there would be two boxes read by nothing. Hiding those commands on a path is what **Select command exclude paths** is for.
+`Select` and `Rename` are the two categories with no content pair, and only two boxes on their pages. The `Select ...` commands move the caret and write nothing, so there is no content for a filter to allow or refuse. A rename has no picker and sweeps nothing up: the only thing it touches is the folder or heading you ran it on. A pair on either would be two boxes read by nothing. Hiding those commands on a path is what **Select command exclude paths** and **Rename command exclude paths** are for.
 
 ### Try it
 
@@ -103,8 +103,10 @@ The two are worth keeping apart because they answer different questions — what
 
 ## Upgrading
 
-Two rounds of settings have led here, and both were carried over for you.
+Three rounds of settings have led here.
 
 These filters used to be one list plus a **Should block commands on excluded paths** switch, which could not express "hide the commands here, but still let me merge into it". If you had that switch on, your entries were copied into the command boxes when you upgraded.
 
 There were then four boxes that covered **every** command at once, sitting above the per-category ones on a settings page of their own called **Include/exclude**. Having both invited the confusing case where a path was listed in the all-commands box *and* in a category's box, with neither one explaining the result on its own — so the all-commands boxes are gone, and the page with them. Whatever you had listed in them was copied into every category's boxes when you upgraded, so nothing changed for you; if you want a path back for one category, clear it from that category's box.
+
+Most recently, the exclude boxes stopped refusing the note or folder a command is run **on**. They used to answer two questions at once: the command was still offered there, and then refused with an "ignored in the plugin settings" notice. That duplicated what the command boxes do, and it made it impossible to keep a folder out of the pickers while still working from inside it. If you relied on that refusal, list the same path in that category's **command** exclude box. The **Rename** exclude boxes did nothing *but* refuse, so they were retired and your entries were moved into **Rename command exclude paths** for you.

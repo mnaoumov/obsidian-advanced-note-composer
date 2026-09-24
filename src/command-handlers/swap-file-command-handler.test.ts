@@ -146,15 +146,13 @@ describe('SwapFileCommandHandler', () => {
     expect(handler.canExecuteFile(getFile('source.md'))).toBe(false);
   });
 
-  it('should show a notice and not swap when the file path is ignored', async () => {
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
     initApp({ 'source.md': 'source body' });
-    const { handler, showNotice } = createHandler({ isPathIgnored: (path) => path === 'source.md' });
+    const { handler } = createHandler({ isPathIgnored: (path) => path === 'source.md' });
 
     await handler.executeFile(getFile('source.md'));
 
-    expect(showNotice).toHaveBeenCalledOnce();
-    expect(mockSelectFileForSwap).not.toHaveBeenCalled();
-    // The source is untouched.
+    expect(mockSelectFileForSwap).toHaveBeenCalled();
     expect(await app.vault.adapter.read('source.md')).toBe('source body');
   });
 
