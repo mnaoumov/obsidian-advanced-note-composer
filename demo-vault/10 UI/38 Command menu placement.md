@@ -11,7 +11,7 @@ The first menu gets long. This plugin alone can put nine items in it, and they s
 
 1. Turn on `Settings -> Editor -> Readable line length`, so there is a margin to right-click.
 2. Right-click this note's text. `Split note by headings recursively...` is in the menu, near the bottom.
-3. Open the plugin settings, go to `Command menu placement`, find the `Split/extract command menus` group, and on the `Split note by headings recursively...` row turn `Editor menu` off and `Margin` on.
+3. Open the plugin settings, go to `Command menu placement`, open `Split/extract command menus`, and on the `Split note by headings recursively...` row turn `Editor menu` off and `Margin` on.
 4. Right-click the text again — that one command is gone, and every other extract and split is still there.
 5. Right-click the empty margin to the left or right of the text. There it is, under Obsidian's three view toggles.
 

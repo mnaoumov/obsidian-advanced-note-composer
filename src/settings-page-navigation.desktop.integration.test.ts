@@ -15,35 +15,41 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface NavigationResult {
+  readonly allMergesRows: string[];
+  readonly depthInsideSubPage: number;
+  readonly frontmatterPropertiesRows: string[];
   readonly frontmatterRows: string[];
   readonly frontmatterSubheadings: string[];
-  readonly mergeFolderRows: string[];
+  readonly mergeRows: string[];
+  readonly mergeRowsAfterBack: string[];
   readonly mergeSubheadings: string[];
   readonly onOpen: string[];
   readonly pageDescription: null | string;
   readonly smartCutRows: string[];
   readonly smartCutSubheadings: string[];
+  readonly subPageDescription: null | string;
   readonly swapRows: string[];
   readonly swapSubheadings: string[];
+  readonly titleRows: string[];
 }
 
-// Issues #220-#226 turned the tab from sixteen stacked headers into a short list of pages. This is the
-// Real-Obsidian half of `plugin-settings-tab.test.ts`: the unit test pins the DECLARED tree, and this one
-// Proves Obsidian actually renders it that way and that a page can be walked into.
+// Issues #220-#226 turned the tab from sixteen stacked headers into a short list of pages, and issue #282
+// Turned every section INSIDE a page into a page of its own. This is the real-Obsidian half of
+// `plugin-settings-tab.test.ts`: the unit test pins the DECLARED tree, and this one proves Obsidian actually
+// Renders it that way, that a page can be walked into, and that a page inside a page can be walked into and
+// Back out of again.
 describe('settings page navigation', () => {
   it('should open folded to the page entries and reveal a page contents when one is opened', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, pluginId }): Promise<NavigationResult> {
         /*
          * Under the transport's ~30s per-closure cap, not at it.
-         * Nothing in this closure declares a ceiling: every wait in it takes the harness's documented 5_000
-         * default, so the 26_200 it adds up to is simply several of those plus a few short settles, and there
-         * is no chosen number here to tighten.
-         * What keeps that safe is the size of each wait rather than the size of the sum. The first wait to
-         * genuinely fail reports its own message after five seconds, far short of the cap, so only a run in
-         * which every wait in turn burned its whole default could reach the transport at all - and such a run
-         * has already failed on the first one.
+         * Eight waits share one ceiling: the tab rendering, then seven page opens through `openPage` - four
+         * top-level pages and three nested ones. 8 x 2500 = 20_000, plus the short settles after each
+         * navigation, stays well under the cap. Every wait here is a page opening, which is fast; a page
+         * that has not opened in 2.5 s is not going to.
          */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
         const RENDER_DELAY_IN_MILLISECONDS = 150;
 
         app.setting.open();
@@ -55,125 +61,100 @@ describe('settings page navigation', () => {
 
         await waitUntil({
           message: 'the settings tab did not render',
-          predicate: () => settingTab.containerEl.querySelectorAll('.setting-item').length > 0
+          predicate: () => settingTab.containerEl.querySelectorAll('.setting-item').length > 0,
+          timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
         const onOpen = rowNames();
+        const pageDescription = describeEntry('Merge');
 
-        const mergeEntry = findRow('Merge');
-        if (!mergeEntry) {
-          throw new Error('The `Merge` page entry was not found.');
-        }
-
-        const pageDescription = mergeEntry.querySelector(':scope .setting-item-description')?.textContent ?? null;
-        mergeEntry.click();
-        await waitUntil({
-          message: 'the `Merge` page did not open',
-          predicate: () => findRow('Merge template') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
-        // Scoped to the page on screen: Obsidian keeps the page it came from in the DOM underneath, so a
-        // Modal-wide query would also return the top-level headings.
+        await openPage('Merge', 'All merges');
         const mergeSubheadings = collectSubheadings();
-        const mergeFolderRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
-          .map((el) => el.textContent)
-          .filter((name) => name !== '');
+        const mergeRows = currentPageRowNames();
+        const subPageDescription = describeEntry('All merges');
 
-        app.setting.closePage();
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        // Issue #282: the page inside the page. Opening it must stack on top of `Merge`, and closing it must
+        // Land back on `Merge` rather than on the top level - that is what makes it navigation rather than a
+        // Second way to reach the same rows.
+        await openPage('All merges', 'Merge template');
+        const allMergesRows = currentPageRowNames();
+        const depthInsideSubPage = app.setting.pageStack.length;
+        await closePage();
+        const mergeRowsAfterBack = currentPageRowNames();
+        await closePage();
 
-        // Issue #241: the other half of the comparison — a page that deliberately has NO subheadings.
-        const swapEntry = findRow('Swap');
-        if (!swapEntry) {
-          throw new Error('The `Swap` page entry was not found.');
-        }
-
-        swapEntry.click();
-        await waitUntil({
-          message: 'the `Swap` page did not open',
-          predicate: () => findRow('Should ask before swapping') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
+        // Issue #241: a page that deliberately has no sections of its own besides its path rows.
+        await openPage('Swap', 'Should ask before swapping');
         const swapSubheadings = collectSubheadings();
-        const swapRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
-          .map((el) => el.textContent)
-          .filter((name) => name !== '');
+        const swapRows = currentPageRowNames();
+        await closePage();
 
-        app.setting.closePage();
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
-        // Issue #243: the third shape — a page that MIXES a flat row with groups. Neither of the two above
-        // Proves Obsidian renders such a page at all, and the unit test cannot: it only sees the declared
-        // Tree.
-        const smartCutEntry = findRow('Smart cut & paste');
-        if (!smartCutEntry) {
-          throw new Error('The `Smart cut & paste` page entry was not found.');
-        }
-
-        smartCutEntry.click();
-        await waitUntil({
-          message: 'the `Smart cut & paste` page did not open',
-          predicate: () => findRow('Should lock all notes when marking selection') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
+        // Issue #243: a page that MIXES a flat row with sections.
+        await openPage('Smart cut & paste', 'Should lock all notes when marking selection');
         const smartCutSubheadings = collectSubheadings();
-        const smartCutRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
-          .map((el) => el.textContent)
-          .filter((name) => name !== '');
+        const smartCutRows = currentPageRowNames();
+        await closePage();
 
-        app.setting.closePage();
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
-        // Issue #272: the page that ABSORBED another one. The unit test can pin the declared groups, but
-        // Only Obsidian can say whether the rows moved with them — a row is not in the DOM until its page
-        // Is opened, so the wait below is itself the proof that `Name transform template` left the retired
-        // `Title` page.
-        const frontmatterEntry = findRow('Frontmatter');
-        if (!frontmatterEntry) {
-          throw new Error('The `Frontmatter` page entry was not found.');
-        }
-
-        frontmatterEntry.click();
-        await waitUntil({
-          message: 'the `Frontmatter` page did not open',
-          predicate: () => findRow('Name transform template') !== null
-        });
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
-
+        // Issue #272: the page that ABSORBED another one. A row is not in the DOM until its page is opened,
+        // So the waits below are themselves the proof that `Name transform template` left the retired
+        // `Title` page and is reached through the `Title` section instead.
+        await openPage('Frontmatter', 'Title');
         const frontmatterSubheadings = collectSubheadings();
-        const frontmatterRows = [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
-          .map((el) => el.textContent)
-          .filter((name) => name !== '');
-
-        app.setting.closePage();
-        await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        const frontmatterRows = currentPageRowNames();
+        await openPage('Title', 'Name transform template');
+        const titleRows = currentPageRowNames();
+        await closePage();
+        await openPage('Frontmatter properties', 'Frontmatter merge strategy');
+        const frontmatterPropertiesRows = currentPageRowNames();
+        await closePage();
+        await closePage();
         app.setting.close();
 
         return {
+          allMergesRows,
+          depthInsideSubPage,
+          frontmatterPropertiesRows,
           frontmatterRows,
           frontmatterSubheadings,
-          mergeFolderRows,
+          mergeRows,
+          mergeRowsAfterBack,
           mergeSubheadings,
           onOpen,
           pageDescription,
           smartCutRows,
           smartCutSubheadings,
+          subPageDescription,
           swapRows,
-          swapSubheadings
+          swapSubheadings,
+          titleRows
         };
+
+        async function closePage(): Promise<void> {
+          app.setting.closePage();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+        }
 
         // A heading is a `.setting-item-heading` inside the page's `.setting-group`, NOT the group itself:
         // Obsidian wraps a page's rows in a `.setting-group` even when the page declares no group at all
         // (verified against the rendered `Swap` page), so counting groups reports a heading a flat page
-        // Does not have — it returned the first ROW's name. Both pages are measured with this one
-        // Function, which is what keeps the empty `Swap` result from passing vacuously on a dead selector.
+        // Does not have — it returned the first ROW's name. The positive half of this selector is the unit
+        // Test's `should render only the two root headings`.
         function collectSubheadings(): string[] {
           return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-heading .setting-item-name') ?? [])]
             .map((el) => el.textContent)
             .filter((heading) => heading !== '');
+        }
+
+        // Scoped to the page on screen: Obsidian keeps the page it came from in the DOM underneath, so a
+        // Modal-wide query would also return the rows of every page below it on the stack.
+        function currentPageRowNames(): string[] {
+          return [...(app.setting.getCurrentPageEl()?.querySelectorAll(':scope .setting-item-name') ?? [])]
+            .map((el) => el.textContent)
+            .filter((name) => name !== '');
+        }
+
+        function describeEntry(name: string): null | string {
+          return findRow(name)?.querySelector(':scope .setting-item-description')?.textContent ?? null;
         }
 
         function findRow(name: string): HTMLElement | null {
@@ -183,6 +164,21 @@ describe('settings page navigation', () => {
 
         function getModalEl(): Element | null {
           return activeDocument.querySelector('.modal.mod-settings');
+        }
+
+        async function openPage(name: string, rowOnPage: string): Promise<void> {
+          const entry = findRow(name);
+          if (!entry) {
+            throw new Error(`The "${name}" page entry was not found.`);
+          }
+
+          entry.click();
+          await waitUntil({
+            message: `the "${name}" page did not open`,
+            predicate: () => currentPageRowNames().includes(rowOnPage),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
 
         function rowNames(): string[] {
@@ -195,9 +191,7 @@ describe('settings page navigation', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // Issue #221: the tab opens showing the entries, not eighty rows. `Merge folders` is gone as a
-    // Top-level header — it is a subheading of `Merge` now (issues #224/#240). `Swap` had the same
-    // Treatment from issue #226 and lost it again to issue #241: its four rows are flat on its page.
+    // Issue #221: the tab opens showing the entries, not eighty rows.
     expect(result.onOpen).toContain('Merge');
     expect(result.onOpen).toContain('Frontmatter');
     // Issue #271 retired the `Include/exclude` page and gave the two categories that had no page of their
@@ -205,64 +199,50 @@ describe('settings page navigation', () => {
     expect(result.onOpen).not.toContain('Include/exclude');
     expect(result.onOpen).toContain('Select');
     expect(result.onOpen).toContain('Rename');
-    // Issue #272: `Title` is no longer an entry of its own — it is a heading INSIDE `Frontmatter` now, and a
-    // Heading is not in the DOM until its page is opened, which is what makes this assertion meaningful
-    // Rather than vacuous.
+    // Issue #272: `Title` is no longer an entry of the top level — it lives INSIDE `Frontmatter`, and is not
+    // In the DOM until that page is opened, which is what makes this assertion meaningful rather than vacuous.
     expect(result.onOpen).not.toContain('Title');
     expect(result.onOpen).not.toContain('Merge folders');
     expect(result.onOpen).not.toContain('Command include/exclude paths');
     // A row that lives inside a page is genuinely absent until that page is opened.
     expect(result.onOpen).not.toContain('Merge template');
 
-    // Issue #224 asked for a description of what merging is on the expanded header.
+    // Issue #224 asked for a description of what merging is on the expanded header; issue #282's sub-pages
+    // Carry one too, which is all the user sees of a section before clicking into it.
     expect(result.pageDescription).toContain('Merging');
+    expect(result.subPageDescription).toContain('merge');
 
-    // Issue #224 gave the page two subheadings; issue #240 resplit them into four, because `Merge folder`
-    // Covered two different commands and each of its rows belongs to exactly one of them.
-    expect(result.mergeSubheadings).toEqual([
+    // Issue #282: `Merge` holds no heading any more, only the five entries issues #240 and #271 gave it -
+    // Each of them a page to click into rather than a stretch of rows to scroll past.
+    const MERGE_SECTIONS = [
       'All merges',
       'Merge file',
       'Merge folder contents into a single file',
       'Merge current folder with another folder',
-      // Issue #271 moved the Merge category's four path rows onto this page, under a heading of their own.
       'Merge include/exclude paths'
-    ]);
+    ];
+    expect(result.mergeSubheadings).toEqual([]);
+    expect(result.mergeRows).toEqual(MERGE_SECTIONS);
+    // The sub-page stacks on top of `Merge`, and closing it lands back on `Merge`.
+    expect(result.depthInsideSubPage).toBe(2);
+    expect(result.mergeRowsAfterBack).toEqual(MERGE_SECTIONS);
+    // Issue #220: the template leads its section.
+    expect(result.allMergesRows[0]).toBe('Merge template');
 
-    // Issue #220: the template leads its header.
-    const firstSharedRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('All merges') + 1];
-    expect(firstSharedRow).toBe('Merge template');
-    const firstMergeFolderIntoFileRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge folder contents into a single file') + 1];
-    expect(firstMergeFolderIntoFileRow).toBe('Merge folder into file note name');
-
-    // Issue #240: the one row of the whole-folder merge that used to sit among the into-a-single-file
-    // Ones is now under the header that names its own command.
-    const firstMergeFolderWithFolderRow = result.mergeFolderRows[result.mergeFolderRows.indexOf('Merge current folder with another folder') + 1];
-    expect(firstMergeFolderWithFolderRow).toBe('Should include child folders when merging folders');
-
-    // Issue #241: `Swap` renders its own four rows with no subheading of their own — the shared
-    // Confirmation row belonged under neither of the two issue #226 had put there. Issue #271 then added
-    // The category's path group below them, which is the page's only heading. Asserted in real Obsidian
-    // Because the unit test can only pin the DECLARED tree, and a page's rows are not in the DOM until it
-    // Is opened — the mixed flat-rows-then-a-group shape is exactly what needs confirming here.
-    expect(result.swapSubheadings).toEqual(['Swap include/exclude paths']);
+    // Issue #241: `Swap` renders its own four rows flat; issue #271's path rows are its one section.
+    expect(result.swapSubheadings).toEqual([]);
     expect(result.swapRows).toEqual([
       'Should ask before swapping',
       'Should include child folders when swapping folders',
       'Should include parent folders when swapping folders',
       'Should swap entire folder structure',
-      'Swap include/exclude paths',
-      'Swap include paths',
-      'Swap exclude paths',
-      'Swap command include paths',
-      'Swap command exclude paths'
+      'Swap include/exclude paths'
     ]);
 
-    // Issue #272: the merged page renders both groups, `Title` first, and the four rows of the retired
-    // `Title` page really are on it — the row list is asserted in full, because a regroup that dropped a row
-    // Would still produce the right two headings.
-    expect(result.frontmatterSubheadings).toEqual(['Title', 'Frontmatter']);
-    expect(result.frontmatterRows).toEqual([
-      'Title',
+    // Issue #272: the merged page, `Title` first; the rows of the retired `Title` page really are under it.
+    expect(result.frontmatterSubheadings).toEqual([]);
+    expect(result.frontmatterRows).toEqual(['Title', 'Frontmatter properties']);
+    expect(result.titleRows).toEqual([
       'Name transform template',
       'Should replace invalid characters',
       'Replacement string',
@@ -271,19 +251,20 @@ describe('settings page navigation', () => {
       // Is what the rows above exist to preserve when a name cannot become a file name.
       'Frontmatter title mode',
       'Should use source title when destination has none',
-      'Should add invalid title to note aliases',
-      'Frontmatter',
+      'Should add invalid title to note aliases'
+    ]);
+    expect(result.frontmatterPropertiesRows).toEqual([
       'Frontmatter merge strategy',
       'Should include frontmatter when splitting',
       'Should extract a properties selection as properties'
     ]);
 
-    // Issue #243: the lock row moved here off `Split/extract`, and it sits FLAT above the groups because
-    // It governs the mark rather than any one notice or move direction. Obsidian renders it before the
-    // First subheading — the mixed shape works, which is the whole point of asserting it here.
-    expect(result.smartCutRows[0]).toBe('Should lock all notes when marking selection');
-    expect(result.smartCutRows[1]).toBe('Notice');
-    expect(result.smartCutSubheadings).toEqual([
+    // Issue #243: the lock row sits FLAT above the sections because it governs the mark rather than any one
+    // Notice or move direction. Obsidian renders a flat row and page entries on one page - the mixed shape
+    // Works, which is the whole point of asserting it here.
+    expect(result.smartCutSubheadings).toEqual([]);
+    expect(result.smartCutRows).toEqual([
+      'Should lock all notes when marking selection',
       'Notice',
       'At cursor',
       'To top of file',
