@@ -44,8 +44,6 @@ interface SwapFileModalConstructorParams {
   readonly sourceFile: TFile;
 }
 
-/* v8 ignore stop */
-
 /* v8 ignore start -- SwapFileModal is an internal UI class tested through exported functions. */
 class SwapFileModal extends FuzzySuggestModal<TFile> {
   private isSelected = false;

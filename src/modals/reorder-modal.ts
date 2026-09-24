@@ -212,7 +212,6 @@ interface ReorderModalHandleDropParams {
   readonly itemEl: HTMLElement;
   readonly row: ReorderModalRow;
 }
-/* v8 ignore stop */
 
 /* v8 ignore start -- ReorderModal is an internal UI class tested through the real app (integration). */
 class ReorderModal extends Modal {
@@ -401,6 +400,8 @@ class ReorderModal extends Modal {
     });
   }
 }
+
+/* v8 ignore stop */
 
 /**
  * Opens the shared reorder modal over a {@link ReorderModel} and resolves whether the user confirmed it.

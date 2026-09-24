@@ -71,8 +71,6 @@ interface PrepareForMergeFileParams {
   readonly sourceFile: TFile;
 }
 
-/* v8 ignore stop */
-
 interface PrepareForMergeFileResult {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly insertMode: InsertMode;

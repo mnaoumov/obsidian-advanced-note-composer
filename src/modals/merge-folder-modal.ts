@@ -37,8 +37,6 @@ interface MergeFolderModalConstructorParams {
   readonly sourceFolder: TFolder;
 }
 
-/* v8 ignore stop */
-
 interface SelectTargetFolderForMergeFolderParams {
   readonly app: App;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -147,6 +145,8 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     return true;
   }
 }
+
+/* v8 ignore stop */
 
 export async function selectTargetFolderForMergeFolder(params: SelectTargetFolderForMergeFolderParams): Promise<null | TFolder> {
   // The confirmation dialog can send the flow back to the folder picker ("Change target"); loop until the
