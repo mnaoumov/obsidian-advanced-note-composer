@@ -705,6 +705,29 @@ describe('PluginSettingsTab', () => {
     expect(findCodeHighlighter('Split into folder note name').getValue()).toBe('');
   });
 
+  // Issue #285: emptying either folder-note property template is its opt-out, and `bind` used to write
+  // The default straight back into the setting the moment the box was cleared.
+  it.each(
+    [
+      { defaultValue: '{{folderName}}', name: 'Folder note title template', propertyName: 'folderNoteTitleTemplate' },
+      { defaultValue: '{{safeFolderName}}', name: 'Folder note aliases template', propertyName: 'folderNoteAliasesTemplate' }
+    ] as const
+  )('should keep $name empty once its box is cleared', async ({ defaultValue, name, propertyName }) => {
+    const pluginSettingsComponent = await createSettingsComponent();
+    const tab = await createSettingsTab(pluginSettingsComponent);
+    renderRows(tab);
+
+    const codeHighlighter = findCodeHighlighter(name);
+    // The default is real text rather than a placeholder, so an empty box cannot be mistaken for it.
+    expect(codeHighlighter.getValue()).toBe(defaultValue);
+
+    codeHighlighter.setValue('');
+
+    await vi.waitFor(() => {
+      expect(pluginSettingsComponent.settings[propertyName]).toBe('');
+    });
+  });
+
   it('should render the split-headings-automatically toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);

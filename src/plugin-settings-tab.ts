@@ -4,6 +4,7 @@ import type {
   SettingGroupItem
 } from 'obsidian';
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import type { CodeHighlighterComponent } from 'obsidian-dev-utils/obsidian/setting-components/code-highlighter-component';
 import type { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
@@ -2107,7 +2108,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             render: (setting) => {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'folderNoteTitleTemplate', valueComponent: codeHighlighter });
+                this.bindOptionalPropertyTemplate('folderNoteTitleTemplate', codeHighlighter);
               });
             }
           }),
@@ -2133,7 +2134,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             render: (setting) => {
               setting.addCodeHighlighter((codeHighlighter) => {
                 codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
-                this.bind({ propertyName: 'folderNoteAliasesTemplate', valueComponent: codeHighlighter });
+                this.bindOptionalPropertyTemplate('folderNoteAliasesTemplate', codeHighlighter);
               });
             }
           })
@@ -2372,6 +2373,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         });
       });
     });
+  }
+
+  /**
+   * Binds a folder-note property template whose EMPTY value is a real answer: leave the property alone.
+   *
+   * `bind` resets an emptied text box to the setting's default on its own, so with the defaults
+   * (`{{folderName}}` / `{{safeFolderName}}`) the opt-out every description promised could not be reached:
+   * clearing the box wrote the default straight back, and the property kept being written (issue #285).
+   * The default is therefore shown as real text rather than as a placeholder, and the placeholder is
+   * cleared, so an empty box reads as empty rather than as a greyed-out default still in force.
+   *
+   * @param propertyName - The template setting.
+   * @param codeHighlighter - The box it is edited in.
+   */
+  private bindOptionalPropertyTemplate(
+    propertyName: 'folderNoteAliasesTemplate' | 'folderNoteTitleTemplate',
+    codeHighlighter: CodeHighlighterComponent
+  ): void {
+    this.bind({
+      propertyName,
+      shouldResetSettingWhenComponentIsEmpty: false,
+      shouldShowPlaceholderForDefaultValues: false,
+      valueComponent: codeHighlighter
+    });
+    codeHighlighter.setPlaceholder('');
   }
 
   /**
