@@ -567,6 +567,51 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                     this.bind({ propertyName: 'shouldOpenFirstNoteAfterMergingFolder', valueComponent: toggle });
                   });
                 }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('Folders with these names are never merged INTO a folder of the same name. Where ');
+                  appendCodeBlock(f, 'Merge current folder with another folder...');
+                  f.appendText(' would combine the two, the incoming folder arrives under a numbered name instead, bringing everything under it along.');
+                  f.createEl('br');
+                  f.appendText('For example, with ');
+                  appendCodeBlock(f, 'B');
+                  f.appendText(' listed, merging ');
+                  appendCodeBlock(f, 'A');
+                  f.appendText(' (holding ');
+                  appendCodeBlock(f, 'A/B/C');
+                  f.appendText(') into ');
+                  appendCodeBlock(f, 'E');
+                  f.appendText(' (already holding ');
+                  appendCodeBlock(f, 'E/B/F');
+                  f.appendText(') gives you ');
+                  appendCodeBlock(f, 'E/B 1/C');
+                  f.appendText(' beside the untouched ');
+                  appendCodeBlock(f, 'E/B/F');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('Insert each name on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use a folder name or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.appendText('. Either is matched against the folder\'s NAME, not its path, so it applies at every depth; a regular expression is unanchored, so ');
+                  appendCodeBlock(f, '/^Archive$/');
+                  f.appendText(' is the form that matches that one name exactly.');
+                  f.createEl('br');
+                  f.appendText('Nothing is skipped here — every listed folder is still merged, only under another name. Which notes and folders a merge may touch at all is ');
+                  appendCodeBlock(f, 'Merge include paths');
+                  f.appendText(' / ');
+                  appendCodeBlock(f, 'Merge exclude paths');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('If the setting is empty, same-named folders are combined as before.');
+                }),
+                name: 'Folder names to keep separate',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'keepSeparateFolderNames', valueComponent: multipleText });
+                  });
+                }
               })
             ]
           }),

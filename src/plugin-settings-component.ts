@@ -407,6 +407,14 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('splitExcludePaths', pathsValidator);
     this.registerValidator('swapIncludePaths', pathsValidator);
     this.registerValidator('swapExcludePaths', pathsValidator);
+
+    // Issue #267's list is not a path list — its entries are folder NAMES — but the one syntax the
+    // validator checks, a `/regular expression/` literal that parses, is exactly this list's too, and a
+    // broken entry here fails the same silent way: `shouldKeepFolderNameSeparate` answers `false` for it
+    // and the folder merges as if it had never been listed. The name deliberately does not end in
+    // `includePaths` / `excludePaths`, which is the suffix `plugin-settings-component.test.ts` derives the
+    // path-list roster from off the prototype.
+    this.registerValidator('keepSeparateFolderNames', pathsValidator);
   }
 }
 

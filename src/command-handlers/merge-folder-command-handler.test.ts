@@ -122,6 +122,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         attachmentExtensions: ['.excalidraw.md'],
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
+        keepSeparateFolderNames: [],
         mergeTemplate: '{{content}}',
         reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
@@ -572,6 +573,99 @@ describe('MergeFolderCommandHandler', () => {
 
     // The unknown child was ignored: the target is unchanged.
     expect(await app.vault.adapter.read('dst/keep.md')).toBe('keep');
+  });
+
+  /*
+   * Issue #267. `Folder names to keep separate` names folders that must never be poured into a folder of
+   * the same name. The reporter's worked example is the first case verbatim: `A/B/C` merged into an `E`
+   * that already holds `E/B/F`, with `B` listed, must leave the two `B` folders distinct. The cases either
+   * side of it are what keep the setting from being a blunt instrument — an unlisted name still merges,
+   * and a listed name with nothing to collide with still lands under its own name.
+   */
+  describe('folders kept separate from a same-named destination folder (issue #267)', () => {
+    it('should rename the incoming folder and carry its subtree with it', async () => {
+      initApp({
+        'A/B/C/chapter.md': 'chapter body',
+        'E/B/F/existing.md': 'existing body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderNames: ['B'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      // The incoming `B` arrived under a de-duplicated name, and `C` came with it — the whole
+      // Point of mapping a folder from its parent's destination rather than from its source path.
+      expect(await app.vault.adapter.read('E/B 1/C/chapter.md')).toContain('chapter body');
+      // The destination's own `B` was not touched: nothing was poured into it and nothing moved out.
+      expect(await app.vault.adapter.read('E/B/F/existing.md')).toBe('existing body');
+      expect(await app.vault.adapter.exists('E/B/C')).toBe(false);
+      expect(await app.vault.adapter.exists('A/B/C/chapter.md')).toBe(false);
+    });
+
+    it('should merge a same-named folder as before when the name is not listed', async () => {
+      // The control for the case above: same layout, empty setting, and the two `B` folders become one.
+      initApp({
+        'A/B/C/chapter.md': 'chapter body',
+        'E/B/F/existing.md': 'existing body'
+      });
+      const { handler } = createHandler();
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B/C/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.exists('E/B 1')).toBe(false);
+      expect(await app.vault.adapter.read('E/B/F/existing.md')).toBe('existing body');
+    });
+
+    it('should leave a listed folder under its own name when the destination holds no such folder', async () => {
+      // Being listed is not a rename: without a collision there is nothing to keep separate FROM.
+      initApp({
+        'A/B/chapter.md': 'chapter body',
+        'E/keep.md': 'keep body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderNames: ['B'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.exists('E/B 1')).toBe(false);
+    });
+
+    it('should accept a regular expression entry, matched against the folder name', async () => {
+      initApp({
+        'A/3. Beta/note.md': 'beta body',
+        'A/Plain/note.md': 'plain body',
+        'E/3. Beta/existing.md': 'existing body',
+        'E/Plain/existing.md': 'existing plain'
+      });
+      const { handler } = createHandler({ keepSeparateFolderNames: [String.raw`/^\d+\. /`] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      // The numbered folder was kept separate; the one the pattern does not match merged as usual.
+      expect(await app.vault.adapter.read('E/3. Beta 1/note.md')).toContain('beta body');
+      expect(await app.vault.adapter.read('E/3. Beta/existing.md')).toBe('existing body');
+      expect(await app.vault.adapter.read('E/Plain/note.md')).toContain('plain body');
+      expect(await app.vault.adapter.read('E/Plain/existing.md')).toBe('existing plain');
+    });
+
+    it('should move a non-markdown file into the renamed folder too', async () => {
+      // The attachment walk reads the same map, so nothing may land beside the notes it belongs to.
+      initApp({
+        'A/B/pic.png': 'PIC',
+        'E/B/existing.md': 'existing body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderNames: ['B'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.exists('E/B 1/pic.png')).toBe(true);
+      expect(await app.vault.adapter.exists('E/B/pic.png')).toBe(false);
+    });
   });
 
   // Issue #215. ONE open once the merge has landed — never the per-note open of issue #106, which stays
