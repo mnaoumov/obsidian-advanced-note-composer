@@ -125,7 +125,7 @@ export interface ComposerBaseConstructorParamsBase {
 
   /**
    * An outer transaction to run this operation's mutations against (e.g. a folder merge spanning many
-   * files). When provided, {@link ComposerBase.runLockedTransaction} reuses it and does NOT lock,
+   * files). When provided, {@link runLockedTransaction} reuses it and does NOT lock,
    * commit, or roll back — the outer owner does. When omitted, the operation owns its own transaction.
    */
   readonly vaultTransaction?: VaultTransaction;

@@ -13,10 +13,11 @@
  * The group of commands that one pair of per-category `Command include/exclude paths` settings narrows
  * (issue #249).
  *
- * Command blocking used to be all-or-nothing: a path listed in {@link PluginSettings.commandExcludePaths}
- * lost EVERY Advanced Note Composer command. The request was to block merges on a path while keeping the
- * rest of the commands there, so each command now names the category it belongs to and each category
- * carries a path filter of its own, layered on top of that un-prefixed baseline pair.
+ * Command blocking used to be all-or-nothing: a path listed in the all-commands `Command exclude paths`
+ * setting lost EVERY Advanced Note Composer command. The request was to block merges on a path while
+ * keeping the rest of the commands there, so each command now names the category it belongs to and each
+ * category carries a path filter of its own. The all-commands pair it was first layered on was retired in
+ * issue #271, so the category's own filter is now the only one consulted.
  *
  * Categories rather than the ~40 individual command ids, because that is the granularity the request was
  * written in — "merges", "reordering", "renaming folder" — and because per-id lists would mean eighty
