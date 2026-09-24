@@ -19,7 +19,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { applySplitTemplateToNotes } from '../apply-split-template.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { resolveTemplateTail } from '../create-note-template.ts';
-import { createNoteFromTypedName } from '../create-note.ts';
+import {
+  createNoteFromTypedName,
+  resolveTypedNoteName
+} from '../create-note.ts';
 import { INVALID_CHARACTERS_REG_EXP } from '../filename-validation.ts';
 import { moveIntoOwnFolder } from '../move-into-own-folder.ts';
 import {
@@ -161,6 +164,9 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
             sourceFile: null
           })
         : null,
+      // The name is typed from scratch here, so it is cleaned the way `Create folder with notes...` cleans a
+      // Typed folder name (issue #283).
+      shouldCleanTypedName: true,
       // The destination was chosen by the right-click, so a typed `/` is a character in a name rather than a
       // Path to descend into.
       shouldTreatTitleAsPath: false,
@@ -283,7 +289,8 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
       fixedName = await transformAndFixFileName({
         app: this.app,
         contextFile: null,
-        fileName: value,
+        // Judged as it will be written: cleaned first, exactly as `createNoteFromTypedName` does (issue #283).
+        fileName: resolveTypedNoteName({ fileName: value, pluginSettingsComponent: this.pluginSettingsComponent, shouldCleanTypedName: true }),
         nameTransformTemplate: settings.nameTransformTemplate,
         replacement: settings.replacement,
         shouldReplaceInvalidCharacters: settings.shouldReplaceInvalidTitleCharacters,

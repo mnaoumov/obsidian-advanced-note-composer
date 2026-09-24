@@ -109,6 +109,9 @@ export class CreateEmptyNoteAtCursorEditorCommandHandler extends EditorCommandHa
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      // The name is typed from scratch, not taken from a heading, so it is cleaned the way
+      // `Create empty note in folder...` cleans it (issue #283).
+      shouldCleanTypedName: true,
       sourceFile: file
     });
     if (!prepareForSplitFileResult) {

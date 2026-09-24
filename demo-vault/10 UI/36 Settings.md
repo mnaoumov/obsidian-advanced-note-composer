@@ -232,6 +232,8 @@ Obsidian has two context menus over an open note, and they never both answer one
   - show the `Rename` buttons in that dialog.
 - `shouldTitleCaseCreatedFolderName`
   - capitalize the folder name you typed, leaving all-caps words alone.
+- `shouldTitleCaseCreatedNoteName`
+  - capitalize the note name typed into `Create empty note at cursor...` / `Create empty note in folder...` the same way. Off by default; the spacing is always cleaned.
 - `shouldOpenNoteAfterCreatingFolder`
   - open the first declared note once the folder is created.
 - `shouldRunTemplaterOnDestinationFile`

@@ -18,7 +18,10 @@ import type { Frontmatter } from './frontmatter-merge.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
-import { createNoteFromTypedName } from './create-note.ts';
+import {
+  createNoteFromTypedName,
+  resolveTypedNoteName
+} from './create-note.ts';
 import { FrontmatterTitleMode } from './plugin-settings.ts';
 
 const mockAddAlias = vi.fn();
@@ -42,6 +45,7 @@ interface SettingsOverrides {
   replacement?: string;
   shouldAddInvalidTitleToNoteAlias?: boolean;
   shouldReplaceInvalidTitleCharacters?: boolean;
+  shouldTitleCaseCreatedNoteName?: boolean;
 }
 
 function createMockApp(createdFile: TFile): App {
@@ -96,6 +100,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       replacement: '_',
       shouldAddInvalidTitleToNoteAlias: true,
       shouldReplaceInvalidTitleCharacters: true,
+      shouldTitleCaseCreatedNoteName: false,
       ...settingsOverrides
     })
   });
@@ -120,6 +125,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '/Parent/',
       pluginSettingsComponent: createMockPluginSettingsComponent(),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -141,6 +147,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent(),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: 'source.md'
     });
@@ -158,6 +165,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent(),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -177,6 +185,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent({ shouldAddInvalidTitleToNoteAlias: false }),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -197,6 +206,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent(),
       relocateNote,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -216,6 +226,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent(),
       relocateNote: vi.fn().mockResolvedValue(null),
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -233,6 +244,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent({ frontmatterTitleMode: FrontmatterTitleMode.UseAlways }),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -250,6 +262,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent({ frontmatterTitleMode: FrontmatterTitleMode.None }),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     });
@@ -267,6 +280,7 @@ describe('createNoteFromTypedName', () => {
       folderPrefix: '',
       pluginSettingsComponent: createMockPluginSettingsComponent({ frontmatterTitleMode: 'nonsense' }),
       relocateNote: null,
+      shouldCleanTypedName: false,
       shouldTreatTitleAsPath: false,
       sourcePath: ''
     })).rejects.toThrow('Invalid frontmatter title mode: nonsense');
@@ -283,6 +297,7 @@ describe('createNoteFromTypedName', () => {
         folderPrefix: '',
         pluginSettingsComponent: createMockPluginSettingsComponent({ numberedSplitNoteNameTemplate: '{{index}}. {{safeName}}' }),
         relocateNote: null,
+        shouldCleanTypedName: false,
         shouldTreatTitleAsPath: false,
         sourcePath: ''
       });
@@ -302,6 +317,7 @@ describe('createNoteFromTypedName', () => {
         folderPrefix: '',
         pluginSettingsComponent: createMockPluginSettingsComponent({ numberedSplitNoteNameTemplate: '{{index}}. {{safeName}}' }),
         relocateNote: vi.fn().mockResolvedValue(null),
+        shouldCleanTypedName: false,
         shouldTreatTitleAsPath: false,
         sourcePath: ''
       });
@@ -319,11 +335,109 @@ describe('createNoteFromTypedName', () => {
         folderPrefix: '',
         pluginSettingsComponent: createMockPluginSettingsComponent(),
         relocateNote: null,
+        shouldCleanTypedName: false,
         shouldTreatTitleAsPath: false,
         sourcePath: ''
       });
 
       expect(app.fileManager.renameFile).not.toHaveBeenCalled();
     });
+  });
+
+  describe('typed-name cleaning (issue #283)', () => {
+    it('should collapse the spacing and keep the casing when title-casing is off', async () => {
+      const app = createMockApp(createMockFile('tEsT HellO'));
+
+      await createNoteFromTypedName({
+        app,
+        contextFile: null,
+        fileName: '  tEsT      HellO  ',
+        folderPrefix: '/Parent/',
+        pluginSettingsComponent: createMockPluginSettingsComponent(),
+        relocateNote: null,
+        shouldCleanTypedName: true,
+        shouldTreatTitleAsPath: false,
+        sourcePath: ''
+      });
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('/Parent/tEsT HellO.md', '');
+      // The cleaned name IS the typed name from here on, so it is not an invalid title to record.
+      expect(mockAddAlias).not.toHaveBeenCalled();
+    });
+
+    it('should Title Case the name when shouldTitleCaseCreatedNoteName is on, keeping an acronym', async () => {
+      const app = createMockApp(createMockFile('Test Hello API'));
+
+      await createNoteFromTypedName({
+        app,
+        contextFile: null,
+        fileName: 'tEsT      HellO API',
+        folderPrefix: '/Parent/',
+        pluginSettingsComponent: createMockPluginSettingsComponent({ shouldTitleCaseCreatedNoteName: true }),
+        relocateNote: null,
+        shouldCleanTypedName: true,
+        shouldTreatTitleAsPath: false,
+        sourcePath: ''
+      });
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('/Parent/Test Hello API.md', '');
+    });
+
+    it('should record the CLEANED name as the frontmatter title', async () => {
+      const app = createMockApp(createMockFile('Test Hello'));
+
+      await createNoteFromTypedName({
+        app,
+        contextFile: null,
+        fileName: 'tEsT      HellO',
+        folderPrefix: '',
+        pluginSettingsComponent: createMockPluginSettingsComponent({
+          frontmatterTitleMode: FrontmatterTitleMode.UseAlways,
+          shouldTitleCaseCreatedNoteName: true
+        }),
+        relocateNote: null,
+        shouldCleanTypedName: true,
+        shouldTreatTitleAsPath: false,
+        sourcePath: ''
+      });
+
+      expect(frontmatterWrites.title).toBe('Test Hello');
+    });
+
+    it('should leave the name untouched when the caller does not ask for cleaning', async () => {
+      const app = createMockApp(createMockFile('tEsT HellO'));
+
+      await createNoteFromTypedName({
+        app,
+        contextFile: null,
+        fileName: 'tEsT  HellO',
+        folderPrefix: '',
+        pluginSettingsComponent: createMockPluginSettingsComponent({ shouldTitleCaseCreatedNoteName: true }),
+        relocateNote: null,
+        shouldCleanTypedName: false,
+        shouldTreatTitleAsPath: false,
+        sourcePath: ''
+      });
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('tEsT  HellO.md', '');
+    });
+  });
+});
+
+describe('resolveTypedNoteName', () => {
+  it('should strip leading and trailing dots and a typed .md extension', () => {
+    expect(resolveTypedNoteName({
+      fileName: '..Ghost  note..md',
+      pluginSettingsComponent: createMockPluginSettingsComponent(),
+      shouldCleanTypedName: true
+    })).toBe('Ghost note');
+  });
+
+  it('should keep a name that cleans to nothing as typed, rather than making it empty', () => {
+    expect(resolveTypedNoteName({
+      fileName: '...',
+      pluginSettingsComponent: createMockPluginSettingsComponent(),
+      shouldCleanTypedName: true
+    })).toBe('...');
   });
 });

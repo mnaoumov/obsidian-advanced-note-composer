@@ -21,6 +21,13 @@ interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructor
   readonly shouldAllowOnlyCurrentFolder: boolean;
 
   /**
+   * Whether a CREATED note's typed name is cleaned first (issue #283). Set only by
+   * `Create empty note at cursor...`, whose name is typed from scratch; see
+   * `CreateNoteFromTypedNameParams.shouldCleanTypedName` for why an ordinary split must not.
+   */
+  readonly shouldCleanTypedName?: boolean;
+
+  /**
    * Puts the new note into its own folder even when the `shouldSplitIntoFolder` setting is off. Set by the
    * recursive split, whose folder tree IS the feature, so it cannot be at the mercy of that setting.
    */
@@ -46,6 +53,7 @@ interface SplitItemSelectorConstructorParams extends ItemSelectorBaseConstructor
 
 export class SplitItemSelector extends ItemSelectorBase {
   private readonly shouldAllowOnlyCurrentFolder: boolean;
+  private readonly shouldCleanTypedName: boolean;
   private readonly shouldForceSplitIntoFolder: boolean;
   private readonly shouldTreatTitleAsPath: boolean;
   private readonly splitTargetMode: SplitTargetMode;
@@ -54,6 +62,7 @@ export class SplitItemSelector extends ItemSelectorBase {
   public constructor(params: SplitItemSelectorConstructorParams) {
     super(params);
     this.shouldAllowOnlyCurrentFolder = params.shouldAllowOnlyCurrentFolder;
+    this.shouldCleanTypedName = params.shouldCleanTypedName ?? false;
     this.shouldForceSplitIntoFolder = params.shouldForceSplitIntoFolder ?? false;
     this.shouldTreatTitleAsPath = params.shouldTreatTitleAsPath;
     this.splitTargetMode = params.splitTargetMode;
@@ -127,6 +136,7 @@ export class SplitItemSelector extends ItemSelectorBase {
             sourceFile: this.sourceFile
           })
         : null,
+      shouldCleanTypedName: this.shouldCleanTypedName,
       shouldTreatTitleAsPath: this.shouldTreatTitleAsPath,
       sourcePath: this.sourceFile.path
     });

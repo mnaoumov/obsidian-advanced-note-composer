@@ -9,6 +9,7 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 import type { Frontmatter } from './frontmatter-merge.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
+import { cleanTypedName } from './create-folder-name.ts';
 import { transformAndFixFileName } from './name-transform.ts';
 import { applyNumberedNoteName } from './numbered-note-name.ts';
 import { FrontmatterTitleMode } from './plugin-settings.ts';
@@ -50,6 +51,18 @@ export interface CreateNoteFromTypedNameParams {
   readonly relocateNote: ((file: TFile) => Promise<null | string>) | null;
 
   /**
+   * Whether the typed name is CLEANED before anything else reads it (issue #283): trimmed, stripped of
+   * leading/trailing dots, every whitespace run collapsed to one space, and Title Cased when
+   * `shouldTitleCaseCreatedNoteName` is on — the rules `Create folder with notes...` applies to a typed folder
+   * name.
+   *
+   * The two `Create empty note ...` commands pass `true`, because there the name is typed from scratch. A
+   * split passes `false`: its name is usually a HEADING, and re-casing or re-spacing what a heading already
+   * says would change the output of every existing extract.
+   */
+  readonly shouldCleanTypedName: boolean;
+
+  /**
    * Whether `/` keeps its meaning as a path separator in the typed name.
    */
   readonly shouldTreatTitleAsPath: boolean;
@@ -60,6 +73,11 @@ export interface CreateNoteFromTypedNameParams {
    */
   readonly sourcePath: string;
 }
+
+/**
+ * Parameters for {@link resolveTypedNoteName}.
+ */
+export type ResolveTypedNoteNameParams = Pick<CreateNoteFromTypedNameParams, 'fileName' | 'pluginSettingsComponent' | 'shouldCleanTypedName'>;
 
 /**
  * Creates a note from a name the user typed, applying every naming rule the plugin owns: the
@@ -80,7 +98,7 @@ export async function createNoteFromTypedName(params: CreateNoteFromTypedNamePar
     pluginSettingsComponent,
     relocateNote
   } = params;
-  const fileName = trimEnd({ $string: params.fileName, suffix: '.md' });
+  const fileName = resolveTypedNoteName(params);
   const fixedFileName = `${await resolveFileName(params, fileName)}.md`;
   const file = await app.fileManager.createNewMarkdownFileFromLinktext(params.folderPrefix + fixedFileName, params.sourcePath);
 
@@ -139,6 +157,34 @@ export async function createNoteFromTypedName(params: CreateNoteFromTypedNamePar
   }
 
   return file;
+}
+
+/**
+ * The name the note is created from, before the transform and the invalid-character pass: the typed name
+ * without its `.md`, cleaned when the caller asks for it.
+ *
+ * Exported so a prompt's validator judges exactly the name {@link createNoteFromTypedName} will use.
+ *
+ * Cleaning runs FIRST, ahead of the `Name transform template` — unlike `Create folder with notes...`, which
+ * transforms first — because this is also the name recorded as the alias / frontmatter `title`, and the
+ * reporter's own `title` came out holding the very spacing and casing they asked to have cleaned.
+ *
+ * A name that cleans to nothing (only dots) is kept as typed, so it reaches the same `fixFileName` handling
+ * it always did rather than becoming an empty name.
+ *
+ * @param params - The parameters.
+ * @returns The name to create the note from.
+ */
+export function resolveTypedNoteName(params: ResolveTypedNoteNameParams): string {
+  const fileName = trimEnd({ $string: params.fileName, suffix: '.md' });
+  if (!params.shouldCleanTypedName) {
+    return fileName;
+  }
+
+  return cleanTypedName({
+    rawName: fileName,
+    shouldTitleCase: params.pluginSettingsComponent.settings.shouldTitleCaseCreatedNoteName
+  }) || fileName;
 }
 
 /**

@@ -1029,6 +1029,19 @@ export class PluginSettings {
    * characters are already governed by `shouldReplaceInvalidTitleCharacters` / `replacement`.
    */
   public shouldTitleCaseCreatedFolderName = true;
+
+  /**
+   * Whether the two `Create empty note ...` commands Title Case the typed note name (issue #283), by the same
+   * rule as {@link shouldTitleCaseCreatedFolderName}.
+   *
+   * The rest of that cleaning — trimming, stripping leading/trailing dots, collapsing whitespace runs — is
+   * unconditional for those commands, as it is for a folder; only this step rewrites letters the user typed.
+   *
+   * Off by default, unlike its folder sibling: this command shipped without it, and a note name carries a
+   * mixed-case word (`iPhone`, `macOS`) far more often than anyone would want re-cased behind their back.
+   * No `registerLegacySettingsConverter` — an absent key already resolves to `false`.
+   */
+  public shouldTitleCaseCreatedNoteName = false;
   public shouldTreatTitleAsPathByDefault = true;
 
   public shouldUseSourceTitleWhenTargetHasNoTitle = false;
