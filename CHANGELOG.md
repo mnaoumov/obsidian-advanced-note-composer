@@ -1,5 +1,62 @@
 # CHANGELOG
 
+## 5.12.0
+
+- chore(spellcheck): merge accepting headlessly in the changelog
+- test(settings): merge expecting the command menus sections on the Swap and Smart cut & paste pages (#278)
+- fix(release-notes): merge waiting for the settings before deciding what was shown (#293)
+- feat(settings): merge moving each command menus section onto its command page (#278)
+- fix(split): merge keeping the title a split template writes on a new note
+- refactor: merge reaching Custom Attachment Location through its published API
+- feat(settings): merge folding the strategies group into Common
+- fix: merge keeping the editor focused after every extract-notice click
+- test: merge floating obsidian-test-mocks to ^7.0.0
+- test(demo-vault): merge installing CodeScript Toolkit headlessly in the demo-vault setup
+- docs(screenshots): merge recapturing the recursive-split mobile frames
+- fix(merge): merge merging a folder into its destination, not beneath it
+- fix(deps): merge restoring the lockfile's missing resolved and integrity fields
+- test(split-composer): merge elapsing the whitespace-only give-up in fake time
+- fix(split): merge gating the folder-then-name pair on the effective mode
+- test(coverage): merge re-pairing the orphaned v8 ignore ranges in the modals
+- docs(settings): merge naming the commands the strategies heading leaves out
+- fix(links): merge keeping heading and block links pointing at their target through a split (#291)
+- docs(settings): merge the Attachment extensions pointer to the path lists (#290)
+- fix(progress): merge making Cancel roll an operation back whole (#289)
+- style(comments): stop capitalizing the middle of a wrapped comment
+- feat(paths): merge letting commands run on a path the content filter excludes (#288)
+- feat(select): merge resuming a live selection instead of dropping it (#287)
+- docs(agents): correct the stale raiseSoftKeyboard warning in the keyboard notes
+- fix(release-notes): merge naming the plugin in the release notes popup (#286)
+- fix(settings): merge keeping an emptied folder-note property template empty (#285)
+- feat(templates): merge Templater in the split and folder-note templates (#284)
+- feat(create-note): merge typed-name cleaning for the create-empty-note commands (#283)
+- feat(settings): merge nested settings sections (#282)
+- fix(confirm-dialog): merge the single action row restoration (#281)
+- fix(reorder): keep a folder's contents reorderable when only the folder is excluded (#279)
+- test(screenshots): restore the extract and merge picker mobile frames
+- feat(merge): keep named folders out of a same-named destination folder (#267)
+- feat(split): keep create/merge reachable and enrich the naming box (#280)
+- build(markdownlint): forbid hard-wrapped markdown paragraphs
+- chore: raise obsidian-dev-utils to 105 and clear what held the range back
+- test(split-composer): elapse the reveal poll's give-up budget in fake time
+- docs(settings): record why the two root setting groups stay at the root (#274)
+- feat(move): auto-number what a move or a flatten relocates (#273)
+- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+- test: record why the desktop suites' default-wait budgets are left alone
+- chore(deps): drop the dead markdown-it override
+- chore(deps): drop the dead js-yaml override
+- docs: replace the private rule-id citations with what they assert
+- docs: name the library and the sibling plugins so a reader can resolve them
+- docs: replace the private tracker references with what they pointed at
+- docs: record why the rename-heading frame does not raise the soft keyboard
+- refactor(rename-heading): adopt editBacklinks instead of re-deriving its loop
+- chore: adopt the npm run gate branch gate
+- docs: say where the debug command is run
+- test: bring the in-closure wait ceiling under the transport's per-eval cap
+- docs(agents): record where the picker's spellcheck rule now lives
+- refactor(modals): take the picker's spellcheck rule from obsidian-dev-utils
+- refactor(android): drive the Android suites with trusted input
+
 ## 5.11.0
 
 - docs: name the unversioned demo-vault asset and the folder it unzips into
