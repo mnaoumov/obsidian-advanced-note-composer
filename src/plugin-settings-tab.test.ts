@@ -669,6 +669,21 @@ describe('PluginSettingsTab', () => {
     expect(desc).toContain('only the source note is locked');
   });
 
+  // The `Merge/split/extract strategies` heading names three families, but two of its rows are read by more:
+  // the smart cut & paste move reads the footnote default, and the create commands run Templater. The rows
+  // stay where they are (a row read by several families belongs on none of their pages), so the
+  // descriptions carry the families the heading leaves out.
+  it('should name the command families the strategies heading leaves out in its rows', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    expect(findDesc('Should fix footnotes')).toContain('smart cut & paste move');
+    const templaterDesc = findDesc('Should run templater on destination file');
+    expect(templaterDesc).toContain('Create folder with notes...');
+    expect(templaterDesc).toContain('Create empty note in folder...');
+    expect(templaterDesc).toContain('recursive split');
+  });
+
   it('should render the always-merge-excluded-items toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
