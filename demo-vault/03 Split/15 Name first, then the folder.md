@@ -58,8 +58,25 @@ The picker's box does two jobs at once: what you type names the new note **and**
 **Should choose the folder before the name when splitting** takes the picker out of that flow entirely and asks the two questions separately:
 
 1. A folder list — folders only, no note names in it.
-2. A plain name box, with nothing offered underneath.
+2. A name box, with nothing offered underneath.
 
 The name is cleaned exactly as it is anywhere else: the **Name transform template**, the invalid-character replacement, and the alias or `title` property recording what you actually typed — see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
 
-It only applies while **Default split target mode** is `Create`. The `Create` / `Merge` switch lives in the picker this replaces, so a pass that skips the picker cannot be switched to a merge — turn the setting off for a pass that should merge into an existing note. Heading-driven splits that never open the picker are unaffected, and dismissing either prompt abandons the split (there is no picker to fall back to).
+It only applies while **Default split target mode** is `Create` — a default of `Merge` is asking for the picker. Heading-driven splits that never open the picker are unaffected, and dismissing either prompt abandons the split (there is no picker to fall back to).
+
+### What the name box can do besides name the note
+
+The box is the second half of the pair, not a dead end: everything the picker would have let you change from here, it lets you change too.
+
+| Button | Shortcut | What it does |
+| --- | --- | --- |
+| `Create` | `Enter` | Creates the note in the folder you chose, named as typed |
+| `Change target folder` | `Alt+C` | Reopens the folder list, keeping what you have typed |
+| `Switch to merge` | `Alt+M` | Abandons the pair for this pass and opens the ordinary picker in `Merge` |
+| minimize | — | Parks the box on the floating bar so you can go and read a note first |
+
+`Switch to merge` is what keeps the `Create` / `Merge` switch reachable on this path. Turning the setting off for one pass used to be the only way to merge; it is not any more. The picker it opens starts empty rather than holding the name you were inventing — that name was for a note that does not exist yet, and `Merge` searches notes that do.
+
+`Create empty note at cursor...` has nothing to merge, so there `Switch to merge` is shown disabled rather than missing, the same answer the picker's own switch gives.
+
+The box is minimizable for the reason the picker is: by the time you are naming the note, a selection has been captured and the source note is locked, so there is a half-finished operation worth parking. A click on the dimmed background therefore minimizes it; `Escape`, `Cancel` and the bar's `✕` are what abandon it.

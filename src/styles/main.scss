@@ -36,14 +36,24 @@
   }
 }
 
-// The split/extract picker's "name it first" hint (issue #238), inserted directly under the prompt input.
-// It states the rule while the refusal is live rather than complaining after a refused `Enter`, so it is
-// Styled as a quiet note - `--text-muted`, not `--text-error` - and matches the input's own left padding so
-// It reads as belonging to the box above it.
+// The "name it first" hint (issue #238), inserted directly under the box it is about - the split/extract
+// Picker's prompt input, and since issue #280 the folder-then-name pair's name box too. It states the rule
+// While the refusal is live rather than complaining after a refused `Enter`, so it is styled as a quiet
+// Note - `--text-muted`, not `--text-error` - and matches the input's own left padding so it reads as
+// Belonging to the box above it.
 .advanced-note-composer-name-required-hint {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   padding: var(--size-4-1) var(--size-4-3) 0;
+}
+
+// The folder the first prompt already chose, stated above the name box of the folder-then-name pair
+// (issue #280). It is there so `Change target folder` asks the user to change something they can see;
+// Styled as a quiet note for the same reason the hint above is.
+.advanced-note-composer-split-note-name-folder {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: var(--size-4-2);
 }
 
 // One name plus its `Rename` button in the `Create folder with notes...` confirmation (issue #200). The

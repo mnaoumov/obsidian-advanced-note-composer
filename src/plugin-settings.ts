@@ -751,10 +751,15 @@ export class PluginSettings {
    * wants. With this on he is asked the two questions separately, and the name box has no suggestions
    * under it at all.
    *
-   * **Consequence, and the reason it is opt-in**: the `Create` / `Merge` switch lives in the picker, so a pass
-   * that skips the picker cannot be switched to `Merge`. The setting therefore applies only while
-   * {@link defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is asking for the picker
-   * — and anyone who wants to merge on a given pass turns it off.
+   * Applies only while {@link defaultSplitTargetMode} is `Create` — someone whose default is `Merge` is
+   * asking for the picker, and the pair has nothing to offer them that the picker does not.
+   *
+   * **Merging is NOT off the table on this path, since issue #280.** It was, and that was the reporter's
+   * complaint: the `Create` / `Merge` switch lives in the picker this replaces, so with the setting on a
+   * split could only ever create, and the only way to merge was to go and turn the setting off — a
+   * capability silently removed by a setting that says nothing about it. The name box now carries
+   * `Switch to merge`, which hands the pass to the ordinary picker in `Merge`, alongside
+   * `Change target folder` and a minimize button.
    *
    * Name CLEANING needs nothing new: `createNoteFromTypedName` already runs
    * {@link nameTransformTemplate}, replaces invalid characters per

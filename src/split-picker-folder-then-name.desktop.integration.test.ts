@@ -122,16 +122,16 @@ describe('choosing the folder before the name (issue #261)', () => {
           getPromptInput()?.focus();
           await pressKey({ key: 'Enter' });
 
-          // SECOND prompt: the name box, which is a plain text prompt with no suggestion list at all.
+          // SECOND prompt: the name box, which has no suggestion list under it at all.
           await waitUntil({
             message: 'the note name prompt did not open',
-            predicate: () => document.querySelector('.prompt-modal .text-box') !== null,
+            predicate: () => getNameInput() !== null,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           const suggestionCountWhileNaming = document.querySelectorAll('.suggestion-item').length;
 
-          await submitName(NEW_NOTE_NAME);
+          submitName(NEW_NOTE_NAME);
 
           await waitUntil({
             message: `the new note was not created at ${EXPECTED_PATH}`,
@@ -231,27 +231,26 @@ describe('choosing the folder before the name (issue #261)', () => {
           return app.vault.create(path, '');
         }
 
-        async function submitName(name: string): Promise<void> {
-          const nameInput = document.querySelector('.prompt-modal .text-box');
-          if (!(nameInput instanceof HTMLInputElement)) {
+        function getNameInput(): HTMLInputElement | null {
+          const input = document.querySelector('.advanced-note-composer-split-note-name-modal input[type="text"]');
+          return input instanceof HTMLInputElement ? input : null;
+        }
+
+        function submitName(name: string): void {
+          const nameInput = getNameInput();
+          if (!nameInput) {
             throw new TypeError('No note name prompt input.');
           }
           nameInput.value = name;
-          // The modal tracks its value through the component's change handler, so a bare `value` assignment
+          // The box tracks its value through the component's change handler, so a bare `value` assignment
           // Would be accepted and then submitted as an empty name.
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-          // The prompt validates ASYNCHRONOUSLY and starts out invalid, so a click before it settles is
-          // Silently ignored.
-          await waitUntil({
-            message: 'the typed note name never became valid',
-            predicate: () => nameInput.checkValidity(),
-            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
-          });
-          const okButton = document.querySelector('.prompt-modal .ok-button');
-          if (!(okButton instanceof HTMLElement)) {
-            throw new TypeError('No note name prompt OK button.');
+          const createButton = [...document.querySelectorAll('.advanced-note-composer-split-note-name-modal .modal-button-container button')]
+            .find((el) => el.textContent === 'Create');
+          if (!(createButton instanceof HTMLElement)) {
+            throw new TypeError('No note name prompt Create button.');
           }
-          okButton.click();
+          createButton.click();
         }
 
         async function trashIfExists(path: string): Promise<void> {
