@@ -27,7 +27,7 @@ import type { CreateFolderTemplateTokens } from '../template-tokens.ts';
 
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
-import { swapDerivedAlias } from '../folder-note-aliases.ts';
+import { swapDerivedAliases } from '../folder-note-aliases.ts';
 import {
   resolveFolderNoteConfigFromSettings,
   resolveFolderNoteFromSettings
@@ -48,6 +48,7 @@ import {
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import {
   renderSingleLineValueWithTemplater,
+  renderValueListWithTemplater,
   TemplateRenderError
 } from '../templater-string.ts';
 import {
@@ -440,21 +441,21 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       template: settings.folderNoteTitleTemplate,
       tokens: plan.newTokens
     });
-    const newAlias = await renderTemplate({
+    const newAliases = await renderAliasesTemplate({
       app: this.app,
       noteFile,
       settingName: FOLDER_NOTE_ALIASES_TEMPLATE_SETTING_NAME,
       template: settings.folderNoteAliasesTemplate,
       tokens: plan.newTokens
     });
-    if (!title && !newAlias) {
+    if (!title && newAliases.length === 0) {
       return;
     }
 
-    // Rendered with the OLD tokens so the entry it names can be found and swapped out. A template whose
+    // Rendered with the OLD tokens so the entries they name can be found and swapped out. A template whose
     // templater half is not a function of the tokens (a date, say) renders differently this time, so the old
-    // entry is not found and the note simply gains the new one — `swapDerivedAlias`'s safe direction.
-    const oldAlias = await renderTemplate({
+    // entries are not found and the note simply gains the new ones — `swapDerivedAliases`' safe direction.
+    const oldAliases = await renderAliasesTemplate({
       app: this.app,
       noteFile,
       settingName: FOLDER_NOTE_ALIASES_TEMPLATE_SETTING_NAME,
@@ -468,11 +469,11 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       if (title) {
         newFrontmatter[TITLE_PROPERTY_NAME] = title;
       }
-      if (newAlias) {
-        newFrontmatter[ALIASES_PROPERTY_NAME] = swapDerivedAlias({
+      if (newAliases.length > 0) {
+        newFrontmatter[ALIASES_PROPERTY_NAME] = swapDerivedAliases({
           existingAliases: frontmatter[ALIASES_PROPERTY_NAME],
-          newAlias,
-          oldAlias
+          newAliases,
+          oldAliases
         });
       }
       return setFrontmatter(content, newFrontmatter);
@@ -506,6 +507,35 @@ function buildTokens(params: BuildTokensParams): CreateFolderTemplateTokens {
     rawFolderName: '',
     safeFolderName
   };
+}
+
+/**
+ * Renders the folder note's aliases template the way {@link renderTemplate} renders the title, except that
+ * each line of the result is an alias of its own (issue #294), so one rename can derive several.
+ *
+ * @param params - The template, its tokens and the Templater context.
+ * @returns The aliases, or none when the template is empty — the opt-out that leaves the property alone.
+ */
+async function renderAliasesTemplate(params: RenderTemplateParams): Promise<string[]> {
+  const {
+    app,
+    noteFile,
+    settingName,
+    template,
+    tokens
+  } = params;
+
+  if (!template) {
+    return [];
+  }
+
+  return await renderValueListWithTemplater({
+    app,
+    contextFile: noteFile,
+    resolvedTemplate: resolveCreateFolderTemplateTokens({ template, tokens }),
+    settingName,
+    tokens
+  });
 }
 
 /**

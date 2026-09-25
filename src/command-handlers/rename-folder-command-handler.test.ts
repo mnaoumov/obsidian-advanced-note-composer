@@ -197,6 +197,18 @@ describe('RenameFolderCommandHandler', () => {
     expect(await readFrontmatterAliases('parent/1. Beta/1. Beta.md')).toEqual(['first', 'Beta', 'last']);
   });
 
+  // Issue #294: each line the aliases template renders is an alias of its own, and the whole set the old
+  // name rendered is swapped for the set the new one renders.
+  it('should swap every alias a multi-line template derives, keeping the hand-written ones', async () => {
+    initApp({ 'parent/Alpha/Alpha.md': '---\naliases:\n  - first\n  - Alpha\n  - parent Alpha\n  - last\n---\n' });
+    const { handler } = createHandler({ folderNoteAliasesTemplate: '{{safeFolderName}}\n{{parentFolder}} {{safeFolderName}}' });
+    typedName = 'Beta';
+
+    await handler.executeFolder(getFolder('parent/Alpha'));
+
+    expect(await readFrontmatterAliases('parent/Beta/Beta.md')).toEqual(['first', 'Beta', 'parent Beta', 'last']);
+  });
+
   it('should give the alias to a folder note that had none', async () => {
     initApp({ 'parent/Alpha/Alpha.md': '---\ntitle: Alpha\n---\n' });
     const { handler } = createHandler();

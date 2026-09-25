@@ -81,6 +81,12 @@ const COMMAND_CATEGORY_COMMANDS_DESCRIPTIONS: ReadonlyMap<CommandCategory, strin
   ]
 ]);
 
+/**
+ * What a property template that writes ONE value says about its result, closing its Templater description.
+ * The aliases template says something else, since each line of its result is an alias of its own (issue #294).
+ */
+const SINGLE_LINE_RESULT_RULE = 'The result must be a single line.';
+
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginId: string;
 }
@@ -2095,7 +2101,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('Leave empty to leave the property alone.');
               f.createEl('br');
-              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName');
+              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName', SINGLE_LINE_RESULT_RULE);
               f.createEl('br');
               addReorderFolderTokens(f);
             }),
@@ -2109,11 +2115,15 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
-              f.appendText('The alias ');
+              f.appendText('The aliases ');
               appendCodeBlock(f, 'Rename folder...');
-              f.appendText(' writes into the renamed folder\'s folder note.');
+              f.appendText(' writes into the renamed folder\'s folder note, one per line of the rendered template.');
               f.createEl('br');
-              f.appendText('It REPLACES the alias the old name rendered and nothing else, so aliases you wrote by hand survive the rename.');
+              f.appendText('They REPLACE the aliases the old name rendered and nothing else, so aliases you wrote by hand survive the rename.');
+              f.createEl('br');
+              f.appendText('A Templater expression that computes several aliases returns them joined with ');
+              appendCodeBlock(f, String.raw`"\n"`);
+              f.appendText('.');
               f.createEl('br');
               f.appendText('A reorder never writes aliases. With the default ');
               appendCodeBlock(f, '{{safeFolderName}}');
@@ -2121,7 +2131,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('Leave empty to leave the property alone.');
               f.createEl('br');
-              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName');
+              addPropertyTemplaterDesc(f, 'the folder note', 'TOKENS.safeFolderName', 'Each line of the result is an alias of its own.');
               f.createEl('br');
               addReorderFolderTokens(f);
             }),
@@ -2189,7 +2199,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('Empty by default, which leaves the property alone: only folders were asked for, so a reordered note is renamed and nothing else until you fill this in.');
               f.createEl('br');
-              addPropertyTemplaterDesc(f, 'the renumbered note', 'TOKENS.safeName');
+              addPropertyTemplaterDesc(f, 'the renumbered note', 'TOKENS.safeName', SINGLE_LINE_RESULT_RULE);
               f.createEl('br');
               addReorderFileTokens(f);
             }),
@@ -2808,14 +2818,14 @@ function addNumberedSplitNoteTokens(f: DocumentFragment): void {
  * @param noteDescription - The note `tp.file` reports on, as a phrase.
  * @param exampleToken - A `TOKENS` member to show in the example.
  */
-function addPropertyTemplaterDesc(f: DocumentFragment, noteDescription: string, exampleToken: string): void {
+function addPropertyTemplaterDesc(f: DocumentFragment, noteDescription: string, exampleToken: string, resultRule: string): void {
   f.appendText('With ');
   f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
   f.appendText(' installed it may also hold Templater commands, run once the tokens below are filled in: the tokens are available as ');
   appendCodeBlock(f, `<% ${exampleToken} %>`);
   f.appendText(' and ');
   appendCodeBlock(f, 'tp.file');
-  f.appendText(` reports on ${noteDescription}. The result must be a single line.`);
+  f.appendText(` reports on ${noteDescription}. ${resultRule}`);
 }
 
 function addReorderFileTokens(f: DocumentFragment): void {
