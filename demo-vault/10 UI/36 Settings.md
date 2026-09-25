@@ -245,6 +245,10 @@ Obsidian has two context menus over an open note, and they never both answer one
   - the `title` a reorder writes into a renumbered note. Empty leaves it alone.
 - `shouldIncludeFilesWhenReorderingByDefault`
   - tick `Include files` in the reorder dialog by default.
+- `headingNumberTemplate`
+  - the text `Reorder headings...` gives a numbered heading: `{{index}}` is its position among its siblings, `{{outlineIndex}}` the chain such as `1.2.3`.
+- `shouldNumberHeadingsWhenReorderingByDefault`
+  - tick `Number headings` in the reorder dialog for a note that is not numbered yet. A numbered note always opens ticked.
 
 ## Folder note
 

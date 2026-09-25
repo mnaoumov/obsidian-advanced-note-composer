@@ -1,5 +1,6 @@
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import type { HeadingNumbering } from './heading-numbering.ts';
 import type {
   HeadingTreeNode,
   SplitReorderableSectionsResult
@@ -11,6 +12,7 @@ import type {
   ReorderModelDidMoveToParams
 } from './modals/reorder-modal.ts';
 
+import { computeHeadingTexts } from './heading-numbering.ts';
 import {
   flattenHeadingTree,
   MAX_REORDERED_HEADING_LEVEL
@@ -21,6 +23,12 @@ import { ReorderDropPlacement } from './modals/reorder-modal.ts';
  * Parameters for {@link HeadingReorderModel}.
  */
 export interface HeadingReorderModelConstructorParams {
+  /**
+   * How the headings are numbered (issue #295), or `null` to leave every heading text as it is. The model
+   * reads it on every render, so the rows preview the text each heading will be written with.
+   */
+  readonly numbering: HeadingNumbering | null;
+
   /**
    * The split note. Its `roots` tree and its `levels` are what the model mutates, so the caller reads the
    * confirmed order and levels straight back off it.
@@ -90,14 +98,17 @@ const HEADINGS_GROUP_KEY = 'headings';
  */
 export class HeadingReorderModel implements ReorderModel {
   public readonly isNestable = true;
+  private readonly numbering: HeadingNumbering | null;
   private readonly split: SplitReorderableSectionsResult;
 
   public constructor(params: HeadingReorderModelConstructorParams) {
+    this.numbering = params.numbering;
     this.split = params.split;
   }
 
-  public buildRows: ReorderModel['buildRows'] = () =>
-    flattenHeadingTree(this.split).map((row): ReorderModalRow => ({
+  public buildRows: ReorderModel['buildRows'] = () => {
+    const headingTexts = this.numbering ? computeHeadingTexts(this.split, this.numbering) : this.split.headingTexts;
+    return flattenHeadingTree(this.split).map((row): ReorderModalRow => ({
       canIndent: this.planIndent(row.index) !== null,
       canMoveDown: row.canMoveDown,
       canMoveUp: row.canMoveUp,
@@ -106,10 +117,11 @@ export class HeadingReorderModel implements ReorderModel {
       depth: row.depth,
       groupKey: HEADINGS_GROUP_KEY,
       id: row.index,
-      // Headings are not a numbered sequence — nothing renames them, so there is no number to preview.
+      // A heading's number is part of its text, so the label previews it rather than a separate badge.
       indexLabel: null,
-      label: `${'#'.repeat(this.getLevel(row.index))} ${row.section.headingText}`
+      label: `${'#'.repeat(this.getLevel(row.index))} ${ensureNonNullable(headingTexts[row.index])}`
     }));
+  };
 
   public canMoveTo: ReorderModel['canMoveTo'] = (params: ReorderModelDidMoveToParams) => this.planDrop(params.id, params.placement, params.targetId) !== null;
 

@@ -15,6 +15,7 @@ import {
   hasMovableHeadings,
   joinReorderedSections,
   relevelHeadingText,
+  retitleHeadingText,
   splitIntoReorderableSections
 } from './heading-sections.ts';
 
@@ -131,6 +132,33 @@ describe('heading-sections', () => {
       expect(result.roots[0]?.children.map((node) => node.index)).toStrictEqual([1, 2]);
       expect(result.roots[1]?.children).toHaveLength(0);
       expect(result.levels).toStrictEqual([1, 2, 2, 1]);
+      expect(result.headingTexts).toStrictEqual(['A', 'A.1', 'A.2', 'B']);
+    });
+  });
+
+  describe('retitleHeadingText', () => {
+    it('should replace the text of an ATX heading and keep everything around it', () => {
+      expect(retitleHeadingText({ newHeadingText: '1. A', oldHeadingText: 'A', text: '  ## A ##\nbody\n' })).toBe('  ## 1. A ##\nbody\n');
+    });
+
+    it('should replace the text of a setext heading and keep its underline', () => {
+      expect(retitleHeadingText({ newHeadingText: '1. A', oldHeadingText: 'A', text: 'A\n===\nbody\n' })).toBe('1. A\n===\nbody\n');
+    });
+
+    it('should rewrite an ATX heading line whole when its text is not there verbatim', () => {
+      expect(retitleHeadingText({ newHeadingText: '1. A b', oldHeadingText: 'A b', text: '## A  b\nbody\n' })).toBe('## 1. A b\nbody\n');
+    });
+
+    it('should rewrite a setext heading line whole when its text is not there verbatim', () => {
+      expect(retitleHeadingText({ newHeadingText: '1. A b', oldHeadingText: 'A b', text: 'A  b\n---\n' })).toBe('1. A b\n---\n');
+    });
+
+    it('should retitle a heading that is the last line of the note', () => {
+      expect(retitleHeadingText({ newHeadingText: '2. B', oldHeadingText: 'B', text: '# B' })).toBe('# 2. B');
+    });
+
+    it('should not search the # run for an empty old text', () => {
+      expect(retitleHeadingText({ newHeadingText: '1.', oldHeadingText: '', text: '#\nbody\n' })).toBe('# 1.\nbody\n');
     });
   });
 
@@ -197,6 +225,21 @@ describe('heading-sections', () => {
       split.levels[1] = 3;
       split.levels[3] = 2;
       expect(joinReorderedSections(split, [0, 3, 1, 2])).toBe('intro\n\n# A\naaa\n\n## B\nbbb\n\n### A.1\na1\n\n## A.2\na2\n');
+    });
+
+    it('should rewrite the heading text of every section whose text changed, before re-leveling it (issue #295)', () => {
+      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
+      split.headingTexts.splice(0, 4, '1. A', '1. A.1', 'A.2', '2. B');
+      split.levels[3] = 2;
+      expect(joinReorderedSections(split, [0, 1, 2, 3])).toBe('intro\n\n# 1. A\naaa\n\n## 1. A.1\na1\n\n## A.2\na2\n\n## 2. B\nbbb\n');
+    });
+
+    it('should keep a section\'s own heading text when it has no text entry', () => {
+      const split = castTo<SplitReorderableSectionsResult>({
+        ...splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS),
+        headingTexts: []
+      });
+      expect(joinReorderedSections(split, [3])).toBe('intro\n\n# B\nbbb\n');
     });
 
     it('should keep a section\'s own level when it has no level entry', () => {

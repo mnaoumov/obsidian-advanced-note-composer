@@ -85,10 +85,37 @@ export interface HeadingTreeNode {
 }
 
 /**
+ * Parameters for {@link retitleHeadingText}.
+ */
+export interface RetitleHeadingTextParams {
+  /**
+   * The text the heading will have.
+   */
+  readonly newHeadingText: string;
+
+  /**
+   * The heading text as Obsidian parsed it.
+   */
+  readonly oldHeadingText: string;
+
+  /**
+   * The section text, starting at its heading.
+   */
+  readonly text: string;
+}
+
+/**
  * The result of splitting a note into a fixed preamble, its flat list of heading sections, and the
  * heading tree that nests them.
  */
 export interface SplitReorderableSectionsResult {
+  /**
+   * The text each section's heading WILL have, indexed like {@link SplitReorderableSectionsResult.sections}
+   * (mutable — heading numbering rewrites it, issue #295). Starts as each section's own heading text;
+   * {@link joinReorderedSections} rewrites every heading line whose entry differs.
+   */
+  readonly headingTexts: string[];
+
   /**
    * The level each section's heading WILL have, indexed like {@link SplitReorderableSectionsResult.sections}
    * (mutable — a move under another parent re-levels the moved subtree in place, issue #295). Starts as each
@@ -180,9 +207,10 @@ export function hasMovableHeadings(headings: readonly HeadingCache[]): boolean {
  * first; the sections are emitted in `order`, each trimmed of trailing whitespace and separated by a
  * single blank line (inter-section spacing is normalized), with a trailing newline. Because each moved
  * section keeps its descendants adjacent (they are emitted right after it in `order`), nesting is
- * preserved. A section whose entry in {@link SplitReorderableSectionsResult.levels} differs from its own
- * level has its heading line rewritten to that level. Any out-of-range index in `order` is skipped
- * defensively.
+ * preserved. A section whose entry in {@link SplitReorderableSectionsResult.headingTexts} differs from its
+ * own heading text has that text rewritten, and one whose entry in {@link SplitReorderableSectionsResult.levels}
+ * differs from its own level has its heading line rewritten to that level. Any out-of-range index in `order`
+ * is skipped defensively.
  *
  * @param split - The split note (preamble + sections).
  * @param order - A permutation of section indices giving the new order.
@@ -199,8 +227,12 @@ export function joinReorderedSections(split: SplitReorderableSectionsResult, ord
     if (!section) {
       continue;
     }
+    const headingText = split.headingTexts[index] ?? section.headingText;
+    const retitledText = headingText === section.headingText
+      ? section.text
+      : retitleHeadingText({ newHeadingText: headingText, oldHeadingText: section.headingText, text: section.text });
     const level = split.levels[index] ?? section.level;
-    const text = level === section.level ? section.text : relevelHeadingText(section.text, level);
+    const text = level === section.level ? retitledText : relevelHeadingText(retitledText, level);
     parts.push(text.trimEnd());
   }
   return `${parts.join('\n\n')}\n`;
@@ -233,6 +265,29 @@ export function relevelHeadingText(text: string, level: number): string {
 }
 
 /**
+ * Rewrites the text of the heading that opens a section (issue #295: heading numbering). Everything on the
+ * heading line around that text is kept — the `#` run of an ATX heading, its closing `#`s, the indentation.
+ * A heading line that does not contain the parsed text verbatim (Obsidian normalizes some of it) is rewritten
+ * whole: an ATX heading keeps its `#` run, a setext heading keeps its underline.
+ *
+ * @param params - The section text and the old and new heading texts.
+ * @returns The section text with its heading retitled.
+ */
+export function retitleHeadingText(params: RetitleHeadingTextParams): string {
+  const { newHeadingText, oldHeadingText, text } = params;
+  const lineEnd = text.indexOf('\n');
+  const line = lineEnd === -1 ? text : text.slice(0, lineEnd);
+  const rest = lineEnd === -1 ? '' : text.slice(lineEnd);
+  const atxPrefix = ATX_HEADING_PREFIX_REG_EXP.exec(line)?.[0] ?? '';
+  const textStart = line.indexOf(oldHeadingText, atxPrefix.length);
+  if (oldHeadingText !== '' && textStart !== -1) {
+    return `${line.slice(0, textStart)}${newHeadingText}${line.slice(textStart + oldHeadingText.length)}${rest}`;
+  }
+
+  return atxPrefix === '' ? `${newHeadingText}${rest}` : `${atxPrefix} ${newHeadingText}${rest}`;
+}
+
+/**
  * Splits a note into its fixed preamble, its flat heading sections, and the heading tree nesting them.
  * Each section owns the slice from its heading to the next heading of any level, so nested subheadings
  * are separate sections held as children of their parent node.
@@ -244,7 +299,7 @@ export function relevelHeadingText(text: string, level: number): string {
 export function splitIntoReorderableSections(content: string, headings: readonly HeadingCache[]): SplitReorderableSectionsResult {
   const first = headings[0];
   if (!first) {
-    return { levels: [], preamble: content, roots: [], sections: [] };
+    return { headingTexts: [], levels: [], preamble: content, roots: [], sections: [] };
   }
   const sections: HeadingSection[] = headings.map((heading, index) => {
     const start = heading.position.start.offset;
@@ -257,7 +312,13 @@ export function splitIntoReorderableSections(content: string, headings: readonly
     };
   });
   const preamble = content.slice(0, first.position.start.offset);
-  return { levels: sections.map((section) => section.level), preamble, roots: buildTree(headings), sections };
+  return {
+    headingTexts: sections.map((section) => section.headingText),
+    levels: sections.map((section) => section.level),
+    preamble,
+    roots: buildTree(headings),
+    sections
+  };
 }
 
 function buildTree(headings: readonly HeadingCache[]): HeadingTreeNode[] {
