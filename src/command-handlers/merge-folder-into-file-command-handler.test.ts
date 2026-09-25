@@ -139,6 +139,20 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
 }
 
 /**
+ * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): as a member
+ * on the patched `Vault.getAvailablePathForAttachments`, with the native resolution kept underneath.
+ *
+ * @param unitFolderPaths - The folders to designate. A folder under one is designated too, as Custom
+ * Attachment Location's plain-path entries are.
+ */
+function designateAttachmentUnitFolders(unitFolderPaths: readonly string[]): void {
+  const original = app.vault.getAvailablePathForAttachments.bind(app.vault);
+  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(original), {
+    checkIsAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
+  }));
+}
+
+/**
  * Asserts that exactly one note was opened, and which one.
  *
  * The opened file is compared by PATH rather than handed to `toHaveBeenCalledWith`: a failing matcher would
@@ -1110,6 +1124,115 @@ describe('MergeFolderIntoFileCommandHandler', () => {
       await handler.executeFolder(getFolder('src'));
 
       expect(getLeaf).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('attachment unit folders (issue #298)', () => {
+    it('should not be offered on a folder that is a unit, or lies inside one', () => {
+      initApp({
+        'src/page_files/a.md': 'a',
+        'src/page_files/deep/b.md': 'b',
+        'src/page_files/deep/c.md': 'c'
+      });
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler();
+
+      expect(handler.canExecuteFolder(getFolder('src/page_files'))).toBe(false);
+      expect(handler.canExecuteFolder(getFolder('src/page_files/deep'))).toBe(false);
+    });
+
+    it('should still be offered on a folder that merely holds a unit', () => {
+      initApp({
+        'src/a.md': 'a',
+        'src/b.md': 'b',
+        'src/page_files/img.png': 'PIC'
+      });
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler();
+
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(true);
+    });
+
+    it('should not count a note inside a unit towards the two the command needs', () => {
+      initApp({
+        'src/a.md': 'a',
+        'src/page_files/page.md': 'part of the unit'
+      });
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler();
+
+      expect(handler.canExecuteFolder(getFolder('src'))).toBe(false);
+    });
+
+    it('should merge nothing out of a unit, head nothing for it, and leave it whole in place', async () => {
+      initApp({
+        'src/api/get.md': 'get body',
+        'src/note.md': 'root body',
+        'src/page_files/img.png': 'PIC',
+        'src/page_files/page.md': 'unit body'
+      });
+      await app.vault.createFolder('src/page_files/empty');
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler({
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
+        mergeTemplate: '\n\n{{content}}',
+        shouldConvertFoldersToHeadingsWhenMergingFolder: true
+      });
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      const merged = await app.vault.adapter.read('src.md');
+      expect(merged).not.toContain('unit body');
+      expect(getHeadingLines(merged)).toEqual(['# api']);
+      expect(await app.vault.adapter.read('src/page_files/page.md')).toBe('unit body');
+      expect(await app.vault.adapter.exists('src/page_files/img.png')).toBe(true);
+      // The empty folder inside the unit is part of the unit, not debris the merge left behind.
+      expect(app.vault.getFolderByPath('src/page_files/empty')).not.toBeNull();
+      expect(app.vault.getFolderByPath('src/api')).toBeNull();
+    });
+
+    it('should move a unit the merged notes reference whole, rather than file by file', async () => {
+      initApp({
+        'src/page_files/deep/style.css': 'CSS',
+        'src/page_files/img.png': 'PIC',
+        'src/zeta.md': '![[src/page_files/img.png]] ![[src/page_files/deep/style.css]]',
+        'src/zz.md': 'zz body'
+      });
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler({
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
+        shouldMoveAttachmentsWhenMergingFolder: true
+      });
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      // The vault's attachment folder is the root, so the unit lands there under its own name, shape intact.
+      expect(await app.vault.adapter.read('page_files/img.png')).toBe('PIC');
+      expect(await app.vault.adapter.read('page_files/deep/style.css')).toBe('CSS');
+      expect(await app.vault.adapter.exists('img.png')).toBe(false);
+      expect(await app.vault.adapter.exists('style.css')).toBe(false);
+      expect(app.vault.getFolderByPath('src')).toBeNull();
+    });
+
+    it('should leave a unit nothing references where it is, keeping its folder alive', async () => {
+      initApp({
+        'src/a.md': 'a',
+        'src/b.md': 'b',
+        'src/page_files/img.png': 'PIC'
+      });
+      designateAttachmentUnitFolders(['src/page_files']);
+      const { handler } = createHandler({
+        emptyFolderBehaviorAfterMergingFolder: EmptyFolderBehaviorAfterMergingFolder.Delete,
+        shouldMoveAttachmentsWhenMergingFolder: true
+      });
+      mockConfirm.mockResolvedValue('confirmed');
+
+      await handler.executeFolder(getFolder('src'));
+
+      expect(await app.vault.adapter.exists('src/page_files/img.png')).toBe(true);
+      expect(await app.vault.adapter.exists('page_files')).toBe(false);
     });
   });
 

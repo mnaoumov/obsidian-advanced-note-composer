@@ -29,6 +29,10 @@ import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import {
+  isAttachmentUnitFolder,
+  isInsideAttachmentUnitFolder
+} from '../attachment-unit-folders.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { buildFolderHeadingPlan } from '../folder-headings.ts';
 import { mergeFilesIntoSingleFile } from '../merge-into-single-file-runner.ts';
@@ -88,6 +92,23 @@ interface MergeFolderIntoFileTargetPaths {
 }
 
 /**
+ * The two questions every walk of the merged folder asks, bundled so the menu's count, the executor's walk
+ * and the cleanup cannot answer them differently.
+ */
+interface MergeWalkPredicates {
+  /**
+   * Whether a sub-folder is an attachment unit folder (issue #298), which the walk treats as ONE attachment:
+   * nothing inside it is merged, headed or cleaned up.
+   */
+  readonly isAttachmentUnitFolder: (folder: TFolder) => boolean;
+
+  /**
+   * Whether a file is one of the notes to merge (as opposed to an attachment).
+   */
+  readonly isMergeableNote: (file: TFile) => boolean;
+}
+
+/**
  * `Merge folder contents into a single file` command / folder-menu item (issue #92, the "Folder Merger"
  * capability): concatenates every descendant markdown note of the chosen folder (recursively, in path
  * order) into ONE brand-new note named after the folder and placed alongside it. Distinct from
@@ -128,6 +149,15 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return false;
     }
     /*
+     * Issue #298: a folder that IS an attachment unit, or lies inside one, is part of a single attachment.
+     * Merging its notes away is the one thing that cannot keep the unit whole, so the command is not offered
+     * there. A folder that merely HOLDS unit folders keeps the command: the walk below treats each of them
+     * as one attachment.
+     */
+    if (isInsideAttachmentUnitFolder(this.app, folder)) {
+      return false;
+    }
+    /*
      * Issue #209: a folder holding a single mergeable note has nothing to merge INTO anything — the run
      * would just reproduce that note under the folder's name — and a folder holding none has nothing at
      * all, so the command is not offered in either case. The count goes through the very predicate
@@ -135,12 +165,13 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
      * note (same discipline as `FlattenFolderCommandHandler`, issue #185), and it stops at the threshold
      * rather than walking a large subtree to learn a fact two notes already settle.
      */
-    return countMergeableNotes(folder, (file) => this.isMergeableNote(file), MIN_MERGEABLE_NOTE_COUNT) >= MIN_MERGEABLE_NOTE_COUNT;
+    return countMergeableNotes(folder, this.getWalkPredicates(), MIN_MERGEABLE_NOTE_COUNT) >= MIN_MERGEABLE_NOTE_COUNT;
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {
     const { settings } = this.pluginSettingsComponent;
-    const mergeItems = collectMergeItemsDepthFirst(folder, (file) => this.isMergeableNote(file));
+    const walkPredicates = this.getWalkPredicates();
+    const mergeItems = collectMergeItemsDepthFirst(folder, walkPredicates);
     const sourceMdFiles = mergeItems.filter(isFile);
 
     if (sourceMdFiles.length === 0) {
@@ -161,7 +192,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     const { pathToCreate, targetPath } = targetPaths;
 
     // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
-    const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder);
+    const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder, walkPredicates);
 
     const targetFile = await this.app.vault.create(pathToCreate, '');
 
@@ -235,6 +266,13 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;
+  }
+
+  private getWalkPredicates(): MergeWalkPredicates {
+    return {
+      isAttachmentUnitFolder: (folder) => isAttachmentUnitFolder(this.app, folder),
+      isMergeableNote: (file) => this.isMergeableNote(file)
+    };
   }
 
   /**
@@ -417,19 +455,26 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
  * Collects the folder and every folder under it, deepest first, so an emptied tree can be removed from
  * the leaves upward — a parent only becomes empty once its children are gone.
  *
+ * An attachment unit folder is left out together with its whole subtree (issue #298): the merge either
+ * moved the unit away whole or left it where it was, and an empty folder INSIDE a unit is part of that
+ * attachment, not debris the merge produced.
+ *
  * @param folder - The folder being merged.
+ * @param walkPredicates - How the walk classifies what it meets.
  * @returns The folder paths, deepest first.
  */
-function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
-  // Seeded with the folder itself and collected into a set, because whether `recurseChildren` yields the
-  // folder it was given is not something to depend on.
-  const folderPaths = new Set<string>([folder.path]);
-  Vault.recurseChildren(folder, (child) => {
-    if (isFolder(child)) {
-      folderPaths.add(child.path);
+function collectFolderPathsDeepestFirst(folder: TFolder, walkPredicates: MergeWalkPredicates): string[] {
+  const folderPaths: string[] = [];
+  function visit(currentFolder: TFolder): void {
+    folderPaths.push(currentFolder.path);
+    for (const child of currentFolder.children) {
+      if (isFolder(child) && !walkPredicates.isAttachmentUnitFolder(child)) {
+        visit(child);
+      }
     }
-  });
-  return [...folderPaths].sort((a, b) => getDepth(b) - getDepth(a) || compareNatural(b, a));
+  }
+  visit(folder);
+  return folderPaths.sort((a, b) => getDepth(b) - getDepth(a) || compareNatural(b, a));
 }
 
 /**
@@ -447,20 +492,20 @@ function collectFolderPathsDeepestFirst(folder: TFolder): string[] {
  * {@link shouldHeadSubFolder} — being in the walk IS getting a heading.
  *
  * @param folder - The folder to walk.
- * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @param walkPredicates - How the walk classifies what it meets.
  * @returns The descendant folders and mergeable notes, in merge order.
  */
-function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TFile) => boolean): (TFile | TFolder)[] {
+function collectMergeItemsDepthFirst(folder: TFolder, walkPredicates: MergeWalkPredicates): (TFile | TFolder)[] {
   const notes = folder.children
     .filter(isFile)
-    .filter((child) => isMergeableNote(child))
+    .filter((child) => walkPredicates.isMergeableNote(child))
     .sort((a, b) => compareNatural(a.name, b.name));
   const subFolders = folder.children
     .filter(isFolder)
     // A rejected folder takes its whole subtree with it: the `flatMap` below never recurses into it.
-    .filter((subFolder) => shouldHeadSubFolder(subFolder, isMergeableNote))
+    .filter((subFolder) => shouldHeadSubFolder(subFolder, walkPredicates))
     .sort((a, b) => compareNatural(a.name, b.name));
-  return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, isMergeableNote)])];
+  return [...notes, ...subFolders.flatMap((subFolder) => [subFolder, ...collectMergeItemsDepthFirst(subFolder, walkPredicates)])];
 }
 
 /**
@@ -471,24 +516,25 @@ function collectMergeItemsDepthFirst(folder: TFolder, isMergeableNote: (file: TF
  *
  * Hand-rolled rather than `Vault.recurseChildren`, which visits the whole subtree with no way to break.
  * The folder's own notes are counted first — a sub-folder is only descended into once they have not
- * settled it.
+ * settled it. An attachment unit folder is never descended into (issue #298): whatever it holds is one
+ * attachment, not notes to merge.
  *
  * @param folder - The folder to walk.
- * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @param walkPredicates - How the walk classifies what it meets.
  * @param limit - The count to stop at.
  * @returns The number of mergeable notes found, which stops growing once it reaches `limit`.
  */
-function countMergeableNotes(folder: TFolder, isMergeableNote: (file: TFile) => boolean, limit: number): number {
-  let count = folder.children.filter(isFile).filter((file) => isMergeableNote(file)).length;
+function countMergeableNotes(folder: TFolder, walkPredicates: MergeWalkPredicates, limit: number): number {
+  let count = folder.children.filter(isFile).filter((file) => walkPredicates.isMergeableNote(file)).length;
   if (count >= limit) {
     return count;
   }
 
   // Resolved only once the folder's own notes have failed to settle it, so a folder that already holds
   // two of them never pays for the array.
-  const subFolders = folder.children.filter(isFolder);
+  const subFolders = folder.children.filter(isFolder).filter((subFolder) => !walkPredicates.isAttachmentUnitFolder(subFolder));
   for (const subFolder of subFolders) {
-    count += countMergeableNotes(subFolder, isMergeableNote, limit - count);
+    count += countMergeableNotes(subFolder, walkPredicates, limit - count);
     if (count >= limit) {
       return count;
     }
@@ -515,6 +561,10 @@ function getDepth(folderPath: string): number {
  *   than being classified on its own — an empty folder inside an attachment folder would otherwise be
  *   headed at its own depth with no parent heading above it, which is worse than losing it.
  *
+ * An attachment unit folder (issue #298) is dropped outright, whatever it holds: it is ONE attachment, so
+ * a note inside it is part of that attachment rather than a note of the merged tree. A folder holding only
+ * units therefore counts as an attachment folder — its files exist, and none of them is a mergeable note.
+ *
  * A third case is deliberately NOT decided here: a folder whose notes exist but are ALL excluded in the
  * settings is planned normally and dropped later by `mergeFilesIntoSingleFile`, which flushes a pending
  * heading only once a source actually reaches the merge.
@@ -524,15 +574,18 @@ function getDepth(folderPath: string): number {
  * never built, so this only ever affects the headings.
  *
  * @param folder - The sub-folder to classify.
- * @param isMergeableNote - Whether a file is one of the notes to merge (as opposed to an attachment).
+ * @param walkPredicates - How the walk classifies what it meets.
  * @returns Whether the folder (and its subtree) stays in the walk.
  */
-function shouldHeadSubFolder(folder: TFolder, isMergeableNote: (file: TFile) => boolean): boolean {
+function shouldHeadSubFolder(folder: TFolder, walkPredicates: MergeWalkPredicates): boolean {
+  if (walkPredicates.isAttachmentUnitFolder(folder)) {
+    return false;
+  }
   const files: TFile[] = [];
   Vault.recurseChildren(folder, (child) => {
     if (isFile(child)) {
       files.push(child);
     }
   });
-  return files.length === 0 || files.some((file) => isMergeableNote(file));
+  return files.length === 0 || countMergeableNotes(folder, walkPredicates, 1) > 0;
 }
