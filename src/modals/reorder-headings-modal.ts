@@ -20,7 +20,7 @@ export interface OpenReorderHeadingsModalParams {
  *
  * A thin adapter since issue #216: the modal, the arrow buttons and the drag support are shared with the
  * folder reorder, and {@link HeadingReorderModel} is what teaches them about a tree — indentation through
- * each row's depth, and same-parent-only movement through each row's group.
+ * each row's depth, and (since issue #295) moves under a different parent, re-leveled to fit.
  *
  * @param params - The parameters.
  * @returns The chosen order, or `null` if cancelled.
@@ -30,7 +30,7 @@ export async function openReorderHeadingsModal(params: OpenReorderHeadingsModalP
   const isConfirmed = await didConfirmReorderModal({
     app: params.app,
     confirmButtonText: 'Reorder',
-    description: 'Move each heading (and everything nested under it) up or down among its siblings, then confirm.',
+    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, or use the left/right arrows to change its level, then confirm.',
     model: new HeadingReorderModel({ split: params.split }),
     title: 'Reorder headings',
     toggle: null

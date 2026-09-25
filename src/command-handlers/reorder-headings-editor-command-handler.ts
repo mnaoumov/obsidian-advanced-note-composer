@@ -9,6 +9,8 @@ import type {
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
 import { isEditorCommandBlocked } from '../command-block.ts';
@@ -17,7 +19,7 @@ import {
   checkShouldAddCommandToViewportMenu
 } from '../command-menu-placement.ts';
 import {
-  hasReorderableSiblings,
+  hasMovableHeadings,
   joinReorderedSections,
   splitIntoReorderableSections
 } from '../heading-sections.ts';
@@ -29,6 +31,7 @@ import {
   showOperationProgressNotice
 } from '../operation-notices.ts';
 import { CommandCategory } from '../plugin-settings.ts';
+import { updateReorderedHeadingLinks } from '../reordered-heading-links.ts';
 import { ActiveEditorCommandHandlerBase } from './active-editor-command-handler-base.ts';
 
 interface ReorderHeadingsEditorCommandHandlerConstructorParams {
@@ -41,8 +44,10 @@ interface ReorderHeadingsEditorCommandHandlerConstructorParams {
 /**
  * Reorders a note's heading sections at any nesting level. Opens a modal listing the whole heading tree
  * as an indented list; the user moves each heading (and everything nested under it) up or down among its
- * same-parent siblings; on confirm the note is rewritten with the sections in the chosen order, nested
- * subheadings preserved, inside a reversible resource-locked transaction.
+ * siblings, drags it under another heading, or indents/outdents it (issue #295); on confirm the note is
+ * rewritten with the sections in the chosen order and the moved headings re-leveled, nested subheadings
+ * preserved, inside a reversible resource-locked transaction. Links a move would break — a nested
+ * `[[note#A#A1]]` whose `A1` now sits under `B` — are rewritten in the same transaction.
  */
 export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHandlerBase {
   private readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -68,7 +73,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
       return false;
     }
     const file = context.file;
-    return file ? hasReorderableSiblings(this.getHeadings(file)) : false;
+    return file ? hasMovableHeadings(this.getHeadings(file)) : false;
   }
 
   protected override async executeEditor(_editor: Editor, context: MarkdownFileInfo): Promise<void> {
@@ -77,10 +82,13 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
       return;
     }
     const content = await this.app.vault.read(file);
-    const split = splitIntoReorderableSections(content, this.getHeadings(file));
+    const oldCache = await getCacheSafe(this.app, file);
+    const split = splitIntoReorderableSections(content, oldCache?.headings ?? []);
 
     const order = await openReorderHeadingsModal({ app: this.app, split });
-    if (!order || order.every((sectionIndex, position) => sectionIndex === position)) {
+    const isUnchanged = order?.every((sectionIndex, position) => sectionIndex === position)
+      && split.sections.every((section, index) => split.levels[index] === section.level);
+    if (!order || isUnchanged) {
       return;
     }
 
@@ -88,6 +96,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     // Hoisted out of the `runLockedTransaction` call so the progress notice's Cancel button has a
     // controller to abort.
     const abortController = new AbortController();
+    let updatedLinkCount = 0;
     const progressNotice = showOperationProgressNotice({
       abortController,
       app: this.app,
@@ -108,6 +117,21 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
         app: this.app,
         body: async (vaultTransaction) => {
           await vaultTransaction.modify(file, newContent);
+          const newCache = await getCacheSafe(this.app, file);
+          if (!oldCache || !newCache) {
+            return;
+          }
+          updatedLinkCount = await updateReorderedHeadingLinks({
+            abortSignal: abortController.signal,
+            app: this.app,
+            newCache,
+            oldCache,
+            order,
+            path: file.path,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            resourceLockComponent: this.resourceLockComponent,
+            split
+          });
         },
         lockTargets: [{ mode: 'file', pathOrFile: file }],
         operationName: 'Reorder headings',
@@ -128,6 +152,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
         app: this.app,
         pluginSettingsComponent: this.pluginSettingsComponent,
         sourcePathOrAbstractFile: file,
+        suffix: updatedLinkCount > 0 ? ` and updated ${String(updatedLinkCount)} link(s)` : '',
         verb: 'Reordered headings in note'
       }),
       pluginNoticeComponent: this.pluginNoticeComponent,

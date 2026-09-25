@@ -9,6 +9,18 @@ import {
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 
 /**
+ * Where a dragged row lands relative to the row it is dropped on.
+ */
+export enum ReorderDropPlacement {
+  After = 'After',
+  Before = 'Before',
+  /**
+   * Nested under the target. Only a {@link ReorderModel.isNestable} list ever reports it.
+   */
+  Inside = 'Inside'
+}
+
+/**
  * Parameters for {@link didConfirmReorderModal}.
  */
 export interface DidConfirmReorderModalParams {
@@ -41,8 +53,19 @@ export interface DidConfirmReorderModalParams {
  * One row of the list.
  */
 export interface ReorderModalRow {
+  /**
+   * Whether the row can be nested one level deeper. Read only when {@link ReorderModel.isNestable}.
+   */
+  readonly canIndent: boolean;
+
   readonly canMoveDown: boolean;
   readonly canMoveUp: boolean;
+
+  /**
+   * Whether the row can be lifted one level out of its parent. Read only when
+   * {@link ReorderModel.isNestable}.
+   */
+  readonly canOutdent: boolean;
 
   /**
    * The row's identity in the DOM, written to `data-row-label`. Distinct from
@@ -57,8 +80,9 @@ export interface ReorderModalRow {
   readonly depth: number;
 
   /**
-   * Which group the row belongs to. A row can only ever be moved among rows sharing this key — for the
-   * heading tree that is "same parent", for a folder reorder it is "folders" vs "files".
+   * Which group the row belongs to. A drag can only ever land on a row sharing this key — for a folder
+   * reorder it is "folders" vs "files". A heading tree puts every row in ONE group (issue #295), so a
+   * heading can be dragged under any other and the model alone decides what that drop means.
    */
   readonly groupKey: string;
 
@@ -104,6 +128,24 @@ export interface ReorderModel {
   buildRows: (this: void) => readonly ReorderModalRow[];
 
   /**
+   * Whether a drop at that position would be accepted, asked while the drag hovers so a refused position
+   * shows Obsidian's no-drop cursor rather than an insertion line that promises a move.
+   *
+   * @param params - Which row, and where it would be dropped.
+   * @returns Whether {@link ReorderModel.didMoveTo} would move anything.
+   */
+  canMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
+
+  /**
+   * Nests a row one level deeper or lifts it one level out. Only ever called when
+   * {@link ReorderModel.isNestable}.
+   *
+   * @param params - Which row: `1` indents, `-1` outdents.
+   * @returns Whether anything actually moved.
+   */
+  didChangeDepth: (this: void, params: ReorderModelDidMoveParams) => boolean;
+
+  /**
    * Moves a row one place up or down among its own group.
    *
    * @param params - Which row, and which way.
@@ -127,6 +169,12 @@ export interface ReorderModel {
    * tree, where the groups exist only to keep a drag among its siblings.
    */
   getGroupTitle: (this: void, groupKey: string) => null | string;
+
+  /**
+   * Whether rows nest: a nestable list offers indent/outdent buttons and a middle drop zone that puts the
+   * dragged row INSIDE the one it is dropped on. A heading tree nests; a folder listing does not.
+   */
+  readonly isNestable: boolean;
 }
 
 /**
@@ -147,9 +195,9 @@ export interface ReorderModelDidMoveToParams {
   readonly id: number;
 
   /**
-   * Whether the row was dropped after {@link ReorderModelDidMoveToParams.targetId} rather than before it.
+   * Where, relative to {@link ReorderModelDidMoveToParams.targetId}, the row was dropped.
    */
-  readonly isAfter: boolean;
+  readonly placement: ReorderDropPlacement;
   readonly targetId: number;
 }
 
@@ -161,9 +209,26 @@ const DEPTH_INDENT_IN_PIXELS = 20;
  */
 const DROP_AFTER_HEIGHT_FRACTION = 0.5;
 
+/**
+ * A nestable list splits a row into thirds instead: the top third drops before it, the bottom third after
+ * it, and the middle third inside it.
+ */
+const NESTABLE_DROP_ZONE_COUNT = 3;
+const NESTABLE_DROP_ZONE_FRACTION = 1 / NESTABLE_DROP_ZONE_COUNT;
+
 const DRAG_HANDLE_ICON_ID = 'lucide-grip-vertical';
 const DRAG_OVER_AFTER_CLASS = 'advanced-note-composer-reorder-drag-over-after';
 const DRAG_OVER_BEFORE_CLASS = 'advanced-note-composer-reorder-drag-over-before';
+const DRAG_OVER_INSIDE_CLASS = 'advanced-note-composer-reorder-drag-over-inside';
+
+const DRAG_OVER_CLASSES: Readonly<Record<ReorderDropPlacement, string>> = {
+  [ReorderDropPlacement.After]: DRAG_OVER_AFTER_CLASS,
+  [ReorderDropPlacement.Before]: DRAG_OVER_BEFORE_CLASS,
+  [ReorderDropPlacement.Inside]: DRAG_OVER_INSIDE_CLASS
+};
+
+// Spelled out rather than read off `Object.values(DRAG_OVER_CLASSES)`, which ts-reset types as `unknown[]`.
+const ALL_DRAG_OVER_CLASSES = [DRAG_OVER_AFTER_CLASS, DRAG_OVER_BEFORE_CLASS, DRAG_OVER_INSIDE_CLASS];
 
 /**
  * The `Draggable.type` our rows advertise to Obsidian's drag manager. Every other drag in the app — a
@@ -171,6 +236,16 @@ const DRAG_OVER_BEFORE_CLASS = 'advanced-note-composer-reorder-drag-over-before'
  * of the "is this one of ours?" test.
  */
 const REORDER_DRAGGABLE_TYPE = 'advanced-note-composer-reorder-row';
+
+interface RenderDepthButtonParams {
+  readonly cls: string;
+  readonly controlsEl: HTMLElement;
+  readonly delta: number;
+  readonly icon: string;
+  readonly id: number;
+  readonly isEnabled: boolean;
+  readonly tooltip: string;
+}
 
 /**
  * The shape of `Draggable` this modal actually reads. Declared structurally rather than imported from
@@ -275,14 +350,15 @@ class ReorderModal extends Modal {
     });
   }
 
-  private checkIsAfter(event: DragEvent, itemEl: HTMLElement): boolean {
-    const bounds = itemEl.getBoundingClientRect();
-    return event.clientY > bounds.top + bounds.height * DROP_AFTER_HEIGHT_FRACTION;
+  private changeDepth(id: number, delta: number): void {
+    if (this.params.model.didChangeDepth({ delta, id })) {
+      this.renderList();
+    }
   }
 
   private clearDropIndicators(): void {
-    for (const itemEl of this.listEl?.querySelectorAll(`.${DRAG_OVER_AFTER_CLASS}, .${DRAG_OVER_BEFORE_CLASS}`) ?? []) {
-      itemEl.removeClasses([DRAG_OVER_AFTER_CLASS, DRAG_OVER_BEFORE_CLASS]);
+    for (const itemEl of this.listEl?.querySelectorAll(ALL_DRAG_OVER_CLASSES.map((cls) => `.${cls}`).join(', ')) ?? []) {
+      itemEl.removeClasses(ALL_DRAG_OVER_CLASSES);
     }
   }
 
@@ -297,29 +373,47 @@ class ReorderModal extends Modal {
    * insertion line, and the drop pass, which performs the move.
    *
    * @param params - The parameters.
+   * @returns Whether the position is one the model accepts; a refused one is declined to the drag
+   * manager, which then shows the no-drop cursor.
    */
-  private handleDrop(params: ReorderModalHandleDropParams): void {
-    const isAfter = this.checkIsAfter(params.event, params.itemEl);
+  private handleDrop(params: ReorderModalHandleDropParams): boolean {
     this.clearDropIndicators();
+    const moveParams: ReorderModelDidMoveToParams = {
+      id: params.dragSource.rowId,
+      placement: this.resolvePlacement(params.event, params.itemEl),
+      targetId: params.row.id
+    };
+
+    if (params.dragSource.rowId === params.row.id || !this.params.model.canMoveTo(moveParams)) {
+      return false;
+    }
 
     if (params.isOver) {
-      params.itemEl.addClass(isAfter ? DRAG_OVER_AFTER_CLASS : DRAG_OVER_BEFORE_CLASS);
-      return;
+      params.itemEl.addClass(DRAG_OVER_CLASSES[moveParams.placement]);
+      return true;
     }
 
-    if (params.dragSource.rowId === params.row.id) {
-      return;
-    }
-
-    if (this.params.model.didMoveTo({ id: params.dragSource.rowId, isAfter, targetId: params.row.id })) {
+    if (this.params.model.didMoveTo(moveParams)) {
       this.renderList();
     }
+    return true;
   }
 
   private move(id: number, delta: number): void {
     if (this.params.model.didMove({ delta, id })) {
       this.renderList();
     }
+  }
+
+  private renderDepthButton(params: RenderDepthButtonParams): void {
+    params.controlsEl.createEl('button', { cls: `${params.cls} clickable-icon` }, (button) => {
+      setIcon(button, params.icon);
+      button.disabled = !params.isEnabled;
+      button.setAttribute('aria-label', params.tooltip);
+      button.addEventListener('click', () => {
+        this.changeDepth(params.id, params.delta);
+      });
+    });
   }
 
   private renderList(): void {
@@ -366,8 +460,8 @@ class ReorderModal extends Modal {
         return null;
       }
 
-      this.handleDrop({ dragSource: droppedSource, event, isOver, itemEl, row });
-      return { action: null, dropEffect: 'move' };
+      // A position the model refuses is declined the same way, so the no-drop cursor shows there too.
+      return this.handleDrop({ dragSource: droppedSource, event, isOver, itemEl, row }) ? { action: null, dropEffect: 'move' } : null;
     });
     // A drag abandoned outside any row ends without a drop, so the last insertion line has to be cleared
     // here; `dragend` fires on the row the drag started from.
@@ -384,6 +478,26 @@ class ReorderModal extends Modal {
     itemEl.createSpan({ cls: 'advanced-note-composer-reorder-title', text: row.label });
 
     const controlsEl = itemEl.createDiv('advanced-note-composer-reorder-controls');
+    if (this.params.model.isNestable) {
+      this.renderDepthButton({
+        cls: 'advanced-note-composer-reorder-outdent',
+        controlsEl,
+        delta: -1,
+        icon: 'lucide-arrow-left',
+        id: row.id,
+        isEnabled: row.canOutdent,
+        tooltip: 'Move out of its parent heading'
+      });
+      this.renderDepthButton({
+        cls: 'advanced-note-composer-reorder-indent',
+        controlsEl,
+        delta: 1,
+        icon: 'lucide-arrow-right',
+        id: row.id,
+        isEnabled: row.canIndent,
+        tooltip: 'Move under the heading above'
+      });
+    }
     controlsEl.createEl('button', { cls: 'advanced-note-composer-reorder-up clickable-icon' }, (button) => {
       setIcon(button, 'lucide-arrow-up');
       button.disabled = !row.canMoveUp;
@@ -399,6 +513,19 @@ class ReorderModal extends Modal {
       });
     });
   }
+
+  private resolvePlacement(event: DragEvent, itemEl: HTMLElement): ReorderDropPlacement {
+    const bounds = itemEl.getBoundingClientRect();
+    const fraction = (event.clientY - bounds.top) / bounds.height;
+    if (!this.params.model.isNestable) {
+      return fraction > DROP_AFTER_HEIGHT_FRACTION ? ReorderDropPlacement.After : ReorderDropPlacement.Before;
+    }
+
+    if (fraction < NESTABLE_DROP_ZONE_FRACTION) {
+      return ReorderDropPlacement.Before;
+    }
+    return fraction > 1 - NESTABLE_DROP_ZONE_FRACTION ? ReorderDropPlacement.After : ReorderDropPlacement.Inside;
+  }
 }
 
 /* v8 ignore stop */
@@ -412,7 +539,8 @@ class ReorderModal extends Modal {
  *
  * Rows can be moved with the arrow buttons or by dragging, deliberately BOTH: the arrows are the only path
  * that works by touch, while dragging is what makes a twenty-item list bearable. A drag never crosses a
- * group. Both paths are integration-tested — issue #231 shipped a drag that never moved anything because
+ * group. A nestable list (the heading tree, issue #295) adds indent/outdent buttons for the same reason:
+ * without them re-parenting would be drag-only. Both paths are integration-tested — issue #231 shipped a drag that never moved anything because
  * only the arrows were, so "a click-driven test cannot drive this" is a reason to write the drag test, not
  * a reason to leave the interaction uncovered.
  *

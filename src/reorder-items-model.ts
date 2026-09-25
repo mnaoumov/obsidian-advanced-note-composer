@@ -8,6 +8,7 @@ import type {
 } from './modals/reorder-modal.ts';
 import type { ReorderItemInput } from './reorder-items.ts';
 
+import { ReorderDropPlacement } from './modals/reorder-modal.ts';
 import { parseNumberedName } from './numbered-name.ts';
 import {
   BASE_TOKEN_KEYS,
@@ -65,8 +66,10 @@ const FOLDERS_GROUP_KEY = 'folders';
  * dialog.
  */
 export class ReorderItemsModel implements ReorderModel {
+  public readonly isNestable = false;
   private readonly fileEntries: ReorderEntry[];
   private readonly folderEntries: ReorderEntry[];
+
   private shouldIncludeFiles: boolean;
 
   public constructor(params: ReorderItemsModelConstructorParams) {
@@ -79,6 +82,12 @@ export class ReorderItemsModel implements ReorderModel {
     ...toRows(this.folderEntries, FOLDERS_GROUP_KEY),
     ...toRows(this.shouldIncludeFiles ? this.fileEntries : [], FILES_GROUP_KEY)
   ];
+
+  // The modal confines a drag to its group, and every in-group position is a real move.
+  public canMoveTo: ReorderModel['canMoveTo'] = () => true;
+
+  // A folder listing is flat: there is no deeper or shallower level for a row to go to.
+  public didChangeDepth: ReorderModel['didChangeDepth'] = () => false;
 
   public didMove: ReorderModel['didMove'] = (params: ReorderModelDidMoveParams) => {
     const entries = this.findEntries(params.id);
@@ -106,7 +115,7 @@ export class ReorderItemsModel implements ReorderModel {
 
     const position = entries.findIndex((entry) => entry.id === params.id);
     const targetPosition = entries.findIndex((entry) => entry.id === params.targetId);
-    const insertPosition = targetPosition + (params.isAfter ? 1 : 0) - (targetPosition > position ? 1 : 0);
+    const insertPosition = targetPosition + (params.placement === ReorderDropPlacement.After ? 1 : 0) - (targetPosition > position ? 1 : 0);
     if (insertPosition === position) {
       return false;
     }
@@ -171,8 +180,10 @@ function toEntries(
 
 function toRows(entries: readonly ReorderEntry[], groupKey: string): ReorderModalRow[] {
   return entries.map((entry, position) => ({
+    canIndent: false,
     canMoveDown: position < entries.length - 1,
     canMoveUp: position > 0,
+    canOutdent: false,
     dataLabel: entry.baseName,
     depth: 0,
     groupKey,

@@ -5,6 +5,7 @@ import {
   it
 } from 'vitest';
 
+import { ReorderDropPlacement } from './modals/reorder-modal.ts';
 import { ReorderItemsModel } from './reorder-items-model.ts';
 import { ReorderItemKind } from './reorder-items.ts';
 
@@ -86,7 +87,7 @@ describe('ReorderItemsModel', () => {
   });
 
   it('should drop a row before another one', () => {
-    model.didMoveTo({ id: ensureRowId(2), isAfter: false, targetId: ensureRowId(0) });
+    model.didMoveTo({ id: ensureRowId(2), placement: ReorderDropPlacement.Before, targetId: ensureRowId(0) });
     expect(toLabels()).toEqual([
       'folders:1:Gamma',
       'folders:2:Alpha',
@@ -95,7 +96,7 @@ describe('ReorderItemsModel', () => {
   });
 
   it('should drop a row after another one', () => {
-    model.didMoveTo({ id: ensureRowId(0), isAfter: true, targetId: ensureRowId(2) });
+    model.didMoveTo({ id: ensureRowId(0), placement: ReorderDropPlacement.After, targetId: ensureRowId(2) });
     expect(toLabels()).toEqual([
       'folders:1:Beta',
       'folders:2:Gamma',
@@ -105,11 +106,11 @@ describe('ReorderItemsModel', () => {
 
   it('should refuse a drop onto a row of another group, so a note never joins the folder sequence', () => {
     model.setShouldIncludeFiles(true);
-    expect(model.didMoveTo({ id: ensureRowId(0), isAfter: true, targetId: ensureRowId(3) })).toBe(false);
+    expect(model.didMoveTo({ id: ensureRowId(0), placement: ReorderDropPlacement.After, targetId: ensureRowId(3) })).toBe(false);
   });
 
   it('should refuse a drop that changes nothing', () => {
-    expect(model.didMoveTo({ id: ensureRowId(0), isAfter: false, targetId: ensureRowId(1) })).toBe(false);
+    expect(model.didMoveTo({ id: ensureRowId(0), placement: ReorderDropPlacement.Before, targetId: ensureRowId(1) })).toBe(false);
   });
 
   it('should report the items of each kind in their current order', () => {
@@ -129,6 +130,13 @@ describe('ReorderItemsModel', () => {
     model.setShouldIncludeFiles(true);
     model.didMove({ delta: 1, id: ensureRowId(3) });
     expect(model.getOrderedItems(ReorderItemKind.File).map((item) => item.name)).toEqual(['Draft', '1. Notes']);
+  });
+
+  it('should be flat: never nestable, never changing a row\'s depth, and accepting any in-group drop', () => {
+    expect(model.isNestable).toBe(false);
+    expect(model.didChangeDepth({ delta: 1, id: ensureRowId(0) })).toBe(false);
+    expect(model.canMoveTo({ id: ensureRowId(0), placement: ReorderDropPlacement.After, targetId: ensureRowId(1) })).toBe(true);
+    expect(model.buildRows().every((row) => !row.canIndent && !row.canOutdent)).toBe(true);
   });
 });
 

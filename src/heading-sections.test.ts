@@ -10,11 +10,11 @@ import {
 import type { SplitReorderableSectionsResult } from './heading-sections.ts';
 
 import {
-  didMoveSibling,
   flattenHeadingTree,
   flattenTreeToOrder,
-  hasReorderableSiblings,
+  hasMovableHeadings,
   joinReorderedSections,
+  relevelHeadingText,
   splitIntoReorderableSections
 } from './heading-sections.ts';
 
@@ -67,25 +67,46 @@ const NESTED_CONTENT = [
 const NESTED_HEADINGS = parseHeadings(NESTED_CONTENT);
 
 describe('heading-sections', () => {
-  describe('hasReorderableSiblings', () => {
+  describe('hasMovableHeadings', () => {
     it('should return false when there are no headings', () => {
-      expect(hasReorderableSiblings([])).toBe(false);
+      expect(hasMovableHeadings([])).toBe(false);
     });
 
     it('should return false with a single heading', () => {
-      expect(hasReorderableSiblings([heading(1, 'A', 0)])).toBe(false);
+      expect(hasMovableHeadings([heading(1, 'A', 0)])).toBe(false);
     });
 
-    it('should return false when the only headings are a parent and its single child', () => {
-      expect(hasReorderableSiblings([heading(1, 'A', 0), heading(2, 'A.1', 4)])).toBe(false);
+    it('should return true for a parent and its single child, since the child can be outdented (issue #295)', () => {
+      expect(hasMovableHeadings([heading(1, 'A', 0), heading(2, 'A.1', 4)])).toBe(true);
     });
 
-    it('should return true with two or more top-level headings', () => {
-      expect(hasReorderableSiblings([heading(1, 'A', 0), heading(1, 'B', 4)])).toBe(true);
+    it('should return true with two top-level headings', () => {
+      expect(hasMovableHeadings([heading(1, 'A', 0), heading(1, 'B', 4)])).toBe(true);
+    });
+  });
+
+  describe('relevelHeadingText', () => {
+    it('should replace the hashes of an ATX heading and keep the rest of the section', () => {
+      expect(relevelHeadingText('## A.1\na1\n', 3)).toBe('### A.1\na1\n');
     });
 
-    it('should return true when a nested level has two or more siblings', () => {
-      expect(hasReorderableSiblings([heading(1, 'A', 0), heading(2, 'A.1', 4), heading(2, 'A.2', 10)])).toBe(true);
+    it('should keep up to three spaces of indentation and a closing sequence', () => {
+      expect(relevelHeadingText('  # A #\n', 2)).toBe('  ## A #\n');
+    });
+
+    it('should re-level a heading with no text', () => {
+      expect(relevelHeadingText('##\nbody', 1)).toBe('#\nbody');
+    });
+
+    it('should rewrite a setext heading as ATX, since setext has only two levels', () => {
+      expect(relevelHeadingText('Title  \n=====\nbody\n', 3)).toBe('### Title\nbody\n');
+      expect(relevelHeadingText('Sub\r\n---\r\nbody', 1)).toBe('# Sub\r\nbody');
+      expect(relevelHeadingText('Last\n---', 2)).toBe('## Last');
+    });
+
+    it('should leave text that opens with no heading unchanged', () => {
+      expect(relevelHeadingText('plain\ntext', 2)).toBe('plain\ntext');
+      expect(relevelHeadingText('#tag line', 2)).toBe('#tag line');
     });
   });
 
@@ -109,6 +130,7 @@ describe('heading-sections', () => {
       expect(result.roots.map((node) => node.index)).toStrictEqual([0, 3]);
       expect(result.roots[0]?.children.map((node) => node.index)).toStrictEqual([1, 2]);
       expect(result.roots[1]?.children).toHaveLength(0);
+      expect(result.levels).toStrictEqual([1, 2, 2, 1]);
     });
   });
 
@@ -141,36 +163,6 @@ describe('heading-sections', () => {
     });
   });
 
-  describe('didMoveSibling', () => {
-    it('should swap a top-level section down with its next sibling', () => {
-      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(didMoveSibling(split.roots, 0, 1)).toBe(true);
-      expect(flattenTreeToOrder(split.roots)).toStrictEqual([3, 0, 1, 2]);
-    });
-
-    it('should swap a nested section without affecting other branches', () => {
-      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(didMoveSibling(split.roots, 1, 1)).toBe(true);
-      expect(flattenTreeToOrder(split.roots)).toStrictEqual([0, 2, 1, 3]);
-    });
-
-    it('should not move above the first sibling', () => {
-      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(didMoveSibling(split.roots, 0, -1)).toBe(false);
-      expect(flattenTreeToOrder(split.roots)).toStrictEqual([0, 1, 2, 3]);
-    });
-
-    it('should not move below the last sibling', () => {
-      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(didMoveSibling(split.roots, 3, 1)).toBe(false);
-    });
-
-    it('should return false when the index is not in the tree', () => {
-      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
-      expect(didMoveSibling(split.roots, 999, 1)).toBe(false);
-    });
-  });
-
   describe('joinReorderedSections', () => {
     it('should rebuild the note with a top-level section moved, keeping its descendants with it', () => {
       const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
@@ -198,6 +190,21 @@ describe('heading-sections', () => {
       const result = joinReorderedSections(split, [0, 1, 2, 3, 99]);
       expect(result).toContain('# A');
       expect(result).toContain('# B');
+    });
+
+    it('should rewrite the heading line of every section whose level changed (issue #295)', () => {
+      const split = splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS);
+      split.levels[1] = 3;
+      split.levels[3] = 2;
+      expect(joinReorderedSections(split, [0, 3, 1, 2])).toBe('intro\n\n# A\naaa\n\n## B\nbbb\n\n### A.1\na1\n\n## A.2\na2\n');
+    });
+
+    it('should keep a section\'s own level when it has no level entry', () => {
+      const split = castTo<SplitReorderableSectionsResult>({
+        ...splitIntoReorderableSections(NESTED_CONTENT, NESTED_HEADINGS),
+        levels: []
+      });
+      expect(joinReorderedSections(split, [3])).toBe('intro\n\n# B\nbbb\n');
     });
   });
 });

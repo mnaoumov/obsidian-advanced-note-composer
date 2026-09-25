@@ -5,7 +5,15 @@ interface HeadingTreeStackEntry {
   readonly node: HeadingTreeNode;
 }
 
-const MINIMUM_SIBLING_GROUP_SIZE = 2;
+const MINIMUM_MOVABLE_HEADING_COUNT = 2;
+
+/**
+ * The deepest heading level markdown defines.
+ */
+export const MAX_REORDERED_HEADING_LEVEL = 6;
+
+const ATX_HEADING_PREFIX_REG_EXP = /^ {0,3}#{1,6}(?=\s|$)/;
+const SETEXT_HEADING_REG_EXP = /^[^\n]*\n {0,3}(?:=+|-+)[ \t]*(?=\r?\n|$)/;
 
 /**
  * A single row of the flattened, indented heading list shown in the reorder modal.
@@ -82,6 +90,13 @@ export interface HeadingTreeNode {
  */
 export interface SplitReorderableSectionsResult {
   /**
+   * The level each section's heading WILL have, indexed like {@link SplitReorderableSectionsResult.sections}
+   * (mutable — a move under another parent re-levels the moved subtree in place, issue #295). Starts as each
+   * section's own level; {@link joinReorderedSections} rewrites every heading line whose entry differs.
+   */
+  readonly levels: number[];
+
+  /**
    * The content before the first heading, kept in place (never reordered).
    */
   readonly preamble: string;
@@ -95,37 +110,6 @@ export interface SplitReorderableSectionsResult {
    * The flat heading sections, in document order (indexed by {@link HeadingTreeNode.index}).
    */
   readonly sections: HeadingSection[];
-}
-
-/**
- * Swaps the tree node with the given section index with its same-parent sibling `delta` places away,
- * mutating the tree in place. Only same-parent siblings are ever exchanged, so each moved section keeps
- * its descendants.
- *
- * @param roots - The tree roots.
- * @param index - The section index of the node to move.
- * @param delta - The signed sibling offset (`-1` up, `+1` down).
- * @returns `true` when the node was moved, `false` when the move was out of range or the node was not found.
- */
-export function didMoveSibling(roots: HeadingTreeNode[], index: number, delta: number): boolean {
-  const siblings = findSiblingList(roots, index);
-  if (!siblings) {
-    return false;
-  }
-  const position = siblings.findIndex((node) => node.index === index);
-  const target = position + delta;
-  if (target < 0 || target >= siblings.length) {
-    return false;
-  }
-  const current = siblings[position];
-  const swapped = siblings[target];
-  /* v8 ignore next 3 -- position (from a found node) and target (range-checked) are always in bounds. */
-  if (!current || !swapped) {
-    return false;
-  }
-  siblings[position] = swapped;
-  siblings[target] = current;
-  return true;
 }
 
 /**
@@ -180,14 +164,15 @@ export function flattenTreeToOrder(roots: readonly HeadingTreeNode[]): number[] 
 }
 
 /**
- * Whether the note has at least one group of two or more same-parent sibling headings that could be
- * reordered (top-level siblings or nested siblings at any level).
+ * Whether the note has anything `Reorder headings` could move. Since issue #295 a heading can move under a
+ * different parent, so any two headings are enough: siblings can be swapped, and a lone child can be lifted
+ * out of its parent.
  *
  * @param headings - The note's heading cache entries.
- * @returns `true` when there is a reorderable sibling group.
+ * @returns `true` when the note has at least two headings.
  */
-export function hasReorderableSiblings(headings: readonly HeadingCache[]): boolean {
-  return hasSiblingGroup(buildTree(headings));
+export function hasMovableHeadings(headings: readonly HeadingCache[]): boolean {
+  return headings.length >= MINIMUM_MOVABLE_HEADING_COUNT;
 }
 
 /**
@@ -195,7 +180,9 @@ export function hasReorderableSiblings(headings: readonly HeadingCache[]): boole
  * first; the sections are emitted in `order`, each trimmed of trailing whitespace and separated by a
  * single blank line (inter-section spacing is normalized), with a trailing newline. Because each moved
  * section keeps its descendants adjacent (they are emitted right after it in `order`), nesting is
- * preserved. Any out-of-range index in `order` is skipped defensively.
+ * preserved. A section whose entry in {@link SplitReorderableSectionsResult.levels} differs from its own
+ * level has its heading line rewritten to that level. Any out-of-range index in `order` is skipped
+ * defensively.
  *
  * @param split - The split note (preamble + sections).
  * @param order - A permutation of section indices giving the new order.
@@ -209,11 +196,40 @@ export function joinReorderedSections(split: SplitReorderableSectionsResult, ord
   }
   for (const index of order) {
     const section = split.sections[index];
-    if (section) {
-      parts.push(section.text.trimEnd());
+    if (!section) {
+      continue;
     }
+    const level = split.levels[index] ?? section.level;
+    const text = level === section.level ? section.text : relevelHeadingText(section.text, level);
+    parts.push(text.trimEnd());
   }
   return `${parts.join('\n\n')}\n`;
+}
+
+/**
+ * Rewrites the heading that opens a section's text to the given level. An ATX heading keeps everything but
+ * its `#` run; a setext heading (`Text` underlined by `===` / `---`) is rewritten as ATX, since setext has
+ * only two levels. Text that opens with neither is returned unchanged.
+ *
+ * @param text - The section text, starting at its heading.
+ * @param level - The new level.
+ * @returns The section text with its heading re-leveled.
+ */
+export function relevelHeadingText(text: string, level: number): string {
+  const hashes = '#'.repeat(level);
+  const atxMatch = ATX_HEADING_PREFIX_REG_EXP.exec(text);
+  if (atxMatch) {
+    // The match is the indentation followed by the `#` run, so dropping the `#`s leaves the indentation.
+    return `${atxMatch[0].replaceAll('#', '')}${hashes}${text.slice(atxMatch[0].length)}`;
+  }
+
+  const setextMatch = SETEXT_HEADING_REG_EXP.exec(text);
+  if (!setextMatch) {
+    return text;
+  }
+
+  const headingText = text.slice(0, text.indexOf('\n')).trim();
+  return `${hashes} ${headingText}${text.slice(setextMatch[0].length)}`;
 }
 
 /**
@@ -228,7 +244,7 @@ export function joinReorderedSections(split: SplitReorderableSectionsResult, ord
 export function splitIntoReorderableSections(content: string, headings: readonly HeadingCache[]): SplitReorderableSectionsResult {
   const first = headings[0];
   if (!first) {
-    return { preamble: content, roots: [], sections: [] };
+    return { levels: [], preamble: content, roots: [], sections: [] };
   }
   const sections: HeadingSection[] = headings.map((heading, index) => {
     const start = heading.position.start.offset;
@@ -241,7 +257,7 @@ export function splitIntoReorderableSections(content: string, headings: readonly
     };
   });
   const preamble = content.slice(0, first.position.start.offset);
-  return { preamble, roots: buildTree(headings), sections };
+  return { levels: sections.map((section) => section.level), preamble, roots: buildTree(headings), sections };
 }
 
 function buildTree(headings: readonly HeadingCache[]): HeadingTreeNode[] {
@@ -263,21 +279,4 @@ function buildTree(headings: readonly HeadingCache[]): HeadingTreeNode[] {
     stack.push({ level: heading.level, node });
   }
   return roots;
-}
-
-function findSiblingList(nodes: HeadingTreeNode[], index: number): HeadingTreeNode[] | null {
-  if (nodes.some((node) => node.index === index)) {
-    return nodes;
-  }
-  for (const node of nodes) {
-    const found = findSiblingList(node.children, index);
-    if (found) {
-      return found;
-    }
-  }
-  return null;
-}
-
-function hasSiblingGroup(nodes: readonly HeadingTreeNode[]): boolean {
-  return nodes.length >= MINIMUM_SIBLING_GROUP_SIZE || nodes.some((node) => hasSiblingGroup(node.children));
 }

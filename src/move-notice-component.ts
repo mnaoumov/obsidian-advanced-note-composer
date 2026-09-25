@@ -21,7 +21,7 @@ import type {
 } from './move-selection-buffer.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
-import { hasReorderableSiblings } from './heading-sections.ts';
+import { hasMovableHeadings } from './heading-sections.ts';
 import { reopenMarkedSourceNote } from './marked-source-handoff.ts';
 
 /**
@@ -286,7 +286,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
         definitions.push({
           // Enablement is read off the MARKED note, not the active editor (unlike the move buttons): this
           // button acts on the source note wherever the user happens to be.
-          getIsEnabled: () => hasReorderableSiblings(this.app.metadataCache.getFileCache(sourceFile)?.headings ?? []),
+          getIsEnabled: () => hasMovableHeadings(this.app.metadataCache.getFileCache(sourceFile)?.headings ?? []),
           label: 'Reorder headings...',
           onClick: (): void => {
             invokeAsyncSafely(() => this.runOnMarkedHeading(this.reorderHeadingsHandler));
