@@ -23,12 +23,12 @@
  * because Android's own selection toolbar covers the dialog title (the repo's
  * `AGENTS.md` has the detail).
  *
- * **The two keyboard frames are NOT byte-reproducible**: a device capture
- * carries the status bar, and its clock and battery change between runs. The
- * harness's `paintOutStatusBar`, which the link picker's suite uses to fix
- * exactly that, arrived in a later `obsidian-integration-testing` major than
- * this repo is on; adopting it is part of that bump, not of these frames. The
- * blinking caret, which the same suite also found, is simply not drawn.
+ * **The two keyboard frames have their status bar PAINTED OUT**: a device
+ * capture carries it, and its clock and battery change between runs, so the
+ * frame would never reproduce. The harness's `paintOutStatusBar` fills the band
+ * with the background under it, after checking the band holds nothing of the
+ * app. The blinking caret, which is the other nondeterminism, is simply not
+ * drawn.
  *
  * There is no mobile equivalent of the desktop viewport override, so the capture
  * is always the device's own framebuffer. The fix is to make the DEVICE the
@@ -51,6 +51,7 @@ import {
   captureObsidianScreenshot,
   evalInObsidian,
   labelScreenshot,
+  paintOutStatusBar,
   parseInputMethodState,
   raiseSoftKeyboard,
   readPngDimensions,
@@ -138,6 +139,14 @@ const PROMPT_INPUT_SELECTOR = '.modal-container .prompt-input';
  * page reports the keyboard, so the device's own answer is the only one there is.
  */
 const INPUT_SHOWN_STATE = 'mInputShown=true';
+
+/**
+ * The status bar's height on the `obsidian_screenshots` AVD, in framebuffer
+ * pixels: 24dp at density 320. Measured on a frame, not derived — the harness
+ * refuses to paint a band whose bottom row is not one flat color, so a stale
+ * number fails the capture rather than painting over the app.
+ */
+const STATUS_BAR_HEIGHT_IN_PIXELS = 48;
 
 const KEYBOARD_RETRACT_DELAY_IN_MILLISECONDS = 900;
 const KEYBOARD_SETTLE_DELAY_IN_MILLISECONDS = 900;
@@ -566,30 +575,6 @@ async function runPickerAndCapture(commandId: string, index: number, caption: st
 }
 
 /**
- * Replaces the open suggester's text and lets it re-render its rows.
- *
- * @param value - The new text.
- * @returns The text the field held before.
- */
-async function setPromptInputValue(value: string): Promise<string> {
-  return await evalInObsidian({
-    callback({ inputSelector, newValue }): string {
-      const input = document.querySelector(inputSelector);
-      if (!(input instanceof HTMLInputElement)) {
-        throw new TypeError('The picker has no input.');
-      }
-
-      const oldValue = input.value;
-      input.value = newValue;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      return oldValue;
-    },
-    input: { inputSelector: PROMPT_INPUT_SELECTOR, newValue: value },
-    vaultPath: vaultPath()
-  });
-}
-
-/**
  * Captures the page, captions it, and writes it as
  * `images/screenshots/screenshot-mobile-<index>.png`.
  *
@@ -602,7 +587,7 @@ async function shoot(index: number, caption: string): Promise<void> {
 
 /**
  * Raises the soft keyboard on the open suggester, captures the DEVICE
- * framebuffer, captions it, and writes it as
+ * framebuffer, paints its status bar out, captions it, and writes it as
  * `images/screenshots/screenshot-mobile-<index>.png`.
  *
  * The device capture, not the page one: `captureObsidianScreenshot` photographs
@@ -615,26 +600,21 @@ async function shootWithSoftKeyboard(index: number, caption: string): Promise<vo
   await lowerSoftKeyboard();
   await hideCaret();
 
-  // The touch that raises the IME lands in the middle of the field, and when it
-  // lands inside TEXT Chromium draws a selection handle under the caret, which
-  // the framebuffer photographs. So the `Extract` picker's seeded name is taken
-  // out for the touch and put back afterwards (later harness versions do this
-  // themselves; 12.x does not).
-  const query = await setPromptInputValue('');
-
+  // The harness empties the field for the touch and writes the `Extract`
+  // picker's seeded name back afterwards, because a touch that lands inside TEXT
+  // makes Chromium draw a selection handle the framebuffer would photograph.
   await raiseSoftKeyboard({
     deviceId,
     inputSelector: PROMPT_INPUT_SELECTOR,
     vaultPath: vaultPath()
   });
 
-  await setPromptInputValue(query);
-
   // The write-back says nothing about the rows the suggester re-renders off it,
   // and the frame is the painted result, so it waits for the paint.
   await sleepInNode(KEYBOARD_SETTLE_DELAY_IN_MILLISECONDS);
 
-  await writeFrame(index, caption, await captureDeviceScreenshot({ deviceId }));
+  const captured = await captureDeviceScreenshot({ deviceId });
+  await writeFrame(index, caption, await paintOutStatusBar(captured, { heightInPixels: STATUS_BAR_HEIGHT_IN_PIXELS }));
 }
 
 function vaultPath(): string {
