@@ -434,6 +434,8 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // `includePaths` / `excludePaths`, which is the suffix `plugin-settings-component.test.ts` derives the
     // path-list roster from off the prototype.
     this.registerValidator('keepSeparateFolderNames', pathsValidator);
+    // Issue #296's sibling IS a path list, with the same all-or-nothing fallback on a broken entry.
+    this.registerValidator('keepSeparateFolderPaths', pathsValidator);
   }
 }
 

@@ -60,3 +60,14 @@ caption: Keep folders named B separate
 ---
 await require('/demoSetup.ts').changeSettings(app, { keepSeparateFolderNames: ['B'] });
 ```
+
+To scope the rule to a place rather than a name, use **Folder paths to keep separate** (`keepSeparateFolderPaths`) instead. Its entries take the same form as the include/exclude path lists: a plain path covers that folder and everything under it, and a `/regular expression/` is tested against the full path. A folder is kept separate when either list matches it.
+
+Each path is checked at both ends of the merge. With `E` listed, nothing merged into `E` is ever combined with a same-named folder anywhere under it. With `A` listed, nothing coming out of `A` is, wherever `A` is merged. `/^E\/[^/]+$/` narrows it to the folders directly inside `E`.
+
+```code-button
+---
+caption: Keep folders inside E separate
+---
+await require('/demoSetup.ts').changeSettings(app, { keepSeparateFolderPaths: ['E'] });
+```

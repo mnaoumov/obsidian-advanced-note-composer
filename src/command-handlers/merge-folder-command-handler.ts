@@ -35,7 +35,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { getAvailableFolderPath } from '../available-folder-path.ts';
 import { isFileOrFolderCommandBlocked } from '../command-block.ts';
 import { MergeComposer } from '../composers/merge-composer.ts';
-import { shouldKeepFolderNameSeparate } from '../keep-separate-folder-names.ts';
+import {
+  shouldKeepFolderNameSeparate,
+  shouldKeepFolderPathSeparate
+} from '../keep-separate-folder-names.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { selectTargetFolderForMergeFolder } from '../modals/merge-folder-modal.ts';
 import { compareNatural } from '../natural-sort.ts';
@@ -296,10 +299,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       // #267). `getAvailableFolderPath` answers both halves at once: it hands the desired path straight
       // back when nothing occupies it, so an unlisted folder and a listed one with no clash behave
       // identically and only a real collision produces ` 1`.
-      const targetSubfolderPath = shouldKeepFolderNameSeparate({
-          folderName: sourceSubfolder.name,
-          keepSeparateFolderNames: this.pluginSettingsComponent.settings.keepSeparateFolderNames
-        })
+      // Issue #296 adds the same rule by PATH, judged at both ends of the move.
+      const targetSubfolderPath = this.shouldKeepFolderSeparate(sourceSubfolder, desiredTargetSubfolderPath)
         ? getAvailableFolderPath(this.app, desiredTargetSubfolderPath)
         : desiredTargetSubfolderPath;
       await vaultTransaction.createFolder(targetSubfolderPath);
@@ -409,6 +410,21 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
       });
       await composer.mergeFile();
     }
+  }
+
+  /**
+   * Whether a source folder must not be poured into a same-named destination folder: listed by NAME
+   * (issue #267) or by PATH (issue #296). The path list is judged against where the folder sits now AND
+   * where it would land, since "folders in folder X" can name either end of the merge.
+   *
+   * @param sourceSubfolder - The folder being merged in.
+   * @param desiredTargetSubfolderPath - Where it would land if it were not kept separate.
+   * @returns Whether it is kept separate.
+   */
+  private shouldKeepFolderSeparate(sourceSubfolder: TFolder, desiredTargetSubfolderPath: string): boolean {
+    const { keepSeparateFolderNames, keepSeparateFolderPaths } = this.pluginSettingsComponent.settings;
+    return shouldKeepFolderNameSeparate({ folderName: sourceSubfolder.name, keepSeparateFolderNames })
+      || shouldKeepFolderPathSeparate({ keepSeparateFolderPaths, paths: [sourceSubfolder.path, desiredTargetSubfolderPath] });
   }
 
   private async showIgnoredFilesNotice(ignoredSourceFiles: TFile[]): Promise<void> {
