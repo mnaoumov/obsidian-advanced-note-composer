@@ -1,6 +1,13 @@
-import type { TFile } from 'obsidian';
+import type {
+  App,
+  TFile
+} from 'obsidian';
 
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  ContextId,
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
@@ -12,6 +19,14 @@ import {
 // cover.
 // Isolation: `npx vitest run --project integration-tests:desktop src/operation-progress-dialog.desktop.integration.test.ts`.
 const PLUGIN_ID = 'advanced-note-composer';
+const SOURCE_NOTE_PATH = 'issue-289-a/shared/x.md';
+const TARGET_NOTE_PATH = 'issue-289-b/shared/y.md';
+/*
+ * The two waits done from NODE. Neither is a closure's budget, so neither is bound by the transport's
+ * ~30 s cap: a slow aggregate gets real headroom, and a genuine stall reports the phase that stalled.
+ */
+const DIALOG_SEEN_TIMEOUT_IN_MILLISECONDS = 15_000;
+const DIALOG_GONE_TIMEOUT_IN_MILLISECONDS = 20_000;
 
 interface ComponentTreeNode {
   _children?: ComponentTreeNode[];
@@ -30,69 +45,138 @@ interface SettingsCarrier {
   settings: ProgressDialogSettings;
 }
 
+/**
+ * What the phases hand to each other, on `window` in the Obsidian process.
+ */
+interface SuiteContext {
+  cancelButtonCount?: number;
+  closeButtonCount?: number;
+  isDialogSeen?: boolean;
+  observer?: MutationObserver;
+  originalSettings?: ProgressDialogSettings;
+
+  /**
+   * When setup started, as `performance.now()`, which every step is timed from.
+   */
+  startTime?: number;
+
+  /**
+   * Each step as it completes, with its time since setup, so a stall names the step it stopped after.
+   */
+  steps?: string[];
+}
+
 /*
  * Issue #289: the reporter asked for the blocking dialog's X and Cancel to go, because a cancelled
  * operation left half its notes edited. Two things were actually wrong. The X was a dead control: the
  * dialog removed `.modal-close-button`, which Obsidian renamed to `.modal-header-button` in 1.13.0. And
  * Cancel was honored only by operations whose body polled the signal - a folder swap does not, so it ran
  * on and COMMITTED. The swap is therefore the subject here: Cancel must now roll it back whole.
+ *
+ * The test runs in PHASES, each its own short eval, with the waiting done from Node. It used to be one
+ * closure, and in one aggregate run in four it died as a bare `EvalCapExceededError` - which names the
+ * transport, not the step that hung, and threw away everything the closure had observed.
  */
 describe('operation progress dialog (issue #289)', () => {
   it('shows no X, and Cancel rolls a whole folder swap back', async () => {
-    const result = await evalInObsidian({
-      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
-        /**
-         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s cap: six
-         * waits at this ceiling plus the dialog's own drain wait below. Each step settles in well under a
-         * second on a healthy machine.
-         */
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
-        const DIALOG_GONE_TIMEOUT_IN_MILLISECONDS = 8000;
-        const SOURCE_NOTE_PATH = 'issue-289-a/shared/x.md';
-        const TARGET_NOTE_PATH = 'issue-289-b/shared/y.md';
+    const contextId = new ContextId<SuiteContext>();
+    const vaultPath = getTemporaryVault().path;
 
-        const settingsComponent = findSettingsComponent();
-        const originalSettings = {
-          shouldAskBeforeSwapping: settingsComponent.settings.shouldAskBeforeSwapping,
-          shouldBlockVaultDuringOperations: settingsComponent.settings.shouldBlockVaultDuringOperations,
-          shouldShowOperationNotices: settingsComponent.settings.shouldShowOperationNotices
-        };
-
-        let closeButtonCount = -1;
-        let cancelButtonCount = -1;
-        let isDialogSeen = false;
-        const observer = new MutationObserver(() => {
-          if (isDialogSeen) {
-            return;
+    try {
+      await evalInObsidian({
+        async callback({ app, context, findSettingsComponent, obsidianModule, pluginId, sourceNotePath, targetNotePath }) {
+          const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
+          const startTime = performance.now();
+          context.startTime = startTime;
+          const steps: string[] = [];
+          context.steps = steps;
+          function step(name: string): void {
+            steps.push(`${name} +${String(Math.round(performance.now() - startTime))} ms`);
           }
-          const dialog = findProgressDialog();
-          if (!dialog) {
-            return;
-          }
-          isDialogSeen = true;
-          closeButtonCount = dialog.querySelectorAll(':scope > :is(.modal-close-button, .modal-header-button)').length;
-          const cancelButtons = [...dialog.querySelectorAll('button')].filter((button) => button.textContent === 'Cancel');
-          cancelButtonCount = cancelButtons.length;
-          // Pressed the moment the dialog appears, while the swap's renames are still in flight.
-          cancelButtons[0]?.click();
-        });
 
-        try {
+          const settingsComponent = findSettingsComponent(app, pluginId);
+          context.originalSettings = {
+            shouldAskBeforeSwapping: settingsComponent.settings.shouldAskBeforeSwapping,
+            shouldBlockVaultDuringOperations: settingsComponent.settings.shouldBlockVaultDuringOperations,
+            shouldShowOperationNotices: settingsComponent.settings.shouldShowOperationNotices
+          };
           await settingsComponent.editAndSave((settings) => {
             settings.shouldAskBeforeSwapping = false;
             settings.shouldBlockVaultDuringOperations = true;
             settings.shouldShowOperationNotices = true;
           });
+          step('settings saved');
 
-          const sourceNote = await resetFile(SOURCE_NOTE_PATH, 'X body');
-          await resetFile(TARGET_NOTE_PATH, 'Y body');
+          const sourceNote = await resetFile(sourceNotePath, 'X body');
+          await resetFile(targetNotePath, 'Y body');
+          step('notes written');
 
           await app.workspace.getLeaf(false).openFile(sourceNote);
-          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === SOURCE_NOTE_PATH, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await (async (): Promise<void> => {
+            const deadline = performance.now() + WAIT_TIMEOUT_IN_MILLISECONDS;
+            while (app.workspace.getActiveFile()?.path !== sourceNotePath) {
+              if (performance.now() > deadline) {
+                throw new Error('The source note did not become active.');
+              }
+              await sleep(50);
+            }
+          })();
+          step('source note active');
 
-          observer.observe(document.body, { childList: true, subtree: true });
+          async function resetFile(path: string, content: string): Promise<TFile> {
+            const existing = app.vault.getAbstractFileByPath(path);
+            if (existing instanceof obsidianModule.TFile) {
+              await app.vault.modify(existing, content);
+              return existing;
+            }
+            const parentPath = path.slice(0, path.lastIndexOf('/'));
+            if (parentPath && app.vault.getAbstractFileByPath(parentPath) === null) {
+              await app.vault.createFolder(parentPath);
+            }
+            return app.vault.create(path, content);
+          }
+        },
+        contextId,
+        input: { findSettingsComponent: findSettingsComponentInObsidian, pluginId: PLUGIN_ID, sourceNotePath: SOURCE_NOTE_PATH, targetNotePath: TARGET_NOTE_PATH },
+        vaultPath
+      });
+
+      await evalInObsidian({
+        async callback({ app, context, findProgressDialog, lib: { pressKey, waitUntil }, pluginId }) {
+          // Three waits share this ceiling, well inside the transport's ~30 s cap.
+          const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
+          const steps = context.steps ?? [];
+          const startTime = context.startTime ?? performance.now();
+          function step(name: string): void {
+            steps.push(`${name} +${String(Math.round(performance.now() - startTime))} ms`);
+          }
+
+          context.isDialogSeen = false;
+          context.observer = new MutationObserver(() => {
+            if (context.isDialogSeen) {
+              return;
+            }
+            const dialog = findProgressDialog();
+            if (!dialog) {
+              return;
+            }
+            context.isDialogSeen = true;
+            context.closeButtonCount = dialog.querySelectorAll(':scope > :is(.modal-close-button, .modal-header-button)').length;
+            const cancelButtons = [...dialog.querySelectorAll('button')].filter((button) => button.textContent === 'Cancel');
+            context.cancelButtonCount = cancelButtons.length;
+            step('progress dialog seen, Cancel clicked');
+            // Pressed the moment the dialog appears, while the swap's renames are still in flight.
+            cancelButtons[0]?.click();
+          });
+          context.observer.observe(document.body, { childList: true, subtree: true });
+
           app.commands.executeCommandById(`${pluginId}:swap-folder`);
-          await waitUntil({ predicate: () => document.querySelector('.prompt-input') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await waitUntil({
+            message: 'the swap folder picker did not open',
+            predicate: () => document.querySelector('.prompt-input') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          step('picker open');
 
           const input = document.querySelector('.prompt-input');
           if (!(input instanceof HTMLInputElement)) {
@@ -101,82 +185,151 @@ describe('operation progress dialog (issue #289)', () => {
           input.value = 'issue-289-b/shared';
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await waitUntil({
+            message: 'the swap target was not suggested',
             predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes('issue-289-b/shared')),
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           input.focus();
           await pressKey({ key: 'Enter' });
+          step('target chosen');
+        },
+        contextId,
+        input: { findProgressDialog: findProgressDialogInObsidian, pluginId: PLUGIN_ID },
+        vaultPath
+      });
 
-          await waitUntil({ predicate: () => isDialogSeen, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
-          await waitUntil({ predicate: () => findProgressDialog() === null, timeoutInMilliseconds: DIALOG_GONE_TIMEOUT_IN_MILLISECONDS });
+      await pollInObsidian({
+        contextId,
+        input: { findProgressDialog: findProgressDialogInObsidian },
+        poll: ({ context, findProgressDialog: findDialog }) => ({
+          isDialogGone: findDialog() === null,
+          isDialogSeen: context.isDialogSeen ?? false
+        }),
+        timeoutInMilliseconds: DIALOG_SEEN_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the progress dialog never appeared',
+        until: (status) => status.isDialogSeen,
+        vaultPath
+      }).catch(async (error: unknown) => {
+        throw await describeStall(contextId, vaultPath, error);
+      });
 
+      await pollInObsidian({
+        contextId,
+        input: { findProgressDialog: findProgressDialogInObsidian },
+        poll: ({ findProgressDialog: findDialog }) => findDialog() === null,
+        timeoutInMilliseconds: DIALOG_GONE_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the progress dialog did not close after Cancel',
+        until: (isDialogGone) => isDialogGone,
+        vaultPath
+      }).catch(async (error: unknown) => {
+        throw await describeStall(contextId, vaultPath, error);
+      });
+
+      const result = await evalInObsidian({
+        callback({ app, context, sourceNotePath, targetNotePath }) {
           return {
-            cancelButtonCount,
-            closeButtonCount,
-            isSourceInPlace: app.vault.getAbstractFileByPath(SOURCE_NOTE_PATH) !== null,
-            isTargetInPlace: app.vault.getAbstractFileByPath(TARGET_NOTE_PATH) !== null
+            cancelButtonCount: context.cancelButtonCount ?? -1,
+            closeButtonCount: context.closeButtonCount ?? -1,
+            isSourceInPlace: app.vault.getAbstractFileByPath(sourceNotePath) !== null,
+            isTargetInPlace: app.vault.getAbstractFileByPath(targetNotePath) !== null
           };
-        } finally {
-          observer.disconnect();
-          await settingsComponent.editAndSave((settings) => {
+        },
+        contextId,
+        input: { sourceNotePath: SOURCE_NOTE_PATH, targetNotePath: TARGET_NOTE_PATH },
+        vaultPath
+      });
+
+      expect(result.closeButtonCount).toBe(0);
+      expect(result.cancelButtonCount).toBe(1);
+      // Rolled back whole: each note is still in the folder it started in.
+      expect(result.isSourceInPlace).toBe(true);
+      expect(result.isTargetInPlace).toBe(true);
+    } finally {
+      await evalInObsidian({
+        async callback({ app, context, findSettingsComponent, pluginId }) {
+          context.observer?.disconnect();
+          const { originalSettings } = context;
+          if (!originalSettings) {
+            return;
+          }
+          await findSettingsComponent(app, pluginId).editAndSave((settings) => {
             settings.shouldAskBeforeSwapping = originalSettings.shouldAskBeforeSwapping;
             settings.shouldBlockVaultDuringOperations = originalSettings.shouldBlockVaultDuringOperations;
             settings.shouldShowOperationNotices = originalSettings.shouldShowOperationNotices;
           });
-        }
-
-        function findProgressDialog(): HTMLElement | null {
-          for (const modalEl of document.querySelectorAll<HTMLElement>('.modal')) {
-            if (modalEl.querySelector('.modal-title')?.textContent === 'Working...') {
-              return modalEl;
-            }
-          }
-          return null;
-        }
-
-        function findSettingsComponent(): SettingsCarrier {
-          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
-          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
-          while (queue.length > 0) {
-            const node = queue.shift();
-            if (!node) {
-              continue;
-            }
-            if (isSettingsComponent(node)) {
-              return node;
-            }
-            if (node._children) {
-              queue.push(...node._children);
-            }
-          }
-          throw new Error('Settings component was not found.');
-        }
-
-        function isSettingsComponent(node: ComponentTreeNode): node is SettingsCarrier {
-          return typeof node.editAndSave === 'function' && typeof node.settings?.shouldBlockVaultDuringOperations === 'boolean';
-        }
-
-        async function resetFile(path: string, content: string): Promise<TFile> {
-          const existing = app.vault.getAbstractFileByPath(path);
-          if (existing instanceof obsidianModule.TFile) {
-            await app.vault.modify(existing, content);
-            return existing;
-          }
-          const parentPath = path.slice(0, path.lastIndexOf('/'));
-          if (parentPath && app.vault.getAbstractFileByPath(parentPath) === null) {
-            await app.vault.createFolder(parentPath);
-          }
-          return app.vault.create(path, content);
-        }
-      },
-      input: { pluginId: PLUGIN_ID },
-      vaultPath: getTemporaryVault().path
-    });
-
-    expect(result.closeButtonCount).toBe(0);
-    expect(result.cancelButtonCount).toBe(1);
-    // Rolled back whole: each note is still in the folder it started in.
-    expect(result.isSourceInPlace).toBe(true);
-    expect(result.isTargetInPlace).toBe(true);
+        },
+        contextId,
+        input: { findSettingsComponent: findSettingsComponentInObsidian, pluginId: PLUGIN_ID },
+        vaultPath
+      });
+      await contextId.dispose(vaultPath);
+    }
   });
 });
+
+/**
+ * Turns a phase timeout into an error that also says which steps completed and what the app looked like.
+ *
+ * @param contextId - The suite's context.
+ * @param vaultPath - The vault.
+ * @param error - What the poll rejected with.
+ * @returns The error to throw.
+ */
+async function describeStall(contextId: ContextId<SuiteContext>, vaultPath: string, error: unknown): Promise<Error> {
+  const state = await evalInObsidian({
+    callback({ app, context, findProgressDialog: findDialog, sourceNotePath, targetNotePath }) {
+      return {
+        dialogText: findDialog()?.textContent ?? null,
+        isSourceInPlace: app.vault.getAbstractFileByPath(sourceNotePath) !== null,
+        isTargetInPlace: app.vault.getAbstractFileByPath(targetNotePath) !== null,
+        lockIndicatorCount: document.querySelectorAll('.obsidian-dev-utils-lock-indicator').length,
+        modalTitles: [...document.querySelectorAll('.modal')].map((modalEl) => modalEl.querySelector('.modal-title')?.textContent ?? '<untitled>'),
+        steps: context.steps ?? []
+      };
+    },
+    contextId,
+    input: { findProgressDialog: findProgressDialogInObsidian, sourceNotePath: SOURCE_NOTE_PATH, targetNotePath: TARGET_NOTE_PATH },
+    vaultPath
+  });
+  return new Error(`${String(error)} | state when the suite gave up: ${JSON.stringify(state)}`);
+}
+
+/**
+ * Finds the plugin's blocking progress dialog. Runs inside Obsidian, passed through `input`.
+ *
+ * @returns The dialog's element, or `null` when none is open.
+ */
+function findProgressDialogInObsidian(): HTMLElement | null {
+  for (const modalEl of document.querySelectorAll<HTMLElement>('.modal')) {
+    if (modalEl.querySelector('.modal-title')?.textContent === 'Working...') {
+      return modalEl;
+    }
+  }
+  return null;
+}
+
+/**
+ * Finds the plugin's settings component by walking its component tree. Runs inside Obsidian, passed through
+ * `input`.
+ *
+ * @param app - The app.
+ * @param pluginId - The plugin.
+ * @returns The settings component.
+ */
+function findSettingsComponentInObsidian(app: App, pluginId: string): SettingsCarrier {
+  const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+  const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (!node) {
+      continue;
+    }
+    if (typeof node.editAndSave === 'function' && typeof node.settings?.shouldBlockVaultDuringOperations === 'boolean') {
+      return node as SettingsCarrier;
+    }
+    if (node._children) {
+      queue.push(...node._children);
+    }
+  }
+  throw new Error('Settings component was not found.');
+}

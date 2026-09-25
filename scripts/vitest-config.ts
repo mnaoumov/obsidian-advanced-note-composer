@@ -73,6 +73,13 @@ const INTEGRATION_TEST_SETUP_FILE = './scripts/integration-test-setup.ts';
 const INTEGRATION_TEST_VAULT_RESET_FILE = './scripts/integration-test-vault-reset.ts';
 
 /**
+ * Per-test error recording: every `console.error`, uncaught error and unhandled rejection inside Obsidian is
+ * attached to the report of a test that FAILS, so an aggregate-only one-off carries its own stack instead of
+ * pointing at the console of an Obsidian the harness has already closed.
+ */
+const INTEGRATION_TEST_ERROR_RECORDER_FILE = './scripts/integration-test-error-recorder.ts';
+
+/**
  * Normalizes vitest's `string | string[]` setup-file field so a new entry can be appended without
  * assuming which shape the shared configuration used.
  *
@@ -163,6 +170,7 @@ export const config = defineObsidianPluginVitestConfig({
     context.desktop.setupFiles = [
       ...toSetupFileList(context.desktop.setupFiles),
       INTEGRATION_TEST_SETUP_FILE,
+      INTEGRATION_TEST_ERROR_RECORDER_FILE,
       INTEGRATION_TEST_VAULT_RESET_FILE
     ];
   }
