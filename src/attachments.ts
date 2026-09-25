@@ -15,14 +15,20 @@ import {
   getAttachmentFilePath,
   isAtProperAttachmentPath
 } from 'obsidian-dev-utils/obsidian/attachment-path';
+import { findAttachmentUnitFolderPath } from 'obsidian-dev-utils/obsidian/attachment-unit-folder';
 import {
   isFile,
   isMarkdownFile,
   isTreatedAsAttachment
 } from 'obsidian-dev-utils/obsidian/file-system';
+import {
+  dirname,
+  join
+} from 'obsidian-dev-utils/path';
 
 import type { Selection } from './composers/composer-base.ts';
 
+import { getAvailableFolderPath } from './available-folder-path.ts';
 import { compareNatural } from './natural-sort.ts';
 
 /**
@@ -60,6 +66,53 @@ export interface AttachmentToRelocate {
    * file — the note at whose proper attachment path it already sits.
    */
   readonly ownerNoteFile: TFile;
+}
+
+/**
+ * One attachment unit folder move (issue #298): the unit, the collected file inside it whose destination
+ * decides where the unit lands, and the notes that file moved between.
+ */
+export interface AttachmentUnitFolderRelocation {
+  /**
+   * The collected attachment inside the unit. The unit lands in the folder this file would have been
+   * moved to on its own.
+   */
+  readonly memberFile: TFile;
+
+  /**
+   * The note the unit now belongs to; its attachment folder is the destination.
+   */
+  readonly newNoteFile: TFile;
+
+  /**
+   * The note the member file used to belong to.
+   */
+  readonly oldNoteFile: TFile;
+
+  /**
+   * The unit folder to move whole.
+   */
+  readonly unitFolder: TFolder;
+}
+
+/**
+ * One attachment unit folder about to move whole (issue #298).
+ */
+export interface AttachmentUnitFolderToRelocate {
+  /**
+   * The first collected attachment inside the unit, by path. Its destination decides where the unit lands.
+   */
+  readonly memberFile: TFile;
+
+  /**
+   * The note {@link memberFile} belongs to.
+   */
+  readonly ownerNoteFile: TFile;
+
+  /**
+   * The unit folder itself.
+   */
+  readonly unitFolder: TFolder;
 }
 
 /**
@@ -130,6 +183,42 @@ export interface CollectAttachmentsToRelocateParams {
 }
 
 /**
+ * Parameters for {@link groupAttachmentsByUnitFolder}.
+ */
+export interface GroupAttachmentsByUnitFolderParams {
+  /**
+   * The Obsidian application instance, whose patched `Vault.getAvailablePathForAttachments` carries the
+   * unit-folder designation.
+   */
+  readonly app: App;
+
+  /**
+   * The attachments collected under {@link folder}.
+   */
+  readonly attachments: readonly AttachmentToRelocate[];
+
+  /**
+   * The folder being merged. Only a unit strictly inside it is this operation's to move.
+   */
+  readonly folder: TFolder;
+}
+
+/**
+ * What {@link groupAttachmentsByUnitFolder} splits a folder's collected attachments into.
+ */
+export interface GroupedAttachments {
+  /**
+   * The attachments that move one file at a time.
+   */
+  readonly attachments: AttachmentToRelocate[];
+
+  /**
+   * The attachment unit folders that move whole.
+   */
+  readonly unitFolders: AttachmentUnitFolderToRelocate[];
+}
+
+/**
  * Parameters for {@link relocateAttachments}.
  */
 export interface RelocateAttachmentsParams {
@@ -142,6 +231,26 @@ export interface RelocateAttachmentsParams {
    * The moves to perform.
    */
   readonly relocations: readonly AttachmentRelocation[];
+
+  /**
+   * The transaction to route the renames through, so they are reversed if the operation is cancelled.
+   */
+  readonly vaultTransaction: VaultTransaction;
+}
+
+/**
+ * Parameters for {@link relocateAttachmentUnitFolders}.
+ */
+export interface RelocateAttachmentUnitFoldersParams {
+  /**
+   * The Obsidian application instance.
+   */
+  readonly app: App;
+
+  /**
+   * The unit folder moves to perform.
+   */
+  readonly relocations: readonly AttachmentUnitFolderRelocation[];
 
   /**
    * The transaction to route the renames through, so they are reversed if the operation is cancelled.
@@ -348,6 +457,54 @@ export async function collectAttachmentsToRelocate(params: CollectAttachmentsToR
 }
 
 /**
+ * Splits a folder's collected attachments into the files that move one at a time and the attachment unit
+ * folders that move whole (issue #298). A unit folder is one attachment by designation — a saved web page's
+ * `_files/` folder, say — so relocating its files one by one into the note's attachment folder would tear
+ * it apart and break the links inside it.
+ *
+ * The designation is read back through `obsidian-dev-utils` {@link findAttachmentUnitFolderPath}, from
+ * whatever an attachment-location plugin published, so this plugin and that one agree on what a unit is. A
+ * vault where nothing is published has no units, and every attachment comes back as a loose file.
+ *
+ * A unit moves when ANY of its files was collected, i.e. when the merged notes reference something in it
+ * (or it sits at their proper attachment path); a unit none of them touch is not collected and stays put.
+ * A unit that is not strictly inside the merged folder is not this operation's business: its files are
+ * dropped rather than moved one by one. The command is not offered on a folder inside a unit, so this is a
+ * guard rather than a path the menu reaches.
+ *
+ * @param params - The collected attachments, the merged folder and the app.
+ * @returns The loose attachments and the unit folders, both in path order.
+ */
+export function groupAttachmentsByUnitFolder(params: GroupAttachmentsByUnitFolderParams): GroupedAttachments {
+  const { app, attachments, folder } = params;
+  const folderPrefix = folder.isRoot() ? '' : `${folder.path}/`;
+  const looseAttachments: AttachmentToRelocate[] = [];
+  const unitFolders = new Map<string, AttachmentUnitFolderToRelocate>();
+
+  for (const attachment of attachments) {
+    const unitFolderPath = findAttachmentUnitFolderPath({ app, attachmentPath: attachment.file.path });
+    if (unitFolderPath === null) {
+      looseAttachments.push(attachment);
+      continue;
+    }
+    if (!unitFolderPath.startsWith(folderPrefix) || unitFolders.has(unitFolderPath)) {
+      continue;
+    }
+    const unitFolder = app.vault.getFolderByPath(unitFolderPath);
+    /* v8 ignore next 3 -- defensive: a collected file's ancestor folder always resolves. */
+    if (!unitFolder) {
+      continue;
+    }
+    unitFolders.set(unitFolderPath, { memberFile: attachment.file, ownerNoteFile: attachment.ownerNoteFile, unitFolder });
+  }
+
+  return {
+    attachments: looseAttachments,
+    unitFolders: [...unitFolders.values()].sort((a, b) => compareNatural(a.unitFolder.path, b.unitFolder.path))
+  };
+}
+
+/**
  * Moves each attachment to the attachment folder of the note it now belongs to, through the given
  * transaction so a cancelled operation puts everything back. The rename is the vault's own, so links to
  * the attachment are updated for us.
@@ -377,6 +534,38 @@ export async function relocateAttachments(params: RelocateAttachmentsParams): Pr
       oldNoteFile: relocation.oldNoteFile
     });
     await vaultTransaction.rename(relocation.attachment, newPath);
+  }
+}
+
+/**
+ * Moves each attachment unit folder WHOLE into the attachment folder of the note it now belongs to (issue
+ * #298), through the given transaction so a cancelled operation puts it back. The unit lands in the folder
+ * its member file would have been moved to on its own, under its own name — the way Custom Attachment
+ * Location moves one — so its internal shape, and the relative links inside it, are untouched. The name is
+ * de-duplicated as a FOLDER, so a unit called `page.v2_files` does not become `page 1.v2_files`.
+ *
+ * A unit already sitting in that folder stays where it is: renaming it onto its own name would only
+ * de-duplicate it against itself.
+ *
+ * @param params - The moves and the transaction to route them through.
+ */
+export async function relocateAttachmentUnitFolders(params: RelocateAttachmentUnitFoldersParams): Promise<void> {
+  const { app, relocations, vaultTransaction } = params;
+  for (const relocation of relocations) {
+    const memberDestination = await resolveAttachmentDestination({
+      app,
+      attachment: relocation.memberFile,
+      newNoteFile: relocation.newNoteFile,
+      oldNoteFile: relocation.oldNoteFile
+    });
+    const memberDestinationFolderPath = dirname(memberDestination);
+    // A destination at the vault root has no folder part, which `dirname` reports as `.`.
+    const destinationFolderPath = memberDestinationFolderPath === '.' ? '' : normalizeFolderPath(memberDestinationFolderPath);
+    if (destinationFolderPath === normalizeFolderPath(relocation.unitFolder.parent?.path)) {
+      continue;
+    }
+    const newPath = getAvailableFolderPath(app, join(destinationFolderPath, relocation.unitFolder.name));
+    await vaultTransaction.rename(relocation.unitFolder, newPath);
   }
 }
 

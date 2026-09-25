@@ -58,6 +58,17 @@ await require('/demoSetup.ts').changeSettings(app, { shouldOpenNoteAfterMergingF
 
 Markdown files that are really attachments are never merged - **Attachment extensions** (default `.excalidraw.md`) lists them, written out in full with the leading dot, so an Excalidraw drawing stored as `sketch.excalidraw.md` keeps its raw payload out of the merged note and is relocated with the other attachments instead. The same applies to [`Merge current folder with another folder...`](<../01 Merge/02 Merge folder.md>): a drawing is moved into the destination folder like any other attachment — de-duplicated if one of the same name is already there — rather than merged into it.
 
+### Attachment unit folders
+
+[Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) lets you mark folders as **attachment unit folders**: folders that are one attachment as a whole, like the `_files` folder saved next to a web page. The merge treats each of them as one attachment:
+
+- Nothing inside a unit folder is merged, not even a markdown note, and it gets no heading of its own.
+- With **Should move attachments when merging a folder** on, a unit folder that a merged note references is moved **whole** into the merged note's attachment folder, under its own name, so the links inside it keep working. A unit folder nothing references stays where it is.
+- The emptied-folder cleanup never removes a folder inside a unit, even an empty one.
+- The command is not offered on a unit folder or on any folder inside one, because merging its contents is the one thing that would break it. A folder that only *contains* unit folders still gets the command.
+
+Without an attachment-location plugin that marks unit folders, there are no unit folders, and nothing here applies.
+
 ## Emptied folders
 
 **Empty folders after merging a folder** decides what happens to the folders the merge empties: `Delete` (the default) removes the merged folder and every emptied sub-folder, `Delete sub-folders only` keeps the merged folder itself — even once it is empty — and removes every emptied folder under it however deep, `Delete with empty parents` is `Delete` plus any parent the deletion leaves empty, and `Keep` leaves everything in place. A folder still holding files is always kept.

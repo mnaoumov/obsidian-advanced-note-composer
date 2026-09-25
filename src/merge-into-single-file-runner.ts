@@ -15,7 +15,10 @@ import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
 
-import type { AttachmentToRelocate } from './attachments.ts';
+import type {
+  AttachmentToRelocate,
+  GroupedAttachments
+} from './attachments.ts';
 import type { FolderHeadingPlan } from './folder-headings.ts';
 import type { LockTarget } from './locked-transaction.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
@@ -23,7 +26,9 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import {
   collectAttachmentsOwnedByNote,
   collectAttachmentsToRelocate,
-  relocateAttachments
+  groupAttachmentsByUnitFolder,
+  relocateAttachments,
+  relocateAttachmentUnitFolders
 } from './attachments.ts';
 import { MergeComposer } from './composers/merge-composer.ts';
 import { runLockedTransaction } from './locked-transaction.ts';
@@ -187,7 +192,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   // The sources that will actually be merged away, as opposed to the ignored ones, which are left exactly
   // as they are - both their attachments and their open tabs.
   const notesToMerge = sourcesToMerge.filter((sourceFile) => !isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path));
-  const attachmentsToRelocate = await collectAttachments({
+  const { attachments: attachmentsToRelocate, unitFolders: unitFoldersToRelocate } = await collectAttachments({
     app,
     attachmentExtensions: settings.attachmentExtensions,
     folder: attachmentSourceFolder,
@@ -216,6 +221,9 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
   for (const attachment of attachmentsToRelocate) {
     lockTargets.push({ mode: 'file', pathOrFile: attachment.file });
   }
+  for (const unitFolder of unitFoldersToRelocate) {
+    lockTargets.push({ mode: 'subtree', pathOrFile: unitFolder.unitFolder.path });
+  }
 
   const abortController = new AbortController();
   try {
@@ -225,6 +233,17 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
       body: async (vaultTransaction) => {
         // Attachments move FIRST, while their notes still exist: the vault's own rename then fixes the
         // links in those notes, and each merge's link rewriting re-resolves them against the target.
+        // An attachment unit folder moves whole rather than file by file (issue #298).
+        await relocateAttachmentUnitFolders({
+          app,
+          relocations: unitFoldersToRelocate.map((unitFolder) => ({
+            memberFile: unitFolder.memberFile,
+            newNoteFile: targetFile,
+            oldNoteFile: unitFolder.ownerNoteFile,
+            unitFolder: unitFolder.unitFolder
+          })),
+          vaultTransaction
+        });
         await relocateAttachments({
           app,
           relocations: attachmentsToRelocate.map((attachment) => ({
@@ -386,10 +405,13 @@ function closeLeavesShowingFiles(app: App, files: readonly TFile[]): ClosedNoteL
  * merge — which has no folder — collects the attachments each source NOTE owns (issue #161). Neither
  * applies when the corresponding setting is off, in which case nothing moves.
  *
+ * Only the folder rule knows about attachment unit folders (issue #298): it hands back each unit a merged
+ * note touches as ONE move, so the unit is never torn apart file by file.
+ *
  * @param params - The notes, the optional folder, and which rule to apply.
- * @returns The attachments to relocate with their owning notes.
+ * @returns The attachments and attachment unit folders to relocate with their owning notes.
  */
-async function collectAttachments(params: CollectAttachmentsParams): Promise<AttachmentToRelocate[]> {
+async function collectAttachments(params: CollectAttachmentsParams): Promise<GroupedAttachments> {
   const {
     app,
     attachmentExtensions,
@@ -399,11 +421,15 @@ async function collectAttachments(params: CollectAttachmentsParams): Promise<Att
   } = params;
 
   if (folder) {
-    return await collectAttachmentsToRelocate({ app, folder, noteFiles });
+    return groupAttachmentsByUnitFolder({
+      app,
+      attachments: await collectAttachmentsToRelocate({ app, folder, noteFiles }),
+      folder
+    });
   }
 
   if (!shouldRelocateOwnedAttachments) {
-    return [];
+    return { attachments: [], unitFolders: [] };
   }
 
   const attachments = new Map<string, AttachmentToRelocate>();
@@ -412,7 +438,7 @@ async function collectAttachments(params: CollectAttachmentsParams): Promise<Att
       attachments.set(attachment.file.path, attachment);
     }
   }
-  return [...attachments.values()];
+  return { attachments: [...attachments.values()], unitFolders: [] };
 }
 
 function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, sourcePath: string, targetPath: string): boolean {

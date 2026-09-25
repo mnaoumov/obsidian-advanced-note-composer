@@ -4,26 +4,45 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   describe,
   expect,
-  it
+  it,
+  vi
 } from 'vitest';
 
+import type { AttachmentToRelocate } from './attachments.ts';
 import type { Selection } from './composers/composer-base.ts';
 
 import {
   collectAttachmentsOwnedByNote,
   collectAttachmentsReferencedBySelections,
   collectAttachmentsToRelocate,
+  groupAttachmentsByUnitFolder,
   relocateAttachments,
+  relocateAttachmentUnitFolders,
   resolveAttachmentDestination
 } from './attachments.ts';
 
 let app: AppOriginal;
+
+/**
+ * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): as a member
+ * on the patched `Vault.getAvailablePathForAttachments`, with the native resolution kept underneath.
+ *
+ * @param unitFolderPaths - The folders to designate. A folder under one is designated too, as Custom
+ * Attachment Location's plain-path entries are.
+ */
+function designateAttachmentUnitFolders(unitFolderPaths: readonly string[]): void {
+  const original = app.vault.getAvailablePathForAttachments.bind(app.vault);
+  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(original), {
+    checkIsAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
+  }));
+}
 
 function getFile(path: string): TFile {
   return ensureNonNullable(app.vault.getFileByPath(path));
@@ -452,5 +471,162 @@ describe('relocateAttachments', () => {
 
     expect(await app.vault.adapter.exists('Docs/img.png')).toBe(true);
     expect(await app.vault.adapter.exists('img.png')).toBe(false);
+  });
+});
+
+describe('groupAttachmentsByUnitFolder', () => {
+  function toAttachments(paths: readonly string[], ownerPath: string): AttachmentToRelocate[] {
+    return paths.map((path) => ({ file: getFile(path), ownerNoteFile: getFile(ownerPath) }));
+  }
+
+  it('should hand every attachment back loose when no designation is published', () => {
+    initApp({
+      'Docs/note.md': '',
+      'Docs/page_files/img.png': 'PIC'
+    });
+
+    const grouped = groupAttachmentsByUnitFolder({
+      app,
+      attachments: toAttachments(['Docs/page_files/img.png'], 'Docs/note.md'),
+      folder: getFolder('Docs')
+    });
+
+    expect(grouped.attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/page_files/img.png']);
+    expect(grouped.unitFolders).toEqual([]);
+  });
+
+  it('should collapse every file of a unit into ONE move of its outermost designated folder', () => {
+    initApp({
+      'Docs/img.png': 'PIC',
+      'Docs/note.md': '',
+      'Docs/page_files/deep/style.css': 'CSS',
+      'Docs/page_files/img.png': 'PIC',
+      'Docs/z_files/a.png': 'PIC'
+    });
+    designateAttachmentUnitFolders(['Docs/page_files', 'Docs/z_files']);
+
+    const grouped = groupAttachmentsByUnitFolder({
+      app,
+      attachments: toAttachments(['Docs/z_files/a.png', 'Docs/page_files/deep/style.css', 'Docs/img.png', 'Docs/page_files/img.png'], 'Docs/note.md'),
+      folder: getFolder('Docs')
+    });
+
+    expect(grouped.attachments.map((attachment) => attachment.file.path)).toEqual(['Docs/img.png']);
+    expect(grouped.unitFolders.map((unitFolder) => [unitFolder.unitFolder.path, unitFolder.memberFile.path])).toEqual([
+      ['Docs/page_files', 'Docs/page_files/deep/style.css'],
+      ['Docs/z_files', 'Docs/z_files/a.png']
+    ]);
+    expect(grouped.unitFolders[0]?.ownerNoteFile.path).toBe('Docs/note.md');
+  });
+
+  it('should drop a file whose unit is not inside the folder rather than move it alone', () => {
+    initApp({
+      'unit/Docs/img.png': 'PIC',
+      'unit/Docs/note.md': ''
+    });
+    designateAttachmentUnitFolders(['unit']);
+
+    const grouped = groupAttachmentsByUnitFolder({
+      app,
+      attachments: toAttachments(['unit/Docs/img.png'], 'unit/Docs/note.md'),
+      folder: getFolder('unit/Docs')
+    });
+
+    expect(grouped).toEqual({ attachments: [], unitFolders: [] });
+  });
+
+  it('should take any unit in the vault when the folder is the vault root', () => {
+    initApp({
+      'Docs/page_files/img.png': 'PIC',
+      'note.md': ''
+    });
+    designateAttachmentUnitFolders(['Docs/page_files']);
+
+    const grouped = groupAttachmentsByUnitFolder({
+      app,
+      attachments: toAttachments(['Docs/page_files/img.png'], 'note.md'),
+      folder: app.vault.getRoot()
+    });
+
+    expect(grouped.unitFolders.map((unitFolder) => unitFolder.unitFolder.path)).toEqual(['Docs/page_files']);
+  });
+});
+
+describe('relocateAttachmentUnitFolders', () => {
+  async function relocateUnit(memberPath: string, unitFolderPath: string, vaultTransaction: VaultTransaction): Promise<void> {
+    await relocateAttachmentUnitFolders({
+      app,
+      relocations: [{
+        memberFile: getFile(memberPath),
+        newNoteFile: getFile('Docs.md'),
+        oldNoteFile: getFile('Docs/note.md'),
+        unitFolder: getFolder(unitFolderPath)
+      }],
+      vaultTransaction
+    });
+  }
+
+  it('should move the whole unit, under its own name, into the folder its member would have gone to', async () => {
+    initApp({
+      'Docs.md': '',
+      'Docs/note.md': '',
+      'Docs/page.v2_files/deep/style.css': 'CSS',
+      'Docs/page.v2_files/img.png': 'PIC',
+      'Media/page.v2_files/other.png': 'PIC'
+    }, 'Media');
+    const vaultTransaction = new VaultTransaction({ app });
+
+    await relocateUnit('Docs/page.v2_files/img.png', 'Docs/page.v2_files', vaultTransaction);
+    await vaultTransaction.commit();
+
+    // De-duplicated as a FOLDER: the counter goes at the end of the name, not before its last dot.
+    expect(await app.vault.adapter.read('Media/page.v2_files 1/img.png')).toBe('PIC');
+    expect(await app.vault.adapter.read('Media/page.v2_files 1/deep/style.css')).toBe('CSS');
+    expect(await app.vault.adapter.exists('Docs/page.v2_files')).toBe(false);
+  });
+
+  it('should move a unit to the vault root when that is where its member belongs', async () => {
+    initApp({
+      'Docs.md': '',
+      'Docs/note.md': '',
+      'Docs/page_files/img.png': 'PIC'
+    });
+    const vaultTransaction = new VaultTransaction({ app });
+
+    await relocateUnit('Docs/page_files/img.png', 'Docs/page_files', vaultTransaction);
+    await vaultTransaction.commit();
+
+    expect(await app.vault.adapter.exists('page_files/img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('Docs/page_files')).toBe(false);
+  });
+
+  it('should leave a unit that already sits where its member belongs', async () => {
+    initApp({
+      'Docs.md': '',
+      'Docs/note.md': '',
+      'Media/page_files/img.png': 'PIC'
+    }, 'Media');
+    const vaultTransaction = new VaultTransaction({ app });
+
+    await relocateUnit('Media/page_files/img.png', 'Media/page_files', vaultTransaction);
+    await vaultTransaction.commit();
+
+    expect(await app.vault.adapter.exists('Media/page_files/img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('Media/page_files 1')).toBe(false);
+  });
+
+  it('should put the unit back when the transaction rolls back', async () => {
+    initApp({
+      'Docs.md': '',
+      'Docs/note.md': '',
+      'Docs/page_files/img.png': 'PIC'
+    });
+    const vaultTransaction = new VaultTransaction({ app });
+
+    await relocateUnit('Docs/page_files/img.png', 'Docs/page_files', vaultTransaction);
+    await vaultTransaction.rollback();
+
+    expect(await app.vault.adapter.exists('Docs/page_files/img.png')).toBe(true);
+    expect(await app.vault.adapter.exists('page_files')).toBe(false);
   });
 });
