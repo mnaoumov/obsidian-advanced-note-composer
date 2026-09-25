@@ -175,8 +175,8 @@ export class SplitComposer extends ComposerBase {
     super({
       ...params,
       insertToken: params.insertToken ?? (isSameFile ? createMoveToken() : undefined),
-      shouldFixFootnotes: isSameFile ? false : (params.shouldFixFootnotes ?? settings.shouldFixFootnotesByDefault),
-      shouldIncludeFrontmatter: isSameFile ? false : (params.shouldIncludeFrontmatter ?? settings.shouldIncludeFrontmatterWhenSplittingByDefault)
+      shouldFixFootnotes: !isSameFile && (params.shouldFixFootnotes ?? settings.shouldFixFootnotesByDefault),
+      shouldIncludeFrontmatter: !isSameFile && (params.shouldIncludeFrontmatter ?? settings.shouldIncludeFrontmatterWhenSplittingByDefault)
     });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
@@ -188,7 +188,7 @@ export class SplitComposer extends ComposerBase {
     this.shouldJumpToMovedContent = params.shouldJumpToMovedContent ?? true;
     // A same-note extract has one attachment folder for both ends, so there is nothing to relocate — and
     // `isAtProperAttachmentPath` would refuse every move anyway.
-    this.shouldMoveAttachments = isSameFile ? false : (params.shouldMoveAttachments ?? settings.shouldMoveAttachmentsWhenSplitting);
+    this.shouldMoveAttachments = !isSameFile && (params.shouldMoveAttachments ?? settings.shouldMoveAttachmentsWhenSplitting);
     this.targetCursorOffset = params.targetCursorOffset ?? null;
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
     this.templateOverride = params.templateOverride;
@@ -900,11 +900,7 @@ export class SplitComposer extends ComposerBase {
       return this.pluginSettingsComponent.settings.mergeTemplate;
     }
 
-    if (this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge) {
-      return this.pluginSettingsComponent.settings.mergeTemplate;
-    }
-
-    return this.pluginSettingsComponent.settings.splitTemplate;
+    return this.pluginSettingsComponent.settings.splitToExistingFileTemplate === Action.Merge ? this.pluginSettingsComponent.settings.mergeTemplate : this.pluginSettingsComponent.settings.splitTemplate;
   }
 
   /**
@@ -917,11 +913,7 @@ export class SplitComposer extends ComposerBase {
    * @returns The extraction, or `null`.
    */
   private async resolveFrontmatterExtraction(): Promise<FrontmatterSelectionExtraction | null> {
-    if (!this.pluginSettingsComponent.settings.shouldExtractFrontmatterSelectionAsProperties) {
-      return null;
-    }
-
-    if (this.smartCutAndPasteMoveKind) {
+    if (!this.pluginSettingsComponent.settings.shouldExtractFrontmatterSelectionAsProperties || this.smartCutAndPasteMoveKind) {
       return null;
     }
 
@@ -1093,9 +1085,5 @@ export function resolveSmartCutAndPasteTemplate(settings: SmartCutAndPasteTempla
  * @returns The template to apply.
  */
 export function resolveSplitTemplateForNewTargetFile(settings: SplitTemplateSettings): string {
-  if (!settings.splitTemplate) {
-    return settings.mergeTemplate;
-  }
-
-  return settings.splitTemplate;
+  return settings.splitTemplate || settings.mergeTemplate;
 }

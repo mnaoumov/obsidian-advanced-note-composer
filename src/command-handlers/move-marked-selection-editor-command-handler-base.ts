@@ -114,10 +114,7 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
       return false;
     }
     const targetFile = context.file;
-    if (!targetFile) {
-      return false;
-    }
-    if (!this.app.vault.getFileByPath(marked.sourceFile.path)) {
+    if (!targetFile || !this.app.vault.getFileByPath(marked.sourceFile.path)) {
       return false;
     }
     if (targetFile.path !== marked.sourceFile.path) {

@@ -188,10 +188,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    if (folder.isRoot()) {
-      return false;
-    }
-    if (isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.MoveAndFlatten, pluginSettingsComponent: this.pluginSettingsComponent })) {
+    if (folder.isRoot() || isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.MoveAndFlatten, pluginSettingsComponent: this.pluginSettingsComponent })) {
       return false;
     }
     const collectFlattenItemsParams = this.buildCollectFlattenItemsParams(folder);
@@ -529,10 +526,8 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
  */
 export function isAllowedFlattenDestination(params: IsAllowedFlattenDestinationParams): boolean {
   const { app, pluginSettingsComponent, sourceFolder, targetFolder } = params;
-  if (isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
-    return false;
-  }
-  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
+  return !isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })
+    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
 }
 
 /**

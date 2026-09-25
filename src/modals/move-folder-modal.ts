@@ -33,13 +33,9 @@ interface SelectTargetFolderForMoveParams {
  */
 export function isAllowedMoveTarget(params: IsAllowedMoveTargetParams): boolean {
   const { app, pluginSettingsComponent, sourceFolder, targetFolder } = params;
-  if (targetFolder === sourceFolder.parent) {
-    return false;
-  }
-  if (isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })) {
-    return false;
-  }
-  return !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
+  return targetFolder !== sourceFolder.parent
+    && !isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })
+    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
 }
 
 export async function selectTargetFolderForMove(params: SelectTargetFolderForMoveParams): Promise<null | TFolder> {

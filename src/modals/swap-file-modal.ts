@@ -98,13 +98,9 @@ class SwapFileModal extends FuzzySuggestModal<TFile> {
   }
 
   private isAllowedTargetFile(file: TFile): boolean {
-    if (isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFile, parentPathOrFile: file })) {
-      return false;
-    }
-    if (isChildOrSelf({ app: this.app, childPathOrFile: file, parentPathOrFile: this.sourceFile })) {
-      return false;
-    }
-    return !this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap);
+    return !isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFile, parentPathOrFile: file })
+      && !isChildOrSelf({ app: this.app, childPathOrFile: file, parentPathOrFile: this.sourceFile })
+      && !this.pluginSettingsComponent.settings.isPathIgnored(file.path, CommandCategory.Swap);
   }
 }
 

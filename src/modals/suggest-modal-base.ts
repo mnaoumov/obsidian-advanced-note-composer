@@ -183,19 +183,21 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
   /* v8 ignore start -- onInput mobile branch has defensive ?? and ?. on chooser.suggestions[0]?.getText(). */
   public override onInput(): void {
     super.onInput();
-    if (Platform.isMobile && this.allowCreateNewFile) {
-      const inputValue = this.inputEl.value.trim();
-      if (inputValue === '') {
-        this.newFileButtonEl.detach();
-        return;
-      }
-      if (!this.newFileButtonEl.parentElement) {
-        this.ctaEl.append(this.newFileButtonEl);
-
-        const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
-        this.newFileButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
-      }
+    if (!Platform.isMobile || !this.allowCreateNewFile) {
+      return;
     }
+    const inputValue = this.inputEl.value.trim();
+    if (inputValue === '') {
+      this.newFileButtonEl.detach();
+      return;
+    }
+    if (this.newFileButtonEl.parentElement) {
+      return;
+    }
+    this.ctaEl.append(this.newFileButtonEl);
+
+    const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
+    this.newFileButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
   }
   /* v8 ignore stop */
 
@@ -358,18 +360,20 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     const aliases = parseFrontMatterAliases(cache.frontmatter) ?? [];
     for (const alias of aliases) {
       const match = searchFunction(alias);
-      if (match) {
-        if (isUserIgnored) {
-          match.score -= scoreStep;
-        }
-        items.push({
-          alias,
-          downranked: isUserIgnored,
-          file,
-          match,
-          type: 'alias'
-        });
+      if (!match) {
+        continue;
       }
+
+      if (isUserIgnored) {
+        match.score -= scoreStep;
+      }
+      items.push({
+        alias,
+        downranked: isUserIgnored,
+        file,
+        match,
+        type: 'alias'
+      });
     }
   }
 
@@ -578,19 +582,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     if (file.extension === 'canvas' || file.extension === 'base') {
       return this.shouldShowNonAttachments;
     }
-    if (IMAGE_EXTENSIONS.has(file.extension)) {
-      return this.shouldShowImages;
-    }
-
-    if (this.shouldShowAllTypes) {
-      return true;
-    }
-
-    if (this.shouldShowNonImageAttachments) {
-      return this.app.viewRegistry.isExtensionRegistered(file.extension);
-    }
-
-    return false;
+    return IMAGE_EXTENSIONS.has(file.extension)
+      ? this.shouldShowImages
+      : this.shouldShowAllTypes || (this.shouldShowNonImageAttachments && this.app.viewRegistry.isExtensionRegistered(file.extension));
   }
   /* v8 ignore stop */
 }

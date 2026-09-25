@@ -219,10 +219,7 @@ async function driveHeadingAction(label: string, title: string): Promise<Heading
 
       function readNoticeButtonLabels(): string[] {
         const containerEl = activeDocument.querySelector('.advanced-note-composer-move-notice-buttons');
-        if (!containerEl) {
-          return [];
-        }
-        return [...containerEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
+        return containerEl ? [...containerEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent) : [];
       }
 
       function clickNoticeButton(buttonText: string): void {
@@ -320,10 +317,7 @@ async function readSelectionMarkLabels(): Promise<string[]> {
 
       function readNoticeButtonLabels(): string[] {
         const containerEl = activeDocument.querySelector('.advanced-note-composer-move-notice-buttons');
-        if (!containerEl) {
-          return [];
-        }
-        return [...containerEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
+        return containerEl ? [...containerEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent) : [];
       }
 
       async function resetFile(path: string, content: string): Promise<TFile> {

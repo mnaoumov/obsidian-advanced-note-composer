@@ -237,11 +237,12 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
      * returned above, so this is only ever reached by a merge that landed; a destination holding no note at
      * all (an attachment-only merge) opens nothing rather than failing.
      */
-    if (this.pluginSettingsComponent.settings.shouldOpenFirstNoteAfterMergingFolder) {
-      const firstNote = findFirstNote(targetFolder, (file) => this.isMergeableNote(file));
-      if (firstNote) {
-        await openFileAfterOperation({ app: this.app, file: firstNote });
-      }
+    if (!this.pluginSettingsComponent.settings.shouldOpenFirstNoteAfterMergingFolder) {
+      return;
+    }
+    const firstNote = findFirstNote(targetFolder, (file) => this.isMergeableNote(file));
+    if (firstNote) {
+      await openFileAfterOperation({ app: this.app, file: firstNote });
     }
   }
 

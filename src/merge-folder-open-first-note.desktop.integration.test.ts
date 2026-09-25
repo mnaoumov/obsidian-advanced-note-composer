@@ -229,13 +229,14 @@ describe('folder merge opens the first note of the destination folder (issue #21
           await trashIfExists({ app, path: sourceFolder });
           await trashIfExists({ app, path: targetFolder });
           const { originalSettings } = context;
-          if (originalSettings) {
-            const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
-            await settingsComponent.editAndSave((settings) => {
-              settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
-              settings.shouldOpenFirstNoteAfterMergingFolder = originalSettings.shouldOpenFirstNoteAfterMergingFolder;
-            });
+          if (!originalSettings) {
+            return;
           }
+          const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
+            settings.shouldOpenFirstNoteAfterMergingFolder = originalSettings.shouldOpenFirstNoteAfterMergingFolder;
+          });
         },
         contextId,
         input: {

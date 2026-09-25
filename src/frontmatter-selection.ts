@@ -176,11 +176,7 @@ class FrontmatterSelectionExtractor {
     }
 
     const hasChildren = [...this.parentIndexes.values()].includes(index);
-    if (!hasChildren) {
-      return false;
-    }
-
-    return [...this.parentIndexes].every(([childIndex, parentIndex]) => !(parentIndex === index && remainingIndexes.has(childIndex)));
+    return hasChildren && [...this.parentIndexes].every(([childIndex, parentIndex]) => !(parentIndex === index && remainingIndexes.has(childIndex)));
   }
 
   /**

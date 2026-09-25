@@ -68,10 +68,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
       return false;
     }
     const file = context.file;
-    if (!file) {
-      return false;
-    }
-    return hasReorderableSiblings(this.getHeadings(file));
+    return file ? hasReorderableSiblings(this.getHeadings(file)) : false;
   }
 
   protected override async executeEditor(_editor: Editor, context: MarkdownFileInfo): Promise<void> {
@@ -83,10 +80,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     const split = splitIntoReorderableSections(content, this.getHeadings(file));
 
     const order = await openReorderHeadingsModal({ app: this.app, split });
-    if (!order) {
-      return;
-    }
-    if (order.every((sectionIndex, position) => sectionIndex === position)) {
+    if (!order || order.every((sectionIndex, position) => sectionIndex === position)) {
       return;
     }
 

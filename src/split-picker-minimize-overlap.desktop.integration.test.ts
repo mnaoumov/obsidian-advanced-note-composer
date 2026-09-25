@@ -211,10 +211,7 @@ function describeOverlap(first: Rect, second: Rect): string {
     && second.left < first.right
     && first.top < second.bottom
     && second.top < first.bottom;
-  if (!doesOverlap) {
-    return 'no overlap';
-  }
-  return `overlap: ${formatRect(first)} vs ${formatRect(second)}`;
+  return doesOverlap ? `overlap: ${formatRect(first)} vs ${formatRect(second)}` : 'no overlap';
 }
 
 /**

@@ -290,11 +290,7 @@ export function collectFlattenItemsSyncOrNull(params: CollectFlattenItemsSyncOrN
   }
 
   const noteAttachmentFolders = collectNoteAttachmentFoldersSyncOrNull(app, folder, context.attachmentExtensions);
-  if (!noteAttachmentFolders) {
-    return null;
-  }
-
-  return buildItems(folder, noteAttachmentFolders, mode, context);
+  return noteAttachmentFolders ? buildItems(folder, noteAttachmentFolders, mode, context) : null;
 }
 
 /**

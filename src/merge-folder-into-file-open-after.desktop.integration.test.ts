@@ -207,14 +207,15 @@ describe('merge folder contents into a single file opens the merged note (issue 
           await trashIfExists({ app, path: mergedNotePath });
           await trashIfExists({ app, path: sourceFolder });
           const { originalSettings } = context;
-          if (originalSettings) {
-            const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
-            await settingsComponent.editAndSave((settings) => {
-              settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
-              settings.shouldOpenNoteAfterMergingFolderIntoFile = originalSettings.shouldOpenNoteAfterMergingFolderIntoFile;
-              settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
-            });
+          if (!originalSettings) {
+            return;
           }
+          const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
+            settings.shouldOpenNoteAfterMergingFolderIntoFile = originalSettings.shouldOpenNoteAfterMergingFolderIntoFile;
+            settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
+          });
         },
         contextId,
         input: {

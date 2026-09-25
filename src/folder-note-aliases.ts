@@ -75,9 +75,5 @@ function toAliasList(existingAliases: unknown): string[] {
     return [existingAliases];
   }
 
-  if (!Array.isArray(existingAliases)) {
-    return [];
-  }
-
-  return existingAliases.filter((alias): alias is string => typeof alias === 'string');
+  return Array.isArray(existingAliases) ? existingAliases.filter((alias): alias is string => typeof alias === 'string') : [];
 }

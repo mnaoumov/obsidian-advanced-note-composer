@@ -196,10 +196,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
         function isHintVisible(): boolean {
           const hint = document.querySelector('.advanced-note-composer-name-required-hint');
-          if (!(hint instanceof HTMLElement)) {
-            return false;
-          }
-          return hint.isShown();
+          return hint instanceof HTMLElement && hint.isShown();
         }
 
         async function pressEnter(): Promise<void> {

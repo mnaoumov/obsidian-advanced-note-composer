@@ -104,16 +104,9 @@ export function canSwapWithSelection(params: CanSwapWithSelectionParams): boolea
     marked,
     targetFile
   } = params;
-  if (!app.vault.getFileByPath(marked.sourceFile.path)) {
-    return false;
-  }
-  if (!editor.somethingSelected()) {
-    return false;
-  }
-  if (targetFile.path !== marked.sourceFile.path) {
-    return true;
-  }
-  return !areRegionsOverlapping(getEditorRegion(editor), markedRegion(marked));
+  return app.vault.getFileByPath(marked.sourceFile.path) !== null
+    && editor.somethingSelected()
+    && (targetFile.path !== marked.sourceFile.path || !areRegionsOverlapping(getEditorRegion(editor), markedRegion(marked)));
 }
 
 /**

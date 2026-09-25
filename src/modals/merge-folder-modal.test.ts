@@ -70,10 +70,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
       vault: strictProxy<Vault>({
         getAllFolders: vi.fn().mockReturnValue(folders),
         getFileByPath: vi.fn().mockImplementation((filePath: string) => {
-          if (autoSelectFolder) {
-            return strictProxy<TFile>({ parent: autoSelectFolder, path: filePath });
-          }
-          return null;
+          return autoSelectFolder ? strictProxy<TFile>({ parent: autoSelectFolder, path: filePath }) : null;
         })
       }),
       workspace: strictProxy<Workspace>({

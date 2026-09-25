@@ -71,9 +71,6 @@ export class MoveMarkedSelectionHereEditorCommandHandler extends MoveMarkedSelec
 
   protected override async resolveOptions(defaultTextAfterExtractionMode: TextAfterExtractionMode): Promise<MoveOptions | null> {
     const defaultOptions = this.buildDefaultOptions(defaultTextAfterExtractionMode);
-    if (!this.isAdvanced) {
-      return defaultOptions;
-    }
-    return await openPasteOptionsModal({ app: this.app, defaultOptions });
+    return this.isAdvanced ? (await openPasteOptionsModal({ app: this.app, defaultOptions })) : defaultOptions;
   }
 }

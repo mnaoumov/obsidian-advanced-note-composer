@@ -355,14 +355,15 @@ describe('merge folder contents into a single file does not cycle the active lea
           await trashIfExists({ app, path: sourceFolder });
           await trashIfExists({ app, path: hubNotePath });
           const { originalSettings } = context;
-          if (originalSettings) {
-            const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
-            await settingsComponent.editAndSave((settings) => {
-              settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
-              settings.shouldOpenNoteAfterMergingFolderIntoFile = originalSettings.shouldOpenNoteAfterMergingFolderIntoFile;
-              settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
-            });
+          if (!originalSettings) {
+            return;
           }
+          const settingsComponent = findSettingsComponent<MergeSettings>({ app, pluginId, probeSettingName: 'shouldAskBeforeMerging' });
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = originalSettings.shouldAskBeforeMerging;
+            settings.shouldOpenNoteAfterMergingFolderIntoFile = originalSettings.shouldOpenNoteAfterMergingFolderIntoFile;
+            settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
+          });
         },
         contextId,
         input: {

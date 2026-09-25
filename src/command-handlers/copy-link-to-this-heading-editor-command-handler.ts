@@ -73,10 +73,6 @@ export class CopyLinkToThisHeadingEditorCommandHandler extends SelectEditorComma
     }
 
     const headingInfo = resolveEnclosingHeadingInfo({ app: this.app, editor, file });
-    if (!headingInfo) {
-      return null;
-    }
-
-    return this.app.fileManager.generateMarkdownLink(file, file.path, `#${stripHeadingForLink(headingInfo.heading)}`);
+    return headingInfo ? this.app.fileManager.generateMarkdownLink(file, file.path, `#${stripHeadingForLink(headingInfo.heading)}`) : null;
   }
 }

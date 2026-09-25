@@ -815,13 +815,8 @@ class SplitFileModal extends SuggestModalBase {
       return false;
     }
     const selections = getSelections(this.editor);
-    if (!selections[0]) {
-      return false;
-    }
-    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
-      return false;
-    }
-    return true;
+    const [firstSelection] = selections;
+    return firstSelection !== undefined && firstSelection.startOffset >= sourceCache.frontmatterPosition.end.offset;
   }
 
   /**
@@ -870,10 +865,12 @@ class SplitFileModal extends SuggestModalBase {
       this.treatTitleAsPathCheckboxEl.disabled = !isTreatTitleAsPathAvailable;
     }
 
-    if (this.unresolvedPathCheckboxEl !== undefined) {
-      this.unresolvedPathCheckboxEl.checked = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
-      this.unresolvedPathCheckboxEl.disabled = !isCreate;
+    if (this.unresolvedPathCheckboxEl === undefined) {
+      return;
     }
+
+    this.unresolvedPathCheckboxEl.checked = isCreate && this.shouldAllowSplitIntoUnresolvedPath;
+    this.unresolvedPathCheckboxEl.disabled = !isCreate;
   }
 
   /**
@@ -1395,10 +1392,7 @@ async function rememberSplitTargetMode(params: RememberSplitTargetModeParams): P
  * @returns The mode the pass opens in.
  */
 function resolveInitialSplitTargetMode(params: ResolveInitialSplitTargetModeParams): SplitTargetMode {
-  if (!params.canMergeIntoExistingNote) {
-    return SplitTargetMode.Create;
-  }
-  return params.initialSplitTargetMode ?? params.defaultSplitTargetMode;
+  return params.canMergeIntoExistingNote ? (params.initialSplitTargetMode ?? params.defaultSplitTargetMode) : SplitTargetMode.Create;
 }
 
 /**
@@ -1470,10 +1464,7 @@ async function resolveSplitPass(params: ResolveSplitPassParams): Promise<Resolve
  * @returns The folder to force the new note into, or `null` to leave the resolution alone.
  */
 function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, isPickerStillSkipped: boolean): null | TFolder {
-  if (!isPickerStillSkipped) {
-    return null;
-  }
-  return params.targetParentFolderOverride ?? null;
+  return isPickerStillSkipped ? (params.targetParentFolderOverride ?? null) : null;
 }
 
 /**
@@ -1664,11 +1655,7 @@ async function selectTargetParentFolder(params: SelectTargetParentFolderParams):
     pluginSettingsComponent: prepareParams.pluginSettingsComponent
   });
 
-  if (!folder) {
-    return null;
-  }
-
-  return { folder };
+  return folder ? { folder } : null;
 }
 
 /**

@@ -354,11 +354,7 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
         }
 
         async function ensureFolder(path: string): Promise<TFolder> {
-          const existing = app.vault.getFolderByPath(path);
-          if (existing) {
-            return existing;
-          }
-          return await app.vault.createFolder(path);
+          return app.vault.getFolderByPath(path) ?? (await app.vault.createFolder(path));
         }
 
         async function waitForEditor(path: string, content: string): Promise<Editor> {

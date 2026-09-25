@@ -92,11 +92,8 @@ export function checkShouldAddCommandToEditorMenu(params: CheckShouldAddCommandT
  * @returns Whether the command belongs in the viewport menu.
  */
 export function checkShouldAddCommandToViewportMenu(params: CheckShouldAddCommandToViewportMenuParams): boolean {
-  if (params.mode !== SOURCE_VIEW_MODE) {
-    return false;
-  }
-
-  return isMenuIncludedInPlacement(params.pluginSettingsComponent.settings.commandMenuPlacement(params.commandId), MenuKind.ViewportMenu);
+  return params.mode === SOURCE_VIEW_MODE
+    && isMenuIncludedInPlacement(params.pluginSettingsComponent.settings.commandMenuPlacement(params.commandId), MenuKind.ViewportMenu);
 }
 
 /**
@@ -142,8 +139,5 @@ export function withMenuIncludedInPlacement(
   if (isEditorMenuIncluded) {
     return CommandMenuPlacement.EditorMenu;
   }
-  if (isViewportMenuIncluded) {
-    return CommandMenuPlacement.ViewportMenu;
-  }
-  return CommandMenuPlacement.Neither;
+  return isViewportMenuIncluded ? CommandMenuPlacement.ViewportMenu : CommandMenuPlacement.Neither;
 }

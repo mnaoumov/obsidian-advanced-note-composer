@@ -348,10 +348,7 @@ export function showOperationCompletionNotice(params: ShowOperationCompletionNot
  */
 export function showOperationPermanentProgressNotice(params: ShowOperationPermanentProgressNoticeParams): Notice | null {
   const { content, pluginNoticeComponent, pluginSettingsComponent } = params;
-  if (!pluginSettingsComponent.settings.shouldShowOperationNotices) {
-    return null;
-  }
-  return pluginNoticeComponent.showNotice(content, { isPermanent: true });
+  return pluginSettingsComponent.settings.shouldShowOperationNotices ? pluginNoticeComponent.showNotice(content, { isPermanent: true }) : null;
 }
 
 /**

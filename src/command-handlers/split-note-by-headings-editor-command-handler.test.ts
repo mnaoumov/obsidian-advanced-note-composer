@@ -404,10 +404,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     let callCount = 0;
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) {
-        return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] }));
-      }
-      return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
+      return callCount === 1 ? Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })) : Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValue({

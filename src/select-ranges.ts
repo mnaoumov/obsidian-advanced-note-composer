@@ -90,11 +90,7 @@ export function getHeadingContentSelection(params: GetHeadingContentSelectionPar
   }
 
   const end = headingInfo.end;
-  if (!editor.getRange(start, end).trim()) {
-    return null;
-  }
-
-  return { end, start };
+  return editor.getRange(start, end).trim() ? { end, start } : null;
 }
 
 /**

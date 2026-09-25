@@ -92,10 +92,7 @@ export class ExtractBetweenHorizontalRulesEditorCommandHandler extends EditorCom
 
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
     const file = context.file;
-    if (!file) {
-      return;
-    }
-    if (!this.range) {
+    if (!file || !this.range) {
       return;
     }
     editor.setSelection(this.range.start, this.range.end);

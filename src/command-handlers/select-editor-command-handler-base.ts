@@ -56,11 +56,7 @@ export abstract class SelectEditorCommandHandlerBase extends EditorCommandHandle
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked({ commandCategory: CommandCategory.Select, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
-      return false;
-    }
-
-    return this.canSelect(editor, context);
+    return !isEditorCommandBlocked({ commandCategory: CommandCategory.Select, context, pluginSettingsComponent: this.pluginSettingsComponent }) && this.canSelect(editor, context);
   }
 
   /**

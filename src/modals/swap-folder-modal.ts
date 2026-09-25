@@ -148,16 +148,10 @@ class SwapFolderModal extends FuzzySuggestModal<TFolder> {
   }
 
   private isAllowedTargetFolder(folder: TFolder): boolean {
-    if (folder === this.sourceFolder) {
-      return false;
-    }
-    if (!this.shouldIncludeParentFolders && isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFolder, parentPathOrFile: folder })) {
-      return false;
-    }
-    if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {
-      return false;
-    }
-    return !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Swap);
+    return folder !== this.sourceFolder
+      && (this.shouldIncludeParentFolders || !isChildOrSelf({ app: this.app, childPathOrFile: this.sourceFolder, parentPathOrFile: folder }))
+      && (this.shouldIncludeChildFolders || !isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder }))
+      && !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Swap);
   }
 }
 

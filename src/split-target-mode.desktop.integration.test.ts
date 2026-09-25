@@ -444,10 +444,7 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
 
       async function ensureFile(path: string, content: string): Promise<TFile> {
         const existing = app.vault.getAbstractFileByPath(path);
-        if (existing instanceof obsidianModule.TFile) {
-          return existing;
-        }
-        return app.vault.create(path, content);
+        return existing instanceof obsidianModule.TFile ? existing : app.vault.create(path, content);
       }
 
       async function resetFile(path: string, content: string): Promise<TFile> {

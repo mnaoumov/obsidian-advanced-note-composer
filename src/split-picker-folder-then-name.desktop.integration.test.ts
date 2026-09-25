@@ -225,10 +225,7 @@ describe('choosing the folder before the name (issue #261)', () => {
 
         async function resetFileHandle(path: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);
-          if (existing instanceof obsidianModule.TFile) {
-            return existing;
-          }
-          return app.vault.create(path, '');
+          return existing instanceof obsidianModule.TFile ? existing : app.vault.create(path, '');
         }
 
         function getNameInput(): HTMLInputElement | null {
