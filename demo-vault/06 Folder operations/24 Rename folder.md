@@ -20,11 +20,11 @@ The folder is now `1. Revenue Review`: it kept its place in the sequence. Open i
 
 ## Aliases are swapped, not rewritten
 
-**Folder note aliases template** (default `{{safeFolderName}}`) renders the alias the new name deserves. Only the entry the **old** name rendered is replaced, and it is replaced where it stood — every alias you wrote by hand survives. If the old entry is not there, the new alias is simply added.
+**Folder note aliases template** (default `{{safeFolderName}}`) renders the aliases the new name deserves, one per line — `{{safeFolderName}}` on one line and `{{parentFolder}} {{safeFolderName}}` on the next gives the note two. Only the entries the **old** name rendered are replaced, and the new ones are written where the first of them stood — every alias you wrote by hand survives. If none of the old entries is there, the new aliases are simply added.
 
 Leave the template empty to leave `aliases` alone entirely. **Folder note title template** is the same opt-out for `title`, and is shared with the reorder commands.
 
-Both templates may also hold [Templater](https://silentvoid13.github.io/Templater/) commands, which run once the `{{tokens}}` are filled in: the tokens are available as `TOKENS` (`<% TOKENS.safeFolderName.toUpperCase() %>`) and `tp.file` is the folder note. The result must be a single line; a template that produces more, or fails, is reported by name and the rename is rolled back. **Reordered file title template** works the same way, with the renumbered note as `tp.file`.
+Both templates may also hold [Templater](https://silentvoid13.github.io/Templater/) commands, which run once the `{{tokens}}` are filled in: the tokens are available as `TOKENS` (`<% TOKENS.safeFolderName.toUpperCase() %>`) and `tp.file` is the folder note. A title must be a single line, while each line of the aliases result is an alias of its own, so an expression that computes several returns them joined with a line break: `<% TOKENS.safeFolderName.split(" - ").join("\n") %>` turns a folder `Alpha - Beta` into the two aliases `Alpha` and `Beta`. A template that fails, or a title that spans more than one line, is reported by name and the rename is rolled back. **Reordered file title template** works the same way, with the renumbered note as `tp.file`.
 
 ## The number is recognized, not assumed
 

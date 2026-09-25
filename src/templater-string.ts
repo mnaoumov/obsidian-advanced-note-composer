@@ -68,6 +68,12 @@ export interface RenderStringWithTemplaterParams {
 }
 
 /**
+ * Parameters for {@link renderValueListWithTemplater} — the same as for {@link renderStringWithTemplater},
+ * which it wraps.
+ */
+export type RenderValueListWithTemplaterParams = RenderStringWithTemplaterParams;
+
+/**
  * The `cause` chain a {@link TemplateRenderError} carries. Named for the rule that a supplementary bag is
  * `*Options`, prefixed by what it belongs to.
  */
@@ -155,6 +161,25 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
   } catch (error) {
     throw new TemplateRenderError(`${settingName} failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
+}
+
+/**
+ * Renders a template that produces a LIST of property values — a folder note's aliases (issue #294) —
+ * through {@link renderStringWithTemplater}, one value per line.
+ *
+ * A line break is the separator because no usable value can contain one, so it is never ambiguous the way a
+ * comma would be. That covers a plain `{{token}}` template written over several lines and a Templater one
+ * alike: Templater concatenates what its commands emit into a string, so an expression that computes an
+ * array hands it over with `.join("\n")`. Each line is trimmed, blank lines are dropped and a repeated value
+ * is kept once.
+ *
+ * @param params - The resolved template, its tokens and the Templater context.
+ * @returns The values, in the order the template produced them.
+ */
+export async function renderValueListWithTemplater(params: RenderValueListWithTemplaterParams): Promise<string[]> {
+  const renderedValue = await renderStringWithTemplater(params);
+  const values = renderedValue.split(LINE_BREAK_REG_EXP).map((line) => line.trim()).filter((line) => line !== '');
+  return [...new Set(values)];
 }
 
 /**

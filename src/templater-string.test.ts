@@ -18,6 +18,7 @@ import {
 import {
   renderSingleLineValueWithTemplater,
   renderStringWithTemplater,
+  renderValueListWithTemplater,
   TemplateRenderError
 } from './templater-string.ts';
 
@@ -89,6 +90,38 @@ describe('renderSingleLineValueWithTemplater', () => {
     const promise = renderSingleLineValueWithTemplater({ app, contextFile: getNote(app), resolvedTemplate: '<% x %>', settingName: SETTING_NAME, tokens: TOKENS });
     await expect(promise).rejects.toBeInstanceOf(TemplateRenderError);
     await expect(promise).rejects.toThrow('Folder note aliases template produced a multi-line value.');
+  });
+});
+
+describe('renderValueListWithTemplater', () => {
+  it('should take one value per line of a template with no Templater command, trimmed and without blanks', async () => {
+    const app = createApp();
+
+    expect(
+      await renderValueListWithTemplater({
+        app,
+        contextFile: getNote(app),
+        resolvedTemplate: '  Alpha \r\n\nBeta\rAlpha\n',
+        settingName: SETTING_NAME,
+        tokens: TOKENS
+      })
+    ).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('should take one value per line of what Templater hands back', async () => {
+    const app = createApp();
+    const parseTemplate = installTemplater(app);
+    parseTemplate.mockResolvedValue('A\nB\n');
+
+    expect(
+      await renderValueListWithTemplater({
+        app,
+        contextFile: getNote(app),
+        resolvedTemplate: String.raw`<% ["A", "B"].join("\n") %>`,
+        settingName: SETTING_NAME,
+        tokens: TOKENS
+      })
+    ).toEqual(['A', 'B']);
   });
 });
 
