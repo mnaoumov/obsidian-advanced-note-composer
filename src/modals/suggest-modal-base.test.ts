@@ -121,10 +121,7 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
     app: strictProxy<App>({
       internalPlugins: strictProxy<InternalPlugins>({
         getEnabledPluginById: castTo<InternalPlugins['getEnabledPluginById']>(vi.fn((id: string) => {
-          if (id === 'bookmarks') {
-            return bookmarksPlugin;
-          }
-          return null;
+          return id === 'bookmarks' ? bookmarksPlugin : null;
         }))
       }),
       metadataCache: strictProxy<MetadataCache>({
@@ -401,10 +398,7 @@ describe('SuggestModalBase', () => {
         files: [bookmarkedFile, sourceFile]
       });
       vi.mocked(plugin.app.vault.getFileByPath).mockImplementation((path: string) => {
-        if (path === 'folder/bookmarked.md') {
-          return bookmarkedFile;
-        }
-        return null;
+        return path === 'folder/bookmarked.md' ? bookmarkedFile : null;
       });
       const modal = createTestSuggestModal(plugin, sourceFile);
       const suggestions = modal.getSuggestions('Bookmarked');

@@ -172,11 +172,7 @@ export function rewriteHeadingSubpath(params: RewriteHeadingSubpathParams): null
     }
   }
 
-  if (!hasChanged) {
-    return null;
-  }
-
-  return `#${newSegments.join('#')}`;
+  return hasChanged ? `#${newSegments.join('#')}` : null;
 }
 
 /**

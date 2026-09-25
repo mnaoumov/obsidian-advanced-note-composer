@@ -159,12 +159,11 @@ export class MoveSelectionBuffer {
    */
   public isRangeOverlappingMarkedSelection(params: MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams): boolean {
     const { endOffset, startOffset } = params;
-    if (!this.markedSelection) {
-      return false;
-    }
-    return this.markedSelection.capturedSelections.some(
-      (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
-    );
+    return this.markedSelection
+      ? this.markedSelection.capturedSelections.some(
+        (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
+      )
+      : false;
   }
 
   /**

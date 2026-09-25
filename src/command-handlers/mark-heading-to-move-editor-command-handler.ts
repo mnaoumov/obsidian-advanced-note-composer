@@ -77,10 +77,7 @@ export class MarkHeadingToMoveEditorCommandHandler extends EditorCommandHandler 
       return false;
     }
     const headingLine = getEnclosingHeadingLine({ app: this.app, cursorLine: editor.getCursor().line, file });
-    if (headingLine === null) {
-      return false;
-    }
-    return getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
+    return headingLine !== null && getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
   }
 
   protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {

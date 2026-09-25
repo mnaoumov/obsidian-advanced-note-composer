@@ -46,10 +46,6 @@ export class SelectThisHeadingContentEditorCommandHandler extends SelectRangeEdi
     }
 
     const headingInfo = resolveEnclosingHeadingInfo({ app: this.app, editor, file });
-    if (!headingInfo) {
-      return null;
-    }
-
-    return getHeadingContentSelection({ editor, headingInfo });
+    return headingInfo ? getHeadingContentSelection({ editor, headingInfo }) : null;
   }
 }

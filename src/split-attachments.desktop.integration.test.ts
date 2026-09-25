@@ -175,10 +175,7 @@ describe('attachments in a split (issue #239)', () => {
 
         async function resetFile(path: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);
-          if (existing instanceof obsidianModule.TFile) {
-            return existing;
-          }
-          return app.vault.create(path, '');
+          return existing instanceof obsidianModule.TFile ? existing : app.vault.create(path, '');
         }
       },
       input: { pluginId: PLUGIN_ID },

@@ -1575,10 +1575,9 @@ export class PluginSettings {
      * keyed by command id while a validator binds to a settings property name. This is the ONE place that
      * decides it, so every caller downstream can treat a placement as a real member.
      */
-    if (commandMenuPlacement === undefined || !COMMAND_MENU_PLACEMENTS.includes(commandMenuPlacement)) {
-      return CommandMenuPlacement.EditorMenu;
-    }
-    return commandMenuPlacement;
+    return commandMenuPlacement !== undefined && COMMAND_MENU_PLACEMENTS.includes(commandMenuPlacement)
+      ? commandMenuPlacement
+      : CommandMenuPlacement.EditorMenu;
   }
 
   /**

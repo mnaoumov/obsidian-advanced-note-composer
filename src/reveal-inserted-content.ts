@@ -425,10 +425,12 @@ function findMarkdownViewShowingFile(app: App, file: TFile): MarkdownView | null
   let bestActiveTime = -1;
   for (const leaf of app.workspace.getLeavesOfType('markdown')) {
     const { view } = leaf;
-    if (view instanceof MarkdownView && view.file?.path === file.path && leaf.activeTime > bestActiveTime) {
-      bestView = view;
-      bestActiveTime = leaf.activeTime;
+    if (!(view instanceof MarkdownView && view.file?.path === file.path && leaf.activeTime > bestActiveTime)) {
+      continue;
     }
+
+    bestView = view;
+    bestActiveTime = leaf.activeTime;
   }
   return bestView;
 }

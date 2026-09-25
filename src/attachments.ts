@@ -445,10 +445,7 @@ async function findNoteOwningAttachmentPath(app: App, attachment: TFile, noteFil
 }
 
 function isAncestorOrSelf(ancestorFolderPath: string, folderPath: string): boolean {
-  if (ancestorFolderPath === '') {
-    return true;
-  }
-  return folderPath === ancestorFolderPath || folderPath.startsWith(`${ancestorFolderPath}/`);
+  return ancestorFolderPath === '' || folderPath === ancestorFolderPath || folderPath.startsWith(`${ancestorFolderPath}/`);
 }
 
 function isAttachmentFile(file: TFile, attachmentExtensions: readonly string[]): boolean {

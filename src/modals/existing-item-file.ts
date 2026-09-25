@@ -32,9 +32,5 @@ export function resolveExistingItemFile(app: App, item: Item | null | undefined)
     return item.file;
   }
 
-  if (item?.type === 'bookmark' && item.item?.type === 'file') {
-    return app.vault.getFileByPath(item.item.path ?? '');
-  }
-
-  return null;
+  return item?.type === 'bookmark' && item.item?.type === 'file' ? app.vault.getFileByPath(item.item.path ?? '') : null;
 }

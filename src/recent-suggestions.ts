@@ -174,11 +174,7 @@ export function getRecentPaths(params: GetRecentPathsParams): string[] {
   // Whether the folder you are looking at RIGHT NOW outranks your recent activity — the whole of issue
   // #248. Since issue #256 the other side of this choice is a time-ordered log rather than a pile of
   // targets, so `RecentTargetsFirst` no longer means "a target, however old".
-  if (pickerRecencyOrder === PickerRecencyOrder.ActiveFileFirst) {
-    return [activeFilePath, ...recentTargetPaths, ...recentFilePaths];
-  }
-
-  return [...recentTargetPaths, activeFilePath, ...recentFilePaths];
+  return pickerRecencyOrder === PickerRecencyOrder.ActiveFileFirst ? [activeFilePath, ...recentTargetPaths, ...recentFilePaths] : [...recentTargetPaths, activeFilePath, ...recentFilePaths];
 }
 
 /**
@@ -264,13 +260,7 @@ function reorderSuggestionsByRecentItems<Item extends TAbstractFile>(params: Reo
   const recentItemsSet = new Set<Item>();
   for (const recentPath of recentPaths) {
     const item = resolveItem(recentPath);
-    if (!item) {
-      continue;
-    }
-    if (!isAllowedItem(item)) {
-      continue;
-    }
-    if (recentItemsSet.has(item)) {
+    if (!item || !isAllowedItem(item) || recentItemsSet.has(item)) {
       continue;
     }
     recentItemsSet.add(item);

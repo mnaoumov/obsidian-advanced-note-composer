@@ -383,14 +383,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
 
     const heading = createHeading(2, 3, 3);
 
-    let callCount = 0;
-    mockGetCacheSafe.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
-      }
-      return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
-    });
+    mockGetCacheSafe.mockImplementation(() => Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] })));
 
     mockGetSelectionUnderHeading.mockReturnValueOnce({
       end: { ch: 0, line: 8 },
@@ -435,10 +428,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     let callCount = 0;
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) {
-        return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] }));
-      }
-      return Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
+      return callCount === 1 ? Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] })) : Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValue({

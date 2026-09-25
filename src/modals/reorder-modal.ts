@@ -448,10 +448,6 @@ function toReorderDragSource(draggable: ReorderDraggableCandidate): null | Reord
 
   const groupKey = source.groupKey;
   const rowId = source.rowId;
-  if (typeof groupKey !== 'string' || typeof rowId !== 'number') {
-    return null;
-  }
-
-  return { groupKey, rowId };
+  return typeof groupKey === 'string' && typeof rowId === 'number' ? { groupKey, rowId } : null;
 }
 /* v8 ignore stop */

@@ -1109,11 +1109,7 @@ function isRowDisabled(tab: PluginSettingsTab, name: string): boolean {
   }
 
   const disabled = castTo<DisabledPredicateRow>(row).disabled;
-  if (typeof disabled === 'function') {
-    return disabled();
-  }
-
-  return disabled ?? false;
+  return typeof disabled === 'function' ? disabled() : disabled ?? false;
 }
 
 /**

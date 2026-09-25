@@ -49,7 +49,7 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
 
 function createMockEditor(hasSomethingSelected = true): Editor {
   return strictProxy<Editor>({
-    getCursor: vi.fn((which?: string) => (which === 'from' ? { ch: 0, line: 0 } : { ch: 0, line: 1 })),
+    getCursor: vi.fn((which?: string) => ({ ch: 0, line: which === 'from' ? 0 : 1 })),
     getSelection: vi.fn().mockReturnValue('marked text'),
     posToOffset: vi.fn((pos: EditorPosition) => (pos.line === 0 ? 3 : 14)),
     somethingSelected: vi.fn().mockReturnValue(hasSomethingSelected)

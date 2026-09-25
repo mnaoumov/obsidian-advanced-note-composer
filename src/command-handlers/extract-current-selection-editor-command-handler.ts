@@ -62,10 +62,7 @@ export class ExtractCurrentSelectionEditorCommandHandler extends ActiveEditorCom
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
-      return false;
-    }
-    return editor.somethingSelected();
+    return !isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent }) && editor.somethingSelected();
   }
 
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {

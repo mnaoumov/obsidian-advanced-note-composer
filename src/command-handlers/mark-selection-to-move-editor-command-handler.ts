@@ -56,10 +56,7 @@ export class MarkSelectionToMoveEditorCommandHandler extends EditorCommandHandle
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
-      return false;
-    }
-    return editor.somethingSelected();
+    return !isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent }) && editor.somethingSelected();
   }
 
   protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {

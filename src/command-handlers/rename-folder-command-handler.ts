@@ -157,11 +157,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     const parentFolder = ensureNonNullable(folder.parent);
 
     const plan = await this.buildPlan(folder, parentFolder);
-    if (!plan) {
-      return;
-    }
-
-    if (!await this.rename(folder, plan)) {
+    if (!plan || !await this.rename(folder, plan)) {
       return;
     }
 

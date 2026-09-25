@@ -296,12 +296,14 @@ async function buildMoveConfirmContent(params: BuildMoveConfirmContentParams): P
   // Only when the auto-numbering of issue #273 actually changes the name. The dialog otherwise names the
   // folder once and the user would meet `8. B` for the first time in the file explorer — the same surprise
   // the flatten dialog's `old → new` arrow exists to prevent.
-  if (movedName !== sourceFolder.name) {
-    fragment.createEl('br');
-    fragment.createEl('br');
-    appendCodeBlock(fragment, 'New name');
-    fragment.appendText(': ');
-    // Plain text: the folder does not exist under that name yet.
-    appendCodeBlock(fragment, movedName);
+  if (movedName === sourceFolder.name) {
+    return;
   }
+
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'New name');
+  fragment.appendText(': ');
+  // Plain text: the folder does not exist under that name yet.
+  appendCodeBlock(fragment, movedName);
 }

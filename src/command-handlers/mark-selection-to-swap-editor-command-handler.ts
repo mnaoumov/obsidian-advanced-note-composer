@@ -47,10 +47,7 @@ export class MarkSelectionToSwapEditorCommandHandler extends EditorCommandHandle
   }
 
   protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
-    if (isEditorCommandBlocked({ commandCategory: CommandCategory.Swap, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
-      return false;
-    }
-    return editor.somethingSelected();
+    return !isEditorCommandBlocked({ commandCategory: CommandCategory.Swap, context, pluginSettingsComponent: this.pluginSettingsComponent }) && editor.somethingSelected();
   }
 
   protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {

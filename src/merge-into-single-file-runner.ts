@@ -419,10 +419,8 @@ function isMergeIgnored(pluginSettingsComponent: PluginSettingsComponent, source
   const { settings } = pluginSettingsComponent;
   // Source and target are decided by their own settings since issue #253 — what a merge may swallow, and
   // where it may land. Mirrors `MergeFolderCommandHandler.isMergeIgnored`.
-  if (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath, CommandCategory.Merge)) {
-    return true;
-  }
-  return !settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath, CommandCategory.Merge);
+  return (!settings.shouldAlwaysMergeExcludedItems && settings.isPathIgnored(sourcePath, CommandCategory.Merge))
+    || (!settings.shouldOfferExcludedPathsAsMergeDestinations && settings.isPathIgnored(targetPath, CommandCategory.Merge));
 }
 
 /**
@@ -463,10 +461,7 @@ async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNot
 }
 
 function warnIfTemplaterMissing(app: App, pluginNoticeComponent: PluginNoticeComponent, shouldRunTemplater: boolean): void {
-  if (!shouldRunTemplater) {
-    return;
-  }
-  if (app.plugins.plugins['templater-obsidian']) {
+  if (!shouldRunTemplater || app.plugins.plugins['templater-obsidian']) {
     return;
   }
   pluginNoticeComponent.showNotice(createFragment((f) => {

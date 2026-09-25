@@ -46,8 +46,5 @@ export async function reopenMarkedSourceNote(params: ReopenMarkedSourceNoteParam
   await leaf.openFile(sourceFile, { active: true });
 
   const view = params.app.workspace.getActiveViewOfType(MarkdownView);
-  if (!view || view.file?.path !== sourceFile.path) {
-    return null;
-  }
-  return view;
+  return view?.file?.path === sourceFile.path ? view : null;
 }

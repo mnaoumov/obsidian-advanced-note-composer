@@ -279,8 +279,5 @@ function findSiblingList(nodes: HeadingTreeNode[], index: number): HeadingTreeNo
 }
 
 function hasSiblingGroup(nodes: readonly HeadingTreeNode[]): boolean {
-  if (nodes.length >= MINIMUM_SIBLING_GROUP_SIZE) {
-    return true;
-  }
-  return nodes.some((node) => hasSiblingGroup(node.children));
+  return nodes.length >= MINIMUM_SIBLING_GROUP_SIZE || nodes.some((node) => hasSiblingGroup(node.children));
 }

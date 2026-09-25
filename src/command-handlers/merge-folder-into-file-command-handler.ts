@@ -314,11 +314,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     });
     // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
     // Creating the note in the folder that separator implies would put it somewhere the user never asked.
-    if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {
-      return folder.name;
-    }
-
-    return fixedNoteName;
+    return fixedNoteName.includes('/') || fixedNoteName.includes('\\') ? folder.name : fixedNoteName;
   }
 
   /**
@@ -412,10 +408,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
         }
         continue;
       }
-      if (confirmResult === 'cancelled') {
-        return null;
-      }
-      return { pathToCreate, targetPath };
+      return confirmResult === 'cancelled' ? null : { pathToCreate, targetPath };
     }
   }
 }

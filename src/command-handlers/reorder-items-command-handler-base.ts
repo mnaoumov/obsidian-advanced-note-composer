@@ -213,11 +213,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       ...this.buildPlan(model, parentFolder, ReorderItemKind.File)
     ];
     const renamedItems = plan.filter((plannedItem) => plannedItem.item.newPath !== plannedItem.item.oldPath);
-    if (renamedItems.length === 0) {
-      return;
-    }
-
-    if (!await this.reorder(plan, parentFolder)) {
+    if (renamedItems.length === 0 || !await this.reorder(plan, parentFolder)) {
       return;
     }
 
@@ -339,10 +335,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
         if (aIndex !== null) {
           return -1;
         }
-        if (bIndex !== null) {
-          return 1;
-        }
-        return compareNatural(a.name, b.name);
+        return bIndex === null ? compareNatural(a.name, b.name) : 1;
       });
   }
 

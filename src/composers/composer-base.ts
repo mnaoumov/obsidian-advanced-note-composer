@@ -77,10 +77,7 @@ export function getInsertModeFromEvent($event: KeyboardEvent | MouseEvent): Inse
  * @returns The insert offset.
  */
 export function resolveInsertOffset(content: string, insertMode: InsertMode): number {
-  if (insertMode === InsertMode.Prepend) {
-    return getFrontMatterInfo(content).contentStart;
-  }
-  return content.length;
+  return insertMode === InsertMode.Prepend ? getFrontMatterInfo(content).contentStart : content.length;
 }
 
 const moment = extractDefaultExportInterop(moment_);
@@ -612,15 +609,8 @@ export abstract class ComposerBase {
 
     const selections = await this.getSelections();
 
-    if (!selections[0]) {
-      return false;
-    }
-
-    if (selections[0].startOffset < sourceCache.frontmatterPosition.end.offset) {
-      return false;
-    }
-
-    return true;
+    const [firstSelection] = selections;
+    return firstSelection !== undefined && firstSelection.startOffset >= sourceCache.frontmatterPosition.end.offset;
   }
 
   private extractFrontmatter($string: string): ExtractFrontmatterResult {
@@ -1019,10 +1009,12 @@ export function getSelectionUnderHeading(params: GetSelectionUnderHeadingParams)
       break;
     }
 
-    if (!headingAtLineNumber && heading.position.start.line === lineNumber) {
-      headingLevelAtLineNumber = heading.level;
-      headingAtLineNumber = heading;
+    if (headingAtLineNumber || heading.position.start.line !== lineNumber) {
+      continue;
     }
+
+    headingLevelAtLineNumber = heading.level;
+    headingAtLineNumber = heading;
   }
 
   if (!headingAtLineNumber) {

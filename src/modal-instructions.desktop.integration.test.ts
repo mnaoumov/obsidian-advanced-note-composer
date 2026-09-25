@@ -68,10 +68,7 @@ describe('shouldShowModalInstructions', () => {
 
         async function ensureMarkdownFile(path: string, content: string): Promise<TFile> {
           const existing = app.vault.getAbstractFileByPath(path);
-          if (existing instanceof obsidianModule.TFile) {
-            return existing;
-          }
-          return app.vault.create(path, content);
+          return existing instanceof obsidianModule.TFile ? existing : app.vault.create(path, content);
         }
 
         async function setShowInstructions(shouldShow: boolean): Promise<void> {

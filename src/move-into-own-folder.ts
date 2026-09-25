@@ -132,11 +132,7 @@ function resolveNoteBasenameInOwnFolder(params: MoveIntoOwnFolderParams, folderP
   });
   // Only reachable when `shouldReplaceInvalidTitleCharacters` is off, leaving a separator in place.
   // Renaming into the folder that separator implies would fail, since it does not exist.
-  if (fixedNoteName.includes('/') || fixedNoteName.includes('\\')) {
-    return file.basename;
-  }
-
-  return fixedNoteName;
+  return fixedNoteName.includes('/') || fixedNoteName.includes('\\') ? file.basename : fixedNoteName;
 }
 
 /**

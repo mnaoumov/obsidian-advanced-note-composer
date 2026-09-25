@@ -159,10 +159,7 @@ export class SplitItemSelector extends ItemSelectorBase {
    * @returns The picked note's folder, or `null`.
    */
   private resolvePickedParentFolder(): null | TFolder {
-    if (this.item?.type === 'unresolved') {
-      return null;
-    }
-    return resolveExistingItemFile(this.app, this.item)?.parent ?? null;
+    return this.item?.type === 'unresolved' ? null : (resolveExistingItemFile(this.app, this.item)?.parent ?? null);
   }
 
   /**

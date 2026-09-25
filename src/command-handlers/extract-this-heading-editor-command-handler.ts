@@ -96,10 +96,7 @@ export class ExtractThisHeadingEditorCommandHandler extends EditorCommandHandler
 
   protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
     const file = context.file;
-    if (!file) {
-      return;
-    }
-    if (!this.headingInfo) {
+    if (!file || !this.headingInfo) {
       return;
     }
     editor.setSelection(this.headingInfo.start, this.headingInfo.end);

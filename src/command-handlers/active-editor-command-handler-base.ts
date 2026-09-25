@@ -31,10 +31,7 @@ export abstract class ActiveEditorCommandHandlerBase extends EditorCommandHandle
    */
   public canExecuteInActiveEditor(): boolean {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view?.file) {
-      return false;
-    }
-    return this.canExecuteEditor(view.editor, view);
+    return view?.file ? this.canExecuteEditor(view.editor, view) : false;
   }
 
   /**

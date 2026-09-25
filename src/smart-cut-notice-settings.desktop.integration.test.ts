@@ -124,10 +124,7 @@ async function markAndReadButtons(): Promise<string[]> {
 
       function moveNoticeButtonLabels(): string[] {
         const container = document.querySelector('.advanced-note-composer-move-notice-buttons');
-        if (!container) {
-          return [];
-        }
-        return [...container.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
+        return container ? [...container.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent) : [];
       }
 
       async function ensureMarkdownFile(path: string, content: string): Promise<TFile> {
