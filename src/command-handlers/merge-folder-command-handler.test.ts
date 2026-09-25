@@ -123,6 +123,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: () => false,
         keepSeparateFolderNames: [],
+        keepSeparateFolderPaths: [],
         mergeTemplate: '{{content}}',
         reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
@@ -682,6 +683,73 @@ describe('MergeFolderCommandHandler', () => {
 
       expect(await app.vault.adapter.exists('E/B 1/pic.png')).toBe(true);
       expect(await app.vault.adapter.exists('E/B/pic.png')).toBe(false);
+    });
+  });
+
+  // Issue #296: the same rule scoped to a PLACE, through `Folder paths to keep separate`.
+  describe('folders kept separate by path (issue #296)', () => {
+    it('should keep every folder separate that would land under a listed destination path', async () => {
+      // The reporter's "folders in folder X": `E` listed, and both `B` and the nested `B/D` stay apart,
+      // though neither NAME is listed anywhere.
+      initApp({
+        'A/B/C/chapter.md': 'chapter body',
+        'A/G/note.md': 'g body',
+        'E/B/F/existing.md': 'existing body',
+        'E/G/existing.md': 'existing g'
+      });
+      const { handler } = createHandler({ keepSeparateFolderPaths: ['E'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B 1/C/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.read('E/G 1/note.md')).toContain('g body');
+      expect(await app.vault.adapter.read('E/B/F/existing.md')).toBe('existing body');
+      expect(await app.vault.adapter.read('E/G/existing.md')).toBe('existing g');
+    });
+
+    it('should keep separate what comes out of a listed source path', async () => {
+      initApp({
+        'A/B/chapter.md': 'chapter body',
+        'E/B/existing.md': 'existing body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderPaths: ['A'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B 1/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.read('E/B/existing.md')).toBe('existing body');
+    });
+
+    it('should merge as before where no listed path matches', async () => {
+      // The control: a path elsewhere in the vault does not reach this merge.
+      initApp({
+        'A/B/chapter.md': 'chapter body',
+        'E/B/existing.md': 'existing body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderPaths: ['Elsewhere'] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.exists('E/B 1')).toBe(false);
+    });
+
+    it('should match a regular expression against the destination path', async () => {
+      // Only the folders DIRECTLY inside `E`: `B` is kept apart, the nested `B/C` would merge normally.
+      initApp({
+        'A/B/C/chapter.md': 'chapter body',
+        'E/B/existing.md': 'existing body'
+      });
+      const { handler } = createHandler({ keepSeparateFolderPaths: [String.raw`/^E\/[^/]+$/`] });
+      mockSelectTargetFolder.mockResolvedValue(getFolder('E'));
+
+      await handler.executeFolder(getFolder('A'));
+
+      expect(await app.vault.adapter.read('E/B 1/C/chapter.md')).toContain('chapter body');
+      expect(await app.vault.adapter.read('E/B/existing.md')).toBe('existing body');
     });
   });
 

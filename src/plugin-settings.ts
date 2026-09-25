@@ -513,6 +513,21 @@ export class PluginSettings {
   public keepSeparateFolderNames: string[] = [];
 
   /**
+   * The same rule as `keepSeparateFolderNames`, listed by PATH instead of by name (issue #296), so a rule
+   * can be scoped to a place — "folders in `E` are never poured together" — rather than to a name. Its
+   * entries take the include/exclude syntax (a plain path covers its whole subtree, a `/regular expression/`
+   * is tested against the full path), and a folder is kept separate when EITHER list matches it; read
+   * through `shouldKeepFolderPathSeparate`, which judges both where the folder comes from and where it
+   * would land.
+   *
+   * A second list rather than a reinterpretation of the first: every shipped name entry would otherwise
+   * start meaning a vault-root path. Empty by default, so no `registerLegacySettingsConverter` is needed.
+   * Like its sibling, it must not be folded into the `Merge include/exclude paths` pair (bug #253's shape),
+   * and its name deliberately does not end in `includePaths` / `excludePaths`.
+   */
+  public keepSeparateFolderPaths: string[] = [];
+
+  /**
    * Where a folder merge creates the merged note (issue #178). Defaults to `BesideFolder`, which is the
    * existing behavior, so no `registerLegacySettingsConverter` is needed — the same reasoning as
    * `flattenMode` and `shouldSplitRecursivelyIntoDefaultNewNoteFolder`.

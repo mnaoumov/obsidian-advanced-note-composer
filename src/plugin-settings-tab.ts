@@ -617,6 +617,43 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                     this.bind({ propertyName: 'keepSeparateFolderNames', valueComponent: multipleText });
                   });
                 }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
+                  f.appendText('The same rule as ');
+                  appendCodeBlock(f, 'Folder names to keep separate');
+                  f.appendText(', listed by path instead of by name, so it can be scoped to a place: where ');
+                  appendCodeBlock(f, 'Merge current folder with another folder...');
+                  f.appendText(' would combine two same-named folders, the incoming one arrives under a numbered name instead. A folder is kept separate when either list matches it.');
+                  f.createEl('br');
+                  f.appendText('Each path is checked both where the folder is now and where it would land. For example, with ');
+                  appendCodeBlock(f, 'E');
+                  f.appendText(' listed, no folder merged into ');
+                  appendCodeBlock(f, 'E');
+                  f.appendText(' is ever combined with a same-named folder anywhere under it; with ');
+                  appendCodeBlock(f, 'A');
+                  f.appendText(' listed, nothing coming out of ');
+                  appendCodeBlock(f, 'A');
+                  f.appendText(' is, wherever it is merged.');
+                  f.createEl('br');
+                  f.appendText('Insert each path on a new line');
+                  f.createEl('br');
+                  f.appendText('You can use a path or ');
+                  appendCodeBlock(f, '/regular expression/');
+                  f.appendText(', as in the include/exclude paths lists. A plain path covers that folder and everything under it; a regular expression is tested against the full path, so ');
+                  appendCodeBlock(f, String.raw`/^E\/[^/]+$/`);
+                  f.appendText(' matches only the folders directly inside ');
+                  appendCodeBlock(f, 'E');
+                  f.appendText('.');
+                  f.createEl('br');
+                  f.appendText('If an entry is an invalid regular expression, the whole list is ignored until it is fixed.');
+                }),
+                name: 'Folder paths to keep separate',
+                render: (setting) => {
+                  setting.addMultipleText((multipleText) => {
+                    this.bind({ propertyName: 'keepSeparateFolderPaths', valueComponent: multipleText });
+                  });
+                }
               })
             ],
             name: 'Merge current folder with another folder'

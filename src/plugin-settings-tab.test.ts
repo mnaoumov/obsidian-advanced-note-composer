@@ -485,7 +485,8 @@ describe('PluginSettingsTab', () => {
       'Should include child folders when merging folders',
       'Should include parent folders when merging folders',
       'Should open the first note after merging folders',
-      'Folder names to keep separate'
+      'Folder names to keep separate',
+      'Folder paths to keep separate'
     ]);
   });
 

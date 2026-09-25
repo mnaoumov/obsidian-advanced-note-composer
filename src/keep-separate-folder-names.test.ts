@@ -4,7 +4,10 @@ import {
   it
 } from 'vitest';
 
-import { shouldKeepFolderNameSeparate } from './keep-separate-folder-names.ts';
+import {
+  shouldKeepFolderNameSeparate,
+  shouldKeepFolderPathSeparate
+} from './keep-separate-folder-names.ts';
 
 describe('shouldKeepFolderNameSeparate', () => {
   it('should keep nothing separate when the list is empty', () => {
@@ -56,5 +59,39 @@ describe('shouldKeepFolderNameSeparate', () => {
   it('should be case-sensitive', () => {
     // No flags are parsed out of the literal, which is what every other list in this plugin does too.
     expect(shouldKeepFolderNameSeparate({ folderName: 'b', keepSeparateFolderNames: ['B'] })).toBe(false);
+  });
+});
+
+describe('shouldKeepFolderPathSeparate', () => {
+  it('should keep nothing separate when the list is empty', () => {
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: [], paths: ['A/B', 'E/B'] })).toBe(false);
+  });
+
+  it('should match a plain path against that folder and its whole subtree', () => {
+    // Issue #296's "folders in folder X": `E` covers every folder under `E`, at any depth.
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E'], paths: ['E/B'] })).toBe(true);
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E'], paths: ['E/B/C'] })).toBe(true);
+  });
+
+  it('should not match a plain path that is only a prefix of a folder name', () => {
+    // The include/exclude grammar: `E` covers `E/…`, never `Else`.
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E'], paths: ['Else/B'] })).toBe(false);
+  });
+
+  it('should match when any of the folder paths matches', () => {
+    // Where the folder comes from, or where it would land: either end of the merge can be named.
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['A'], paths: ['A/B', 'E/B'] })).toBe(true);
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E'], paths: ['A/B', 'E/B'] })).toBe(true);
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['X'], paths: ['A/B', 'E/B'] })).toBe(false);
+  });
+
+  it('should test a regular expression literal against the full path', () => {
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: [String.raw`/^E\/[^/]+$/`], paths: ['E/B'] })).toBe(true);
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: [String.raw`/^E\/[^/]+$/`], paths: ['E/B/C'] })).toBe(false);
+  });
+
+  it('should match nothing while the list holds an un-parseable regular expression', () => {
+    // The shared all-or-nothing fallback of issue #155; `pathsValidator` is what reports it.
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E', String.raw`/^E\/`], paths: ['E/B'] })).toBe(false);
   });
 });

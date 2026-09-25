@@ -1,3 +1,4 @@
+import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
 import { isValidRegExp } from 'obsidian-dev-utils/reg-exp';
 
 /**
@@ -15,6 +16,22 @@ export interface ShouldKeepFolderNameSeparateParams {
   readonly keepSeparateFolderNames: readonly string[];
 }
 
+/**
+ * Parameters for {@link shouldKeepFolderPathSeparate}.
+ */
+export interface ShouldKeepFolderPathSeparateParams {
+  /**
+   * The configured entries, as typed into the setting: a plain path, or a `/regular expression/` literal.
+   */
+  readonly keepSeparateFolderPaths: readonly string[];
+
+  /**
+   * The paths the folder is judged by: where it sits before the merge, and where it would land without
+   * being kept separate.
+   */
+  readonly paths: readonly string[];
+}
+
 const REG_EXP_LITERAL_MIN_LENGTH = 2;
 
 /**
@@ -23,8 +40,9 @@ const REG_EXP_LITERAL_MIN_LENGTH = 2;
  *
  * Matched against the folder's NAME rather than its path, because what makes two folders combine is the
  * name they share: the reporter's case is an `B` that occurs under several parents and must stay distinct
- * under each. A path-scoped rule is what the category's own `Merge include paths` / `Merge exclude paths`
- * rows already are, and those answer a different question — they decide what a merge may touch at all.
+ * under each. A rule scoped to a PLACE is {@link shouldKeepFolderPathSeparate}'s list (issue #296); the
+ * category's own `Merge include paths` / `Merge exclude paths` rows answer a different question — they
+ * decide what a merge may touch at all.
  *
  * The two entry forms are the ones every other list in this plugin takes:
  * - a plain string, matched as the WHOLE name (`B` keeps `B` separate and leaves `Backup` alone);
@@ -40,6 +58,35 @@ const REG_EXP_LITERAL_MIN_LENGTH = 2;
 export function shouldKeepFolderNameSeparate(params: ShouldKeepFolderNameSeparateParams): boolean {
   const { folderName, keepSeparateFolderNames } = params;
   return keepSeparateFolderNames.some((entry) => doesEntryMatch(entry, folderName));
+}
+
+/**
+ * The path-based sibling of {@link shouldKeepFolderNameSeparate} (issue #296): whether a folder must never
+ * be merged INTO a destination folder of the same name, judged by its PATH rather than its name.
+ *
+ * The name list cannot say "folders in folder X", which is what the reporter asked for: a rule scoped to a
+ * place rather than to a name. This list takes exactly the syntax of the `<category> include/exclude paths`
+ * lists — a plain path covers that path AND its whole subtree, a `/regular expression/` is tested
+ * unanchored against the full path — and is matched through obsidian-dev-utils' own `PathSettings`, so the
+ * grammar is that object rather than a second copy of it. That also carries over its all-or-nothing
+ * fallback: one un-parseable literal makes the whole list match nothing, which the registered
+ * `pathsValidator` reports (issue #155).
+ *
+ * It is ADDED beside the name list, not folded into it: reading the shipped name entries as paths would
+ * turn a listed `B` into "the vault-root folder `B`", silently changing every existing configuration.
+ *
+ * A folder is judged by more than one path because "folders in folder X" names either end of a merge:
+ * `E` listed keeps separate whatever would be poured into a same-named folder under `E`, while `A` listed
+ * keeps separate whatever comes out of `A`, wherever `A` is merged. Any path matching is enough.
+ *
+ * @param params - The folder's paths and the configured entries.
+ * @returns Whether this folder must be kept separate.
+ */
+export function shouldKeepFolderPathSeparate(params: ShouldKeepFolderPathSeparateParams): boolean {
+  const { keepSeparateFolderPaths, paths } = params;
+  const pathSettings = new PathSettings();
+  pathSettings.excludePaths = [...keepSeparateFolderPaths];
+  return paths.some((path) => pathSettings.isPathIgnored(path));
 }
 
 /**
