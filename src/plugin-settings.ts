@@ -806,7 +806,10 @@ export class PluginSettings {
    * split could only ever create, and the only way to merge was to go and turn the setting off — a
    * capability silently removed by a setting that says nothing about it. The name box now carries
    * `Switch to merge`, which hands the pass to the ordinary picker in `Merge`, alongside
-   * `Change target folder` and a minimize button.
+   * `Change target folder` and a minimize button. Since issue #297 the FOLDER prompt carries the picker's
+   * own `Create` / `Merge` switch as well, so a merge no longer costs an arbitrary folder choice first,
+   * and a picker this setting opened comes back to the folder prompt when its switch is flipped to
+   * `Create`.
    *
    * Name CLEANING needs nothing new: `createNoteFromTypedName` already runs
    * {@link nameTransformTemplate}, replaces invalid characters per
