@@ -1023,6 +1023,10 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendCodeBlock(f, 'Merge');
               f.appendText(' mode — so merging stays available without turning this off. It can also be minimized while you go and look at a note.');
               f.createEl('br');
+              f.appendText('The folder list carries the picker\'s own create/merge switch (Alt+M) too, so a merge does not cost a folder choice first. In a picker this setting opened, flipping the switch back to ');
+              appendCodeBlock(f, 'Create');
+              f.appendText(' returns to the folder list.');
+              f.createEl('br');
               f.appendText('Heading-driven splits that never open the picker are unaffected. The name is cleaned exactly as it is anywhere else — the name transform, the invalid-character replacement, and the alias or title recording what you typed.');
             }),
             name: 'Should choose the folder before the name when splitting',

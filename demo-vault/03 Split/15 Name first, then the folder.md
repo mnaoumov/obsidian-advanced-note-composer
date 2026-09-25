@@ -64,6 +64,8 @@ The name is cleaned exactly as it is anywhere else: the **Name transform templat
 
 It only applies while **Default split target mode** is `Create` — a default of `Merge` is asking for the picker. Heading-driven splits that never open the picker are unaffected, and dismissing either prompt abandons the split (there is no picker to fall back to).
 
+The folder list opens with the picker's own `Create` / `Merge` switch above it, reading `Create a new note`. Flip it (or press `Alt+M`) and the pass goes straight to the ordinary picker in `Merge`, with no folder chosen first. In a picker this setting opened, flipping the switch back to `Create` returns to the folder list — so the rule holds both ways: `Create` asks for a folder and then a name, `Merge` lists the notes to merge into.
+
 ### What the name box can do besides name the note
 
 The box is the second half of the pair, not a dead end: everything the picker would have let you change from here, it lets you change too.

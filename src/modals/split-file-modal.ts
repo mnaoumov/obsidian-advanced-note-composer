@@ -51,7 +51,10 @@ import {
 } from '../plugin-settings.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { resolveExistingItemFile } from './existing-item-file.ts';
-import { selectFolder } from './select-folder-modal.ts';
+import {
+  selectFolder,
+  selectFolderForNewNote
+} from './select-folder-modal.ts';
 import {
   openSplitNoteNameModal,
   SplitNoteNameAction
@@ -80,7 +83,8 @@ enum FolderThenNameKind {
   NotApplicable = 'NotApplicable',
 
   /**
-   * The user pressed `Switch to merge` in the name box (issue #280). The pair is abandoned for this pass
+   * The user pressed `Switch to merge` in the name box (issue #280), or flipped the folder prompt's
+   * `Create` / `Merge` switch before choosing a folder (issue #297). The pair is abandoned for this pass
    * and the ordinary picker opens in `Merge` mode — which is how the `Create` / `Merge` switch stays
    * reachable on a path that replaces the picker holding it.
    */
@@ -124,6 +128,15 @@ interface FolderThenNameSwitchedToMerge {
    * something the user was inventing.
    */
   readonly name: string;
+}
+
+interface OpenSplitPickerParams {
+  readonly abortController: AbortController;
+  readonly canSwitchToSmartCut: boolean;
+  readonly initialInputValue: string;
+  readonly initialSplitTargetMode: null | SplitTargetMode;
+  readonly isInitialInputValueNewNoteName: boolean;
+  readonly params: PrepareForSplitFileParams;
 }
 
 interface PrepareForSplitFileParams {
@@ -285,6 +298,12 @@ interface SelectFolderThenNameParams {
   readonly abortController: AbortController;
 
   /**
+   * Whether the picker's switch has just asked for `Create` (issue #297), which counts as the pass's mode
+   * whatever {@link PluginSettings.defaultSplitTargetMode} says.
+   */
+  readonly isCreateRequested: boolean;
+
+  /**
    * Whether this pass is already running without the picker. A heading-driven split has both answers
    * already, so it must not grow two prompts.
    */
@@ -395,8 +414,24 @@ interface SplitFileModalConstructorParams extends SuggestModalBaseConstructorPar
    * wants, so it seeds both modes.
    */
   readonly isInitialInputValueNewNoteName: boolean;
-  readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
+  readonly promiseResolve: PromiseResolve<null | SplitFileModalPickerResult>;
+
+  /**
+   * Whether flipping the switch to `Create` leaves the picker for the folder-then-name pair (issue #297),
+   * which is what `Should choose the folder before the name when splitting` asks a creation to go through.
+   * Without it a picker the setting opened in `Merge` — after the pair's own `Switch to merge`, or under a
+   * `Merge` default the last merge remembered (issue #245) — let a creation be typed into the very box the
+   * setting exists to take away.
+   */
+  readonly shouldReturnToFolderThenNameOnCreate: boolean;
 }
+
+/**
+ * Everything the picker itself can resolve with. {@link resolveSplitPass} answers the
+ * `switch-to-folder-then-name` member internally, so the rest of the flow only ever sees a
+ * {@link SplitFileModalResult}.
+ */
+type SplitFileModalPickerResult = SplitFileModalResult | SplitFileModalSwitchToFolderThenNameResult;
 
 type SplitFileModalResult = SplitFileModalSplitResult | SplitFileModalSwitchToSmartCutResult;
 
@@ -422,6 +457,20 @@ interface SplitFileModalSplitResult {
    * {@link SplitTargetMode.Create} and chooses, so the switch can never disagree with what happens.
    */
   readonly splitTargetMode: SplitTargetMode;
+}
+
+/**
+ * The user flipped the switch to `Create` in a picker opened while
+ * `Should choose the folder before the name when splitting` is on (issue #297): the creation goes through
+ * the folder prompt and the name box instead.
+ */
+interface SplitFileModalSwitchToFolderThenNameResult {
+  readonly action: 'switch-to-folder-then-name';
+
+  /**
+   * What `Create` held when the user switched, which seeds the name box.
+   */
+  readonly name: string;
 }
 
 /**
@@ -452,11 +501,12 @@ class SplitFileModal extends SuggestModalBase {
   private readonly inputValueBySplitTargetMode: Record<SplitTargetMode, string>;
   private isSelected = false;
   private nameRequiredHintEl?: HTMLElement;
-  private readonly promiseResolve: PromiseResolve<null | SplitFileModalResult>;
+  private readonly promiseResolve: PromiseResolve<null | SplitFileModalPickerResult>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
   private shouldIncludeFrontmatter: boolean;
   private shouldMergeHeadings: boolean;
+  private readonly shouldReturnToFolderThenNameOnCreate: boolean;
   private shouldTreatTitleAsPath: boolean;
   private splitTargetMode: SplitTargetMode;
   private splitTargetModeSetting?: Setting;
@@ -472,6 +522,7 @@ class SplitFileModal extends SuggestModalBase {
     this.canSwitchToSmartCut = params.canSwitchToSmartCut;
     this.editor = params.editor;
     this.promiseResolve = params.promiseResolve;
+    this.shouldReturnToFolderThenNameOnCreate = params.shouldReturnToFolderThenNameOnCreate;
 
     this.shouldIncludeFrontmatter = this.pluginSettingsComponent.settings.shouldIncludeFrontmatterWhenSplittingByDefault;
     this.shouldTreatTitleAsPath = this.pluginSettingsComponent.settings.shouldTreatTitleAsPathByDefault;
@@ -680,10 +731,7 @@ class SplitFileModal extends SuggestModalBase {
         key: 'm',
         modifiers: ['Alt'],
         onKey: () => {
-          this.setSplitTargetMode({
-            shouldCarryOverInputValue: false,
-            splitTargetMode: this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create
-          });
+          this.flipSplitTargetModeSwitch(this.splitTargetMode === SplitTargetMode.Create ? SplitTargetMode.Merge : SplitTargetMode.Create);
           return false;
         },
         purpose: 'to switch between create and merge'
@@ -827,6 +875,32 @@ class SplitFileModal extends SuggestModalBase {
    *
    * @returns Whether a name is still missing.
    */
+  /**
+   * What the switch and `Alt+M` do — the two surfaces that ASK for a mode, as opposed to `Mod+Enter`, which
+   * forces a creation from what was typed and keeps doing so.
+   *
+   * While {@link SplitFileModalConstructorParams.shouldReturnToFolderThenNameOnCreate} is on, `Create`
+   * leaves the picker for the folder prompt and the name box (issue #297), carrying `Create`'s text as the
+   * name. It is checked against the CURRENT mode first: `setSplitTargetMode` re-sets the toggle, which fires
+   * this again with the mode it has just applied, and that echo must not close the picker.
+   *
+   * @param splitTargetMode - The mode the surface asked for.
+   */
+  private flipSplitTargetModeSwitch(splitTargetMode: SplitTargetMode): void {
+    if (splitTargetMode === this.splitTargetMode) {
+      return;
+    }
+
+    if (splitTargetMode === SplitTargetMode.Create && this.shouldReturnToFolderThenNameOnCreate) {
+      this.isSelected = true;
+      this.promiseResolve({ action: 'switch-to-folder-then-name', name: this.inputValueBySplitTargetMode[SplitTargetMode.Create] });
+      this.close();
+      return;
+    }
+
+    this.setSplitTargetMode({ shouldCarryOverInputValue: false, splitTargetMode });
+  }
+
   private isNameMissing(): boolean {
     return this.splitTargetMode === SplitTargetMode.Create && !this.inputEl.value.trim();
   }
@@ -928,10 +1002,7 @@ class SplitFileModal extends SuggestModalBase {
           .setValue(this.splitTargetMode === SplitTargetMode.Merge)
           .setDisabled(!this.canMergeIntoExistingNote)
           .onChange((value) => {
-            this.setSplitTargetMode({
-              shouldCarryOverInputValue: false,
-              splitTargetMode: value ? SplitTargetMode.Merge : SplitTargetMode.Create
-            });
+            this.flipSplitTargetModeSwitch(value ? SplitTargetMode.Merge : SplitTargetMode.Create);
           });
       });
     this.refreshSplitTargetModeSwitch();
@@ -1330,6 +1401,30 @@ async function confirmSplit(params: ConfirmSplitParams): Promise<ConfirmDialogMo
 }
 
 /**
+ * Opens the split/extract target picker for one pass.
+ *
+ * @param params - The prepare parameters and what the picker opens holding.
+ * @returns What the picker resolved with, or `null` when it was dismissed.
+ */
+async function openSplitPicker(params: OpenSplitPickerParams): Promise<null | SplitFileModalPickerResult> {
+  const prepareParams = params.params;
+  return await new Promise<null | SplitFileModalPickerResult>((promiseResolve) => {
+    const modal = new SplitFileModal({
+      ...prepareParams,
+      canSwitchToSmartCut: params.canSwitchToSmartCut,
+      initialInputValue: params.initialInputValue,
+      initialSplitTargetMode: params.initialSplitTargetMode,
+      isInitialInputValueNewNoteName: params.isInitialInputValueNewNoteName,
+      promiseResolve,
+      // The picker only opens under that setting when the pass is headed for a merge (a creation goes
+      // through the pair), so its switch flipping to `Create` has to lead back there (issue #297).
+      shouldReturnToFolderThenNameOnCreate: prepareParams.pluginSettingsComponent.settings.shouldChooseFolderBeforeNameWhenSplitting
+    });
+    openMinimizableModal(modal, params.abortController);
+  });
+}
+
+/**
  * Writes the mode the picker was left in back to `defaultSplitTargetMode`, so the next split/extract opens
  * where the last one did (issue #245).
  *
@@ -1409,47 +1504,62 @@ function resolveInitialSplitTargetMode(params: ResolveInitialSplitTargetModePara
 async function resolveSplitPass(params: ResolveSplitPassParams): Promise<ResolveSplitPassResult> {
   const prepareParams = params.params;
 
-  const folderThenName = await selectFolderThenName({
-    abortController: params.abortController,
-    isPickerStillSkipped: params.shouldSkipModalThisPass,
-    params: prepareParams,
-    seed: params.seed
-  });
+  let seed = params.seed;
+  let isSeedNewNoteName = params.isCurrentSeedNewNoteName;
+  // Set once the picker's switch has asked for `Create` (issue #297), which the pair must honor even under
+  // a `Merge` default: the user has just answered the question that default only guesses at.
+  let isCreateRequested = false;
 
-  if (folderThenName.kind === FolderThenNameKind.Dismissed) {
-    return { chosenParentFolder: null, splitFileModalResult: null };
-  }
-
-  if (folderThenName.kind === FolderThenNameKind.Chosen) {
-    return {
-      chosenParentFolder: folderThenName.folder,
-      splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, folderThenName.name)
-    };
-  }
-
-  if (params.shouldSkipModalThisPass) {
-    return {
-      chosenParentFolder: null,
-      splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, params.heading)
-    };
-  }
-
-  // The pair handed the pass to the picker in `Merge` (issue #280), seeded with the name that was typed —
-  // which the picker then keeps out of the `Merge` box, since it names a note to CREATE (issue #237).
-  const hasSwitchedToMerge = folderThenName.kind === FolderThenNameKind.SwitchedToMerge;
-
-  const splitFileModalResult = await new Promise<null | SplitFileModalResult>((promiseResolve) => {
-    const modal = new SplitFileModal({
-      ...prepareParams,
-      canSwitchToSmartCut: params.canSwitchToSmartCut,
-      initialInputValue: hasSwitchedToMerge ? folderThenName.name : params.seed,
-      initialSplitTargetMode: hasSwitchedToMerge ? SplitTargetMode.Merge : null,
-      isInitialInputValueNewNoteName: hasSwitchedToMerge || params.isCurrentSeedNewNoteName,
-      promiseResolve
+  // A loop because the pair and the picker can hand the pass back and forth: the pair's switches go to the
+  // picker in `Merge`, and the picker's switch comes back to the pair for `Create`.
+  for (;;) {
+    const folderThenName = await selectFolderThenName({
+      abortController: params.abortController,
+      isCreateRequested,
+      isPickerStillSkipped: params.shouldSkipModalThisPass,
+      params: prepareParams,
+      seed
     });
-    openMinimizableModal(modal, params.abortController);
-  });
-  return { chosenParentFolder: null, splitFileModalResult };
+
+    if (folderThenName.kind === FolderThenNameKind.Dismissed) {
+      return { chosenParentFolder: null, splitFileModalResult: null };
+    }
+
+    if (folderThenName.kind === FolderThenNameKind.Chosen) {
+      return {
+        chosenParentFolder: folderThenName.folder,
+        splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, folderThenName.name)
+      };
+    }
+
+    if (params.shouldSkipModalThisPass) {
+      return {
+        chosenParentFolder: null,
+        splitFileModalResult: buildSynthesizedSplitFileModalResult(prepareParams, params.heading)
+      };
+    }
+
+    // The pair handed the pass to the picker in `Merge` (issues #280, #297), seeded with the name that was
+    // typed — which the picker then keeps out of the `Merge` box, since it names a note to CREATE (#237).
+    const hasSwitchedToMerge = folderThenName.kind === FolderThenNameKind.SwitchedToMerge;
+
+    const pickerResult = await openSplitPicker({
+      abortController: params.abortController,
+      canSwitchToSmartCut: params.canSwitchToSmartCut,
+      initialInputValue: hasSwitchedToMerge ? folderThenName.name : seed,
+      initialSplitTargetMode: hasSwitchedToMerge ? SplitTargetMode.Merge : null,
+      isInitialInputValueNewNoteName: hasSwitchedToMerge || isSeedNewNoteName,
+      params: prepareParams
+    });
+
+    if (pickerResult?.action !== 'switch-to-folder-then-name') {
+      return { chosenParentFolder: null, splitFileModalResult: pickerResult };
+    }
+
+    seed = pickerResult.name;
+    isSeedNewNoteName = true;
+    isCreateRequested = true;
+  }
 }
 
 /**
@@ -1489,7 +1599,9 @@ function resolveTargetParentFolderOverride(params: PrepareForSplitFileParams, is
  * lives in the picker this replaces, so with the setting on a split could only ever create, and the only
  * way to merge was to go and turn the setting off. The name box now carries `Switch to merge`, which
  * abandons the pair for this pass and hands it to the picker in `Merge` — the switch is reachable again
- * without the setting having to be touched. It also carries `Change target folder`, which is why this is a
+ * without the setting having to be touched. Since issue #297 the FOLDER prompt carries the picker's own switch as well, so a merge
+ * no longer costs an arbitrary folder choice first; and the picker it hands over to comes back here when
+ * its switch is flipped to `Create`. It also carries `Change target folder`, which is why this is a
  * LOOP: that answer reopens the folder prompt with what was typed still in hand.
  *
  * Nothing is done about name CLEANING here, because nothing needs to be: `createNoteFromTypedName`,
@@ -1510,7 +1622,7 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
     || resolveInitialSplitTargetMode({
         canMergeIntoExistingNote: prepareParams.canMergeIntoExistingNote ?? true,
         defaultSplitTargetMode: settings.defaultSplitTargetMode,
-        initialSplitTargetMode: null
+        initialSplitTargetMode: params.isCreateRequested ? SplitTargetMode.Create : null
       }) !== SplitTargetMode.Create
   ) {
     return { kind: FolderThenNameKind.NotApplicable };
@@ -1521,19 +1633,27 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
   let name = params.seed;
 
   for (;;) {
-    const folder = await selectFolder({
+    const folderResult = await selectFolderForNewNote({
       // The source note is locked for the whole setup flow, so an unlock request has to close this prompt
       // just as it closes the picker it stands in for.
       abortController: params.abortController,
       app: prepareParams.app,
+      canMergeIntoExistingNote: prepareParams.canMergeIntoExistingNote ?? true,
       isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
       placeholder: 'Select folder to create the new note in...',
       pluginSettingsComponent: prepareParams.pluginSettingsComponent
     });
-    if (!folder) {
+    if (!folderResult) {
       return { kind: FolderThenNameKind.Dismissed };
     }
 
+    // The switch is the first thing an extract shows now (issue #297), so a merge no longer costs an
+    // arbitrary folder choice just to reach the name box's `Switch to merge`.
+    if (folderResult.kind === 'switch-to-merge') {
+      return { kind: FolderThenNameKind.SwitchedToMerge, name };
+    }
+
+    const { folder } = folderResult;
     const nameResult = await openSplitNoteNameModal({
       abortController: params.abortController,
       app: prepareParams.app,

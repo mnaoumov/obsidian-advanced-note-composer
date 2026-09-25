@@ -451,4 +451,181 @@ describe('choosing the folder before the name (issue #261)', () => {
     expect(result.firstPromptPlaceholder).toBe('Select folder to create the new note in...');
     expect(result.wasCreated).toBe(true);
   });
+
+  it('offers the create/merge switch on the folder prompt, and comes back to it for Create (issue #297)', async () => {
+    // The reporter's steps: with the setting on, the first thing an extract showed was the folder list,
+    // with no way to say "merge" short of choosing an arbitrary folder to reach the name box.
+    const result = await evalInObsidian({
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Nine call sites share this ceiling (one inside `openAndGetEditor`), so the closure declares 21.6 s
+         * of waits plus about 1.5 s of fixed render delays - under the transport's ~30 s cap with headroom.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2400;
+        const RENDER_DELAY_IN_MILLISECONDS = 300;
+        const FOLDER_PLACEHOLDER = 'Select folder to create the new note in...';
+        const PICKER_PLACEHOLDER = 'Select file to split into...';
+        const SOURCE_PATH = 'folder-then-name-switch-source.md';
+        const TARGET_BASENAME = 'folder-then-name-switch-merge-target';
+        const TARGET_PATH = `${TARGET_BASENAME}.md`;
+        const SOURCE_CONTENT = 'alpha FOLDER-THEN-NAME-SWITCH-BODY omega\n';
+        const SELECTED_TEXT = 'FOLDER-THEN-NAME-SWITCH-BODY';
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldChooseFolderBeforeNameWhenSplitting = true;
+            settings.defaultSplitTargetMode = 'Create';
+            settings.shouldAskBeforeSplitting = false;
+            settings.shouldAskForTargetFolderWhenSplitting = false;
+            settings.shouldSplitIntoFolder = false;
+            settings.shouldSplitHeadingsAutomatically = false;
+          });
+
+          const target = await resetFile(TARGET_PATH, 'target body\n');
+          const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
+          const editor = await openAndGetEditor(source);
+          editor.setValue(SOURCE_CONTENT);
+          await waitUntil({
+            message: 'the source editor did not catch up with the reset content',
+            predicate: () => editor.getValue() === SOURCE_CONTENT,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          const selectionStart = SOURCE_CONTENT.indexOf(SELECTED_TEXT);
+          editor.setSelection(editor.offsetToPos(selectionStart), editor.offsetToPos(selectionStart + SELECTED_TEXT.length));
+          app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
+
+          // 1. The folder prompt opens WITH the switch, reading `Create`, and the box still has the cursor.
+          await waitForPlaceholder(FOLDER_PLACEHOLDER, 'the folder prompt did not open');
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const folderPromptSwitchName = getSwitchName();
+          const isFolderPromptInputFocused = document.activeElement === getPromptInput();
+
+          // 2. Clicking the switch hands the pass to the picker in `Merge`, with no folder chosen.
+          getSwitchToggle()?.click();
+          await waitForPlaceholder(PICKER_PLACEHOLDER, 'the switch did not open the picker');
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const pickerSwitchName = getSwitchName();
+
+          // 3. Flipping the picker's switch back to `Create` returns to the folder prompt.
+          getSwitchToggle()?.click();
+          await waitForPlaceholder(FOLDER_PLACEHOLDER, 'the picker\'s switch did not return to the folder prompt');
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          // 4. `Alt+M` on the folder prompt does what the click did, and the merge goes through.
+          getPromptInput()?.focus();
+          await pressKey({ key: 'm', modifiers: ['Alt'] });
+          await waitForPlaceholder(PICKER_PLACEHOLDER, 'Alt+M did not open the picker');
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const pickerInput = getPromptInput();
+          if (!pickerInput) {
+            throw new TypeError('No picker input.');
+          }
+          pickerInput.value = TARGET_BASENAME;
+          pickerInput.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'the merge target was not offered',
+            predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(TARGET_BASENAME)),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          pickerInput.focus();
+          await pressKey({ key: 'Enter' });
+
+          await waitUntil({
+            message: 'the selection was not merged into the target',
+            predicate: async () => {
+              const targetContent = await app.vault.read(target);
+              return targetContent.includes(SELECTED_TEXT);
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+
+          return { folderPromptSwitchName, isFolderPromptInputFocused, pickerSwitchName };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.defaultSplitTargetMode = original.defaultSplitTargetMode;
+            settings.shouldAskBeforeSplitting = original.shouldAskBeforeSplitting;
+            settings.shouldAskForTargetFolderWhenSplitting = original.shouldAskForTargetFolderWhenSplitting;
+            settings.shouldChooseFolderBeforeNameWhenSplitting = original.shouldChooseFolderBeforeNameWhenSplitting;
+            settings.shouldSplitHeadingsAutomatically = original.shouldSplitHeadingsAutomatically;
+            settings.shouldSplitIntoFolder = original.shouldSplitIntoFolder;
+          });
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (typeof node.editAndSave === 'function' && typeof node.settings?.shouldChooseFolderBeforeNameWhenSplitting === 'boolean') {
+              return node as SettingsCarrier;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        function getPromptInput(): HTMLInputElement | null {
+          const input = document.querySelector('.prompt-input');
+          return input instanceof HTMLInputElement ? input : null;
+        }
+
+        function getSwitchName(): string {
+          return getPromptInput()?.closest('.modal-container')?.querySelector(':scope .advanced-note-composer-split-target-mode .setting-item-name')?.textContent
+            ?? '';
+        }
+
+        function getSwitchToggle(): HTMLElement | null {
+          return getPromptInput()?.closest('.modal-container')?.querySelector<HTMLElement>(':scope .advanced-note-composer-split-target-mode .checkbox-container')
+            ?? null;
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          const leaf = app.workspace.getLeaf(false);
+          await leaf.openFile(file);
+          await waitUntil({
+            message: `the editor for ${file.path} did not open`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          await view.setState({ ...view.getState(), mode: 'source', source: true }, { history: false });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return view.editor;
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function waitForPlaceholder(placeholder: string, message: string): Promise<void> {
+          await waitUntil({
+            message,
+            predicate: () => getPromptInput()?.placeholder === placeholder,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    expect(result.folderPromptSwitchName).toBe('Create a new note');
+    expect(result.isFolderPromptInputFocused).toBe(true);
+    expect(result.pickerSwitchName).toBe('Merge into an existing note');
+  });
 });
