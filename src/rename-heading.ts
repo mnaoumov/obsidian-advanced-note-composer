@@ -109,6 +109,40 @@ export interface UpdateHeadingBacklinksParams {
 }
 
 /**
+ * Normalizes a heading the way Obsidian does to MATCH it against a link subpath segment.
+ *
+ * @param heading - The heading text or subpath segment.
+ * @returns The comparable form.
+ */
+export function normalizeHeadingForComparison(heading: string): string {
+  return heading.replaceAll(HEADING_MATCH_STRIP_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
+}
+
+/**
+ * Re-emits a link with a new url (path plus subpath), keeping its style (wikilink / markdown / embed /
+ * angle-bracket), alias and title exactly as written.
+ *
+ * @param link - The link reference to rewrite.
+ * @param url - The new url.
+ * @returns The rewritten raw link text, or `undefined` for an external link, which has no url to replace.
+ */
+export function replaceLinkUrl(link: Reference, url: string): string | undefined {
+  const parsed = parseLink(link.original);
+  if (!parsed || parsed.isExternal) {
+    return undefined;
+  }
+
+  return generateRawMarkdownLink(normalizeOptionalProperties<GenerateRawMarkdownLinkParams>({
+    alias: parsed.alias,
+    isEmbed: parsed.isEmbed,
+    isWikilink: parsed.isWikilink,
+    shouldUseAngleBrackets: parsed.hasAngleBrackets,
+    title: parsed.title,
+    url
+  }));
+}
+
+/**
  * Rewrites a single link reference when its subpath contains the renamed heading as a segment (at any
  * position — start, middle, or end of a nested `#A#B#C` subpath). The link's target path, style
  * (wikilink / markdown / embed / angle-bracket), alias, and title are preserved; only the matching
@@ -120,25 +154,9 @@ export interface UpdateHeadingBacklinksParams {
  */
 export function rewriteHeadingLink(params: RewriteHeadingLinkParams): string | undefined {
   const { link, newHeading, oldHeading } = params;
-  const parsed = parseLink(link.original);
-  if (!parsed || parsed.isExternal) {
-    return undefined;
-  }
-
   const { linkPath, subpath } = splitSubpath(link.link);
   const newSubpath = rewriteHeadingSubpath({ newHeading, oldHeading, subpath });
-  if (newSubpath === null) {
-    return undefined;
-  }
-
-  return generateRawMarkdownLink(normalizeOptionalProperties<GenerateRawMarkdownLinkParams>({
-    alias: parsed.alias,
-    isEmbed: parsed.isEmbed,
-    isWikilink: parsed.isWikilink,
-    shouldUseAngleBrackets: parsed.hasAngleBrackets,
-    title: parsed.title,
-    url: linkPath + newSubpath
-  }));
+  return newSubpath === null ? undefined : replaceLinkUrl(link, linkPath + newSubpath);
 }
 
 /**
@@ -173,6 +191,17 @@ export function rewriteHeadingSubpath(params: RewriteHeadingSubpathParams): null
   }
 
   return hasChanged ? `#${newSegments.join('#')}` : null;
+}
+
+/**
+ * Writes a heading's text as one segment of a link subpath, the way Obsidian itself does: characters that
+ * would break the subpath are replaced with a space and whitespace is collapsed.
+ *
+ * @param heading - The heading text.
+ * @returns The subpath segment.
+ */
+export function sanitizeHeadingForSubpath(heading: string): string {
+  return heading.replaceAll(SUBPATH_SANITIZE_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim();
 }
 
 /**
@@ -217,12 +246,4 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
   });
 
   return rewrittenLinks.length;
-}
-
-function normalizeHeadingForComparison(heading: string): string {
-  return heading.replaceAll(HEADING_MATCH_STRIP_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
-}
-
-function sanitizeHeadingForSubpath(heading: string): string {
-  return heading.replaceAll(SUBPATH_SANITIZE_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim();
 }

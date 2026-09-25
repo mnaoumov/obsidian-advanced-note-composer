@@ -12,6 +12,7 @@ import type {
   PluginNoticeComponent,
   PluginNoticeComponentShowNoticeAfterDelayParams
 } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
@@ -19,6 +20,7 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   beforeEach,
@@ -35,6 +37,7 @@ import type { PluginSettings } from '../plugin-settings.ts';
 import { runLockedTransaction } from '../locked-transaction.ts';
 import { openReorderHeadingsModal } from '../modals/reorder-headings-modal.ts';
 import { CommandMenuPlacement } from '../plugin-settings.ts';
+import { updateReorderedHeadingLinks } from '../reordered-heading-links.ts';
 import { ReorderHeadingsEditorCommandHandler } from './reorder-headings-editor-command-handler.ts';
 
 interface CreateParamsOptions {
@@ -71,6 +74,14 @@ vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
   renderInternalLink: vi.fn()
 }));
 
+vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
+  getCacheSafe: vi.fn()
+}));
+
+vi.mock('../reordered-heading-links.ts', () => ({
+  updateReorderedHeadingLinks: vi.fn()
+}));
+
 vi.mock('../locked-transaction.ts', () => ({
   runLockedTransaction: vi.fn()
 }));
@@ -83,6 +94,8 @@ const mockCreateFragmentAsync = vi.mocked(createFragmentAsync);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockRunLockedTransaction = vi.mocked(runLockedTransaction);
 const mockOpenModal = vi.mocked(openReorderHeadingsModal);
+const mockGetCacheSafe = vi.mocked(getCacheSafe);
+const mockUpdateLinks = vi.mocked(updateReorderedHeadingLinks);
 const mockModify = vi.fn().mockResolvedValue(undefined);
 
 const FILE = castTo<TFile>({ path: 'note.md' });
@@ -143,6 +156,9 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
     mockRunLockedTransaction.mockImplementation(async (params: RunLockedTransactionParams) => {
       await params.body(strictProxy<VaultTransaction>({ modify: mockModify }));
     });
+    // The handler reads the cache through `getCacheSafe`; answer with whatever the stubbed metadata cache holds.
+    mockGetCacheSafe.mockImplementation((app, pathOrFile) => Promise.resolve(castTo<CachedMetadataEx | null>(app.metadataCache.getFileCache(castTo<TFile>(pathOrFile)))));
+    mockUpdateLinks.mockResolvedValue(0);
   });
 
   it('should construct with correct params', () => {
@@ -158,7 +174,7 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
     });
 
-    it('should be unavailable without a reorderable sibling group', () => {
+    it('should be unavailable with fewer than two headings', () => {
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings: [heading(1, 'A', 0)] })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(false);
     });
@@ -173,8 +189,8 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(true);
     });
 
-    it('should be available with two or more nested siblings under one parent', () => {
-      const headings = [heading(1, 'A', 0), heading(2, 'A.1', 4), heading(2, 'A.2', 12)];
+    it('should be available for a parent and its single child, which can be outdented (issue #295)', () => {
+      const headings = [heading(1, 'A', 0), heading(2, 'A.1', 4)];
       const handler = toTestable(new ReorderHeadingsEditorCommandHandler(createMockParams({ headings })));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(FILE))).toBe(true);
     });
@@ -228,6 +244,57 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       expect(mockRunLockedTransaction).toHaveBeenCalledOnce();
       expect(mockModify).toHaveBeenCalledWith(FILE, '# B\nbbb\n\n# A\naaa\n');
       expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Reordered headings in note [note.md].');
+    });
+
+    it('should rewrite the note when only a heading level changed (issue #295)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockImplementation(({ split }) => {
+        split.levels[1] = 2;
+        return Promise.resolve([0, 1]);
+      });
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockModify).toHaveBeenCalledWith(FILE, '# A\naaa\n\n## B\nbbb\n');
+    });
+
+    it('should update the links the reorder broke and report how many (issue #295)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue([1, 0]);
+      mockUpdateLinks.mockResolvedValue(2);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      // Read off `lastCall` rather than `objectContaining`: pretty-format would probe the strictProxy app.
+      const [linkParams] = mockUpdateLinks.mock.lastCall ?? [];
+      expect(linkParams?.order).toEqual([1, 0]);
+      expect(linkParams?.path).toBe('note.md');
+      expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Reordered headings in note [note.md] and updated 2 link(s).');
+    });
+
+    it('should leave the links alone when a metadata cache is unavailable', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue([1, 0]);
+      mockGetCacheSafe.mockResolvedValueOnce(castTo<CachedMetadataEx>({ headings: TWO_SECTION_HEADINGS })).mockResolvedValueOnce(null);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockModify).toHaveBeenCalledOnce();
+      expect(mockUpdateLinks).not.toHaveBeenCalled();
+    });
+
+    it('should treat a note with no metadata cache as having no headings', async () => {
+      const params = createMockParams({ cacheIsNull: true, content: 'plain\n' });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue([]);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockOpenModal.mock.lastCall?.[0].split.sections).toEqual([]);
+      expect(mockRunLockedTransaction).not.toHaveBeenCalled();
     });
 
     it('should report nothing when the operation is cancelled', async () => {
