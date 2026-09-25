@@ -109,6 +109,16 @@ export interface UpdateHeadingBacklinksParams {
 }
 
 /**
+ * Normalizes a heading the way Obsidian does to MATCH it against a link subpath segment.
+ *
+ * @param heading - The heading text or subpath segment.
+ * @returns The comparable form.
+ */
+export function normalizeHeadingForComparison(heading: string): string {
+  return heading.replaceAll(HEADING_MATCH_STRIP_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
+}
+
+/**
  * Re-emits a link with a new url (path plus subpath), keeping its style (wikilink / markdown / embed /
  * angle-bracket), alias and title exactly as written.
  *
@@ -236,8 +246,4 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
   });
 
   return rewrittenLinks.length;
-}
-
-function normalizeHeadingForComparison(heading: string): string {
-  return heading.replaceAll(HEADING_MATCH_STRIP_REGEXP, ' ').replaceAll(WHITESPACE_RUN_REGEXP, ' ').trim().toLowerCase();
 }

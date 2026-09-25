@@ -19,6 +19,7 @@ import type {
 } from './heading-sections.ts';
 
 import {
+  normalizeHeadingForComparison,
   replaceLinkUrl,
   sanitizeHeadingForSubpath
 } from './rename-heading.ts';
@@ -32,6 +33,12 @@ export interface ResolveReorderedHeadingSubpathParams {
    * from its top-level ancestor down to the heading itself.
    */
   readonly newHeadingPaths: readonly (readonly string[])[];
+
+  /**
+   * The heading paths of the note BEFORE the reorder, indexed by old heading position, shaped like
+   * {@link ResolveReorderedHeadingSubpathParams.newHeadingPaths}.
+   */
+  readonly oldHeadingPaths: readonly (readonly string[])[];
 
   /**
    * Which heading of the reordered note a subpath now resolves to, or `null` for none.
@@ -86,22 +93,32 @@ export interface UpdateReorderedHeadingLinksParams {
   readonly split: SplitReorderableSectionsResult;
 }
 
+interface HeadingPathStackEntry {
+  readonly level: number;
+  readonly path: string[];
+}
+
 /**
  * Works out the subpath a heading link needs after `Reorder headings` moved headings around (issue #295).
  *
- * Only a link that would now land somewhere else — or nowhere — is touched: a plain `[[note#Heading]]` to a
- * unique heading resolves the same wherever that heading goes, so it is left exactly as written. What does
- * change is a NESTED path (`[[note#A#A1]]` once `A1` moved under `B`), and a link to one of two same-named
- * headings whose order flipped. The new subpath is built from the heading's new ancestor path, trying the
- * same number of segments the link had first, then more, then fewer, and is kept only once Obsidian's own
- * resolution confirms it reaches the moved heading.
+ * Two kinds of link are touched, and only those. One that would now land somewhere else — or nowhere — such
+ * as a link to one of two same-named headings whose order flipped. And a NESTED path that named the heading's
+ * real ancestors and no longer does: `[[note#A#A1]]` once `A1` moved under `B`. That second kind is not
+ * broken as far as Obsidian is concerned — measured on 1.13, `resolveSubpath` matches the segments in
+ * document order without checking nesting, so `#A#A1` still reaches `A1` sitting under `B` — but the link
+ * now states a structure the note no longer has, and the next `A1` added under `A` would silently take it
+ * over. A plain `[[note#Heading]]` to a unique heading names no ancestors, so it is left exactly as written.
+ *
+ * The new subpath is built from the heading's new ancestor path, trying the same number of segments the
+ * link had first, then more, then fewer, and is kept only once Obsidian's own resolution confirms it
+ * reaches the moved heading.
  *
  * @param params - The parameters.
  * @returns The new subpath (with its leading `#`), or `null` when the link needs no change or no subpath
  * reaches the heading.
  */
 export function resolveReorderedHeadingSubpath(params: ResolveReorderedHeadingSubpathParams): null | string {
-  const { newHeadingPaths, resolveNewHeadingIndex, resolveOldHeadingIndex, subpath, toNewHeadingIndex } = params;
+  const { newHeadingPaths, oldHeadingPaths, resolveNewHeadingIndex, resolveOldHeadingIndex, subpath, toNewHeadingIndex } = params;
   if (!subpath.startsWith('#')) {
     return null;
   }
@@ -113,11 +130,19 @@ export function resolveReorderedHeadingSubpath(params: ResolveReorderedHeadingSu
 
   const oldHeadingIndex = resolveOldHeadingIndex(subpath);
   const newHeadingIndex = oldHeadingIndex === null ? null : toNewHeadingIndex(oldHeadingIndex);
-  if (newHeadingIndex === null || resolveNewHeadingIndex(subpath) === newHeadingIndex) {
+  if (oldHeadingIndex === null || newHeadingIndex === null) {
     return null;
   }
 
-  const path = (newHeadingPaths[newHeadingIndex] ?? []).map((heading) => sanitizeHeadingForSubpath(heading));
+  const newHeadingPath = newHeadingPaths[newHeadingIndex] ?? [];
+  const isStillReached = resolveNewHeadingIndex(subpath) === newHeadingIndex;
+  const didStopNamingAncestors = isAncestorPath(segments, oldHeadingPaths[oldHeadingIndex] ?? [])
+    && !isAncestorPath(segments, newHeadingPath);
+  if (isStillReached && !didStopNamingAncestors) {
+    return null;
+  }
+
+  const path = newHeadingPath.map((heading) => sanitizeHeadingForSubpath(heading));
   const preferredLength = Math.min(segments.length, path.length);
   const lengths = [
     ...Array.from({ length: path.length - preferredLength + 1 }, (_, offset) => preferredLength + offset),
@@ -152,6 +177,7 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
   }
 
   const newHeadingPaths = buildNewHeadingPaths(params.split, params.order);
+  const oldHeadingPaths = buildHeadingPathsFromCache(oldHeadings);
   // Collected in a `const` array (not a reassigned counter) so the converter closure records rewrites safely.
   const rewrittenLinks: (string | undefined)[] = [];
   await editBacklinks({
@@ -161,6 +187,7 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
       const { linkPath, subpath } = splitSubpath(link.link);
       const newSubpath = resolveReorderedHeadingSubpath({
         newHeadingPaths,
+        oldHeadingPaths,
         resolveNewHeadingIndex: (candidate) => resolveHeadingIndex(params.newCache, newHeadings, candidate),
         resolveOldHeadingIndex: (candidate) => resolveHeadingIndex(params.oldCache, oldHeadings, candidate),
         subpath,
@@ -184,6 +211,25 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
 }
 
 /**
+ * Builds each heading's ancestor path from a heading cache, nesting the way Obsidian's outline does: a
+ * heading's parent is the nearest heading above it of a lower level.
+ *
+ * @param headings - The heading cache entries, in document order.
+ * @returns The heading texts from the top-level ancestor down, per heading position.
+ */
+function buildHeadingPathsFromCache(headings: readonly HeadingCache[]): string[][] {
+  const stack: HeadingPathStackEntry[] = [];
+  return headings.map((heading) => {
+    while ((stack.at(-1)?.level ?? 0) >= heading.level) {
+      stack.pop();
+    }
+    const path = [...(stack.at(-1)?.path ?? []), heading.heading];
+    stack.push({ level: heading.level, path });
+    return path;
+  });
+}
+
+/**
  * Builds each heading's ancestor path in the confirmed tree, indexed by its position in the reordered note.
  *
  * @param split - The split note, holding the confirmed tree.
@@ -203,6 +249,33 @@ function buildNewHeadingPaths(split: SplitReorderableSectionsResult, order: read
       visit(node.children, path);
     }
   }
+}
+
+/**
+ * Whether a subpath's segments name a heading through its real ancestors: the last segment is the heading
+ * itself and the ones before it are ancestors of it, in order, any of them skippable — `#A#C` names `C`
+ * under `A` under nothing, whether or not a `B` sits between them.
+ *
+ * @param segments - The subpath's segments.
+ * @param headingPath - The heading's path, top-level ancestor first.
+ * @returns Whether the segments follow that path.
+ */
+function isAncestorPath(segments: readonly string[], headingPath: readonly string[]): boolean {
+  const normalizedPath = headingPath.map((heading) => normalizeHeadingForComparison(heading));
+  const normalizedSegments = segments.map((segment) => normalizeHeadingForComparison(segment));
+  if (normalizedSegments.at(-1) !== normalizedPath.at(-1)) {
+    return false;
+  }
+
+  let pathPosition = 0;
+  for (const segment of normalizedSegments.slice(0, -1)) {
+    const found = normalizedPath.indexOf(segment, pathPosition);
+    if (found === -1 || found >= normalizedPath.length - 1) {
+      return false;
+    }
+    pathPosition = found + 1;
+  }
+  return true;
 }
 
 function resolveHeadingIndex(cache: CachedMetadata, headings: readonly HeadingCache[], subpath: string): null | number {

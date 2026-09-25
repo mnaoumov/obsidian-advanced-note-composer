@@ -47,6 +47,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => 
 function resolveParams(overrides: Partial<ResolveReorderedHeadingSubpathParams>): ResolveReorderedHeadingSubpathParams {
   return {
     newHeadingPaths: [['A'], ['B'], ['B', 'A1']],
+    oldHeadingPaths: [['A'], ['A', 'A1'], ['B']],
     resolveNewHeadingIndex: (subpath) => ({ '#A1': 2, '#B': 1, '#B#A1': 2 } as Record<string, number | undefined>)[subpath] ?? null,
     resolveOldHeadingIndex: (subpath) => ({ '#A#A1': 1, '#A1': 1, '#B': 2 } as Record<string, number | undefined>)[subpath] ?? null,
     subpath: '#A#A1',
@@ -58,6 +59,37 @@ function resolveParams(overrides: Partial<ResolveReorderedHeadingSubpathParams>)
 describe('resolveReorderedHeadingSubpath', () => {
   it('should rewrite a nested path whose heading moved under another parent', () => {
     expect(resolveReorderedHeadingSubpath(resolveParams({}))).toBe('#B#A1');
+  });
+
+  it('should rewrite a nested path that still resolves but no longer names the heading\'s ancestors', () => {
+    // Obsidian matches `#A#A1` segment by segment in document order, so it still reaches `A1` under `B`.
+    expect(resolveReorderedHeadingSubpath(resolveParams({
+      resolveNewHeadingIndex: (subpath) => ['#A#A1', '#B#A1'].includes(subpath) ? 2 : null
+    }))).toBe('#B#A1');
+  });
+
+  it('should leave a nested path that did not name the heading\'s ancestors to begin with', () => {
+    expect(resolveReorderedHeadingSubpath(resolveParams({
+      resolveNewHeadingIndex: () => 2,
+      resolveOldHeadingIndex: () => 1,
+      subpath: '#Other#A1'
+    }))).toBeNull();
+    expect(resolveReorderedHeadingSubpath(resolveParams({
+      resolveNewHeadingIndex: () => 2,
+      resolveOldHeadingIndex: () => 1,
+      subpath: '#A1#A1'
+    }))).toBeNull();
+    expect(resolveReorderedHeadingSubpath(resolveParams({
+      oldHeadingPaths: [],
+      resolveNewHeadingIndex: () => 2
+    }))).toBeNull();
+  });
+
+  it('should keep a nested path that still names ancestors, skipping levels between them', () => {
+    expect(resolveReorderedHeadingSubpath(resolveParams({
+      newHeadingPaths: [['A'], ['B'], ['A', 'X', 'A1']],
+      resolveNewHeadingIndex: () => 2
+    }))).toBeNull();
   });
 
   it('should leave a link that still reaches the same heading', () => {
@@ -105,10 +137,12 @@ describe('resolveReorderedHeadingSubpath', () => {
 });
 
 describe('updateReorderedHeadingLinks', () => {
-  const OLD_CACHE = castTo<CachedMetadata>({ headings: [heading('A', 0), heading('A1', 10), heading('B', 20)] });
-  const NEW_CACHE = castTo<CachedMetadata>({ headings: [heading('A', 0), heading('B', 10), heading('A1', 20)] });
+  const OLD_CACHE = castTo<CachedMetadata>({ headings: [heading('A', 1, 0), heading('A1', 2, 10), heading('B', 1, 20)] });
+  const NEW_CACHE = castTo<CachedMetadata>({ headings: [heading('A', 1, 0), heading('B', 1, 10), heading('A1', 2, 20)] });
+  // `#A#A1` still resolves after the move, as it does in Obsidian itself: it is rewritten because it no
+  // longer names `A1`'s ancestors, not because it broke.
   const RESOLUTIONS = new Map<CachedMetadata, Record<string, number | undefined>>([
-    [NEW_CACHE, { '#A1': 20, '#B': 10, '#B#A1': 20 }],
+    [NEW_CACHE, { '#A#A1': 20, '#A1': 20, '#B': 10, '#B#A1': 20 }],
     [OLD_CACHE, { '#A#A1': 10, '#B': 20, '#Top': 0 }]
   ]);
   const SPLIT = castTo<SplitReorderableSectionsResult>({
@@ -119,8 +153,8 @@ describe('updateReorderedHeadingLinks', () => {
   let app: AppOriginal;
   let resourceLockComponent: ResourceLockComponent;
 
-  function heading(text: string, offset: number): HeadingCache {
-    return castTo<HeadingCache>({ heading: text, position: { start: { offset } } });
+  function heading(text: string, level: number, offset: number): HeadingCache {
+    return castTo<HeadingCache>({ heading: text, level, position: { start: { offset } } });
   }
 
   beforeEach(() => {
@@ -146,7 +180,7 @@ describe('updateReorderedHeadingLinks', () => {
       if (offset === undefined) {
         return castTo<ReturnType<typeof resolveSubpath>>(subpath === '#Top' ? { type: 'block' } : null);
       }
-      return castTo<ReturnType<typeof resolveSubpath>>({ current: heading('', offset === 0 ? -1 : offset), type: 'heading' });
+      return castTo<ReturnType<typeof resolveSubpath>>({ current: heading('', 1, offset === 0 ? -1 : offset), type: 'heading' });
     });
   });
 

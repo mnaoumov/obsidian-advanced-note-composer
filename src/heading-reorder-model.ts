@@ -113,8 +113,7 @@ export class HeadingReorderModel implements ReorderModel {
 
   public canMoveTo: ReorderModel['canMoveTo'] = (params: ReorderModelDidMoveToParams) => this.planDrop(params.id, params.placement, params.targetId) !== null;
 
-  public didChangeDepth: ReorderModel['didChangeDepth'] = (params: ReorderModelDidMoveParams) =>
-    this.apply(params.delta > 0 ? this.planIndent(params.id) : this.planOutdent(params.id));
+  public didChangeDepth: ReorderModel['didChangeDepth'] = (params: ReorderModelDidMoveParams) => this.apply(params.delta > 0 ? this.planIndent(params.id) : this.planOutdent(params.id));
 
   public didMove: ReorderModel['didMove'] = (params: ReorderModelDidMoveParams) => this.apply(this.planSiblingSwap(params.id, params.delta));
 

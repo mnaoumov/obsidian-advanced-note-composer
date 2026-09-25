@@ -1,15 +1,22 @@
 # Reorder headings
 
-Reorder a note's **headings at any level** without cutting and pasting. The dialog shows the whole heading tree as an indented list; the up/down arrows move a heading (and everything nested under it) among its **same-parent siblings only**, so nesting is always preserved.
+Reorder a note's **headings at any level** without cutting and pasting. The dialog shows the whole heading tree as an indented list, and a heading always moves together with everything nested under it:
+
+- The **up/down arrows** move a heading among its siblings.
+- **Dragging** a heading onto another one moves it anywhere in the tree: drop on the top of a row to put it before that heading, on the bottom to put it after, or on the middle to put it **inside** it.
+- The **left/right arrows** move a heading out of its parent, or under the heading above it.
+
+A heading that lands under a different parent is **re-leveled** to fit - `### Alpha detail` dragged beside `## Beta` becomes `## Alpha detail` - and everything under it shifts by the same amount. Links that spelled out the old nesting, such as `[[note#Alpha#Alpha detail]]`, are rewritten to the new one.
 
 ## Try it
 
 1. Put the cursor anywhere in this note.
 2. Run `Reorder headings...`.
-3. In the dialog, use the up/down arrows:
-   - Move a top-level section - for example, `Beta` above `Alpha`.
-   - Or reorder the nested siblings `Alpha detail` and `More Alpha detail` under `Alpha` - they only swap with each other, never leaving `Alpha`.
-4. Click **Reorder**. The sections are rewritten in the new order; any content before the first heading (the preamble) stays put.
+3. In the dialog, try any of:
+   - Move a top-level section with the up/down arrows - for example, `Beta` above `Alpha`.
+   - Drag `More Alpha detail` onto the middle of `Beta`, so it becomes `### More Alpha detail` under `Beta`.
+   - Press the right arrow on `Gamma` to put it under `Beta` as `### Gamma`.
+4. Click **Reorder**. The sections are rewritten in the new order and levels; any content before the first heading (the preamble) stays put.
 
 ## Alpha
 
@@ -17,7 +24,7 @@ The Alpha section. Its body travels with the heading when you reorder.
 
 ### Alpha detail
 
-A nested subheading. It can be reordered against its sibling below, but it stays under `Alpha`.
+A nested subheading. Reorder it against its sibling below, or drag it under `Beta`.
 
 ### More Alpha detail
 

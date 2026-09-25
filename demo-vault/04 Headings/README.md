@@ -4,5 +4,5 @@ Two commands that rearrange a note's headings without moving any text out of it.
 
 | Note | What it covers |
 | --- | --- |
-| [15 Reorder headings](<./15 Reorder headings.md>) | Dragging a note's sections into the order you want, nested siblings included |
+| [15 Reorder headings](<./15 Reorder headings.md>) | Dragging a note's sections into the order you want, or under another heading, re-leveled to fit |
 | [16 Rename heading](<./16 Rename heading.md>) | Renaming a heading so every backlink pointing at it follows |
