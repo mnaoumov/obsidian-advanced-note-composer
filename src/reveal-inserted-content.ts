@@ -30,6 +30,7 @@ import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/componen
 
 import { MarkdownView } from 'obsidian';
 import { noopAsync } from 'obsidian-dev-utils/function';
+import { revealInFileExplorer } from 'obsidian-dev-utils/obsidian/file-explorer';
 
 /**
  * How long to wait between polls for the destination note's editor.
@@ -354,7 +355,7 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
 
   // Started BEFORE the poll, so the explorer highlights the note as promptly as dev-utils' own reveal did,
   // and awaited AFTER it, so nothing below can run before the explorer is done taking the focus.
-  const revealPromise = shouldRevealInFileExplorer ? revealFileInFileExplorer(app, file) : noopAsync();
+  const revealPromise = shouldRevealInFileExplorer ? revealInFileExplorer({ abstractFile: file, app }) : noopAsync();
   const located = await pollForInsertedContent(params);
   await revealPromise;
   if (!located) {
@@ -388,14 +389,13 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
    *   reveal had landed by then. With a synthetic `click()` it had, which is why its test passed; with a
    *   real mouse click it had not, and the explorer took the focus back on every repeat click — what the
    *   reporter's video shows. The reveal is `revealLeaf` (asynchronous) → `setActiveLeaf(explorer)` → a
-   *   `nextFrame` that activates the explorer AGAIN, so both its promise and the frame after it are awaited.
+   *   `nextFrame` that activates the explorer AGAIN, so both its promise and the frames after it have to be
+   *   awaited — which is exactly what dev-utils' `revealInFileExplorer` resolves on, so the reveal awaited
+   *   above already covers it.
    * - Harmless on the paths that do not reveal: the smart cut & paste move already has the user in this
    *   editor, so this is what is already true there.
    */
-  if (shouldRevealInFileExplorer) {
-    await waitForNextFrame();
-    await waitForNextFrame();
-  } else {
+  if (!shouldRevealInFileExplorer) {
     await sleep(POLL_INTERVAL_IN_MILLISECONDS);
   }
   app.workspace.setActiveLeaf(view.leaf, { focus: true });
@@ -433,39 +433,5 @@ function findMarkdownViewShowingFile(app: App, file: TFile): MarkdownView | null
     bestActiveTime = leaf.activeTime;
   }
   return bestView;
-}
-/* v8 ignore stop */
-
-/**
- * Reveals `file` in the file explorer, resolving once the explorer has finished doing so.
- *
- * The same call dev-utils' `renderInternalLink` makes for `shouldRevealFile`, except AWAITED: the core
- * plugin's `revealInFolder` is typed `void` but is asynchronous at runtime (it awaits `revealLeaf` before
- * activating the explorer), and awaiting it is what lets the caller order its own activation after it.
- * A disabled file explorer reveals nothing and resolves at once.
- *
- * @param app - The Obsidian app.
- * @param file - The note to reveal.
- * @returns A {@link Promise} that resolves once the reveal has finished.
- */
-/* v8 ignore start -- drives the live file explorer; verified via integration. */
-async function revealFileInFileExplorer(app: App, file: TFile): Promise<void> {
-  const result: unknown = app.internalPlugins.getEnabledPluginById('file-explorer')?.revealInFolder(file);
-  await result;
-}
-/* v8 ignore stop */
-
-/**
- * Resolves on the next animation frame.
- *
- * @returns A {@link Promise} that resolves on the next frame.
- */
-/* v8 ignore start -- needs a real rendering loop; verified via integration. */
-async function waitForNextFrame(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => {
-      resolve();
-    });
-  });
 }
 /* v8 ignore stop */
