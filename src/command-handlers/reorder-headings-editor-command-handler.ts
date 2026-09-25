@@ -18,6 +18,7 @@ import {
   checkShouldAddCommandToEditorMenu,
   checkShouldAddCommandToViewportMenu
 } from '../command-menu-placement.ts';
+import { isEveryHeadingNumbered } from '../heading-numbering.ts';
 import {
   hasMovableHeadings,
   joinReorderedSections,
@@ -47,7 +48,9 @@ interface ReorderHeadingsEditorCommandHandlerConstructorParams {
  * siblings, drags it under another heading, or indents/outdents it (issue #295); on confirm the note is
  * rewritten with the sections in the chosen order and the moved headings re-leveled, nested subheadings
  * preserved, inside a reversible resource-locked transaction. Links a move would break — a nested
- * `[[note#A#A1]]` whose `A1` now sits under `B` — are rewritten in the same transaction.
+ * `[[note#A#A1]]` whose `A1` now sits under `B` — are rewritten in the same transaction. With
+ * `Number headings` ticked every heading is renumbered by the `Heading number template`, and a link to a
+ * renumbered heading follows it the same way.
  */
 export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHandlerBase {
   private readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -85,9 +88,22 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     const oldCache = await getCacheSafe(this.app, file);
     const split = splitIntoReorderableSections(content, oldCache?.headings ?? []);
 
-    const order = await openReorderHeadingsModal({ app: this.app, split });
+    const { headingNumberTemplate, shouldNumberHeadingsWhenReorderingByDefault, shouldShowModalInstructions } = this.pluginSettingsComponent.settings;
+    // A note that is already numbered stays numbered: that is what keeps its numbers correct across
+    // reorders without anyone ticking the box again (issue #295).
+    const wasNumbered = isEveryHeadingNumbered(split, headingNumberTemplate);
+    const order = await openReorderHeadingsModal({
+      app: this.app,
+      numbering: {
+        shouldNumber: wasNumbered || shouldNumberHeadingsWhenReorderingByDefault,
+        template: headingNumberTemplate,
+        wasNumbered
+      },
+      shouldShowNumberingToggle: shouldShowModalInstructions,
+      split
+    });
     const isUnchanged = order?.every((sectionIndex, position) => sectionIndex === position)
-      && split.sections.every((section, index) => split.levels[index] === section.level);
+      && split.sections.every((section, index) => split.levels[index] === section.level && split.headingTexts[index] === section.headingText);
     if (!order || isUnchanged) {
       return;
     }

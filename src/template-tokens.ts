@@ -74,6 +74,26 @@ export interface CreateFolderTemplateTokens {
 }
 
 /**
+ * The values a heading-number template (issue #295) resolves against.
+ */
+export interface HeadingNumberTemplateTokens {
+  /**
+   * The heading's own text, with any number an earlier renumbering wrote removed.
+   */
+  readonly headingText: string;
+
+  /**
+   * The heading's position among its siblings, counted from 1.
+   */
+  readonly index: number;
+
+  /**
+   * The positions of the heading and every ancestor, top-level ancestor first: `[1, 2, 3]` renders `1.2.3`.
+   */
+  readonly outlineIndex: readonly number[];
+}
+
+/**
  * Everything the `Name transform template` knows about the name it is rewriting (issue #196).
  *
  * Exactly one member, deliberately: the transform's whole job is to turn the supplied name into another
@@ -158,6 +178,18 @@ interface ResolveFolderTemplateTokensParams {
    * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
    */
   readonly template: string;
+}
+
+interface ResolveHeadingNumberTemplateTokensParams {
+  /**
+   * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
+   */
+  readonly template: string;
+
+  /**
+   * The values the tokens resolve to.
+   */
+  readonly tokens: HeadingNumberTemplateTokens;
 }
 
 interface ResolveNameTransformTokensParams {
@@ -340,6 +372,37 @@ export function resolveFolderTemplateTokens(params: ResolveFolderTemplateTokensP
       }
       case 'parentFolder'.toLowerCase(): {
         return sourceFolder.parent?.name ?? '';
+      }
+      default: {
+        return resolveDateTimeToken(key, format);
+      }
+    }
+  });
+}
+
+/**
+ * Resolves the tokens of the heading-number template (issue #295) inside a template string.
+ *
+ * `{{index}}` is the heading's position among its siblings, the way a folder is numbered among its sibling
+ * folders; `{{outlineIndex}}` is the dotted chain from the top-level ancestor down (`1.2.3`), which is what a
+ * heading outline usually shows. Both take the zero-pad MASK the folder numbering takes, and the chain applies
+ * it to every part: `{{outlineIndex:00}}` renders `01.02.03`.
+ *
+ * @param params - The template and the values its tokens resolve to.
+ * @returns The template with every token replaced by its value.
+ */
+export function resolveHeadingNumberTemplateTokens(params: ResolveHeadingNumberTemplateTokensParams): string {
+  const { template, tokens } = params;
+  return replaceTemplateTokens(template, (key, format) => {
+    switch (key.toLowerCase()) {
+      case 'headingText'.toLowerCase(): {
+        return tokens.headingText;
+      }
+      case 'outlineIndex'.toLowerCase(): {
+        return tokens.outlineIndex.map((index) => formatIndex(index, format)).join('.');
+      }
+      case 'index': {
+        return formatIndex(tokens.index, format);
       }
       default: {
         return resolveDateTimeToken(key, format);

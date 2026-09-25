@@ -146,6 +146,7 @@ describe('updateReorderedHeadingLinks', () => {
     [OLD_CACHE, { '#A#A1': 10, '#B': 20, '#Top': 0 }]
   ]);
   const SPLIT = castTo<SplitReorderableSectionsResult>({
+    headingTexts: ['A', 'A1', 'B'],
     roots: [{ children: [], index: 0 }, { children: [{ children: [], index: 1 }], index: 2 }],
     sections: [{ headingText: 'A' }, { headingText: 'A1' }, { headingText: 'B' }]
   });
@@ -211,6 +212,43 @@ describe('updateReorderedHeadingLinks', () => {
       .toBe('See [[target#B#A1]], [[target#B]], [[target#Top]], [[target#^blk]] and [[target]].');
   });
 
+  it('should re-path a link to a heading that was renumbered (issue #295)', async () => {
+    const oldCache = castTo<CachedMetadata>({ headings: [heading('A', 1, 5), heading('B', 1, 15)] });
+    const newCache = castTo<CachedMetadata>({ headings: [heading('1. A', 1, 5), heading('2. B', 1, 17)] });
+    const resolutions = new Map<CachedMetadata, Record<string, number | undefined>>([
+      [newCache, { '#1. A': 5, '#2. B': 17 }],
+      [oldCache, { '#A': 5, '#B': 15 }]
+    ]);
+    vi.mocked(resolveSubpath).mockImplementation((cache, subpath) => {
+      const offset = resolutions.get(cache)?.[subpath];
+      return castTo<ReturnType<typeof resolveSubpath>>(offset === undefined ? null : { current: heading('', 1, offset), type: 'heading' });
+    });
+    await app.vault.modify(ensureNonNullable(app.vault.getFileByPath('note.md')), 'See [[target#A]] and [[target#B|B]].');
+    const noteFile = ensureNonNullable(app.vault.getFileByPath('note.md'));
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(castTo<Awaited<ReturnType<typeof getBacklinksForFileSafe>>>(
+      new Map<string, Reference[]>([['note.md', app.metadataCache.getFileCache(noteFile)?.links ?? []]])
+    ));
+
+    const count = await updateReorderedHeadingLinks({
+      abortSignal: new AbortController().signal,
+      app,
+      newCache,
+      oldCache,
+      order: [0, 1],
+      path: 'target.md',
+      pluginNoticeComponent: noticeStub(),
+      resourceLockComponent,
+      split: castTo<SplitReorderableSectionsResult>({
+        headingTexts: ['1. A', '2. B'],
+        roots: [{ children: [], index: 0 }, { children: [], index: 1 }],
+        sections: [{ headingText: 'A' }, { headingText: 'B' }]
+      })
+    });
+
+    expect(count).toBe(2);
+    expect(await app.vault.read(noteFile)).toBe('See [[target#1. A]] and [[target#2. B|B]].');
+  });
+
   it('should touch nothing when the heading count changed, since the mapping would then be wrong', async () => {
     const count = await updateReorderedHeadingLinks({
       abortSignal: new AbortController().signal,
@@ -238,7 +276,7 @@ describe('updateReorderedHeadingLinks', () => {
       path: 'target.md',
       pluginNoticeComponent: noticeStub(),
       resourceLockComponent,
-      split: castTo<SplitReorderableSectionsResult>({ roots: [], sections: [] })
+      split: castTo<SplitReorderableSectionsResult>({ headingTexts: [], roots: [], sections: [] })
     });
 
     expect(count).toBe(0);

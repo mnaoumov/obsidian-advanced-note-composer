@@ -482,6 +482,19 @@ export class PluginSettings {
   public frontmatterTitleMode = FrontmatterTitleMode.UseForInvalidTitleOnly;
 
   /**
+   * The text `Reorder headings...` gives a heading when it numbers the note's headings (issue #295).
+   *
+   * The folder-and-note numbering's shape, for headings: `{{index}}` is the heading's position among its
+   * siblings, `{{headingText}}` its own text, and `{{outlineIndex}}` the dotted chain from its top-level
+   * ancestor (`1.2.3`) for anyone who wants an outline. The parser that removes an old number before a
+   * new one is written is derived from this same template, as `numbered-name.ts` derives the folder one.
+   *
+   * Numbering itself is switched per NOTE, by the reorder modal's `Number headings` checkbox — see
+   * {@link shouldNumberHeadingsWhenReorderingByDefault}.
+   */
+  public headingNumberTemplate = '{{index}}. {{headingText}}';
+
+  /**
    * Folder names that `Merge current folder with another folder...` must never merge into a destination
    * folder of the same name (issue #267). Such a folder arrives under a de-duplicated name instead, and
    * takes its whole subtree with it: merging `A` into `E` with `A/B/C` and an existing `E/B/F` leaves
@@ -856,6 +869,16 @@ export class PluginSettings {
    * referencer: one referenced by both the extracted heading and the text left behind stays where it is.
    */
   public shouldMoveAttachmentsWhenSplitting = true;
+
+  /**
+   * Whether the reorder modal's `Number headings` checkbox starts ticked for a note whose headings are not
+   * numbered yet (issue #295).
+   *
+   * A note whose headings ALL carry a number {@link headingNumberTemplate} could have written starts ticked
+   * whatever this says: that is what keeps a numbered note numbered across reorders. Off by default, so
+   * nothing is numbered until somebody asks for it.
+   */
+  public shouldNumberHeadingsWhenReorderingByDefault = false;
 
   public shouldOfferCurrentNoteWhenSplitting = true;
 

@@ -933,6 +933,45 @@ describe('PluginSettingsComponent', () => {
       });
     });
 
+    describe('headingNumberTemplate validator', () => {
+      it('should accept the default per-sibling template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}. {{headingText}}')).toBeUndefined();
+      });
+
+      it('should accept an outline template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{outlineIndex:00}} {{headingText}}')).toBeUndefined();
+      });
+
+      it('should reject an empty template', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', ' ')).toBe('Heading number template should not be empty');
+      });
+
+      it('should reject a line break, since a heading is one line', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}.\n{{headingText}}')).toBe('Heading number template should be a single line');
+      });
+
+      it('should reject an unknown token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}. {{safeName}}')).toBe('Unknown token {{safeName}}');
+      });
+
+      it('should require a number token', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{headingText}}'))
+          .toBe('Heading number template should contain {{index}} or {{outlineIndex}}, which is the number it writes');
+      });
+
+      it('should require the heading text', async () => {
+        const component = createComponent();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}.'))
+          .toBe('Heading number template should contain {{headingText}}, or numbering would drop the heading\'s text');
+      });
+    });
+
     describe('reorderedFileTitleTemplate validator', () => {
       it('should accept an empty template, which is the default and leaves the property alone', async () => {
         const component = createComponent();

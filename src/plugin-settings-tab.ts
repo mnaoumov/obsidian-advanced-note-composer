@@ -2147,7 +2147,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         name: 'Folder note'
       }),
       this.settingPage({
-        desc: 'How renumbered folders and notes are named, and what a reorder writes into them.',
+        desc: 'How renumbered folders, notes and headings are named, and what a reorder writes into them.',
         items: [
           this.settingEx({
             desc: createFragment((f) => {
@@ -2213,6 +2213,35 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('The text to give a heading when ');
+              appendCodeBlock(f, 'Reorder headings...');
+              f.appendText(' numbers the note\'s headings.');
+              f.createEl('br');
+              appendCodeBlock(f, '{{index}}');
+              f.appendText(' is the heading\'s position among its siblings, the way folders and notes are numbered. ');
+              appendCodeBlock(f, '{{outlineIndex}}');
+              f.appendText(' is the chain from its top-level heading down, such as ');
+              appendCodeBlock(f, '1.2.3');
+              f.appendText('. Both zero-pad to the width of a mask, such as ');
+              appendCodeBlock(f, '{{index:00}}');
+              f.appendText('.');
+              f.createEl('br');
+              f.appendText('Reading an existing number back uses this same template, so renumbering replaces the old number rather than adding a second one.');
+              f.createEl('br');
+              addTokenList(f, ['{{index}}', '{{outlineIndex}}', '{{headingText}}', '{{date}}', '{{time}}']);
+              appendCodeBlock(f, '{{headingText}}');
+              f.appendText(' is the heading without its number.');
+            }),
+            name: 'Heading number template',
+            render: (setting) => {
+              setting.addCodeHighlighter((codeHighlighter) => {
+                codeHighlighter.setLanguage(TOKENIZED_STRING_LANGUAGE);
+                this.bind({ propertyName: 'headingNumberTemplate', valueComponent: codeHighlighter });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Whether a reorder also offers the folder\'s notes, and not only its folders.');
               f.createEl('br');
               f.appendText('This seeds the ');
@@ -2223,6 +2252,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldIncludeFilesWhenReorderingByDefault', valueComponent: toggle });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether ');
+              appendCodeBlock(f, 'Reorder headings...');
+              f.appendText(' numbers the headings of a note that is not numbered yet.');
+              f.createEl('br');
+              f.appendText('This seeds the ');
+              appendCodeBlock(f, 'Number headings');
+              f.appendText(' checkbox in the reorder dialog. A note whose headings are all numbered already starts with it ticked whatever this says, so its numbers stay correct after every reorder. Clear the checkbox on such a note to remove its numbers.');
+            }),
+            name: 'Should number headings when reordering by default',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldNumberHeadingsWhenReorderingByDefault', valueComponent: toggle });
               });
             }
           }),

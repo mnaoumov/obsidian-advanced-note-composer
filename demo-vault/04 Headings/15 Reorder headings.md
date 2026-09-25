@@ -18,6 +18,15 @@ A heading that lands under a different parent is **re-leveled** to fit - `### Al
    - Press the right arrow on `Gamma` to put it under `Beta` as `### Gamma`.
 4. Click **Reorder**. The sections are rewritten in the new order and levels; any content before the first heading (the preamble) stays put.
 
+## Numbering headings
+
+Tick **Number headings** in the dialog to number every heading the way folders and notes are numbered: `1. Alpha`, then `1. Alpha detail` and `2. More Alpha detail` under it, then `2. Beta`. Each row shows the heading as it will be written, and the numbers follow every move you make.
+
+- A note whose headings are **all numbered** already opens with the box ticked, so its numbers stay correct after every reorder without anything to remember.
+- Clear the box on such a note to **remove** its numbers.
+- The format is the `Heading number template` setting. `{{index}}` is the position among siblings, and `{{outlineIndex}}` is the whole chain, such as `1.2.3`.
+- Links to a renumbered heading, such as `[[note#1. Alpha]]`, are rewritten to its new number.
+
 ## Alpha
 
 The Alpha section. Its body travels with the heading when you reorder.

@@ -244,7 +244,8 @@ function buildNewHeadingPaths(split: SplitReorderableSectionsResult, order: read
   function visit(nodes: readonly HeadingTreeNode[], ancestorPath: readonly string[]): void {
     for (const node of nodes) {
       // Every node indexes a section of the same split, so a fallback would be a branch nothing can reach.
-      const path = [...ancestorPath, ensureNonNullable(split.sections[node.index]).headingText];
+      // The text is the one the heading WILL have, so a renumbered heading is re-pathed too.
+      const path = [...ancestorPath, ensureNonNullable(split.headingTexts[node.index])];
       paths[order.indexOf(node.index)] = path;
       visit(node.children, path);
     }

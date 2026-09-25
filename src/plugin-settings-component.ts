@@ -11,12 +11,17 @@ import type {
 } from './plugin-settings.ts';
 import type {
   CreateFolderTemplateTokens,
+  HeadingNumberTemplateTokens,
   NameTransformTokens,
   ReorderedFileTemplateTokens
 } from './template-tokens.ts';
 
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';
 import { parseFolderContentTemplate } from './folder-content-template.ts';
+import {
+  HEADING_INDEX_TOKEN_KEYS,
+  HEADING_TEXT_TOKEN_KEY
+} from './heading-numbering.ts';
 import { menuPlaceableCommandsOfCategory } from './menu-placeable-commands.ts';
 import {
   COMMAND_CATEGORY_PATH_SETTING_NAMES,
@@ -33,6 +38,7 @@ import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
+  resolveHeadingNumberTemplateTokens,
   resolveNameTransformTokens,
   resolveReorderedFileTemplateTokens
 } from './template-tokens.ts';
@@ -67,6 +73,12 @@ const SAMPLE_NAME_TRANSFORM_TOKENS: NameTransformTokens = { rawString: 'Sample' 
 /**
  * Stand-in values for validating a reordered-FILE template. As above, only the shape matters.
  */
+const SAMPLE_HEADING_NUMBER_TOKENS: HeadingNumberTemplateTokens = {
+  headingText: 'Sample',
+  index: 1,
+  outlineIndex: [1]
+};
+
 const SAMPLE_REORDERED_FILE_TOKENS: ReorderedFileTemplateTokens = {
   extension: '.md',
   index: 1,
@@ -362,6 +374,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('folderNoteTitleTemplate', validateFolderNotePropertyTemplate);
     this.registerValidator('folderNoteAliasesTemplate', validateFolderNotePropertyTemplate);
     this.registerValidator('reorderedFileTitleTemplate', validateReorderedFileTitleTemplate);
+    this.registerValidator('headingNumberTemplate', validateHeadingNumberTemplate);
 
     // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
@@ -661,6 +674,42 @@ function validateFolderNotePropertyTemplate(value: string): MaybeReturn<string> 
   const unknownKey = findUnknownCreateFolderTokenKey(value);
   if (unknownKey) {
     return `Unknown token {{${unknownKey}}}`;
+  }
+}
+
+/**
+ * Validates the `headingNumberTemplate` setting (issue #295).
+ *
+ * The two required tokens are what make renumbering possible, exactly as for a reordered folder name:
+ * without a number token there is nothing to renumber, and without `{{headingText}}` the heading would lose
+ * its own text. A heading is one line, so a line break is refused too.
+ *
+ * @param value - The template as typed.
+ * @returns The error message, or nothing when the template is valid.
+ */
+function validateHeadingNumberTemplate(value: string): MaybeReturn<string> {
+  if (!value.trim()) {
+    return 'Heading number template should not be empty';
+  }
+
+  if (/[\r\n]/.test(value)) {
+    return 'Heading number template should be a single line';
+  }
+
+  const unknownKey = findUnknownTokenKey(value, (probe) => {
+    resolveHeadingNumberTemplateTokens({ template: probe, tokens: SAMPLE_HEADING_NUMBER_TOKENS });
+  });
+  if (unknownKey) {
+    return `Unknown token {{${unknownKey}}}`;
+  }
+
+  const tokenKeys = new Set(getTemplateTokenKeys(value).map((key) => key.toLowerCase()));
+  if (HEADING_INDEX_TOKEN_KEYS.every((key) => !tokenKeys.has(key.toLowerCase()))) {
+    return 'Heading number template should contain {{index}} or {{outlineIndex}}, which is the number it writes';
+  }
+
+  if (!tokenKeys.has(HEADING_TEXT_TOKEN_KEY.toLowerCase())) {
+    return `Heading number template should contain {{${HEADING_TEXT_TOKEN_KEY}}}, or numbering would drop the heading's text`;
   }
 }
 

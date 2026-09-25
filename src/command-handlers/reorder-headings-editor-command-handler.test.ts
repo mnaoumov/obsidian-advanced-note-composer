@@ -46,6 +46,8 @@ interface CreateParamsOptions {
   readonly headings?: readonly HeadingCache[];
   readonly isPathIgnored?: boolean;
   readonly shouldBlockCommandOnPath?: boolean;
+  readonly shouldNumberHeadingsWhenReorderingByDefault?: boolean;
+  readonly shouldShowModalInstructions?: boolean;
 }
 
 interface HandlerParams {
@@ -129,10 +131,13 @@ function createMockParams(options: CreateParamsOptions = {}): HandlerParams {
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
         commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
+        headingNumberTemplate: '{{index}}. {{headingText}}',
         isPathIgnored: vi.fn().mockReturnValue(options.isPathIgnored ?? false),
         shouldAddCommandsToSubmenu: true,
         shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
         shouldBlockVaultDuringOperations: false,
+        shouldNumberHeadingsWhenReorderingByDefault: options.shouldNumberHeadingsWhenReorderingByDefault ?? false,
+        shouldShowModalInstructions: options.shouldShowModalInstructions ?? true,
         shouldShowOperationNotices: true
       })
     }),
@@ -257,6 +262,64 @@ describe('ReorderHeadingsEditorCommandHandler', () => {
       await handler.executeEditor(createMockEditor(), createMockContext(FILE));
 
       expect(mockModify).toHaveBeenCalledWith(FILE, '# A\naaa\n\n## B\nbbb\n');
+    });
+
+    it('should leave the headings unnumbered by default in a note that is not numbered (issue #295)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue(null);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      const [openParams] = mockOpenModal.mock.lastCall ?? [];
+      expect(openParams?.numbering).toEqual({ shouldNumber: false, template: '{{index}}. {{headingText}}', wasNumbered: false });
+      expect(openParams?.shouldShowNumberingToggle).toBe(true);
+    });
+
+    it('should start numbering a note that is not numbered when the setting says so (issue #295)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS, shouldNumberHeadingsWhenReorderingByDefault: true });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue(null);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockOpenModal.mock.lastCall?.[0].numbering).toEqual({ shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: false });
+    });
+
+    it('should keep a numbered note numbered whatever the setting says (issue #295)', async () => {
+      const params = createMockParams({
+        content: '# 1. A\naaa\n# 2. B\nbbb\n',
+        headings: [heading(1, '1. A', 0), heading(1, '2. B', 11)]
+      });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue(null);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockOpenModal.mock.lastCall?.[0].numbering).toEqual({ shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: true });
+    });
+
+    it('should hide the numbering checkbox when per-operation overrides are off (issue #242)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS, shouldShowModalInstructions: false });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockResolvedValue(null);
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockOpenModal.mock.lastCall?.[0].shouldShowNumberingToggle).toBe(false);
+    });
+
+    it('should rewrite the note when only a heading text changed (issue #295)', async () => {
+      const params = createMockParams({ content: TWO_SECTION_CONTENT, headings: TWO_SECTION_HEADINGS });
+      const handler = toTestable(new ReorderHeadingsEditorCommandHandler(params));
+      mockOpenModal.mockImplementation(({ split }) => {
+        split.headingTexts.splice(0, 2, '1. A', '2. B');
+        return Promise.resolve([0, 1]);
+      });
+
+      await handler.executeEditor(createMockEditor(), createMockContext(FILE));
+
+      expect(mockModify).toHaveBeenCalledWith(FILE, '# 1. A\naaa\n\n# 2. B\nbbb\n');
     });
 
     it('should update the links the reorder broke and report how many (issue #295)', async () => {

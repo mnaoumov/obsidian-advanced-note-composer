@@ -38,7 +38,7 @@ interface ModelFixture {
 
 function createFixture(content: string): ModelFixture {
   const split = splitIntoReorderableSections(content, parseHeadings(content));
-  return { model: new HeadingReorderModel({ split }), split };
+  return { model: new HeadingReorderModel({ numbering: null, split }), split };
 }
 
 function createModel(content: string): HeadingReorderModel {
@@ -87,6 +87,19 @@ describe('HeadingReorderModel', () => {
 
   it('should number nothing, since reordering headings renames nothing', () => {
     expect(createModel(NESTED_NOTE).buildRows().every((row) => row.indexLabel === null)).toBe(true);
+  });
+
+  it('should preview the number each heading will carry, and follow a move (issue #295)', () => {
+    const split = splitIntoReorderableSections(NESTED_NOTE, parseHeadings(NESTED_NOTE));
+    const numbering = { shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: false };
+    const model = new HeadingReorderModel({ numbering, split });
+    expect(rows(model)).toEqual(['0:# 1. A', '1:## 1. A.1', '1:## 2. A.2', '0:# 2. B']);
+
+    model.didMove({ delta: -1, id: id(model, 'B') });
+    expect(rows(model)).toEqual(['0:# 1. B', '0:# 2. A', '1:## 1. A.1', '1:## 2. A.2']);
+
+    numbering.shouldNumber = false;
+    expect(rows(model)).toEqual(['0:# B', '0:# A', '1:## A.1', '1:## A.2']);
   });
 
   it('should put every heading in one group, so a drag can reach any heading (issue #295)', () => {

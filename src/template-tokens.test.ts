@@ -20,6 +20,7 @@ import {
   getTemplateTokenKeys,
   resolveCreateFolderTemplateTokens,
   resolveFolderTemplateTokens,
+  resolveHeadingNumberTemplateTokens,
   resolveReorderedFileTemplateTokens,
   resolveTemplateTokens
 } from './template-tokens.ts';
@@ -388,6 +389,26 @@ describe('resolveFolderTemplateTokens', () => {
 
   it('should throw for an unknown token key', () => {
     expect(() => resolve('{{unknown}}')).toThrow('Invalid template key: unknown');
+  });
+});
+
+describe('resolveHeadingNumberTemplateTokens', () => {
+  const TOKENS = { headingText: 'Plans', index: 3, outlineIndex: [1, 2, 3] };
+
+  it('should resolve the heading text and its sibling index', () => {
+    expect(resolveHeadingNumberTemplateTokens({ template: '{{index}}. {{headingText}}', tokens: TOKENS })).toBe('3. Plans');
+  });
+
+  it('should resolve the outline chain', () => {
+    expect(resolveHeadingNumberTemplateTokens({ template: '{{outlineIndex}} {{headingText}}', tokens: TOKENS })).toBe('1.2.3 Plans');
+  });
+
+  it('should zero-pad the index and every part of the chain to the mask', () => {
+    expect(resolveHeadingNumberTemplateTokens({ template: '{{index:00}} {{outlineIndex:00}}', tokens: TOKENS })).toBe('03 01.02.03');
+  });
+
+  it('should reject an unknown token', () => {
+    expect(() => resolveHeadingNumberTemplateTokens({ template: '{{nope}}', tokens: TOKENS })).toThrow('Invalid template key: nope');
   });
 });
 
