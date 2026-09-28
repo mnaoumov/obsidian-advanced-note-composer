@@ -49,16 +49,23 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { clickMouse, waitUntil }, obsidianModule, pluginId }) {
         /**
-         * Shared by the six waits below, so their sum stays well under the transport's ~30 s cap. Each one
-         * settles in well under a second on a healthy machine.
+         * Shared by the four note/notice waits below. With the three click waits, the closure declares
+         * 18 s, well under the transport's ~30 s cap; each step settles in well under a second.
          */
         const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
+        /**
+         * How long a click is given to land the user on the moved text. Kept short on purpose: the notice
+         * hides after a few seconds, and all three clicks have to happen while it is still up.
+         */
+        const CLICK_WAIT_TIMEOUT_IN_MILLISECONDS = 2000;
         const SETTLE_IN_MILLISECONDS = 300;
         /**
-         * How long after a click the state is read. The explorer's reveal takes the focus in two steps, the
-         * second a frame later, so an instant read could precede the step that undoes the selection.
+         * How long the state is held after it first looks right, before it is read. The explorer's reveal
+         * takes the focus in two steps, the second a frame later, so the first right-looking read can precede
+         * the step that undoes it.
          */
-        const SETTLE_AFTER_CLICK_IN_MILLISECONDS = 1500;
+        const SETTLE_AFTER_CLICK_IN_MILLISECONDS = 500;
+        const EXPECTED_STATE = 'markdown|issue-300-destination.md|true|MOVED-BY-ISSUE-300';
         const MOVED_TEXT = 'MOVED-BY-ISSUE-300';
         const SOURCE_PATH = 'issue-300-source.md';
         const DESTINATION_PATH = 'issue-300-destination.md';
@@ -97,7 +104,6 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
             predicate: () => findNoticeLink() !== null,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
-          await sleep(SETTLE_IN_MILLISECONDS);
 
           // The explorer has to be on screen for its reveal to compete for the focus.
           app.workspace.leftSplit.expand();
@@ -105,9 +111,11 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
           if (fileExplorerLeaf) {
             await app.workspace.revealLeaf(fileExplorerLeaf);
           }
+          // Let the move's own landing and the explorer's activation finish, as they have by the time a user
+          // clicks. Clicking within the same few frames left the destination active with its editor unfocused.
+          await sleep(SETTLE_IN_MILLISECONDS);
 
-          await clickNoticeLink();
-          states.push(readDestinationState());
+          states.push(await clickNoticeLink());
 
           // Click 2: the user clicked into the text first, collapsing the selection.
           const activeView = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
@@ -117,14 +125,12 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
             await clickMouse({ x: box.x + 5, y: box.y + box.height / 2 });
             await sleep(SETTLE_IN_MILLISECONDS);
           }
-          states.push(`between|${readDestinationState()}`);
-          await clickNoticeLink();
-          states.push(readDestinationState());
+          // One call: the `between` state is read before the click's await, since arguments evaluate in order.
+          states.push(`between|${readDestinationState()}`, await clickNoticeLink());
 
           // Click 3: the user went back to the source note, so the click has to open the destination again.
           await openAndGetView(source);
-          await clickNoticeLink();
-          states.push(readDestinationState());
+          states.push(await clickNoticeLink());
         } finally {
           if (wasLeftSplitCollapsed) {
             app.workspace.leftSplit.collapse();
@@ -145,15 +151,28 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
 
         /**
          * Clicks the notice's destination link with TRUSTED mouse input — a synthetic `click()` is what let
-         * issue #263's first fix pass while every real click lost the focus — and lets the reveal settle.
+         * issue #263's first fix pass while every real click lost the focus — and reads where it left the user.
          * The centre of the link's LAST line box is clicked, because the link can wrap.
+         *
+         * @returns The state after the click, or `no notice link` when the notice had already gone.
          */
-        async function clickNoticeLink(): Promise<void> {
+        async function clickNoticeLink(): Promise<string> {
           const lastLineBox = [...findNoticeLink()?.getClientRects() ?? []].at(-1);
-          if (lastLineBox) {
-            await clickMouse({ x: lastLineBox.x + lastLineBox.width / 2, y: lastLineBox.y + lastLineBox.height / 2 });
+          if (!lastLineBox) {
+            return 'no notice link';
+          }
+          await clickMouse({ x: lastLineBox.x + lastLineBox.width / 2, y: lastLineBox.y + lastLineBox.height / 2 });
+          try {
+            await waitUntil({
+              message: 'the click did not land on the moved text',
+              predicate: () => readDestinationState() === EXPECTED_STATE,
+              timeoutInMilliseconds: CLICK_WAIT_TIMEOUT_IN_MILLISECONDS
+            });
+          } catch {
+            // Reported through the returned state, which names what the click did instead.
           }
           await sleep(SETTLE_AFTER_CLICK_IN_MILLISECONDS);
+          return readDestinationState();
         }
 
         async function createFile(path: string, content: string): Promise<TFile> {
