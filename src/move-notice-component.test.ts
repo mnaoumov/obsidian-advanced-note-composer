@@ -218,7 +218,7 @@ function showPlainNotice(): Notice | null {
 }
 
 describe('MoveNoticeComponent', () => {
-  it('shows a non-dismissable notice with the Switch to split/extract button, the three move buttons, plus Cancel move', () => {
+  it('shows a non-dismissable notice with the Switch to extract button, the three move buttons, plus Cancel move', () => {
     const shownNotice = showPlainNotice();
 
     expect(shownNotice).toBe(notice);
@@ -233,7 +233,7 @@ describe('MoveNoticeComponent', () => {
     const fragment = castTo<DocumentFragment>(capturedMessage);
     const labels = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
     expect(labels).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
@@ -248,7 +248,7 @@ describe('MoveNoticeComponent', () => {
     component.refreshButtons();
 
     const buttons = getButtons();
-    // Switch to split/extract has no enablement predicate, so it is never disabled.
+    // Switch to extract has no enablement predicate, so it is never disabled.
     expect(buttons[0]?.component.disabled).toBe(false);
     expect(buttons[1]?.component.disabled).toBe(false);
     expect(buttons[2]?.component.disabled).toBe(true);
@@ -322,7 +322,7 @@ describe('MoveNoticeComponent', () => {
     expect(vi.mocked(moveToTopHandler.canExecuteInActiveEditor)).toHaveBeenCalled();
   });
 
-  it('opens the split/extract flow when the Switch to split/extract button is clicked', () => {
+  it('opens the split/extract flow when the Switch to extract button is clicked', () => {
     showPlainNotice();
     getButtons()[0]?.component.simulateClick__();
     expect(vi.mocked(openSplitModalCommandHandler.openSplitModal)).toHaveBeenCalledOnce();
@@ -355,7 +355,7 @@ describe('MoveNoticeComponent', () => {
     pluginSettings.shouldShowMoveToTopButton = false;
     showPlainNotice();
     expect(getButtonLabels()).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
       'Swap with selection',
@@ -367,7 +367,7 @@ describe('MoveNoticeComponent', () => {
     pluginSettings.shouldShowMoveToBottomButton = false;
     showPlainNotice();
     expect(getButtonLabels()).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection at cursor',
       'Swap with selection',
@@ -379,7 +379,7 @@ describe('MoveNoticeComponent', () => {
     pluginSettings.shouldShowMoveAtCursorButton = false;
     showPlainNotice();
     expect(getButtonLabels()).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Swap with selection',
@@ -393,7 +393,7 @@ describe('MoveNoticeComponent', () => {
     pluginSettings.shouldShowMoveAtCursorButton = false;
     showPlainNotice();
     expect(getButtonLabels()).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Swap with selection',
       'Cancel move'
     ]);
@@ -404,7 +404,7 @@ describe('MoveNoticeComponent', () => {
     showHeadingNotice();
 
     expect(getButtonLabels()).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',

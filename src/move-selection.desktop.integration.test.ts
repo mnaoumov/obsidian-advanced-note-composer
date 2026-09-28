@@ -145,7 +145,7 @@ describe('move marked selection', () => {
     // hidden once the mark is released.
     expect(result.markNoticeText).toContain('Smart cut & paste');
     expect(result.markNoticeButtonTexts).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',

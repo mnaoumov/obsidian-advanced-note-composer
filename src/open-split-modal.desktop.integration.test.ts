@@ -15,7 +15,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 const PLUGIN_ID = 'advanced-note-composer';
 
-describe('switch to split/extract from the smart-cut notice', () => {
+describe('switch to extract from the smart-cut notice', () => {
   it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
     const result = await evalInObsidian({
       async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
@@ -47,7 +47,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
           await app.workspace.getLeaf(false).openFile(target);
           await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'open-split-target.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
 
-          // Click the notice's "Switch to split/extract" button: it clears the mark, re-opens the source
+          // Click the notice's "Switch to extract" button: it clears the mark, re-opens the source
           // with the selection restored, and opens the split picker.
           findSwitchButton()?.click();
           await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
@@ -111,7 +111,7 @@ describe('switch to split/extract from the smart-cut notice', () => {
 
         function findSwitchButton(): HTMLButtonElement | null {
           for (const el of activeDocument.querySelectorAll(':scope .notice button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to split/extract') {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to extract') {
               return el;
             }
           }

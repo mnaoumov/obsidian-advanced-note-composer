@@ -41,7 +41,7 @@ describe('switch to smart cut from the split/extract picker', () => {
         await waitUntil({ predicate: () => findMarkNotice() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-        // Switch to the split/extract picker (the notice's "Switch to split/extract" action).
+        // Switch to the split/extract picker (the notice's "Switch to extract" action).
         app.commands.executeCommandById(`${pluginId}:open-split-modal`);
         await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
         await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'picker-switch-source.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });

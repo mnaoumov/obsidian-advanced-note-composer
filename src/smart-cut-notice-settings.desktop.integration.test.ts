@@ -53,10 +53,10 @@ describe('Smart cut & paste notice settings', () => {
     // Restore the defaults so the shared Obsidian instance is left in a clean state.
     await setToggles(ALL_TOGGLES, true);
 
-    // "Switch to split/extract" is always shown (independent of the three move-button toggles), so it
+    // "Switch to extract" is always shown (independent of the three move-button toggles), so it
     // leads every non-empty list.
     expect(allOn).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
@@ -64,21 +64,21 @@ describe('Smart cut & paste notice settings', () => {
       'Cancel move'
     ]);
     expect(topOff).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to bottom of file',
       'Move marked selection at cursor',
       'Swap with selection',
       'Cancel move'
     ]);
     expect(bottomOff).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection at cursor',
       'Swap with selection',
       'Cancel move'
     ]);
     expect(atCursorOff).toEqual([
-      'Switch to split/extract',
+      'Switch to extract',
       'Move marked selection to top of file',
       'Move marked selection to bottom of file',
       'Swap with selection',

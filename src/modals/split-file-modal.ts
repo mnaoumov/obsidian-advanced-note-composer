@@ -548,7 +548,7 @@ class SplitFileModal extends SuggestModalBase {
 
     this.applySplitTargetMode();
 
-    this.setPlaceholder('Select file to split into...');
+    this.setPlaceholder('Select file to extract into...');
 
     invokeAsyncSafely(() => this.buildInstructions());
   }

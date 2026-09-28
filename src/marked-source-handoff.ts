@@ -16,7 +16,7 @@ export interface ReopenMarkedSourceNoteParams {
 
 /**
  * Releases a pending smart-cut mark and re-opens its source note as the active editor, handing the note over
- * to an operation that writes to it — `Switch to split/extract`, and the marked-heading notice's
+ * to an operation that writes to it — `Switch to extract`, and the marked-heading notice's
  * `Split heading recursively...` / `Reorder headings...` actions.
  *
  * Clearing the mark first is what makes the handoff possible at all: the mark holds a `shouldBlockMutations`
