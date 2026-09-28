@@ -62,6 +62,7 @@ import {
 } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { resolveTemplateTokens } from '../template-tokens.ts';
+import { recordPendingTemplaterCursor } from '../templater-cursor.ts';
 
 export function getInsertModeFromEvent($event: KeyboardEvent | MouseEvent): InsertMode {
   return $event.shiftKey ? InsertMode.Prepend : InsertMode.Append;
@@ -559,6 +560,9 @@ export abstract class ComposerBase {
     }
     const isActiveFile = this.app.workspace.getActiveFile() === this.targetFile;
     await templaterPlugin.templater.overwrite_file_commands(this.targetFile, isActiveFile);
+    // Issue #301: Templater consumes a `tp.file.cursor()` marker only in the active note, and this one is
+    // usually not open yet, so the marker would stay behind as raw text. It is consumed when the note opens.
+    await recordPendingTemplaterCursor(this.app, this.targetFile);
   }
 
   /* v8 ignore stop */
