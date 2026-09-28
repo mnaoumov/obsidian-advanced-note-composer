@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 5.14.0
+
+- test(screenshots): apply the dark theme through applyObsidianTheme
+- fix(split): keep the create/merge switch steady across the folder prompt and the picker (#303)
+- fix(templater): consume the cursor marker when a created note opens (#301)
+- fix(smart-cut): re-select the moved content from the completion notice link
+- feat: rename the split/extract wording to extract (#299)
+
 ## 5.13.0
 
 - test(split-target-mode): merge setting spellcheck after the source note opens
