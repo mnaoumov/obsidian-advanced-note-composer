@@ -419,26 +419,7 @@ export class SplitComposer extends ComposerBase {
    */
   protected override getTargetLinkClickAction(): (() => Promise<void>) | undefined {
     const insertedContent = this.insertedContent;
-    if (insertedContent === null) {
-      return undefined;
-    }
-
-    const insertedContentOffset = this.insertedContentOffset;
-    return async (): Promise<void> => {
-      await revealInsertedContent({
-        app: this.app,
-        consoleDebugComponent: this.consoleDebugComponent,
-        file: this.targetFile,
-        insertedContent,
-        insertedContentOffset,
-        // The link leaves the explorer reveal to this action, so the editor can be put back in front
-        // only once that reveal has finished (issue #263).
-        shouldRevealInFileExplorer: true,
-        // The click hands the open to Obsidian and returns, so this poll has to outlast the open itself,
-        // not just the editor load the default budget assumes.
-        timeoutInMilliseconds: POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS
-      });
-    };
+    return insertedContent === null ? undefined : this.buildRevealInsertedContentAction(insertedContent, true);
   }
 
   protected override getTemplate(): string {
@@ -513,11 +494,14 @@ export class SplitComposer extends ComposerBase {
       await createFragmentAsync(async (f) => {
         f.appendText('Moved the marked selection into ');
         // A completion notice like the ones `buildOperationNoticeContent` builds, so its link reveals the
-        // destination in the file explorer the same way (issue #232). No jump action: the cursor is already
-        // on the moved content by the time this notice is shown.
+        // destination in the file explorer the same way (issue #232). It carries the same jump action as
+        // the extract's notice (issue #300): the cursor is on the moved content when the notice appears,
+        // but a click is a request to get back to it later, and without the action the explorer's reveal
+        // took the focus and a click from another note opened the destination at its top.
         f.append(
           await renderOperationNoticeLink({
             app: this.app,
+            onClick: this.buildRevealInsertedContentAction(ensureNonNullable(this.insertedContent), shouldSelect),
             pathOrAbstractFile: this.targetFile.path,
             pluginSettingsComponent: this.pluginSettingsComponent
           })
@@ -525,6 +509,37 @@ export class SplitComposer extends ComposerBase {
         f.appendText('.');
       })
     );
+  }
+
+  /**
+   * Builds the action a completion notice's destination link runs on click: land the user ON the inserted
+   * content rather than at the top of the destination note (issues #232, #263, #300).
+   *
+   * Reading the pair here rather than inside the closure is safe and deliberate: a completion notice is
+   * built only after the transaction has committed, so both are already final.
+   *
+   * @param insertedContent - The content the operation wrote, which the action locates.
+   * @param shouldSelect - Whether the content is left selected, rather than the caret collapsed onto it.
+   * @returns The click action.
+   */
+  private buildRevealInsertedContentAction(insertedContent: string, shouldSelect: boolean): () => Promise<void> {
+    const insertedContentOffset = this.insertedContentOffset;
+    return async (): Promise<void> => {
+      await revealInsertedContent({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        file: this.targetFile,
+        insertedContent,
+        insertedContentOffset,
+        // The link leaves the explorer reveal to this action, so the editor can be put back in front
+        // only once that reveal has finished (issue #263).
+        shouldRevealInFileExplorer: true,
+        shouldSelect,
+        // The click hands the open to Obsidian and returns, so this poll has to outlast the open itself,
+        // not just the editor load the default budget assumes.
+        timeoutInMilliseconds: POLL_TIMEOUT_WHILE_OPENING_IN_MILLISECONDS
+      });
+    };
   }
 
   /**
