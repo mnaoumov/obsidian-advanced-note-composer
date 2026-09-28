@@ -102,7 +102,7 @@ function stubActiveSourceEditor(viewFile: null | TFile = getSourceFile()): StubA
 describe('OpenSplitModalCommandHandler', () => {
   it('should construct with the correct id and name', () => {
     expect(castTo<TestableHandler>(handler).id).toBe('open-split-modal');
-    expect(castTo<TestableHandler>(handler).name).toBe('Smart cut & paste: Switch to split/extract');
+    expect(castTo<TestableHandler>(handler).name).toBe('Smart cut & paste: Switch to extract');
   });
 
   it('should be unavailable when nothing is marked', () => {

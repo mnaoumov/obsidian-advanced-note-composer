@@ -32,7 +32,7 @@ export class OpenSplitModalCommandHandler extends GlobalCommandHandler {
     super({
       icon: 'lucide-scissors',
       id: 'open-split-modal',
-      name: 'Smart cut & paste: Switch to split/extract'
+      name: 'Smart cut & paste: Switch to extract'
     });
 
     this.app = params.app;
@@ -45,7 +45,7 @@ export class OpenSplitModalCommandHandler extends GlobalCommandHandler {
    * Abandons the pending smart-cut mark and re-enters the split/extract flow with the marked selection:
    * re-opens the source note, restores its editor selection to the marked text, then delegates to the
    * `Extract current selection` flow (which offers the switch back to smart cut). Also used by the
-   * notice's "Switch to split/extract" button. A no-op when nothing is marked.
+   * notice's "Switch to extract" button. A no-op when nothing is marked.
    */
   public async openSplitModal(): Promise<void> {
     const marked = this.moveSelectionBuffer.get();

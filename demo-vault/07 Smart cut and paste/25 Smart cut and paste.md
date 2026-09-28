@@ -170,8 +170,8 @@ Splitting and smart cut share the same setup, so you can change your mind in eit
 
 - The `Extract ...` picker carries a **Switch to smart cut & paste** button (or `Alt+S`)
   - the picker closes, your selection is marked to move, and the note highlighted in the picker opens so you can position the cursor and paste. The same button is on the split confirmation dialog, so you can switch after the target is chosen.
-- The notice carries a **Switch to split/extract** button
-  - also the `Smart cut & paste: Switch to split/extract` command. It re-opens the source note with the selection restored and opens the split/extract picker, so you can search for a target and split into it with the full option set.
+- The notice carries a **Switch to extract** button
+  - also the `Smart cut & paste: Switch to extract` command. It re-opens the source note with the selection restored and opens the extract picker, so you can search for a target and extract into it with the full option set.
 
 ## Moving within one note
 

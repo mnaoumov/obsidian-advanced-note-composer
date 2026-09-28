@@ -91,7 +91,7 @@ interface MoveNoticeButtonDefinition {
 
 /**
  * Owns the non-dismissable notice shown while a selection is marked for moving. The notice carries a
- * `Switch to split/extract` button, up to three configurable move buttons, a `Swap with selection`
+ * `Switch to extract` button, up to three configurable move buttons, a `Swap with selection`
  * button (swaps the marked selection with the active editor's current selection), and an always-shown
  * `Cancel move` button. Button state is refreshed whenever the active leaf or the editor selection changes.
  *
@@ -163,7 +163,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   }
 
   /**
-   * Sets the handler backing the `Switch to split/extract` button. It is injected after construction to
+   * Sets the handler backing the `Switch to extract` button. It is injected after construction to
    * break the construction cycle because the handler itself depends on this component.
    *
    * @param openSplitModalCommandHandler - The handler to back the button.
@@ -228,7 +228,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
     const definitions: MoveNoticeButtonDefinition[] = [
       {
         getIsEnabled: null,
-        label: 'Switch to split/extract',
+        label: 'Switch to extract',
         onClick: (): void => {
           invokeAsyncSafely(() => ensureNonNullable(this.openSplitModalCommandHandler).openSplitModal());
         }
