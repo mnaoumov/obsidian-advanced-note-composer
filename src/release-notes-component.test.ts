@@ -21,7 +21,7 @@ import {
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
-import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { createReleaseNotesComponent } from './release-notes-component.ts';
 
 interface MockAppResult {
   readonly app: App;
@@ -116,16 +116,16 @@ async function triggerLayoutReadyAndWait(triggerLayoutReady: () => void): Promis
   await waitForAllAsyncOperations();
 }
 
-describe('ReleaseNotesComponent', () => {
+describe('createReleaseNotesComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('onLayoutReady', () => {
+  describe('on layout ready', () => {
     it('should show release notes, persist shown versions, and render the code block when the version was not shown yet', async () => {
       const { app, triggerLayoutReady } = createMockApp();
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
-      const component = new ReleaseNotesComponent({
+      const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,
         pluginSettingsComponent
@@ -156,7 +156,7 @@ describe('ReleaseNotesComponent', () => {
         [],
         loadedFromFilePromise
       );
-      const component = new ReleaseNotesComponent({
+      const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,
         pluginSettingsComponent
@@ -180,10 +180,28 @@ describe('ReleaseNotesComponent', () => {
       expect(mockAlert).not.toHaveBeenCalled();
     });
 
+    it('should keep the versions already shown and append only the ones shown now', async () => {
+      const { app, triggerLayoutReady } = createMockApp();
+      const { pluginSettingsComponent, settings } = createMockPluginSettingsComponent(['3.0.0']);
+      const component = createReleaseNotesComponent({
+        app,
+        pluginName: PLUGIN_NAME,
+        pluginSettingsComponent
+      });
+
+      component.load();
+      await triggerLayoutReadyAndWait(triggerLayoutReady);
+
+      expect(settings.releaseNotesShown).toEqual(['3.0.0', '5.11.0', '5.12.0']);
+      const message = mockAlert.mock.lastCall?.[0].message;
+      expect(message).toBeInstanceOf(DocumentFragment);
+      expect(Array.from(castTo<DocumentFragment>(message).querySelectorAll('h3'), (heading) => heading.textContent)).toEqual(['5.11.0', '5.12.0']);
+    });
+
     it('should do nothing when all release note versions were already shown', async () => {
       const { app, triggerLayoutReady } = createMockApp();
       const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0', '5.12.0']);
-      const component = new ReleaseNotesComponent({
+      const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,
         pluginSettingsComponent
@@ -199,7 +217,7 @@ describe('ReleaseNotesComponent', () => {
     it('should show and persist release notes when the core note-composer plugin is enabled', async () => {
       const { app, triggerLayoutReady } = createMockApp(true);
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
-      const component = new ReleaseNotesComponent({
+      const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,
         pluginSettingsComponent
@@ -216,7 +234,7 @@ describe('ReleaseNotesComponent', () => {
     it('should not show or persist release notes when the core note-composer plugin is disabled', async () => {
       const { app, triggerLayoutReady } = createMockApp(false);
       const { editAndSave, pluginSettingsComponent, settings } = createMockPluginSettingsComponent([]);
-      const component = new ReleaseNotesComponent({
+      const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,
         pluginSettingsComponent

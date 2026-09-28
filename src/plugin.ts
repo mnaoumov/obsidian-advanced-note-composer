@@ -59,7 +59,7 @@ import {
   clearRecentTargets,
   recordRecentVisit
 } from './recent-targets.ts';
-import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { createReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
@@ -514,7 +514,7 @@ export class Plugin extends PluginBase {
       })
     );
     this.addChild(
-      new ReleaseNotesComponent({
+      createReleaseNotesComponent({
         app: this.app,
         pluginName: this.manifest.name,
         pluginSettingsComponent
