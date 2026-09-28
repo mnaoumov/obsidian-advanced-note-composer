@@ -20,11 +20,24 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { PickerRecencyOrder } from '../plugin-settings.ts';
 import {
   selectFolder,
   selectFolderForNewNote
 } from './select-folder-modal.ts';
+
+vi.mock('../open-minimizable-modal.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../open-minimizable-modal.ts')>();
+  return {
+    ...actual,
+    openMinimizableModal: vi.fn(actual.openMinimizableModal),
+    openModal: vi.fn(actual.openModal)
+  };
+});
 
 function createMockApp(): AppOriginal {
   return strictProxy<AppOriginal>({
@@ -88,6 +101,41 @@ describe('selectFolderForNewNote', () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(await promise).toBeNull();
+  });
+});
+
+describe('which opener each entry point uses', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(openMinimizableModal).mockClear();
+    vi.mocked(openModal).mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should open the folder-then-name prompt minimizable and every other folder picker plainly (issue #303)', async () => {
+    // The folder-then-name prompt stands in for the split picker, which is minimizable (issue #130), so a flip
+    // between the two must not make the minimize button come and go. The other pickers keep issue #125's rule.
+    const params = {
+      app: createMockApp(),
+      isAllowedFolder: (): boolean => true,
+      placeholder: 'Select folder...',
+      pluginSettingsComponent: createSettingsComponent()
+    };
+
+    const plainPromise = selectFolder(params);
+    await vi.advanceTimersByTimeAsync(0);
+    await plainPromise;
+    expect(openModal).toHaveBeenCalledTimes(1);
+    expect(openMinimizableModal).not.toHaveBeenCalled();
+
+    const newNotePromise = selectFolderForNewNote({ ...params, canMergeIntoExistingNote: true });
+    await vi.advanceTimersByTimeAsync(0);
+    await newNotePromise;
+    expect(openMinimizableModal).toHaveBeenCalledTimes(1);
+    expect(openModal).toHaveBeenCalledTimes(1);
   });
 });
 
