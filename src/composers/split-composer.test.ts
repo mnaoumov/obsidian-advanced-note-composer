@@ -43,7 +43,10 @@ import { relocateAttachments } from '../attachments.ts';
 import { collectAttachmentsWithCustomAttachmentLocation } from '../custom-attachment-location.ts';
 import { buildExtractedSubpathPredicate } from '../extracted-link-targets.ts';
 import { InsertMode } from '../insert-mode.ts';
-import { buildOperationNoticeContent } from '../operation-notices.ts';
+import {
+  buildOperationNoticeContent,
+  renderOperationNoticeLink
+} from '../operation-notices.ts';
 import {
   Action,
   FrontmatterMergeStrategy,
@@ -157,7 +160,8 @@ vi.mock('../operation-notices.ts', async (importOriginal) => {
   const original = await importOriginal<typeof import('../operation-notices.ts')>();
   return {
     ...original,
-    buildOperationNoticeContent: vi.fn(original.buildOperationNoticeContent)
+    buildOperationNoticeContent: vi.fn(original.buildOperationNoticeContent),
+    renderOperationNoticeLink: vi.fn(original.renderOperationNoticeLink)
   };
 });
 
@@ -1217,6 +1221,9 @@ describe('splitFile move mode', () => {
     expect(targetEditor.setSelection).not.toHaveBeenCalled();
     expect(targetEditor.scrollIntoView).toHaveBeenCalledWith({ from: { ch: 7, line: 0 }, to: { ch: 12, line: 0 } }, true);
     expect(showNoticeMock).toHaveBeenCalled();
+    // Issue #300: clicking the notice's link later lands on the moved text again, as the mode says -
+    // a collapsed caret here.
+    expect(await clickMoveNoticeLinkAndReadRevealParams()).toEqual({ insertedContent: 'MOVED', shouldRevealInFileExplorer: true, shouldSelect: false });
   });
 
   it('both selects and notifies in SelectMovedContentAndNotice feedback mode (issue #176)', async () => {
@@ -1256,6 +1263,9 @@ describe('splitFile move mode', () => {
     expect(targetEditor.setSelection).toHaveBeenCalledWith({ ch: 7, line: 0 }, { ch: 12, line: 0 });
     expect(targetEditor.setCursor).not.toHaveBeenCalled();
     expect(showNoticeMock).toHaveBeenCalled();
+    // Issue #300: every click on the notice's link re-selects the moved text, as the extract's notice
+    // link does since issue #263.
+    expect(await clickMoveNoticeLinkAndReadRevealParams()).toEqual({ insertedContent: 'MOVED', shouldRevealInFileExplorer: true, shouldSelect: true });
   });
 
   it('inserts a `$&` in the moved text literally instead of expanding it as a replacement pattern', async () => {
@@ -2162,6 +2172,24 @@ describe('splitFile completion notice link', () => {
     expect(revealParams.insertedContentOffset).toBe('target body'.length);
   });
 });
+
+/**
+ * Runs the click action the smart cut & paste completion notice handed its destination link, and reads back
+ * what it asked {@link revealInsertedContent} for (issue #300).
+ *
+ * @returns The reveal's params, without the `file`: its `strictProxy` throws inside a deep-equality matcher.
+ */
+async function clickMoveNoticeLinkAndReadRevealParams(): Promise<object> {
+  const linkParams = ensureNonNullable(vi.mocked(renderOperationNoticeLink).mock.lastCall)[0];
+  await ensureNonNullable(linkParams.onClick)();
+  const revealParams = ensureNonNullable(vi.mocked(revealInsertedContent).mock.lastCall)[0];
+  expect(revealParams.file).toBe(getTargetFile());
+  return {
+    insertedContent: revealParams.insertedContent,
+    shouldRevealInFileExplorer: revealParams.shouldRevealInFileExplorer,
+    shouldSelect: revealParams.shouldSelect
+  };
+}
 
 /**
  * Reads back the action the composer handed to its COMPLETION notice for the destination link.

@@ -294,7 +294,8 @@ describe('cursor follows the moved content (issue #144)', () => {
             message: 'completion notice did not appear for the Notice feedback mode',
             predicate: () => {
               noticeTexts = [...activeDocument.querySelectorAll('.notice')].map((el) => el.textContent);
-              if (noticeTexts.every((text) => !text.includes('Moved the marked selection into'))) {
+              // Matched by THIS run's target too: an earlier suite's move notice can still be on screen.
+              if (noticeTexts.every((text) => !text.includes('Moved the marked selection into') || !text.includes(target.path))) {
                 return false;
               }
               const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
