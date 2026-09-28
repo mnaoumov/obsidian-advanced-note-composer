@@ -69,6 +69,7 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
           smartCutAndPasteCompletionFeedback: settingsComponent.settings.smartCutAndPasteCompletionFeedback
         };
         const states: string[] = [];
+        const wasLeftSplitCollapsed = app.workspace.leftSplit.collapsed;
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.shouldShowOperationNotices = true;
@@ -125,6 +126,16 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
           await clickNoticeLink();
           states.push(readDestinationState());
         } finally {
+          if (wasLeftSplitCollapsed) {
+            app.workspace.leftSplit.collapse();
+          }
+          // The notice stays up for its full duration, and a later suite waiting for ITS OWN
+          // `Moved the marked selection into` notice would otherwise take this one for it.
+          for (const noticeEl of activeDocument.querySelectorAll('.notice')) {
+            if (noticeEl.textContent.includes(DESTINATION_PATH)) {
+              noticeEl.remove();
+            }
+          }
           await settingsComponent.editAndSave((settings) => {
             Object.assign(settings, originalSettings);
           });
