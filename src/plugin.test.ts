@@ -33,7 +33,7 @@ import {
   clearRecentTargets,
   getRecentTargetPaths
 } from './recent-targets.ts';
-import { ReleaseNotesComponent } from './release-notes-component.ts';
+import { createReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
@@ -179,7 +179,7 @@ vi.mock('./plugin-settings-tab.ts', () => ({
 }));
 
 vi.mock('./release-notes-component.ts', () => ({
-  ReleaseNotesComponent: vi.fn()
+  createReleaseNotesComponent: vi.fn()
 }));
 
 // Since obsidian-dev-utils 93.2.0 the universal components live in a private `components` bag behind
@@ -253,7 +253,7 @@ describe('Plugin', () => {
       language: TOKENIZED_STRING_LANGUAGE,
       tokenPattern: /^[a-zA-Z0-9_,]+/
     });
-    expect(ReleaseNotesComponent).toHaveBeenCalledOnce();
+    expect(createReleaseNotesComponent).toHaveBeenCalledOnce();
     expect(MoveNoticeComponent).toHaveBeenCalledOnce();
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
     expect(SelectionAnchorComponent).toHaveBeenCalledOnce();
