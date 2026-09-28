@@ -179,11 +179,17 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
          * @returns The attribute seen in each mode, keyed by what the switch itself reported.
          */
         async function readSpellcheckByMode(isSpellcheckEnabled: boolean): Promise<SpellcheckByMode> {
-          app.vault.setConfig('spellcheck', isSpellcheckEnabled);
-
           const editor = await openSourceEditor();
           const selectionStart = SPELLCHECK_SOURCE_CONTENT.indexOf('bravo');
           editor.setSelection(editor.offsetToPos(selectionStart), editor.offsetToPos(selectionStart + 'bravo'.length));
+
+          // Set AFTER the editor is open, not before: after the file's first case, opening the note put the
+          // setting back to its value on disk (measured: `false` read back right after `setConfig`, `true` once
+          // the editor was up), so the `false` pass read a box that was following `true`.
+          app.vault.setConfig('spellcheck', isSpellcheckEnabled);
+          if (app.vault.getConfig('spellcheck') !== isSpellcheckEnabled) {
+            throw new Error(`Editor > Spellcheck did not take the value ${String(isSpellcheckEnabled)}.`);
+          }
 
           app.commands.executeCommandById(`${pluginId}:extract-current-selection`);
           await waitUntil({
