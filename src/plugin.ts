@@ -1,3 +1,4 @@
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { TemplatesLanguageComponent } from 'obsidian-dev-utils/obsidian/components/templates-language-component';
@@ -63,6 +64,10 @@ import { createReleaseNotesComponent } from './release-notes-component.ts';
 import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
+import {
+  clearPendingTemplaterCursors,
+  jumpToPendingTemplaterCursor
+} from './templater-cursor.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
 /**
@@ -106,10 +111,15 @@ export class Plugin extends PluginBase {
     // leaf change carrying the same file (splitting, focusing another pane on it) is not a move to
     // anywhere new. It fires with `null` when the last note is closed, which records nothing.
     this.registerEvent(this.app.workspace.on('file-open', (file) => {
-      if (file) {
-        recordRecentVisit(file);
+      if (!file) {
+        return;
       }
+      recordRecentVisit(file);
+      // Issue #301: a note Templater rendered while it was not on screen still holds its
+      // `tp.file.cursor()` marker, and this is the moment Templater would have jumped to it.
+      invokeAsyncSafely(() => jumpToPendingTemplaterCursor(this.app, file));
     }));
+    this.register(clearPendingTemplaterCursors);
 
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];

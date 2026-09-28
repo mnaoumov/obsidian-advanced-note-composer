@@ -75,6 +75,16 @@ interface TemplaterApi {
   start_templater_task: (path: string) => void;
 }
 
+interface TemplaterEditorHandler {
+  /**
+   * Consumes the next `tp.file.cursor()` marker in the ACTIVE editor and puts the caret there. With a file, it
+   * does nothing unless that file is the active one; with `shouldAutoJump` set, it does nothing when Templater's
+   * own `Automatic jump to cursor` setting is off — the pair Templater passes after rendering a note itself.
+   */
+  jump_to_next_cursor_location: (file?: null | TFile, shouldAutoJump?: boolean) => Promise<void>;
+}
+
 interface TemplaterPlugin extends Plugin {
+  editor_handler: TemplaterEditorHandler;
   templater: TemplaterApi;
 }

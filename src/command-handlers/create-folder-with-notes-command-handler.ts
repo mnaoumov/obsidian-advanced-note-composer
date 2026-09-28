@@ -49,6 +49,7 @@ import { CommandCategory } from '../plugin-settings.ts';
 import { recordRecentTarget } from '../recent-targets.ts';
 import { ReorderItemKind } from '../reorder-items.ts';
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
+import { recordPendingTemplaterCursor } from '../templater-cursor.ts';
 import { buildTemplaterPrelude } from '../templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../templater-run-properties.ts';
 import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../templater.ts';
@@ -821,8 +822,9 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * `templater:all-templates-executed`, so a template that DOES use `tp.hooks.on_all_templates_executed(…)`
    * never runs its callback without it. It is in a `finally` so a broken template cannot strand the pair.
    *
-   * Templater's own cursor jump is deliberately NOT reproduced: it acts on `workspace.activeEditor`, which at
+   * Templater's own cursor jump is deliberately NOT run here: it acts on `workspace.activeEditor`, which at
    * this point is still whatever note the user was on — never the note just created, which is opened later.
+   * The note is recorded instead, and the jump runs when it opens (issue #301, `templater-cursor.ts`).
    *
    * @param files - The created notes.
    * @param tokens - The values to expose to Templater code.
@@ -858,6 +860,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         });
         await this.app.vault.modify(file, content);
         this.app.workspace.trigger('templater:overwrite-file', { content, file });
+        await recordPendingTemplaterCursor(this.app, file);
       } catch (error) {
         // Templater's own entry point swallows this into a notice that names neither the note nor the
         // template, and leaves the note unrendered. The note is kept the same way — it already exists and

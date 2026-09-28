@@ -48,6 +48,8 @@ A `title` written there wins on a note the operation **creates**. It replaces th
 
 With [Templater](https://silentvoid13.github.io/Templater/) installed and **Should run templater on destination file** on, a template may also hold Templater commands such as `<% tp.date.now("YYYY-MM-DD") %>`. They run once the note holds the template, in every split — including `Split note by headings recursively...`, `Split heading recursively...` and `Create empty note in folder...`, which fill the template in after the notes exist.
 
+`<% tp.file.cursor() %>` works too. The note is usually not open while Templater fills it, so the marker stays in the note until you open it; then the caret jumps there and the marker goes, just as when Templater creates a note itself. Templater's own **Automatic jump to cursor** setting has to be on for that, as it does for Templater's own notes.
+
 Smart cut and paste can also be templated **per direction** - see [25 Smart cut and paste](<../07 Smart cut and paste/25 Smart cut and paste.md>).
 
 ## Try it

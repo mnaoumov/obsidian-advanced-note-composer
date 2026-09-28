@@ -6,6 +6,8 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 
 import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 
+import { recordPendingTemplaterCursor } from './templater-cursor.ts';
+
 /**
  * Runs Templater over one note the way `Should run templater on destination file` runs it over a split or
  * merge destination: Templater's own `overwrite_file_commands`.
@@ -68,5 +70,6 @@ export function resolveDestinationTemplaterRunner(params: ResolveDestinationTemp
 
   return async (file) => {
     await templaterPlugin.templater.overwrite_file_commands(file, app.workspace.getActiveFile() === file);
+    await recordPendingTemplaterCursor(app, file);
   };
 }
