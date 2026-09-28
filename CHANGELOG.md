@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 5.13.0
+
+- test(split-target-mode): merge setting spellcheck after the source note opens
+- chore(cspell): merge accepting repoint for the changelog spellcheck
+- refactor(release-notes): merge moving the popup onto the shared ReleaseNotesComponent
+- test(split-auto-number): merge running each case in phases driven from node
+- feat(merge-folder): merge keeping attachment unit folders whole (#298)
+- feat(split): merge offering the create/merge switch before the folder is chosen (#297)
+- feat(merge-folder): keep same-named folders separate by path
+- feat(reorder-headings): number headings the way folders and notes are numbered
+- feat(reorder-headings): move headings under a different parent
+- chore: merge caret-free desktop screenshot capture
+- test(integration): merge per-test Obsidian error recording for the desktop aggregate
+- feat(rename-folder): merge several folder note aliases per template
+- refactor(notices): merge the move onto the library file-explorer reveal
+- chore: merge the obsidian-integration-testing 17 float
+- docs: merge updating five JSDoc links whose targets were renamed or removed
+
 ## 5.12.0
 
 - chore(spellcheck): merge accepting headlessly in the changelog
