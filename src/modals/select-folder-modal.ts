@@ -31,9 +31,24 @@ import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-co
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
-import { openModal } from '../open-minimizable-modal.ts';
+import {
+  openMinimizableModal,
+  openModal
+} from '../open-minimizable-modal.ts';
 import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { reorderSuggestionsByRecentFolders } from '../recent-suggestions.ts';
+
+/**
+ * What the create/merge switch says on BOTH surfaces of the folder-then-name pair (issue #303): this folder
+ * prompt, and the split picker it hands a merge over to, whose `Create` comes back here (issue #297).
+ *
+ * One text for both is what keeps the flip from moving the input. The two surfaces are prompts of the same
+ * width, so the same words wrap onto the same number of lines and the row above the input is the same
+ * height on both sides. Before, the folder prompt's text wrapped onto a second line and the picker's did
+ * not, so the list jumped by a line on every flip. It is also worded for both, which the picker's own
+ * `create a new note named as typed` was not: in this flow `Off` leads back to this prompt.
+ */
+export const FOLDER_THEN_NAME_SPLIT_TARGET_MODE_DESC = 'Off: create a new note, choosing its folder first and then its name. On: merge into an existing note instead. (Alt+M)';
 
 /**
  * The user chose the folder the new note is created in.
@@ -213,7 +228,7 @@ class SelectFolderModal extends FuzzySuggestModal<TFolder> {
       // Shown DISABLED rather than hidden when merging is unavailable, the answer the picker's switch gives.
       .setDesc(
         params.canMergeIntoExistingNote
-          ? 'Off: choose the folder below, then name the new note. On: merge into an existing note instead. (Alt+M)'
+          ? FOLDER_THEN_NAME_SPLIT_TARGET_MODE_DESC
           : 'There is nothing to merge, so this flow can only create a new note.'
       )
       .addToggle((toggle) => {
@@ -254,7 +269,7 @@ export async function selectFolder(params: SelectFolderParams): Promise<null | T
 
 /**
  * Asks for the folder a new note is created in, with the split picker's `Create` / `Merge` switch above
- * the list (issue #297). The folder-then-name pair opens with this prompt, and before the switch was on it
+ * the list (issue #297), opened minimizable like the picker it stands in for (issue #303). The folder-then-name pair opens with this prompt, and before the switch was on it
  * a user who wanted to merge had to choose an arbitrary folder first, only to reach the name box's
  * `Switch to merge`.
  *
@@ -263,7 +278,12 @@ export async function selectFolder(params: SelectFolderParams): Promise<null | T
  */
 export async function selectFolderForNewNote(params: SelectFolderForNewNoteParams): Promise<null | SelectFolderForNewNoteResult> {
   return await new Promise<null | SelectFolderForNewNoteResult>((promiseResolve) => {
-    openModal(
+    // Minimizable, unlike every other caller's folder picker (issue #303). This prompt stands in for the
+    // split picker, which is minimizable so a pending extract can be parked (issue #130), and the source
+    // note is already locked while it is open. Issue #125's "nothing has been chosen yet" does not apply,
+    // since the selection to extract has been chosen, and a flip between the two surfaces must not make
+    // the button come and go.
+    openMinimizableModal(
       new SelectFolderModal({
         ...params,
         promiseResolve,

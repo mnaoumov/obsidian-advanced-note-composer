@@ -52,6 +52,7 @@ import {
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { resolveExistingItemFile } from './existing-item-file.ts';
 import {
+  FOLDER_THEN_NAME_SPLIT_TARGET_MODE_DESC,
   selectFolder,
   selectFolderForNewNote
 } from './select-folder-modal.ts';
@@ -991,11 +992,7 @@ class SplitFileModal extends SuggestModalBase {
     this.splitTargetModeSetting = new Setting(switchContainerEl)
       // Shown DISABLED rather than hidden when merging is unavailable (issue #244): a row that says why the
       // only option is a creation answers the question a missing row would raise.
-      .setDesc(
-        this.canMergeIntoExistingNote
-          ? 'Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)'
-          : 'There is nothing to merge, so this flow can only create a new note named as typed.'
-      )
+      .setDesc(this.resolveSplitTargetModeDesc())
       .addToggle((toggle) => {
         this.splitTargetModeToggle = toggle;
         toggle
@@ -1021,6 +1018,23 @@ class SplitFileModal extends SuggestModalBase {
       .onClick(() => {
         this.switchToSmartCut();
       });
+  }
+
+  /**
+   * What the switch row says. While `Create` returns to the folder-then-name pair (issue #297), `Off` does
+   * not create a note named as typed, so the row says what the pair's folder prompt says, word for word.
+   * The same text on both surfaces is what keeps the input from jumping by a line on every flip (issue
+   * #303).
+   *
+   * @returns The switch row's description.
+   */
+  private resolveSplitTargetModeDesc(): string {
+    if (!this.canMergeIntoExistingNote) {
+      return 'There is nothing to merge, so this flow can only create a new note named as typed.';
+    }
+    return this.shouldReturnToFolderThenNameOnCreate
+      ? FOLDER_THEN_NAME_SPLIT_TARGET_MODE_DESC
+      : 'Off: create a new note named as typed. On: merge into the existing note picked below. (Alt+M)';
   }
 
   /**
