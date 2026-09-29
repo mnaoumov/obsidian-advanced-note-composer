@@ -2434,6 +2434,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               });
             }
           }),
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether a note picker shows a folder note by its folder\'s path, leaving out the note\'s own name: ');
+              appendCodeBlock(f, 'Projects/Alpha');
+              f.appendText(' rather than ');
+              appendCodeBlock(f, 'Projects/Alpha/Alpha');
+              f.appendText('. Which note is a folder note is decided by the ');
+              appendCodeBlock(f, 'Folder note');
+              f.appendText(' settings. A folder note kept beside its folder already shows as the folder\'s path, so this changes nothing there.');
+            }),
+            name: 'Should hide folder note name in pickers',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldHideFolderNoteNameInPickers', valueComponent: toggle });
+              });
+            }
+          }),
           // Issue #275: read by no command family, so it has no place among the cross-cutting `Common` rows.
           this.settingEx({
             desc: 'Whether to show console debug messages.',

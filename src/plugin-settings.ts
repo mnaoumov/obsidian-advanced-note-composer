@@ -849,6 +849,17 @@ export class PluginSettings {
 
   public shouldFixFootnotesByDefault = true;
 
+  /**
+   * Whether a note picker shows a folder note by its FOLDER's path, leaving out the note's own name
+   * (issue #304): `Projects/Alpha` rather than `Projects/Alpha/Alpha`.
+   *
+   * Which note is a folder note is the `Folder note` settings' answer ({@link folderNoteLocation}), so a
+   * vault with folder notes turned off, or kept BESIDE their folder, sees no change: there the note's path
+   * already is the folder's. Off by default, since the suffix is also what tells a folder note apart from a
+   * note that merely sits in that folder.
+   */
+  public shouldHideFolderNoteNameInPickers = false;
+
   public shouldIncludeChildFoldersWhenMergingByDefault = true;
   public shouldIncludeChildFoldersWhenSwappingByDefault = true;
   /**

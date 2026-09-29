@@ -17,7 +17,8 @@ import type { FolderNoteSettings } from './folder-note.ts';
 import {
   buildFolderNoteOptions,
   resolveFolderNoteConfigFromSettings,
-  resolveFolderNoteFromSettings
+  resolveFolderNoteFromSettings,
+  resolveFolderOfFolderNote
 } from './folder-note.ts';
 
 /*
@@ -114,5 +115,59 @@ describe('resolveFolderNoteFromSettings', () => {
 
   it('should find nothing when the folder simply has no folder note, and create nothing looking', () => {
     expect(resolve({ 'alpha/bravo/charlie/other.md': '' }, 'alpha/bravo/charlie', settingsFor(FolderNoteLocation.InsideFolder))).toBeNull();
+  });
+});
+
+describe('resolveFolderOfFolderNote', () => {
+  function resolve(files: Record<string, string>, filePath: string, settings: FolderNoteSettings): null | string {
+    initApp(files);
+    return resolveFolderOfFolderNote({
+      app,
+      config: resolveFolderNoteConfigFromSettings({ app, settings }),
+      file: ensureNonNullable(app.vault.getFileByPath(filePath))
+    })?.path ?? null;
+  }
+
+  it('should answer the folder a note named after it describes, from inside', () => {
+    expect(resolve({ 'alpha/bravo/bravo.md': '' }, 'alpha/bravo/bravo.md', settingsFor(FolderNoteLocation.InsideFolder))).toBe('alpha/bravo');
+  });
+
+  it('should answer nothing for a note that merely sits in the folder', () => {
+    expect(resolve(
+      {
+        'alpha/bravo/bravo.md': '',
+        'alpha/bravo/other.md': ''
+      },
+      'alpha/bravo/other.md',
+      settingsFor(FolderNoteLocation.InsideFolder)
+    )).toBeNull();
+  });
+
+  it('should follow the name template rather than the folder name', () => {
+    const files = {
+      'alpha/bravo/bravo.md': '',
+      'alpha/bravo/index.md': ''
+    };
+    expect(resolve(files, 'alpha/bravo/index.md', settingsFor(FolderNoteLocation.InsideFolder, 'index'))).toBe('alpha/bravo');
+    expect(resolve(files, 'alpha/bravo/bravo.md', settingsFor(FolderNoteLocation.InsideFolder, 'index'))).toBeNull();
+  });
+
+  it('should answer nothing for a folder note kept beside its folder, whose path already is the folder\'s', () => {
+    expect(resolve(
+      {
+        'alpha/bravo.md': '',
+        'alpha/bravo/other.md': ''
+      },
+      'alpha/bravo.md',
+      settingsFor(FolderNoteLocation.ParentFolder)
+    )).toBeNull();
+  });
+
+  it('should answer nothing when this vault has no folder notes', () => {
+    expect(resolve({ 'alpha/bravo/bravo.md': '' }, 'alpha/bravo/bravo.md', settingsFor(FolderNoteLocation.None))).toBeNull();
+  });
+
+  it('should answer nothing for a note at the vault root', () => {
+    expect(resolve({ 'alpha.md': '' }, 'alpha.md', settingsFor(FolderNoteLocation.InsideFolder, 'alpha'))).toBeNull();
   });
 });

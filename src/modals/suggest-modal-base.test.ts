@@ -29,6 +29,10 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { Item } from './suggest-modal-base.ts';
 
 import {
+  resolveFolderNoteConfigFromSettings,
+  resolveFolderOfFolderNote
+} from '../folder-note.ts';
+import {
   CommandCategory,
   PickerRecencyOrder
 } from '../plugin-settings.ts';
@@ -58,9 +62,22 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
   addPluginCssClasses: vi.fn()
 }));
 
+// The folder-note RULE is `folder-note.ts`'s, tested there against a real vault; here only the picker's use
+// of it is under test, so the two functions are stubbed and each case says which note is a folder note.
+vi.mock('../folder-note.ts', () => ({
+  resolveFolderNoteConfigFromSettings: vi.fn(() => ({})),
+  resolveFolderOfFolderNote: vi.fn(() => null)
+}));
+
 interface BookmarksPlugin {
   getItemTitle: ReturnType<typeof vi.fn>;
   items: BookmarkItem[];
+}
+
+interface FolderNoteFixture {
+  readonly folderNote: TFile;
+  readonly modal: TestSuggestModal;
+  readonly otherNote: TFile;
 }
 
 interface MockPlugin {
@@ -74,6 +91,7 @@ interface MockPluginOptions {
   readonly isSpellcheckEnabled?: boolean;
   readonly markdownFiles?: TFile[];
   readonly recentFiles?: string[];
+  readonly shouldHideFolderNoteNameInPickers?: boolean;
   readonly unresolvedLinks?: Record<string, Record<string, number>>;
 }
 
@@ -149,7 +167,8 @@ function createMockPlugin(overrides?: MockPluginOptions): MockPlugin {
       settings: strictProxy({
         isPathIgnored: vi.fn().mockReturnValue(false),
         pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
-        shouldAllowOnlyCurrentFolderByDefault: false
+        shouldAllowOnlyCurrentFolderByDefault: false,
+        shouldHideFolderNoteNameInPickers: overrides?.shouldHideFolderNoteNameInPickers ?? false
       })
     })
   };
@@ -1102,6 +1121,74 @@ describe('SuggestModalBase', () => {
       modal['shouldAllowOnlyCurrentFolder'] = false;
       const text = modal['getSuggestionText']('folder/test.md');
       expect(text).toBe('folder/test');
+    });
+  });
+
+  describe('shouldHideFolderNoteNameInPickers', () => {
+    // A folder note kept inside its folder: `Projects/Alpha/Alpha.md` describes `Projects/Alpha`.
+    function setUpFolderNote(isSettingOn: boolean): FolderNoteFixture {
+      const folderNote = createMockFile('Projects/Alpha/Alpha.md');
+      const otherNote = createMockFile('Projects/Alpha/Beta.md');
+      sourceFile = createMockFile('source.md');
+      plugin = createMockPlugin({
+        files: [folderNote, otherNote, sourceFile],
+        shouldHideFolderNoteNameInPickers: isSettingOn
+      });
+      vi.mocked(resolveFolderOfFolderNote).mockImplementation(({ file }) => file === folderNote ? folderNote.parent : null);
+      return { folderNote, modal: createTestSuggestModal(plugin, sourceFile), otherNote };
+    }
+
+    // The text `renderSuggestion` shows; read directly, because the mocked `renderResults` writes none.
+    function shownText(modal: TestSuggestModal, file: TFile): string {
+      return modal['getFileSuggestionText'](file);
+    }
+
+    afterEach(() => {
+      vi.mocked(resolveFolderOfFolderNote).mockReset().mockReturnValue(null);
+      vi.mocked(resolveFolderNoteConfigFromSettings).mockClear();
+    });
+
+    it('should show a folder note by its folder\'s path when on', () => {
+      const { folderNote, modal } = setUpFolderNote(true);
+      expect(shownText(modal, folderNote)).toBe('Projects/Alpha');
+    });
+
+    it('should show every other note by its full path when on', () => {
+      const { modal, otherNote } = setUpFolderNote(true);
+      expect(shownText(modal, otherNote)).toBe('Projects/Alpha/Beta');
+    });
+
+    it('should show a folder note by its full path when off, without asking which note is one', () => {
+      const { folderNote, modal } = setUpFolderNote(false);
+      expect(shownText(modal, folderNote)).toBe('Projects/Alpha/Alpha');
+      expect(resolveFolderNoteConfigFromSettings).not.toHaveBeenCalled();
+      expect(resolveFolderOfFolderNote).not.toHaveBeenCalled();
+    });
+
+    it('should search a folder note by the text it is shown as, so the highlighted ranges line up', () => {
+      const { folderNote, modal } = setUpFolderNote(true);
+      const suggestions = modal.getSuggestions('Projects/Alpha');
+      const folderNoteItem = suggestions.find((item) => item.file === folderNote);
+      // Every match range lies inside the SHOWN text; ranges against the full path could run past its end.
+      const shownLength = 'Projects/Alpha'.length;
+      expect(folderNoteItem?.match.matches.every(([, end]) => end <= shownLength)).toBe(true);
+    });
+
+    it('should resolve the folder-note setup once per picker, not once per note', () => {
+      const { modal } = setUpFolderNote(true);
+      modal.getSuggestions('a');
+      modal.getSuggestions('al');
+      expect(resolveFolderNoteConfigFromSettings).toHaveBeenCalledTimes(1);
+    });
+
+    it('should show a folder note by its folder\'s path relative to the current folder when limited to it', () => {
+      const folderNote = createMockFile('Projects/Alpha/Alpha.md');
+      sourceFile = createMockFile('Projects/source.md');
+      plugin = createMockPlugin({ files: [folderNote, sourceFile], shouldHideFolderNoteNameInPickers: true });
+      vi.mocked(resolveFolderOfFolderNote).mockReturnValue(folderNote.parent);
+      const modal = createTestSuggestModal(plugin, sourceFile);
+      modal['shouldAllowOnlyCurrentFolder'] = true;
+      expect(shownText(modal, folderNote)).toBe('Alpha');
     });
   });
 });
