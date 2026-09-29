@@ -18,13 +18,11 @@ import type {
   TFile,
   TFolder
 } from 'obsidian';
-import type {
-  FolderNoteConfig,
-  FolderNoteLocation
-} from 'obsidian-dev-utils/obsidian/folder-note';
+import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
 import type { RenderInternalLinkFolderNoteOptions } from 'obsidian-dev-utils/obsidian/markdown';
 
 import {
+  FolderNoteLocation,
   resolveFolderNote,
   resolveFolderNoteConfig
 } from 'obsidian-dev-utils/obsidian/folder-note';
@@ -78,6 +76,22 @@ export interface ResolveFolderNoteFromSettingsParams {
    * The settings that say which note is a folder's folder note.
    */
   readonly settings: FolderNoteSettings;
+}
+/**
+ * Parameters for {@link resolveFolderOfFolderNote}.
+ */
+export interface ResolveFolderOfFolderNoteParams {
+  readonly app: App;
+
+  /**
+   * The already-resolved folder-note setup, so a caller asking about many notes resolves it once.
+   */
+  readonly config: FolderNoteConfig;
+
+  /**
+   * The note that may be a folder note.
+   */
+  readonly file: TFile;
 }
 
 /**
@@ -147,4 +161,38 @@ export function resolveFolderNoteFromSettings(params: ResolveFolderNoteFromSetti
     config: resolveFolderNoteConfigFromSettings({ app, settings }),
     folder
   });
+}
+
+/**
+ * The inverse of {@link resolveFolderNoteFromSettings}: the folder a note is the folder note OF, when that
+ * folder is the note's own parent (issue #304).
+ *
+ * Only a folder note kept INSIDE its folder answers. One kept beside its folder already has the folder's
+ * path as its own (`alpha/bravo.md` describes `alpha/bravo`), so there is nothing a caller could shorten,
+ * and the vault root is never answered, since its path names nothing.
+ *
+ * The note is compared against what `resolveFolderNote` resolves for its parent rather than matched by
+ * name, so a note that merely shares the folder note's name under another extension is not mistaken for
+ * it.
+ *
+ * @param params - The note and the setup.
+ * @returns The folder the note describes, or `null` when it is no folder note kept inside its folder.
+ */
+export function resolveFolderOfFolderNote(params: ResolveFolderOfFolderNoteParams): null | TFolder {
+  const {
+    app,
+    config,
+    file
+  } = params;
+
+  if (config.location !== FolderNoteLocation.InsideFolder) {
+    return null;
+  }
+
+  const folder = file.parent;
+  if (!folder || folder.isRoot()) {
+    return null;
+  }
+
+  return resolveFolderNote({ app, config, folder }) === file ? folder : null;
 }

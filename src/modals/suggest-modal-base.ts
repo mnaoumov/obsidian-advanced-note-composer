@@ -5,6 +5,7 @@ import type {
   SearchResult,
   SearchResultContainer
 } from 'obsidian';
+import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
 import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import {
@@ -32,6 +33,10 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { CommandCategory } from '../plugin-settings.ts';
 
+import {
+  resolveFolderNoteConfigFromSettings,
+  resolveFolderOfFolderNote
+} from '../folder-note.ts';
 import { getRecentPaths } from '../recent-suggestions.ts';
 
 export interface Item extends SearchResultContainer {
@@ -106,6 +111,11 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
    */
   protected abstract get commandCategory(): CommandCategory;
 
+  /**
+   * The folder-note setup, resolved on first use and kept for the picker's short life, so a search over
+   * every note in the vault does not re-read it per note (issue #304).
+   */
+  private folderNoteConfig: FolderNoteConfig | null = null;
   private readonly initialInputValue: string;
   private readonly newFileButtonEl: HTMLElement;
   private readonly shouldShowAlias: boolean;
@@ -242,7 +252,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     switch (item.type) {
       case 'alias': {
         renderResults(suggestionContent.createDiv('suggestion-title'), item.alias ?? '', item.match);
-        suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getSuggestionText(item.file?.path ?? '') });
+        suggestionContent.createDiv({ cls: 'suggestion-note', text: this.getFileSuggestionText(item.file) });
         suggestionAux.createSpan({ cls: 'suggestion-flair' }, (suggestionFlair) => {
           setIcon(suggestionFlair, 'lucide-forward');
           suggestionFlair.title = 'Alias';
@@ -301,7 +311,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
         break;
       }
       case 'file': {
-        renderResults(suggestionContent.createDiv('suggestion-title'), this.getSuggestionText(item.file?.path ?? ''), item.match);
+        renderResults(suggestionContent.createDiv('suggestion-title'), this.getFileSuggestionText(item.file), item.match);
         suggestionAux.createSpan({ cls: 'suggestion-flair' });
 
         break;
@@ -400,6 +410,33 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
   /* v8 ignore stop */
 
+  /**
+   * The text a note is searched by, and — before {@link trimCurrentFolderPrefix} — shown as.
+   *
+   * With `Should hide folder note name in pickers` on (issue #304), a folder note kept inside its folder is
+   * its FOLDER's path: `Projects/Alpha` rather than `Projects/Alpha/Alpha`. It is searched by that same text,
+   * not by its full path, because the match ranges the search returns are what highlights the shown text,
+   * and ranges computed against a longer string would highlight the wrong characters.
+   *
+   * @param file - The note.
+   * @returns The text.
+   */
+  private getFileSearchText(file: TFile): string {
+    if (!this.pluginSettingsComponent.settings.shouldHideFolderNoteNameInPickers) {
+      return trimMarkdownExtension(file.path);
+    }
+
+    this.folderNoteConfig ??= resolveFolderNoteConfigFromSettings({ app: this.app, settings: this.pluginSettingsComponent.settings });
+    const folder = resolveFolderOfFolderNote({ app: this.app, config: this.folderNoteConfig, file });
+    return folder?.path ?? trimMarkdownExtension(file.path);
+  }
+
+  /* v8 ignore start -- defensive ?? on an item that always carries its file. */
+  private getFileSuggestionText(file: TFile | undefined): string {
+    return file ? this.trimCurrentFolderPrefix(this.getFileSearchText(file)) : '';
+  }
+  /* v8 ignore stop */
+
   private getRecentFiles(): Item[] {
     // The per-type flags are not passed to `getRecentPaths`: `shouldIncludeFile` below applies the
     // same ones, so the shared superset keeps every picker reading one recent list (issue #158). The list
@@ -427,17 +464,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return items;
   }
 
-  /* v8 ignore start -- defensive ?? on parent?.getParentPrefix(). */
   private getSuggestionText(text: string): string {
-    let suggestionText = trimMarkdownExtension(text);
-    if (!this.shouldAllowOnlyCurrentFolder) {
-      return suggestionText;
-    }
-
-    suggestionText = trimStart({ $string: suggestionText, prefix: this.sourceFile.parent?.getParentPrefix() ?? '' });
-    return suggestionText;
+    return this.trimCurrentFolderPrefix(trimMarkdownExtension(text));
   }
-  /* v8 ignore stop */
 
   private handleCreateButtonClick($event: MouseEvent): void {
     this.onChooseSuggestion(null, $event);
@@ -514,7 +543,7 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
 
     for (const file of files) {
       const isUserIgnored = this.app.metadataCache.isUserIgnored(file.path);
-      const match = searchFilePath(searchFunction, trimMarkdownExtension(file.path));
+      const match = searchFilePath(searchFunction, this.getFileSearchText(file));
       if (match) {
         if (isUserIgnored) {
           match.score -= SCORE_STEP;
@@ -585,6 +614,14 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     return IMAGE_EXTENSIONS.has(file.extension)
       ? this.shouldShowImages
       : this.shouldShowAllTypes || (this.shouldShowNonImageAttachments && this.app.viewRegistry.isExtensionRegistered(file.extension));
+  }
+  /* v8 ignore stop */
+
+  /* v8 ignore start -- defensive ?? on parent?.getParentPrefix(). */
+  private trimCurrentFolderPrefix(text: string): string {
+    return this.shouldAllowOnlyCurrentFolder
+      ? trimStart({ $string: text, prefix: this.sourceFile.parent?.getParentPrefix() ?? '' })
+      : text;
   }
   /* v8 ignore stop */
 }

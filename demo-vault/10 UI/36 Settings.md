@@ -269,6 +269,8 @@ Obsidian has two context menus over an open note, and they never both answer one
   - show the controls that override a setting for one operation: the keyboard-hint line at the bottom of the pickers and the reorder dialog's `Include files` checkbox. Turn it off and this settings page is the only place those choices are made. The split picker's `Create` / `Merge` switch is **not** one of them and is always shown — it says what the picker is about to do, and with it hidden there was no way to see the mode, let alone change it.
 - `pickerRecencyOrder`
   - which recency a picker offers first when you have typed nothing: your recent activity — the destinations of completed operations and the notes you have opened, whichever happened last — or the folder you are currently in.
+- `shouldHideFolderNoteNameInPickers`
+  - show a folder note in the note pickers by its folder's path — `Projects/Alpha` rather than `Projects/Alpha/Alpha` — and search it by that path too. Which note is a folder note is the `Folder note` settings' answer, so a folder note kept beside its folder shows as it always did: its path already is the folder's.
 - `shouldAddCommandsToSubmenu`
   - group this plugin's context-menu entries under one submenu instead of listing them inline.
 
