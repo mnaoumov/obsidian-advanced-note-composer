@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.15.0
+
+- feat(pickers): optionally show a folder note by its folder's path (#304)
+
 ## 5.14.0
 
 - test(screenshots): apply the dark theme through applyObsidianTheme
