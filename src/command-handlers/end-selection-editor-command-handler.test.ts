@@ -57,7 +57,7 @@ function createEditor(): Editor {
   });
 }
 
-function createHandler(anchorOffset: null | number, hasAnchor = anchorOffset !== null): CreatedHandler {
+function createHandler(anchorOffset: null | number, hasAnchor = anchorOffset !== null, lastSelectionStartOffset: null | number = null): CreatedHandler {
   const settings = strictProxy<PluginSettings>({
     commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
     shouldAddCommandsToSubmenu: true,
@@ -66,6 +66,7 @@ function createHandler(anchorOffset: null | number, hasAnchor = anchorOffset !==
   const anchorComponent = strictProxy<SelectionAnchorComponent>({
     clearAnchor: vi.fn(),
     getAnchorOffset: vi.fn().mockReturnValue(anchorOffset),
+    getLastSelectionStartOffset: vi.fn().mockReturnValue(lastSelectionStartOffset),
     hasAnchor: vi.fn().mockReturnValue(hasAnchor)
   });
   const handler = new EndSelectionEditorCommandHandler({
@@ -88,7 +89,7 @@ describe('EndSelectionEditorCommandHandler', () => {
    * Availability is answered from the anchored NOTE, not by resolving the range, so it costs no trip into
    * CodeMirror — and so on a phone the command stays out of the palette until it can do something.
    */
-  it('is unavailable until an anchor is set in this note', () => {
+  it('is unavailable with no anchor and no remembered selection start', () => {
     const { anchorComponent, handler } = createHandler(null, false);
     const context = createContext();
 
@@ -135,5 +136,35 @@ describe('EndSelectionEditorCommandHandler', () => {
 
     expect(vi.mocked(editor.setSelection)).not.toHaveBeenCalled();
     expect(vi.mocked(anchorComponent.clearAnchor)).toHaveBeenCalledOnce();
+  });
+
+  /*
+   * Issue #305: an interrupted selection is finished with ONE command. The tap that marks where it should
+   * end collapses it, so the start comes from what the editor remembers rather than from an anchor.
+   */
+  it('is available with no anchor once this editor remembers a selection start', () => {
+    const { handler } = createHandler(null, false, 12);
+    expect(handler.canExecuteEditor(createEditor(), createContext())).toBe(true);
+  });
+
+  it('selects from the remembered selection start to the cursor when no anchor is set', () => {
+    const { anchorComponent, handler } = createHandler(null, false, 12);
+    const editor = createEditor();
+
+    handler.executeEditor(editor, createContext());
+
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith({ ch: 12, line: 0 }, { ch: CURSOR_OFFSET, line: 0 });
+    // The anchor read is skipped outright: an anchor in another note must not leak in through this editor.
+    expect(vi.mocked(anchorComponent.getAnchorOffset)).not.toHaveBeenCalled();
+  });
+
+  // The anchor was placed on purpose, so it wins over a start remembered from some earlier selection.
+  it('prefers the explicit anchor over the remembered selection start', () => {
+    const { handler } = createHandler(10, true, 12);
+    const editor = createEditor();
+
+    handler.executeEditor(editor, createContext());
+
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith({ ch: 10, line: 0 }, { ch: CURSOR_OFFSET, line: 0 });
   });
 });

@@ -24,7 +24,9 @@ import {
 
 import {
   buildSelectionAnchorDecorations,
+  getLastSelectionStartOffset,
   getSelectionAnchorOffset,
+  lastSelectionStartField,
   replaceSelectionAnchorEffect,
   SelectionAnchorComponent,
   selectionAnchorField
@@ -53,7 +55,13 @@ interface DispatchedTransactionSpec {
   readonly effects: StateEffect<unknown>;
 }
 
+interface SelectionSpec {
+  readonly anchor: number;
+  readonly head?: number;
+}
+
 const DOC = 'hello world';
+const COLLAPSED: SelectionSpec = { anchor: 0 };
 
 function anchoredState(offset: number, doc = DOC): EditorState {
   return EditorState.create({ doc, extensions: [selectionAnchorField] })
@@ -143,6 +151,64 @@ describe('selectionAnchorField', () => {
   });
 });
 
+describe('lastSelectionStartField', () => {
+  function stateWith(selection: SelectionSpec): EditorState {
+    return EditorState.create({ doc: DOC, extensions: [lastSelectionStartField], selection });
+  }
+
+  it('starts empty for a collapsed selection', () => {
+    expect(getLastSelectionStartOffset(stateWith({ anchor: 3 }))).toBeNull();
+  });
+
+  it('starts at the anchor end of a non-empty initial selection', () => {
+    expect(getLastSelectionStartOffset(stateWith({ anchor: 7, head: 2 }))).toBe(7);
+  });
+
+  // Where the selection BEGAN, not its head: a drag backwards still resumes from the point it began at.
+  it('records the anchor end of a non-empty selection', () => {
+    expect(getLastSelectionStartOffset(stateWith(COLLAPSED).update({ selection: { anchor: 8, head: 2 } }).state)).toBe(8);
+  });
+
+  /*
+   * THE test for issue #305. The tap that marks where an interrupted selection should end collapses it,
+   * and the point it began at must survive that, or `End selection` has nothing to select from.
+   */
+  it('keeps the start when the selection collapses', () => {
+    const selected = stateWith(COLLAPSED).update({ selection: { anchor: 2, head: 5 } }).state;
+    expect(getLastSelectionStartOffset(selected.update({ selection: { anchor: 9 } }).state)).toBe(2);
+  });
+
+  it('maps the start through an edit made above it', () => {
+    const selected = stateWith(COLLAPSED).update({ selection: { anchor: 6, head: 8 } }).state;
+    expect(getLastSelectionStartOffset(selected.update({ changes: { from: 0, insert: 'XYZ' } }).state)).toBe(9);
+  });
+
+  it('stays put when text is typed at the start, so the new text falls inside the range', () => {
+    const selected = stateWith(COLLAPSED).update({ selection: { anchor: 6, head: 8 } }).state;
+    expect(getLastSelectionStartOffset(selected.update({ changes: { from: 6, insert: 'XYZ' } }).state)).toBe(6);
+  });
+
+  // `Editor.setValue`, and Obsidian switching a leaf to another note: the old point means nothing there.
+  it('forgets the start when the whole document is replaced', () => {
+    const selected = stateWith(COLLAPSED).update({ selection: { anchor: 6, head: 8 } }).state;
+    expect(getLastSelectionStartOffset(selected.update({ changes: { from: 0, insert: 'other', to: DOC.length } }).state)).toBeNull();
+  });
+
+  it('stays empty through an edit when nothing was selected', () => {
+    expect(getLastSelectionStartOffset(stateWith(COLLAPSED).update({ changes: { from: 0, insert: 'XYZ' } }).state)).toBeNull();
+  });
+
+  it('ignores a transaction that neither selects nor edits', () => {
+    const selected = stateWith(COLLAPSED).update({ selection: { anchor: 6, head: 8 } }).state;
+    const unrelatedEffect = StateEffect.define();
+    expect(getLastSelectionStartOffset(selected.update({ effects: unrelatedEffect.of(null) }).state)).toBe(6);
+  });
+
+  it('returns null for a state that never registered the field', () => {
+    expect(getLastSelectionStartOffset(EditorState.create({ doc: DOC }))).toBeNull();
+  });
+});
+
 describe('getSelectionAnchorOffset', () => {
   it('returns null for a state that never registered the field', () => {
     expect(getSelectionAnchorOffset(EditorState.create({ doc: DOC }))).toBeNull();
@@ -178,7 +244,7 @@ describe('SelectionAnchorComponent', () => {
   });
 
   it('exposes the anchor editor extension', () => {
-    expect(component.getEditorExtension()).toBe(selectionAnchorField);
+    expect(component.getEditorExtension()).toEqual([selectionAnchorField, lastSelectionStartField]);
   });
 
   it('holds no anchor to begin with', () => {
@@ -203,6 +269,11 @@ describe('SelectionAnchorComponent', () => {
 
     const spec = castTo<DispatchedTransactionSpec>(dispatch.mock.calls[0]?.[0]);
     expect(getSelectionAnchorOffset(state.update({ effects: spec.effects }).state)).toBe(2);
+  });
+
+  it('reads the remembered selection start back out of the editor', () => {
+    const state = EditorState.create({ doc: DOC, extensions: [lastSelectionStartField], selection: { anchor: 1, head: 4 } });
+    expect(component.getLastSelectionStartOffset(editorWithState(state))).toBe(1);
   });
 
   it('reads the anchored offset back out of the editor', () => {

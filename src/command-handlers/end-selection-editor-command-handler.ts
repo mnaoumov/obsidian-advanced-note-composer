@@ -21,8 +21,13 @@ interface EndSelectionEditorCommandHandlerConstructorParams {
  * Selects from the anchor `Selection anchor: Start selection` set to the cursor, then drops the anchor
  * (issue #266).
  *
- * Unavailable until an anchor is set in this note, so on a phone it stays out of the command palette —
- * and off any toolbar filtering by availability — until it can actually do something.
+ * With no anchor set it selects from where the most recent selection in this editor BEGAN (issue #305).
+ * A selection interrupted part-way is then finished with one command: tap where it should end, run this.
+ * Before #305 that took `Start selection` first, run while the partial selection was still live. An
+ * explicit anchor wins over the remembered start, because the user placed it on purpose.
+ *
+ * Unavailable when neither exists, so on a phone it stays out of the command palette — and off any
+ * toolbar filtering by availability — until it can actually do something.
  */
 export class EndSelectionEditorCommandHandler extends SelectRangeEditorCommandHandlerBase {
   private readonly selectionAnchorComponent: SelectionAnchorComponent;
@@ -40,15 +45,16 @@ export class EndSelectionEditorCommandHandler extends SelectRangeEditorCommandHa
   }
 
   /**
-   * Answered from the anchored NOTE rather than by resolving the range, so availability costs no trip
-   * into CodeMirror — and so an anchor set in another note can never enable the command here.
+   * The explicit anchor is answered from the anchored NOTE, so an anchor set in another note can never
+   * enable the command here. Only without one is the editor asked for a remembered selection start.
    *
-   * @param _editor - The editor instance.
+   * @param editor - The editor instance.
    * @param context - The markdown file context.
-   * @returns Whether this note holds the anchor.
+   * @returns Whether there is a point to select from.
    */
-  protected override canSelect(_editor: Editor, context: MarkdownFileInfo): boolean {
-    return this.selectionAnchorComponent.hasAnchor(context.file);
+  protected override canSelect(editor: Editor, context: MarkdownFileInfo): boolean {
+    return this.selectionAnchorComponent.hasAnchor(context.file)
+      || this.selectionAnchorComponent.getLastSelectionStartOffset(editor) !== null;
   }
 
   protected override executeEditor(editor: Editor, context: MarkdownFileInfo): void {
@@ -58,8 +64,11 @@ export class EndSelectionEditorCommandHandler extends SelectRangeEditorCommandHa
     this.selectionAnchorComponent.clearAnchor();
   }
 
-  protected override resolveRange(editor: Editor): null | SelectionRange {
-    const anchorOffset = this.selectionAnchorComponent.getAnchorOffset(editor);
+  protected override resolveRange(editor: Editor, context: MarkdownFileInfo): null | SelectionRange {
+    const explicitAnchorOffset = this.selectionAnchorComponent.hasAnchor(context.file)
+      ? this.selectionAnchorComponent.getAnchorOffset(editor)
+      : null;
+    const anchorOffset = explicitAnchorOffset ?? this.selectionAnchorComponent.getLastSelectionStartOffset(editor);
     if (anchorOffset === null) {
       return null;
     }
