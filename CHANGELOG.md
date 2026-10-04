@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.16.0
+
+- feat(selection): finish an interrupted selection with End selection alone (#305)
+
 ## 5.15.0
 
 - feat(pickers): optionally show a folder note by its folder's path (#304)
