@@ -21,6 +21,14 @@ export enum ReorderDropPlacement {
 }
 
 /**
+ * Which way a {@link ReorderModalSort} orders the rows.
+ */
+export enum ReorderSortDirection {
+  AToZ = 'AToZ',
+  ZToA = 'ZToA'
+}
+
+/**
  * Parameters for {@link didConfirmReorderModal}.
  */
 export interface DidConfirmReorderModalParams {
@@ -41,6 +49,12 @@ export interface DidConfirmReorderModalParams {
    * on confirm the caller simply reads its own model back.
    */
   readonly model: ReorderModel;
+
+  /**
+   * An optional sort row above the list (the heading reorder's `Sort by name`, issue #306), or `null` for
+   * none.
+   */
+  readonly sort: null | ReorderModalSort;
 
   readonly title: string;
   /**
@@ -97,6 +111,47 @@ export interface ReorderModalRow {
    */
   readonly indexLabel: null | string;
   readonly label: string;
+}
+
+/**
+ * The sort row above the list: a scope dropdown and one button per {@link ReorderSortDirection}.
+ */
+export interface ReorderModalSort {
+  /**
+   * The {@link ReorderModalSortScope.value} the dropdown starts on.
+   */
+  readonly defaultScope: string;
+
+  readonly label: string;
+
+  /**
+   * What the dropdown offers. Never empty: a list with nothing to sort gets no sort row at all.
+   */
+  readonly scopes: readonly ReorderModalSortScope[];
+
+  /**
+   * Sorts the model. The modal re-reads the model afterwards when this reports a change.
+   *
+   * @param params - The scope chosen in the dropdown, and the button pressed.
+   * @returns Whether the order changed.
+   */
+  sort: (this: void, params: ReorderModalSortParams) => boolean;
+}
+
+/**
+ * Parameters for {@link ReorderModalSort.sort}.
+ */
+export interface ReorderModalSortParams {
+  readonly direction: ReorderSortDirection;
+  readonly scope: string;
+}
+
+/**
+ * One option of the sort row's scope dropdown.
+ */
+export interface ReorderModalSortScope {
+  readonly label: string;
+  readonly value: string;
 }
 
 /**
@@ -334,6 +389,11 @@ class ReorderModal extends Modal {
       });
     }
 
+    const sort = this.params.sort;
+    if (sort) {
+      this.renderSortRow(sort);
+    }
+
     this.listEl = this.contentEl.createDiv('advanced-note-composer-reorder-list');
     this.renderList();
 
@@ -512,6 +572,27 @@ class ReorderModal extends Modal {
         this.move(row.id, 1);
       });
     });
+  }
+
+  private renderSortRow(sort: ReorderModalSort): void {
+    const sortEl = this.contentEl.createDiv('advanced-note-composer-reorder-sort');
+    sortEl.createSpan({ text: sort.label });
+    const selectEl = sortEl.createEl('select', { cls: 'dropdown advanced-note-composer-reorder-sort-scope' });
+    for (const scope of sort.scopes) {
+      selectEl.createEl('option', { text: scope.label, value: scope.value });
+    }
+    selectEl.value = sort.defaultScope;
+
+    for (const direction of [ReorderSortDirection.AToZ, ReorderSortDirection.ZToA]) {
+      const isAToZ = direction === ReorderSortDirection.AToZ;
+      sortEl.createEl('button', { cls: `advanced-note-composer-reorder-sort-${isAToZ ? 'a-to-z' : 'z-to-a'}`, text: isAToZ ? 'A to Z' : 'Z to A' }, (button) => {
+        button.addEventListener('click', () => {
+          if (sort.sort({ direction, scope: selectEl.value })) {
+            this.renderList();
+          }
+        });
+      });
+    }
   }
 
   private resolvePlacement(event: DragEvent, itemEl: HTMLElement): ReorderDropPlacement {

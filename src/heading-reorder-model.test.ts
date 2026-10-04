@@ -10,13 +10,19 @@ import {
 
 import type { SplitReorderableSectionsResult } from './heading-sections.ts';
 
-import { HeadingReorderModel } from './heading-reorder-model.ts';
+import {
+  ALL_LEVELS_SORT_SCOPE,
+  HeadingReorderModel
+} from './heading-reorder-model.ts';
 import {
   flattenTreeToOrder,
   joinReorderedSections,
   splitIntoReorderableSections
 } from './heading-sections.ts';
-import { ReorderDropPlacement } from './modals/reorder-modal.ts';
+import {
+  ReorderDropPlacement,
+  ReorderSortDirection
+} from './modals/reorder-modal.ts';
 
 const NESTED_NOTE = '# A\n\n## A.1\na1\n\n## A.2\na2\n\n# B\nbbb\n';
 
@@ -246,6 +252,89 @@ describe('HeadingReorderModel', () => {
       expect(model.didChangeDepth({ delta: 1, id: id(model, 'A') })).toBe(false);
       expect(model.didChangeDepth({ delta: -1, id: id(model, 'A') })).toBe(false);
       expect(model.didChangeDepth({ delta: 1, id: -1 })).toBe(false);
+    });
+  });
+
+  describe('buildNameSort (issue #306)', () => {
+    const CHANGELOG_NOTE = '# Changelog\n\n## 1.9.0\nnine\n\n### Fixed\nf9\n\n## 1.10.0\nten\n\n## 1.2.0\ntwo\n';
+
+    function didSortByName(model: HeadingReorderModel, scope: string, direction: ReorderSortDirection): boolean {
+      return ensureNonNullable(model.buildNameSort()).sort({ direction, scope });
+    }
+
+    it('should offer no sort when no heading has a sibling', () => {
+      expect(createModel('# A\n\n## B\n\n### C\n').buildNameSort()).toBeNull();
+    });
+
+    it('should offer every level that has siblings plus all levels, starting on the shallowest', () => {
+      const sort = ensureNonNullable(createModel(NESTED_NOTE).buildNameSort());
+      expect(sort.label).toBe('Sort by name');
+      expect(sort.scopes).toEqual([
+        { label: 'Level 1 (#)', value: '1' },
+        { label: 'Level 2 (##)', value: '2' },
+        { label: 'All levels', value: ALL_LEVELS_SORT_SCOPE }
+      ]);
+      expect(sort.defaultScope).toBe('1');
+    });
+
+    it('should skip a lone title heading when choosing the default level', () => {
+      expect(ensureNonNullable(createModel(CHANGELOG_NOTE).buildNameSort()).defaultScope).toBe('2');
+    });
+
+    it('should sort versions naturally, carrying each heading\'s content and subtree', () => {
+      const { model, split } = createFixture(CHANGELOG_NOTE);
+      expect(didSortByName(model, '2', ReorderSortDirection.ZToA)).toBe(true);
+      expect(rows(model)).toEqual(['0:# Changelog', '1:## 1.10.0', '1:## 1.9.0', '2:### Fixed', '1:## 1.2.0']);
+      expect(write(split)).toBe('# Changelog\n\n## 1.10.0\nten\n\n## 1.9.0\nnine\n\n### Fixed\nf9\n\n## 1.2.0\ntwo\n');
+
+      expect(didSortByName(model, '2', ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(model)).toEqual(['0:# Changelog', '1:## 1.2.0', '1:## 1.9.0', '2:### Fixed', '1:## 1.10.0']);
+    });
+
+    it('should report no change when the level is already in order', () => {
+      expect(didSortByName(createModel('# A\n\n# B\n'), '1', ReorderSortDirection.AToZ)).toBe(false);
+    });
+
+    it('should leave the lists of other levels alone, unless all levels are sorted', () => {
+      const note = '# B\n\n## y\n\n## x\n\n# A\n';
+      const model = createModel(note);
+      expect(didSortByName(model, '1', ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(model)).toEqual(['0:# A', '0:# B', '1:## y', '1:## x']);
+
+      const allModel = createModel(note);
+      expect(didSortByName(allModel, ALL_LEVELS_SORT_SCOPE, ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(allModel)).toEqual(['0:# A', '0:# B', '1:## x', '1:## y']);
+    });
+
+    it('should keep tied names in their current order', () => {
+      const model = createModel('# b\n\n## first\n\n# a\n\n# b\n\n## second\n');
+      expect(didSortByName(model, '1', ReorderSortDirection.ZToA)).toBe(true);
+      expect(rows(model)).toEqual(['0:# b', '1:## first', '0:# b', '1:## second', '0:# a']);
+    });
+
+    it('should ignore the numbers of a numbered note, and not of any other', () => {
+      const note = '# 1. B\n\n# 2. A\n';
+      const split = splitIntoReorderableSections(note, parseHeadings(note));
+      const numbering = { shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: true };
+      const model = new HeadingReorderModel({ numbering, split });
+      expect(didSortByName(model, '1', ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(model)).toEqual(['0:# 1. A', '0:# 2. B']);
+
+      // Clearing the box on a numbered note strips the numbers, so they are still not part of the name.
+      const strippedSplit = splitIntoReorderableSections(note, parseHeadings(note));
+      const strippedModel = new HeadingReorderModel({ numbering: { ...numbering, shouldNumber: false }, split: strippedSplit });
+      expect(didSortByName(strippedModel, '1', ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(strippedModel)).toEqual(['0:# A', '0:# B']);
+
+      // An unnumbered note sorts by its headings as typed: `1. B` comes before `2. A`.
+      expect(didSortByName(createModel(note), '1', ReorderSortDirection.AToZ)).toBe(false);
+    });
+
+    it('should bring a list with mixed levels to its shallowest level, so the note re-parses as shown', () => {
+      const { model, split } = createFixture('# R\n\n### b\n\n#### b1\n\n## a\n');
+      expect(didSortByName(model, '2', ReorderSortDirection.AToZ)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## b', '2:### b1']);
+      expect(rows(createModel(write(split)))).toEqual(rows(model));
     });
   });
 

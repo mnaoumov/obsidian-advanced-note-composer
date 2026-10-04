@@ -45,11 +45,13 @@ export interface OpenReorderHeadingsModalParams {
 /* v8 ignore start -- thin modal-open glue tested via the real app (integration). */
 export async function openReorderHeadingsModal(params: OpenReorderHeadingsModalParams): Promise<null | number[]> {
   const { numbering, split } = params;
+  const model = new HeadingReorderModel({ numbering, split });
   const isConfirmed = await didConfirmReorderModal({
     app: params.app,
     confirmButtonText: 'Reorder',
-    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, or use the left/right arrows to change its level, then confirm.',
-    model: new HeadingReorderModel({ numbering, split }),
+    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, use the left/right arrows to change its level, or sort a level by name, then confirm.',
+    model,
+    sort: model.buildNameSort(),
     title: 'Reorder headings',
     toggle: params.shouldShowNumberingToggle
       ? {

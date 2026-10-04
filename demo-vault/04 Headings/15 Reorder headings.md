@@ -27,6 +27,21 @@ Tick **Number headings** in the dialog to number every heading the way folders a
 - The format is the `Heading number template` setting. `{{index}}` is the position among siblings, and `{{outlineIndex}}` is the whole chain, such as `1.2.3`.
 - Links to a renumbered heading, such as `[[note#1. Alpha]]`, are rewritten to its new number.
 
+## Sorting headings by name
+
+The **Sort by name** row at the top of the dialog sorts every heading of one level at once. Each heading takes its content and subheadings with it.
+
+1. Choose a level in the dropdown. It starts on the shallowest level that has more than one heading, so a lone title heading is skipped. Choose **All levels** to sort every level.
+2. Click **A to Z** or **Z to A**. The list shows the new order, and you can still adjust it by hand before clicking **Reorder**.
+
+Numbers sort as numbers, so the order is chronological for:
+
+- Versions: `1.10.0` comes after `1.9.0`.
+- Dates such as `2026-10-04`.
+- Timestamps from the `Unique note creator` core plugin, such as `202610041438`.
+
+**Z to A** puts the newest changelog entry on top. After you move headings around for a while, sorting again restores their order. The numbers that `Number headings` writes are ignored when sorting.
+
 ## Alpha
 
 The Alpha section. Its body travels with the heading when you reorder.
