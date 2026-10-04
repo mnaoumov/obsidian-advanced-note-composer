@@ -158,6 +158,14 @@
   margin-bottom: var(--size-4-2);
 }
 
+.advanced-note-composer-reorder-sort {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+
 .advanced-note-composer {
   &.suggest-modal-base {
     input[type=checkbox] {

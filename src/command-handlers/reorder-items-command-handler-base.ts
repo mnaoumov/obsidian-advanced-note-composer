@@ -190,6 +190,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       confirmButtonText: 'Reorder',
       description: 'Drag an item, or move it with the arrows. Folders and notes are numbered separately, and every item is renumbered to match the order you leave.',
       model,
+      sort: null,
       title: `Reorder ${parentFolder.isRoot() ? '/' : parentFolder.name}`,
       // No checkbox when per-operation overrides are turned off (issue #242) — the settings page is then the
       // only place the choice is made. The model is already seeded from the same setting above, so hiding the

@@ -7,17 +7,30 @@ import type {
 } from './heading-sections.ts';
 import type {
   ReorderModalRow,
+  ReorderModalSort,
   ReorderModel,
   ReorderModelDidMoveParams,
   ReorderModelDidMoveToParams
 } from './modals/reorder-modal.ts';
 
-import { computeHeadingTexts } from './heading-numbering.ts';
+import {
+  computeHeadingTexts,
+  stripHeadingNumber
+} from './heading-numbering.ts';
 import {
   flattenHeadingTree,
   MAX_REORDERED_HEADING_LEVEL
 } from './heading-sections.ts';
-import { ReorderDropPlacement } from './modals/reorder-modal.ts';
+import {
+  ReorderDropPlacement,
+  ReorderSortDirection
+} from './modals/reorder-modal.ts';
+import { compareNatural } from './natural-sort.ts';
+
+/**
+ * The sort scope that sorts every list of siblings, whatever their level.
+ */
+export const ALL_LEVELS_SORT_SCOPE = 'all';
 
 /**
  * Parameters for {@link HeadingReorderModel}.
@@ -106,6 +119,40 @@ export class HeadingReorderModel implements ReorderModel {
     this.split = params.split;
   }
 
+  /**
+   * Builds the modal's `Sort by name` row (issue #306): one scope per heading level that has siblings to
+   * sort, plus `All levels`. The default is the shallowest such level, which skips a lone title heading and
+   * lands on the entries under it, such as a changelog's versions.
+   *
+   * @returns The sort row, or `null` when no heading has a sibling, so there is nothing to sort.
+   */
+  public buildNameSort(): null | ReorderModalSort {
+    const levels = new Set<number>();
+    visitSiblingLists(this.split.roots, (siblings) => {
+      if (siblings.length > 1) {
+        for (const node of siblings) {
+          levels.add(this.getLevel(node.index));
+        }
+      }
+    });
+
+    const sortedLevels = [...levels].sort((a, b) => a - b);
+    const shallowestLevel = sortedLevels[0];
+    if (shallowestLevel === undefined) {
+      return null;
+    }
+
+    return {
+      defaultScope: String(shallowestLevel),
+      label: 'Sort by name',
+      scopes: [
+        ...sortedLevels.map((level) => ({ label: `Level ${String(level)} (${'#'.repeat(level)})`, value: String(level) })),
+        { label: 'All levels', value: ALL_LEVELS_SORT_SCOPE }
+      ],
+      sort: (params) => this.didSortByName(params.scope, params.direction)
+    };
+  }
+
   public buildRows: ReorderModel['buildRows'] = () => {
     const headingTexts = this.numbering ? computeHeadingTexts(this.split, this.numbering) : this.split.headingTexts;
     return flattenHeadingTree(this.split).map((row): ReorderModalRow => ({
@@ -149,6 +196,48 @@ export class HeadingReorderModel implements ReorderModel {
       this.split.levels[node.index] = this.getLevel(node.index) + shift;
     });
     return true;
+  }
+
+  /**
+   * Sorts, by name, every list of siblings that holds a heading of the chosen level, or every list for
+   * `All levels`. Each heading carries its whole subtree with it.
+   *
+   * The comparison is {@link compareNatural}, so a run of digits counts as one number: version headings,
+   * ISO dates and `Unique note creator` timestamps sort chronologically by name. A number the numbering
+   * template wrote is ignored when the note is or will be numbered, since renumbering rewrites it anyway.
+   * Ties keep their current order.
+   *
+   * @param scope - The level to sort, or {@link ALL_LEVELS_SORT_SCOPE}.
+   * @param direction - Which way to sort.
+   * @returns Whether the order changed.
+   */
+  private didSortByName(scope: string, direction: ReorderSortDirection): boolean {
+    const level = scope === ALL_LEVELS_SORT_SCOPE ? null : Number(scope);
+    const sign = direction === ReorderSortDirection.AToZ ? 1 : -1;
+    const numbering = this.numbering;
+    const shouldIgnoreNumbers = numbering !== null && (numbering.shouldNumber || numbering.wasNumbered);
+    const keys = this.split.sections.map((section) => shouldIgnoreNumbers ? stripHeadingNumber({ headingText: section.headingText, template: numbering.template }) : section.headingText);
+
+    let isChanged = false;
+    visitSiblingLists(this.split.roots, (siblings) => {
+      if (level !== null && siblings.every((node) => this.getLevel(node.index) !== level)) {
+        return;
+      }
+
+      const sorted = [...siblings].sort((a, b) => sign * compareNatural(getKey(a), getKey(b)));
+      if (sorted.every((node, position) => node === siblings[position])) {
+        return;
+      }
+
+      siblings.splice(0, siblings.length, ...sorted);
+      this.relevelToShallowest(siblings);
+      isChanged = true;
+    });
+    return isChanged;
+
+    function getKey(node: HeadingTreeNode): string {
+      return ensureNonNullable(keys[node.index]);
+    }
   }
 
   private getLevel(index: number): number {
@@ -253,6 +342,24 @@ export class HeadingReorderModel implements ReorderModel {
     });
   }
 
+  /**
+   * Brings every heading of a reordered sibling list to the list's shallowest level, shifting its subtree
+   * with it. Siblings can only ever get shallower down a heading tree, so a sorted list with mixed levels
+   * would otherwise re-parse with a heading swallowed by the shallower one sorted above it. Only an outline
+   * that already skips levels has such a list.
+   *
+   * @param siblings - The reordered list.
+   */
+  private relevelToShallowest(siblings: readonly HeadingTreeNode[]): void {
+    const shallowestLevel = Math.min(...siblings.map((node) => this.getLevel(node.index)));
+    for (const sibling of siblings) {
+      const shift = shallowestLevel - this.getLevel(sibling.index);
+      visitSubtree(sibling, (node) => {
+        this.split.levels[node.index] = this.getLevel(node.index) + shift;
+      });
+    }
+  }
+
   private validate(move: PlannedHeadingMove): null | PlannedHeadingMove {
     const { destination, insertPosition, level, source } = move;
     const shift = level - this.getLevel(source.node.index);
@@ -287,6 +394,20 @@ function findLocation(siblings: HeadingTreeNode[], parent: HeadingTreeNode | nul
 
 function isInSubtree(node: HeadingTreeNode, index: number): boolean {
   return node.index === index || node.children.some((child) => isInSubtree(child, index));
+}
+
+/**
+ * Calls the callback on every list of siblings in the tree, the roots first, each list before the lists
+ * under it. The callback may reorder the list it is handed: its children are visited in the new order.
+ *
+ * @param siblings - The list to start from.
+ * @param callback - Called once per list.
+ */
+function visitSiblingLists(siblings: HeadingTreeNode[], callback: (siblings: HeadingTreeNode[]) => void): void {
+  callback(siblings);
+  for (const node of siblings) {
+    visitSiblingLists(node.children, callback);
+  }
 }
 
 function visitSubtree(node: HeadingTreeNode, callback: (node: HeadingTreeNode) => void): void {
