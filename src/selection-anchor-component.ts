@@ -1,6 +1,7 @@
 import type {
   EditorState,
-  Extension
+  Extension,
+  Transaction
 } from '@codemirror/state';
 import type { DecorationSet } from '@codemirror/view';
 import type {
@@ -67,6 +68,38 @@ export const selectionAnchorField = StateField.define<DecorationSet>({
       }
     }
     return anchor;
+  }
+});
+
+/**
+ * The editor extension that remembers where the most recent non-empty selection BEGAN (issue #305), so
+ * `Selection anchor: End selection` can finish an interrupted selection with no `Start selection` first.
+ *
+ * The reporter's flow is: drag a selection, get interrupted part-way, tap where it should have ended, and
+ * run `End selection`. The tap collapses the selection, so by the time the command runs the editor no
+ * longer knows where it began. This field keeps that point after the collapse. That is why #287's rule
+ * that End selection is never offered without an anchor could be dropped.
+ *
+ * It is mapped through every change for the same reason {@link selectionAnchorField} is, with `-1` so
+ * text typed at that point ends up inside the range. A change that replaces the WHOLE document resets it,
+ * which is `Editor.setValue`. A leaf switching to another note needs no rule of its own: measured in real
+ * Obsidian, the field comes back empty after a switch even with the reset disabled, so a point remembered
+ * in one note never carries into the next one. Unlike the explicit anchor it draws
+ * no marker: it would otherwise decorate every editor after every selection.
+ */
+export const lastSelectionStartField = StateField.define<null | number>({
+  create(state) {
+    return getNonEmptySelectionStart(state.selection.main);
+  },
+  update(start, tr) {
+    const selectionStart = tr.selection ? getNonEmptySelectionStart(tr.selection.main) : null;
+    if (selectionStart !== null) {
+      return selectionStart;
+    }
+    if (start === null || !tr.docChanged) {
+      return start;
+    }
+    return isWholeDocumentReplaced(tr) ? null : tr.changes.mapPos(start, -1);
   }
 });
 
@@ -152,12 +185,24 @@ export class SelectionAnchorComponent extends ComponentEx {
   }
 
   /**
-   * The editor extension backing the anchor. Register it once with `plugin.registerEditorExtension`.
+   * The editor extensions backing the anchor and the remembered selection start. Register them once with `plugin.registerEditorExtension`.
    *
-   * @returns The editor extension.
+   * @returns The editor extensions.
    */
   public getEditorExtension(): Extension {
-    return selectionAnchorField;
+    return [selectionAnchorField, lastSelectionStartField];
+  }
+
+  /**
+   * Reads where the most recent non-empty selection in the given editor began (issue #305).
+   *
+   * @param editor - The editor to read from.
+   * @returns The offset that selection began at, or `null` when the editor has not had one since it last
+   * loaded a document.
+   */
+  public getLastSelectionStartOffset(editor: Editor): null | number {
+    // The same type-level identity cast as `getAnchorOffset`.
+    return getLastSelectionStartOffset(castTo<EditorState>(editor.cm.state));
   }
 
   /**
@@ -261,6 +306,16 @@ export function buildSelectionAnchorDecorations(offset: null | number): Decorati
 }
 
 /**
+ * Reads where the most recent non-empty selection began out of an editor state (issue #305).
+ *
+ * @param state - The editor state.
+ * @returns The offset, or `null` when there is none or the state never registered the field.
+ */
+export function getLastSelectionStartOffset(state: EditorState): null | number {
+  return state.field(lastSelectionStartField, false) ?? null;
+}
+
+/**
  * Reads the anchored offset out of an editor state.
  *
  * @param state - The editor state.
@@ -274,4 +329,19 @@ export function getSelectionAnchorOffset(state: EditorState): null | number {
 
   const iterator = anchor.iter();
   return iterator.value ? iterator.from : null;
+}
+
+function getNonEmptySelectionStart(range: EditorState['selection']['main']): null | number {
+  return range.empty ? null : range.anchor;
+}
+
+function isWholeDocumentReplaced(tr: Transaction): boolean {
+  const length = tr.startState.doc.length;
+  let isReplaced = false;
+  tr.changes.iterChangedRanges((fromA, toA) => {
+    if (fromA === 0 && toA === length) {
+      isReplaced = true;
+    }
+  });
+  return isReplaced;
 }

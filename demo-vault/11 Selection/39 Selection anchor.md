@@ -5,11 +5,11 @@ The commands in [38 Select ranges](<./38 Select ranges.md>) select shapes markdo
 - `Selection anchor: Start selection`
   - drops an anchor at the cursor. A thin coloured marker appears there so you can see it is armed.
 - `Selection anchor: End selection`
-  - selects from the anchor to wherever the cursor is now, and removes the anchor.
+  - selects from the anchor to wherever the cursor is now, and removes the anchor. With no anchor set, it selects from where your most recent selection began.
 - `Selection anchor: Cancel selection`
   - removes the anchor without selecting anything.
 
-The last two are only offered while an anchor is set, so they stay out of your way the rest of the time.
+`Cancel selection` is only offered while an anchor is set, and `End selection` only while there is an anchor or an earlier selection to start from, so they stay out of your way the rest of the time.
 
 Why two commands rather than one that toggles: on the mobile toolbar two labelled buttons beat one whose meaning depends on state you cannot see. And placing a cursor by tapping is reliable on a phone — it is dragging the selection handles that is not — so tap, `Start`, tap the far end, `End` is a selection made entirely out of the gesture that works.
 
@@ -36,8 +36,10 @@ The selection still starts where you anchored it, not several lines off. Delete 
 
 ## Good to know
 
-- `Start selection` continues a selection you already started
-  - if text is selected when you run it, the anchor goes where that selection began, not at the cursor. When a drag stops early, run `Start selection`, tap where the selection should end, and run `End selection`. There is no need to go back to where you started.
+- `End selection` finishes a selection you already started
+  - when a drag stops early, tap where the selection should end and run `End selection`. It selects from where the drag began, even though the tap cleared it. There is no need to run `Start selection` first, or to go back to where you started.
+- `Start selection` continues a selection you already started too
+  - if text is selected when you run it, the anchor goes where that selection began, not at the cursor. That is useful when you want to move around a while before ending it.
 - One anchor exists at a time
   - running `Start selection` again moves it, rather than adding a second.
 - The anchor belongs to its note
