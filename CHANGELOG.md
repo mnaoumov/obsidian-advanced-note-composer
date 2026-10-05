@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 5.17.0
+
+- feat(reorder): merge sorting headings by created, modified or recently seen time (#306)
+- docs(screenshots): merge the five-frame mobile set
+- feat(reorder): sort a heading level by name in Reorder headings (#306)
+
 ## 5.16.0
 
 - feat(selection): finish an interrupted selection with End selection alone (#305)
