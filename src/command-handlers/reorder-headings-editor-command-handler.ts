@@ -13,6 +13,7 @@ import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
+import { readHeadingTimes } from '../advanced-metadata-cache.ts';
 import { isEditorCommandBlocked } from '../command-block.ts';
 import {
   checkShouldAddCommandToEditorMenu,
@@ -86,7 +87,8 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     }
     const content = await this.app.vault.read(file);
     const oldCache = await getCacheSafe(this.app, file);
-    const split = splitIntoReorderableSections(content, oldCache?.headings ?? []);
+    const headings = oldCache?.headings ?? [];
+    const split = splitIntoReorderableSections(content, headings);
 
     const { headingNumberTemplate, shouldNumberHeadingsWhenReorderingByDefault, shouldShowModalInstructions } = this.pluginSettingsComponent.settings;
     // A note that is already numbered stays numbered: that is what keeps its numbers correct across
@@ -94,6 +96,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     const wasNumbered = isEveryHeadingNumbered(split, headingNumberTemplate);
     const order = await openReorderHeadingsModal({
       app: this.app,
+      headingTimes: readHeadingTimes({ app: this.app, file, headings }),
       numbering: {
         shouldNumber: wasNumbered || shouldNumberHeadingsWhenReorderingByDefault,
         template: headingNumberTemplate,

@@ -27,12 +27,25 @@ Tick **Number headings** in the dialog to number every heading the way folders a
 - The format is the `Heading number template` setting. `{{index}}` is the position among siblings, and `{{outlineIndex}}` is the whole chain, such as `1.2.3`.
 - Links to a renumbered heading, such as `[[note#1. Alpha]]`, are rewritten to its new number.
 
-## Sorting headings by name
+## Sorting headings
 
-The **Sort by name** row at the top of the dialog sorts every heading of one level at once. Each heading takes its content and subheadings with it.
+The **Sort** row at the top of the dialog sorts every heading of one level at once. Each heading takes its content and subheadings with it.
 
-1. Choose a level in the dropdown. It starts on the shallowest level that has more than one heading, so a lone title heading is skipped. Choose **All levels** to sort every level.
-2. Click **A to Z** or **Z to A**. The list shows the new order, and you can still adjust it by hand before clicking **Reorder**.
+1. Choose what to sort by in the first dropdown: **Name**, **Created time**, **Modified time** or **Recently seen**.
+2. Choose a level in the second dropdown. It starts on the shallowest level that has more than one heading, so a lone title heading is skipped. Choose **All levels** to sort every level.
+3. Click one of the two buttons. Their labels follow the first dropdown: **A to Z** / **Z to A** for a name, **Oldest first** / **Newest first** for a time, **Recent on bottom** / **Recent on top** for recently seen. The list shows the new order, and you can still adjust it by hand before clicking **Reorder**.
+
+### Sorting by time
+
+Obsidian does not record when a heading was created, changed or looked at. The three time sorts read those times from the [Advanced Metadata Cache](https://github.com/mnaoumov/obsidian-advanced-metadata-cache) plugin, version 1.2.0 or later, with its `Headings` module turned on. Without it they are shown in the dropdown but disabled.
+
+- **Created time** is when the heading first appeared.
+- **Modified time** is when anything in its section last changed, subheadings included. Moving the section does not count.
+- **Recently seen** is when its section was last on screen in the editor.
+
+A heading that was already there before Advanced Metadata Cache started tracking the note has no time, and counts as the oldest.
+
+### Sorting by name
 
 Numbers sort as numbers, so the order is chronological for:
 
