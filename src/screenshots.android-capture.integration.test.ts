@@ -1,15 +1,15 @@
 /**
  * @file
  *
- * Produces the seven mobile screenshots the community-store listing needs,
+ * Produces the five mobile screenshots the community-store listing needs,
  * driving a staged note in Obsidian Mobile on a real Android
  * emulator and writing `images/screenshots/screenshot-mobile-N.png`.
  *
- * The mobile counterpart of the desktop capture suite, in the same order where
- * the two sets overlap: the note the flow starts from, the `Extract` picker, the
- * dialogs, and the `Merge` picker last. On a phone the dialogs fill nearly the
- * whole screen and grow a row of touch controls the desktop build never shows,
- * which is why the mobile set carries more frames than the desktop one.
+ * The mobile counterpart of the desktop capture suite, showing the same five
+ * features in the same order: the whole-note split, the `Extract` picker, the
+ * reorder and rename dialogs, and the `Merge` picker last. Five is the
+ * directory's cap per form factor, so a new frame replaces one of these rather
+ * than joining them.
  *
  * **The two pickers are taken with the soft keyboard UP, and nothing else is.**
  * `Extract` and `Merge` are Obsidian suggesters, whose field is anchored to the
@@ -17,7 +17,7 @@
  * the list renders as a full-height empty band, which is why this suite used to
  * leave both out. The harness can raise a real IME now
  * (`withSoftKeyboardEnabled` + `raiseSoftKeyboard`), so those two frames go
- * through {@link shootWithSoftKeyboard} and the device framebuffer. The five
+ * through {@link shootWithSoftKeyboard} and the device framebuffer. The three
  * dialog frames stay on `captureObsidianScreenshot`, which photographs the page:
  * the rename-heading frame was measured WITH a keyboard and came back worse,
  * because Android's own selection toolbar covers the dialog title (the repo's
@@ -259,13 +259,11 @@ describe('mobile store screenshots', () => {
     expect(setupDiagnostics).toMatchObject({ isNoteOpen: true });
   });
 
-  it('1 - the note the whole flow starts from', async () => {
-    // The only shot that does not run a command, so it is the only one that does
-    // not go through the dismissal `openCommandDialog` does first — and this
-    // plugin greets a fresh install with a "Release notes" dialog, which is what
-    // got photographed instead of the note.
-    await dismissDialogs();
-    await shoot(1, 'One long note, five sections');
+  it('1 - the whole-note split preview', async () => {
+    // Every shot runs a command, so every one goes through the dismissal
+    // `openCommandDialog` does first, which is what clears the "Release notes"
+    // dialog this plugin greets a fresh install with.
+    await runCommandAndCapture('split-note-by-headings-recursively', 1, 'Split a note into one file per heading, nested');
   });
 
   it('2 - the extract picker', async () => {
@@ -282,22 +280,9 @@ describe('mobile store screenshots', () => {
     await runCommandAndCapture('rename-heading', 4, 'Rename a heading and every link to it');
   });
 
-  it('5 - the whole-note split preview', async () => {
-    await runCommandAndCapture('split-note-by-headings-recursively', 5, 'Split it into one file per heading, nested');
-  });
-
-  it('6 - the single-heading split preview', async () => {
-    // The same machinery scoped to ONE heading, which is the far more common
-    // everyday use. Every shot in this set escapes its dialog rather than
-    // confirming it: the harness pushes files into a vault that persists on the
-    // device between runs and is never cleared, so one confirmed split would
-    // leave its produced notes behind for every later run to trip over.
-    await runCommandAndCapture('split-heading-recursively', 6, 'Or split just one heading, and all it contains');
-  });
-
-  it('7 - the merge picker', async () => {
+  it('5 - the merge picker', async () => {
     // Nothing typed: the frame is the list of notes this one can be merged into.
-    await runPickerAndCapture('merge-file', 7, 'Merge this note into another');
+    await runPickerAndCapture('merge-file', 5, 'Merge this note into another');
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
 
@@ -326,35 +311,6 @@ async function checkIsSoftKeyboardShown(): Promise<boolean> {
   });
 
   return parseInputMethodState(dump).includes(INPUT_SHOWN_STATE);
-}
-
-/**
- * Closes every dialog currently on screen and waits for the last of them to go.
- *
- * The in-renderer `pressKey` dispatches a SYNTHETIC keydown on Android, where
- * the harness's trusted input path does not exist. Obsidian's keymap listens on
- * `document`, so a dispatched event dismisses a dialog just as a real key would.
- * Clicking the `.modal-close-button` is NOT an alternative: on an
- * `obsidian-dev-utils` alert it does not close the dialog at all.
- */
-async function dismissDialogs(): Promise<void> {
-  await evalInObsidian({
-    async callback({ lib: { pressKey, waitUntil } }) {
-      const MODAL_TIMEOUT_IN_MILLISECONDS = 15_000;
-      const SETTLE_DELAY_IN_MILLISECONDS = 600;
-
-      await pressKey({ key: 'Escape' });
-
-      await waitUntil({
-        message: 'every open dialog to close',
-        predicate: () => document.querySelectorAll('.modal-container').length === 0,
-        timeoutInMilliseconds: MODAL_TIMEOUT_IN_MILLISECONDS
-      });
-
-      await sleep(SETTLE_DELAY_IN_MILLISECONDS);
-    },
-    vaultPath: vaultPath()
-  });
 }
 
 /**
