@@ -1,5 +1,6 @@
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
+import type { HeadingTimes } from './advanced-metadata-cache.ts';
 import type { HeadingNumbering } from './heading-numbering.ts';
 import type {
   HeadingTreeNode,
@@ -33,9 +34,31 @@ import { compareNatural } from './natural-sort.ts';
 export const ALL_LEVELS_SORT_SCOPE = 'all';
 
 /**
+ * What `Reorder headings...` can sort a level by (issue #306).
+ */
+export enum HeadingSortKey {
+  Created = 'created',
+  Modified = 'modified',
+  Name = 'name',
+  Seen = 'seen'
+}
+
+/**
+ * Shown beside a time sort the model has no times for.
+ */
+export const HEADING_TIMES_UNAVAILABLE_REASON = 'needs Advanced Metadata Cache with its Headings module on';
+
+/**
  * Parameters for {@link HeadingReorderModel}.
  */
 export interface HeadingReorderModelConstructorParams {
+  /**
+   * When each heading was created, modified and seen, indexed like the split's sections, or `null` when the
+   * Advanced Metadata Cache plugin does not provide them. Without them the three time sorts are offered
+   * disabled.
+   */
+  readonly headingTimes: null | readonly HeadingTimes[];
+
   /**
    * How the headings are numbered (issue #295), or `null` to leave every heading text as it is. The model
    * reads it on every render, so the rows preview the text each heading will be written with.
@@ -93,6 +116,20 @@ interface PlannedHeadingMove {
 const HEADINGS_GROUP_KEY = 'headings';
 
 /**
+ * The name sort key, typed as the plain string the modal hands back.
+ */
+const NAME_SORT_KEY: string = HeadingSortKey.Name;
+
+/**
+ * The time field each time sort key reads.
+ */
+const HEADING_TIME_FIELDS = new Map<string, 'created' | 'modified' | 'seen'>([
+  [HeadingSortKey.Created, 'created'],
+  [HeadingSortKey.Modified, 'modified'],
+  [HeadingSortKey.Seen, 'seen']
+]);
+
+/**
  * Presents a note's heading tree to the shared reorder modal (issue #216).
  *
  * A row's DEPTH is its indentation. Moving a heading moves everything nested under it, because the move
@@ -111,46 +148,14 @@ const HEADINGS_GROUP_KEY = 'headings';
  */
 export class HeadingReorderModel implements ReorderModel {
   public readonly isNestable = true;
+  private readonly headingTimes: null | readonly HeadingTimes[];
   private readonly numbering: HeadingNumbering | null;
   private readonly split: SplitReorderableSectionsResult;
 
   public constructor(params: HeadingReorderModelConstructorParams) {
+    this.headingTimes = params.headingTimes;
     this.numbering = params.numbering;
     this.split = params.split;
-  }
-
-  /**
-   * Builds the modal's `Sort by name` row (issue #306): one scope per heading level that has siblings to
-   * sort, plus `All levels`. The default is the shallowest such level, which skips a lone title heading and
-   * lands on the entries under it, such as a changelog's versions.
-   *
-   * @returns The sort row, or `null` when no heading has a sibling, so there is nothing to sort.
-   */
-  public buildNameSort(): null | ReorderModalSort {
-    const levels = new Set<number>();
-    visitSiblingLists(this.split.roots, (siblings) => {
-      if (siblings.length > 1) {
-        for (const node of siblings) {
-          levels.add(this.getLevel(node.index));
-        }
-      }
-    });
-
-    const sortedLevels = [...levels].sort((a, b) => a - b);
-    const shallowestLevel = sortedLevels[0];
-    if (shallowestLevel === undefined) {
-      return null;
-    }
-
-    return {
-      defaultScope: String(shallowestLevel),
-      label: 'Sort by name',
-      scopes: [
-        ...sortedLevels.map((level) => ({ label: `Level ${String(level)} (${'#'.repeat(level)})`, value: String(level) })),
-        { label: 'All levels', value: ALL_LEVELS_SORT_SCOPE }
-      ],
-      sort: (params) => this.didSortByName(params.scope, params.direction)
-    };
   }
 
   public buildRows: ReorderModel['buildRows'] = () => {
@@ -169,6 +174,73 @@ export class HeadingReorderModel implements ReorderModel {
       label: `${'#'.repeat(this.getLevel(row.index))} ${ensureNonNullable(headingTexts[row.index])}`
     }));
   };
+
+  /**
+   * Builds the modal's `Sort` row (issue #306). The keys are the heading's name and its three times; the
+   * scopes are one per heading level that has siblings to sort, plus `All levels`. The default scope is the
+   * shallowest such level, which skips a lone title heading and lands on the entries under it, such as a
+   * changelog's versions.
+   *
+   * @returns The sort row, or `null` when no heading has a sibling, so there is nothing to sort.
+   */
+  public buildSort(): null | ReorderModalSort {
+    const levels = new Set<number>();
+    visitSiblingLists(this.split.roots, (siblings) => {
+      if (siblings.length > 1) {
+        for (const node of siblings) {
+          levels.add(this.getLevel(node.index));
+        }
+      }
+    });
+
+    const sortedLevels = [...levels].sort((a, b) => a - b);
+    const shallowestLevel = sortedLevels[0];
+    if (shallowestLevel === undefined) {
+      return null;
+    }
+
+    const timeUnavailableReason = this.headingTimes === null ? HEADING_TIMES_UNAVAILABLE_REASON : null;
+    return {
+      defaultScope: String(shallowestLevel),
+      keys: [
+        { ascendingLabel: 'A to Z', descendingLabel: 'Z to A', label: 'Name', unavailableReason: null, value: HeadingSortKey.Name },
+        {
+          ascendingLabel: 'Oldest first',
+          descendingLabel: 'Newest first',
+          label: 'Created time',
+          unavailableReason: timeUnavailableReason,
+          value: HeadingSortKey.Created
+        },
+        {
+          ascendingLabel: 'Oldest first',
+          descendingLabel: 'Newest first',
+          label: 'Modified time',
+          unavailableReason: timeUnavailableReason,
+          value: HeadingSortKey.Modified
+        },
+        {
+          ascendingLabel: 'Recent on bottom',
+          descendingLabel: 'Recent on top',
+          label: 'Recently seen',
+          unavailableReason: timeUnavailableReason,
+          value: HeadingSortKey.Seen
+        }
+      ],
+      label: 'Sort',
+      scopes: [
+        ...sortedLevels.map((level) => ({ label: `Level ${String(level)} (${'#'.repeat(level)})`, value: String(level) })),
+        { label: 'All levels', value: ALL_LEVELS_SORT_SCOPE }
+      ],
+      sort: (params): boolean => {
+        const compare = this.getComparator(params.key);
+        if (!compare) {
+          return false;
+        }
+        const sign = params.direction === ReorderSortDirection.Ascending ? 1 : -1;
+        return this.didSort(params.scope, (a, b) => sign * compare(a, b));
+      }
+    };
+  }
 
   public canMoveTo: ReorderModel['canMoveTo'] = (params: ReorderModelDidMoveToParams) => this.planDrop(params.id, params.placement, params.targetId) !== null;
 
@@ -198,33 +270,30 @@ export class HeadingReorderModel implements ReorderModel {
     return true;
   }
 
-  /**
-   * Sorts, by name, every list of siblings that holds a heading of the chosen level, or every list for
-   * `All levels`. Each heading carries its whole subtree with it.
-   *
-   * The comparison is {@link compareNatural}, so a run of digits counts as one number: version headings,
-   * ISO dates and `Unique note creator` timestamps sort chronologically by name. A number the numbering
-   * template wrote is ignored when the note is or will be numbered, since renumbering rewrites it anyway.
-   * Ties keep their current order.
-   *
-   * @param scope - The level to sort, or {@link ALL_LEVELS_SORT_SCOPE}.
-   * @param direction - Which way to sort.
-   * @returns Whether the order changed.
-   */
-  private didSortByName(scope: string, direction: ReorderSortDirection): boolean {
-    const level = scope === ALL_LEVELS_SORT_SCOPE ? null : Number(scope);
-    const sign = direction === ReorderSortDirection.AToZ ? 1 : -1;
+  private buildNameComparator(): (a: number, b: number) => number {
     const numbering = this.numbering;
     const shouldIgnoreNumbers = numbering !== null && (numbering.shouldNumber || numbering.wasNumbered);
     const keys = this.split.sections.map((section) => shouldIgnoreNumbers ? stripHeadingNumber({ headingText: section.headingText, template: numbering.template }) : section.headingText);
+    return (a, b) => compareNatural(ensureNonNullable(keys[a]), ensureNonNullable(keys[b]));
+  }
 
+  /**
+   * Sorts every list of siblings that holds a heading of the chosen level, or every list for `All levels`.
+   * Each heading carries its whole subtree with it. Ties keep their current order.
+   *
+   * @param scope - The level to sort, or {@link ALL_LEVELS_SORT_SCOPE}.
+   * @param compare - Compares two section indices, already signed for the direction.
+   * @returns Whether the order changed.
+   */
+  private didSort(scope: string, compare: (a: number, b: number) => number): boolean {
+    const level = scope === ALL_LEVELS_SORT_SCOPE ? null : Number(scope);
     let isChanged = false;
     visitSiblingLists(this.split.roots, (siblings) => {
       if (level !== null && siblings.every((node) => this.getLevel(node.index) !== level)) {
         return;
       }
 
-      const sorted = [...siblings].sort((a, b) => sign * compareNatural(getKey(a), getKey(b)));
+      const sorted = [...siblings].sort((a, b) => compare(a.index, b.index));
       if (sorted.every((node, position) => node === siblings[position])) {
         return;
       }
@@ -234,10 +303,32 @@ export class HeadingReorderModel implements ReorderModel {
       isChanged = true;
     });
     return isChanged;
+  }
 
-    function getKey(node: HeadingTreeNode): string {
-      return ensureNonNullable(keys[node.index]);
+  /**
+   * Resolves how a sort key compares two sections, in ascending order.
+   *
+   * By name the comparison is {@link compareNatural}, so a run of digits counts as one number: version
+   * headings, ISO dates and `Unique note creator` timestamps sort chronologically by name. A number the
+   * numbering template wrote is ignored when the note is or will be numbered, since renumbering rewrites it
+   * anyway.
+   *
+   * By time a heading with no time (`null`, an event Advanced Metadata Cache did not see) counts as the
+   * oldest, as that plugin asks.
+   *
+   * @param key - The {@link HeadingSortKey} chosen.
+   * @returns The comparator, or `null` for a time key without times or a key this model does not know.
+   */
+  private getComparator(key: string): ((a: number, b: number) => number) | null {
+    const timeField = HEADING_TIME_FIELDS.get(key);
+    if (timeField === undefined) {
+      return key === NAME_SORT_KEY ? this.buildNameComparator() : null;
     }
+
+    const headingTimes = this.headingTimes;
+    return headingTimes === null
+      ? null
+      : (a, b): number => compareTimes(ensureNonNullable(headingTimes[a])[timeField], ensureNonNullable(headingTimes[b])[timeField]);
   }
 
   private getLevel(index: number): number {
@@ -375,6 +466,15 @@ export class HeadingReorderModel implements ReorderModel {
     });
     return deepestLevel + shift > MAX_REORDERED_HEADING_LEVEL ? null : move;
   }
+}
+
+function compareTimes(a: null | number, b: null | number): number {
+  const left = a ?? -Infinity;
+  const right = b ?? -Infinity;
+  if (left === right) {
+    return 0;
+  }
+  return left < right ? -1 : 1;
 }
 
 function findLocation(siblings: HeadingTreeNode[], parent: HeadingTreeNode | null, index: number): HeadingLocation | null {

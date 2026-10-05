@@ -12,7 +12,9 @@ import type { SplitReorderableSectionsResult } from './heading-sections.ts';
 
 import {
   ALL_LEVELS_SORT_SCOPE,
-  HeadingReorderModel
+  HEADING_TIMES_UNAVAILABLE_REASON,
+  HeadingReorderModel,
+  HeadingSortKey
 } from './heading-reorder-model.ts';
 import {
   flattenTreeToOrder,
@@ -44,7 +46,7 @@ interface ModelFixture {
 
 function createFixture(content: string): ModelFixture {
   const split = splitIntoReorderableSections(content, parseHeadings(content));
-  return { model: new HeadingReorderModel({ numbering: null, split }), split };
+  return { model: new HeadingReorderModel({ headingTimes: null, numbering: null, split }), split };
 }
 
 function createModel(content: string): HeadingReorderModel {
@@ -98,7 +100,7 @@ describe('HeadingReorderModel', () => {
   it('should preview the number each heading will carry, and follow a move (issue #295)', () => {
     const split = splitIntoReorderableSections(NESTED_NOTE, parseHeadings(NESTED_NOTE));
     const numbering = { shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: false };
-    const model = new HeadingReorderModel({ numbering, split });
+    const model = new HeadingReorderModel({ headingTimes: null, numbering, split });
     expect(rows(model)).toEqual(['0:# 1. A', '1:## 1. A.1', '1:## 2. A.2', '0:# 2. B']);
 
     model.didMove({ delta: -1, id: id(model, 'B') });
@@ -255,20 +257,20 @@ describe('HeadingReorderModel', () => {
     });
   });
 
-  describe('buildNameSort (issue #306)', () => {
+  describe('buildSort by name (issue #306)', () => {
     const CHANGELOG_NOTE = '# Changelog\n\n## 1.9.0\nnine\n\n### Fixed\nf9\n\n## 1.10.0\nten\n\n## 1.2.0\ntwo\n';
 
     function didSortByName(model: HeadingReorderModel, scope: string, direction: ReorderSortDirection): boolean {
-      return ensureNonNullable(model.buildNameSort()).sort({ direction, scope });
+      return ensureNonNullable(model.buildSort()).sort({ direction, key: HeadingSortKey.Name, scope });
     }
 
     it('should offer no sort when no heading has a sibling', () => {
-      expect(createModel('# A\n\n## B\n\n### C\n').buildNameSort()).toBeNull();
+      expect(createModel('# A\n\n## B\n\n### C\n').buildSort()).toBeNull();
     });
 
     it('should offer every level that has siblings plus all levels, starting on the shallowest', () => {
-      const sort = ensureNonNullable(createModel(NESTED_NOTE).buildNameSort());
-      expect(sort.label).toBe('Sort by name');
+      const sort = ensureNonNullable(createModel(NESTED_NOTE).buildSort());
+      expect(sort.label).toBe('Sort');
       expect(sort.scopes).toEqual([
         { label: 'Level 1 (#)', value: '1' },
         { label: 'Level 2 (##)', value: '2' },
@@ -278,37 +280,37 @@ describe('HeadingReorderModel', () => {
     });
 
     it('should skip a lone title heading when choosing the default level', () => {
-      expect(ensureNonNullable(createModel(CHANGELOG_NOTE).buildNameSort()).defaultScope).toBe('2');
+      expect(ensureNonNullable(createModel(CHANGELOG_NOTE).buildSort()).defaultScope).toBe('2');
     });
 
     it('should sort versions naturally, carrying each heading\'s content and subtree', () => {
       const { model, split } = createFixture(CHANGELOG_NOTE);
-      expect(didSortByName(model, '2', ReorderSortDirection.ZToA)).toBe(true);
+      expect(didSortByName(model, '2', ReorderSortDirection.Descending)).toBe(true);
       expect(rows(model)).toEqual(['0:# Changelog', '1:## 1.10.0', '1:## 1.9.0', '2:### Fixed', '1:## 1.2.0']);
       expect(write(split)).toBe('# Changelog\n\n## 1.10.0\nten\n\n## 1.9.0\nnine\n\n### Fixed\nf9\n\n## 1.2.0\ntwo\n');
 
-      expect(didSortByName(model, '2', ReorderSortDirection.AToZ)).toBe(true);
+      expect(didSortByName(model, '2', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(model)).toEqual(['0:# Changelog', '1:## 1.2.0', '1:## 1.9.0', '2:### Fixed', '1:## 1.10.0']);
     });
 
     it('should report no change when the level is already in order', () => {
-      expect(didSortByName(createModel('# A\n\n# B\n'), '1', ReorderSortDirection.AToZ)).toBe(false);
+      expect(didSortByName(createModel('# A\n\n# B\n'), '1', ReorderSortDirection.Ascending)).toBe(false);
     });
 
     it('should leave the lists of other levels alone, unless all levels are sorted', () => {
       const note = '# B\n\n## y\n\n## x\n\n# A\n';
       const model = createModel(note);
-      expect(didSortByName(model, '1', ReorderSortDirection.AToZ)).toBe(true);
+      expect(didSortByName(model, '1', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(model)).toEqual(['0:# A', '0:# B', '1:## y', '1:## x']);
 
       const allModel = createModel(note);
-      expect(didSortByName(allModel, ALL_LEVELS_SORT_SCOPE, ReorderSortDirection.AToZ)).toBe(true);
+      expect(didSortByName(allModel, ALL_LEVELS_SORT_SCOPE, ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(allModel)).toEqual(['0:# A', '0:# B', '1:## x', '1:## y']);
     });
 
     it('should keep tied names in their current order', () => {
       const model = createModel('# b\n\n## first\n\n# a\n\n# b\n\n## second\n');
-      expect(didSortByName(model, '1', ReorderSortDirection.ZToA)).toBe(true);
+      expect(didSortByName(model, '1', ReorderSortDirection.Descending)).toBe(true);
       expect(rows(model)).toEqual(['0:# b', '1:## first', '0:# b', '1:## second', '0:# a']);
     });
 
@@ -316,25 +318,98 @@ describe('HeadingReorderModel', () => {
       const note = '# 1. B\n\n# 2. A\n';
       const split = splitIntoReorderableSections(note, parseHeadings(note));
       const numbering = { shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: true };
-      const model = new HeadingReorderModel({ numbering, split });
-      expect(didSortByName(model, '1', ReorderSortDirection.AToZ)).toBe(true);
+      const model = new HeadingReorderModel({ headingTimes: null, numbering, split });
+      expect(didSortByName(model, '1', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(model)).toEqual(['0:# 1. A', '0:# 2. B']);
 
       // Clearing the box on a numbered note strips the numbers, so they are still not part of the name.
       const strippedSplit = splitIntoReorderableSections(note, parseHeadings(note));
-      const strippedModel = new HeadingReorderModel({ numbering: { ...numbering, shouldNumber: false }, split: strippedSplit });
-      expect(didSortByName(strippedModel, '1', ReorderSortDirection.AToZ)).toBe(true);
+      const strippedModel = new HeadingReorderModel({ headingTimes: null, numbering: { ...numbering, shouldNumber: false }, split: strippedSplit });
+      expect(didSortByName(strippedModel, '1', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(strippedModel)).toEqual(['0:# A', '0:# B']);
 
       // An unnumbered note sorts by its headings as typed: `1. B` comes before `2. A`.
-      expect(didSortByName(createModel(note), '1', ReorderSortDirection.AToZ)).toBe(false);
+      expect(didSortByName(createModel(note), '1', ReorderSortDirection.Ascending)).toBe(false);
     });
 
     it('should bring a list with mixed levels to its shallowest level, so the note re-parses as shown', () => {
       const { model, split } = createFixture('# R\n\n### b\n\n#### b1\n\n## a\n');
-      expect(didSortByName(model, '2', ReorderSortDirection.AToZ)).toBe(true);
+      expect(didSortByName(model, '2', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## b', '2:### b1']);
       expect(rows(createModel(write(split)))).toEqual(rows(model));
+    });
+  });
+
+  describe('buildSort by time (issue #306)', () => {
+    // Created / modified / seen per heading, in document order: R, a, b, c.
+    const TIMED_NOTE = '# R\n\n## a\naa\n\n## b\nbb\n\n## c\ncc\n';
+
+    function createTimedModel(times: readonly (readonly [null | number, null | number, null | number])[]): HeadingReorderModel {
+      const split = splitIntoReorderableSections(TIMED_NOTE, parseHeadings(TIMED_NOTE));
+      const headingTimes = times.map(([created, modified, seen], index) => ({
+        created,
+        heading: ensureNonNullable(split.sections[index]).headingText,
+        level: ensureNonNullable(split.sections[index]).level,
+        line: index,
+        modified,
+        seen
+      }));
+      return new HeadingReorderModel({ headingTimes, numbering: null, split });
+    }
+
+    function didSortBy(model: HeadingReorderModel, key: string, direction: ReorderSortDirection): boolean {
+      return ensureNonNullable(model.buildSort()).sort({ direction, key, scope: '2' });
+    }
+
+    it('should offer the time keys disabled, saying why, when there are no times', () => {
+      const keys = ensureNonNullable(createModel(TIMED_NOTE).buildSort()).keys;
+      expect(keys.map((key) => [key.value, key.unavailableReason])).toEqual([
+        [HeadingSortKey.Name, null],
+        [HeadingSortKey.Created, HEADING_TIMES_UNAVAILABLE_REASON],
+        [HeadingSortKey.Modified, HEADING_TIMES_UNAVAILABLE_REASON],
+        [HeadingSortKey.Seen, HEADING_TIMES_UNAVAILABLE_REASON]
+      ]);
+      expect(didSortBy(createModel(TIMED_NOTE), HeadingSortKey.Created, ReorderSortDirection.Descending)).toBe(false);
+    });
+
+    it('should offer every key with its own button labels when there are times', () => {
+      const model = createTimedModel([[1, 1, 1], [1, 1, 1], [2, 2, 2], [3, 3, 3]]);
+      const keys = ensureNonNullable(model.buildSort()).keys;
+      expect(keys.map((key) => [key.label, key.ascendingLabel, key.descendingLabel, key.unavailableReason])).toEqual([
+        ['Name', 'A to Z', 'Z to A', null],
+        ['Created time', 'Oldest first', 'Newest first', null],
+        ['Modified time', 'Oldest first', 'Newest first', null],
+        ['Recently seen', 'Recent on bottom', 'Recent on top', null]
+      ]);
+    });
+
+    it('should refuse a key it does not know', () => {
+      const model = createTimedModel([[1, 1, 1], [1, 1, 1], [2, 2, 2], [3, 3, 3]]);
+      expect(didSortBy(model, 'size', ReorderSortDirection.Ascending)).toBe(false);
+    });
+
+    it('should sort by created time, a missing time counting as the oldest', () => {
+      const model = createTimedModel([[0, null, null], [null, null, null], [300, null, null], [200, null, null]]);
+      expect(didSortBy(model, HeadingSortKey.Created, ReorderSortDirection.Descending)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## b', '1:## c', '1:## a']);
+
+      expect(didSortBy(model, HeadingSortKey.Created, ReorderSortDirection.Ascending)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## c', '1:## b']);
+    });
+
+    it('should sort by modified time', () => {
+      const model = createTimedModel([[null, null, null], [null, 500, null], [null, 100, null], [null, 300, null]]);
+      expect(didSortBy(model, HeadingSortKey.Modified, ReorderSortDirection.Descending)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## c', '1:## b']);
+    });
+
+    it('should put the most recently seen heading on top, and keep unseen ones in their order', () => {
+      const model = createTimedModel([[null, null, null], [null, null, null], [null, null, null], [null, null, 9]]);
+      expect(didSortBy(model, HeadingSortKey.Seen, ReorderSortDirection.Descending)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## c', '1:## a', '1:## b']);
+
+      expect(didSortBy(model, HeadingSortKey.Seen, ReorderSortDirection.Ascending)).toBe(true);
+      expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## b', '1:## c']);
     });
   });
 

@@ -1,5 +1,6 @@
 import type { App } from 'obsidian';
 
+import type { HeadingTimes } from '../advanced-metadata-cache.ts';
 import type { HeadingNumbering } from '../heading-numbering.ts';
 import type { SplitReorderableSectionsResult } from '../heading-sections.ts';
 
@@ -13,6 +14,12 @@ import { didConfirmReorderModal } from './reorder-modal.ts';
  */
 export interface OpenReorderHeadingsModalParams {
   readonly app: App;
+
+  /**
+   * When each heading was created, modified and seen, indexed like the split's sections, or `null` when
+   * Advanced Metadata Cache does not provide them (issue #306).
+   */
+  readonly headingTimes: null | readonly HeadingTimes[];
 
   /**
    * How the headings are numbered (issue #295). The modal's `Number headings` checkbox flips its
@@ -45,13 +52,13 @@ export interface OpenReorderHeadingsModalParams {
 /* v8 ignore start -- thin modal-open glue tested via the real app (integration). */
 export async function openReorderHeadingsModal(params: OpenReorderHeadingsModalParams): Promise<null | number[]> {
   const { numbering, split } = params;
-  const model = new HeadingReorderModel({ numbering, split });
+  const model = new HeadingReorderModel({ headingTimes: params.headingTimes, numbering, split });
   const isConfirmed = await didConfirmReorderModal({
     app: params.app,
     confirmButtonText: 'Reorder',
-    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, use the left/right arrows to change its level, or sort a level by name, then confirm.',
+    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, use the left/right arrows to change its level, or sort a level, then confirm.',
     model,
-    sort: model.buildNameSort(),
+    sort: model.buildSort(),
     title: 'Reorder headings',
     toggle: params.shouldShowNumberingToggle
       ? {

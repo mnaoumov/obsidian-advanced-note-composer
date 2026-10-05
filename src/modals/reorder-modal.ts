@@ -24,8 +24,8 @@ export enum ReorderDropPlacement {
  * Which way a {@link ReorderModalSort} orders the rows.
  */
 export enum ReorderSortDirection {
-  AToZ = 'AToZ',
-  ZToA = 'ZToA'
+  Ascending = 'Ascending',
+  Descending = 'Descending'
 }
 
 /**
@@ -51,8 +51,7 @@ export interface DidConfirmReorderModalParams {
   readonly model: ReorderModel;
 
   /**
-   * An optional sort row above the list (the heading reorder's `Sort by name`, issue #306), or `null` for
-   * none.
+   * An optional sort row above the list (the heading reorder's `Sort`, issue #306), or `null` for none.
    */
   readonly sort: null | ReorderModalSort;
 
@@ -114,28 +113,59 @@ export interface ReorderModalRow {
 }
 
 /**
- * The sort row above the list: a scope dropdown and one button per {@link ReorderSortDirection}.
+ * The sort row above the list: a key dropdown, a scope dropdown and one button per
+ * {@link ReorderSortDirection}, labelled by the chosen key.
  */
 export interface ReorderModalSort {
   /**
-   * The {@link ReorderModalSortScope.value} the dropdown starts on.
+   * The {@link ReorderModalSortScope.value} the scope dropdown starts on.
    */
   readonly defaultScope: string;
+
+  /**
+   * What the key dropdown offers. The first available one is selected.
+   */
+  readonly keys: readonly ReorderModalSortKey[];
 
   readonly label: string;
 
   /**
-   * What the dropdown offers. Never empty: a list with nothing to sort gets no sort row at all.
+   * What the scope dropdown offers. Never empty: a list with nothing to sort gets no sort row at all.
    */
   readonly scopes: readonly ReorderModalSortScope[];
 
   /**
    * Sorts the model. The modal re-reads the model afterwards when this reports a change.
    *
-   * @param params - The scope chosen in the dropdown, and the button pressed.
+   * @param params - The key and scope chosen in the dropdowns, and the button pressed.
    * @returns Whether the order changed.
    */
   sort: (this: void, params: ReorderModalSortParams) => boolean;
+}
+
+/**
+ * One option of the sort row's key dropdown: what the rows are compared by.
+ */
+export interface ReorderModalSortKey {
+  /**
+   * The text of the {@link ReorderSortDirection.Ascending} button while this key is chosen.
+   */
+  readonly ascendingLabel: string;
+
+  /**
+   * The text of the {@link ReorderSortDirection.Descending} button while this key is chosen.
+   */
+  readonly descendingLabel: string;
+
+  readonly label: string;
+
+  /**
+   * Why this key cannot be chosen, shown beside its label in the dropdown, or `null` when it can. A key is
+   * offered disabled rather than left out, so the option is discoverable.
+   */
+  readonly unavailableReason: null | string;
+
+  readonly value: string;
 }
 
 /**
@@ -143,6 +173,7 @@ export interface ReorderModalSort {
  */
 export interface ReorderModalSortParams {
   readonly direction: ReorderSortDirection;
+  readonly key: string;
   readonly scope: string;
 }
 
@@ -577,21 +608,41 @@ class ReorderModal extends Modal {
   private renderSortRow(sort: ReorderModalSort): void {
     const sortEl = this.contentEl.createDiv('advanced-note-composer-reorder-sort');
     sortEl.createSpan({ text: sort.label });
-    const selectEl = sortEl.createEl('select', { cls: 'dropdown advanced-note-composer-reorder-sort-scope' });
-    for (const scope of sort.scopes) {
-      selectEl.createEl('option', { text: scope.label, value: scope.value });
+    const keyEl = sortEl.createEl('select', { cls: 'dropdown advanced-note-composer-reorder-sort-key' });
+    for (const key of sort.keys) {
+      keyEl.createEl('option', {
+        text: key.unavailableReason === null ? key.label : `${key.label} (${key.unavailableReason})`,
+        value: key.value
+      }, (optionEl) => {
+        optionEl.disabled = key.unavailableReason !== null;
+      });
     }
-    selectEl.value = sort.defaultScope;
+    keyEl.value = sort.keys.find((key) => key.unavailableReason === null)?.value ?? '';
 
-    for (const direction of [ReorderSortDirection.AToZ, ReorderSortDirection.ZToA]) {
-      const isAToZ = direction === ReorderSortDirection.AToZ;
-      sortEl.createEl('button', { cls: `advanced-note-composer-reorder-sort-${isAToZ ? 'a-to-z' : 'z-to-a'}`, text: isAToZ ? 'A to Z' : 'Z to A' }, (button) => {
+    const scopeEl = sortEl.createEl('select', { cls: 'dropdown advanced-note-composer-reorder-sort-scope' });
+    for (const scope of sort.scopes) {
+      scopeEl.createEl('option', { text: scope.label, value: scope.value });
+    }
+    scopeEl.value = sort.defaultScope;
+
+    const buttons = [ReorderSortDirection.Ascending, ReorderSortDirection.Descending].map((direction) =>
+      sortEl.createEl('button', { cls: `advanced-note-composer-reorder-sort-${direction.toLowerCase()}` }, (button) => {
         button.addEventListener('click', () => {
-          if (sort.sort({ direction, scope: selectEl.value })) {
+          if (sort.sort({ direction, key: keyEl.value, scope: scopeEl.value })) {
             this.renderList();
           }
         });
-      });
+      })
+    );
+
+    keyEl.addEventListener('change', refreshButtonLabels);
+    refreshButtonLabels();
+
+    function refreshButtonLabels(): void {
+      const key = sort.keys.find((candidate) => candidate.value === keyEl.value);
+      const [ascendingButton, descendingButton] = buttons;
+      ascendingButton?.setText(key?.ascendingLabel ?? '');
+      descendingButton?.setText(key?.descendingLabel ?? '');
     }
   }
 
