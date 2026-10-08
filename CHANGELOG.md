@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.18.0
+
+- feat(reorder): merge reversing a heading level and the end drop zone (#307)
+
 ## 5.17.0
 
 - feat(reorder): merge sorting headings by created, modified or recently seen time (#306)
