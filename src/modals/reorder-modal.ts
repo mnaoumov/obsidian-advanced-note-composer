@@ -13,6 +13,13 @@ import { openMinimizableModal } from '../open-minimizable-modal.ts';
  */
 export enum ReorderDropPlacement {
   After = 'After',
+  /**
+   * After the target AND everything nested under it, as the target's sibling. Reported only by the drop
+   * zone below a {@link ReorderModel.isNestable} list, whose target is the last top-level row (issue #307):
+   * a plain `After` on that row's last descendant would land inside the subtree, so without this no drop
+   * could move a heading below the last top-level heading.
+   */
+  AfterSubtree = 'AfterSubtree',
   Before = 'Before',
   /**
    * Nested under the target. Only a {@link ReorderModel.isNestable} list ever reports it.
@@ -128,6 +135,15 @@ export interface ReorderModalSort {
   readonly keys: readonly ReorderModalSortKey[];
 
   readonly label: string;
+
+  /**
+   * Reverses the order within the chosen scope, whatever the key (issue #307). The modal re-reads the model
+   * afterwards when this reports a change.
+   *
+   * @param scope - The {@link ReorderModalSortScope.value} chosen in the scope dropdown.
+   * @returns Whether the order changed.
+   */
+  reverse: (this: void, scope: string) => boolean;
 
   /**
    * What the scope dropdown offers. Never empty: a list with nothing to sort gets no sort row at all.
@@ -309,6 +325,9 @@ const DRAG_OVER_INSIDE_CLASS = 'advanced-note-composer-reorder-drag-over-inside'
 
 const DRAG_OVER_CLASSES: Readonly<Record<ReorderDropPlacement, string>> = {
   [ReorderDropPlacement.After]: DRAG_OVER_AFTER_CLASS,
+  // Only the end drop zone reports it, and the class goes on that zone: a line along its top edge is a line
+  // right under the last row, which is where the heading lands.
+  [ReorderDropPlacement.AfterSubtree]: DRAG_OVER_BEFORE_CLASS,
   [ReorderDropPlacement.Before]: DRAG_OVER_BEFORE_CLASS,
   [ReorderDropPlacement.Inside]: DRAG_OVER_INSIDE_CLASS
 };
@@ -322,6 +341,16 @@ const ALL_DRAG_OVER_CLASSES = [DRAG_OVER_AFTER_CLASS, DRAG_OVER_BEFORE_CLASS, DR
  * of the "is this one of ours?" test.
  */
 const REORDER_DRAGGABLE_TYPE = 'advanced-note-composer-reorder-row';
+
+interface RegisterDropTargetParams {
+  readonly el: HTMLElement;
+
+  /**
+   * Where a drop on {@link RegisterDropTargetParams.el} lands.
+   */
+  readonly resolvePlacement: (event: DragEvent) => ReorderDropPlacement;
+  readonly targetRow: ReorderModalRow;
+}
 
 interface RenderDepthButtonParams {
   readonly cls: string;
@@ -363,15 +392,19 @@ interface ReorderModalConstructorParams {
 
 interface ReorderModalHandleDropParams {
   readonly dragSource: ReorderDragSource;
-  readonly event: DragEvent;
+
+  /**
+   * The element the drop indicator is drawn on: the hovered row, or the end drop zone.
+   */
+  readonly indicatorEl: HTMLElement;
 
   /**
    * Whether this is the hover pass (`dragenter`/`dragover`) rather than the drop itself.
    */
   readonly isOver: boolean;
 
-  readonly itemEl: HTMLElement;
-  readonly row: ReorderModalRow;
+  readonly placement: ReorderDropPlacement;
+  readonly targetRow: ReorderModalRow;
 }
 
 /* v8 ignore start -- ReorderModal is an internal UI class tested through the real app (integration). */
@@ -471,16 +504,16 @@ class ReorderModal extends Modal {
     this.clearDropIndicators();
     const moveParams: ReorderModelDidMoveToParams = {
       id: params.dragSource.rowId,
-      placement: this.resolvePlacement(params.event, params.itemEl),
-      targetId: params.row.id
+      placement: params.placement,
+      targetId: params.targetRow.id
     };
 
-    if (params.dragSource.rowId === params.row.id || !this.params.model.canMoveTo(moveParams)) {
+    if (params.dragSource.rowId === params.targetRow.id || !this.params.model.canMoveTo(moveParams)) {
       return false;
     }
 
     if (params.isOver) {
-      params.itemEl.addClass(DRAG_OVER_CLASSES[moveParams.placement]);
+      params.indicatorEl.addClass(DRAG_OVER_CLASSES[moveParams.placement]);
       return true;
     }
 
@@ -496,6 +529,28 @@ class ReorderModal extends Modal {
     }
   }
 
+  private registerDropTarget(params: RegisterDropTargetParams): void {
+    this.app.dragManager.handleDrop(params.el, (event, draggable, isOver) => {
+      const droppedSource = toReorderDragSource(draggable);
+      // Refusing by returning `null` leaves the event un-`preventDefault`ed, which is what declines a row
+      // from another group — and a file dragged in from the explorer — instead of accepting it.
+      if (droppedSource?.groupKey !== params.targetRow.groupKey) {
+        return null;
+      }
+
+      // A position the model refuses is declined the same way, so the no-drop cursor shows there too.
+      return this.handleDrop({
+          dragSource: droppedSource,
+          indicatorEl: params.el,
+          isOver,
+          placement: params.resolvePlacement(event),
+          targetRow: params.targetRow
+        })
+        ? { action: null, dropEffect: 'move' }
+        : null;
+    });
+  }
+
   private renderDepthButton(params: RenderDepthButtonParams): void {
     params.controlsEl.createEl('button', { cls: `${params.cls} clickable-icon` }, (button) => {
       setIcon(button, params.icon);
@@ -507,6 +562,34 @@ class ReorderModal extends Modal {
     });
   }
 
+  /**
+   * Renders the drop zone below a nestable list (issue #307). Dropping on it moves a row after the last
+   * top-level row and everything nested under it, at that row's level. No row offers that position: below
+   * the last row a drop takes the last row's level, which in a nested list is inside the last subtree.
+   *
+   * @param listEl - The list.
+   * @param rows - The rows just rendered.
+   */
+  private renderEndDropZone(listEl: HTMLElement, rows: readonly ReorderModalRow[]): void {
+    if (!this.params.model.isNestable) {
+      return;
+    }
+
+    // A plain loop: `findLast` is ES2023, past the library this project compiles against.
+    let lastTopLevelRow: null | ReorderModalRow = null;
+    for (const row of rows) {
+      if (row.depth === 0) {
+        lastTopLevelRow = row;
+      }
+    }
+    if (!lastTopLevelRow) {
+      return;
+    }
+
+    const zoneEl = listEl.createDiv({ cls: 'advanced-note-composer-reorder-end-drop', text: 'Drop here to move to the end' });
+    this.registerDropTarget({ el: zoneEl, resolvePlacement: () => ReorderDropPlacement.AfterSubtree, targetRow: lastTopLevelRow });
+  }
+
   private renderList(): void {
     if (!this.listEl) {
       return;
@@ -515,7 +598,8 @@ class ReorderModal extends Modal {
     listEl.empty();
 
     let previousGroupKey: null | string = null;
-    for (const row of this.params.model.buildRows()) {
+    const rows = this.params.model.buildRows();
+    for (const row of rows) {
       if (row.groupKey !== previousGroupKey) {
         previousGroupKey = row.groupKey;
         const groupTitle = this.params.model.getGroupTitle(row.groupKey);
@@ -525,6 +609,8 @@ class ReorderModal extends Modal {
       }
       this.renderRow(listEl, row);
     }
+
+    this.renderEndDropZone(listEl, rows);
   }
 
   private renderRow(listEl: HTMLElement, row: ReorderModalRow): void {
@@ -543,17 +629,7 @@ class ReorderModal extends Modal {
       title: row.label,
       type: REORDER_DRAGGABLE_TYPE
     }));
-    this.app.dragManager.handleDrop(itemEl, (event, draggable, isOver) => {
-      const droppedSource = toReorderDragSource(draggable);
-      // Refusing by returning `null` leaves the event un-`preventDefault`ed, which is what declines a row
-      // from another group — and a file dragged in from the explorer — instead of accepting it.
-      if (droppedSource?.groupKey !== row.groupKey) {
-        return null;
-      }
-
-      // A position the model refuses is declined the same way, so the no-drop cursor shows there too.
-      return this.handleDrop({ dragSource: droppedSource, event, isOver, itemEl, row }) ? { action: null, dropEffect: 'move' } : null;
-    });
+    this.registerDropTarget({ el: itemEl, resolvePlacement: (event) => this.resolvePlacement(event, itemEl), targetRow: row });
     // A drag abandoned outside any row ends without a drop, so the last insertion line has to be cleared
     // here; `dragend` fires on the row the drag started from.
     itemEl.addEventListener('dragend', () => {
@@ -634,6 +710,16 @@ class ReorderModal extends Modal {
         });
       })
     );
+
+    // Not a third direction of the chosen key: it reverses whatever order the scope is in right now
+    // (issue #307), so it sits after the key's own two buttons.
+    sortEl.createEl('button', { cls: 'advanced-note-composer-reorder-sort-reverse', text: 'Reverse' }, (button) => {
+      button.addEventListener('click', () => {
+        if (sort.reverse(scopeEl.value)) {
+          this.renderList();
+        }
+      });
+    });
 
     keyEl.addEventListener('change', refreshButtonLabels);
     refreshButtonLabels();

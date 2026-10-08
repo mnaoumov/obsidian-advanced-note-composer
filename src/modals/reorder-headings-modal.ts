@@ -56,7 +56,7 @@ export async function openReorderHeadingsModal(params: OpenReorderHeadingsModalP
   const isConfirmed = await didConfirmReorderModal({
     app: params.app,
     confirmButtonText: 'Reorder',
-    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, use the left/right arrows to change its level, or sort a level, then confirm.',
+    description: 'Move each heading (and everything nested under it) up or down, drag it under another heading, use the left/right arrows to change its level, or sort or reverse a level, then confirm.',
     model,
     sort: model.buildSort(),
     title: 'Reorder headings',

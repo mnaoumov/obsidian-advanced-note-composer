@@ -4,6 +4,7 @@ Reorder a note's **headings at any level** without cutting and pasting. The dial
 
 - The **up/down arrows** move a heading among its siblings.
 - **Dragging** a heading onto another one moves it anywhere in the tree: drop on the top of a row to put it before that heading, on the bottom to put it after, or on the middle to put it **inside** it.
+- Dragging a heading onto **Drop here to move to the end**, below the list, moves it after the last top-level heading and everything under it, at that heading's level. Dropping on the bottom of the last row would put it inside the last section instead.
 - The **left/right arrows** move a heading out of its parent, or under the heading above it.
 
 A heading that lands under a different parent is **re-leveled** to fit - `### Alpha detail` dragged beside `## Beta` becomes `## Alpha detail` - and everything under it shifts by the same amount. Links that spelled out the old nesting, such as `[[note#Alpha#Alpha detail]]`, are rewritten to the new one.
@@ -35,6 +36,8 @@ The **Sort** row at the top of the dialog sorts every heading of one level at on
 2. Choose a level in the second dropdown. It starts on the shallowest level that has more than one heading, so a lone title heading is skipped. Choose **All levels** to sort every level.
 3. Click one of the two buttons. Their labels follow the first dropdown: **A to Z** / **Z to A** for a name, **Oldest first** / **Newest first** for a time, **Recent on bottom** / **Recent on top** for recently seen. The list shows the new order, and you can still adjust it by hand before clicking **Reorder**.
 
+**Reverse**, after those two buttons, turns the chosen level upside down, whatever the first dropdown says: the last heading becomes the first. In a numbered note the numbers follow, so `1.`, `2.`, `3.` reversed is still `1.`, `2.`, `3.`, now on the opposite headings. Click it again to undo it.
+
 ### Sorting by time
 
 Obsidian does not record when a heading was created, changed or looked at. The three time sorts read those times from the [Advanced Metadata Cache](https://github.com/mnaoumov/obsidian-advanced-metadata-cache) plugin, version 1.2.0 or later, with its `Headings` module turned on. Without it they are shown in the dropdown but disabled.
@@ -53,7 +56,7 @@ Numbers sort as numbers, so the order is chronological for:
 - Dates such as `2026-10-04`.
 - Timestamps from the `Unique note creator` core plugin, such as `202610041438`.
 
-**Z to A** puts the newest changelog entry on top. After you move headings around for a while, sorting again restores their order. The numbers that `Number headings` writes are ignored when sorting.
+**Z to A** puts the newest changelog entry on top. After you move headings around for a while, sorting again restores their order. The numbers that `Number headings` writes are ignored when sorting. To flip a numbered note's order, use **Reverse**.
 
 ## Alpha
 

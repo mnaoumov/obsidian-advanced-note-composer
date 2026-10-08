@@ -123,6 +123,22 @@
   }
 }
 
+// The drop zone below a heading list (issue #307): the one place a drop lands after the last top-level
+// Heading's whole subtree. Tall enough to hit with a finger.
+.advanced-note-composer-reorder-end-drop {
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-top: var(--size-4-1);
+  padding: var(--size-4-3) var(--size-4-2);
+  text-align: center;
+
+  &.advanced-note-composer-reorder-drag-over-before {
+    box-shadow: inset 0 2px 0 0 var(--interactive-accent);
+  }
+}
+
 .advanced-note-composer-reorder-handle {
   color: var(--text-faint);
   cursor: grab;
