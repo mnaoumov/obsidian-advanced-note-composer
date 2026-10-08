@@ -290,7 +290,7 @@ describe('reorder headings: sort (issue #306)', () => {
     });
 
     expect(result.disabledKeys).toEqual([]);
-    expect(result.buttonLabels).toEqual(['Oldest first', 'Newest first']);
+    expect(result.buttonLabels).toEqual(['Oldest first', 'Newest first', 'Reverse']);
     // `Old` has no created time, so it counts as the oldest and goes last.
     expect(result.sortedRows).toEqual(['Log', 'Fresh', 'Middle', 'Old']);
     expect(result.note).toBe('# Log\n\n## Fresh\nf\n\n## Middle\nm\n\n## Old\no\n');

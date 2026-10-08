@@ -227,6 +227,7 @@ export class HeadingReorderModel implements ReorderModel {
         }
       ],
       label: 'Sort',
+      reverse: (scope): boolean => this.didReorderLists(scope, (siblings) => [...siblings].reverse()),
       scopes: [
         ...sortedLevels.map((level) => ({ label: `Level ${String(level)} (${'#'.repeat(level)})`, value: String(level) })),
         { label: 'All levels', value: ALL_LEVELS_SORT_SCOPE }
@@ -237,7 +238,7 @@ export class HeadingReorderModel implements ReorderModel {
           return false;
         }
         const sign = params.direction === ReorderSortDirection.Ascending ? 1 : -1;
-        return this.didSort(params.scope, (a, b) => sign * compare(a, b));
+        return this.didReorderLists(params.scope, (siblings) => [...siblings].sort((a, b) => sign * compare(a.index, b.index)));
       }
     };
   }
@@ -278,14 +279,14 @@ export class HeadingReorderModel implements ReorderModel {
   }
 
   /**
-   * Sorts every list of siblings that holds a heading of the chosen level, or every list for `All levels`.
-   * Each heading carries its whole subtree with it. Ties keep their current order.
+   * Reorders every list of siblings that holds a heading of the chosen level, or every list for `All levels`
+   * — a sort by a key, or a reverse (issue #307). Each heading carries its whole subtree with it.
    *
-   * @param scope - The level to sort, or {@link ALL_LEVELS_SORT_SCOPE}.
-   * @param compare - Compares two section indices, already signed for the direction.
+   * @param scope - The level to reorder, or {@link ALL_LEVELS_SORT_SCOPE}.
+   * @param reorder - Returns the list's new order, as a new array. A sort keeps ties in their current order.
    * @returns Whether the order changed.
    */
-  private didSort(scope: string, compare: (a: number, b: number) => number): boolean {
+  private didReorderLists(scope: string, reorder: (siblings: readonly HeadingTreeNode[]) => HeadingTreeNode[]): boolean {
     const level = scope === ALL_LEVELS_SORT_SCOPE ? null : Number(scope);
     let isChanged = false;
     visitSiblingLists(this.split.roots, (siblings) => {
@@ -293,12 +294,12 @@ export class HeadingReorderModel implements ReorderModel {
         return;
       }
 
-      const sorted = [...siblings].sort((a, b) => compare(a.index, b.index));
-      if (sorted.every((node, position) => node === siblings[position])) {
+      const reordered = reorder(siblings);
+      if (reordered.every((node, position) => node === siblings[position])) {
         return;
       }
 
-      siblings.splice(0, siblings.length, ...sorted);
+      siblings.splice(0, siblings.length, ...reordered);
       this.relevelToShallowest(siblings);
       isChanged = true;
     });
@@ -350,7 +351,8 @@ export class HeadingReorderModel implements ReorderModel {
     }
 
     // A drop just below a heading that HAS children draws its line between that heading and its first
-    // child, so that is where it lands: as the first child, not after the whole subtree.
+    // child, so that is where it lands: as the first child, not after the whole subtree. Only the end drop
+    // zone's `AfterSubtree` means after the whole subtree (issue #307).
     const isInside = placement === ReorderDropPlacement.Inside
       || (placement === ReorderDropPlacement.After && target.node.children.length > 0);
     if (isInside) {
@@ -360,7 +362,7 @@ export class HeadingReorderModel implements ReorderModel {
     const targetPosition = target.siblings.indexOf(target.node);
     return this.validate({
       destination: target.siblings,
-      insertPosition: targetPosition + (placement === ReorderDropPlacement.After ? 1 : 0),
+      insertPosition: targetPosition + (placement === ReorderDropPlacement.Before ? 0 : 1),
       level: this.getLevel(target.node.index),
       source
     });

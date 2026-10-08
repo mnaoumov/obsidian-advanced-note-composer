@@ -37,7 +37,7 @@ const LCG_MODULUS = 2_147_483_648;
 const PROPERTY_STEP_COUNT = 400;
 const OPERATION_KIND_COUNT = 4;
 const MIN_PROPERTY_MOVE_COUNT = 100;
-const PLACEMENTS = [ReorderDropPlacement.After, ReorderDropPlacement.Before, ReorderDropPlacement.Inside];
+const PLACEMENTS = [ReorderDropPlacement.After, ReorderDropPlacement.AfterSubtree, ReorderDropPlacement.Before, ReorderDropPlacement.Inside];
 
 interface ModelFixture {
   readonly model: HeadingReorderModel;
@@ -222,6 +222,29 @@ describe('HeadingReorderModel', () => {
       expect(model.didMoveTo({ id: 0, placement: ReorderDropPlacement.Before, targetId: -1 })).toBe(false);
     });
 
+    it('should move the first top-level heading below the last one\'s subtree, from the end drop zone (issue #307)', () => {
+      const { model, split } = createFixture(REPORTER_NOTE);
+      expect(model.didMoveTo({ id: id(model, 'A'), placement: ReorderDropPlacement.AfterSubtree, targetId: id(model, 'B') })).toBe(true);
+      expect(rows(model)).toEqual(['0:# B', '1:## B1', '1:## B2', '0:# A', '1:## A1', '1:## A2']);
+      expect(write(split)).toBe('# B\nb\n\n## B1\nb1\n\n## B2\nb2\n\n# A\na\n\n## A1\na1\n\n## A2\na2\n');
+
+      // A plain `After` on the last row is the drop the reporter made: it lands inside `B`, at `B2`'s level.
+      const { model: afterModel } = createFixture(REPORTER_NOTE);
+      expect(afterModel.didMoveTo({ id: id(afterModel, 'A'), placement: ReorderDropPlacement.After, targetId: id(afterModel, 'B2') })).toBe(true);
+      expect(rows(afterModel)).toEqual(['0:# B', '1:## B1', '1:## B2', '1:## A', '2:### A1', '2:### A2']);
+    });
+
+    it('should lift a sub-heading to the top level at the end from the end drop zone', () => {
+      const model = createModel(REPORTER_NOTE);
+      expect(model.didMoveTo({ id: id(model, 'A1'), placement: ReorderDropPlacement.AfterSubtree, targetId: id(model, 'B') })).toBe(true);
+      expect(rows(model)).toEqual(['0:# A', '1:## A2', '0:# B', '1:## B1', '1:## B2', '0:# A1']);
+    });
+
+    it('should refuse an end drop zone drop of the heading that is already last', () => {
+      const model = createModel(REPORTER_NOTE);
+      expect(model.canMoveTo({ id: id(model, 'B'), placement: ReorderDropPlacement.AfterSubtree, targetId: id(model, 'B') })).toBe(false);
+    });
+
     it('should refuse a move that would push a heading past level 6', () => {
       const model = createModel('# A\n\n##### deep\n\n# B\n\n## C\n');
       expect(model.canMoveTo({ id: id(model, 'A'), placement: ReorderDropPlacement.Inside, targetId: id(model, 'C') })).toBe(false);
@@ -337,6 +360,35 @@ describe('HeadingReorderModel', () => {
       expect(didSortByName(model, '2', ReorderSortDirection.Ascending)).toBe(true);
       expect(rows(model)).toEqual(['0:# R', '1:## a', '1:## b', '2:### b1']);
       expect(rows(createModel(write(split)))).toEqual(rows(model));
+    });
+  });
+
+  describe('buildSort reverse (issue #307)', () => {
+    // The reporter's numbered shape: three top-level headings, each with its own sub-headings.
+    const NUMBERED_NOTE = '# 1. General\n\n# 2. Projects\n\n## 1. Due\nd\n\n# 3. Travel\n\n## 1. Due A\n\n## 2. Due B\n';
+
+    function didReverse(model: HeadingReorderModel, scope: string): boolean {
+      return ensureNonNullable(model.buildSort()).reverse(scope);
+    }
+
+    it('should reverse a level, renumbering it, and leave the order under each heading alone', () => {
+      const split = splitIntoReorderableSections(NUMBERED_NOTE, parseHeadings(NUMBERED_NOTE));
+      const numbering = { shouldNumber: true, template: '{{index}}. {{headingText}}', wasNumbered: true };
+      const model = new HeadingReorderModel({ headingTimes: null, numbering, split });
+      expect(didReverse(model, '1')).toBe(true);
+      expect(rows(model)).toEqual(['0:# 1. Travel', '1:## 1. Due A', '1:## 2. Due B', '0:# 2. Projects', '1:## 1. Due', '0:# 3. General']);
+    });
+
+    it('should reverse every list for all levels, and back again', () => {
+      const model = createModel(REPORTER_NOTE);
+      expect(didReverse(model, ALL_LEVELS_SORT_SCOPE)).toBe(true);
+      expect(rows(model)).toEqual(['0:# B', '1:## B2', '1:## B1', '0:# A', '1:## A2', '1:## A1']);
+      expect(didReverse(model, ALL_LEVELS_SORT_SCOPE)).toBe(true);
+      expect(rows(model)).toEqual(rows(createModel(REPORTER_NOTE)));
+    });
+
+    it('should report no change for a level whose lists hold one heading each', () => {
+      expect(didReverse(createModel('# A\n\n## a\n\n# B\n\n## b\n'), '2')).toBe(false);
     });
   });
 
