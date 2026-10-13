@@ -11,6 +11,8 @@ It works for every split, extract and merge, and for a link however it was writt
 
 Put the cursor anywhere in a heading's section - on the heading line or in its body - and run `Copy link to this heading`. It copies the same link Obsidian writes when you pick that heading from the `[[#` suggester, so your `New link format` and `Use [[Wikilinks]]` settings decide its shape. Paste it into another heading of the same note.
 
+`Copy link to this file` does the same for the note itself (`[[Linked headings]]`, under the default settings), wherever the cursor is. A link to the note written into a section that is split out later keeps pointing at this note.
+
 ## Try it
 
 1. Open [Linked headings](<../Materials/42 Heading links/Linked headings.md>).
