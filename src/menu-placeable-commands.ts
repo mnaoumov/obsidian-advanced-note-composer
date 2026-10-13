@@ -119,6 +119,11 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
   },
   {
     commandCategory: CommandCategory.Select,
+    id: 'copy-link-to-this-file',
+    name: 'Copy link to this file'
+  },
+  {
+    commandCategory: CommandCategory.Select,
     id: 'select-before-cursor',
     name: 'Select before cursor'
   },

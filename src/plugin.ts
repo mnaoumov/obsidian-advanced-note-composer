@@ -10,6 +10,7 @@ import type { Level } from './markdown-heading-document.ts';
 
 import { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
 import { CancelSelectionEditorCommandHandler } from './command-handlers/cancel-selection-editor-command-handler.ts';
+import { CopyLinkToThisFileEditorCommandHandler } from './command-handlers/copy-link-to-this-file-editor-command-handler.ts';
 import { CopyLinkToThisHeadingEditorCommandHandler } from './command-handlers/copy-link-to-this-heading-editor-command-handler.ts';
 import { CreateEmptyNoteAtCursorEditorCommandHandler } from './command-handlers/create-empty-note-at-cursor-editor-command-handler.ts';
 import { CreateEmptyNoteInFolderCommandHandler } from './command-handlers/create-empty-note-in-folder-command-handler.ts';
@@ -332,6 +333,12 @@ export class Plugin extends PluginBase {
       // A link to a heading of the note it sits in, which every split and merge now carries along with the
       // heading (issue #291).
       new CopyLinkToThisHeadingEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent
+      }),
+      // A link to the note itself, for a section that will be split out later (issue #308).
+      new CopyLinkToThisFileEditorCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent
