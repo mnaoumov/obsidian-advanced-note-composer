@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.19.0
+
+- feat(select): merge Copy link to this file (#308)
+
 ## 5.18.0
 
 - feat(reorder): merge reversing a heading level and the end drop zone (#307)
