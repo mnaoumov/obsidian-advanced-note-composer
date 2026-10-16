@@ -1,4 +1,4 @@
-import { getEnumValue } from 'obsidian-dev-utils/enum';
+import { getEnumValue } from '@mnaoumov/typescript-lib/enum';
 import {
   describe,
   expect,

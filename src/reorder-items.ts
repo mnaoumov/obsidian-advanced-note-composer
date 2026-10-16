@@ -1,6 +1,6 @@
+import { join } from '@mnaoumov/typescript-lib/path';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { normalizePath } from 'obsidian';
-import { join } from 'obsidian-dev-utils/path';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { parseNumberedName } from './numbered-name.ts';
 import {

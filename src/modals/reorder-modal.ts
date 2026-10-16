@@ -1,4 +1,4 @@
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 
 import {
   App,

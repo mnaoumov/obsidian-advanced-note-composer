@@ -1,4 +1,8 @@
 import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
   InternalPlugins,
   ViewRegistry
 } from '@obsidian-typings/obsidian-public-latest';
@@ -10,14 +14,10 @@ import type {
   Vault,
   Workspace
 } from 'obsidian';
-import type {
-  ResourceLockComponent,
-  ResourceLockComponentLockForPathParams
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { noop } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { noop } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   afterEach,
   beforeEach,
@@ -37,22 +37,22 @@ import {
 } from '../plugin-settings.ts';
 import { prepareForMergeFile } from './merge-file-modal.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
+vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-context', () => ({
   addPluginCssClasses: vi.fn()
 }));
 
@@ -77,7 +77,7 @@ interface WithSelectSuggestion {
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
 
-  const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
+  const asyncModule = await import('@mnaoumov/typescript-lib/async') as AsyncModule;
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;

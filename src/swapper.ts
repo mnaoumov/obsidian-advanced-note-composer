@@ -1,21 +1,21 @@
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type {
   App,
   TAbstractFile,
   TFile,
   TFolder
 } from 'obsidian';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
 import {
   getFolderOrNull,
   isFile,
   isFolder
-} from 'obsidian-dev-utils/obsidian/file-system';
+} from '@mnaoumov/obsidian-lib/file-system';
 import {
   getAvailablePath,
   isChild
-} from 'obsidian-dev-utils/obsidian/vault';
-import { join } from 'obsidian-dev-utils/path';
+} from '@mnaoumov/obsidian-lib/vault';
+import { join } from '@mnaoumov/typescript-lib/path';
 
 /**
  * Parameters for {@link swap}.

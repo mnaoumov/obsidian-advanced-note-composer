@@ -1,8 +1,8 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { App } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { GlobalCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/global-command-handler';
+import { GlobalCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/global-command-handler';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { ExtractCurrentSelectionEditorCommandHandler } from './extract-current-selection-editor-command-handler.ts';

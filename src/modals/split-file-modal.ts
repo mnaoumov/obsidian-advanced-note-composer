@@ -1,11 +1,18 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 import type {
   TFolder,
   ToggleComponent
 } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { ModalCommandBuilder } from '@mnaoumov/obsidian-lib/modals/modal-command-builder';
+import { trashSafe } from '@mnaoumov/obsidian-lib/vault';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   App,
   ButtonComponent,
@@ -13,13 +20,6 @@ import {
   Setting,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
-import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { Selection } from '../composers/composer-base.ts';
 import type { SelectItemResult } from '../item-selectors/item-selector-base.ts';
@@ -35,6 +35,7 @@ import type {
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { getSelections } from '../composers/split-composer.ts';
+import { toEnumValue } from '../enum-value.ts';
 import { extractHeading } from '../headings.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { SplitItemSelector } from '../item-selectors/split-item-selector.ts';
@@ -839,7 +840,7 @@ class SplitFileModal extends SuggestModalBase {
       key: '7',
       modifiers: ['Alt'],
       onChange: (value: string) => {
-        this.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
+        this.frontmatterMergeStrategy = toEnumValue(FrontmatterMergeStrategy, value);
       },
       onInit: (dropdownComponent) => {
         dropdownComponent.addOptions({

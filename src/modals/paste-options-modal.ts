@@ -1,4 +1,4 @@
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 
 import {
   App,
@@ -6,6 +6,7 @@ import {
   Setting
 } from 'obsidian';
 
+import { toEnumValue } from '../enum-value.ts';
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 import {
   FrontmatterMergeStrategy,
@@ -99,7 +100,7 @@ class PasteOptionsModal extends Modal {
           /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
         dropdown.setValue(this.options.frontmatterMergeStrategy).onChange((value) => {
-          this.options = { ...this.options, frontmatterMergeStrategy: value as FrontmatterMergeStrategy };
+          this.options = { ...this.options, frontmatterMergeStrategy: toEnumValue(FrontmatterMergeStrategy, value) };
         });
       });
 
@@ -115,7 +116,7 @@ class PasteOptionsModal extends Modal {
           /* eslint-enable perfectionist/sort-objects -- Need to keep order. */
         });
         dropdown.setValue(this.options.textAfterExtractionMode).onChange((value) => {
-          this.options = { ...this.options, textAfterExtractionMode: value as TextAfterExtractionMode };
+          this.options = { ...this.options, textAfterExtractionMode: toEnumValue(TextAfterExtractionMode, value) };
         });
       });
 

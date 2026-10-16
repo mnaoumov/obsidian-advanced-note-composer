@@ -19,7 +19,7 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { isFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { isFile } from '@mnaoumov/obsidian-lib/file-system';
 
 import {
   resolveNextSiblingIndex,

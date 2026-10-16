@@ -1,3 +1,8 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   InternalPlugins,
   ViewRegistry
@@ -13,15 +18,10 @@ import type {
   Workspace,
   WorkspaceLeaf
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type {
-  ResourceLockComponent,
-  ResourceLockComponentLockForPathParams
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { noop } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { noop } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   afterEach,
   beforeEach,
@@ -56,26 +56,26 @@ import {
   SplitNoteNameAction
 } from './split-note-name-modal.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', () => ({
   getCacheSafe: vi.fn().mockResolvedValue(null)
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
+vi.mock('@mnaoumov/obsidian-lib/vault', () => ({
   trashSafe: vi.fn().mockResolvedValue(undefined)
 }));
 
@@ -133,7 +133,7 @@ interface WithSwitchToSmartCut {
 vi.mock('./suggest-modal-base.ts', async () => {
   const obsidian = await vi.importActual<typeof import('obsidian')>('obsidian');
 
-  const asyncModule = await import('obsidian-dev-utils/async') as AsyncModule;
+  const asyncModule = await import('@mnaoumov/typescript-lib/async') as AsyncModule;
 
   class MockSuggestModalBase extends obsidian.SuggestModal<unknown> {
     protected allowCreateNewFile = false;
@@ -772,7 +772,7 @@ describe('prepareForSplitFile', () => {
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSplitting: true });
 
-    const { trashSafe } = await import('obsidian-dev-utils/obsidian/vault');
+    const { trashSafe } = await import('@mnaoumov/obsidian-lib/vault');
 
     mockSelectItem.mockResolvedValueOnce({ isNewTargetFile: true, targetFile: mockTargetFile });
 

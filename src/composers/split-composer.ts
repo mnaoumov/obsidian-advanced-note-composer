@@ -1,24 +1,24 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type {
   Editor,
   EditorChange,
   EditorSelection,
   Pos
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
-import { isReferenceCache } from '@obsidian-typings/obsidian-public-latest/implementations';
-import { MarkdownView } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 import {
   editLinksInContent,
   extractLinkFile,
   splitSubpath,
   updateLink
-} from 'obsidian-dev-utils/obsidian/link';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/obsidian-lib/link';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { isReferenceCache } from '@obsidian-typings/obsidian-public-latest/implementations';
+import { MarkdownView } from 'obsidian';
 
 import type { AttachmentToRelocate } from '../attachments.ts';
 import type { FrontmatterSelectionExtraction } from '../frontmatter-selection.ts';
@@ -439,7 +439,7 @@ export class SplitComposer extends ComposerBase {
     return new Set();
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override updateEditorSelections(params: ComposerBaseUpdateEditorSelectionsParams): void {
     const { sourceCache, sourceFootnoteIdsToRemove, sourceFootnoteIdsToRestore } = params;
     super.updateEditorSelections(params);

@@ -15,8 +15,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 import { normalizePath } from 'obsidian';
-import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 

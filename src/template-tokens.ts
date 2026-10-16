@@ -3,11 +3,11 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { extractDefaultExportInterop } from '@mnaoumov/typescript-lib/object-utils';
+import { basename } from '@mnaoumov/typescript-lib/path';
+import { getMandatoryNamedGroup } from '@mnaoumov/typescript-lib/reg-exp';
+import { replaceAll } from '@mnaoumov/typescript-lib/string';
 import { moment as moment_ } from 'obsidian';
-import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
-import { basename } from 'obsidian-dev-utils/path';
-import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
-import { replaceAll } from 'obsidian-dev-utils/string';
 
 import { parseNumberedName } from './numbered-name.ts';
 import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';

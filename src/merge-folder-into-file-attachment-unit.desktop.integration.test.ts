@@ -22,6 +22,10 @@ interface ComponentTreeNode {
   settings?: MergeSettings;
 }
 
+interface IsAttachmentUnitFolderParamsLike {
+  readonly folderPath: string;
+}
+
 interface MenuItemLike {
   dom?: HTMLElement;
   section?: string;
@@ -38,6 +42,43 @@ interface MergeSettings {
   shouldMoveAttachmentsWhenMergingFolder: boolean;
 }
 
+interface ObsidianDevUtilsStateLike {
+  pluginApiRegistry?: PluginApiRegistryWrapperLike;
+}
+
+/**
+ * The slice of the shared plugin API registry the stand-in is published into.
+ */
+interface PluginApiRegistryHostLike {
+  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+}
+
+interface PluginApiRegistryLike {
+  records?: Record<string, PublishedPluginApiRecordLike[]>;
+  subscribers?: (() => void)[];
+}
+
+interface PluginApiRegistryWrapperLike {
+  value?: PluginApiRegistryLike;
+}
+
+interface PublishedPluginApiRecordLike {
+  api: object;
+  apiVersion: string;
+  contract: Record<string, object>;
+  isRevoked: boolean;
+  pluginId: string;
+}
+
+/**
+ * The subset of the attachment-path resolution parameters the stand-in reads.
+ */
+interface ResolutionParamsLike {
+  readonly attachmentFileBaseName: string;
+  readonly attachmentFileExtension: string;
+  readonly notePathOrFile: null | string | TFile;
+}
+
 interface SettingsCarrier {
   editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
   settings: MergeSettings;
@@ -46,8 +87,8 @@ interface SettingsCarrier {
 /**
  * Issue #298: an attachment unit folder — one an attachment-location plugin designated to travel as ONE
  * attachment — must never be merged into the single file. The designation is published the way Custom
- * Attachment Location publishes it, as a member on the patched `Vault.getAvailablePathForAttachments`, so
- * this proves the plugin reads it from real Obsidian rather than from anything local.
+ * Attachment Location publishes it, through the attachment-path API it publishes in the plugin
+ * registry, so this proves the plugin reads it from real Obsidian rather than from anything local.
  */
 describe('merge folder into file with an attachment unit folder (issue #298)', () => {
   it('hides the entry inside a unit and moves a referenced unit whole', async () => {
@@ -64,7 +105,7 @@ describe('merge folder into file with an attachment unit folder (issue #298)', (
           shouldMoveAttachmentsWhenMergingFolder: settingsComponent.settings.shouldMoveAttachmentsWhenMergingFolder
         };
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
-        const originalGetAvailablePathForAttachments = app.vault.getAvailablePathForAttachments;
+        const standInRecords: PublishedPluginApiRecordLike[] = [];
         try {
           await settingsComponent.editAndSave((settings) => {
             settings.emptyFolderBehaviorAfterMergingFolder = 'Delete';
@@ -72,14 +113,7 @@ describe('merge folder into file with an attachment unit folder (issue #298)', (
             settings.shouldMoveAttachmentsWhenMergingFolder = true;
           });
           app.vault.setConfig('attachmentFolderPath', '/');
-          // Wrapped rather than replaced, keeping whatever members are already there.
-          app.vault.getAvailablePathForAttachments = Object.assign(
-            (...callArguments: Parameters<typeof originalGetAvailablePathForAttachments>) => originalGetAvailablePathForAttachments.apply(app.vault, callArguments),
-            originalGetAvailablePathForAttachments,
-            {
-              checkIsAttachmentUnitFolder: (folderPath: string): boolean => folderPath === UNIT_FOLDER_PATH || folderPath.startsWith(`${UNIT_FOLDER_PATH}/`)
-            }
-          );
+          publishAttachmentLocationPlugin();
 
           await app.vault.createFolder('unit298-src');
           await app.vault.createFolder(UNIT_FOLDER_PATH);
@@ -126,7 +160,7 @@ describe('merge folder into file with an attachment unit folder (issue #298)', (
             unitPageContent: await app.vault.read(getFile('unit298-page_files/page.md'))
           };
         } finally {
-          restoreGetAvailablePathForAttachments();
+          revokeAttachmentLocationPlugin();
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
           await settingsComponent.editAndSave((settings) => {
             settings.emptyFolderBehaviorAfterMergingFolder = originalSettings.emptyFolderBehaviorAfterMergingFolder;
@@ -135,9 +169,57 @@ describe('merge folder into file with an attachment unit folder (issue #298)', (
           });
         }
 
-        // Restored from a synchronous function, so the restore cannot be read as racing the awaits around it.
-        function restoreGetAvailablePathForAttachments(): void {
-          app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
+        function getPluginApiRegistry(): PluginApiRegistryLike {
+          const host = window as PluginApiRegistryHostLike;
+          host.__obsidianDevUtils ??= {};
+          host.__obsidianDevUtils.pluginApiRegistry ??= {};
+          const wrapper = host.__obsidianDevUtils.pluginApiRegistry;
+          wrapper.value ??= {};
+          return wrapper.value;
+        }
+
+        function notifyPluginApiSubscribers(registry: PluginApiRegistryLike): void {
+          for (const subscriber of registry.subscribers ?? []) {
+            subscriber();
+          }
+        }
+
+        /**
+         * Publishes a stand-in `Custom Attachment Location` attachment-path API: it designates the unit folder
+         * and hands every resolution back to Obsidian's own, so nothing else the vault does changes.
+         */
+        function publishAttachmentLocationPlugin(): void {
+          const customAttachmentLocationPluginId = 'obsidian-custom-attachment-location';
+          const registry = getPluginApiRegistry();
+          registry.records ??= {};
+          const record: PublishedPluginApiRecordLike = {
+            api: {
+              getAvailablePathForAttachments: (params: ResolutionParamsLike): Promise<string> => {
+                const noteFile = typeof params.notePathOrFile === 'string' ? app.vault.getFileByPath(params.notePathOrFile) : params.notePathOrFile;
+                return app.vault.getAvailablePathForAttachments(params.attachmentFileBaseName, params.attachmentFileExtension, noteFile);
+              },
+              isAttachmentUnitFolder: ({ folderPath }: IsAttachmentUnitFolderParamsLike): boolean => folderPath === UNIT_FOLDER_PATH || folderPath.startsWith(`${UNIT_FOLDER_PATH}/`)
+            },
+            apiVersion: '1.3.0',
+            contract: {},
+            isRevoked: false,
+            pluginId: customAttachmentLocationPluginId
+          };
+          registry.records[customAttachmentLocationPluginId] = [...(registry.records[customAttachmentLocationPluginId] ?? []), record];
+          standInRecords.push(record);
+          notifyPluginApiSubscribers(registry);
+        }
+
+        // Revoked from a synchronous function, so the revocation cannot be read as racing the awaits around it.
+        function revokeAttachmentLocationPlugin(): void {
+          const registry = getPluginApiRegistry();
+          for (const record of standInRecords.splice(0)) {
+            record.isRevoked = true;
+            if (registry.records) {
+              registry.records[record.pluginId] = (registry.records[record.pluginId] ?? []).filter((candidate) => candidate !== record);
+            }
+          }
+          notifyPluginApiSubscribers(registry);
         }
 
         function findSettingsComponent(): SettingsCarrier {

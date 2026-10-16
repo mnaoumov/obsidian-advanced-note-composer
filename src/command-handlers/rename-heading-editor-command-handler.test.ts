@@ -1,4 +1,10 @@
 import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import type {
   App,
   Editor,
   HeadingCache,
@@ -8,19 +14,13 @@ import type {
   TFile,
   Vault
 } from 'obsidian';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -66,15 +66,15 @@ interface TestableHandler {
   shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
+vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({
   prompt: vi.fn()
 }));
 

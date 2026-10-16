@@ -1,4 +1,4 @@
-import { join } from 'obsidian-dev-utils/path';
+import { join } from '@mnaoumov/typescript-lib/path';
 
 import type {
   ItemSelectorBaseConstructorParams,

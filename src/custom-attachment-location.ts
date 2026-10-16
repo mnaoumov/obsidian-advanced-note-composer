@@ -19,15 +19,15 @@
  * disabled, or older than contract `1.2.0` all read as "not available".
  */
 
+import type { TypedApiContract } from '@mnaoumov/typescript-lib/api-contract';
 import type {
   App,
   TAbstractFile
 } from 'obsidian';
-import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
+import { watchPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { Component } from 'obsidian';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
 import type { CustomAttachmentLocationApi as CustomAttachmentLocationFullApi } from './custom-attachment-location-api/api.d.ts';
 
@@ -49,7 +49,7 @@ export const CUSTOM_ATTACHMENT_LOCATION_API_VERSION_RANGE = '^1.2.0';
  * check would use the provider's contract, which a future provider could satisfy while dropping this member.
  * The entry is the provider's own, schemas included.
  */
-export const CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT: PluginApiContract = {
+export const CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT: TypedApiContract<CustomAttachmentLocationApi> = {
   collectAttachments: CUSTOM_ATTACHMENT_LOCATION_FULL_API_CONTRACT.collectAttachments
 };
 

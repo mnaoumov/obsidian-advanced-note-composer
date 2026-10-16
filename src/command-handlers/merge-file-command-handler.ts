@@ -1,17 +1,17 @@
 import type {
+  FileCommandHandlerShouldAddToFileMenuParams,
+  FileCommandHandlerShouldAddToFilesMenuParams
+} from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
   App,
   TFile
 } from 'obsidian';
-import type {
-  FileCommandHandlerShouldAddToFileMenuParams,
-  FileCommandHandlerShouldAddToFilesMenuParams
-} from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { FileCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
-import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { FileCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -131,13 +131,13 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean {
     super.shouldAddToFileMenu(params);
     return params.source !== 'link-context-menu';
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean {
     super.shouldAddToFilesMenu(params);
     return true;

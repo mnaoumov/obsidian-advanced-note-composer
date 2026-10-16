@@ -1,8 +1,8 @@
+import type { EditorCommandHandlerConstructorParams } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
 import type { App } from 'obsidian';
-import type { EditorCommandHandlerConstructorParams } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
 import { MarkdownView } from 'obsidian';
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
 
 interface ActiveEditorCommandHandlerBaseConstructorParams extends EditorCommandHandlerConstructorParams {
   readonly app: App;

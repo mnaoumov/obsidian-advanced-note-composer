@@ -1,12 +1,12 @@
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
   TFile
 } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { Mock } from 'vitest';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   describe,

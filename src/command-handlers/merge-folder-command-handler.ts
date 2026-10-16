@@ -1,18 +1,16 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type {
   App,
   TAbstractFile,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
-import { Vault } from 'obsidian';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 import {
   doesExist,
   FileSystemType,
@@ -20,15 +18,17 @@ import {
   isFolder,
   isMarkdownFile,
   isTreatedAsAttachment
-} from 'obsidian-dev-utils/obsidian/file-system';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+} from '@mnaoumov/obsidian-lib/file-system';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import {
   getAvailablePath,
   getOrCreateFileSafe,
   isChildOrSelf
-} from 'obsidian-dev-utils/obsidian/vault';
-import { join } from 'obsidian-dev-utils/path';
+} from '@mnaoumov/obsidian-lib/vault';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import { join } from '@mnaoumov/typescript-lib/path';
+import { Vault } from 'obsidian';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -126,7 +126,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;

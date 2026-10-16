@@ -20,17 +20,17 @@
  * loop should be answering.
  */
 
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
 import type {
   App,
   Editor,
   EditorPosition,
   TFile
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
+import { revealInFileExplorer } from '@mnaoumov/obsidian-lib/file-explorer';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { MarkdownView } from 'obsidian';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { revealInFileExplorer } from 'obsidian-dev-utils/obsidian/file-explorer';
 
 /**
  * How long to wait between polls for the destination note's editor.

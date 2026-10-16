@@ -1,9 +1,9 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App,
   Editor,
   MarkdownFileInfo
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

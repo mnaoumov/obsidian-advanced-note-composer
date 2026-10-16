@@ -1,18 +1,18 @@
 import type {
+  FileCommandHandlerShouldAddToFileMenuParams,
+  FileCommandHandlerShouldAddToFilesMenuParams
+} from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
   App,
   TFile
 } from 'obsidian';
-import type {
-  FileCommandHandlerShouldAddToFileMenuParams,
-  FileCommandHandlerShouldAddToFilesMenuParams
-} from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -48,7 +48,7 @@ interface TestableHandler {
 // Partial rather than a bare factory: `plugin-settings.ts` reaches dev-utils' folder-note module, which
 // imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
 // `undefined` and the whole suite fails to load.
-vi.mock(import('obsidian-dev-utils/obsidian/file-system'), async (importOriginal) => ({
+vi.mock(import('@mnaoumov/obsidian-lib/file-system'), async (importOriginal) => ({
   ...await importOriginal(),
   isMarkdownFile: vi.fn()
 }));

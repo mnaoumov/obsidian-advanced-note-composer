@@ -13,9 +13,9 @@ import type {
   Workspace
 } from 'obsidian';
 
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { Platform } from 'obsidian';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
   beforeEach,
@@ -58,7 +58,7 @@ interface TestableSuggestModalBase {
   shouldShowNonFileBookmarks: boolean;
 }
 
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-context', () => ({
+vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-context', () => ({
   addPluginCssClasses: vi.fn()
 }));
 

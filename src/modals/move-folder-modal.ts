@@ -3,7 +3,7 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
+import { isChildOrSelf } from '@mnaoumov/obsidian-lib/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

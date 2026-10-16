@@ -1,25 +1,25 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { normalizePath } from 'obsidian';
-import { noop } from 'obsidian-dev-utils/function';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
+import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
+import { noop } from '@mnaoumov/typescript-lib/function';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import {
   basename,
   join
-} from 'obsidian-dev-utils/path';
+} from '@mnaoumov/typescript-lib/path';
+import { normalizePath } from 'obsidian';
 
 import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -364,7 +364,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;

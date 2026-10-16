@@ -1,19 +1,19 @@
+import type { PluginSettingsTabBaseConstructorParams } from '@mnaoumov/obsidian-lib/plugin/plugin-settings-tab';
+import type { CodeHighlighterComponent } from '@mnaoumov/obsidian-lib/setting-components/code-highlighter-component';
+import type { SettingEx } from '@mnaoumov/obsidian-lib/setting-ex';
 import type {
   SettingDefinitionItem,
   SettingDefinitionPage,
   SettingGroupItem
 } from 'obsidian';
-import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
-import type { CodeHighlighterComponent } from 'obsidian-dev-utils/obsidian/setting-components/code-highlighter-component';
-import type { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { getDebugController } from 'obsidian-dev-utils/debug';
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
-import { EMPTY } from 'obsidian-dev-utils/string';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { PluginSettingsTabBase } from '@mnaoumov/obsidian-lib/plugin/plugin-settings-tab';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { getDebugController } from '@mnaoumov/typescript-lib/debug';
+import { EMPTY } from '@mnaoumov/typescript-lib/string';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
 import type { MenuPlaceableCommand } from './menu-placeable-commands.ts';
 import type { PluginSettings } from './plugin-settings.ts';

@@ -6,8 +6,8 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,

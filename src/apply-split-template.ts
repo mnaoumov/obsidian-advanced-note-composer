@@ -1,8 +1,8 @@
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   TFile
 } from 'obsidian';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { DestinationTemplaterRunner } from './destination-templater.ts';
 import type { Frontmatter } from './frontmatter-merge.ts';

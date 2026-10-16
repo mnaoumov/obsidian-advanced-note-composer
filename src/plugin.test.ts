@@ -1,21 +1,21 @@
+import type { CommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/command-handler';
+import type { CommandHandlerComponent } from '@mnaoumov/obsidian-lib/command-handlers/command-handler-component';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { PluginSettingsComponentBase } from '@mnaoumov/obsidian-lib/components/plugin-settings-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   EventRef,
   PluginManifest,
   TFile
 } from 'obsidian';
-import type { CommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler';
-import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { PluginSettingsComponentBase } from 'obsidian-dev-utils/obsidian/components/plugin-settings-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
-import { TemplatesLanguageComponent } from 'obsidian-dev-utils/obsidian/components/templates-language-component';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
+import { TemplatesLanguageComponent } from '@mnaoumov/obsidian-lib/components/templates-language-component';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   describe,
   expect,
@@ -38,19 +38,19 @@ import { SelectionAnchorComponent } from './selection-anchor-component.ts';
 import { SelectionHighlightComponent } from './selection-highlight-component.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
+vi.mock('@mnaoumov/obsidian-lib/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/components/templates-language-component', () => ({
+vi.mock('@mnaoumov/obsidian-lib/components/templates-language-component', () => ({
   TemplatesLanguageComponent: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
+vi.mock('@mnaoumov/obsidian-lib/data-handler', () => ({
   PluginDataHandler: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
+vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-event-source', () => ({
   PluginEventSourceImpl: vi.fn()
 }));
 

@@ -1,19 +1,19 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { PathOrFile } from '@mnaoumov/obsidian-lib/file-system';
+import type { GenerateRawMarkdownLinkParams } from '@mnaoumov/obsidian-lib/link';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Reference
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
-import type { GenerateRawMarkdownLinkParams } from 'obsidian-dev-utils/obsidian/link';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
 import {
   editBacklinks,
   generateRawMarkdownLink,
   splitSubpath
-} from 'obsidian-dev-utils/obsidian/link';
-import { parseLink } from 'obsidian-dev-utils/obsidian/parse-link';
+} from '@mnaoumov/obsidian-lib/link';
+import { parseLink } from '@mnaoumov/obsidian-lib/parse-link';
+import { normalizeOptionalProperties } from '@mnaoumov/typescript-lib/object-utils';
 
 // Mirrors Obsidian's internal heading normalization used to MATCH a heading against a link subpath
 // segment (the core `rename this heading` command lowercases and replaces these characters with a

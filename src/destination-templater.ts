@@ -1,10 +1,10 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App,
   TFile
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 
 import { recordPendingTemplaterCursor } from './templater-cursor.ts';
 

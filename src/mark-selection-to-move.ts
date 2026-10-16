@@ -1,8 +1,8 @@
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   TFile
 } from 'obsidian';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { Selection } from './composers/composer-base.ts';
 import type { MoveNoticeComponent } from './move-notice-component.ts';

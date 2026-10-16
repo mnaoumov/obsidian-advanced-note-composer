@@ -1,3 +1,5 @@
+import type { FolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type { BookmarkItem } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
@@ -5,9 +7,16 @@ import type {
   SearchResult,
   SearchResultContainer
 } from 'obsidian';
-import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
+import { applySpellcheckMode } from '@mnaoumov/obsidian-lib/html-element';
+import { SpellcheckMode } from '@mnaoumov/obsidian-lib/obsidian-settings';
+import { addPluginCssClasses } from '@mnaoumov/obsidian-lib/plugin/plugin-context';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { basename } from '@mnaoumov/typescript-lib/path';
+import {
+  trimEnd,
+  trimStart
+} from '@mnaoumov/typescript-lib/string';
 import {
   parseFrontMatterAliases,
   Platform,
@@ -20,15 +29,6 @@ import {
   SuggestModal,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { applySpellcheckMode } from 'obsidian-dev-utils/obsidian/html-element';
-import { SpellcheckMode } from 'obsidian-dev-utils/obsidian/obsidian-settings';
-import { addPluginCssClasses } from 'obsidian-dev-utils/obsidian/plugin/plugin-context';
-import { basename } from 'obsidian-dev-utils/path';
-import {
-  trimEnd,
-  trimStart
-} from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { CommandCategory } from '../plugin-settings.ts';

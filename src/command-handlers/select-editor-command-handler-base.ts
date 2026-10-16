@@ -6,7 +6,7 @@ import type {
   MarkdownView
 } from 'obsidian';
 
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

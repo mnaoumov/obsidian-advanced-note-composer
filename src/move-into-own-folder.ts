@@ -16,9 +16,9 @@ import type {
   TFile
 } from 'obsidian';
 
+import { createFolderSafe } from '@mnaoumov/obsidian-lib/vault';
+import { trimEnd } from '@mnaoumov/typescript-lib/string';
 import { normalizePath } from 'obsidian';
-import { createFolderSafe } from 'obsidian-dev-utils/obsidian/vault';
-import { trimEnd } from 'obsidian-dev-utils/string';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 

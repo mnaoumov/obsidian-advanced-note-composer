@@ -1,18 +1,18 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
+import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 
@@ -214,7 +214,7 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;

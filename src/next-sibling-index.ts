@@ -7,8 +7,8 @@ import {
   isFile,
   isFolder,
   isMarkdownFile
-} from 'obsidian-dev-utils/obsidian/file-system';
-import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
+} from '@mnaoumov/obsidian-lib/file-system';
+import { getMandatoryNamedGroup } from '@mnaoumov/typescript-lib/reg-exp';
 
 import { buildNumberedNameRegExp } from './numbered-name.ts';
 import { ReorderItemKind } from './reorder-items.ts';

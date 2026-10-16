@@ -1,3 +1,6 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor,
@@ -6,12 +9,9 @@ import type {
   MarkdownView,
   TFile
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
 
 import type { Level } from '../markdown-heading-document.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';

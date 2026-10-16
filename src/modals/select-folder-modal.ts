@@ -15,19 +15,19 @@
  * (issue #297).
  */
 
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 import type {
   App,
   FuzzyMatch,
   TFolder
 } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
+import { ModalCommandBuilder } from '@mnaoumov/obsidian-lib/modals/modal-command-builder';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import {
   FuzzySuggestModal,
   Setting
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

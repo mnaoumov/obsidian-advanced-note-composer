@@ -4,7 +4,7 @@
  * This plugin's `Folder note` SETTINGS, expressed as `obsidian-dev-utils`' folder-note parameters.
  *
  * The folder-note concept itself — where a folder's note lives, how the installed `folder-notes` plugin is
- * read under `Auto`, which file that resolves to — moved into `obsidian-dev-utils/obsidian/folder-note` in
+ * read under `Auto`, which file that resolves to — moved into `@mnaoumov/obsidian-lib/folder-note` in
  * 94.2.0 (it is not this plugin's to own, and `renderInternalLink` needed the same answer). What is
  * left here is the only half that IS this plugin's: two settings, and the token vocabulary their name
  * template is written in.
@@ -13,19 +13,19 @@
  * than assembling the pair itself, which is how one of the two settings ends up read from somewhere else.
  */
 
+import type { FolderNoteConfig } from '@mnaoumov/obsidian-lib/folder-note';
+import type { RenderInternalLinkFolderNoteOptions } from '@mnaoumov/obsidian-lib/markdown';
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderNoteConfig } from 'obsidian-dev-utils/obsidian/folder-note';
-import type { RenderInternalLinkFolderNoteOptions } from 'obsidian-dev-utils/obsidian/markdown';
 
 import {
   FolderNoteLocation,
   resolveFolderNote,
   resolveFolderNoteConfig
-} from 'obsidian-dev-utils/obsidian/folder-note';
+} from '@mnaoumov/obsidian-lib/folder-note';
 
 import { resolveFolderTemplateTokens } from './template-tokens.ts';
 

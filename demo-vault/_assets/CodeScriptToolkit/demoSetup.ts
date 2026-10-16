@@ -4,6 +4,8 @@ import type {
 } from 'obsidian';
 
 import { Notice } from 'obsidian';
+// Deliberately still `obsidian-dev-utils`, unlike the plugin itself: a vault has no `node_modules`, and
+// `CodeScript Toolkit` serves that package, and no other library, to vault scripts as a built-in module.
 import {
   configureCommunityPlugin,
   disableCommunityPlugin,

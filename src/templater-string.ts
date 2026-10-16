@@ -3,8 +3,8 @@ import type {
   TFile
 } from 'obsidian';
 
-import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 
 import type { TemplaterPreludeTokens } from './templater-prelude.ts';
 

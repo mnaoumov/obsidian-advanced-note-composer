@@ -1,8 +1,8 @@
+import type { ReleaseNotes } from '@mnaoumov/obsidian-lib/components/release-notes-component';
 import type { App } from 'obsidian';
-import type { ReleaseNotes } from 'obsidian-dev-utils/obsidian/components/release-notes-component';
 
-import { ReleaseNotesComponent } from 'obsidian-dev-utils/obsidian/components/release-notes-component';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
+import { ReleaseNotesComponent } from '@mnaoumov/obsidian-lib/components/release-notes-component';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 

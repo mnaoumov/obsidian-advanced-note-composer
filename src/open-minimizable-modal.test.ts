@@ -1,10 +1,10 @@
 import type { App as AppOriginal } from 'obsidian';
 
-import { Modal } from 'obsidian';
 import {
   noop,
   noopAsync
-} from 'obsidian-dev-utils/function';
+} from '@mnaoumov/typescript-lib/function';
+import { Modal } from 'obsidian';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,

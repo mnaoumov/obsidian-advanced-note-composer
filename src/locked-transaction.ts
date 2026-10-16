@@ -1,8 +1,8 @@
+import type { PathOrFile } from '@mnaoumov/obsidian-lib/file-system';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type { App } from 'obsidian';
-import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 
 /**
  * A resource to lock for the duration of an operation.

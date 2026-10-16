@@ -1,17 +1,17 @@
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 import type {
   App,
   FuzzyMatch,
   TAbstractFile
 } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { isChildOrSelf } from '@mnaoumov/obsidian-lib/vault';
 import {
   FuzzySuggestModal,
   TFile
 } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { isChildOrSelf } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';

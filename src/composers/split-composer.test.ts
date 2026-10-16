@@ -1,3 +1,6 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
   Editor,
@@ -7,21 +10,18 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { Mock } from 'vitest';
 
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import {
   castTo,
   normalizeOptionalProperties
-} from 'obsidian-dev-utils/object-utils';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
-import { resolveValue } from 'obsidian-dev-utils/value-provider';
+} from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { resolveValue } from '@mnaoumov/typescript-lib/value-provider';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   App,
   getFrontMatterInfo
@@ -128,10 +128,10 @@ interface SameNoteComposerParams {
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
 // would otherwise poll forever. Everything else (vault, lock, transaction, links) is REAL.
 vi.mock(
-  'obsidian-dev-utils/obsidian/metadata-cache',
+  '@mnaoumov/obsidian-lib/metadata-cache',
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import('obsidian-dev-utils/obsidian/metadata-cache')
+      typeof import('@mnaoumov/obsidian-lib/metadata-cache')
     >()),
     getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
     getCacheSafe: vi.fn().mockResolvedValue(null),
@@ -141,7 +141,7 @@ vi.mock(
 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
 // reach into unmocked App internals (embedRegistry). Not the behavior under test.
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi
     .fn()
     .mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
@@ -150,7 +150,7 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
     })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 

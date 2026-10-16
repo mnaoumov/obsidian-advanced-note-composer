@@ -15,16 +15,16 @@
  * `1.2.0`, or with its `Headings` module off all read as "no times".
  */
 
+import type { TypedApiContract } from '@mnaoumov/typescript-lib/api-contract';
 import type {
   App,
   HeadingCache,
   TFile
 } from 'obsidian';
-import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
+import { watchPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { Component } from 'obsidian';
-import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type {
   AdvancedMetadataCacheApi as AdvancedMetadataCacheFullApi,
@@ -51,7 +51,7 @@ export const ADVANCED_METADATA_CACHE_API_VERSION_RANGE = '^1.2.0';
  * that dropped the member is not mistaken for one that has it. The entry is the provider's own, schemas
  * included.
  */
-export const ADVANCED_METADATA_CACHE_API_CONTRACT: PluginApiContract = {
+export const ADVANCED_METADATA_CACHE_API_CONTRACT: TypedApiContract<AdvancedMetadataCacheApi> = {
   getHeadingTimes: ADVANCED_METADATA_CACHE_FULL_API_CONTRACT.getHeadingTimes
 };
 

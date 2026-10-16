@@ -1,4 +1,4 @@
-import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
+import { getMandatoryNamedGroup } from '@mnaoumov/typescript-lib/reg-exp';
 
 /**
  * The name template a section falls back to when its `{{file}}` marker names nothing — and the name the

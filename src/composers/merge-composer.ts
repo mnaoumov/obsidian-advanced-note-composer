@@ -1,11 +1,11 @@
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 
 import {
   editLinks,
   extractLinkFile,
   updateLink
-} from 'obsidian-dev-utils/obsidian/link';
+} from '@mnaoumov/obsidian-lib/link';
 
 import type { LockTarget } from '../locked-transaction.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
@@ -165,7 +165,7 @@ export class MergeComposer extends ComposerBase {
     }
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override async fixBacklinks(params: ComposerBaseFixBacklinksParams): Promise<void> {
     const { updatedFilePaths, updatedLinks } = params;
     await super.fixBacklinks(params);

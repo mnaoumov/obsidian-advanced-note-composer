@@ -1,17 +1,17 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   CachedMetadata,
   HeadingCache
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { resolveSubpath } from 'obsidian';
 import {
   editBacklinks,
   splitSubpath
-} from 'obsidian-dev-utils/obsidian/link';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/obsidian-lib/link';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { resolveSubpath } from 'obsidian';
 
 import type {
   HeadingTreeNode,

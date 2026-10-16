@@ -1,16 +1,16 @@
 import type {
+  ResourceLockComponent,
+  ResourceLockComponentLockForPathParams
+} from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
   App,
   Notice,
   TFile,
   TFolder,
   Vault
 } from 'obsidian';
-import type {
-  ResourceLockComponent,
-  ResourceLockComponentLockForPathParams
-} from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,

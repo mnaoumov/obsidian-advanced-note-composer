@@ -4,18 +4,18 @@ import type {
   TFile,
   TFolder
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsFunctionExtended } from 'obsidian-dev-utils/obsidian/attachment-path';
 
 import {
   getAttachmentFolderPath,
-  getAttachmentFolderPathSyncOrNull
-} from 'obsidian-dev-utils/obsidian/attachment-path';
+  getAttachmentFolderPathSyncOrNull,
+  getCheckIsAttachmentUnitFolderFunction
+} from '@mnaoumov/obsidian-lib/attachment-path';
 import {
   isFile,
   isFolder,
   isMarkdownFile,
   isTreatedAsAttachment
-} from 'obsidian-dev-utils/obsidian/file-system';
+} from '@mnaoumov/obsidian-lib/file-system';
 
 import { FlattenMode } from './plugin-settings.ts';
 
@@ -482,15 +482,16 @@ function hasOwnNote(folder: TFolder, attachmentExtensions: readonly string[]): b
  * over, which is what makes Obsidian's own `attachmentFolderPath` unusable as a statement of intent (issue
  * #213).
  *
- * The `extended` member `obsidian-dev-utils` hangs on `Vault.getAvailablePathForAttachments` IS the
- * hand-over — the same signal `getAttachmentFolderPathSyncOrNull` reads to answer `null` — so this asks the
- * question in the one place the answer is recorded rather than sniffing for a plugin id.
+ * `@mnaoumov/obsidian-lib` hands the resolution over exactly when `Custom Attachment Location` publishes its
+ * attachment-path API in the plugin registry. {@link getCheckIsAttachmentUnitFolderFunction} answers from
+ * that same lookup — the one `getAttachmentFolderPathSyncOrNull` reads to answer `null` — so asking it keeps
+ * the two from disagreeing about whether a plugin owns the resolution.
  *
  * @param app - The Obsidian application instance.
  * @returns Whether a plugin owns the attachment resolution.
  */
 function isAttachmentResolutionOwnedByPlugin(app: App): boolean {
-  return !!(app.vault.getAvailablePathForAttachments as Partial<GetAvailablePathForAttachmentsFunctionExtended>).extended;
+  return getCheckIsAttachmentUnitFolderFunction(app) !== undefined;
 }
 
 /**

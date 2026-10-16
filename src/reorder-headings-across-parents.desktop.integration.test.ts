@@ -105,7 +105,7 @@ describe('reorder headings across parents', () => {
 
         // A drag has no trusted equivalent (`sendInputEvent` cannot express one), so the same synthetic
         // sequence `reorder-drag.desktop.integration.test.ts` uses drives Obsidian's drag manager here.
-        /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
+        /* eslint-disable obsidian-dev-toolkit/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         function dragRowOnto(sourceLabel: string, targetLabel: string, heightFraction: number): DropOutcome {
           const sourceEl = getRow(sourceLabel);
           const targetEl = getRow(targetLabel);
@@ -129,7 +129,7 @@ describe('reorder headings across parents', () => {
           sourceEl.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
           return classes;
         }
-        /* eslint-enable obsidian-dev-utils/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
+        /* eslint-enable obsidian-dev-toolkit/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
 
         function getRow(rowLabel: string): HTMLElement {
           const itemEl = document.querySelector(`.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(rowLabel)}"]`);

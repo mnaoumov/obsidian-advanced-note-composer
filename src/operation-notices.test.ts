@@ -1,20 +1,20 @@
 import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentDelayedNotice
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { RenderInternalLinkParams } from '@mnaoumov/obsidian-lib/markdown';
+import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentDelayedNotice
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { RenderInternalLinkParams } from 'obsidian-dev-utils/obsidian/markdown';
 
-import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
-import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { PluginNoticeMode } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { normalizeOptionalProperties } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -37,7 +37,7 @@ import {
 import { showOperationProgressModal } from './operation-progress-modal.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn()
 }));
 

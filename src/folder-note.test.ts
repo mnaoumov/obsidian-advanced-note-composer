@@ -3,8 +3,8 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   describe,

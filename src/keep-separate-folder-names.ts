@@ -1,5 +1,5 @@
-import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
-import { isValidRegExp } from 'obsidian-dev-utils/reg-exp';
+import { PathSettings } from '@mnaoumov/obsidian-lib/path-settings';
+import { isValidRegExp } from '@mnaoumov/typescript-lib/reg-exp';
 
 /**
  * Parameters for {@link shouldKeepFolderNameSeparate}.

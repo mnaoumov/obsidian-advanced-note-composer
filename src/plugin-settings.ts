@@ -1,6 +1,6 @@
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { PathSettings } from 'obsidian-dev-utils/obsidian/path-settings';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { PathSettings } from '@mnaoumov/obsidian-lib/path-settings';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
 import {
   COMMAND_CATEGORIES,

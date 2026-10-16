@@ -18,18 +18,18 @@
  * as early as the mock-up did.
  */
 
-import type { PluginNoticeComponentDelayedNotice } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { PluginNoticeComponentDelayedNotice } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 
+import { flushQueue } from '@mnaoumov/obsidian-lib/queue';
+import {
+  invokeAsyncSafely,
+  sleep
+} from '@mnaoumov/typescript-lib/async';
 import {
   App,
   ButtonComponent,
   Modal
 } from 'obsidian';
-import {
-  invokeAsyncSafely,
-  sleep
-} from 'obsidian-dev-utils/async';
-import { flushQueue } from 'obsidian-dev-utils/obsidian/queue';
 
 /**
  * How long the dialog may keep the vault blocked while waiting for queued work to drain.

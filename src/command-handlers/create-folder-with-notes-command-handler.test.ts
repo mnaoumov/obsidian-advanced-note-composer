@@ -1,26 +1,26 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 import type { MockInstance } from 'vitest';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
-} from 'obsidian-dev-utils/obsidian/resource-lock';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/obsidian-lib/resource-lock';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -87,24 +87,24 @@ interface ValidateTypedNoteNameParams {
  */
 const NAME_ROW_CLASS = 'advanced-note-composer-confirm-name-row';
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
 // A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span would let
 // A missing link pass unnoticed.
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
+vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({
   prompt: vi.fn()
 }));
 
