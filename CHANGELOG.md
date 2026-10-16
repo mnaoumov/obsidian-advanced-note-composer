@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 5.19.1
+
+- refactor(deps): merge moving off obsidian-dev-utils onto the @mnaoumov packages
+- refactor(api): merge re-copying the providers' contracts in their short typescript-lib form
+- refactor(api): merge using the providers' copied plugin API contracts, with full schemas
+- fix(ui): render plugin names as code in notices, settings, docs and comments
+- build: merge loading obsidian-typings' ESM copy for the Templater augmentation
+- refactor: merge the keyed getConfig read of attachmentFolderPath
+- test: merge using the obsidian-typings declarations of Obsidian internals
+
 ## 5.19.0
 
 - feat(select): merge Copy link to this file (#308)
