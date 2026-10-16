@@ -30,10 +30,6 @@ import {
   updateReorderedHeadingLinks
 } from './reordered-heading-links.ts';
 
-interface MetadataCacheWithCompute {
-  computeMetadataAsync: () => void;
-}
-
 vi.mock('obsidian', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian')>(),
   resolveSubpath: vi.fn()
@@ -165,7 +161,7 @@ describe('updateReorderedHeadingLinks', () => {
         'target.md': '# A\n\n# B\n\n## A1\n'
       }
     }).asOriginalType__();
-    castTo<MetadataCacheWithCompute>(app.metadataCache).computeMetadataAsync = vi.fn();
+    app.metadataCache.computeMetadataAsync = vi.fn();
     resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
     resourceLockComponent.load();
 

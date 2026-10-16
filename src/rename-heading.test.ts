@@ -25,10 +25,6 @@ import {
   updateHeadingBacklinks
 } from './rename-heading.ts';
 
-interface MetadataCacheWithCompute {
-  computeMetadataAsync: () => void;
-}
-
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
   ...(await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>()),
   getBacklinksForFileSafe: vi.fn()
@@ -158,7 +154,7 @@ describe('updateHeadingBacklinks', () => {
         'target.md': '# Parent\n\ntext\n\n## Child\n\ntext\n'
       }
     }).asOriginalType__();
-    castTo<MetadataCacheWithCompute>(app.metadataCache).computeMetadataAsync = vi.fn();
+    app.metadataCache.computeMetadataAsync = vi.fn();
     resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
     resourceLockComponent.load();
 

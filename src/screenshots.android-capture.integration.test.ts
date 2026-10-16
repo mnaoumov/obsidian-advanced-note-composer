@@ -81,22 +81,6 @@ interface CursorEditorView {
   editor: CursorEditor;
 }
 
-/**
- * `App`, reduced to the font-size applier that `obsidian-typings` does not
- * declare. Setting `baseFontSize` alone changes nothing on screen.
- */
-interface FontSizeApp {
-  updateFontSize: (this: void) => void;
-}
-
-/**
- * `App`, reduced to the inline-title toggle that `obsidian-typings` does not
- * declare.
- */
-interface InlineTitleApp {
-  updateInlineTitleDisplay: (this: void) => void;
-}
-
 interface OpenCommandDialogParams {
   readonly commandId: string;
 
@@ -233,14 +217,12 @@ beforeAll(async () => {
       // `MOBILE_FONT_SIZE_IN_PIXELS`. Setting the config alone changes nothing
       // on screen; the applier is what re-renders.
       app.vault.setConfig('baseFontSize', fontSizeInPixels);
-      const fontApp: unknown = app;
-      (fontApp as FontSizeApp).updateFontSize();
+      app.updateFontSize();
 
       // The note's own `# Project plan` heading already titles it, so Obsidian's
       // inline title renders the name twice.
       app.vault.setConfig('showInlineTitle', false);
-      const inlineTitleApp: unknown = app;
-      (inlineTitleApp as InlineTitleApp).updateInlineTitleDisplay();
+      app.updateInlineTitleDisplay();
 
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
 
