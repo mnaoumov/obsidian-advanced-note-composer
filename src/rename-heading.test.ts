@@ -1,14 +1,14 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App as AppOriginal,
   Reference
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { getBacklinksForFileSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -25,8 +25,8 @@ import {
   updateHeadingBacklinks
 } from './rename-heading.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>()),
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>()),
   getBacklinksForFileSafe: vi.fn()
 }));
 

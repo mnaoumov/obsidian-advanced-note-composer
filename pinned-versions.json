@@ -45,7 +45,7 @@
     },
     "typescript": {
       "section": "devDependencies",
-      "why": "TypeScript 7 (tsgo) breaks this toolchain: build:compile fails in obsidian-dev-utils' check-project-types (`sys`) and type-aware lint fails in @typescript-eslint (`ModuleKind`). @typescript-eslint peer-requires >=4.8.4 <6.1.0, so 6.x is the last usable major. Hold until obsidian-dev-utils migrates.",
+      "why": "TypeScript 7 (tsgo) breaks this toolchain: build:compile fails in @mnaoumov/typescript-dev-toolkit's check-project-types (`sys`) and type-aware lint fails in @typescript-eslint (`ModuleKind`). @typescript-eslint peer-requires >=4.8.4 <6.1.0, so 6.x is the last usable major. Hold until @mnaoumov/typescript-dev-toolkit migrates.",
       "check": "node -e \"process.stdout.write(require('typescript-eslint/package.json').peerDependencies.typescript)\"",
       "expect": ">=4.8.4 <6.1.0"
     }

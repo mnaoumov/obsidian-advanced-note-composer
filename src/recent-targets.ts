@@ -28,7 +28,7 @@
  * every command handler in between, for state that is deliberately session-only anyway.
  */
 
-import type { PathOrAbstractFile } from 'obsidian-dev-utils/obsidian/file-system';
+import type { PathOrAbstractFile } from '@mnaoumov/obsidian-lib/file-system';
 
 /**
  * How many recorded targets to keep, matching the recent-file count `recent-suggestions.ts` asks Obsidian

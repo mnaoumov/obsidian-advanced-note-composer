@@ -1,10 +1,10 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { MoveOptions } from '../modals/paste-options-modal.ts';
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';

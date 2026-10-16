@@ -1,3 +1,5 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor,
@@ -6,10 +8,8 @@ import type {
   MarkdownView,
   TFile
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

@@ -1,7 +1,7 @@
 import {
   escapeRegExp,
   getMandatoryNamedGroup
-} from 'obsidian-dev-utils/reg-exp';
+} from '@mnaoumov/typescript-lib/reg-exp';
 
 import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 

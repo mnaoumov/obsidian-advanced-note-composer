@@ -1,14 +1,14 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App,
   Notice,
   TFile
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
+import { AllWindowsEventComponent } from '@mnaoumov/obsidian-lib/components/all-windows-event-component';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { ButtonComponent } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { ActiveEditorCommandHandlerBase } from './command-handlers/active-editor-command-handler-base.ts';
 import type { CancelMoveCommandHandler } from './command-handlers/cancel-move-command-handler.ts';
@@ -217,7 +217,7 @@ export class MoveNoticeComponent extends AllWindowsEventComponent {
   /**
    * Builds the notice's button definitions. Takes the heading and note positionally rather than as a params
    * bag, because a bag shared with {@link showNotice} would have to be named after each of them
-   * (`obsidian-dev-utils/params-options-name-match`).
+   * (`typescript-dev-toolkit/params-options-name-match`).
    *
    * @param markedHeading - The heading being marked, or `null` for a plain selection mark.
    * @param sourceFile - The note being marked.

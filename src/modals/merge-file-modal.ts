@@ -1,16 +1,16 @@
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { ModalCommandBuilder } from '@mnaoumov/obsidian-lib/modals/modal-command-builder';
+import { trashSafe } from '@mnaoumov/obsidian-lib/vault';
 import {
   App,
   Keymap,
   TAbstractFile,
   TFile
 } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { ModalCommandBuilder } from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
-import { trashSafe } from 'obsidian-dev-utils/obsidian/vault';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';
@@ -20,6 +20,7 @@ import type {
 } from './suggest-modal-base.ts';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
+import { toEnumValue } from '../enum-value.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { MergeItemSelector } from '../item-selectors/merge-item-selector.ts';
 import {
@@ -213,7 +214,7 @@ class MergeFileModal extends SuggestModalBase {
       key: '5',
       modifiers: ['Alt'],
       onChange: (value: string) => {
-        this.frontmatterMergeStrategy = value as FrontmatterMergeStrategy;
+        this.frontmatterMergeStrategy = toEnumValue(FrontmatterMergeStrategy, value);
       },
       onInit: (dropdownComponent) => {
         dropdownComponent.addOptions({

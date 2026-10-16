@@ -4,8 +4,8 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,

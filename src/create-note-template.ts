@@ -20,7 +20,7 @@
 
 import type { TFile } from 'obsidian';
 
-import { getMandatoryNamedGroup } from 'obsidian-dev-utils/reg-exp';
+import { getMandatoryNamedGroup } from '@mnaoumov/typescript-lib/reg-exp';
 
 import { TEMPLATE_TOKEN_REG_EXP } from './template-token-reg-exp.ts';
 import { resolveTemplateTokens } from './template-tokens.ts';

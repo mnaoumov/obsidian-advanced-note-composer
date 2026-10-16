@@ -4,12 +4,12 @@ import type {
 } from 'obsidian';
 import type { Promisable } from 'type-fest';
 
-import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { parseMetadata } from '@mnaoumov/obsidian-lib/metadata-cache';
 import {
   trimEnd,
   trimStart
-} from 'obsidian-dev-utils/string';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/typescript-lib/string';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
 import { InsertMode } from './insert-mode.ts';
 

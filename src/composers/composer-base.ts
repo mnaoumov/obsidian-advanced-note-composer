@@ -1,11 +1,34 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type { HeadingInfo } from '@obsidian-typings/obsidian-public-latest';
 import type {
   CachedMetadata,
   Pos
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import {
+  convertLink,
+  editLinks,
+  editLinksInContent,
+  extractLinkFile,
+  splitSubpath,
+  updateLink
+} from '@mnaoumov/obsidian-lib/link';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import {
+  getBacklinksForFileSafe,
+  getCacheSafe,
+  getFrontmatterSafe
+} from '@mnaoumov/obsidian-lib/metadata-cache';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { noop } from '@mnaoumov/typescript-lib/function';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import {
+  extractDefaultExportInterop,
+  normalizeOptionalProperties
+} from '@mnaoumov/typescript-lib/object-utils';
+import { replaceAll } from '@mnaoumov/typescript-lib/string';
 import {
   App,
   Editor,
@@ -15,29 +38,6 @@ import {
   stringifyYaml,
   TFile
 } from 'obsidian';
-import { noop } from 'obsidian-dev-utils/function';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import {
-  extractDefaultExportInterop,
-  normalizeOptionalProperties
-} from 'obsidian-dev-utils/object-utils';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import {
-  convertLink,
-  editLinks,
-  editLinksInContent,
-  extractLinkFile,
-  splitSubpath,
-  updateLink
-} from 'obsidian-dev-utils/obsidian/link';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import {
-  getBacklinksForFileSafe,
-  getCacheSafe,
-  getFrontmatterSafe
-} from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import { replaceAll } from 'obsidian-dev-utils/string';
 
 import type {
   ExtractFrontmatterResult,
@@ -136,11 +136,11 @@ export interface ComposerBaseFixBacklinksParams {
 }
 
 export interface ComposerBaseUpdateEditorSelectionsParams {
-  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  // eslint-disable-next-line typescript-dev-toolkit/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
   readonly sourceCache: CachedMetadata | null;
-  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  // eslint-disable-next-line typescript-dev-toolkit/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
   readonly sourceFootnoteIdsToRemove: Set<string>;
-  // eslint-disable-next-line obsidian-dev-utils/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
+  // eslint-disable-next-line typescript-dev-toolkit/no-unused-params-members -- Shared hook params type; the overriding subclass reads these members, the base no-op does not.
   readonly sourceFootnoteIdsToRestore: Set<string>;
 }
 

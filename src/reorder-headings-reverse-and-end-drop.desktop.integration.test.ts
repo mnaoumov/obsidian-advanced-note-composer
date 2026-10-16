@@ -131,7 +131,7 @@ describe('reorder headings: reverse and the end drop zone (issue #307)', () => {
         const sourceEl = getRow('A');
         const lastRowEl = getRow('B2');
 
-        /* eslint-disable obsidian-dev-utils/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
+        /* eslint-disable obsidian-dev-toolkit/no-untrusted-input-events -- A drag has no trusted equivalent: sendInputEvent cannot express one. */
         // First the drop the reporter made: hovering the bottom of the last row promises a line under it,
         // which is inside `B`.
         let dataTransfer = new DataTransfer();
@@ -149,7 +149,7 @@ describe('reorder headings: reverse and the end drop zone (issue #307)', () => {
         const dropEvent = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer, ...point });
         zoneEl.dispatchEvent(dropEvent);
         sourceEl.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
-        /* eslint-enable obsidian-dev-utils/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
+        /* eslint-enable obsidian-dev-toolkit/no-untrusted-input-events -- The rest of the suite drives the UI with trusted input. */
         const rowsAfterDrop = readRows();
 
         const reorderButton = [...document.querySelectorAll('.modal-button-container button')].find((el) => el.textContent === 'Reorder');

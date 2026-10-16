@@ -1,5 +1,5 @@
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type { App } from 'obsidian';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
 import { normalizeTypedFolderName } from './create-folder-name.ts';
 import { INVALID_CHARACTERS_REG_EXP } from './filename-validation.ts';

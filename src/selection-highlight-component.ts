@@ -14,8 +14,8 @@ import {
   Decoration,
   EditorView
 } from '@codemirror/view';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { MarkdownView } from 'obsidian';
-import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 
 import type { Selection } from './composers/composer-base.ts';
 

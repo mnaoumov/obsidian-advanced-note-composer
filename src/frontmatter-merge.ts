@@ -1,5 +1,5 @@
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { FrontMatterInfo } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
   getFrontMatterInfo,

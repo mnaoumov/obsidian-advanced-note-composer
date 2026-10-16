@@ -1,9 +1,9 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type { App } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { assertNever } from 'obsidian-dev-utils/type-guards';
+import { assertNever } from '@mnaoumov/typescript-lib/type-guards';
 
 import type { MoveSelectionBuffer } from '../move-selection-buffer.ts';
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';

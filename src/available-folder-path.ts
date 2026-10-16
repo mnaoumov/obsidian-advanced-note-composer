@@ -3,8 +3,8 @@ import type {
   TAbstractFile
 } from 'obsidian';
 
-import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
-import { getAvailablePath } from 'obsidian-dev-utils/obsidian/vault';
+import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
+import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 
 /**
  * Finds an available FOLDER path, appending ` 1`, ` 2`, … until a name that no existing file or folder

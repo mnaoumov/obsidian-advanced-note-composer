@@ -1,10 +1,10 @@
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
-import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
-import { TemplatesLanguageComponent } from 'obsidian-dev-utils/obsidian/components/templates-language-component';
-import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
-import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
+import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
+import { TemplatesLanguageComponent } from '@mnaoumov/obsidian-lib/components/templates-language-component';
+import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
+import { PluginBase } from '@mnaoumov/obsidian-lib/plugin/plugin';
+import { PluginEventSourceImpl } from '@mnaoumov/obsidian-lib/plugin/plugin-event-source';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 
 import type { Level } from './markdown-heading-document.ts';
 

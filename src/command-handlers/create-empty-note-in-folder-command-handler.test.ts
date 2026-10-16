@@ -1,19 +1,19 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -46,7 +46,7 @@ interface TestableHandler {
   shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
@@ -54,11 +54,11 @@ vi.mock('obsidian-dev-utils/html-element', () => ({
 }));
 
 // A FRESH element per call: `appendChild` MOVES a node rather than copying it.
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({
+vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({
   prompt: vi.fn()
 }));
 

@@ -1,15 +1,16 @@
 import type { InternalPlugins } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 
-import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { alert } from '@mnaoumov/obsidian-lib/modals/alert';
 import {
   noop,
   noopAsync
-} from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { alert } from 'obsidian-dev-utils/obsidian/modals/alert';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+} from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { waitForAllAsyncOperations } from '@mnaoumov/typescript-test-toolkit/async-operation-tracking';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -35,11 +36,13 @@ interface MockPluginSettingsComponentResult {
   readonly whenLoadedFromFile: ReturnType<typeof vi.fn>;
 }
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+// Partial: the library's own release-notes component imports this module too, and needs the rest of it.
+vi.mock('@mnaoumov/obsidian-lib/html-element', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/html-element')>(),
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/modals/alert', () => ({
+vi.mock('@mnaoumov/obsidian-lib/modals/alert', () => ({
   alert: vi.fn().mockResolvedValue(undefined)
 }));
 
@@ -140,7 +143,12 @@ describe('createReleaseNotesComponent', () => {
       expect(settings.releaseNotesShown).toContain('5.11.0');
       expect(settings.releaseNotesShown).toContain('5.12.0');
       expect(mockAlert).toHaveBeenCalledTimes(1);
-      expect(mockAlert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Advanced Note Composer release notes' }));
+      // The library renders the plugin name as code, so the title is a fragment, not a string.
+      const title = ensureNonNullable(mockAlert.mock.lastCall)[0].title;
+      expect(title).toBeInstanceOf(DocumentFragment);
+      const titleFragment = castTo<DocumentFragment>(title);
+      expect(titleFragment.textContent).toBe('Advanced Note Composer release notes');
+      expect(titleFragment.querySelector('code')?.textContent).toBe(PLUGIN_NAME);
     });
 
     // Issue #293: a loader such as on-demand-plugins enables the plugin AFTER the layout is ready, so the

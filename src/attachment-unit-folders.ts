@@ -15,7 +15,7 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { getCheckIsAttachmentUnitFolderFunction } from 'obsidian-dev-utils/obsidian/attachment-path';
+import { getCheckIsAttachmentUnitFolderFunction } from '@mnaoumov/obsidian-lib/attachment-path';
 
 /**
  * Whether the folder itself is designated as an attachment unit.

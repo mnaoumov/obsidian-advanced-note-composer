@@ -20,20 +20,20 @@
  * The three ways out are {@link SplitNoteNameAction}; dismissing resolves `null`, exactly as the prompt did.
  */
 
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 
+import { applySpellcheckMode } from '@mnaoumov/obsidian-lib/html-element';
+import {
+  ModalCommandBuilder,
+  ModalCommandsRenderMode
+} from '@mnaoumov/obsidian-lib/modals/modal-command-builder';
+import { SpellcheckMode } from '@mnaoumov/obsidian-lib/obsidian-settings';
 import {
   App,
   ButtonComponent,
   Modal,
   TextComponent
 } from 'obsidian';
-import { applySpellcheckMode } from 'obsidian-dev-utils/obsidian/html-element';
-import {
-  ModalCommandBuilder,
-  ModalCommandsRenderMode
-} from 'obsidian-dev-utils/obsidian/modals/modal-command-builder';
-import { SpellcheckMode } from 'obsidian-dev-utils/obsidian/obsidian-settings';
 
 import { openMinimizableModal } from '../open-minimizable-modal.ts';
 

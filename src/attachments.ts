@@ -1,30 +1,30 @@
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type {
   App,
   Pos,
   TFile,
   TFolder
 } from 'obsidian';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
 
-import {
-  parseLinktext,
-  Vault
-} from 'obsidian';
 import {
   AttachmentPathContext,
   getAttachmentFilePath,
   isAtProperAttachmentPath
-} from 'obsidian-dev-utils/obsidian/attachment-path';
-import { findAttachmentUnitFolderPath } from 'obsidian-dev-utils/obsidian/attachment-unit-folder';
+} from '@mnaoumov/obsidian-lib/attachment-path';
+import { findAttachmentUnitFolderPath } from '@mnaoumov/obsidian-lib/attachment-unit-folder';
 import {
   isFile,
   isMarkdownFile,
   isTreatedAsAttachment
-} from 'obsidian-dev-utils/obsidian/file-system';
+} from '@mnaoumov/obsidian-lib/file-system';
 import {
   dirname,
   join
-} from 'obsidian-dev-utils/path';
+} from '@mnaoumov/typescript-lib/path';
+import {
+  parseLinktext,
+  Vault
+} from 'obsidian';
 
 import type { Selection } from './composers/composer-base.ts';
 

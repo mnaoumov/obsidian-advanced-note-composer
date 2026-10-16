@@ -3,11 +3,11 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -23,11 +23,11 @@ import { InsertMode } from '../insert-mode.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { confirmMergeFolderIntoFile } from './merge-folder-into-file-modal.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 

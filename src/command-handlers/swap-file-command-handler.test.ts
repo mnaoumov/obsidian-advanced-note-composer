@@ -1,22 +1,22 @@
+import type { FileCommandHandlerShouldAddToFileMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App as AppOriginal,
   TFile
 } from 'obsidian';
-import type { FileCommandHandlerShouldAddToFileMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/file-command-handler';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { MockInstance } from 'vitest';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
-} from 'obsidian-dev-utils/obsidian/resource-lock';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/obsidian-lib/resource-lock';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -52,14 +52,14 @@ interface Testable {
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does
 // not reach into unmocked App internals. Not the behavior under test.
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 

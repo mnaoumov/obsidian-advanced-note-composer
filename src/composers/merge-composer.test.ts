@@ -1,23 +1,23 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
-import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { getPath } from '@mnaoumov/obsidian-lib/file-system';
+import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -31,6 +31,10 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from '../custom-attachment-location-stub.ts';
 import { FrontmatterMergeStrategy } from '../plugin-settings.ts';
 import { MergeComposer } from './merge-composer.ts';
 
@@ -42,26 +46,30 @@ interface AbortableComposer {
 // (getBacklinksForFileSafe) and frontmatter extraction (getFrontmatterSafe). getCacheSafe runs for
 // REAL against test-mocks' synchronous indexer, so editLinks sees the target's links; the vault, lock,
 // transaction, and link rewriting are all real too.
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
   getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
 // UI-rendering helpers used only by the composer's notices — stub their return so link rendering does not
 // reach into unmocked App internals (embedRegistry). Not the behavior under test.
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
 let app: AppOriginal;
+
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
 let resourceLockComponent: ResourceLockComponent;
 
 beforeEach(() => {
@@ -386,9 +394,8 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
 }
 
 /**
- * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
- * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
- * native resolution. This is the only way a note gets an attachment folder OF ITS OWN — every native mode
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the attachment-path API it publishes is what
+ * `@mnaoumov/obsidian-lib` dispatches to instead of the native resolution. This is the only way a note gets an attachment folder OF ITS OWN — every native mode
  * resolves the same folder for every note in a folder.
  *
  * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
@@ -407,5 +414,5 @@ function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (noteP
     );
   }
 
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
+  publishCustomAttachmentLocationStub({ getAvailablePathForAttachments: extended, isAttachmentUnitFolder: () => false });
 }

@@ -1,10 +1,10 @@
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 import type { App } from 'obsidian';
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
 
-import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { flushQueue } from 'obsidian-dev-utils/obsidian/queue';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { flushQueue } from '@mnaoumov/obsidian-lib/queue';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { waitForAllAsyncOperations } from '@mnaoumov/typescript-test-toolkit/async-operation-tracking';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -86,7 +86,7 @@ vi.mock('obsidian', async (importOriginal) => {
   };
 });
 
-vi.mock('obsidian-dev-utils/obsidian/queue', () => ({
+vi.mock('@mnaoumov/obsidian-lib/queue', () => ({
   flushQueue: vi.fn().mockResolvedValue(undefined)
 }));
 

@@ -1,20 +1,23 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
 import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { getPath } from '@mnaoumov/obsidian-lib/file-system';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
+  afterEach,
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from './custom-attachment-location-stub.ts';
 import {
   canFlattenModeBeDistinctSync,
   collectFlattenItems,
@@ -26,6 +29,10 @@ import { FlattenMode } from './plugin-settings.ts';
 const ATTACHMENT_EXTENSIONS = ['.excalidraw.md'];
 
 let app: AppOriginal;
+
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
 let excludedPaths: string[] = [];
 
 /**
@@ -119,13 +126,9 @@ function isPathIgnored(path: string): boolean {
 }
 
 /**
- * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
- * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
- * native resolution. It is the only way a note gets an attachment folder derived from its own NAME — every
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the attachment-path API it publishes is what
+ * `@mnaoumov/obsidian-lib` dispatches to instead of the native resolution. It is the only way a note gets an attachment folder derived from its own NAME — every
  * native mode resolves the same folder for every note in a folder.
- *
- * Installed on the vault INSTANCE: the bridged member lives on `Vault.prototype`, so patching it there
- * would leak between tests.
  *
  * @param resolveAttachmentFolderPathForNote - Maps a note's path to the folder its attachments belong in.
  */
@@ -137,7 +140,7 @@ function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (noteP
     return Promise.resolve(`${basePath}.${params.attachmentFileExtension}`);
   }
 
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
+  publishCustomAttachmentLocationStub({ getAvailablePathForAttachments: extended, isAttachmentUnitFolder: () => false });
 }
 
 /**

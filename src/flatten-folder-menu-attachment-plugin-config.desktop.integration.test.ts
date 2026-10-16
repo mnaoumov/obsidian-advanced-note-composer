@@ -15,13 +15,10 @@ import {
 // `npx vitest run --project integration-tests:desktop src/flatten-folder-menu-attachment-plugin-config.desktop.integration.test.ts`.
 const PLUGIN_NAME = 'Advanced Note Composer';
 
-/**
- * The subset of `obsidian-dev-utils`' extended-resolution parameters the stub below reads.
- */
 interface ExtendedAttachmentParams {
   readonly attachmentFileBaseName: string;
   readonly attachmentFileExtension: string;
-  readonly notePathOrFile: null | string;
+  readonly notePathOrFile: NotePathLike | null | string;
 }
 
 interface MenuItemLike {
@@ -45,6 +42,41 @@ interface MenuProbe {
 }
 
 /**
+ * The subset of the attachment-path resolution parameters the stub below reads.
+ */
+interface NotePathLike {
+  readonly path: string;
+}
+
+interface ObsidianDevUtilsStateLike {
+  pluginApiRegistry?: PluginApiRegistryWrapperLike;
+}
+
+/**
+ * The slice of the shared plugin API registry the stand-in is published into.
+ */
+interface PluginApiRegistryHostLike {
+  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+}
+
+interface PluginApiRegistryLike {
+  records?: Record<string, PublishedPluginApiRecordLike[]>;
+  subscribers?: (() => void)[];
+}
+
+interface PluginApiRegistryWrapperLike {
+  value?: PluginApiRegistryLike;
+}
+
+interface PublishedPluginApiRecordLike {
+  api: object;
+  apiVersion: string;
+  contract: Record<string, object>;
+  isRevoked: boolean;
+  pluginId: string;
+}
+
+/**
  * Issue #213: the reporter ran `Create folder with notes...` on a folder and the two folder-only flatten
  * entries were missing from its context menu afterwards. They blamed `Custom Attachment Location`, and they
  * were right — though not for the reason anyone assumed.
@@ -65,8 +97,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
     const result = await evalInObsidian({
       async callback({ app, obsidianModule, pluginName }): Promise<MenuProbe> {
         const originalAttachmentFolderPath = app.vault.getConfig('attachmentFolderPath');
-        const hasOwnGetAvailablePathForAttachments = Object.hasOwn(app.vault, 'getAvailablePathForAttachments');
-        const originalGetAvailablePathForAttachments = app.vault.getAvailablePathForAttachments;
+        const standInRecords: PublishedPluginApiRecordLike[] = [];
 
         try {
           stubAttachmentLocationPlugin();
@@ -105,13 +136,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
           return { parkedAncestorTitles, parkedElsewhereTitles };
         } finally {
           app.vault.setConfig('attachmentFolderPath', originalAttachmentFolderPath);
-          if (hasOwnGetAvailablePathForAttachments) {
-            app.vault.getAvailablePathForAttachments = originalGetAvailablePathForAttachments;
-          } else {
-            // The real member lives on `Vault.prototype`; the stub only shadowed it on the instance, so the
-            // instance property has to go rather than be overwritten with a copy.
-            Reflect.deleteProperty(app.vault, 'getAvailablePathForAttachments');
-          }
+          revokeAttachmentLocationPlugin();
         }
 
         /**
@@ -155,23 +180,62 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
          * @returns The resolved attachment file path.
          */
         function resolveExtendedAttachmentPath(parameters: ExtendedAttachmentParams): Promise<string> {
-          const notePath = typeof parameters.notePathOrFile === 'string' ? parameters.notePathOrFile : '';
+          const notePath = typeof parameters.notePathOrFile === 'string' ? parameters.notePathOrFile : parameters.notePathOrFile?.path ?? '';
           const noteFolderPath = notePath.replace(/\/[^/]+$/, '');
           return Promise.resolve(`${noteFolderPath}/@/${parameters.attachmentFileBaseName}.${parameters.attachmentFileExtension}`);
         }
 
+        function getPluginApiRegistry(): PluginApiRegistryLike {
+          const host = window as PluginApiRegistryHostLike;
+          host.__obsidianDevUtils ??= {};
+          host.__obsidianDevUtils.pluginApiRegistry ??= {};
+          const wrapper = host.__obsidianDevUtils.pluginApiRegistry;
+          wrapper.value ??= {};
+          return wrapper.value;
+        }
+
+        function notifyPluginApiSubscribers(registry: PluginApiRegistryLike): void {
+          for (const subscriber of registry.subscribers ?? []) {
+            subscriber();
+          }
+        }
+
         /**
-         * Models `Custom Attachment Location`: the `extended` member it hangs on Obsidian's
-         * `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the native
-         * resolution, and its mere PRESENCE is what says the resolution is owned elsewhere. Installed on the
-         * INSTANCE — the real member lives on `Vault.prototype`.
+         * Revokes the stand-in and drops it, as the registry does when its provider unloads.
+         */
+        function revokeAttachmentLocationPlugin(): void {
+          const registry = getPluginApiRegistry();
+          for (const record of standInRecords.splice(0)) {
+            record.isRevoked = true;
+            if (registry.records) {
+              registry.records[record.pluginId] = (registry.records[record.pluginId] ?? []).filter((candidate) => candidate !== record);
+            }
+          }
+          notifyPluginApiSubscribers(registry);
+        }
+
+        /**
+         * Models `Custom Attachment Location`: the attachment-path API it publishes in the plugin registry is
+         * what `@mnaoumov/obsidian-lib` dispatches to instead of the native resolution, and its mere PRESENCE
+         * is what makes the resolution asynchronous.
          */
         function stubAttachmentLocationPlugin(): void {
-          // `bind` keeps the real call signature, so the native resolution still works for anything that
-          // invokes it — only the `extended` member beside it is new.
-          const patched = originalGetAvailablePathForAttachments.bind(app.vault);
-          Object.assign(patched, { extended: resolveExtendedAttachmentPath });
-          app.vault.getAvailablePathForAttachments = patched;
+          const customAttachmentLocationPluginId = 'obsidian-custom-attachment-location';
+          const registry = getPluginApiRegistry();
+          registry.records ??= {};
+          const record: PublishedPluginApiRecordLike = {
+            api: {
+              getAvailablePathForAttachments: resolveExtendedAttachmentPath,
+              isAttachmentUnitFolder: (): boolean => false
+            },
+            apiVersion: '1.3.0',
+            contract: {},
+            isRevoked: false,
+            pluginId: customAttachmentLocationPluginId
+          };
+          registry.records[customAttachmentLocationPluginId] = [...(registry.records[customAttachmentLocationPluginId] ?? []), record];
+          standInRecords.push(record);
+          notifyPluginApiSubscribers(registry);
         }
 
         async function trashIfExists(path: string): Promise<void> {

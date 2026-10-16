@@ -3,8 +3,8 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from './confirm-dialog-modal.ts';

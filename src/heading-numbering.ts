@@ -1,8 +1,8 @@
 import {
   escapeRegExp,
   getMandatoryNamedGroup
-} from 'obsidian-dev-utils/reg-exp';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/typescript-lib/reg-exp';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
 import type {
   HeadingTreeNode,

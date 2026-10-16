@@ -3,8 +3,8 @@ import type {
   TFile
 } from 'obsidian';
 
-import { addAlias } from 'obsidian-dev-utils/obsidian/file-manager';
-import { trimEnd } from 'obsidian-dev-utils/string';
+import { addAlias } from '@mnaoumov/obsidian-lib/file-manager';
+import { trimEnd } from '@mnaoumov/typescript-lib/string';
 
 import type { Frontmatter } from './frontmatter-merge.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';

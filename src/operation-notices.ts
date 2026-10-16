@@ -1,22 +1,22 @@
 import type {
-  App,
-  Notice
-} from 'obsidian';
-import type {
   PluginNoticeComponent,
   PluginNoticeComponentDelayedNotice,
   PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { PathOrAbstractFile } from 'obsidian-dev-utils/obsidian/file-system';
-import type { ValueProvider } from 'obsidian-dev-utils/value-provider';
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { PathOrAbstractFile } from '@mnaoumov/obsidian-lib/file-system';
+import type { ValueProvider } from '@mnaoumov/typescript-lib/value-provider';
+import type {
+  App,
+  Notice
+} from 'obsidian';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { normalizeOptionalProperties } from 'obsidian-dev-utils/object-utils';
-import { PluginNoticeMode } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { resolveValue } from 'obsidian-dev-utils/value-provider';
+import { PluginNoticeMode } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import { normalizeOptionalProperties } from '@mnaoumov/typescript-lib/object-utils';
+import { resolveValue } from '@mnaoumov/typescript-lib/value-provider';
 
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 

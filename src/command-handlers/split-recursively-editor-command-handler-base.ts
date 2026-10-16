@@ -1,3 +1,7 @@
+import type { EditorCommandHandlerConstructorParams } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   CachedMetadata,
@@ -7,15 +11,11 @@ import type {
   TFile,
   TFolder
 } from 'obsidian';
-import type { EditorCommandHandlerConstructorParams } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
 import { MarkdownView } from 'obsidian';
-import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { SplitTemplateNote } from '../apply-split-template.ts';
 import type { RecursiveSplitPreviewRow } from '../heading-split-recursion.ts';

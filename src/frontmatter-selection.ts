@@ -1,10 +1,10 @@
 import type { FrontMatterInfo } from 'obsidian';
 
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   getFrontMatterInfo,
   parseYaml
 } from 'obsidian';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import type { Selection } from './composers/composer-base.ts';
 

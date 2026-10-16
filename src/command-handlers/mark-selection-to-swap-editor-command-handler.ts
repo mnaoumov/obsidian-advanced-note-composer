@@ -1,11 +1,11 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   Editor,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { SwapSelectionBuffer } from '../swap-selection-buffer.ts';

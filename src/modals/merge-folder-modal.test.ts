@@ -6,7 +6,7 @@ import type {
   Workspace
 } from 'obsidian';
 
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   afterEach,
   beforeEach,
@@ -21,22 +21,22 @@ import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import { PickerRecencyOrder } from '../plugin-settings.ts';
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
+vi.mock('@mnaoumov/obsidian-lib/vault', () => ({
   isChildOrSelf: vi.fn().mockReturnValue(false)
 }));
 

@@ -4,12 +4,12 @@ import type {
   TFolder
 } from 'obsidian';
 
-import { isFolder } from 'obsidian-dev-utils/obsidian/file-system';
+import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
 import {
   basename,
   extname,
   join
-} from 'obsidian-dev-utils/path';
+} from '@mnaoumov/typescript-lib/path';
 
 import type { MovedNameSequence } from './numbered-moved-name.ts';
 

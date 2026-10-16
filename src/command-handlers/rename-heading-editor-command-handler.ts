@@ -1,3 +1,5 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor,
@@ -5,11 +7,9 @@ import type {
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { EditorCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/editor-command-handler';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 

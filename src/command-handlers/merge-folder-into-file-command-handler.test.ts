@@ -1,22 +1,23 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
   TFolder,
   WorkspaceLeaf
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -29,6 +30,10 @@ import {
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from '../custom-attachment-location-stub.ts';
 // The confirm dialog is the plugin's OWN sibling UI module: stub only its yes/no answer so the merge
 // proceeds without opening a modal. Everything else (vault, lock, transaction, composer, runner) is REAL.
 import { confirmMergeFolderIntoFile } from '../modals/merge-folder-into-file-modal.ts';
@@ -55,21 +60,21 @@ interface Testable {
   shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/metadata-cache')>(),
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>(),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
   getCacheSafe: vi.fn().mockResolvedValue(null),
   getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
 }));
 
@@ -85,6 +90,10 @@ const mockConfirm = vi.mocked(confirmMergeFolderIntoFile);
 const mockSelectFolder = vi.mocked(selectFolder);
 
 let app: AppOriginal;
+
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
 let resourceLockComponent: ResourceLockComponent;
 
 afterEach(() => {
@@ -139,17 +148,17 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
 }
 
 /**
- * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): as a member
- * on the patched `Vault.getAvailablePathForAttachments`, with the native resolution kept underneath.
+ * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): by publishing
+ * its attachment-path API, whose resolution is the native one.
  *
  * @param unitFolderPaths - The folders to designate. A folder under one is designated too, as Custom
  * Attachment Location's plain-path entries are.
  */
 function designateAttachmentUnitFolders(unitFolderPaths: readonly string[]): void {
-  const original = app.vault.getAvailablePathForAttachments.bind(app.vault);
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(original), {
-    checkIsAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
-  }));
+  publishCustomAttachmentLocationStub({
+    getAvailablePathForAttachments: (params) => resolveNativeAttachmentPath(params),
+    isAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
+  });
 }
 
 /**
@@ -1264,6 +1273,19 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
     });
     return { setContent: vi.fn(), [Symbol.dispose]: vi.fn() };
   });
+}
+
+/**
+ * The native resolution, which a published attachment-path API takes over from: the stand-in hands it back
+ * so that designating unit folders changes nothing else.
+ *
+ * @param params - The resolution parameters.
+ * @returns The attachment path Obsidian itself would choose.
+ */
+function resolveNativeAttachmentPath(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
+  const notePathOrFile = params.notePathOrFile;
+  const noteFile = typeof notePathOrFile === 'string' ? app.vault.getFileByPath(notePathOrFile) : notePathOrFile;
+  return app.vault.getAvailablePathForAttachments(params.attachmentFileBaseName, params.attachmentFileExtension, noteFile);
 }
 
 /**

@@ -1,26 +1,26 @@
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 import type {
   App,
   TFile,
   TFolder
 } from 'obsidian';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import type { MaybeReturn } from 'obsidian-dev-utils/type';
 
-import { normalizePath } from 'obsidian';
-import { FolderCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
+import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 import {
   parseFrontmatter,
   setFrontmatter
-} from 'obsidian-dev-utils/obsidian/frontmatter';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
+} from '@mnaoumov/obsidian-lib/frontmatter';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 import {
   basename,
   join
-} from 'obsidian-dev-utils/path';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/typescript-lib/path';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { normalizePath } from 'obsidian';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { CreateFolderTemplateTokens } from '../template-tokens.ts';
@@ -182,7 +182,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
-  // eslint-disable-next-line obsidian-dev-utils/params-options-name-match -- Override must keep the base param type.
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
   protected override shouldAddToFolderMenu(params: FolderCommandHandlerShouldAddToFolderMenuParams): boolean {
     super.shouldAddToFolderMenu(params);
     return true;

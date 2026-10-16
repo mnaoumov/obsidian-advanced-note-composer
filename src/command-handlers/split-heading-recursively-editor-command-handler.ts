@@ -1,3 +1,6 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   CachedMetadata,
@@ -6,9 +9,6 @@ import type {
   MarkdownView,
   TFile
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { RecursiveSplitRun } from './split-recursively-editor-command-handler-base.ts';

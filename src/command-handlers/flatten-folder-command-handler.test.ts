@@ -1,26 +1,26 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
+import type { FolderCommandHandlerShouldAddToFolderMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
-import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from 'obsidian-dev-utils/obsidian/attachment-path';
-import type { FolderCommandHandlerShouldAddToFolderMenuParams } from 'obsidian-dev-utils/obsidian/command-handlers/folder-command-handler';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { getPath } from 'obsidian-dev-utils/obsidian/file-system';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { getPath } from '@mnaoumov/obsidian-lib/file-system';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import {
   requestResourceUnlockForPath,
   ResourceLockComponent
-} from 'obsidian-dev-utils/obsidian/resource-lock';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+} from '@mnaoumov/obsidian-lib/resource-lock';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -34,6 +34,10 @@ import type { ConfirmDialogModalResult } from '../modals/confirm-dialog-modal.ts
 import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
 import type { PluginSettings } from '../plugin-settings.ts';
 
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from '../custom-attachment-location-stub.ts';
 import { InsertMode } from '../insert-mode.ts';
 import { selectFolder } from '../modals/select-folder-modal.ts';
 import { openConfirmDialogModal } from '../open-minimizable-modal.ts';
@@ -80,20 +84,20 @@ interface Testable {
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into
 // unmocked App internals. Not the behavior under test.
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn().mockImplementation((callback: (f: DocumentFragment) => Promise<void>) => {
     const fragment = createFragment();
     return callback(fragment).then(() => fragment);
   })
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
 // A FRESH element per call: `appendChild` MOVES a node rather than copying it, so one shared span
 // would let a missing second link pass unnoticed.
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockImplementation(() => Promise.resolve(createSpan()))
 }));
 
@@ -127,6 +131,10 @@ const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectFolder = vi.mocked(selectFolder);
 
 let app: AppOriginal;
+
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
 let confirmResults: ConfirmDialogModalResult[] = [];
@@ -439,7 +447,7 @@ describe('FlattenFolderCommandHandler', () => {
     const fragment = createFragment();
     await capturedConfirmParams?.buildContent(fragment);
 
-    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const { appendCodeBlock } = await import('@mnaoumov/obsidian-lib/html-element');
     const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
     // The colliding note is previewed with the de-duplicated name it will actually get.
     expect(renderedCodeBlocks).toContain('note.md → note 1.md');
@@ -494,7 +502,7 @@ describe('FlattenFolderCommandHandler', () => {
 
       const fragment = createFragment();
       await capturedConfirmParams?.buildContent(fragment);
-      const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+      const { appendCodeBlock } = await import('@mnaoumov/obsidian-lib/html-element');
       const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
       // `elsewhere/note.md` is taken, so the de-duplication is recomputed for the NEW destination.
       expect(renderedCodeBlocks).toContain('note.md → note 1.md');
@@ -769,7 +777,7 @@ describe('FlattenFolderCommandHandler', () => {
       const fragment = createFragment();
       await capturedConfirmParams?.buildContent(fragment);
 
-      const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+      const { appendCodeBlock } = await import('@mnaoumov/obsidian-lib/html-element');
       const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
       expect(renderedCodeBlocks).toContain('b');
       // `c` alone would be ambiguous the moment two promoted folders share a base name.
@@ -1002,9 +1010,8 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
 }
 
 /**
- * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
- * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
- * native resolution.
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the attachment-path API it publishes is what
+ * `@mnaoumov/obsidian-lib` dispatches to instead of the native resolution.
  *
  * Its mere PRESENCE is what these tests are about — it makes the resolution asynchronous, so
  * `canExecuteFolder` cannot answer and stays permissive (issue #185).
@@ -1018,5 +1025,5 @@ function stubAttachmentLocationPlugin(resolveAttachmentFolderPathForNote: (noteP
     return Promise.resolve(`${folderPath}/${params.attachmentFileBaseName}.${params.attachmentFileExtension}`);
   }
 
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(), { extended }));
+  publishCustomAttachmentLocationStub({ getAvailablePathForAttachments: extended, isAttachmentUnitFolder: () => false });
 }

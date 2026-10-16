@@ -3,10 +3,10 @@ import type {
   TAbstractFile
 } from 'obsidian';
 
+import { publishPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { Component } from 'obsidian';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,

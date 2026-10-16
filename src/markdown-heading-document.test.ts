@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
 
-import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { parseMetadata } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   describe,
   expect,
@@ -12,7 +12,7 @@ import {
 import { InsertMode } from './insert-mode.ts';
 import { parseMarkdownHeadingDocument } from './markdown-heading-document.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', () => ({
   parseMetadata: vi.fn()
 }));
 

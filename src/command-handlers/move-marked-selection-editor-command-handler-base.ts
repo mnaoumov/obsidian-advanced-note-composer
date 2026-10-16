@@ -1,15 +1,15 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor,
   MarkdownFileInfo,
   MarkdownView
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 
 import type { InsertMode } from '../insert-mode.ts';
 import type { MoveOptions } from '../modals/paste-options-modal.ts';

@@ -1,37 +1,44 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
 import type {
   App as AppOriginal,
   TFolder
 } from 'obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
+  afterEach,
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
 import {
   isAttachmentUnitFolder,
   isInsideAttachmentUnitFolder
 } from './attachment-unit-folders.ts';
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from './custom-attachment-location-stub.ts';
 
 let app: AppOriginal;
 
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
+
 /**
- * Publishes a unit-folder designation the way an attachment-location plugin does: as a member on the
- * patched `Vault.getAvailablePathForAttachments`. The native resolution is kept underneath, so nothing else
- * the vault does changes.
+ * Publishes a unit-folder designation the way an attachment-location plugin does: by publishing its
+ * attachment-path API. The resolution it publishes is the native one, so nothing else the vault does changes.
  *
  * @param unitFolderPaths - The folders to designate. Only an exact path matches.
  */
 function designateAttachmentUnitFolders(unitFolderPaths: readonly string[]): void {
-  const original = app.vault.getAvailablePathForAttachments.bind(app.vault);
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(original), {
-    checkIsAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.includes(folderPath)
-  }));
+  publishCustomAttachmentLocationStub({
+    getAvailablePathForAttachments: (params) => resolveNativeAttachmentPath(params),
+    isAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.includes(folderPath)
+  });
 }
 
 function getFolder(path: string): TFolder {
@@ -101,3 +108,16 @@ describe('isInsideAttachmentUnitFolder', () => {
     expect(isInsideAttachmentUnitFolder(app, app.vault.getRoot())).toBe(false);
   });
 });
+
+/**
+ * The native resolution, which a published attachment-path API takes over from: the stand-in hands it back
+ * so that designating unit folders changes nothing else.
+ *
+ * @param params - The resolution parameters.
+ * @returns The attachment path Obsidian itself would choose.
+ */
+function resolveNativeAttachmentPath(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
+  const notePathOrFile = params.notePathOrFile;
+  const noteFile = typeof notePathOrFile === 'string' ? app.vault.getFileByPath(notePathOrFile) : notePathOrFile;
+  return app.vault.getAvailablePathForAttachments(params.attachmentFileBaseName, params.attachmentFileExtension, noteFile);
+}

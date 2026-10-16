@@ -1,12 +1,12 @@
-import type { PromiseResolve } from 'obsidian-dev-utils/async';
+import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import {
   App,
   ButtonComponent,
   Modal
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
 
 import { getInsertModeFromEvent } from '../composers/composer-base.ts';
 import { InsertMode } from '../insert-mode.ts';

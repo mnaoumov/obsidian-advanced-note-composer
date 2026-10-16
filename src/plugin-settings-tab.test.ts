@@ -1,3 +1,7 @@
+import type { DataHandler } from '@mnaoumov/obsidian-lib/data-handler';
+import type { PluginEventSource } from '@mnaoumov/obsidian-lib/plugin/plugin-event-source';
+import type { CodeHighlighterComponent } from '@mnaoumov/obsidian-lib/setting-components/code-highlighter-component';
+import type { DebugController } from '@mnaoumov/typescript-lib/debug-controller';
 import type {
   BaseComponent,
   DropdownComponent,
@@ -10,22 +14,18 @@ import type {
   TextComponent,
   ToggleComponent
 } from 'obsidian';
-import type { DebugController } from 'obsidian-dev-utils/debug-controller';
-import type { DataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
-import type { PluginEventSource } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
-import type { CodeHighlighterComponent } from 'obsidian-dev-utils/obsidian/setting-components/code-highlighter-component';
 
+import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
+import { SettingEx } from '@mnaoumov/obsidian-lib/setting-ex';
+import { getDebugController } from '@mnaoumov/typescript-lib/debug';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   App,
   Setting
 } from 'obsidian';
-import { getDebugController } from 'obsidian-dev-utils/debug';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { FolderNoteLocation } from 'obsidian-dev-utils/obsidian/folder-note';
-import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
   afterEach,
   beforeEach,
@@ -92,7 +92,7 @@ const dropdowns: NamedComponent<DropdownComponent>[] = [];
 const codeHighlighters: NamedComponent<CodeHighlighterComponent>[] = [];
 const descriptions: NamedDesc[] = [];
 
-vi.mock('obsidian-dev-utils/debug', () => ({
+vi.mock('@mnaoumov/typescript-lib/debug', () => ({
   getDebugController: vi.fn().mockReturnValue({
     disable: vi.fn(),
     enable: vi.fn(),

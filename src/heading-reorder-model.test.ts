@@ -1,7 +1,7 @@
 import type { HeadingCache } from 'obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   describe,
   expect,

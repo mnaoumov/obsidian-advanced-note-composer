@@ -25,7 +25,7 @@
 
 import type { Modal } from 'obsidian';
 
-import { MinimizableModal } from 'obsidian-dev-utils/obsidian/modals/minimizable-modal';
+import { MinimizableModal } from '@mnaoumov/obsidian-lib/modals/minimizable-modal';
 
 import type { ConfirmDialogModal } from './modals/confirm-dialog-modal.ts';
 

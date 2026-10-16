@@ -1,3 +1,10 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeAfterDelayParams
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { CachedMetadataEx } from '@mnaoumov/obsidian-lib/metadata-cache';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type {
   App,
   Editor,
@@ -11,20 +18,13 @@ import type {
   Workspace,
   WorkspaceLeaf
 } from 'obsidian';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type {
-  PluginNoticeComponent,
-  PluginNoticeComponentShowNoticeAfterDelayParams
-} from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { createFragmentAsync } from 'obsidian-dev-utils/html-element';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { renderInternalLink } from 'obsidian-dev-utils/obsidian/markdown';
-import { getCacheSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
   beforeEach,
   describe,
@@ -86,19 +86,19 @@ interface TestableHandler {
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
 
-vi.mock('obsidian-dev-utils/html-element', () => ({
+vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/html-element', () => ({
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
   appendCodeBlock: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/markdown', () => ({
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
+vi.mock('@mnaoumov/obsidian-lib/metadata-cache', () => ({
   getCacheSafe: vi.fn()
 }));
 
@@ -502,7 +502,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     const fragment = createFragment();
     await capturedConfirmParams?.buildContent(fragment);
 
-    const { appendCodeBlock } = await import('obsidian-dev-utils/obsidian/html-element');
+    const { appendCodeBlock } = await import('@mnaoumov/obsidian-lib/html-element');
     const renderedCodeBlocks = vi.mocked(appendCodeBlock).mock.calls.map((call) => call[1]);
     // The heading is named, and the promise the dialog makes is exactly its own subtree: `B` and `B1`, at
     // the depths they will nest at — never the untouched `A` or `C`.

@@ -1,18 +1,18 @@
+import type { GetAvailablePathForAttachmentsExtendedFunctionParams } from '@mnaoumov/obsidian-lib/attachment-path';
 import type {
   App as AppOriginal,
   TFile,
   TFolder
 } from 'obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { VaultTransaction } from 'obsidian-dev-utils/obsidian/vault-transaction';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
+  afterEach,
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
 import type { AttachmentToRelocate } from './attachments.ts';
@@ -27,21 +27,29 @@ import {
   relocateAttachmentUnitFolders,
   resolveAttachmentDestination
 } from './attachments.ts';
+import {
+  publishCustomAttachmentLocationStub,
+  revokeCustomAttachmentLocationStubs
+} from './custom-attachment-location-stub.ts';
 
 let app: AppOriginal;
 
+afterEach(() => {
+  revokeCustomAttachmentLocationStubs();
+});
+
 /**
- * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): as a member
- * on the patched `Vault.getAvailablePathForAttachments`, with the native resolution kept underneath.
+ * Publishes a unit-folder designation the way an attachment-location plugin does (issue #298): by publishing
+ * its attachment-path API, whose resolution is the native one.
  *
  * @param unitFolderPaths - The folders to designate. A folder under one is designated too, as Custom
  * Attachment Location's plain-path entries are.
  */
 function designateAttachmentUnitFolders(unitFolderPaths: readonly string[]): void {
-  const original = app.vault.getAvailablePathForAttachments.bind(app.vault);
-  app.vault.getAvailablePathForAttachments = castTo<typeof app.vault.getAvailablePathForAttachments>(Object.assign(vi.fn(original), {
-    checkIsAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
-  }));
+  publishCustomAttachmentLocationStub({
+    getAvailablePathForAttachments: (params) => resolveNativeAttachmentPath(params),
+    isAttachmentUnitFolder: (folderPath: string) => unitFolderPaths.some((unitFolderPath) => folderPath === unitFolderPath || folderPath.startsWith(`${unitFolderPath}/`))
+  });
 }
 
 function getFile(path: string): TFile {
@@ -630,3 +638,16 @@ describe('relocateAttachmentUnitFolders', () => {
     expect(await app.vault.adapter.exists('page_files')).toBe(false);
   });
 });
+
+/**
+ * The native resolution, which a published attachment-path API takes over from: the stand-in hands it back
+ * so that designating unit folders changes nothing else.
+ *
+ * @param params - The resolution parameters.
+ * @returns The attachment path Obsidian itself would choose.
+ */
+function resolveNativeAttachmentPath(params: GetAvailablePathForAttachmentsExtendedFunctionParams): Promise<string> {
+  const notePathOrFile = params.notePathOrFile;
+  const noteFile = typeof notePathOrFile === 'string' ? app.vault.getFileByPath(notePathOrFile) : notePathOrFile;
+  return app.vault.getAvailablePathForAttachments(params.attachmentFileBaseName, params.attachmentFileExtension, noteFile);
+}
