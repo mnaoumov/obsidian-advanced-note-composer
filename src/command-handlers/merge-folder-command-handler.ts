@@ -138,7 +138,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
   /**
    * Whether a file is one of the notes this merge would concatenate, as opposed to a file that merely
-   * travels with them. A markdown-shaped attachment (an Excalidraw drawing is a `.md` file) is moved like
+   * travels with them. A markdown-shaped attachment (an `Excalidraw` drawing is a `.md` file) is moved like
    * any other attachment, never merged: merging it into a same-named drawing in the destination would
    * concatenate two raw payloads (issue #160 item 3, issue #161).
    *
@@ -175,7 +175,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const { sourceFolder, targetFolder } = params;
     const notice = showOperationPermanentProgressNotice({
       content: await createFragmentAsync(async (f) => {
-        f.appendText('Advanced Note Composer: Merging folder ');
+        appendCodeBlock(f, 'Advanced Note Composer');
+        f.appendText(': Merging folder ');
         f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
         f.appendText(' with ');
         f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFolder.path }));
@@ -361,9 +362,12 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
-        f.appendText('Advanced Note Composer: You have enabled setting ');
+        appendCodeBlock(f, 'Advanced Note Composer');
+        f.appendText(': You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
-        f.appendText(', but Templater plugin is not installed.');
+        f.appendText(', but ');
+        appendCodeBlock(f, 'Templater');
+        f.appendText(' plugin is not installed.');
       }));
     }
   }
@@ -433,8 +437,9 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
     this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
+        appendCodeBlock(f, 'Advanced Note Composer');
         f.appendText(
-          `Advanced Note Composer: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
+          `: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
         );
         for (const ignoredSourceFile of ignoredSourceFiles) {
           f.createEl('br');

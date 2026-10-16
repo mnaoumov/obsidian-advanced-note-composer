@@ -325,7 +325,7 @@ describe('MergeComposer', () => {
 
     it('should honor an attachment-location plugin\'s destination', async () => {
       // What issue #161 asked for: the destination comes from whatever patched Obsidian's attachment
-      // resolution (e.g. Custom Attachment Location), without this plugin knowing that plugin exists.
+      // resolution (e.g. `Custom Attachment Location`), without this plugin knowing that plugin exists.
       initAttachmentApp({}, (notePath) => `Assets/${notePath.replace(/\.md$/, '')}`);
 
       await createAttachmentComposer().mergeFile();
@@ -386,7 +386,7 @@ function initAttachmentApp(extraFiles: Record<string, string> = {}, resolveAttac
 }
 
 /**
- * Models an attachment-location plugin (e.g. Custom Attachment Location): the `extended` member it installs
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
  * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
  * native resolution. This is the only way a note gets an attachment folder OF ITS OWN — every native mode
  * resolves the same folder for every note in a folder.

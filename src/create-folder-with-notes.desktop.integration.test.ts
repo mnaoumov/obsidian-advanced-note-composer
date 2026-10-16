@@ -69,7 +69,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
             settings.shouldAskBeforeCreatingFolder = false;
             settings.shouldOpenNoteAfterCreatingFolder = true;
             settings.shouldTitleCaseCreatedFolderName = true;
-            // Templater is not installed in the test vault; leaving this on would only add a warning notice.
+            // `Templater` is not installed in the test vault; leaving this on would only add a warning notice.
             settings.shouldRunTemplaterOnDestinationFile = false;
           });
 

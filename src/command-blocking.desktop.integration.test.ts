@@ -51,7 +51,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 3250;
         const RENDER_DELAY_IN_MILLISECONDS = 150;
         const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
-        // Use a command that ONLY Advanced Note Composer provides (Obsidian's core Note Composer plugin
+        // Use a command that ONLY `Advanced Note Composer` provides (Obsidian's core Note Composer plugin
         // also adds an "Extract current selection..." editor-menu item, which would confuse a title match).
         const ANC_COMMAND_TITLE = 'Mark selection to move';
         const ANC_COMMAND_ID = `${pluginId}:mark-selection-to-move`;

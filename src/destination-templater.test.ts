@@ -47,7 +47,7 @@ describe('resolveDestinationTemplaterRunner', () => {
     const { app, showNotice } = createContext();
     const overwriteFileCommands = vi.fn().mockResolvedValue(undefined);
     castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- Templater's own API method name.
+      // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
       templater: { overwrite_file_commands: overwriteFileCommands }
     });
     const note = ensureNonNullable(app.vault.getFileByPath('note.md'));

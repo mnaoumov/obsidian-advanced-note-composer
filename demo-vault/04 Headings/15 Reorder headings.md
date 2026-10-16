@@ -46,7 +46,7 @@ Obsidian does not record when a heading was created, changed or looked at. The t
 - **Modified time** is when anything in its section last changed, subheadings included. Moving the section does not count.
 - **Recently seen** is when its section was last on screen in the editor.
 
-A heading that was already there before Advanced Metadata Cache started tracking the note has no time, and counts as the oldest.
+A heading that was already there before `Advanced Metadata Cache` started tracking the note has no time, and counts as the oldest.
 
 ### Sorting by name
 

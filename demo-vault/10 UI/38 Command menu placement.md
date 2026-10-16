@@ -2,7 +2,7 @@
 
 Obsidian has **two** context menus over an open note, and a right-click only ever raises one of them.
 
-- Right-click **the text** and you get the editor menu — `Cut`, `Copy`, `Format`, and every Advanced Note Composer command that applies.
+- Right-click **the text** and you get the editor menu — `Cut`, `Copy`, `Format`, and every `Advanced Note Composer` command that applies.
 - Right-click **the empty space beside the text**, the margin `Readable line length` leaves, and you get a much smaller menu: `Readable line length`, `Line numbers`, `Inline title`. The line-number gutter raises that same menu.
 
 The first menu gets long. This plugin alone can put nine items in it, and they sit under everything Obsidian already puts there. So **every command picks which menu it appears in, one command at a time**.

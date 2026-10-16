@@ -671,7 +671,7 @@ describe('PluginSettingsTab', () => {
   });
 
   // The `Common` heading names no command family, and two of its rows are read by families a reader would not
-  // guess: the smart cut & paste move reads the footnote default, and the create commands run Templater. The
+  // guess: the smart cut & paste move reads the footnote default, and the create commands run `Templater`. The
   // rows stay where they are (a row read by several families belongs on none of their pages), so the
   // descriptions name those families.
   it('should name the less obvious command families in the common rows', async () => {

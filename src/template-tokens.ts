@@ -30,7 +30,7 @@ const moment = extractDefaultExportInterop(moment_);
  * own output needs both at once: the note's `title` is the folder name WITH its index (`1. Test Notes`)
  * while its alias is the name WITHOUT it (`Test Notes`).
  *
- * The same bag is handed to the Templater prelude, so a value added here becomes available to `{{tokens}}`
+ * The same bag is handed to the `Templater` prelude, so a value added here becomes available to `{{tokens}}`
  * and to `<% TOKENS.… %>` at the same time.
  */
 export interface CreateFolderTemplateTokens {
@@ -97,7 +97,7 @@ export interface HeadingNumberTemplateTokens {
  * Everything the `Name transform template` knows about the name it is rewriting (issue #196).
  *
  * Exactly one member, deliberately: the transform's whole job is to turn the supplied name into another
- * name, so anything else it needs it can compute from that string. The same bag is handed to the Templater
+ * name, so anything else it needs it can compute from that string. The same bag is handed to the `Templater`
  * prelude, so `{{rawString}}` and `<% TOKENS.rawString %>` always mean the same thing.
  */
 export interface NameTransformTokens {

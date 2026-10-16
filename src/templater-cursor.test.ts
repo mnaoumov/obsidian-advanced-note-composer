@@ -140,7 +140,7 @@ describe('jumpToPendingTemplaterCursor', () => {
     context.setActive(context.marked, MARKED_CONTENT);
     await jumpToPendingTemplaterCursor(context.app, context.marked);
     castTo<PluginsRegistryTestable>(context.app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- Templater's own API property name.
+      // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
       editor_handler: { jump_to_next_cursor_location: context.jump }
     });
     await jumpToPendingTemplaterCursor(context.app, context.marked);
@@ -166,7 +166,7 @@ function createContext(options: CreateContextOptions = {}): TestContext {
   const jump = vi.fn().mockResolvedValue(undefined);
   if (options.shouldInstallTemplater ?? true) {
     castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- Templater's own API property name.
+      // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
       editor_handler: { jump_to_next_cursor_location: jump }
     });
   }

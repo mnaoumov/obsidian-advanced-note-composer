@@ -780,7 +780,7 @@ describe('FlattenFolderCommandHandler', () => {
   /**
    * Issue #193: the reporter excluded their attachment folder and the flatten commands kept appearing. Both
    * new skips are synchronous, which is what lets `canExecuteFolder` answer even in the vault that prompted
-   * the report — one running Custom Attachment Location, where the exact resolution cannot.
+   * the report — one running `Custom Attachment Location`, where the exact resolution cannot.
    */
   describe('excluded paths and the configured attachment folder (issue #193)', () => {
     it('should refuse every mode when the only child folder is excluded', () => {
@@ -842,7 +842,7 @@ describe('FlattenFolderCommandHandler', () => {
       /*
        * This used to refuse, on the grounds that `attachmentFolderPath` was the only signal readable
        * synchronously once the resolution is owned elsewhere. Issue #213 showed that signal is not the
-       * user's: Custom Attachment Location parks its own last-resolved path there, so it hid the commands on
+       * user's: `Custom Attachment Location` parks its own last-resolved path there, so it hid the commands on
        * folders that had nothing to do with attachments. Both variants are offered again, and
        * `executeFolder` resolves for real and says so if nothing turns out to move.
        */
@@ -859,7 +859,7 @@ describe('FlattenFolderCommandHandler', () => {
         'parent/a/sub/deeper/deepest.md': 'deepest'
       });
       stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
-      // The reporter's vault verbatim: the path Custom Attachment Location last resolved for the note it
+      // The reporter's vault verbatim: the path `Custom Attachment Location` last resolved for the note it
       // had just created and opened, sitting inside the folder that was created with it.
       app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
 
@@ -948,7 +948,7 @@ describe('FlattenFolderCommandHandler', () => {
       });
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
       /*
-       * The reporter's vault: Custom Attachment Location installed, so the collector cannot answer
+       * The reporter's vault: `Custom Attachment Location` installed, so the collector cannot answer
        * synchronously — which used to offer every variant unconditionally and brought the recursive entry
        * back on exactly the folder issue #210 had removed it from. How deep the folders go is not the
        * attachment question, and it is answered from the folder alone; only `ChildFoldersOnly` stays
@@ -1002,7 +1002,7 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
 }
 
 /**
- * Models an attachment-location plugin (e.g. Custom Attachment Location): the `extended` member it installs
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
  * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
  * native resolution.
  *

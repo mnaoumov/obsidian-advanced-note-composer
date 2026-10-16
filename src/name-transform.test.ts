@@ -60,7 +60,7 @@ const LATER_MTIME = 4_000_000_000_000;
 const MAPPING_TEMPLATE = '<% TOKENS.rawString.replaceAll(": ", " - ") %>';
 
 /**
- * Templater's `RunMode.DynamicProcessor`, restated here so the test pins the number the production code
+ * `Templater`'s `RunMode.DynamicProcessor`, restated here so the test pins the number the production code
  * passes rather than importing whatever it happens to pass.
  */
 const RUN_MODE_DYNAMIC_PROCESSOR = 4;
@@ -73,7 +73,7 @@ describe('applyNameTransform', () => {
 
   it('should resolve the plugin tokens without involving templater', async () => {
     const app = createApp();
-    // No templater plugin is installed, so reaching Templater at all would throw.
+    // No templater plugin is installed, so reaching `Templater` at all would throw.
     expect(await applyNameTransform({ app, contextFile: null, rawString: 'notes', template: '  Project {{rawString}}  ' }))
       .toBe('Project notes');
   });
@@ -196,7 +196,7 @@ describe('applyNameTransform', () => {
   });
 
   it('should refuse a multi-line result, which is a name no file system can hold (issue #203)', async () => {
-    // Issue #203's reporter wrote one Templater command per line; this is the same shape through the
+    // Issue #203's reporter wrote one `Templater` command per line; this is the same shape through the
     // plugin's own token pass, which is why the token path has to refuse it too.
     const app = createApp();
     await expect(applyNameTransform({ app, contextFile: null, rawString: 'A: B', template: '{{rawString}}\n{{rawString}}' }))
@@ -294,10 +294,10 @@ function installTemplater(app: AppOriginal): TemplaterMock {
   };
   castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
     templater: {
-      /* eslint-disable camelcase -- Templater's own API method names. */
+      /* eslint-disable camelcase -- `Templater`'s own API method names. */
       create_running_config: templaterMock.createRunningConfig,
       parse_template: templaterMock.parseTemplate
-      /* eslint-enable camelcase -- Templater's own API method names. */
+      /* eslint-enable camelcase -- `Templater`'s own API method names. */
     }
   });
   return templaterMock;

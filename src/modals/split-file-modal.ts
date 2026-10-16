@@ -49,6 +49,7 @@ import {
   FrontmatterMergeStrategy,
   SplitTargetMode
 } from '../plugin-settings.ts';
+import { renderTemplateErrorMessage } from '../templater-string.ts';
 import { ConfirmDialogModal } from './confirm-dialog-modal.ts';
 import { resolveExistingItemFile } from './existing-item-file.ts';
 import {
@@ -1741,7 +1742,7 @@ async function selectSplitTarget(params: SelectSplitTargetParams): Promise<null 
     if (!(error instanceof NameTransformError)) {
       throw error;
     }
-    prepareParams.pluginNoticeComponent.showNotice(error.message);
+    prepareParams.pluginNoticeComponent.showNotice(renderTemplateErrorMessage(error.message));
     return null;
   }
 }

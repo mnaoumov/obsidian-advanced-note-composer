@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 
 import { isMarkdownFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { appendCodeBlock } from 'obsidian-dev-utils/obsidian/html-element';
 
 import type { TemplaterPreludeTokens } from './templater-prelude.ts';
 
@@ -11,8 +12,8 @@ import { buildTemplaterPrelude } from './templater-prelude.ts';
 import { TEMPLATER_RUN_MODE_DYNAMIC_PROCESSOR } from './templater.ts';
 
 /**
- * What makes a resolved template Templater's problem rather than ours. Checked on the template AFTER the
- * plugin's own `{{tokens}}` are resolved, so a token value holding a literal `<%` still reaches Templater —
+ * What makes a resolved template `Templater`'s problem rather than ours. Checked on the template AFTER the
+ * plugin's own `{{tokens}}` are resolved, so a token value holding a literal `<%` still reaches `Templater` —
  * which is what the user asked for by putting it there.
  */
 const TEMPLATER_COMMAND_START = '<%';
@@ -31,6 +32,11 @@ const LINE_BREAK_REG_EXP = /\r\n|[\r\n]/;
 const RECENT_FILE_PATHS_MAX_COUNT = 50;
 
 /**
+ * The plugin's display name, as a message mentions it.
+ */
+const TEMPLATER_PLUGIN_NAME = 'Templater';
+
+/**
  * Parameters for {@link renderSingleLineValueWithTemplater} — the same as for {@link renderStringWithTemplater},
  * which it wraps.
  */
@@ -43,10 +49,10 @@ export interface RenderStringWithTemplaterParams {
   readonly app: App;
 
   /**
-   * The note the Templater run reports on through `tp.file.*`, or `null` to let
+   * The note the `Templater` run reports on through `tp.file.*`, or `null` to let
    * {@link resolveTemplaterContextFile} find one.
    *
-   * Not optional decoration: Templater reads `target_file.basename` / `target_file.stat` EAGERLY while
+   * Not optional decoration: `Templater` reads `target_file.basename` / `target_file.stat` EAGERLY while
    * building its function object, so a run with no file at all throws before the template is even parsed.
    */
   readonly contextFile: null | TFile;
@@ -62,7 +68,7 @@ export interface RenderStringWithTemplaterParams {
   readonly settingName: string;
 
   /**
-   * The values exposed to Templater code as `TOKENS`.
+   * The values exposed to `Templater` code as `TOKENS`.
    */
   readonly tokens: TemplaterPreludeTokens;
 }
@@ -96,11 +102,11 @@ export class TemplateRenderError extends Error {
  * `title` (issue #284) — through {@link renderStringWithTemplater}, trimmed and refused when it spans more
  * than one line.
  *
- * The refusal mirrors the name transform's (issue #203): writing one Templater command per line makes each
+ * The refusal mirrors the name transform's (issue #203): writing one `Templater` command per line makes each
  * command emit its own result, and a property silently holding two values glued by a line break is a wrong
  * answer where a loud failure was due.
  *
- * @param params - The resolved template, its tokens and the Templater context.
+ * @param params - The resolved template, its tokens and the `Templater` context.
  * @returns The value, trimmed.
  */
 export async function renderSingleLineValueWithTemplater(params: RenderSingleLineValueWithTemplaterParams): Promise<string> {
@@ -117,19 +123,19 @@ export async function renderSingleLineValueWithTemplater(params: RenderSingleLin
 }
 
 /**
- * Hands a string template to Templater when — and only when — it still holds a Templater command once the
+ * Hands a string template to `Templater` when — and only when — it still holds a `Templater` command once the
  * plugin's own `{{tokens}}` are resolved.
  *
  * This is the second stage of the `Name transform template` (issue #196), lifted out once the folder-note
  * property templates wanted the same thing (issue #284). A template that is nothing but tokens never touches
- * Templater, so its presence is the opt-in and no setting gates it: `Should run templater on destination file`
+ * `Templater`, so its presence is the opt-in and no setting gates it: `Should run templater on destination file`
  * names the destination FILE, which a string template does not have.
  *
- * The run uses Templater's `DynamicProcessor` mode (parse and hand back, write nothing) with the same `TOKENS`
+ * The run uses `Templater`'s `DynamicProcessor` mode (parse and hand back, write nothing) with the same `TOKENS`
  * prelude the created notes get, so `<% TOKENS.safeFolderName.toUpperCase() %>` works as readily as any
  * `tp.*` call. Every failure throws a {@link TemplateRenderError} naming the setting.
  *
- * @param params - The resolved template, its tokens and the Templater context.
+ * @param params - The resolved template, its tokens and the `Templater` context.
  * @returns The rendered string, untrimmed.
  */
 export async function renderStringWithTemplater(params: RenderStringWithTemplaterParams): Promise<string> {
@@ -164,16 +170,36 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
 }
 
 /**
+ * Renders a template failure's message for a notice, with every mention of the `Templater` plugin as code.
+ *
+ * The message itself stays plain text, since it also reaches the console and a prompt's validation bubble,
+ * neither of which can hold markup; only a notice can.
+ *
+ * @param message - The message of a {@link TemplateRenderError}, or of a name-transform failure carrying one.
+ * @returns The notice content.
+ */
+export function renderTemplateErrorMessage(message: string): DocumentFragment {
+  return createFragment((f) => {
+    for (const [index, part] of message.split(TEMPLATER_PLUGIN_NAME).entries()) {
+      if (index > 0) {
+        appendCodeBlock(f, TEMPLATER_PLUGIN_NAME);
+      }
+      f.appendText(part);
+    }
+  });
+}
+
+/**
  * Renders a template that produces a LIST of property values — a folder note's aliases (issue #294) —
  * through {@link renderStringWithTemplater}, one value per line.
  *
  * A line break is the separator because no usable value can contain one, so it is never ambiguous the way a
- * comma would be. That covers a plain `{{token}}` template written over several lines and a Templater one
- * alike: Templater concatenates what its commands emit into a string, so an expression that computes an
+ * comma would be. That covers a plain `{{token}}` template written over several lines and a `Templater` one
+ * alike: `Templater` concatenates what its commands emit into a string, so an expression that computes an
  * array hands it over with `.join("\n")`. Each line is trimmed, blank lines are dropped and a repeated value
  * is kept once.
  *
- * @param params - The resolved template, its tokens and the Templater context.
+ * @param params - The resolved template, its tokens and the `Templater` context.
  * @returns The values, in the order the template produced them.
  */
 export async function renderValueListWithTemplater(params: RenderValueListWithTemplaterParams): Promise<string[]> {
@@ -183,9 +209,9 @@ export async function renderValueListWithTemplater(params: RenderValueListWithTe
 }
 
 /**
- * Resolves the note the Templater run reports on through `tp.file.*` (issue #218).
+ * Resolves the note the `Templater` run reports on through `tp.file.*` (issue #218).
  *
- * Templater insists on a file — it reads `target_file.basename`/`.stat` EAGERLY (see `templater.ts`) — but
+ * `Templater` insists on a file — it reads `target_file.basename`/`.stat` EAGERLY (see `templater.ts`) — but
  * the commands that need a string template most are the folder ones, which have no note of their own, so
  * requiring an OPEN note made a configured `Name transform template` refuse every folder command whenever
  * the user had no note focused. That was issue #218, reported twice over: as a validator message in
@@ -198,7 +224,7 @@ export async function renderValueListWithTemplater(params: RenderValueListWithTe
  *
  * **The fallbacks are not a new class of silent wrongness.** The context here has ALWAYS been "whatever note
  * happens to be open", which for a command operating on a folder is exactly as arbitrary as "the note you
- * last had open" — and the usual template never touches `tp.file.*` at all: Templater is the expression
+ * last had open" — and the usual template never touches `tp.file.*` at all: `Templater` is the expression
  * evaluator, and the file it insists on is incidental. One chain shared by every name-transform call site is
  * also why that template gets no per-command anchor (the folder merge offering one of its merged notes, a
  * rename offering the folder note): that would make the same template report a different `tp.file.title`

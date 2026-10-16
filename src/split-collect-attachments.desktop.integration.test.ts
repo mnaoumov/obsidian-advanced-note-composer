@@ -11,7 +11,7 @@ import {
 /*
  * End-to-end coverage for issue #246: with
  * `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit` on, an extract hands its destination
- * note to the Custom Attachment Location plugin so that plugin collects the note's attachments.
+ * note to the `Custom Attachment Location` plugin so that plugin collects the note's attachments.
  *
  * That plugin is not installed in this vault, and installing it to test this would be testing IT rather
  * than the hand-off. So a stand-in API is published under its id in the `obsidian-dev-utils` plugin registry

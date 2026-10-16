@@ -281,7 +281,8 @@ describe('ReorderChildFoldersCommandHandler', () => {
     await handler.executeFolder(getFolder('parent'));
 
     expect(getChildFolderNames('parent')).toEqual(['1. Alpha', '2. Beta']);
-    expect(showNotice).toHaveBeenCalledWith(expect.stringContaining('Folder note title template produced a multi-line value.'));
+    expect(showNotice.mock.calls.some(([content]) => typeof content !== 'string' && content.textContent.includes('Folder note title template produced a multi-line value.')))
+      .toBe(true);
   });
 
   it('should write nothing when the vault has no folder notes', async () => {

@@ -1,6 +1,6 @@
 # Merge file
 
-Merge the **whole current note** into another note. Advanced Note Composer fixes relative links, renumbers footnotes, and merges frontmatter along the way.
+Merge the **whole current note** into another note. `Advanced Note Composer` fixes relative links, renumbers footnotes, and merges frontmatter along the way.
 
 ## Try it
 

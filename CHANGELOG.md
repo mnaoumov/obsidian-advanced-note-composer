@@ -55,11 +55,11 @@
 - fix(release-notes): merge waiting for the settings before deciding what was shown (#293)
 - feat(settings): merge moving each command menus section onto its command page (#278)
 - fix(split): merge keeping the title a split template writes on a new note
-- refactor: merge reaching Custom Attachment Location through its published API
+- refactor: merge reaching `Custom Attachment Location` through its published API
 - feat(settings): merge folding the strategies group into Common
 - fix: merge keeping the editor focused after every extract-notice click
 - test: merge floating obsidian-test-mocks to ^7.0.0
-- test(demo-vault): merge installing CodeScript Toolkit headlessly in the demo-vault setup
+- test(demo-vault): merge installing `CodeScript Toolkit` headlessly in the demo-vault setup
 - docs(screenshots): merge recapturing the recursive-split mobile frames
 - fix(merge): merge merging a folder into its destination, not beneath it
 - fix(deps): merge restoring the lockfile's missing resolved and integrity fields
@@ -76,7 +76,7 @@
 - docs(agents): correct the stale raiseSoftKeyboard warning in the keyboard notes
 - fix(release-notes): merge naming the plugin in the release notes popup (#286)
 - fix(settings): merge keeping an emptied folder-note property template empty (#285)
-- feat(templates): merge Templater in the split and folder-note templates (#284)
+- feat(templates): merge `Templater` in the split and folder-note templates (#284)
 - feat(create-note): merge typed-name cleaning for the create-empty-note commands (#283)
 - feat(settings): merge nested settings sections (#282)
 - fix(confirm-dialog): merge the single action row restoration (#281)
@@ -168,7 +168,7 @@
 - fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
 - feat(pickers): let the picker recency order be chosen, rather than fixed (#248)
 - feat(ui): offer a progress dialog that blocks the vault until the work is done (#247)
-- feat(split): hand an extract's destination note to Custom Attachment Location (#246)
+- feat(split): hand an extract's destination note to `Custom Attachment Location` (#246)
 - test: gate the demo vault by clicking every code button
 - feat(split): create an empty note from an empty extract (#244)
 - feat(settings): move the lock-all-notes row to the smart cut & paste page (#243)
@@ -243,7 +243,7 @@
 ## 5.7.0
 
 - docs: narrow the overstated processFrontMatter claim to the flows it applies to
-- feat(demo-vault): install Templater from the note that needs it
+- feat(demo-vault): install `Templater` from the note that needs it
 - feat(create-folder): make a template's own property writes survive the render (#197)
 - fix(create-folder): declare TOKENS first, so it works in a note's frontmatter (#197)
 - docs(demo-vault): show how to split a name into several aliases (#197)
@@ -696,7 +696,7 @@
 ## 3.6.0
 
 - feat: add source/target clickable links re #49
-- feat: enable Templater re #37
+- feat: enable `Templater` re #37
 - chore: update libs
 
 ## 3.5.7

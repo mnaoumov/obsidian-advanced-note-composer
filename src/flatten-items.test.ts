@@ -119,7 +119,7 @@ function isPathIgnored(path: string): boolean {
 }
 
 /**
- * Models an attachment-location plugin (e.g. Custom Attachment Location): the `extended` member it installs
+ * Models an attachment-location plugin (e.g. `Custom Attachment Location`): the `extended` member it installs
  * on Obsidian's `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the
  * native resolution. It is the only way a note gets an attachment folder derived from its own NAME — every
  * native mode resolves the same folder for every note in a folder.
@@ -334,7 +334,7 @@ describe('collectFlattenItems', () => {
         'parent/a/note/pic.png': 'PIC',
         'parent/a/sub/deep.md': 'deep'
       });
-      // Custom Attachment Location and friends derive the folder from the note's NAME, which is the one
+      // `Custom Attachment Location` and friends derive the folder from the note's NAME, which is the one
       // case no native mode can produce — resolved for free through `getAttachmentFolderPath` (issue #161).
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
@@ -630,7 +630,7 @@ describe('configured attachment folder', () => {
     });
     stubAttachmentLocationPlugin((notePath) => `${notePath.replace(/\/[^/]+$/, '')}/@`);
     /*
-     * Custom Attachment Location keeps `attachmentFolderPath` pointed at the folder it last resolved for
+     * `Custom Attachment Location` keeps `attachmentFolderPath` pointed at the folder it last resolved for
      * the ACTIVE note — an absolute path, and after `Create folder with notes...` that path sits inside the
      * folder just created. Read as a setting it made `isConfiguredAttachmentFolder` claim `parent/a/sub`,
      * and its every ancestor, as an attachment folder, so both folder-only variants vanished from the menu.

@@ -572,7 +572,7 @@ export async function relocateAttachmentUnitFolders(params: RelocateAttachmentUn
 /**
  * Resolves where an attachment belongs once its note has moved, via `obsidian-dev-utils`
  * {@link getAttachmentFilePath}. That helper reads Obsidian's own attachment-folder configuration and is
- * the very function Custom Attachment Location patches, so a vault running that plugin gets its answer
+ * the very function `Custom Attachment Location` patches, so a vault running that plugin gets its answer
  * without this plugin knowing it exists (issue #161).
  *
  * @param params - The attachment and the notes it moved between.

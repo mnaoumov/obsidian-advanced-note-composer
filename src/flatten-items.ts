@@ -256,7 +256,7 @@ export async function collectFlattenItems(params: CollectFlattenItemsParams): Pr
  * deciding whether to merely OFFER a flatten has no chance to resolve attachment folders (issue #185).
  *
  * `null` means "ask {@link collectFlattenItems}", never "nothing to flatten": a folder-only mode has to know
- * where every note's attachments belong, and once an attachment-location plugin (Custom Attachment Location
+ * where every note's attachments belong, and once an attachment-location plugin (`Custom Attachment Location`
  * and friends) installs its own resolution, that answer is genuinely asynchronous. Otherwise the answer is
  * exact rather than a guess — `obsidian-dev-utils`' {@link getAttachmentFolderPathSyncOrNull} runs the very
  * code {@link getAttachmentFolderPath} would have run.
@@ -374,7 +374,7 @@ function collectFolders(
 
 /**
  * Resolves, for every note under the folder, where its attachments belong. The resolution goes through
- * `obsidian-dev-utils` {@link getAttachmentFolderPath} — the surface Custom Attachment Location patches —
+ * `obsidian-dev-utils` {@link getAttachmentFolderPath} — the surface `Custom Attachment Location` patches —
  * so a vault running that plugin is answered correctly without this plugin knowing it exists (issue #161).
  *
  * @param app - The Obsidian application instance.
@@ -478,7 +478,7 @@ function hasOwnNote(folder: TFolder, attachmentExtensions: readonly string[]): b
 }
 
 /**
- * Whether an attachment-location plugin (Custom Attachment Location and friends) has taken the resolution
+ * Whether an attachment-location plugin (`Custom Attachment Location` and friends) has taken the resolution
  * over, which is what makes Obsidian's own `attachmentFolderPath` unusable as a statement of intent (issue
  * #213).
  *
@@ -628,7 +628,7 @@ function isSkippedFolder(folder: TFolder, context: FlattenContext): boolean {
 function parseAttachmentFolderConfig(app: App): AttachmentFolderConfig {
   /*
    * Issue #213: once an attachment-location plugin owns the resolution, `attachmentFolderPath` is no longer
-   * the user's ANSWER — it is that plugin's scratch space. Custom Attachment Location keeps it pointed at
+   * the user's ANSWER — it is that plugin's scratch space. `Custom Attachment Location` keeps it pointed at
    * the folder it just resolved for the ACTIVE note, an absolute path like `Test/1. Test Notes/@`, so that
    * Obsidian's own paste/drop lands in the right place. Read as a setting, that value makes
    * `isConfiguredAttachmentFolder` answer `true` for the active note's own folder and every ancestor of it,

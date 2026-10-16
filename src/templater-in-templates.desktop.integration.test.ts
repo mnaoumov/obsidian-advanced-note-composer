@@ -9,11 +9,11 @@ import {
 } from 'vitest';
 
 /*
- * Issue #284: Templater syntax was honored in `Create folder content template` and not in the two templates the
+ * Issue #284: `Templater` syntax was honored in `Create folder content template` and not in the two templates the
  * reporter's screenshots name — `Split template` as the notes `Create empty note in folder...` makes are filled
  * with it, and `Folder note aliases template` as `Rename folder...` writes it.
  *
- * Templater itself is not installed in the test vault, and what is under test is what the plugin HANDS it, so a
+ * `Templater` itself is not installed in the test vault, and what is under test is what the plugin HANDS it, so a
  * fake `templater-obsidian` stands in: its `overwrite_file_commands` rewrites the note on disk the way the real
  * one does (sees the template's raw command, writes the result back), and its `parse_template` evaluates the one
  * expression these templates use out of the `TOKENS` prelude the plugin generates — a fake returning a constant
@@ -76,7 +76,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
           });
           pluginsRecord['templater-obsidian'] = {
             templater: {
-              // eslint-disable-next-line camelcase -- Templater's own API method name.
+              // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
               overwrite_file_commands: async (file: TFile): Promise<void> => {
                 const content = await app.vault.read(file);
                 contentsSeenByTemplater.push(content);
@@ -187,7 +187,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
       vaultPath: getTemporaryVault().path
     });
 
-    // Templater was handed the note once it held the template, raw command and all...
+    // `Templater` was handed the note once it held the template, raw command and all...
     expect(result.contentsSeenByTemplater).toEqual(['# templater-in-templates-note\n\n\n\nstamp: <% "RENDERED" %>']);
     // ...and what it rendered is what the note ends up holding.
     expect(result.noteContent).toBe('# templater-in-templates-note\n\n\n\nstamp: RENDERED');
@@ -215,7 +215,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
           });
           pluginsRecord['templater-obsidian'] = {
             templater: {
-              /* eslint-disable camelcase -- Templater's own API method names. */
+              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (_templateFile: unknown, targetFile: TFile): unknown => {
                 recordedTargetPaths.push(targetFile.path);
                 return {};
@@ -225,7 +225,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
                 const match = /"safeFolderName":"(?<safeFolderName>[^"]*)"/.exec(content);
                 return Promise.resolve((match?.groups?.['safeFolderName'] ?? '').toUpperCase());
               }
-              /* eslint-enable camelcase -- Templater's own API method names. */
+              /* eslint-enable camelcase -- `Templater`'s own API method names. */
             }
           };
 
@@ -334,7 +334,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
       vaultPath: getTemporaryVault().path
     });
 
-    // The OLD alias was rendered through Templater too, which is why `ALPHA` is found and swapped for `BETA`
+    // The OLD alias was rendered through `Templater` too, which is why `ALPHA` is found and swapped for `BETA`
     // while the hand-written alias survives.
     expect(result.noteContent).toContain('- BETA');
     expect(result.noteContent).not.toContain('ALPHA');

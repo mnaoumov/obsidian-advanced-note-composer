@@ -14,9 +14,9 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 /*
- * The reporter of issue #203 wrote one Templater command per LINE, so their transform produced a two-line
+ * The reporter of issue #203 wrote one `Templater` command per LINE, so their transform produced a two-line
  * name (`Test: a` became `Test - a` + `Test: a`). This template reproduces that exact shape through the
- * plugin's OWN token pass instead, so the reproduction needs no Templater install in the test vault while
+ * plugin's OWN token pass instead, so the reproduction needs no `Templater` install in the test vault while
  * failing for precisely the same reason: a name that spans two lines.
  */
 const MULTI_LINE_NAME_TRANSFORM_TEMPLATE = '{{rawString}}\n{{rawString}}';

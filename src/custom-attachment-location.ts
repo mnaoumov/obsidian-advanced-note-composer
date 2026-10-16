@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Hands a note to the Custom Attachment Location plugin so it can collect that note's attachments.
+ * Hands a note to the `Custom Attachment Location` plugin so it can collect that note's attachments.
  *
  * This plugin already moves the attachments an extracted range references, but only when the range is
  * their SOLE referencer — an attachment also referenced from elsewhere stays where it is, because
@@ -29,13 +29,13 @@ import { noopAsync } from 'obsidian-dev-utils/function';
 import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 
 /**
- * The Custom Attachment Location plugin's id, under which it publishes its API.
+ * The `Custom Attachment Location` plugin's id, under which it publishes its API.
  */
 export const CUSTOM_ATTACHMENT_LOCATION_PLUGIN_ID = 'obsidian-custom-attachment-location';
 
 /**
  * The contract version range this plugin compiled against. `collectAttachments` was added in contract
- * `1.2.0`, first released in Custom Attachment Location `13.0.0`.
+ * `1.2.0`, first released in `Custom Attachment Location` `13.0.0`.
  */
 export const CUSTOM_ATTACHMENT_LOCATION_API_VERSION_RANGE = '^1.2.0';
 
@@ -63,7 +63,7 @@ export interface CollectAttachmentsWithCustomAttachmentLocationParams {
 }
 
 /**
- * Custom Attachment Location's public API, as far as this plugin uses it.
+ * `Custom Attachment Location`'s public API, as far as this plugin uses it.
  */
 export interface CustomAttachmentLocationApi {
   /**
@@ -87,7 +87,7 @@ interface CollectAttachmentsParams {
 }
 
 /**
- * Asks the Custom Attachment Location plugin to collect the given notes' attachments.
+ * Asks the `Custom Attachment Location` plugin to collect the given notes' attachments.
  *
  * The API is watched through a component that lives exactly as long as the call. `watchPluginApi` resolves
  * the published record synchronously, so the handle is current the moment it is returned, and the component

@@ -801,33 +801,33 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   }
 
   /**
-   * Runs Templater over each created note, exposing this command's tokens to it first.
+   * Runs `Templater` over each created note, exposing this command's tokens to it first.
    *
-   * This drives Templater itself rather than calling its `overwrite_file_commands`, and the reason is the
+   * This drives `Templater` itself rather than calling its `overwrite_file_commands`, and the reason is the
    * prelude's POSITION. `overwrite_file_commands` reads the note from disk, so the only way to give it the
    * prelude is to write the prelude into the note — and a file that starts with `<%*` has no frontmatter as
    * far as the metadata cache is concerned, which leaves `tp.frontmatter` empty. Writing it lower instead (it
    * used to go below the frontmatter block) puts `TOKENS` in the temporal dead zone for the frontmatter
-   * above it, so `aliases: <% TOKENS.… %>` made Templater abandon the WHOLE note with a generic
+   * above it, so `aliases: <% TOKENS.… %>` made `Templater` abandon the WHOLE note with a generic
    * `Template parsing error, aborting.` — the note kept the raw prelude as visible garbage. Prepending to the
    * parsed STRING has neither problem: the file on disk keeps real frontmatter for the metadata cache, and
    * `TOKENS` is declared before anything that could reference it.
    *
    * Owning the write is also what lets a plain `app.fileManager.processFrontMatter(tp.config.target_file, …)`
    * work: the render is computed from the note as it stood BEFORE that call, so writing it back would revert
-   * it — which is why Templater requires `tp.hooks.on_all_templates_executed(…)` everywhere else.
+   * it — which is why `Templater` requires `tp.hooks.on_all_templates_executed(…)` everywhere else.
    * {@link applyPropertiesWrittenDuringRun} reconciles the two versions instead, so the hook is optional here.
    *
    * The `start`/`end` task pair is not bookkeeping — it is the only thing that fires
    * `templater:all-templates-executed`, so a template that DOES use `tp.hooks.on_all_templates_executed(…)`
    * never runs its callback without it. It is in a `finally` so a broken template cannot strand the pair.
    *
-   * Templater's own cursor jump is deliberately NOT run here: it acts on `workspace.activeEditor`, which at
+   * `Templater`'s own cursor jump is deliberately NOT run here: it acts on `workspace.activeEditor`, which at
    * this point is still whatever note the user was on — never the note just created, which is opened later.
    * The note is recorded instead, and the jump runs when it opens (issue #301, `templater-cursor.ts`).
    *
    * @param files - The created notes.
-   * @param tokens - The values to expose to Templater code.
+   * @param tokens - The values to expose to `Templater` code.
    * @returns A {@link Promise} that resolves when every note has been processed.
    */
   private async runTemplater(files: readonly TFile[], tokens: CreateFolderTemplateTokens): Promise<void> {
@@ -838,9 +838,12 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
-        f.appendText('Advanced Note Composer: You have enabled setting ');
+        appendCodeBlock(f, 'Advanced Note Composer');
+        f.appendText(': You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
-        f.appendText(', but Templater plugin is not installed.');
+        f.appendText(', but ');
+        appendCodeBlock(f, 'Templater');
+        f.appendText(' plugin is not installed.');
       }));
       return;
     }
@@ -862,11 +865,14 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         this.app.workspace.trigger('templater:overwrite-file', { content, file });
         await recordPendingTemplaterCursor(this.app, file);
       } catch (error) {
-        // Templater's own entry point swallows this into a notice that names neither the note nor the
+        // `Templater`'s own entry point swallows this into a notice that names neither the note nor the
         // template, and leaves the note unrendered. The note is kept the same way — it already exists and
         // the remaining notes still deserve their turn — but the message says which one failed.
         this.pluginNoticeComponent.showNotice(createFragment((f) => {
-          f.appendText('Advanced Note Composer: Templater failed on ');
+          appendCodeBlock(f, 'Advanced Note Composer');
+          f.appendText(': ');
+          appendCodeBlock(f, 'Templater');
+          f.appendText(' failed on ');
           appendCodeBlock(f, file.path);
           f.appendText(`: ${error instanceof Error ? error.message : String(error)}`);
         }));
@@ -880,7 +886,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
    * Runs the `Name transform template` over a name (issue #196).
    *
    * This command creates a folder rather than working on an existing note, so it has none of its own to
-   * offer as the Templater context — the shared fallback chain finds one, and no longer insists that a note
+   * offer as the `Templater` context — the shared fallback chain finds one, and no longer insists that a note
    * be open to do it (issue #218).
    *
    * @param rawString - The name to transform.

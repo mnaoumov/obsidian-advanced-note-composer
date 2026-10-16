@@ -206,7 +206,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
      * through it, `AllChildren` included: excluded paths do not move either (issue #193), so its own count
      * is no longer just `folder.children.length`.
      *
-     * `null` means an attachment-location plugin (Custom Attachment Location and friends) owns the
+     * `null` means an attachment-location plugin (`Custom Attachment Location` and friends) owns the
      * resolution and it is genuinely asynchronous, which Obsidian's synchronous menu / `checkCallback` pass
      * cannot wait for. There the original behavior stands verbatim for everything the gate above could not
      * already settle: the command is offered, and `executeFolder` says so with a notice rather than

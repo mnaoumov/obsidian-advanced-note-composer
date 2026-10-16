@@ -18,6 +18,7 @@ import {
 import {
   renderSingleLineValueWithTemplater,
   renderStringWithTemplater,
+  renderTemplateErrorMessage,
   renderValueListWithTemplater,
   TemplateRenderError
 } from './templater-string.ts';
@@ -125,6 +126,22 @@ describe('renderValueListWithTemplater', () => {
   });
 });
 
+describe('renderTemplateErrorMessage', () => {
+  it('should render every mention of the plugin as code and keep the rest as text', () => {
+    const fragment = renderTemplateErrorMessage(`${SETTING_NAME} uses Templater syntax, but the Templater plugin is not installed`);
+
+    expect(fragment.textContent).toBe(`${SETTING_NAME} uses Templater syntax, but the Templater plugin is not installed`);
+    expect([...fragment.querySelectorAll('code')].map((code) => code.textContent)).toEqual(['Templater', 'Templater']);
+  });
+
+  it('should render a message with no mention as plain text', () => {
+    const fragment = renderTemplateErrorMessage(`${SETTING_NAME} failed: boom`);
+
+    expect(fragment.textContent).toBe(`${SETTING_NAME} failed: boom`);
+    expect(fragment.querySelectorAll('code')).toHaveLength(0);
+  });
+});
+
 function createApp(): AppOriginal {
   const app = App.createConfigured__({ files: { 'note.md': 'note' } }).asOriginalType__();
   castTo<GenericObject>(app.workspace)['getRecentFiles'] = vi.fn().mockReturnValue([]);
@@ -139,10 +156,10 @@ function installTemplater(app: AppOriginal): Mock {
   const parseTemplate = vi.fn().mockResolvedValue('');
   castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
     templater: {
-      /* eslint-disable camelcase -- Templater's own API method names. */
+      /* eslint-disable camelcase -- `Templater`'s own API method names. */
       create_running_config: vi.fn().mockReturnValue({}),
       parse_template: parseTemplate
-      /* eslint-enable camelcase -- Templater's own API method names. */
+      /* eslint-enable camelcase -- `Templater`'s own API method names. */
     }
   });
   return parseTemplate;

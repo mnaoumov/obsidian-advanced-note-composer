@@ -148,7 +148,7 @@ async function configureSuite(): Promise<OriginalState> {
         settings.newFolderContentTemplate = '{{file}} {{safeFolderName}}.md\n# {{folderName}}\n{{file}} tasks.md\n- [ ] todo';
         settings.shouldAskBeforeCreatingFolder = true;
         settings.shouldOpenNoteAfterCreatingFolder = false;
-        // Templater is not installed in the test vault; leaving this on would only add a warning notice.
+        // `Templater` is not installed in the test vault; leaving this on would only add a warning notice.
         settings.shouldRunTemplaterOnDestinationFile = false;
       });
 

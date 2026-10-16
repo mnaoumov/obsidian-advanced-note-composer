@@ -56,7 +56,7 @@ function heading(text: string, line: number): HeadingCache {
 }
 
 /**
- * Publishes a stand-in Advanced Metadata Cache API, exactly as that plugin does.
+ * Publishes a stand-in `Advanced Metadata Cache` API, exactly as that plugin does.
  *
  * @param apiVersion - The contract version to publish under.
  * @param times - What `getHeadingTimes` answers.

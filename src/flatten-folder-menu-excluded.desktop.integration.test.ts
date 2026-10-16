@@ -202,7 +202,7 @@ describe('flatten folder menu with an excluded or configured attachment folder (
         }
 
         /**
-         * Models Custom Attachment Location: the `extended` member it hangs on Obsidian's
+         * Models `Custom Attachment Location`: the `extended` member it hangs on Obsidian's
          * `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the native
          * resolution, and its mere PRESENCE is what makes the resolution asynchronous. Installed on the
          * INSTANCE — the real member lives on `Vault.prototype`.

@@ -69,9 +69,9 @@ caption: Install Templater and load the example
 await require('/demoSetup.ts').setUpTemplaterExample(app);
 ```
 
-Manual equivalent: install and enable **Templater** from **Settings → Community plugins**, then turn on **Should run templater on destination file** in **Settings → Advanced Note Composer** and paste the template below into **Create folder content template**.
+Manual equivalent: install and enable **`Templater`** from **Settings → Community plugins**, then turn on **Should run templater on destination file** in **Settings → `Advanced Note Composer`** and paste the template below into **Create folder content template**.
 
-With **Should run templater on destination file** on, each created note is handed to Templater. The plugin substitutes its own tokens first, so they are available to Templater code too — and they are bound to a `TOKENS` object:
+With **Should run templater on destination file** on, each created note is handed to `Templater`. The plugin substitutes its own tokens first, so they are available to `Templater` code too — and they are bound to a `TOKENS` object:
 
 ```text
 {{file}} {{safeFolderName}}.md
@@ -118,7 +118,7 @@ aliases:
 ---
 ```
 
-A plain `processFrontMatter` like that needs care in Templater generally. Wherever Templater *rewrites a whole note* from what it read before your code ran — creating a note from a template, or replacing the templates in a file — the rendered text lands on top of your write and the properties are lost, which is why `tp.hooks.on_all_templates_executed` exists. Inserting a template into a note you already have open is unaffected, because that writes through the editor, and so is writing properties to some *other* file.
+A plain `processFrontMatter` like that needs care in `Templater` generally. Wherever `Templater` *rewrites a whole note* from what it read before your code ran — creating a note from a template, or replacing the templates in a file — the rendered text lands on top of your write and the properties are lost, which is why `tp.hooks.on_all_templates_executed` exists. Inserting a template into a note you already have open is unaffected, because that writes through the editor, and so is writing properties to some *other* file.
 
 Creating a folder with notes is a rewriting flow, but the plugin owns that write and keeps whatever properties your template set while it ran — so the plain call is enough here. The hook still works if you prefer it.
 

@@ -30,7 +30,7 @@ export interface ApplyPropertiesWrittenDuringRunParams {
  *
  * A template that calls `app.fileManager.processFrontMatter(tp.config.target_file, …)` writes the note
  * during its own run, but the render was computed from the note as it stood BEFORE that write — so writing
- * the render over the top silently reverts it. Templater's own answer is
+ * the render over the top silently reverts it. `Templater`'s own answer is
  * `tp.hooks.on_all_templates_executed(…)`, which defers the write until after the render lands; this makes
  * the plain call work too, because this plugin owns the write and can see both versions.
  *
