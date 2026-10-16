@@ -64,7 +64,7 @@ interface DialogProbeResult {
  * this suite's own restore did on the first run after the split.
  */
 interface OriginalState {
-  readonly newFileFolderPath: string;
+  readonly newFileFolderPath: string | undefined;
   readonly newFileLocation: string;
   readonly settings: RestorableSettings;
 }
@@ -129,7 +129,7 @@ async function configureSuite(): Promise<OriginalState> {
     async callback({ app, findSettingsComponent, parent, pluginId }): Promise<OriginalState> {
       const settingsComponent = findSettingsComponent(app, pluginId);
       const original: OriginalState = {
-        newFileFolderPath: app.vault.getConfig('newFileFolderPath') as string,
+        newFileFolderPath: app.vault.getConfig('newFileFolderPath'),
         newFileLocation: app.vault.getConfig('newFileLocation') as string,
         settings: {
           newFolderContentTemplate: settingsComponent.settings.newFolderContentTemplate,
