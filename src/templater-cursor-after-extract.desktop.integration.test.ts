@@ -13,12 +13,12 @@ import {
 
 /*
  * Issue #301: `Split template` = `<% tp.file.cursor() %> {{content}}`, and the note an Extract created kept the
- * raw `<% tp.file.cursor() %>` — read by the reporter as "Templater does not trigger". Templater DID run:
- * `tp.file.cursor()` renders to that very marker, and Templater consumes it only with a separate cursor jump in
+ * raw `<% tp.file.cursor() %>` — read by the reporter as "Templater does not trigger". `Templater` DID run:
+ * `tp.file.cursor()` renders to that very marker, and `Templater` consumes it only with a separate cursor jump in
  * the ACTIVE editor, while the plugin renders the destination before the note is ever opened.
  *
- * Templater is not installed in the test vault, so a fake `templater-obsidian` stands in, reproducing the two
- * halves of the real one that matter here (both checked against Templater 2.25.0): rendering leaves the marker
+ * `Templater` is not installed in the test vault, so a fake `templater-obsidian` stands in, reproducing the two
+ * halves of the real one that matter here (both checked against `Templater` 2.25.0): rendering leaves the marker
  * in the note, and `editor_handler.jump_to_next_cursor_location(file, true)` does nothing unless `file` is the
  * active note, where it removes the marker and puts the caret there. The real plugin was also driven through
  * this exact flow while fixing it, with the same outcome.
@@ -108,9 +108,9 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
           Object.assign(settings, CHANGED_SETTINGS);
         });
         pluginsRecord['templater-obsidian'] = {
-          // eslint-disable-next-line camelcase -- Templater's own API property name.
+          // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
           editor_handler: {
-            // eslint-disable-next-line camelcase -- Templater's own API method name.
+            // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
             jump_to_next_cursor_location: async (file: null | TFile): Promise<void> => {
               if (file && app.workspace.getActiveFile() !== file) {
                 return;
@@ -127,13 +127,13 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
               }
               editor.setValue(value.slice(0, offset) + value.slice(offset + MARKER.length));
               editor.setCursor(editor.offsetToPos(offset));
-              // Templater awaits a render delay here; one tick stands in for it.
+              // `Templater` awaits a render delay here; one tick stands in for it.
               await sleep(0);
             }
           },
           templater: {
             // `tp.file.cursor()` renders to its own marker, so the rendered note is the note as written.
-            // eslint-disable-next-line camelcase -- Templater's own API method name.
+            // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
             overwrite_file_commands: async (file: TFile): Promise<void> => {
               await app.vault.modify(file, await app.vault.read(file));
             }

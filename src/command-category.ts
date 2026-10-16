@@ -14,7 +14,7 @@
  * (issue #249).
  *
  * Command blocking used to be all-or-nothing: a path listed in the all-commands `Command exclude paths`
- * setting lost EVERY Advanced Note Composer command. The request was to block merges on a path while
+ * setting lost EVERY `Advanced Note Composer` command. The request was to block merges on a path while
  * keeping the rest of the commands there, so each command now names the category it belongs to and each
  * category carries a path filter of its own. The all-commands pair it was first layered on was retired in
  * issue #271, so the category's own filter is now the only one consulted.

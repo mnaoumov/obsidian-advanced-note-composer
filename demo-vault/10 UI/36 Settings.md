@@ -60,7 +60,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 ## Split and extract
 
 - `splitTemplate`
-  - wraps content split or extracted into a new note. Falls back to `mergeTemplate`. Its Templater commands run under `shouldRunTemplaterOnDestinationFile`, recursive splits and `Create empty note in folder...` included.
+  - wraps content split or extracted into a new note. Falls back to `mergeTemplate`. Its `Templater` commands run under `shouldRunTemplaterOnDestinationFile`, recursive splits and `Create empty note in folder...` included.
 - `splitToExistingFileTemplate`
   - which action's template applies when the target already exists, so a split into an existing note can be formatted as a merge.
 - `defaultSplitTargetMode`
@@ -102,7 +102,7 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
 - `shouldMoveAttachmentsWhenSplitting`
   - carry the attachments the extracted text references into the new note's attachment folder. One the text left behind still references stays put.
 - `shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit`
-  - hand the destination note to Custom Attachment Location once the extract lands, so it collects that note's attachments (Custom Attachment Location 13.0.0 or later). Covers the shared ones the setting above deliberately leaves behind.
+  - hand the destination note to `Custom Attachment Location` once the extract lands, so it collects that note's attachments (`Custom Attachment Location` 13.0.0 or later). Covers the shared ones the setting above deliberately leaves behind.
 - `shouldOpenTargetNoteAfterSplit`
   - open the note a split produced.
 
@@ -235,7 +235,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `shouldOpenNoteAfterCreatingFolder`
   - open the first declared note once the folder is created.
 - `shouldRunTemplaterOnDestinationFile`
-  - hand each created note to Templater, with the plugin's own tokens already substituted. In the `Common` group at the top of the settings, because merges, splits and `Create empty note in folder...` read it too.
+  - hand each created note to `Templater`, with the plugin's own tokens already substituted. In the `Common` group at the top of the settings, because merges, splits and `Create empty note in folder...` read it too.
 
 ## Reorder
 
@@ -257,7 +257,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `folderNoteNameTemplate`
   - names the folder note when you chose the location yourself.
 - `folderNoteTitleTemplate` / `folderNoteAliasesTemplate`
-  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property alone. Both may hold Templater commands, with the folder note as `tp.file`.
+  - the `title` and the alias a reorder or rename writes into it. Either empty leaves that property alone. Both may hold `Templater` commands, with the folder note as `tp.file`.
 
 ## UI
 

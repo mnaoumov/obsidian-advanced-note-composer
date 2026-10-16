@@ -60,7 +60,7 @@ describe('change target from the create-folder confirmation dialog (issue #199)'
             settings.newFolderContentTemplate = '{{file}} {{safeFolderName}}.md\n# {{folderName}}';
             settings.shouldAskBeforeCreatingFolder = true;
             settings.shouldOpenNoteAfterCreatingFolder = false;
-            // Templater is not installed in the test vault; leaving this on would only add a warning notice.
+            // `Templater` is not installed in the test vault; leaving this on would only add a warning notice.
             settings.shouldRunTemplaterOnDestinationFile = false;
           });
 

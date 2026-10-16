@@ -184,7 +184,7 @@ vi.mock('../attachments.ts', async (importOriginal) => ({
   relocateAttachments: vi.fn().mockResolvedValue(undefined)
 }));
 
-// The hand-off to Custom Attachment Location reaches a plugin that is not installed in a unit run, and
+// The hand-off to `Custom Attachment Location` reaches a plugin that is not installed in a unit run, and
 // it has its own suite. What this one asserts is that the composer asks, with the right note, at the
 // right moment (issue #246).
 vi.mock('../custom-attachment-location.ts', async (importOriginal) => ({
@@ -292,7 +292,7 @@ function createPluginSettingsComponentStub(
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
       shouldApplyTextAfterExtractionToSameFile: false,
       shouldBlockVaultDuringOperations: false,
-      // The shipped default: the hand-off to Custom Attachment Location is opt-in.
+      // The shipped default: the hand-off to `Custom Attachment Location` is opt-in.
       shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: false,
       shouldExtractFrontmatterSelectionAsProperties: true,
       shouldFixFootnotesByDefault: false,

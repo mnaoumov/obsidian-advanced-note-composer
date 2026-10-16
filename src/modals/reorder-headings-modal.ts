@@ -17,7 +17,7 @@ export interface OpenReorderHeadingsModalParams {
 
   /**
    * When each heading was created, modified and seen, indexed like the split's sections, or `null` when
-   * Advanced Metadata Cache does not provide them (issue #306).
+   * `Advanced Metadata Cache` does not provide them (issue #306).
    */
   readonly headingTimes: null | readonly HeadingTimes[];
 

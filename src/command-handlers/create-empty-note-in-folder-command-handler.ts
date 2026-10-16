@@ -141,7 +141,7 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
 
     const file = await createNoteFromTypedName({
       app: this.app,
-      // No note of its own to offer as the Templater context; the shared fallback chain finds one
+      // No note of its own to offer as the `Templater` context; the shared fallback chain finds one
       // (issue #218).
       contextFile: null,
       fileName: typedName,

@@ -813,7 +813,7 @@ describe('merge folder contents into a single file (issue #92)', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    // The ordinary note was merged; the Excalidraw drawing's raw payload was not, and the drawing lives on.
+    // The ordinary note was merged; the `Excalidraw` drawing's raw payload was not, and the drawing lives on.
     expect(result.hasNoteBody).toBe(true);
     expect(result.drawingNotMerged).toBe(true);
     expect(result.drawingKept).toBe(true);

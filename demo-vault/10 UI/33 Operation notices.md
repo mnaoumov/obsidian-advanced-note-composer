@@ -35,7 +35,7 @@ An **extract** goes one step further. Clicking the destination of `Split note A 
 
 A notice reports the work while leaving Obsidian clickable, so nothing stops you starting a second operation on top of a half-applied first one. **Should block the vault during operations** replaces the notice with a dialog that cannot be dismissed for as long as the work runs.
 
-The part that matters is when it goes away. The operation returning is *not* the end: renaming a file makes other plugins - Custom Attachment Location, Consistent Attachments and Links - queue their own link updates, and those run afterwards. The dialog waits for that queue to drain before it closes, so when it is gone the links really are updated.
+The part that matters is when it goes away. The operation returning is *not* the end: renaming a file makes other plugins - `Custom Attachment Location`, `Consistent Attachments and Links` - queue their own link updates, and those run afterwards. The dialog waits for that queue to drain before it closes, so when it is gone the links really are updated.
 
 It carries the same `Cancel` button the notice does, because blocking the vault without offering a way out would be a trap. And the wait is bounded: if something downstream is stuck, the dialog gives the vault back rather than holding it forever.
 

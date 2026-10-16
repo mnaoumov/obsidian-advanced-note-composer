@@ -6,7 +6,7 @@
  *
  * The designation is not this plugin's: it is read back from whatever the attachment-location plugin
  * published on the patched `Vault.getAvailablePathForAttachments`, through `obsidian-dev-utils`, so this
- * plugin and Custom Attachment Location decide from one answer. A vault where nobody published one has no
+ * plugin and `Custom Attachment Location` decide from one answer. A vault where nobody published one has no
  * unit folders at all, which keeps every caller's behavior exactly what it was before.
  */
 

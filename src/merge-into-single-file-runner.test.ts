@@ -501,7 +501,7 @@ describe('mergeFilesIntoSingleFile', () => {
   });
 
   it('does not warn about templater when the plugin is installed', async () => {
-    // eslint-disable-next-line camelcase -- Templater's real public API method name.
+    // eslint-disable-next-line camelcase -- `Templater`'s real public API method name.
     initApp({ 'a.md': 'alpha body', 'target.md': '' }, { plugins: { 'templater-obsidian': { templater: { overwrite_file_commands: vi.fn() } } } });
     const { consoleDebugComponent, context, pluginNoticeComponent, pluginSettingsComponent } = createContext({
       shouldRunTemplaterOnDestinationFile: true

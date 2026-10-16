@@ -1,6 +1,6 @@
 # Block commands on excluded paths
 
-Advanced Note Composer has **two independent path filters**, and knowing which is which is the whole trick:
+`Advanced Note Composer` has **two independent path filters**, and knowing which is which is the whole trick:
 
 - **`<Category>` include paths** / **`<Category>` exclude paths** decide what those commands may *pick*. An excluded note never shows up in a merge/split picker, is refused as a target, and is never swept up when a folder merge or a flatten runs on a folder above it. It does **not** stop a command you run *on* the excluded note or folder itself: you can still extract from it, merge it away, or flatten it.
 - **`<Category>` command include paths** / **`<Category>` command exclude paths** decide where those commands are *offered* at all. A path listed here loses them entirely — from the command palette and from the editor, file, and folder context menus.
@@ -23,7 +23,7 @@ If a line is not a valid regular expression, the setting says `Invalid regular e
 1. Open the plugin settings, go to **Merge**, and open **Merge include/exclude paths**. Add a folder path (for example `Materials/02 Merge folder/Merge folder`) to **Merge exclude paths**.
 2. Open a note outside that folder and run `Merge current file with another file...`: nothing inside the folder is offered as a destination. Now open a note inside it and run the same command: it works, because excluding a path keeps it out of the picker, not away from the commands.
 3. Now add the same folder path to **Merge command exclude paths**, on the same page.
-4. Right-click the same note again, or open the command palette on it: the merge commands are gone, while every other Advanced Note Composer command is still there.
+4. Right-click the same note again, or open the command palette on it: the merge commands are gone, while every other `Advanced Note Composer` command is still there.
 5. Open a note that is not in that folder and confirm the merge commands are still available there.
 6. Change the **Merge command exclude paths** entry to the regular expression `/Merge folder$/`. Right-click a note inside the folder: the commands are back, because a path ending in `Merge folder` is the folder itself and nothing under it. Right-click the `Merge folder` folder: its merge commands are still hidden.
 7. Clear **Merge command exclude paths** and put the folder path in **Merge command include paths** instead. Now it is the other way round: the merge commands are offered *only* inside that folder and hidden everywhere else.
@@ -85,7 +85,7 @@ Within one category the exclude box wins over the include box, so listing a path
 1. Right-click `Materials/23 Reorder folders/Reorder example` and run `Reorder child folders`. All three of `1. Alpha`, `2. Beta` and `3. Gamma` are listed — see [23 Reorder folders](<../06 Folder operations/23 Reorder folders.md>).
 2. Open the plugin settings, go to **Reorder**, open **Reorder include/exclude paths**, and put `Materials/23 Reorder folders/Reorder example/2. Beta` in **Reorder exclude paths**.
 3. Run `Reorder child folders` on `Reorder example` again: `2. Beta` is gone from the list, and only `1. Alpha` and `3. Gamma` can be moved.
-4. Right-click `2. Beta` itself: every Advanced Note Composer command is still there, and `Merge current folder with another folder...` still offers it as a destination. Only the reorder skipped it.
+4. Right-click `2. Beta` itself: every `Advanced Note Composer` command is still there, and `Merge current folder with another folder...` still offers it as a destination. Only the reorder skipped it.
 5. Clear that box, and put the same path in **Reorder command exclude paths** instead. Now right-click `2. Beta`: the reorder commands are gone from its menu — while `Reorder child folders` on the parent still lists it, because hiding a command is not the same as excluding a path. That is the pair, both ways round.
 6. Clear both boxes when you are done.
 

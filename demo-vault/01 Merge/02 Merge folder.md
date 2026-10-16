@@ -12,7 +12,7 @@ The chapters - [Chapter 1](<../Materials/02 Merge folder/Merge folder/Chapter 1.
 
 ## Options
 
-The confirmation step lets you include child folders and parent folders. Toggle **Should include child folders when merging folders** and **Should include parent folders when merging folders** in **Settings → Advanced Note Composer** to change the defaults.
+The confirmation step lets you include child folders and parent folders. Toggle **Should include child folders when merging folders** and **Should include parent folders when merging folders** in **Settings → `Advanced Note Composer`** to change the defaults.
 
 ## Land in the merged folder
 
@@ -29,11 +29,11 @@ caption: Open the first note after merging folders
 await require('/demoSetup.ts').changeSettings(app, { shouldOpenFirstNoteAfterMergingFolder: true });
 ```
 
-A markdown file that is really an attachment — an Excalidraw drawing stored as `sketch.excalidraw.md`, per **Attachment extensions** — is moved into the destination like any other attachment rather than merged into a note. See [03 Merge folder into single file](<../01 Merge/03 Merge folder into single file.md>).
+A markdown file that is really an attachment — an `Excalidraw` drawing stored as `sketch.excalidraw.md`, per **Attachment extensions** — is moved into the destination like any other attachment rather than merged into a note. See [03 Merge folder into single file](<../01 Merge/03 Merge folder into single file.md>).
 
 ## Excluded items
 
-By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and reports them in a notice, so no stray empty target is left behind. Turn on **Should always merge excluded items** to move and merge those items too (no "ignored" notice). Manual equivalent: toggle **Should always merge excluded items** in **Settings → Advanced Note Composer**.
+By default, folder merge **skips** items whose path is excluded/ignored in the plugin settings and reports them in a notice, so no stray empty target is left behind. Turn on **Should always merge excluded items** to move and merge those items too (no "ignored" notice). Manual equivalent: toggle **Should always merge excluded items** in **Settings → `Advanced Note Composer`**.
 
 The **destination** is a separate question: an excluded folder is offered in the picker only while **Should offer excluded paths as merge destinations** is on, whatever the setting above is set to. See [26 Block commands on excluded paths](<../08 Include and exclude/26 Block commands on excluded paths.md>).
 

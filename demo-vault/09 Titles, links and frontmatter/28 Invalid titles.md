@@ -1,6 +1,6 @@
 # Invalid titles
 
-Headings can contain characters that are illegal in file names. The core plugin refuses to extract them; Advanced Note Composer cleans them up instead.
+Headings can contain characters that are illegal in file names. The core plugin refuses to extract them; `Advanced Note Composer` cleans them up instead.
 
 ## Try it
 
@@ -22,9 +22,9 @@ One **Replacement string** for every invalid character turns `Report: Q1` into `
 <% TOKENS.rawString.replaceAll(": ", " - ") %>
 ```
 
-Conditional mappings are ordinary JavaScript, so one template can handle as many characters as you like. Templater is only needed for the logic — a template made purely of `{{tokens}}` works on its own.
+Conditional mappings are ordinary JavaScript, so one template can handle as many characters as you like. `Templater` is only needed for the logic — a template made purely of `{{tokens}}` works on its own.
 
-**You do not need a note open.** A Templater run has to report on some note through `tp.file`, so the plugin uses the one you have open, and when you have none, the last note you opened, or failing that the last one you edited. Only a vault with no notes in it at all has nothing to offer, and that is the one case the template is refused. This matters for the commands that work on a *folder* — [`Create folder with notes...`](<../06 Folder operations/22 Create folder with notes.md>) and [`Merge current folder contents into a single file...`](<../01 Merge/03 Merge folder into single file.md>) — which have no note of their own and used to refuse outright whenever nothing was focused.
+**You do not need a note open.** A `Templater` run has to report on some note through `tp.file`, so the plugin uses the one you have open, and when you have none, the last note you opened, or failing that the last one you edited. Only a vault with no notes in it at all has nothing to offer, and that is the one case the template is refused. This matters for the commands that work on a *folder* — [`Create folder with notes...`](<../06 Folder operations/22 Create folder with notes.md>) and [`Merge current folder contents into a single file...`](<../01 Merge/03 Merge folder into single file.md>) — which have no note of their own and used to refuse outright whenever nothing was focused.
 
 The template must produce a **single line** - chain your replacements instead of writing one command per line. Each command emits its own result, so two lines produce a two-line name, which no file name can be; the operation is refused with a message saying so:
 
@@ -36,7 +36,7 @@ Characters your template does not map are still governed by **Should replace inv
 
 A broken template is reported where you can see it: the `Create folder with notes...` prompt shows the error and asks again, and the other commands stop rather than create a note under a name you did not intend.
 
-The block below sets a transform that maps a colon-and-space to a spaced dash. Manual equivalent: type it into **Name transform template** in **Settings -> Advanced Note Composer**. Then run `Create folder with notes...` and type `Alpha: Beta` - the folder is created as `Alpha - Beta`, not `Alpha_ Beta`.
+The block below sets a transform that maps a colon-and-space to a spaced dash. Manual equivalent: type it into **Name transform template** in **Settings -> `Advanced Note Composer`**. Then run `Create folder with notes...` and type `Alpha: Beta` - the folder is created as `Alpha - Beta`, not `Alpha_ Beta`.
 
 ```code-button
 ---
@@ -54,7 +54,7 @@ await require('/demoSetup.ts').changeSettings(app, { nameTransformTemplate: '<% 
 - **Name transform template**
   - your own replacements, applied before anything else.
 
-The block below switches to always writing a frontmatter `title`. Manual equivalent: set **Frontmatter title mode** to `UseAlways` in **Settings → Advanced Note Composer**.
+The block below switches to always writing a frontmatter `title`. Manual equivalent: set **Frontmatter title mode** to `UseAlways` in **Settings → `Advanced Note Composer`**.
 
 ```code-button
 ---

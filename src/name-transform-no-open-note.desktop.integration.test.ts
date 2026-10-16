@@ -11,17 +11,17 @@ import {
 } from 'vitest';
 
 /*
- * Issue #218: with a Templater `Name transform template` configured and NO note open, every command that
+ * Issue #218: with a `Templater` `Name transform template` configured and NO note open, every command that
  * names something refused — `Create folder with notes...` reported it in its name prompt, `Merge folder
  * contents into a single file...` as a notice, both of them the one refusal. A folder command has no note of
- * its own to offer Templater, and Templater insists on a file, so the fix is a fallback chain that finds one.
+ * its own to offer `Templater`, and `Templater` insists on a file, so the fix is a fallback chain that finds one.
  *
  * Desktop-only: the whole point is a REAL workspace with nothing open, driven through the real name prompt.
- * Templater itself is not installed in the test vault and installing it is not what is under test — which
+ * `Templater` itself is not installed in the test vault and installing it is not what is under test — which
  * note is handed over is — so a fake `templater-obsidian` records the `target_file` it is given and evaluates
  * the reporter's own template out of the `TOKENS` prelude the plugin builds. That also keeps the assertion
- * honest about what it proves: the plugin reaches Templater with a resolvable note instead of refusing;
- * whether real Templater accepts it is verified by hand against a vault that has it.
+ * honest about what it proves: the plugin reaches `Templater` with a resolvable note instead of refusing;
+ * whether real `Templater` accepts it is verified by hand against a vault that has it.
  *
  * Isolation: `npx vitest run --project integration-tests:desktop src/name-transform-no-open-note.desktop.integration.test.ts`.
  */
@@ -100,7 +100,7 @@ describe('name transform with no note open (issue #218)', () => {
         const originalNewFileLocation = app.vault.getConfig('newFileLocation');
         const originalNewFileFolderPath = app.vault.getConfig('newFileFolderPath');
         const originalGetRecentFiles = app.workspace.getRecentFiles;
-        // The temporary vault has no Templater, so this is `undefined` — restoring it therefore restores the
+        // The temporary vault has no `Templater`, so this is `undefined` — restoring it therefore restores the
         // "not installed" state, which is what the rest of the suite expects to find.
         const pluginsRecord: Record<string, unknown> = app.plugins.plugins;
         const originalTemplaterPlugin = pluginsRecord['templater-obsidian'];
@@ -236,7 +236,7 @@ describe('name transform with no note open (issue #218)', () => {
         function createFakeTemplaterPlugin(): unknown {
           return {
             templater: {
-              /* eslint-disable camelcase -- Templater's own API method names. */
+              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (templateFile: unknown, targetFile: null | TFile | undefined, runMode: number): unknown => {
                 recordedTargetPaths.push(targetFile?.path ?? '<no target file>');
                 return {
@@ -255,7 +255,7 @@ describe('name transform with no note open (issue #218)', () => {
                 const rawStringMatch = /"rawString":"(?<rawString>[^"]*)"/.exec(content);
                 return Promise.resolve((rawStringMatch?.groups?.['rawString'] ?? '').replaceAll(': ', ' - '));
               }
-              /* eslint-enable camelcase -- Templater's own API method names. */
+              /* eslint-enable camelcase -- `Templater`'s own API method names. */
             }
           };
         }
@@ -297,7 +297,7 @@ describe('name transform with no note open (issue #218)', () => {
     expect(result.noticeTexts.filter((text) => text.includes('Name transform template'))).toStrictEqual([]);
     expect(result.isTypedNameValid).toBe(true);
 
-    // Templater ran, and against the note last opened — the deleted path ahead of it in the recent list was
+    // `Templater` ran, and against the note last opened — the deleted path ahead of it in the recent list was
     // walked past rather than handed over.
     expect(result.wasTemplaterCalled).toBe(true);
     expect(result.recordedTargetPaths).toStrictEqual(['name-transform-no-open-note-context.md']);
@@ -475,7 +475,7 @@ describe('name transform with no note open (issue #218)', () => {
         function createFakeTemplaterPlugin(): unknown {
           return {
             templater: {
-              /* eslint-disable camelcase -- Templater's own API method names. */
+              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (templateFile: unknown, targetFile: null | TFile | undefined, runMode: number): unknown => {
                 recordedTargetPaths.push(targetFile?.path ?? '<no target file>');
                 return {
@@ -491,7 +491,7 @@ describe('name transform with no note open (issue #218)', () => {
                 const rawStringMatch = /"rawString":"(?<rawString>[^"]*)"/.exec(content);
                 return Promise.resolve((rawStringMatch?.groups?.['rawString'] ?? '').replaceAll('_', ' - '));
               }
-              /* eslint-enable camelcase -- Templater's own API method names. */
+              /* eslint-enable camelcase -- `Templater`'s own API method names. */
             }
           };
         }

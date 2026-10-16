@@ -353,7 +353,7 @@ export class PluginSettings {
   /**
    * Extensions that make a file an attachment rather than a note, matched against the file's whole name
    * by `obsidian-dev-utils` `isTreatedAsAttachment` — so a multi-part extension like `.excalidraw.md` is
-   * written out in full. Such a file is never merged — inlining an Excalidraw drawing's raw payload into
+   * written out in full. Such a file is never merged — inlining an `Excalidraw` drawing's raw payload into
    * a note is never what the user wanted (issue #160). It is moved like any other attachment instead: by
    * the folder merges (into a single file, or into another folder) and by the file merge that owns it
    * (issue #161).
@@ -542,22 +542,22 @@ export class PluginSettings {
    * How a user-supplied name is rewritten before it is sanitized into a file name (issue #196) — the vault's
    * OWN replacements, instead of living with one universal {@link replacement} character.
    *
-   * `{{rawString}}` is the name as supplied; with Templater installed the same value is bound as
+   * `{{rawString}}` is the name as supplied; with `Templater` installed the same value is bound as
    * `TOKENS.rawString`, so a mapping is written as
    * `<% TOKENS.rawString.replaceAll(": ", " - ") %>` — which turns `A: B` into `A - B` — and a
    * conditional one is just as easy. (The separator carries its space: replacing a bare `:` in `A: B`
    * would leave `A -  B`, which only survives because folder names collapse whitespace runs.)
    *
-   * A Templater run needs a note to report on through `tp.file.*`, and it does NOT have to be an open one
+   * A `Templater` run needs a note to report on through `tp.file.*`, and it does NOT have to be an open one
    * (issue #218): the open note is used when there is one, otherwise the note last open, otherwise the note
    * last written. Only a vault holding no note at all refuses. Before that, a configured template made every
    * folder command — which has no note of its own to offer — fail whenever nothing was focused.
    *
    * A TEMPLATE rather than a `FROM => TO` mapping list, for the reason the rest of this plugin's decisions
    * are templates: a list can only ever express the substitutions someone already thought of, while one
-   * escape hatch covers every mapping anyone will ask for. It is also why Templater is required for anything
+   * escape hatch covers every mapping anyone will ask for. It is also why `Templater` is required for anything
    * conditional — plain token substitution cannot branch, and inventing a second mini-language to make it
-   * branch would be a worse Templater.
+   * branch would be a worse `Templater`.
    *
    * Applies EVERYWHERE a name becomes a file name — splits, extracts, the folder-merge note name, folder
    * creation — matching {@link replacement}, which is already plugin-wide. Empty (the default) skips it
@@ -817,12 +817,12 @@ export class PluginSettings {
    */
   public shouldChooseFolderBeforeNameWhenSplitting = false;
   /**
-   * Whether the target note is handed to the Custom Attachment Location plugin once an extract lands,
+   * Whether the target note is handed to the `Custom Attachment Location` plugin once an extract lands,
    * so that plugin collects its attachments (issue #246).
    *
    * This exists because {@link shouldMoveAttachmentsWhenSplitting} deliberately stops short: it moves
    * an attachment only when the extracted range is its SOLE referencer, since deciding where a SHARED
-   * attachment belongs is a question this plugin has no answer to. Custom Attachment Location does —
+   * attachment belongs is a question this plugin has no answer to. `Custom Attachment Location` does —
    * it has a mode setting for exactly that, and a note-priority list on top — so the note is handed
    * over instead of growing a second, worse copy of that logic here. The reporter reached the same
    * conclusion themselves before filing.
@@ -1655,7 +1655,7 @@ export class PluginSettings {
   }
 
   /**
-   * Whether an Advanced Note Composer command must be blocked (hidden) on the given path (issue #93):
+   * Whether an `Advanced Note Composer` command must be blocked (hidden) on the given path (issue #93):
    * decided ENTIRELY by the command-visibility filter, {@link _commandCategoryPathSettings}, and no longer
    * by the content filter plus a toggle (issue #198).
    *

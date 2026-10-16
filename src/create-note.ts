@@ -86,7 +86,7 @@ export type ResolveTypedNoteNameParams = Pick<CreateNoteFromTypedNameParams, 'fi
  *
  * It exists so the two flows that turn typed text into a note — the split/extract picker and the file
  * explorer's `Create empty note in folder...` (issue #244) — cannot disagree about any of them. Everything
- * the split used to need its SOURCE note for is a parameter here: the Templater context (already nullable in
+ * the split used to need its SOURCE note for is a parameter here: the `Templater` context (already nullable in
  * `name-transform.ts`), the path links resolve against, and the destination folder.
  *
  * @param params - The typed name, where it goes, and the settings the naming rules read.

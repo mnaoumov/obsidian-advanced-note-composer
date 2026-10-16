@@ -22,12 +22,12 @@ export type TemplaterPreludeTokens = CreateFolderTemplateTokens | NameTransformT
 export const TEMPLATER_PRELUDE_VARIABLE_NAME = 'TOKENS';
 
 /**
- * Builds the Templater execution-command prelude that exposes a command's tokens to Templater code
+ * Builds the `Templater` execution-command prelude that exposes a command's tokens to `Templater` code
  * (issue #191). Shared by the created notes' content, by the `Name transform template` (issue #196) and by the
  * folder-note and reordered-note property templates (issue #284), which parse a bare string rather than a file
  * but need the same `TOKENS` binding.
  *
- * Templater offers no way to pass data INTO a template run — `tp.config` carries only `template_file`,
+ * `Templater` offers no way to pass data INTO a template run — `tp.config` carries only `template_file`,
  * `target_file`, `run_mode` and `active_file` — so the values are injected as source instead. A variable
  * declared in a `<%* %>` execution command stays in scope for every later `<% %>` command in the same
  * template, which is what makes `<% TOKENS.safeFolderName %>` resolve; and because these are real
@@ -38,9 +38,9 @@ export const TEMPLATER_PRELUDE_VARIABLE_NAME = 'TOKENS';
  *
  * The closing `-%>` trims exactly one newline after the command, so the prelude leaves no blank line behind.
  *
- * **Every caller puts it FIRST, at position 0 of the text handed to Templater, and never writes it to disk.**
+ * **Every caller puts it FIRST, at position 0 of the text handed to `Templater`, and never writes it to disk.**
  * A `const` is in the temporal dead zone for every command ABOVE it, so a prelude placed any lower makes
- * `TOKENS` unusable in the note's own frontmatter — and Templater then abandons the WHOLE note, body
+ * `TOKENS` unusable in the note's own frontmatter — and `Templater` then abandons the WHOLE note, body
  * included, with a generic `Template parsing error, aborting.` notice. Prepending is only safe because the
  * combined string goes to `parse_template`: a FILE that starts with `<%*` has no frontmatter as far as the
  * metadata cache is concerned, which is what would break `tp.frontmatter`.

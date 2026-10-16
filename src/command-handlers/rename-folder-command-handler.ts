@@ -48,6 +48,7 @@ import {
 import { resolveCreateFolderTemplateTokens } from '../template-tokens.ts';
 import {
   renderSingleLineValueWithTemplater,
+  renderTemplateErrorMessage,
   renderValueListWithTemplater,
   TemplateRenderError
 } from '../templater-string.ts';
@@ -336,7 +337,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       if (error instanceof TemplateRenderError) {
         // A misconfigured property template (issue #284): the transaction has rolled the rename back, and the
         // message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
-        this.pluginNoticeComponent.showNotice(error.message);
+        this.pluginNoticeComponent.showNotice(renderTemplateErrorMessage(error.message));
         return false;
       }
       throw error;
@@ -513,7 +514,7 @@ function buildTokens(params: BuildTokensParams): CreateFolderTemplateTokens {
  * Renders the folder note's aliases template the way {@link renderTemplate} renders the title, except that
  * each line of the result is an alias of its own (issue #294), so one rename can derive several.
  *
- * @param params - The template, its tokens and the Templater context.
+ * @param params - The template, its tokens and the `Templater` context.
  * @returns The aliases, or none when the template is empty — the opt-out that leaves the property alone.
  */
 async function renderAliasesTemplate(params: RenderTemplateParams): Promise<string[]> {
@@ -539,10 +540,10 @@ async function renderAliasesTemplate(params: RenderTemplateParams): Promise<stri
 }
 
 /**
- * Renders one of the folder note's property templates: the plugin's own `{{tokens}}` first, then Templater
+ * Renders one of the folder note's property templates: the plugin's own `{{tokens}}` first, then `Templater`
  * when a `<%` survives them (issue #284), with the folder note itself as `tp.file`.
  *
- * @param params - The template, its tokens and the Templater context.
+ * @param params - The template, its tokens and the `Templater` context.
  * @returns The rendered value, or an empty string when the template is empty — the opt-out that leaves the
  * property alone.
  */

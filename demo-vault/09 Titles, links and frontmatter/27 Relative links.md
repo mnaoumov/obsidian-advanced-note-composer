@@ -1,6 +1,6 @@
 # Relative links
 
-When you extract or merge a note that contains links **relative to its folder**, the core Note composer leaves them pointing at the wrong place. Advanced Note Composer rewrites them so they keep resolving.
+When you extract or merge a note that contains links **relative to its folder**, the core Note composer leaves them pointing at the wrong place. `Advanced Note Composer` rewrites them so they keep resolving.
 
 ## Try it
 

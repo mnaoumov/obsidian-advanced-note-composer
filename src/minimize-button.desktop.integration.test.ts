@@ -131,7 +131,7 @@ describe('minimize button', () => {
             settings.shouldAskBeforeFlattening = true;
             settings.shouldAskBeforeSplitting = true;
             settings.shouldOpenNoteAfterCreatingFolder = false;
-            // Templater is not installed in the test vault; leaving this on would only add a warning notice.
+            // `Templater` is not installed in the test vault; leaving this on would only add a warning notice.
             settings.shouldRunTemplaterOnDestinationFile = false;
           });
 

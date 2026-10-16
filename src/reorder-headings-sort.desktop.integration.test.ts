@@ -11,7 +11,7 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 /**
- * The plugin id Advanced Metadata Cache publishes its API under. Spelled out rather than imported, since the
+ * The plugin id `Advanced Metadata Cache` publishes its API under. Spelled out rather than imported, since the
  * closure cannot reach an import and the test should fail if the production constant drifts from it.
  */
 const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';

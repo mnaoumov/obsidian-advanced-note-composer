@@ -82,7 +82,7 @@ const COMMAND_CATEGORY_COMMANDS_DESCRIPTIONS: ReadonlyMap<CommandCategory, strin
 ]);
 
 /**
- * What a property template that writes ONE value says about its result, closing its Templater description.
+ * What a property template that writes ONE value says about its result, closing its `Templater` description.
  * The aliases template says something else, since each line of its result is an alias of its own (issue #294).
  */
 const SINGLE_LINE_RESULT_RULE = 'The result must be a single line.';
@@ -159,7 +159,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             desc: createFragment((f) => {
               f.appendText('Whether to run ');
               f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
-              f.appendText(' on the destination file after merging/splitting, so Templater commands in the merge and split templates run.');
+              f.appendText(' on the destination file after merging/splitting, so ');
+              appendCodeBlock(f, 'Templater');
+              f.appendText(' commands in the merge and split templates run.');
               f.createEl('br');
               f.appendText('Also applies to the notes ');
               appendCodeBlock(f, 'Create folder with notes...');
@@ -167,7 +169,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               appendCodeBlock(f, 'Create empty note in folder...');
               f.appendText(' create, and to every note a recursive split or a folder merge produces.');
               f.createEl('br');
-              f.appendText('The name transform and the folder-note and reordered-note property templates do not need it: a Templater command in one of those always runs.');
+              f.appendText('The name transform and the folder-note and reordered-note property templates do not need it: a ');
+              appendCodeBlock(f, 'Templater');
+              f.appendText(' command in one of those always runs.');
             }),
             name: 'Should run templater on destination file',
             render: (setting) => {
@@ -774,7 +778,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('When ');
               appendCodeBlock(f, 'Should run templater on destination file');
-              f.appendText(' is on, Templater commands in it run once the note holds the template — in every split, including ');
+              f.appendText(' is on, ');
+              appendCodeBlock(f, 'Templater');
+              f.appendText(' commands in it run once the note holds the template — in every split, including ');
               appendCodeBlock(f, 'Split note by headings recursively...');
               f.appendText(', ');
               appendCodeBlock(f, 'Split heading recursively...');
@@ -1909,7 +1915,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('When ');
               appendCodeBlock(f, 'Should run templater on destination file');
-              f.appendText(' is on, every token is also available to Templater code as ');
+              f.appendText(' is on, every token is also available to ');
+              appendCodeBlock(f, 'Templater');
+              f.appendText(' code as ');
               appendCodeBlock(f, '<% TOKENS.safeFolderName %>');
               f.appendText(' — as real values, so ');
               appendCodeBlock(f, '<% TOKENS.index + 1 %>');
@@ -2162,7 +2170,9 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.createEl('br');
               f.appendText('They REPLACE the aliases the old name rendered and nothing else, so aliases you wrote by hand survive the rename.');
               f.createEl('br');
-              f.appendText('A Templater expression that computes several aliases returns them joined with ');
+              f.appendText('A ');
+              appendCodeBlock(f, 'Templater');
+              f.appendText(' expression that computes several aliases returns them joined with ');
               appendCodeBlock(f, String.raw`"\n"`);
               f.appendText('.');
               f.createEl('br');
@@ -2916,7 +2926,7 @@ function addNumberedSplitNoteTokens(f: DocumentFragment): void {
 }
 
 /**
- * Says that a property template may hold Templater code (issue #284), and what that code sees.
+ * Says that a property template may hold `Templater` code (issue #284), and what that code sees.
  *
  * @param f - The fragment to append to.
  * @param noteDescription - The note `tp.file` reports on, as a phrase.
@@ -2925,7 +2935,9 @@ function addNumberedSplitNoteTokens(f: DocumentFragment): void {
 function addPropertyTemplaterDesc(f: DocumentFragment, noteDescription: string, exampleToken: string, resultRule: string): void {
   f.appendText('With ');
   f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
-  f.appendText(' installed it may also hold Templater commands, run once the tokens below are filled in: the tokens are available as ');
+  f.appendText(' installed it may also hold ');
+  appendCodeBlock(f, 'Templater');
+  f.appendText(' commands, run once the tokens below are filled in: the tokens are available as ');
   appendCodeBlock(f, `<% ${exampleToken} %>`);
   f.appendText(' and ');
   appendCodeBlock(f, 'tp.file');

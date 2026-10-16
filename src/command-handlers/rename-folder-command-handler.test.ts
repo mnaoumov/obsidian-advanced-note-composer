@@ -366,17 +366,17 @@ describe('RenameFolderCommandHandler', () => {
     expect(getChildFolderNames('parent')).toEqual(['Alpha']);
   });
 
-  // Issue #284: a `<%` left after the plugin's own tokens is Templater's, with the folder note as `tp.file`.
+  // Issue #284: a `<%` left after the plugin's own tokens is `Templater`'s, with the folder note as `tp.file`.
   it('should render a property template through Templater, with the folder note as its context', async () => {
     initApp({ 'parent/Alpha/Alpha.md': '---\ntitle: Alpha\naliases:\n  - Alpha\n---\n' });
     const createRunningConfig = vi.fn().mockReturnValue({});
     const parseTemplate = vi.fn().mockImplementation((_config: unknown, content: string) => Promise.resolve(content.includes('toUpperCase') ? 'BETA\n' : 'Beta'));
     castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
       templater: {
-        /* eslint-disable camelcase -- Templater's own API method names. */
+        /* eslint-disable camelcase -- `Templater`'s own API method names. */
         create_running_config: createRunningConfig,
         parse_template: parseTemplate
-        /* eslint-enable camelcase -- Templater's own API method names. */
+        /* eslint-enable camelcase -- `Templater`'s own API method names. */
       }
     });
     const { handler } = createHandler({ folderNoteAliasesTemplate: '<% TOKENS.safeFolderName.toUpperCase() %>' });
@@ -397,7 +397,8 @@ describe('RenameFolderCommandHandler', () => {
     await handler.executeFolder(getFolder('parent/Alpha'));
 
     expect(getChildFolderNames('parent')).toEqual(['Alpha']);
-    expect(showNotice).toHaveBeenCalledWith(expect.stringContaining('Folder note title template produced a multi-line value.'));
+    expect(showNotice.mock.calls.some(([content]) => typeof content !== 'string' && content.textContent.includes('Folder note title template produced a multi-line value.')))
+      .toBe(true);
   });
 
   it('should report the rename once it has landed', async () => {

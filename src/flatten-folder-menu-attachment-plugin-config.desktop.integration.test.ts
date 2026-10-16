@@ -46,7 +46,7 @@ interface MenuProbe {
 
 /**
  * Issue #213: the reporter ran `Create folder with notes...` on a folder and the two folder-only flatten
- * entries were missing from its context menu afterwards. They blamed Custom Attachment Location, and they
+ * entries were missing from its context menu afterwards. They blamed `Custom Attachment Location`, and they
  * were right — though not for the reason anyone assumed.
  *
  * CAL keeps Obsidian's own `attachmentFolderPath` pointed at the folder it last resolved for the ACTIVE
@@ -148,7 +148,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
         }
 
         /**
-         * Derives the folder from the note's own folder, the shape Custom Attachment Location produces for
+         * Derives the folder from the note's own folder, the shape `Custom Attachment Location` produces for
          * its default `./@` setting.
          *
          * @param parameters - The extended-resolution parameters.
@@ -161,7 +161,7 @@ describe('flatten folder menu when an attachment-location plugin parks a path in
         }
 
         /**
-         * Models Custom Attachment Location: the `extended` member it hangs on Obsidian's
+         * Models `Custom Attachment Location`: the `extended` member it hangs on Obsidian's
          * `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the native
          * resolution, and its mere PRESENCE is what says the resolution is owned elsewhere. Installed on the
          * INSTANCE — the real member lives on `Vault.prototype`.

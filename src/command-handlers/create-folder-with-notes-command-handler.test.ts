@@ -554,10 +554,10 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             parse_template: parseTemplate
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -583,14 +583,14 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     });
 
     it('should report a template that throws something other than an Error', async () => {
-      // Templater runs user JS, and `throw "boom"` is legal JS.
+      // `Templater` runs user JS, and `throw "boom"` is legal JS.
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             parse_template: vi.fn().mockRejectedValue('boom')
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -601,7 +601,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const promptParams = ensureNonNullable(mockPrompt.mock.calls[0]?.[0]);
       const validate = castTo<(value: string) => Promise<unknown>>(promptParams.valueValidator);
 
-      // The message names the setting that failed — a bare `boom` from deep inside Templater told the user
+      // The message names the setting that failed — a bare `boom` from deep inside `Templater` told the user
       // nothing about where to go and fix it (issue #203).
       expect(await validate('alpha')).toBe('Name transform template failed: boom');
     });
@@ -1037,10 +1037,10 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             parse_template: vi.fn().mockRejectedValue('boom')
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -1089,12 +1089,12 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             end_templater_task: endTask,
             parse_template: parseTemplate,
             start_templater_task: startTask
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -1129,12 +1129,12 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             end_templater_task: endTask,
             parse_template: parseTemplate,
             start_templater_task: vi.fn()
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -1147,13 +1147,14 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       await handler.executeFolder(getFolder('parent'));
 
       // Not the LAST notice — the operation still completes, so its completion notice comes after this one.
-      // The path is rendered with `appendCodeBlock`, which contributes nothing to `textContent` under the
-      // mocks (the completion notice loses its names the same way), so only the message is asserted here.
+      // The plugin name and the path are rendered with `appendCodeBlock`, which contributes nothing to
+      // `textContent` under the mocks (the completion notice loses its names the same way), so only the message
+      // is asserted here.
       const noticeTexts = showNotice.mock.calls.map((call) => {
         const content = call[0];
         return typeof content === 'string' ? content : content.textContent;
       });
-      expect(noticeTexts.some((text) => text.includes('Templater failed on') && text.includes('bad template'))).toBe(true);
+      expect(noticeTexts.some((text) => text.includes(' failed on ') && text.includes('bad template'))).toBe(true);
       // The failed note keeps what it had; the next one is still rendered.
       expect(await readNote('parent/1. Alpha/first.md')).toBe('# one\n');
       expect(await readNote('parent/1. Alpha/second.md')).toBe('second\n');
@@ -1162,16 +1163,16 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     });
 
     it('should report a created note whose template throws something other than an Error', async () => {
-      // Templater runs user JS, and `throw "boom"` is legal JS.
+      // `Templater` runs user JS, and `throw "boom"` is legal JS.
       initApp({ 'parent/note.md': 'note' }, {
         'templater-obsidian': {
           templater: {
-            /* eslint-disable camelcase -- Templater's own API method names. */
+            /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
             end_templater_task: vi.fn().mockResolvedValue(undefined),
             parse_template: vi.fn().mockRejectedValue('boom'),
             start_templater_task: vi.fn()
-            /* eslint-enable camelcase -- Templater's own API method names. */
+            /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
         }
       });
@@ -1184,7 +1185,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
         const content = call[0];
         return typeof content === 'string' ? content : content.textContent;
       });
-      expect(noticeTexts.some((text) => text.includes('Templater failed on') && text.includes('boom'))).toBe(true);
+      expect(noticeTexts.some((text) => text.includes(' failed on ') && text.includes('boom'))).toBe(true);
     });
   });
 });

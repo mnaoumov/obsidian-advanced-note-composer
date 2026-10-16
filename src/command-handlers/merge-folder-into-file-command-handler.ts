@@ -50,6 +50,7 @@ import {
   MergeFolderIntoFileLocation
 } from '../plugin-settings.ts';
 import { resolveFolderTemplateTokens } from '../template-tokens.ts';
+import { renderTemplateErrorMessage } from '../templater-string.ts';
 
 /**
  * How many mergeable notes a folder needs before the command is offered at all (issue #209). Merging ONE
@@ -277,7 +278,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
   /**
    * Whether a file is one of the notes this merge would concatenate, as opposed to an attachment that
-   * merely travels with them. Markdown-shaped attachments (an Excalidraw drawing is a `.md` file) are
+   * merely travels with them. Markdown-shaped attachments (an `Excalidraw` drawing is a `.md` file) are
    * never merged: their raw payload would land in the merged note. They are relocated with the other
    * attachments instead.
    *
@@ -338,7 +339,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
       return folder.name;
     }
 
-    // A folder merge has no note of its own to offer Templater as context (issue #196), so the
+    // A folder merge has no note of its own to offer `Templater` as context (issue #196), so the
     // `Name transform template` falls back to the shared chain — the open note, else the note last open,
     // else the note last written (issue #218; before it, no open note meant this merge refused outright).
     const fixedNoteName = await transformAndFixFileName({
@@ -410,7 +411,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
         if (!(error instanceof NameTransformError)) {
           throw error;
         }
-        this.pluginNoticeComponent.showNotice(error.message);
+        this.pluginNoticeComponent.showNotice(renderTemplateErrorMessage(error.message));
         return null;
       }
 

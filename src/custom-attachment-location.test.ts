@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 /**
- * Publishes a stand-in Custom Attachment Location API, exactly as that plugin does.
+ * Publishes a stand-in `Custom Attachment Location` API, exactly as that plugin does.
  *
  * @param apiVersion - The contract version to publish under.
  * @param api - The API object.
@@ -85,7 +85,7 @@ describe('collectAttachmentsWithCustomAttachmentLocation', () => {
   });
 
   it('should report it as unavailable when the published contract predates collectAttachments', () => {
-    // Contract 1.1.0 is what Custom Attachment Location 12.x publishes: the API exists, the member does not.
+    // Contract 1.1.0 is what `Custom Attachment Location` 12.x publishes: the API exists, the member does not.
     const collectAttachments = vi.fn<CustomAttachmentLocationApi['collectAttachments']>().mockResolvedValue();
     publish('1.1.0', { collectAttachments });
 

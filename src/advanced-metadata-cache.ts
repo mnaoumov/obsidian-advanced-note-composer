@@ -25,13 +25,13 @@ import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 /**
- * The Advanced Metadata Cache plugin's id, under which it publishes its API.
+ * The `Advanced Metadata Cache` plugin's id, under which it publishes its API.
  */
 export const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
 /**
  * The contract version range this plugin compiled against. `getHeadingTimes` was added in contract
- * `1.2.0`, first released in Advanced Metadata Cache `1.2.0`.
+ * `1.2.0`, first released in `Advanced Metadata Cache` `1.2.0`.
  */
 export const ADVANCED_METADATA_CACHE_API_VERSION_RANGE = '^1.2.0';
 
@@ -44,7 +44,7 @@ export const ADVANCED_METADATA_CACHE_API_CONTRACT: PluginApiContract = {
 };
 
 /**
- * Advanced Metadata Cache's public API, as far as this plugin uses it.
+ * `Advanced Metadata Cache`'s public API, as far as this plugin uses it.
  */
 export interface AdvancedMetadataCacheApi {
   /**

@@ -173,7 +173,7 @@ describe('applySplitTemplateToNotes', () => {
     expect(parseFrontmatter(await read())).not.toContain('title');
   });
 
-  // Issue #284: the template's own Templater commands are only ever in the note from here on, so this is
+  // Issue #284: the template's own `Templater` commands are only ever in the note from here on, so this is
   // the one place they can be run — after the template is written, never before.
   it('should run Templater over each templated note once the template is in it', async () => {
     const contentsSeenByTemplater: string[] = [];

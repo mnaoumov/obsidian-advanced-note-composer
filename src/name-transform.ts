@@ -22,10 +22,10 @@ export interface ApplyNameTransformParams {
   readonly app: App;
 
   /**
-   * The note the Templater run reports on through `tp.file.*`, or `null` to let
+   * The note the `Templater` run reports on through `tp.file.*`, or `null` to let
    * `resolveTemplaterContextFile` in `templater-string.ts` find one.
    *
-   * Not optional decoration: Templater reads `target_file.basename` / `target_file.stat` EAGERLY while
+   * Not optional decoration: `Templater` reads `target_file.basename` / `target_file.stat` EAGERLY while
    * building its function object, so a run with no file at all throws before the template is even parsed.
    * A flow that has an obvious note (a split's source) passes it; the rest get the shared fallback chain,
    * which no longer requires a note to be OPEN (issue #218).
@@ -108,8 +108,8 @@ export class NameTransformError extends Error {
  * Two stages, and the second is skipped unless it is needed:
  *
  * 1. The plugin's own `{{rawString}}` (plus the shared `{{date}}` / `{{time}}`) are resolved. A template
- *    that is nothing but tokens never touches Templater, so the common case costs one regex pass.
- * 2. If what came out holds a Templater command, it is parsed by Templater with the same `TOKENS` binding
+ *    that is nothing but tokens never touches `Templater`, so the common case costs one regex pass.
+ * 2. If what came out holds a `Templater` command, it is parsed by `Templater` with the same `TOKENS` binding
  *    the created notes get — so `<% TOKENS.rawString.replaceAll(":", " - ") %>` expresses any mapping,
  *    conditional ones included. That generality is the whole reason this is a template rather than a
  *    `FROM => TO` list: the list can only ever say what someone already thought of.
@@ -127,7 +127,7 @@ export class NameTransformError extends Error {
  * `replacement`; off, they survive and the caller's existing validation refuses the name. That is issue
  * #196's "block the characters that have no replacement", with no third setting to reconcile.
  *
- * @param params - The name, the template and the Templater context.
+ * @param params - The name, the template and the `Templater` context.
  * @returns The transformed name, trimmed.
  */
 export async function applyNameTransform(params: ApplyNameTransformParams): Promise<string> {
@@ -216,7 +216,7 @@ export async function transformAndFixFileName(params: TransformAndFixFileNamePar
  * and only failed at `vault.create`, as an unhandled error naming nothing.
  *
  * It is refused rather than joined on purpose. The template that produced it is broken, and the reporter of
- * issue #203 wrote one Templater command per LINE — joining would have silently created `Test - a Test  a`
+ * issue #203 wrote one `Templater` command per LINE — joining would have silently created `Test - a Test  a`
  * and turned a loud failure into a wrong name, which is exactly what the "every failure throws" rule above
  * exists to prevent. Only INTERIOR breaks count: both callers trim first, so a `-%>` block's trailing newline
  * is not an error.

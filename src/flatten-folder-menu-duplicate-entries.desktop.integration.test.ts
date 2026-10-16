@@ -180,7 +180,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
   });
 
   /*
-   * Issue #230: the same reporter met the recursive entry again, this time with Custom Attachment Location
+   * Issue #230: the same reporter met the recursive entry again, this time with `Custom Attachment Location`
    * installed. A plugin owning the attachment resolution makes the collector answer `null`, which used to
    * offer every variant unconditionally — so the rule above simply did not apply in their vault. How deep
    * the folders go is not the attachment question, and it is answered from the folder itself.
@@ -263,7 +263,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
         }
 
         /**
-         * Derives the folder from the note's own folder, the shape Custom Attachment Location produces for
+         * Derives the folder from the note's own folder, the shape `Custom Attachment Location` produces for
          * its default `./@` setting.
          *
          * @param parameters - The extended-resolution parameters.
@@ -276,7 +276,7 @@ describe('flatten folder menu duplicate entries (issue #210)', () => {
         }
 
         /**
-         * Models Custom Attachment Location: the `extended` member it hangs on Obsidian's
+         * Models `Custom Attachment Location`: the `extended` member it hangs on Obsidian's
          * `getAvailablePathForAttachments` is what `obsidian-dev-utils` dispatches to instead of the native
          * resolution, and its mere PRESENCE is what says the resolution is owned elsewhere. Installed on the
          * INSTANCE — the real member lives on `Vault.prototype`.

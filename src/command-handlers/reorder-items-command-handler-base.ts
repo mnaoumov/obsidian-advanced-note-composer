@@ -67,6 +67,7 @@ import {
 } from '../template-tokens.ts';
 import {
   renderSingleLineValueWithTemplater,
+  renderTemplateErrorMessage,
   TemplateRenderError
 } from '../templater-string.ts';
 
@@ -448,7 +449,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       if (error instanceof TemplateRenderError) {
         // A misconfigured title template (issue #284): the transaction has rolled the reorder back, and the
         // message names the setting to fix. Anything else is a genuine bug and still reaches the handler.
-        this.pluginNoticeComponent.showNotice(error.message);
+        this.pluginNoticeComponent.showNotice(renderTemplateErrorMessage(error.message));
         return false;
       }
       throw error;
@@ -498,7 +499,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
 
   /**
    * Renders the `title` an item's note should carry, through its kind's own template and vocabulary — the
-   * plugin's own `{{tokens}}` first, then Templater when a `<%` survives them (issue #284), with the note being
+   * plugin's own `{{tokens}}` first, then `Templater` when a `<%` survives them (issue #284), with the note being
    * titled as `tp.file`.
    *
    * @param plannedItem - The renumbered item.

@@ -4,7 +4,7 @@ When you extract a selection, something can be left in its place: a **link** to 
 
 ## Try it
 
-1. Pick one of the three buttons below to set the mode (or set **Text after extraction** in **Settings → Advanced Note Composer** manually).
+1. Pick one of the three buttons below to set the mode (or set **Text after extraction** in **Settings → `Advanced Note Composer`** manually).
 2. Select the paragraph under the rule and run `Extract current selection...` into a new note.
 3. Look at what is left here - a link, an embed, or an empty gap.
 

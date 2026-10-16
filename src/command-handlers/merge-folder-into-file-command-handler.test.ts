@@ -934,7 +934,7 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
     await handler.executeFolder(getFolder('src'));
 
-    expect(showNotice.mock.calls.some(([content]) => typeof content === 'string' && content.includes('multi-line'))).toBe(true);
+    expect(showNotice.mock.calls.some(([content]) => (typeof content === 'string' ? content : content.textContent).includes('multi-line'))).toBe(true);
     // The name is the first thing this flow needs, so the refusal costs nothing: no note, no merge.
     expect(await app.vault.adapter.exists('Overview.md')).toBe(false);
     expect(await app.vault.adapter.exists('src.md')).toBe(false);

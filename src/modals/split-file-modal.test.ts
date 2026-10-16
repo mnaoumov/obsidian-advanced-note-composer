@@ -565,7 +565,8 @@ describe('prepareForSplitFile', () => {
     const result = await prepareForSplitFile({ app, editor, heading: 'Heading', pluginNoticeComponent, pluginSettingsComponent, resourceLockComponent, shouldSkipModal: true, sourceFile });
 
     expect(result).toBeNull();
-    expect(mockShowNotice).toHaveBeenCalledWith('Name transform template produced a multi-line name');
+    expect(mockShowNotice.mock.calls.some(([content]) => content instanceof DocumentFragment && content.textContent === 'Name transform template produced a multi-line name'))
+      .toBe(true);
   });
 
   it('lets an unexpected failure through, so a real bug is not reported as a configuration problem', async () => {

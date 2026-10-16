@@ -310,7 +310,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     // Only the token keys are checked. There is deliberately NO invalid-character check on the literal
     // text, unlike every other name-shaped template here: emitting a `:` or a ` - ` is the entire point of
     // A transform, and whatever it leaves invalid is answered downstream by
-    // `shouldReplaceInvalidTitleCharacters`. Templater syntax cannot be validated statically at all — a
+    // `shouldReplaceInvalidTitleCharacters`. `Templater` syntax cannot be validated statically at all — a
     // broken template surfaces when it runs, in the prompt that refuses the name.
     this.registerValidator('nameTransformTemplate', (value): MaybeReturn<string> => {
       const unknownKey = findUnknownTokenKey(value, (probe) => {

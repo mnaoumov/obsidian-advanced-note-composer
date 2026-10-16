@@ -267,7 +267,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         shouldRunTemplater: this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile,
-        // Every pass's composer has already reported a missing Templater for this run.
+        // Every pass's composer has already reported a missing `Templater` for this run.
         shouldWarnIfMissing: false
       }),
       template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)

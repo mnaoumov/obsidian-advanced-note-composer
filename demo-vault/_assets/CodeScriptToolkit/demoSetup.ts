@@ -42,7 +42,7 @@ interface DemoSettingsPatch {
  *
  * This used to write `data.json` behind the loaded plugin and then reload the window, which was wrong
  * twice over. It was a race the plugin wins — it saves its own in-memory settings as it unloads, over
- * the file just written — which is exactly the reasoning the Templater helper below already spelled
+ * the file just written — which is exactly the reasoning the `Templater` helper below already spelled
  * out for itself. And the reload took the whole window with it, so a reader lost their place and any
  * automated click-through lost the page it was driving.
  *
@@ -57,14 +57,18 @@ export async function changeSettings(app: App, patch: DemoSettingsPatch): Promis
 }
 
 /**
- * Installs and enables Templater, then loads the multi-alias content template and reloads.
+ * Installs and enables `Templater`, then loads the multi-alias content template and reloads.
  *
  * The demo vault ships only the plugin under test and the helper, so the `Templater` section of
- * `29 Create folder with notes` has nothing to run against until this has been done. Templater is
+ * `29 Create folder with notes` has nothing to run against until this has been done. `Templater` is
  * installed through Obsidian's own store path rather than committed to the vault.
  */
 export async function setUpTemplaterExample(app: App): Promise<void> {
-  new Notice('Installing Templater...');
+  new Notice(createFragment((f) => {
+    f.appendText('Installing ');
+    f.createEl('code', { text: 'Templater' });
+    f.appendText('...');
+  }));
   await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
 
   // Disabled first rather than patched in place: this one replaces a template the plugin reads at
@@ -86,7 +90,10 @@ export async function setUpTemplaterExample(app: App): Promise<void> {
     }
   });
   await enableCommunityPlugin({ app, pluginId: PLUGIN_ID });
-  new Notice('Templater is ready — the example template is loaded.');
+  new Notice(createFragment((f) => {
+    f.createEl('code', { text: 'Templater' });
+    f.appendText(' is ready — the example template is loaded.');
+  }));
 }
 
 export function bindHotkey(app: App, commandId: string, hotkey: Hotkey): void {

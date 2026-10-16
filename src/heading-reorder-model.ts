@@ -54,7 +54,7 @@ export const HEADING_TIMES_UNAVAILABLE_REASON = 'needs Advanced Metadata Cache w
 export interface HeadingReorderModelConstructorParams {
   /**
    * When each heading was created, modified and seen, indexed like the split's sections, or `null` when the
-   * Advanced Metadata Cache plugin does not provide them. Without them the three time sorts are offered
+   * `Advanced Metadata Cache` plugin does not provide them. Without them the three time sorts are offered
    * disabled.
    */
   readonly headingTimes: null | readonly HeadingTimes[];
@@ -314,7 +314,7 @@ export class HeadingReorderModel implements ReorderModel {
    * numbering template wrote is ignored when the note is or will be numbered, since renumbering rewrites it
    * anyway.
    *
-   * By time a heading with no time (`null`, an event Advanced Metadata Cache did not see) counts as the
+   * By time a heading with no time (`null`, an event `Advanced Metadata Cache` did not see) counts as the
    * oldest, as that plugin asks.
    *
    * @param key - The {@link HeadingSortKey} chosen.

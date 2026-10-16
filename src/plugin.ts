@@ -116,8 +116,8 @@ export class Plugin extends PluginBase {
         return;
       }
       recordRecentVisit(file);
-      // Issue #301: a note Templater rendered while it was not on screen still holds its
-      // `tp.file.cursor()` marker, and this is the moment Templater would have jumped to it.
+      // Issue #301: a note `Templater` rendered while it was not on screen still holds its
+      // `tp.file.cursor()` marker, and this is the moment `Templater` would have jumped to it.
       invokeAsyncSafely(() => jumpToPendingTemplaterCursor(this.app, file));
     }));
     this.register(clearPendingTemplaterCursors);
