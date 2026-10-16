@@ -7,10 +7,9 @@
  * - **Replaced core methods.** The `Backlinks` and `Names` modules answer by REPLACING a method
  *   Obsidian already has — `app.metadataCache.getBacklinksForFile()` and
  *   `app.metadataCache.getLinkSuggestions()` — so a consumer that only wants the faster answer calls
- *   core and never reaches for a handle. {@link GetBacklinksForFileFn} and {@link GetLinkSuggestionsFn}
- *   declare the members those patched methods ALSO carry; every one of them is deprecated since
- *   `1.3.0` and goes away in `2.0.0`, because nothing of this plugin's own belongs on an Obsidian
- *   function. Each has a replacement on the published API below.
+ *   core and never reaches for a handle. The patched methods keep Obsidian's own signature and carry
+ *   nothing else: the members they also carried before `2.0.0` were removed, because nothing of this
+ *   plugin's own belongs on an Obsidian function, and each has a replacement on the published API below.
  * - **A published API.** {@link AdvancedMetadataCacheApi} is published through the plugin registry
  *   under the plugin id `advanced-metadata-cache` and carries a contract version of its own. It
  *   answers what the `Titles` and `Headings` modules know, which core has no method for, and since
@@ -298,97 +297,6 @@ export interface CustomArrayDict<T> {
    * @param value - The value to remove.
    */
   remove(key: string, value: T): void;
-}
-
-/**
- * Extended implementation of the `app.metadataCache.getBacklinksForFile` method from Obsidian,
- * present while the `Backlinks` module is on.
- *
- * Calling it with a path is deprecated since 1.3.0, and so is every member below: each has a
- * replacement on {@link AdvancedMetadataCacheApi}, and 2.0.0 removes them, leaving Obsidian's own
- * signature.
- */
-export interface GetBacklinksForFileFn {
-  /**
-   * Fast implementation that might be inconsistent if the file changes are not processed yet.
-   *
-   * @param pathOrFile - The path or file to get the backlinks for.
-   * @returns The backlinks for the file.
-   */
-  (pathOrFile: string | TFile): CustomArrayDict<Reference>;
-
-  /**
-   * Original implementation from Obsidian.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getBacklinksForFileOriginal}.
-   * @param file - The file to get the backlinks for.
-   * @returns The backlinks for the file.
-   */
-  originalFn(file: TFile): CustomArrayDict<Reference>;
-
-  /**
-   * Safe asynchronous implementation that waits for the file changes to be processed.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getBacklinksForFileSafe}.
-   * @param pathOrFile - The path or file to get the backlinks for.
-   * @returns The backlinks for the file.
-   */
-  safe(pathOrFile: string | TFile): Promise<CustomArrayDict<Reference>>;
-}
-
-/**
- * Extended implementation of the `app.metadataCache.getLinkSuggestions` method from Obsidian,
- * present while the `Names` module is on.
- *
- * Every member below is deprecated since 1.3.0: each has a replacement on
- * {@link AdvancedMetadataCacheApi}, and 2.0.0 removes them, leaving Obsidian's own signature.
- */
-export interface GetLinkSuggestionsFn {
-  /**
-   * Fast implementation, answered from the index rather than from a full vault walk. Until the
-   * index has finished building it falls through to Obsidian's own implementation.
-   *
-   * @returns Every link target the `[[` autocomplete can offer.
-   */
-  (): LinkSuggestion[];
-
-  /**
-   * Finds every note that answers to a name — its basename, or one of its `aliases`.
-   *
-   * The answer is a LIST, because several notes may declare the same alias, and it is unranked and
-   * complete: which of them the user meant is a question about the caller's context.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getPathsByName}.
-   * @param name - A basename or alias, in any casing and spacing.
-   * @returns The vault-relative paths of the notes carrying that name.
-   */
-  getPathsByName(name: string): string[];
-
-  /**
-   * Safe asynchronous implementation of {@link GetLinkSuggestionsFn.getPathsByName} that waits for
-   * the index to be built.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getPathsByNameSafe}.
-   * @param name - A basename or alias, in any casing and spacing.
-   * @returns The vault-relative paths of the notes carrying that name.
-   */
-  getPathsByNameSafe(name: string): Promise<string[]>;
-
-  /**
-   * Original implementation from Obsidian.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getLinkSuggestionsOriginal}.
-   * @returns Every link target the `[[` autocomplete can offer.
-   */
-  originalFn(): LinkSuggestion[];
-
-  /**
-   * Safe asynchronous implementation that waits for the index to be built.
-   *
-   * @deprecated Since 1.3.0, removed in 2.0.0. Use {@link AdvancedMetadataCacheApi.getLinkSuggestionsSafe}.
-   * @returns Every link target the `[[` autocomplete can offer.
-   */
-  safe(): Promise<LinkSuggestion[]>;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { ApiMethodContract } from '@mnaoumov/typescript-lib/api-contract';
 import type { TFile } from 'obsidian';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
@@ -9,10 +10,6 @@ import {
   it
 } from 'vitest';
 
-import type {
-  AdvancedMetadataCacheApiSchema,
-  AdvancedMetadataCacheApiSchemaResult
-} from './api-contract.ts';
 import type { AdvancedMetadataCacheApi } from './api.d.ts';
 
 import { ADVANCED_METADATA_CACHE_API_CONTRACT } from './api-contract.ts';
@@ -28,6 +25,8 @@ interface PayloadCase {
   readonly invalid: readonly unknown[];
   readonly valid: readonly unknown[];
 }
+
+type Schema = NonNullable<ApiMethodContract['input']>;
 
 const BACKLINKS_DICT = {
   data: new Map(),
@@ -103,7 +102,7 @@ describe('ADVANCED_METADATA_CACHE_API_CONTRACT', () => {
     for (const methodName of castTo<MethodName[]>(Object.keys(ADVANCED_METADATA_CACHE_API_CONTRACT))) {
       const methodContract = ADVANCED_METADATA_CACHE_API_CONTRACT[methodName];
       for (const schema of [methodContract.input, methodContract.output]) {
-        expect(schema['~standard']).toMatchObject({ vendor: 'advanced-metadata-cache', version: 1 });
+        expect(schema['~standard']).toMatchObject({ vendor: '@mnaoumov/typescript-lib', version: 1 });
       }
     }
   });
@@ -112,7 +111,7 @@ describe('ADVANCED_METADATA_CACHE_API_CONTRACT', () => {
     const cases = getCases();
     for (const methodName of castTo<MethodName[]>(Object.keys(cases))) {
       for (const half of ['input', 'output'] as const) {
-        const schema: AdvancedMetadataCacheApiSchema<unknown> = ADVANCED_METADATA_CACHE_API_CONTRACT[methodName][half];
+        const schema: Schema = ADVANCED_METADATA_CACHE_API_CONTRACT[methodName][half];
         const { invalid, valid } = cases[methodName][half];
         for (const [index, value] of valid.entries()) {
           expect(validate(schema, value), `${methodName} ${half} should accept valid case ${String(index)}`).toEqual({ value });
@@ -141,6 +140,11 @@ describe('ADVANCED_METADATA_CACHE_API_CONTRACT', () => {
   });
 });
 
-function validate(schema: AdvancedMetadataCacheApiSchema<unknown>, value: unknown): AdvancedMetadataCacheApiSchemaResult<unknown> {
-  return schema['~standard'].validate(value);
+function validate(schema: Schema, value: unknown): Awaited<ReturnType<Schema['~standard']['validate']>> {
+  const result = schema['~standard'].validate(value);
+  if (result instanceof Promise) {
+    throw new TypeError('Expected a synchronous schema.');
+  }
+
+  return result;
 }

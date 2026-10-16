@@ -1,3 +1,5 @@
+import type { ApiMethodContract } from '@mnaoumov/typescript-lib/api-contract';
+
 import {
   App,
   TFile,
@@ -10,10 +12,6 @@ import {
   vi
 } from 'vitest';
 
-import type {
-  CustomAttachmentLocationApiSchema,
-  CustomAttachmentLocationApiSchemaResult
-} from './api-contract.ts';
 import type { CustomAttachmentLocationApi } from './api.d.ts';
 
 import { CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT } from './api-contract.ts';
@@ -29,6 +27,10 @@ interface PayloadCase {
   readonly invalid: readonly unknown[];
   readonly valid: readonly unknown[];
 }
+
+type Schema = NonNullable<ApiMethodContract['input']>;
+
+type SchemaResult = Awaited<ReturnType<Schema['~standard']['validate']>>;
 
 const app = App.createConfigured__();
 const file = TFile.create__(app.vault, 'Notes/Alpha.md').asOriginalType__();
@@ -158,38 +160,39 @@ describe('CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT', () => {
     }
   });
 
-  it('should accept every valid payload and refuse every invalid one', () => {
+  it('should accept every valid payload and refuse every invalid one', async () => {
     for (const methodName of METHOD_NAMES) {
       for (const half of ['input', 'output'] as const) {
-        const schema: CustomAttachmentLocationApiSchema<unknown> = CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT[methodName][half];
+        const schema: Schema = CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT[methodName][half];
         const { invalid, valid } = CASES[methodName][half];
         for (const [index, value] of valid.entries()) {
-          expect(validate(schema, value), `${methodName} ${half} should accept valid case ${String(index)}`).toEqual({ value });
+          expect(await validate(schema, value), `${methodName} ${half} should accept valid case ${String(index)}`).toEqual({ value });
         }
 
         for (const [index, value] of invalid.entries()) {
-          expect(validate(schema, value).issues, `${methodName} ${half} should refuse invalid case ${String(index)}`).not.toHaveLength(0);
+          const result = await validate(schema, value);
+          expect(result.issues, `${methodName} ${half} should refuse invalid case ${String(index)}`).not.toHaveLength(0);
         }
       }
     }
   });
 
-  it('should name the failing argument and what it expected', () => {
-    expect(validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, [{ folderPath: 1 }])).toEqual({
+  it('should name the failing argument and what it expected', async () => {
+    expect(await validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, [{ folderPath: 1 }])).toEqual({
       issues: [{ message: 'Expected attachment-unit-folder params: { folderPath: string }.', path: [0] }]
     });
-    expect(validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, 'Notes')).toEqual({
+    expect(await validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, 'Notes')).toEqual({
       issues: [{ message: 'Expected an argument list.' }]
     });
-    expect(validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, [{ folderPath: 'a' }, 'b'])).toEqual({
+    expect(await validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.isAttachmentUnitFolder.input, [{ folderPath: 'a' }, 'b'])).toEqual({
       issues: [{ message: 'Expected at most 1 argument(s), got 2.' }]
     });
-    expect(validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.migrateSettings.output, null)).toEqual({
+    expect(await validate(CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT.migrateSettings.output, null)).toEqual({
       issues: [{ message: 'Expected a migrate-settings result: { isApplied: boolean }.' }]
     });
   });
 });
 
-function validate(schema: CustomAttachmentLocationApiSchema<unknown>, value: unknown): CustomAttachmentLocationApiSchemaResult<unknown> {
-  return schema['~standard'].validate(value);
+async function validate(schema: Schema, value: unknown): Promise<SchemaResult> {
+  return await schema['~standard'].validate(value);
 }
