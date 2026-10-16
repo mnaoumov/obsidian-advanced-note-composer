@@ -1,3 +1,7 @@
+// Loads the ESM copy of obsidian-typings, the copy the augmentation below targets. `tsconfig.json` deliberately has
+// no `types` entry for the package: on `node16` that entry loads the CommonJS copy, which this augmentation never reaches.
+/// <reference types="@obsidian-typings/obsidian-public-latest" resolution-mode="import" />
+
 import type {
   Plugin,
   TFile
