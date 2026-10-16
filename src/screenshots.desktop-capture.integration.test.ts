@@ -55,14 +55,6 @@ interface CursorEditorView {
   editor: CursorEditor;
 }
 
-/**
- * `App`, reduced to the inline-title toggle that `obsidian-typings` does not
- * declare.
- */
-interface InlineTitleApp {
-  updateInlineTitleDisplay: (this: void) => void;
-}
-
 const PLUGIN_ID = 'advanced-note-composer';
 const WIDTH_IN_PIXELS = 1200;
 const HEIGHT_IN_PIXELS = 800;
@@ -119,8 +111,7 @@ beforeAll(async () => {
       app.workspace.rightSplit.collapse();
 
       app.vault.setConfig('showInlineTitle', false);
-      const inlineTitleApp: unknown = app;
-      (inlineTitleApp as InlineTitleApp).updateInlineTitleDisplay();
+      app.updateInlineTitleDisplay();
 
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
     },
