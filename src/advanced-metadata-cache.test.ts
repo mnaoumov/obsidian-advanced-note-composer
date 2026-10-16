@@ -1,5 +1,4 @@
 import type {
-  App,
   HeadingCache,
   Plugin,
   TFile
@@ -10,6 +9,7 @@ import { castTo } from 'obsidian-dev-utils/object-utils';
 import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   describe,
@@ -31,9 +31,12 @@ import {
 /**
  * The registry is looked up by plugin id alone, so an empty strict proxy is the whole app these calls need.
  */
-const app = strictProxy<App>({});
+const app = strictProxy<ReturnType<App['asOriginalType__']>>({});
 
-const NOTE_FILE = castTo<TFile>({ path: 'note.md' });
+/**
+ * A real file, because the provider's own contract validates the argument with `instanceof`.
+ */
+const NOTE_FILE = castTo<TFile>(App.createConfigured__().vault.createSync__('note.md', ''));
 
 const HEADINGS = [heading('A', 0), heading('B', 3)];
 
