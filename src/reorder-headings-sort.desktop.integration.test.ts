@@ -171,6 +171,41 @@ describe('reorder headings: sort (issue #306)', () => {
         registry.records ??= {};
         const records = registry.records;
 
+        /*
+         * The stand-in's contract carries an `input` and an `output` schema like the provider's own
+         * (`src/advanced-metadata-cache-api/api-contract.ts`), checking the same shapes. It is restated here
+         * because this closure is serialized into Obsidian and cannot import that module, and passing the
+         * provider's constant through `input` would serialize each `validate` without the helpers it closes over.
+         */
+        function createSchema(expected: string, isValid: (value: unknown) => boolean): object {
+          return {
+            '~standard': {
+              validate: (value: unknown): object => isValid(value) ? { value } : { issues: [{ message: `Expected ${expected}.` }] },
+              vendor: advancedMetadataCachePluginId,
+              version: 1
+            }
+          };
+        }
+
+        function isNullableNumber(value: unknown): boolean {
+          return value === null || typeof value === 'number';
+        }
+
+        function isHeadingTimes(value: unknown): boolean {
+          return typeof value === 'object' && value !== null
+            && isNullableNumber(Reflect.get(value, 'created'))
+            && typeof Reflect.get(value, 'heading') === 'string'
+            && typeof Reflect.get(value, 'level') === 'number'
+            && typeof Reflect.get(value, 'line') === 'number'
+            && isNullableNumber(Reflect.get(value, 'modified'))
+            && isNullableNumber(Reflect.get(value, 'seen'));
+        }
+
+        function isPathOrFileArguments(value: unknown): boolean {
+          return Array.isArray(value) && value.length === 1
+            && (typeof value[0] === 'string' || value[0] instanceof obsidianModule.TFile);
+        }
+
         // The stand-in answers from the live cache, as the real module does, under the contract version that
         // introduced the member, so a sort proves this plugin found it through the registry.
         const standInRecord: PublishedPluginApiRecordLike = {
@@ -190,7 +225,12 @@ describe('reorder headings: sort (issue #306)', () => {
             }
           },
           apiVersion: '1.2.0',
-          contract: { getHeadingTimes: {} },
+          contract: {
+            getHeadingTimes: {
+              input: createSchema('a path or a file', isPathOrFileArguments),
+              output: createSchema('an array of heading times', (value) => Array.isArray(value) && value.every((item) => isHeadingTimes(item)))
+            }
+          },
           isRevoked: false,
           pluginId: advancedMetadataCachePluginId
         };

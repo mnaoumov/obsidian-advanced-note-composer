@@ -1,5 +1,4 @@
 import type {
-  App,
   Plugin,
   TAbstractFile
 } from 'obsidian';
@@ -8,6 +7,7 @@ import { Component } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { publishPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   describe,
@@ -27,9 +27,12 @@ import {
  * The registry is looked up by plugin id alone and the watch reads nothing off the app until it has to
  * explain an absence, so an empty strict proxy is the whole app these calls need — and proves it.
  */
-const app = strictProxy<App>({});
+const app = strictProxy<ReturnType<App['asOriginalType__']>>({});
 
-const NOTE_FILE = castTo<TAbstractFile>({ path: 'note.md' });
+/**
+ * A real file, because the provider's own contract validates the argument with `instanceof`.
+ */
+const NOTE_FILE = castTo<TAbstractFile>(App.createConfigured__().vault.createSync__('note.md', ''));
 
 const providerComponents: Component[] = [];
 

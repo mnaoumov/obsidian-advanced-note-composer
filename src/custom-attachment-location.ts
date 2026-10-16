@@ -12,10 +12,11 @@
  *
  * The other plugin is reached through the API it publishes in the `obsidian-dev-utils` plugin registry,
  * not through its plugin instance. That plugin is an Obsidian plugin repo rather than an npm package, so
- * there is nothing to depend on: the shape below is this plugin's compiled-against copy of the one member
- * it calls, taken from that repo's own copyable `api.d.ts`, and `watchPluginApi` negotiates the version at
- * runtime. The other plugin is optional — not installed, disabled, or older than contract `1.2.0` all read
- * as "not available".
+ * there is nothing to depend on: its own copyable `api.d.ts` and `api-contract.ts` are copied VERBATIM into
+ * `./custom-attachment-location-api/`, everything here narrows them to the one member this plugin calls, and
+ * `watchPluginApi` negotiates the version at runtime. Refresh the copy from the provider's repository rather
+ * than editing it, so both ends keep checking ONE definition. The other plugin is optional — not installed,
+ * disabled, or older than contract `1.2.0` all read as "not available".
  */
 
 import type {
@@ -27,6 +28,10 @@ import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugi
 import { Component } from 'obsidian';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
+
+import type { CustomAttachmentLocationApi as CustomAttachmentLocationFullApi } from './custom-attachment-location-api/api.d.ts';
+
+import { CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT as CUSTOM_ATTACHMENT_LOCATION_FULL_API_CONTRACT } from './custom-attachment-location-api/api-contract.ts';
 
 /**
  * The `Custom Attachment Location` plugin's id, under which it publishes its API.
@@ -42,9 +47,10 @@ export const CUSTOM_ATTACHMENT_LOCATION_API_VERSION_RANGE = '^1.2.0';
 /**
  * What this plugin calls, supplied to `watchPluginApi` as the consumer's own contract. Without it the shape
  * check would use the provider's contract, which a future provider could satisfy while dropping this member.
+ * The entry is the provider's own, schemas included.
  */
 export const CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT: PluginApiContract = {
-  collectAttachments: {}
+  collectAttachments: CUSTOM_ATTACHMENT_LOCATION_FULL_API_CONTRACT.collectAttachments
 };
 
 /**
@@ -65,26 +71,7 @@ export interface CollectAttachmentsWithCustomAttachmentLocationParams {
 /**
  * `Custom Attachment Location`'s public API, as far as this plugin uses it.
  */
-export interface CustomAttachmentLocationApi {
-  /**
-   * Collects the attachments of the given notes, or of every note under the given folders, into the folders
-   * the settings say they belong in — exactly as the `Collect attachments` commands do, dialogs included.
-   *
-   * @param params - What to collect.
-   * @returns A promise that settles once the collect has finished.
-   */
-  collectAttachments: (params: CollectAttachmentsParams) => Promise<void>;
-}
-
-/**
- * Parameters for {@link CustomAttachmentLocationApi.collectAttachments}.
- */
-interface CollectAttachmentsParams {
-  /**
-   * The notes to collect for, and folders whose notes are all collected for.
-   */
-  readonly pathsOrFiles: readonly (string | TAbstractFile)[];
-}
+export type CustomAttachmentLocationApi = Pick<CustomAttachmentLocationFullApi, 'collectAttachments'>;
 
 /**
  * Asks the `Custom Attachment Location` plugin to collect the given notes' attachments.

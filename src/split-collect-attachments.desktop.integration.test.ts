@@ -168,6 +168,31 @@ describe('an extract hands its destination note to Custom Attachment Location (i
         const records = registry.records;
 
         const collectedPaths: string[] = [];
+
+        /*
+         * The stand-in's contract carries an `input` and an `output` schema like the provider's own
+         * (`src/custom-attachment-location-api/api-contract.ts`), checking the same shapes. It is restated here
+         * because this closure is serialized into Obsidian and cannot import that module, and passing the
+         * provider's constant through `input` would serialize each `validate` without the helpers it closes over.
+         */
+        function createSchema(expected: string, isValid: (value: unknown) => boolean): object {
+          return {
+            '~standard': {
+              validate: (value: unknown): object => isValid(value) ? { value } : { issues: [{ message: `Expected ${expected}.` }] },
+              vendor: customAttachmentLocationPluginId,
+              version: 1
+            }
+          };
+        }
+
+        function isCollectAttachmentsArguments(value: unknown): boolean {
+          if (!Array.isArray(value) || value.length !== 1) {
+            return false;
+          }
+          const params: unknown = value[0];
+          return typeof params === 'object' && params !== null && Array.isArray(Reflect.get(params, 'pathsOrFiles'));
+        }
+
         // The stand-in publishes exactly the documented member under the contract version that introduced it,
         // so a call proves this plugin found it through the registry rather than by reaching into internals.
         const standInRecord: PublishedPluginApiRecordLike = {
@@ -179,7 +204,12 @@ describe('an extract hands its destination note to Custom Attachment Location (i
             }
           },
           apiVersion: '1.2.0',
-          contract: { collectAttachments: {} },
+          contract: {
+            collectAttachments: {
+              input: createSchema('collect attachments params', isCollectAttachmentsArguments),
+              output: createSchema('nothing', (value) => value === undefined)
+            }
+          },
           isRevoked: false,
           pluginId: customAttachmentLocationPluginId
         };

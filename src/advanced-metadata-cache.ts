@@ -8,9 +8,11 @@
  * Metadata Cache's `Headings` module tracks those times and publishes them in the `obsidian-dev-utils`
  * plugin registry, which is where this plugin reads them, the same way it reaches Custom Attachment
  * Location (`custom-attachment-location.ts`). That plugin is an Obsidian plugin repo rather than an npm
- * package, so the shape below is this plugin's compiled-against copy of the one member it calls, taken from
- * that repo's own copyable `api.d.ts`. The other plugin is optional: not installed, disabled, older than
- * contract `1.2.0`, or with its `Headings` module off all read as "no times".
+ * package, so there is nothing to depend on: its own copyable `api.d.ts` and `api-contract.ts` are copied
+ * VERBATIM into `./advanced-metadata-cache-api/`, and everything here narrows them to the one member this
+ * plugin calls. Refresh the copy from the provider's repository rather than editing it, so both ends keep
+ * checking ONE definition. The other plugin is optional: not installed, disabled, older than contract
+ * `1.2.0`, or with its `Headings` module off all read as "no times".
  */
 
 import type {
@@ -23,6 +25,15 @@ import type { PluginApiContract } from 'obsidian-dev-utils/obsidian/plugin/plugi
 import { Component } from 'obsidian';
 import { watchPluginApi } from 'obsidian-dev-utils/obsidian/plugin/plugin-api';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+
+import type {
+  AdvancedMetadataCacheApi as AdvancedMetadataCacheFullApi,
+  HeadingTimes
+} from './advanced-metadata-cache-api/api.d.ts';
+
+import { ADVANCED_METADATA_CACHE_API_CONTRACT as ADVANCED_METADATA_CACHE_FULL_API_CONTRACT } from './advanced-metadata-cache-api/api-contract.ts';
+
+export type { HeadingTimes } from './advanced-metadata-cache-api/api.d.ts';
 
 /**
  * The `Advanced Metadata Cache` plugin's id, under which it publishes its API.
@@ -37,37 +48,17 @@ export const ADVANCED_METADATA_CACHE_API_VERSION_RANGE = '^1.2.0';
 
 /**
  * What this plugin calls, supplied to `watchPluginApi` as the consumer's own contract, so a future provider
- * that dropped the member is not mistaken for one that has it.
+ * that dropped the member is not mistaken for one that has it. The entry is the provider's own, schemas
+ * included.
  */
 export const ADVANCED_METADATA_CACHE_API_CONTRACT: PluginApiContract = {
-  getHeadingTimes: {}
+  getHeadingTimes: ADVANCED_METADATA_CACHE_FULL_API_CONTRACT.getHeadingTimes
 };
 
 /**
  * `Advanced Metadata Cache`'s public API, as far as this plugin uses it.
  */
-export interface AdvancedMetadataCacheApi {
-  /**
-   * Reads when each of a note's headings was created, last modified and last seen.
-   *
-   * @param pathOrFile - The vault-relative path of a note, or the note itself.
-   * @returns The note's headings in document order. Empty while the `Headings` module is off.
-   */
-  getHeadingTimes: (this: void, pathOrFile: string | TFile) => HeadingTimes[];
-}
-
-/**
- * One heading's times, in Unix milliseconds. A time is `null` when the other plugin did not see the event
- * happen, such as a heading that was already there when its note started being tracked.
- */
-export interface HeadingTimes {
-  readonly created: null | number;
-  readonly heading: string;
-  readonly level: number;
-  readonly line: number;
-  readonly modified: null | number;
-  readonly seen: null | number;
-}
+export type AdvancedMetadataCacheApi = Pick<AdvancedMetadataCacheFullApi, 'getHeadingTimes'>;
 
 /**
  * Parameters for {@link readHeadingTimes}.
