@@ -7,7 +7,8 @@
  *
  * This plugin publishes exactly this constant with its API, and a consumer copies it beside `api.d.ts`
  * and passes it as the `contract` when it looks the API up, so both ends validate against ONE
- * definition. The plugin registry checks the payloads against it only while its debugger is on.
+ * definition. The plugin registry checks the payloads against it only while the
+ * `obsidian-lib:validate-plugin-api-payloads` debug switch is on.
  *
  * The contract types, the {@link https://standardschema.dev | Standard Schema} builders and the common
  * guards come from `@mnaoumov/typescript-lib/api-contract`, so a consumer copying this file needs that
