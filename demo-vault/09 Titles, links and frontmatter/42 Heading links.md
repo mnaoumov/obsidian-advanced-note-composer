@@ -19,3 +19,26 @@ Put the cursor anywhere in a heading's section - on the heading line or in its b
 2. Put the cursor in the body of `### Second` and run `Copy link to this heading`: `[[#Second]]` is on the clipboard.
 3. Put the cursor in the body of `## First` and run `Split heading recursively...`.
 4. Open the notes it creates. `First` points at `[[Second#Second]]` and `[[Third#^quote]]`, `Second` at `[[First#First]]` and `[[Third#Third]]`, and the introduction left in `Linked headings` points at `[[Second#Second]]` and `[[Third#Third]]`.
+
+The first button below does step 2, the second step 3 up to its confirmation dialog, and the third puts **Linked headings** back and deletes the tree the split built.
+
+```code-button
+---
+caption: Copy a link to the Second heading
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'copy-link-to-this-heading', cursorBefore: 'The second heading points back', notePath: 'Materials/42 Heading links/Linked headings.md' });
+```
+
+```code-button
+---
+caption: Split the First heading recursively
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'split-heading-recursively', cursorBefore: 'The first heading points at', notePath: 'Materials/42 Heading links/Linked headings.md' });
+```
+
+```code-button
+---
+caption: Put Linked headings back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/42 Heading links']);
+```

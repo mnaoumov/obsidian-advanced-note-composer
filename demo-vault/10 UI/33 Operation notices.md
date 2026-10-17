@@ -13,6 +13,31 @@ The running notice only appears once an operation has been going for about half 
 5. Run the same operation again. It does exactly the same thing, silently.
 6. Turn the setting back on.
 
+The buttons below do steps 1, 4 and 6, using the flatten of [20 Flatten folder](<../06 Folder operations/20 Flatten folder.md>) as the operation — confirm its dialog, then watch the corner. The last one also puts that folder back, so you can flatten it again with the notices off.
+
+```code-button
+---
+caption: Run a flatten
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'flatten-folder', notePath: 'Materials/20 Flatten folder/Flatten example/Note one.md' });
+```
+
+```code-button
+---
+caption: Turn operation notices off
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldShowOperationNotices: false });
+```
+
+```code-button
+---
+caption: Turn operation notices back on and put the folder back
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { shouldShowOperationNotices: true });
+await demo.resetDemo(app, ['Materials/20 Flatten folder']);
+```
+
 ## Clicking a notice
 
 The names in a notice are links, and clicking one does two things: it opens the note and it **highlights it in the file explorer**.

@@ -8,6 +8,22 @@ Headings can contain characters that are illegal in file names. The core plugin 
 2. Run `Extract this heading...`.
 3. The invalid characters are replaced (or removed), and - depending on your settings - the original title is preserved as a note **alias** or a frontmatter **title**.
 
+The first button below does steps 1 and 2, putting the cursor in the section's body, so the picker is waiting with the cleaned-up name. The second puts the section back here; the note you created keeps its copy.
+
+```code-button
+---
+caption: Extract the heading with invalid characters
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-this-heading', cursorBefore: 'The heading above uses characters that cannot appear in a file name.', notePath: '09 Titles, links and frontmatter/28 Invalid titles.md' });
+```
+
+```code-button
+---
+caption: Put the section back
+---
+await require('/demoSetup.ts').resetDemo(app, ['09 Titles, links and frontmatter/28 Invalid titles.md']);
+```
+
 ## Title with invalid characters *\<>:|?#^[]"
 
 The heading above uses characters that cannot appear in a file name. Extract it and see how the resulting file is named, and where the original title is preserved.

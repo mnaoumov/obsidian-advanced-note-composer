@@ -18,6 +18,22 @@ Two commands, differing only in which row they reorder:
 
 Every folder is renumbered, not only the one you moved: `1. Beta`, `2. Gamma`, `3. Alpha`. Open any of their `!` notes and the `title` property has followed the folder — while `aliases`, which holds the name without the number, is untouched.
 
+The first button below opens the `Reorder example` folder's right-click menu — step 1 up to choosing the command, which is under its `Advanced Note Composer` submenu. The second puts the three folders back as `1. Alpha`, `2. Beta`, `3. Gamma`.
+
+```code-button
+---
+caption: Open the menu of the Reorder example folder
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/23 Reorder folders/Reorder example'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: Put the folders back in order
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/23 Reorder folders']);
+```
+
 Renumbering the **whole sequence** from 1 is what keeps it contiguous, and a folder that never had a number simply gains one. It all happens in one reversible, resource-locked transaction: cancel it, or change something externally, and the names and properties roll back together.
 
 Items whose path is ignored by your [include/exclude paths](<../08 Include and exclude/26 Block commands on excluded paths.md>) are left out of the dialog entirely, so a reorder neither renames nor renumbers around them.

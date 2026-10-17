@@ -30,8 +30,10 @@ registerDemoVaultCoverageSuite({
        * feature rather than an oversight: a recursive split starts at the SHALLOWEST heading the note has,
        * so a title would be the first thing extracted and the tree would come out rooted in a folder named
        * after it instead of in `D` and `F`. It IS reached from the walkthrough; only the H1 rule cannot
-       * apply.
+       * apply. The same goes for the fixture of `13 Split headings recursively`, whose tree is rooted in
+       * `Trip` and `Notes`.
        */
+      'Materials/13 Split headings recursively/Plans.md',
       'Materials/40 Auto-number splits/Folder example/Recursive source.md',
       // The already-numbered neighbors the auto-numbering reads its `1 + max` from. They are the
       // background of the two sources the walkthrough DOES link, and nothing is done to them.

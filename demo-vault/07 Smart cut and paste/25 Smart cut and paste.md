@@ -4,12 +4,36 @@ A decoupled, two-step **move**: mark a selection, then drop it exactly where you
 
 ## Try it
 
-1. Select the paragraph under the rule below.
+1. Open [Move source](<../Materials/25 Smart cut and paste/Move source.md>) and select its paragraph.
 2. Run `Smart cut & paste: Mark selection to move`. The selection is highlighted and its note is locked so it cannot drift. A persistent notice appears.
 3. Click into any note and position the cursor.
 4. Run `Smart cut & paste: Move marked selection here` (or use the notice buttons: **Move at cursor**, **Move to top**, **Move to bottom**).
 
 Changed your mind? Run `Smart cut & paste: Cancel move`, or click **Cancel move** in the notice - the mark is discarded and the note unlocked.
+
+The first button below does steps 1 and 2. The second does steps 3 and 4 with [Paste target](<../Materials/25 Smart cut and paste/Paste target.md>) as the other note, moving the paragraph to its bottom. The third cancels a move still pending and puts both notes back.
+
+```code-button
+---
+caption: Mark the paragraph to move
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'mark-selection-to-move', notePath: 'Materials/25 Smart cut and paste/Move source.md', shouldReturnToButton: true, selection: 'Mark me, then move me somewhere else. While I am marked, my source note stays locked and I stay highlighted so you always see what will move.' });
+```
+
+```code-button
+---
+caption: Move it to the bottom of Paste target
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'move-marked-selection-to-bottom-of-file', notePath: 'Materials/25 Smart cut and paste/Paste target.md', shouldWaitUntilDone: true });
+```
+
+```code-button
+---
+caption: Cancel the move and put both notes back
+---
+app.commands.executeCommandById('advanced-note-composer:cancel-move');
+await require('/demoSetup.ts').resetDemo(app, ['Materials/25 Smart cut and paste']);
+```
 
 ## The commands
 
@@ -61,10 +85,6 @@ Nested content moves too - the mark covers the whole subtree, exactly like `Extr
 ## Swap instead of move
 
 The persistent notice also has a **Swap with selection** button. Instead of moving the marked selection, it **swaps** it with the text you have selected in the active note: mark a selection, then select some text in any note (or elsewhere in the same note) and click **Swap with selection**. The two pieces of text trade places, both notes are locked during the swap, and it runs as a single reversible operation. The button is enabled only while a single marked selection and a non-overlapping active selection both exist.
-
----
-
-Mark me, then move me somewhere else. While I am marked, my source note stays locked and I stay highlighted so you always see what will move.
 
 ## Move to top / bottom hotkeys
 
@@ -151,6 +171,13 @@ By default only the source note is locked. The block below locks **all** notes w
 caption: Lock all notes while marking
 ---
 await require('/demoSetup.ts').changeSettings(app, { shouldLockAllNotesWhenMarkingSelection: true });
+```
+
+```code-button
+---
+caption: Lock only the marked note again
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldLockAllNotesWhenMarkingSelection: false });
 ```
 
 ## Tailoring the notice

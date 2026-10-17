@@ -31,6 +31,19 @@ Each folder opens with a note of its own listing what is inside, so the File Exp
 | [10 UI](<./10 UI/README.md>) | Dialogs you can park or point elsewhere, the notices operations show, and finding a setting |
 | [11 Selection](<./11 Selection/README.md>) | Commands that only set the selection — the step every other feature starts from, and the one that fails on a phone |
 
+## Start over
+
+Most walkthroughs change something for real: a merge deletes the note it merged away, a split moves text out of the note you read it in. Each walkthrough's own reset button puts back what that walkthrough changed. The button below puts back **every** note of the vault the way it shipped, and deletes every note a walkthrough created — handy when a merge took the walkthrough, reset button and all, with it.
+
+The vault keeps a hidden copy of itself, taken the first time it opens, so nothing is downloaded again. Settings are left as they are: each walkthrough's reset puts back the settings it changed. Manual equivalent: download the demo vault again.
+
+```code-button
+---
+caption: Reset the whole demo vault
+---
+await require('/demoSetup.ts').resetWholeDemoVault(app);
+```
+
 ## Materials
 
 `Materials/` holds the notes and folders the walkthroughs operate on, one folder per note that needs them — `Materials/20 Flatten folder/` belongs to [20 Flatten folder](<./06 Folder operations/20 Flatten folder.md>). You never have to open it directly; each note links to what it needs. It exists so that what you see at the top level is the documentation, rather than a pile of example data mixed in with it.

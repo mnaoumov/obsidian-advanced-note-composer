@@ -12,6 +12,22 @@ The rules can be written as `---`, `***`, `___`, or their spaced/longer variants
 
 The note's start and end act as boundaries too: with the cursor in the closing section below the last rule, everything from that rule to the end of the note is extracted. (With the cursor above the *first* rule, everything from the top of the note - including this heading - down to that rule would be taken, so the middle section is the tidiest one to try first.)
 
+The first button below does steps 1 and 2: it puts the cursor in the middle section's body and runs the command, so the picker is waiting for a name. The second puts the section back here; the note you created keeps its copy.
+
+```code-button
+---
+caption: Extract the block between the rules
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-between-horizontal-rules', cursorBefore: 'moves to the new note when the cursor is here', notePath: '02 Extract/08 Extract between horizontal rules.md' });
+```
+
+```code-button
+---
+caption: Put the extracted block back
+---
+await require('/demoSetup.ts').resetDemo(app, ['02 Extract/08 Extract between horizontal rules.md']);
+```
+
 ---
 
 ## Section to extract

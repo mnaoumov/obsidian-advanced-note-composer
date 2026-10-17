@@ -24,6 +24,22 @@ The anchor runs FROM about here, through this sentence and the next one, and on 
 
 Now try it in the other direction: anchor at the END of that paragraph and end the selection at its start. The order you mark the two points in does not matter.
 
+The first button below does steps 1 and 2, the second steps 3 and 4. Nothing is changed, so there is nothing to put back.
+
+```code-button
+---
+caption: Start the selection before FROM
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'start-selection', cursorBefore: 'FROM about here', notePath: '11 Selection/39 Selection anchor.md' });
+```
+
+```code-button
+---
+caption: End the selection after TO
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'end-selection', cursorAfter: 'on down TO', notePath: '11 Selection/39 Selection anchor.md' });
+```
+
 ## It survives editing
 
 The interesting part. You are meant to keep working between the two commands, so the anchor moves with the text rather than sitting at a fixed position:

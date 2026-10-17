@@ -32,6 +32,22 @@ Open [Inside](<../Materials/41 Auto-number moves/Move example/Movable folder/Ins
 
 The folder lands as `Destination/4. Movable folder`. The **New name** row appears only when the numbering actually changes the name, so a move with numbering off looks exactly as it always did.
 
+The first button below opens **Inside** and does step 1, so the picker of step 2 is waiting; it needs the template from the button above. The second puts `Movable folder` back where it was, unnumbered.
+
+```code-button
+---
+caption: Move Movable folder
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'move-folder', notePath: 'Materials/41 Auto-number moves/Move example/Movable folder/Inside.md' });
+```
+
+```code-button
+---
+caption: Put Movable folder back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/41 Auto-number moves/Move example']);
+```
+
 ## Flattening a folder
 
 A flatten promotes several items at once, and the numbers **advance across the batch** rather than every item asking the destination the same question.

@@ -7,4 +7,7 @@ import { registerDemoVaultButtonSuite } from '@mnaoumov/obsidian-dev-toolkit/dem
 // executes anything.
 //
 // Isolation: `npx vitest run --project integration-tests:demo-vault`.
-registerDemoVaultButtonSuite();
+//
+// Most `Try it` buttons run a command that opens a picker or a confirmation dialog and leaves it for the
+// reader. Closing it after each click keeps one dialog from sitting over every note that runs after it.
+registerDemoVaultButtonSuite({ shouldDismissModals: true });

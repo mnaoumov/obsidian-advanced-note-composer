@@ -1,8 +1,11 @@
 // Per-vault startup script, run by the universal Demo Vault Helper plugin (via CodeScript
 // Toolkit's require) once `CodeScript Toolkit` is installed and enabled. This is where each
-// plugin's demo vault does its own startup setup. Here it just opens the landing note.
+// plugin's demo vault does its own startup setup. Here it keeps a copy of the vault as it shipped,
+// for the demos' reset buttons, and opens the landing note.
 
 import type { App } from 'obsidian';
+
+import { snapshotVault } from './demoSetup.ts';
 
 const START_NOTE_PATH = '00 Start.md';
 
@@ -10,6 +13,7 @@ const START_NOTE_PATH = '00 Start.md';
 // points here). CST calls the exported `invoke` — a top-level script with no `invoke` export throws
 // `this.startupScript.invoke is not a function`.
 export async function invoke(app: App): Promise<void> {
+  await snapshotVault(app);
   const startNote = app.vault.getFileByPath(START_NOTE_PATH);
   if (startNote) {
     await app.workspace.getLeaf(false).openFile(startNote);

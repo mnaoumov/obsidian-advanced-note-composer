@@ -27,6 +27,22 @@ There is a note next door called [Placed note nearby](<../Materials/15 Name firs
 
 You get a new `Placed note` inside that note's folder, and `Placed note nearby` itself is untouched — it named a destination, it was not merged into.
 
+The first button below does steps 1 and 2, so the picker is waiting for `Placed note`. The second puts the line back and deletes the note it became.
+
+```code-button
+---
+caption: Extract the line below the rule
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-current-selection', notePath: '03 Split/15 Name first, then the folder.md', selection: 'Extract me into the folder of the note you pick.' });
+```
+
+```code-button
+---
+caption: Put the line back and delete Placed note
+---
+await require('/demoSetup.ts').resetDemo(app, ['03 Split/15 Name first, then the folder.md', 'Materials/15 Name first, then the folder']);
+```
+
 ---
 
 Extract me into the folder of the note you pick.

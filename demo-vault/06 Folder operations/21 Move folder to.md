@@ -14,6 +14,22 @@ Just like the merge-folder picker, when you open it with an empty query the **mo
 
 The link from [Points here](<../Materials/21 Move folder to/Points here.md>) to [Movable note](<../Materials/21 Move folder to/Move example/Movable note.md>) keeps resolving after the folder moves.
 
+The first button below does steps 1 and 2, so the picker of step 3 is waiting for you. The second puts `Move example` back where it was.
+
+```code-button
+---
+caption: Move the Move example folder
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'move-folder', notePath: 'Materials/21 Move folder to/Move example/Movable note.md' });
+```
+
+```code-button
+---
+caption: Put Move example back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/21 Move folder to']);
+```
+
 In the dialog, both the source and the destination are clickable links that reveal that folder in the file explorer (the vault root shows as `/`).
 
 Press `Don't ask again` in the dialog (or `Alt+D`), or turn off **Should ask before moving a folder** under `Move/flatten folders` in the settings, to move as soon as you pick a destination.
