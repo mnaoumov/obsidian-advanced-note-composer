@@ -4,9 +4,9 @@
 
 ## Try it
 
-1. Put the cursor anywhere in this note and run `Split note by headings recursively...`.
+1. Open [Plans](<../Materials/13 Split headings recursively/Plans.md>), put the cursor anywhere in it and run `Split note by headings recursively...`.
 2. A dialog lists every note it is about to create, indented the way it will be nested. Press `Split`.
-3. Look in the file explorer. The `Trip` section below has become:
+3. Look in the file explorer, next to **Plans**. Its `Trip` section has become:
 
 ```text
 Trip/
@@ -24,9 +24,25 @@ Each note keeps its own heading and its own body text; the sections nested under
 Two things this command does *not* care about:
 
 - **`Should split into folder`.** It builds the folder tree either way. A recursive split with no folders could not express a hierarchy, so the setting only governs ordinary splits.
-- **Where your cursor is, or which heading level you start from.** It begins at the shallowest heading the note actually has. The `Notes` section below jumps straight from `##` to `####`, and still nests correctly.
+- **Where your cursor is, or which heading level you start from.** It begins at the shallowest heading the note actually has. The `Notes` section of **Plans** jumps straight from `#` to `###`, and still nests correctly.
 
 It asks once, not once per note — `Should ask before splitting` controls that single dialog.
+
+The first button below does step 1, so the dialog of step 2 is waiting for you. The second puts **Plans** back and deletes the tree the split built.
+
+```code-button
+---
+caption: Split Plans recursively
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'split-note-by-headings-recursively', cursorBefore: 'Everything about the trip lives here.', notePath: 'Materials/13 Split headings recursively/Plans.md' });
+```
+
+```code-button
+---
+caption: Put Plans back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/13 Split headings recursively']);
+```
 
 ## What each produced note is wrapped in
 
@@ -46,33 +62,8 @@ Select some text first and right-click it: this command is **not** in the menu (
 
 By default the tree lands next to the note you split. Turn on `Should split recursively into the default new note folder` (in the plugin settings, under `Split/extract`) and it is built in Obsidian's own `Default location for new notes` instead — set that under `Settings -> Files and links -> Default location for new notes`.
 
-Only the *top* of the tree moves there. `Trip` would land in that folder, while `Packing`, `Electronics` and `Itinerary` still nest inside it exactly as above — the hierarchy is kept, not flattened. This note itself is never moved; it stays put and links down into the new tree.
+Only the *top* of the tree moves there. `Trip` would land in that folder, while `Packing`, `Electronics` and `Itinerary` still nest inside it exactly as above — the hierarchy is kept, not flattened. The note you split is never moved; it stays put and links down into the new tree.
 
 Nothing changes while Obsidian's own setting is `Same folder as current file`, because that is already where the tree would have been built.
 
 Neither answer is a setting you have to commit to. With `Should ask before splitting` on, the confirmation dialog names the folder the tree will be rooted in, and `Change target` (or `Alt+C`) picks a different one for this run. Only the root moves: every note below it still nests under its own parent, and every note's *name* still comes from its heading, which you do not get to change here.
-
-## Trip
-
-Everything about the trip lives here.
-
-### Packing
-
-What to bring.
-
-#### Electronics
-
-Chargers, adapters, headphones.
-
-### Itinerary
-
-Day by day.
-
-## Notes
-
-This section skips a level on purpose.
-
-<!-- markdownlint-disable-next-line MD001 -- The skipped heading level is what this section demonstrates. -->
-#### Loose end
-
-There is no `###` above this one, so it becomes a direct child of `Notes`.

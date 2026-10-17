@@ -8,6 +8,22 @@ Extract a heading **and everything under it** into its own note, named after the
 2. Run `Extract this heading...`.
 3. Confirm - a new note named `Ideas worth their own note` is created with that section's content, and a link is left here.
 
+The first button below does steps 1 and 2 — it puts the cursor in the middle of that section's body, not on its heading, and runs the command — so the picker is waiting with the heading's name already typed. The second puts the section back and deletes the note it became.
+
+```code-button
+---
+caption: Extract the heading the cursor is in
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-this-heading', cursorBefore: 'Put your cursor right here', notePath: '02 Extract/06 Extract heading.md' });
+```
+
+```code-button
+---
+caption: Put the section back
+---
+await require('/demoSetup.ts').resetDemo(app, ['02 Extract/06 Extract heading.md', 'Ideas worth their own note.md']);
+```
+
 ## Right-click with a selection
 
 Select some text first and right-click it: `Extract this heading...` is **not** in the menu (issue #188). A selection is a question about the selection, so `Extract current selection...` is what you get. Click once to drop the selection and the heading command is back — still from anywhere inside the section.

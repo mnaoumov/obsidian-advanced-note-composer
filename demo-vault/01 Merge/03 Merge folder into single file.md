@@ -8,7 +8,25 @@ Concatenate **every note inside a folder** (recursively - a folder's own notes f
 2. Run `Merge current folder contents into a single file...` (also on the folder's right-click menu).
 3. Confirm the dialog.
 
+The first button below does steps 1 and 2: it opens **Intro** and runs the command, so the confirmation dialog is waiting for you.
+
+```code-button
+---
+caption: Merge the folder into a single file
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-folder-into-file', notePath: 'Materials/03 Merge folder into single file/Merge into single file/Intro.md' });
+```
+
 The notes [Intro](<../Materials/03 Merge folder into single file/Merge into single file/Intro.md>), [Part 1](<../Materials/03 Merge folder into single file/Merge into single file/Part 1.md>), and the nested [Part 2](<../Materials/03 Merge folder into single file/Merge into single file/Nested/Part 2.md>) are combined into a new `Merge into single file.md` note next to the folder. Each note is run through the same merge pipeline as a single-file merge, so your **Merge template**, **frontmatter merge strategy**, footnote fixing, and link/backlink updates all apply. The source notes are deleted once merged.
+
+The button below brings the merged notes back and deletes the note the merge created, so you can run it again — on the `Merge index order` folder too, see below.
+
+```code-button
+---
+caption: Put the merged notes back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/03 Merge folder into single file']);
+```
 
 ## Numbered folders merge in index order
 

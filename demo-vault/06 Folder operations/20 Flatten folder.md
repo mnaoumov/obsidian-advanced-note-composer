@@ -7,9 +7,25 @@ Promote children of a folder up one level, so they become siblings of that folde
 1. Open [Note one](<../Materials/20 Flatten folder/Flatten example/Note one.md>) inside the `Flatten example` folder.
 2. Run `Flatten folder...`.
 3. Read the confirmation dialog: it lists every item that is about to move, and shows the de-duplicated name (`a.md → a 1.md`) for anything that would collide with an existing sibling. Choose `Flatten`.
-4. Watch [Note one](<../Materials/20 Flatten folder/Flatten example/Note one.md>), [Note two](<../Materials/20 Flatten folder/Flatten example/Note two.md>), and the `Nested` subfolder pop up one level (into the vault root), while `Flatten example` is left behind, now empty.
+4. Watch [Note one](<../Materials/20 Flatten folder/Flatten example/Note one.md>), [Note two](<../Materials/20 Flatten folder/Flatten example/Note two.md>), and the `Nested` subfolder pop up one level (into `Materials/20 Flatten folder`), while `Flatten example` is left behind, now empty.
 
 The link from [Note one](<../Materials/20 Flatten folder/Flatten example/Note one.md>) to [Note two](<../Materials/20 Flatten folder/Flatten example/Note two.md>) keeps resolving after the move, and `Nested` travels with its own note inside it.
+
+The first button below does steps 1 and 2, so the confirmation dialog of step 3 is waiting for you. The second puts `Flatten example` back the way it shipped and deletes what the flatten promoted.
+
+```code-button
+---
+caption: Flatten the Flatten example folder
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'flatten-folder', notePath: 'Materials/20 Flatten folder/Flatten example/Note one.md' });
+```
+
+```code-button
+---
+caption: Put Flatten example back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/20 Flatten folder']);
+```
 
 The dialog is there because this command has no picker to review before it acts. It lists a nested item by its path under the flattened folder, so two promoted folders sharing a name are still told apart, and both the folder and its destination are clickable links that reveal it in the file explorer (the vault root shows as `/`). Press `Don't ask again` in it (or `Alt+D`), or turn off **Should ask before flattening a folder** under `Move/flatten folders` in the settings, to flatten straight away.
 

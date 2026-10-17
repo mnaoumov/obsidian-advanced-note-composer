@@ -11,6 +11,35 @@ There is a note next door called [Split merge target](<../Materials/10 Create or
 3. The switch reads `Create`. Type `Split merge target` and press `Enter` — you get a **second**, numbered note beside the existing one. Undo it (`Ctrl+Z`) and come back.
 4. Run the command again, flip the switch to `Merge` (or press `Alt+M`), type `Split merge target`, pick it from the list and press `Enter`. This time the text lands **inside** the existing note.
 
+The first two buttons do steps 1 and 2, each opening the picker with the switch already where that step wants it — they set **Default split target mode**, which is what the picker opens in. The third puts this note and **Split merge target** back, deletes a note the `Create` run made, and sets the picker back to opening in `Create`.
+
+```code-button
+---
+caption: Extract the line with the switch on Create
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { defaultSplitTargetMode: 'Create' });
+await demo.runCommand(app, { commandId: 'extract-current-selection', notePath: '03 Split/10 Create or merge when splitting.md', selection: 'Extract me twice — once in each mode — and watch the same name mean two different things.' });
+```
+
+```code-button
+---
+caption: Extract the line with the switch on Merge
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { defaultSplitTargetMode: 'Merge' });
+await demo.runCommand(app, { commandId: 'extract-current-selection', notePath: '03 Split/10 Create or merge when splitting.md', selection: 'Extract me twice — once in each mode — and watch the same name mean two different things.' });
+```
+
+```code-button
+---
+caption: Put the line and Split merge target back
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { defaultSplitTargetMode: 'Create' });
+await demo.resetDemo(app, ['03 Split/10 Create or merge when splitting.md', 'Materials/10 Create or merge when splitting', 'Split merge target.md']);
+```
+
 ---
 
 Extract me twice — once in each mode — and watch the same name mean two different things.

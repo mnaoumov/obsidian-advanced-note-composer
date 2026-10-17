@@ -6,10 +6,26 @@ Where the operation already asked you to pick a target, the button reopens that 
 
 ## Try it
 
-1. Open any note and run `Merge current file with another file...`.
-2. Pick [Merge target](<../Materials/01 Merge file/Merge target.md>) and let the confirmation dialog appear.
+1. Open [Note to redirect](<../Materials/34 Change target/Note to redirect.md>) and run `Merge current file with another file...`.
+2. Pick [First choice](<../Materials/34 Change target/First choice.md>) and let the confirmation dialog appear.
 3. Click **Change target** (or press `Alt+C`) — the picker comes back with your previous choice already selected.
-4. Pick a different note and confirm. The merge lands in the note you chose second.
+4. Pick [Second choice](<../Materials/34 Change target/Second choice.md>) and confirm. The merge lands in the note you chose second.
+
+The first button below does step 1. The second puts all three notes back after the merge.
+
+```code-button
+---
+caption: Merge Note to redirect into another note
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-file', notePath: 'Materials/34 Change target/Note to redirect.md' });
+```
+
+```code-button
+---
+caption: Put Note to redirect back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/34 Change target']);
+```
 
 Dismissing the picker means "never mind": you go back to the same confirmation dialog with the target unchanged, rather than losing the operation.
 

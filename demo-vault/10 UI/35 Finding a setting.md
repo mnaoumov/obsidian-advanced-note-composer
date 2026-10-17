@@ -11,6 +11,15 @@ This plugin has a lot of settings, and a single long scroll through all of them 
 5. Go back and try `Smart cut & paste`, which splits the same way: one setting that governs the mark itself sits directly on the page, followed by `Notice`, then one section per destination (`At cursor`, `To top of file`, `To bottom of file`), then its own `Smart cut & paste include/exclude paths`.
 6. Go back and open `Frontmatter`, whose two sections divide by **topic** instead: `Title` for everything about the name you type — how it becomes a file name, and how it is kept as an alias or a `title` property when it cannot — then `Frontmatter properties` for what happens to the property block itself.
 
+The button below does step 1; the rest is clicking around the pages.
+
+```code-button
+---
+caption: Open the plugin settings
+---
+require('/demoSetup.ts').openPluginSettings(app);
+```
+
 ## Why a section names a whole command
 
 The two folder merges are different operations, and most of their settings apply to exactly one of them. A single `Merge folder` heading over both of them read as though the settings underneath covered both, so a description naming one command looked like the other command was undocumented. The heading now matches the command palette entry word for word, which is the thing you can check against.

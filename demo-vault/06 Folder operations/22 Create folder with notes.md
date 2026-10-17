@@ -12,6 +12,22 @@ The clean-up is the part worth seeing: surrounding and repeated whitespace colla
 
 It became `2.` rather than `1.` because `1. Existing` is already there: the number is always one more than the highest already in use.
 
+The first button below opens the `Create example` folder's right-click menu — step 1 up to choosing the command, which is under its `Advanced Note Composer` submenu. The second deletes what you created there, so the next folder is `2.` again.
+
+```code-button
+---
+caption: Open the menu of the Create example folder
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/22 Create folder with notes/Create example'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: Put Create example back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/22 Create folder with notes']);
+```
+
 Running the command from the **command palette** instead creates the folder in your vault's `Files & Links > Default location for new notes`, so it works with no note open and never asks where to put it. Right-click a folder whenever you want it somewhere else — that is the whole choice.
 
 ## Naming

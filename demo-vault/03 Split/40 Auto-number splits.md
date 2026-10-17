@@ -29,6 +29,22 @@ Open [Flat source](<../Materials/40 Auto-number splits/Note example/Flat source.
 
 The new note is `5. D`, not `D` and not `4. D`.
 
+The first button below does steps 1 and 2 up to the typing, after the button above has turned the numbering on. The second puts **Flat source** back and deletes the note it produced, so the next extract is `5.` again.
+
+```code-button
+---
+caption: Extract the line from Flat source
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-current-selection', notePath: 'Materials/40 Auto-number splits/Note example/Flat source.md', selection: 'Extract me. I become a numbered note.' });
+```
+
+```code-button
+---
+caption: Put Flat source back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/40 Auto-number splits/Note example']);
+```
+
 The name you typed is not lost. `D` differs from `5. D`, so it is recorded exactly as any other changed title is — as an alias and/or a `title` property, per **Should add invalid title to note alias** and **Frontmatter title mode** — which is what keeps `[[D]]` resolving. See [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>).
 
 ## Numbering the folder instead
@@ -63,6 +79,22 @@ Open [Recursive source](<../Materials/40 Auto-number splits/Folder example/Recur
 ```
 
 `D` continues the folder's sequence at `5.`, and `F` then sees `5. D` and becomes `6.`. The children restart at `1.` inside each new folder for no special reason at all: `5. D/` has no numbered folders in it yet, so `1 + the highest` is `1`.
+
+The first button below opens **Recursive source** and runs the command, so its confirmation dialog is waiting; it needs the folder template from **Number the folders a split creates** above. The second puts **Recursive source** back and deletes the tree.
+
+```code-button
+---
+caption: Split Recursive source recursively
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'split-note-by-headings-recursively', cursorBefore: 'The first new top-level heading.', notePath: 'Materials/40 Auto-number splits/Folder example/Recursive source.md' });
+```
+
+```code-button
+---
+caption: Put Recursive source back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/40 Auto-number splits/Folder example']);
+```
 
 ## Reading the number back in a template
 

@@ -9,7 +9,25 @@ Merge the **whole current note** into another note. `Advanced Note Composer` fix
 3. In the picker, choose [Merge target](<../Materials/01 Merge file/Merge target.md>).
 4. Confirm the dialog.
 
+The first button below does steps 1 and 2 for you, so all that is left is to pick **Merge target** and confirm.
+
+```code-button
+---
+caption: Merge this note into another one
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-file', notePath: '01 Merge/01 Merge file.md' });
+```
+
 The body of this note is appended to **Merge target**, and the two notes' frontmatter is combined using your **Frontmatter merge strategy** (see [30 Frontmatter merge strategy](<../09 Titles, links and frontmatter/30 Frontmatter merge strategy.md>)).
+
+The merge deletes this note — its body, buttons included, now sits at the bottom of **Merge target**. Click the button below there (or **Reset the whole demo vault** in [00 Start](<../00 Start.md>)) to bring this note back and put **Merge target** as it was.
+
+```code-button
+---
+caption: Put this note and Merge target back
+---
+await require('/demoSetup.ts').resetDemo(app, ['01 Merge/01 Merge file.md', 'Materials/01 Merge file']);
+```
 
 ## Attachments follow the note
 

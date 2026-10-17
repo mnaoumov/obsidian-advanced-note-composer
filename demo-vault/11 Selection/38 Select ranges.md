@@ -26,6 +26,29 @@ None of them ends in `...`, and that is deliberate: in this plugin the three dot
 3. Now run `Select this heading's content`. The same range, minus the `## A section to select` line.
 4. With the cursor still there, run `Select between horizontal rules` and watch the selection change to the rule-bounded block instead.
 
+Each button below puts the cursor in the body of `A section to select` and runs one of the three commands — steps 2, 3 and 4 in turn. Nothing is changed, so there is nothing to put back.
+
+```code-button
+---
+caption: Select this heading
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'select-this-heading', cursorBefore: 'This paragraph and the one below it', notePath: '11 Selection/38 Select ranges.md' });
+```
+
+```code-button
+---
+caption: Select this heading's content
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'select-this-heading-content', cursorBefore: 'This paragraph and the one below it', notePath: '11 Selection/38 Select ranges.md' });
+```
+
+```code-button
+---
+caption: Select between horizontal rules
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'select-between-horizontal-rules', cursorBefore: 'This paragraph and the one below it', notePath: '11 Selection/38 Select ranges.md' });
+```
+
 ## A section to select
 
 This paragraph and the one below it make up the body of the section. `Select this heading` takes them and the heading line; `Select this heading's content` takes them alone.

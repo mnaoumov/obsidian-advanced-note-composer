@@ -11,6 +11,26 @@ It also covers `Create empty note in folder...`, the file explorer's command —
 3. Run `Extract current selection...` and type a new note name, e.g. `My extract`.
 4. Confirm. The new note is created at `My extract/My extract.md` — inside a brand-new folder named after it — and the link left behind here still resolves.
 
+The first button below does steps 1 to 3 up to the typing: it turns **Should split into folder** on, selects the paragraph and runs the command, so the picker is waiting for `My extract`. The second puts the paragraph back, deletes the `My extract` and `My second extract` folders, and turns both settings of this note back to their defaults.
+
+```code-button
+---
+caption: Extract the paragraph into a folder of its own
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { shouldSplitIntoFolder: true });
+await demo.runCommand(app, { commandId: 'extract-current-selection', notePath: '03 Split/11 Split into folder.md', selection: 'Select me and extract me into a brand-new note. With **Should split into folder** on, a new folder is created to hold the extracted note.' });
+```
+
+```code-button
+---
+caption: Put the paragraph back and turn split into folder off
+---
+const demo = require('/demoSetup.ts');
+await demo.changeSettings(app, { shouldSplitIntoFolder: false, splitIntoFolderNoteNameTemplate: '' });
+await demo.resetDemo(app, ['03 Split/11 Split into folder.md', 'My extract', 'My second extract']);
+```
+
 If a folder with that name already exists, the new folder name is de-duplicated (`My extract 1`, …). Links and footnotes are fixed exactly as for an ordinary split — the folder changes where the note lands, nothing else about the operation.
 
 ## Predefine the note name

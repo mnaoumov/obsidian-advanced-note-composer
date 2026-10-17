@@ -8,7 +8,25 @@ Merge **every note in a folder** into a single target note, in order.
 2. Run `Merge current folder with another folder...`.
 3. Pick a target folder (or a new one) and confirm.
 
+The first button below does steps 1 and 2: it opens **Chapter 1** and runs the command, so the folder picker is waiting for you.
+
+```code-button
+---
+caption: Merge the chapters' folder into another folder
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-folder', notePath: 'Materials/02 Merge folder/Merge folder/Chapter 1.md' });
+```
+
 The chapters - [Chapter 1](<../Materials/02 Merge folder/Merge folder/Chapter 1.md>), [Chapter 2](<../Materials/02 Merge folder/Merge folder/Chapter 2.md>), and [Chapter 3](<../Materials/02 Merge folder/Merge folder/Chapter 3.md>) - are combined into [Book](<../Materials/02 Merge folder/Merge folder/Book.md>). Watch the `chapter` tags collapse according to your frontmatter merge strategy, and the footnote in Chapter 3 stay intact.
+
+The button below brings the `Merge folder` folder back the way it shipped. What the merge wrote into the folder you picked stays there.
+
+```code-button
+---
+caption: Put the chapters back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/02 Merge folder']);
+```
 
 ## Options
 

@@ -18,6 +18,22 @@ The folder is now `1. Revenue Review`: it kept its place in the sequence. Open i
 
 `2. Roadmap` is exactly as it was. A rename touches one folder.
 
+The first button below opens the `1. Quarterly Report` folder's right-click menu — step 1 up to choosing the command, which is under its `Advanced Note Composer` submenu. The second puts the folder and its `!` note back the way they shipped.
+
+```code-button
+---
+caption: Open the menu of the 1. Quarterly Report folder
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/24 Rename folder/Rename example/1. Quarterly Report'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: Put Quarterly Report back
+---
+await require('/demoSetup.ts').resetDemo(app, ['Materials/24 Rename folder']);
+```
+
 ## Aliases are swapped, not rewritten
 
 **Folder note aliases template** (default `{{safeFolderName}}`) renders the aliases the new name deserves, one per line — `{{safeFolderName}}` on one line and `{{parentFolder}} {{safeFolderName}}` on the next gives the note two. Only the entries the **old** name rendered are replaced, and the new ones are written where the first of them stood — every alias you wrote by hand survives. If none of the old entries is there, the new aliases are simply added.

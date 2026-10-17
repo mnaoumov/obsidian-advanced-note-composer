@@ -17,6 +17,22 @@ The first menu gets long. This plugin alone can put nine items in it, and they s
 
 The line-number gutter works the same way, so you do not have to aim at empty space if the window is narrow.
 
+The right-clicks are yours to do, since the point is which menu a right-click raises. The first button below does step 1, and the second opens the plugin settings for step 3.
+
+```code-button
+---
+caption: Turn on readable line length
+---
+require('/demoSetup.ts').setObsidianSetting(app, 'readableLineLength', true);
+```
+
+```code-button
+---
+caption: Open the plugin settings
+---
+require('/demoSetup.ts').openPluginSettings(app);
+```
+
 ## Two toggles per command
 
 Each row has two switches, and they are independent:

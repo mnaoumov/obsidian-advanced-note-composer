@@ -7,8 +7,24 @@ Rename a heading and update **every link that points to it across the vault** - 
 1. Put the cursor on the `## Second Concept` heading line below.
 2. Run `Rename heading...` and enter `New Concept`.
 3. The heading is renamed **and** the links in [Rename heading backlinks](<../Materials/16 Rename heading/Rename heading backlinks.md>) are rewritten:
-   - `[[22 Rename heading#Second Concept#Definition]]` becomes `[[22 Rename heading#New Concept#Definition]]`
-   - `[[22 Rename heading#Second Concept]]` becomes `[[22 Rename heading#New Concept]]`
+   - `[[16 Rename heading#Second Concept#Definition]]` becomes `[[16 Rename heading#New Concept#Definition]]`
+   - `[[16 Rename heading#Second Concept]]` becomes `[[16 Rename heading#New Concept]]`
+
+The first button below does step 1 and opens the prompt of step 2, waiting for `New Concept`. The second puts the heading and the links back.
+
+```code-button
+---
+caption: Rename the Second Concept heading
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'rename-heading', cursorOnLine: '## Second Concept', notePath: '04 Headings/16 Rename heading.md' });
+```
+
+```code-button
+---
+caption: Put the heading and its links back
+---
+await require('/demoSetup.ts').resetDemo(app, ['04 Headings/16 Rename heading.md', 'Materials/16 Rename heading']);
+```
 
 > [!NOTE] Duplicate headings
 >

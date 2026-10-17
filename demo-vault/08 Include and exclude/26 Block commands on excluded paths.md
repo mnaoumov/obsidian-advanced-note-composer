@@ -30,6 +30,78 @@ If a line is not a valid regular expression, the setting says `Invalid regular e
 
 Clear all four boxes when you are done to put the vault back to its default state.
 
+The buttons below walk the same steps, in order: each one changes one box or asks the question a step asks. A button that lists commands shows a notice of which merge commands are offered on that note, which is what the command palette would show you.
+
+```code-button
+---
+caption: "Step 1: exclude the folder from merges"
+---
+await require('/demoSetup.ts').changeSettings(app, { mergeExcludePaths: ['Materials/02 Merge folder/Merge folder'] });
+```
+
+```code-button
+---
+caption: "Step 2: merge a note from outside the folder"
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-file', notePath: 'Materials/01 Merge file/Merge target.md' });
+```
+
+```code-button
+---
+caption: "Step 2: merge a note from inside the folder"
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'merge-file', notePath: 'Materials/02 Merge folder/Merge folder/Chapter 1.md' });
+```
+
+```code-button
+---
+caption: "Step 3: hide the merge commands in the folder"
+---
+await require('/demoSetup.ts').changeSettings(app, { mergeCommandExcludePaths: ['Materials/02 Merge folder/Merge folder'] });
+```
+
+```code-button
+---
+caption: "Steps 4 and 6: list the merge commands on a note inside"
+---
+await require('/demoSetup.ts').showAvailableCommands(app, { commandIds: ['merge-file', 'merge-folder', 'merge-folder-into-file', 'extract-before-cursor'], notePath: 'Materials/02 Merge folder/Merge folder/Chapter 1.md' });
+```
+
+```code-button
+---
+caption: "Step 5: list the merge commands on a note outside"
+---
+await require('/demoSetup.ts').showAvailableCommands(app, { commandIds: ['merge-file', 'merge-folder', 'merge-folder-into-file', 'extract-before-cursor'], notePath: 'Materials/01 Merge file/Merge target.md' });
+```
+
+```code-button
+---
+caption: "Step 6: hide them on the folder itself only"
+---
+await require('/demoSetup.ts').changeSettings(app, { mergeCommandExcludePaths: ['/Merge folder$/'] });
+```
+
+```code-button
+---
+caption: "Step 6: open the menu of the Merge folder folder"
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/02 Merge folder/Merge folder'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: "Step 7: offer the merge commands only inside the folder"
+---
+await require('/demoSetup.ts').changeSettings(app, { mergeCommandExcludePaths: [], mergeCommandIncludePaths: ['Materials/02 Merge folder/Merge folder'] });
+```
+
+```code-button
+---
+caption: Clear all four merge boxes
+---
+await require('/demoSetup.ts').changeSettings(app, { mergeCommandExcludePaths: [], mergeCommandIncludePaths: [], mergeExcludePaths: [], mergeIncludePaths: [] });
+```
+
 ## Blocking only some commands
 
 Every command belongs to exactly one category, and each category's command boxes cover it and nothing else:
@@ -61,6 +133,36 @@ That is enough for the three things people usually want:
 5. To take the rest away as well, list the same path in the other categories' command exclude boxes. There is no single box that does it for you — that is deliberate, so a path is only ever listed under the commands it affects.
 6. Clear the boxes when you are done.
 
+The buttons below do steps 2, 3, 4 and 6. Instead of a right-click, the two middle ones select a line and list in a notice which of the three commands are offered on it.
+
+```code-button
+---
+caption: "Step 2: hide smart cut & paste in the folder"
+---
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteCommandExcludePaths: ['Materials/02 Merge folder/Merge folder'] });
+```
+
+```code-button
+---
+caption: "Step 3: list the commands on a selection inside"
+---
+await require('/demoSetup.ts').showAvailableCommands(app, { commandIds: ['mark-selection-to-move', 'extract-current-selection', 'merge-file'], notePath: 'Materials/02 Merge folder/Merge folder/Chapter 2.md', selection: 'The second chapter.' });
+```
+
+```code-button
+---
+caption: "Step 4: list the commands on a selection outside"
+---
+await require('/demoSetup.ts').showAvailableCommands(app, { commandIds: ['mark-selection-to-move', 'extract-current-selection', 'merge-file'], notePath: 'Materials/01 Merge file/Merge target.md', selection: 'its own content' });
+```
+
+```code-button
+---
+caption: "Step 6: clear the smart cut & paste box"
+---
+await require('/demoSetup.ts').changeSettings(app, { smartCutAndPasteCommandExcludePaths: [] });
+```
+
 ## Excluding paths from only some commands
 
 The section above hides commands. This one is the same idea applied to the **other** filter: what a command may *touch*.
@@ -88,6 +190,43 @@ Within one category the exclude box wins over the include box, so listing a path
 4. Right-click `2. Beta` itself: every `Advanced Note Composer` command is still there, and `Merge current folder with another folder...` still offers it as a destination. Only the reorder skipped it.
 5. Clear that box, and put the same path in **Reorder command exclude paths** instead. Now right-click `2. Beta`: the reorder commands are gone from its menu — while `Reorder child folders` on the parent still lists it, because hiding a command is not the same as excluding a path. That is the pair, both ways round.
 6. Clear both boxes when you are done.
+
+The buttons below do the steps that need no right-click, and open the two right-click menus the others ask for; choose the reorder from the first one each time. The plugin's commands are under each menu's `Advanced Note Composer` submenu.
+
+```code-button
+---
+caption: "Steps 1 and 3: open the menu of Reorder example"
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/23 Reorder folders/Reorder example'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: "Step 2: exclude 2. Beta from the reorders"
+---
+await require('/demoSetup.ts').changeSettings(app, { reorderExcludePaths: ['Materials/23 Reorder folders/Reorder example/2. Beta'] });
+```
+
+```code-button
+---
+caption: "Steps 4 and 5: open the menu of 2. Beta"
+---
+require('/demoSetup.ts').showFileMenu(app, ['Materials/23 Reorder folders/Reorder example/2. Beta'], codeButtonContext.buttonEl);
+```
+
+```code-button
+---
+caption: "Step 5: hide the reorder commands on 2. Beta instead"
+---
+await require('/demoSetup.ts').changeSettings(app, { reorderCommandExcludePaths: ['Materials/23 Reorder folders/Reorder example/2. Beta'], reorderExcludePaths: [] });
+```
+
+```code-button
+---
+caption: Clear both reorder boxes
+---
+await require('/demoSetup.ts').changeSettings(app, { reorderCommandExcludePaths: [], reorderExcludePaths: [] });
+```
 
 ## An excluded path is never moved
 
