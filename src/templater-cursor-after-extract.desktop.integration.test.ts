@@ -65,8 +65,8 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
   return await evalInObsidian({
     async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId, shouldOpenTargetNoteAfterSplit, targetName }) {
       /**
-       * Every wait here settles in well under a second on a healthy machine. The closure declares four of them,
-       * so this keeps the sum near 14 s, well under the transport's ~30 s per-closure cap.
+       * Every wait here settles in well under a second on a healthy machine. The closure declares five of them,
+       * so this keeps the sum near 17.5 s, well under the transport's ~30 s per-closure cap.
        */
       const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
       const SETTLE_IN_MILLISECONDS = 300;
@@ -168,6 +168,21 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
         const contentAfterExtract = await readIfExists(targetPath);
 
         if (!shouldOpenTargetNoteAfterSplit) {
+          /*
+           * The target is written well before the split is done: `Templater` runs, the note is recorded as
+           * pending, and only then is the extracted text replaced by its link in the source editor. Opening the
+           * target into this leaf any earlier made it the active note before it was recorded, so no jump ever
+           * ran, and the split's residual link was then written into the target's editor instead. The link in
+           * the source editor is therefore what says the split has finished with this leaf.
+           */
+          await waitUntil({
+            message: 'the extract did not leave its link in the source note',
+            predicate: () => {
+              const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+              return view?.file === sourceFile && view.editor.getValue().includes(`[[${targetName}]]`);
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
           const targetFile = app.vault.getFileByPath(targetPath);
           if (!targetFile) {
             throw new Error(`${targetPath} is missing.`);
@@ -175,11 +190,14 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
           await app.workspace.getLeaf(false).openFile(targetFile);
         }
 
+        // An EMPTY editor holds no marker either, and is the other way this can end: the note opened blank,
+        // the race `open-after-operation.ts` settles for. Requiring the content keeps that from passing as a jump.
         await waitUntil({
-          message: 'the cursor marker was not consumed when the note opened',
+          message: 'the cursor marker was not consumed when the note opened (or the note opened blank)',
           predicate: () => {
             const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
-            return view?.file?.path === targetPath && !view.editor.getValue().includes(MARKER);
+            const value = view?.file?.path === targetPath ? view.editor.getValue() : '';
+            return value.includes('fragment') && !value.includes(MARKER);
           },
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
