@@ -110,6 +110,13 @@ caption: Stop the cursor following content moved to the top/bottom
 await require('/demoSetup.ts').changeSettings(app, { shouldJumpToMovedContentToBottom: false, shouldJumpToMovedContentToTop: false });
 ```
 
+```code-button
+---
+caption: Follow content moved to the top/bottom again
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldJumpToMovedContentToBottom: true, shouldJumpToMovedContentToTop: true });
+```
+
 ## A notice instead of a highlight
 
 A selection in the target note looks exactly like the highlight on a selection that is still marked and waiting to be moved, so "still marked" and "move finished" are hard to tell apart - most confusingly while the notes are locked. **Smart cut & paste completion feedback** decides which one you get: `Select moved content` (the default) selects the moved text, `Notice` puts the cursor on it *without* selecting it and shows a notice instead, and `Select moved content and notice` does both. The cursor travels either way. Manual equivalent: pick the mode in **Settings → `Advanced Note Composer`**.
