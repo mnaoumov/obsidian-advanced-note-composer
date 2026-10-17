@@ -74,6 +74,11 @@ export function extractHeading(editor: Editor): string {
 }
 
 function extractHeadingFromLine(line: string): null | string {
-  const match = /^#{1,6} (?<Heading>.*)/m.exec(line);
+  /*
+   * The heading's TEXT, as Obsidian's metadata cache reads it: the whitespace around it and an ATX closing `#`
+   * run are not part of it (issue #115). Keeping a second space after `##` named the new note `_Title`, since
+   * `fixFileName` replaces a leading space.
+   */
+  const match = /^#{1,6}[ \t]+(?<Heading>.*?)(?:[ \t]+#+)?[ \t]*$/.exec(line);
   return match?.groups?.['Heading'] ?? null;
 }

@@ -81,6 +81,22 @@ describe('extractHeading line parsing', () => {
   it('should extract heading with special characters', () => {
     expect(extractHeading(createMockEditor('## Hello *world* `code`'))).toBe('Hello *world* `code`');
   });
+
+  it('should not keep the extra space after the hashes (issue #115)', () => {
+    expect(extractHeading(createMockEditor('##  Title of note'))).toBe('Title of note');
+  });
+
+  it('should accept a tab after the hashes and drop trailing whitespace', () => {
+    expect(extractHeading(createMockEditor('##\tTitle  \t'))).toBe('Title');
+  });
+
+  it('should drop an ATX closing sequence', () => {
+    expect(extractHeading(createMockEditor('## Title ##'))).toBe('Title');
+  });
+
+  it('should keep a hash that is part of the text', () => {
+    expect(extractHeading(createMockEditor('## C#'))).toBe('C#');
+  });
 });
 
 describe('extractHeading', () => {
