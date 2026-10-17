@@ -61,6 +61,15 @@ caption: 'Map ": " to " - "'
 await require('/demoSetup.ts').changeSettings(app, { nameTransformTemplate: '<% TOKENS.rawString.replaceAll(": ", " - ") %>' });
 ```
 
+The block below clears the transform again, so names go back to taking the **Replacement string** alone.
+
+```code-button
+---
+caption: Clear the name transform
+---
+await require('/demoSetup.ts').changeSettings(app, { nameTransformTemplate: '' });
+```
+
 ## Settings
 
 - **Frontmatter title mode**
@@ -70,11 +79,18 @@ await require('/demoSetup.ts').changeSettings(app, { nameTransformTemplate: '<% 
 - **Name transform template**
   - your own replacements, applied before anything else.
 
-The block below switches to always writing a frontmatter `title`. Manual equivalent: set **Frontmatter title mode** to `UseAlways` in **Settings → `Advanced Note Composer`**.
+The first block below switches to always writing a frontmatter `title`, and the second goes back to writing one only for an invalid title, the default. Manual equivalent: set **Frontmatter title mode** to `UseAlways` (or back to `UseForInvalidTitleOnly`) in **Settings → `Advanced Note Composer`**.
 
 ```code-button
 ---
 caption: Always write a frontmatter title
 ---
 await require('/demoSetup.ts').changeSettings(app, { frontmatterTitleMode: 'UseAlways' });
+```
+
+```code-button
+---
+caption: Write a frontmatter title only for invalid titles again
+---
+await require('/demoSetup.ts').changeSettings(app, { frontmatterTitleMode: 'UseForInvalidTitleOnly' });
 ```

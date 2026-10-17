@@ -47,6 +47,13 @@ caption: Open the first note after merging folders
 await require('/demoSetup.ts').changeSettings(app, { shouldOpenFirstNoteAfterMergingFolder: true });
 ```
 
+```code-button
+---
+caption: Stop opening a note after merging folders
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldOpenFirstNoteAfterMergingFolder: false });
+```
+
 A markdown file that is really an attachment — an `Excalidraw` drawing stored as `sketch.excalidraw.md`, per **Attachment extensions** — is moved into the destination like any other attachment rather than merged into a note. See [03 Merge folder into single file](<../01 Merge/03 Merge folder into single file.md>).
 
 ## Excluded items
@@ -60,6 +67,13 @@ The **destination** is a separate question: an excluded folder is offered in the
 caption: Always merge excluded items
 ---
 await require('/demoSetup.ts').changeSettings(app, { shouldAlwaysMergeExcludedItems: true });
+```
+
+```code-button
+---
+caption: Skip excluded items again
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldAlwaysMergeExcludedItems: false });
 ```
 
 ## Keeping folders separate
@@ -88,4 +102,13 @@ Each path is checked at both ends of the merge. With `E` listed, nothing merged 
 caption: Keep folders inside E separate
 ---
 await require('/demoSetup.ts').changeSettings(app, { keepSeparateFolderPaths: ['E'] });
+```
+
+The block below empties both lists again, so same-named folders combine as they do by default.
+
+```code-button
+---
+caption: Clear both keep-separate lists
+---
+await require('/demoSetup.ts').changeSettings(app, { keepSeparateFolderNames: [], keepSeparateFolderPaths: [] });
 ```

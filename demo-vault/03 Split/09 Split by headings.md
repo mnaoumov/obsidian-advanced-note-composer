@@ -30,11 +30,18 @@ Use `Split note by headings content - H2` instead to move only the **content** u
 
 The `Split note by headings - H<n>` items now appear in the editor right-click menu only when your cursor or selection actually sits inside a heading of that level. Right-click inside an `##` section of [Fruit](<../Materials/09 Split by headings/Fruit.md>) and you will see the **H2** item (and **H1**, since the section is nested under `# Fruit`); right-click the line under its title — under no `##` heading — and the **H2** item is not there. The same gate applies to the command palette.
 
-The block below flips that setting for you. Manual equivalent: toggle **Should keep headings when splitting content** in **Settings → `Advanced Note Composer`**.
+The first block below turns **Should keep headings when splitting content** off, and the second turns it back on. Manual equivalent: toggle **Should keep headings when splitting content** in **Settings → `Advanced Note Composer`**.
 
 ```code-button
 ---
 caption: Toggle "keep headings when splitting content" off
 ---
 await require('/demoSetup.ts').changeSettings(app, { shouldKeepHeadingsWhenSplittingContent: false });
+```
+
+```code-button
+---
+caption: Turn "keep headings when splitting content" back on
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldKeepHeadingsWhenSplittingContent: true });
 ```

@@ -70,6 +70,13 @@ caption: Open the merged note
 await require('/demoSetup.ts').changeSettings(app, { shouldOpenNoteAfterMergingFolderIntoFile: true });
 ```
 
+```code-button
+---
+caption: Stop opening the merged note
+---
+await require('/demoSetup.ts').changeSettings(app, { shouldOpenNoteAfterMergingFolderIntoFile: false });
+```
+
 ## Attachments
 
 **Should move attachments when merging a folder** (on by default) carries the merged notes' attachments into the merged note's attachment folder, so nothing is stranded in a folder that is about to disappear. The destination comes from your vault's own attachment settings, so [Custom Attachment Location](https://github.com/mnaoumov/obsidian-custom-attachment-location) is honored when you have it installed. An attachment moves when one of the merged notes references it, or when it already sits where that note's attachments belong. Turn the setting off to leave attachments exactly where they are.
