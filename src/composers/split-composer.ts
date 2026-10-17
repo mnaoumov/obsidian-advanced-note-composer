@@ -159,6 +159,8 @@ export class SplitComposer extends ComposerBase {
   private readonly shouldJumpToMovedContent: boolean;
   private readonly shouldMoveAttachments: boolean;
   private readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind | undefined;
+  // The view the source was re-opened in, whose editor every later source write goes through.
+  private sourceView: MarkdownView | null = null;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
   private readonly templateOverride: string | undefined;
@@ -291,6 +293,9 @@ export class SplitComposer extends ComposerBase {
               isFrontmatterOnlyExtract: true,
               vaultTransaction
             });
+            if (this.refuseIfSourceEditorLeftSource()) {
+              return;
+            }
             this.replaceSourceFrontmatter(frontmatterExtraction);
           } else if (this.isSameNoteMove()) {
             // Same-note move: the target write is on the note the editor shows, and it collapses the
@@ -316,8 +321,18 @@ export class SplitComposer extends ComposerBase {
             //
             // A templated empty create (#244) lands here too, with `selectedText` empty: the write is the
             // template itself, and `{{content}}` interpolates to nothing.
+            //
+            // Every editor write below comes after an await (`Templater` above all, which can be slow), and the
+            // editor belongs to a LEAF, not to the note: one the user pointed at another note meanwhile would take
+            // the link in that note instead. Hence the re-check before each write.
             await this.insertIntoTargetFile({ contentToInsert: this.selectedText, vaultTransaction });
+            if (this.refuseIfSourceEditorLeftSource()) {
+              return;
+            }
             await this.redirectSourceLinksToExtractedContent();
+            if (this.refuseIfSourceEditorLeftSource()) {
+              return;
+            }
             this.replaceSourceSelection();
           }
 
@@ -665,6 +680,20 @@ export class SplitComposer extends ComposerBase {
   }
 
   /**
+   * Answers whether the view the source was re-opened in no longer shows it.
+   *
+   * The editor belongs to that view, not to the note: a leaf the user pointed at another markdown note keeps
+   * the view and its editor, now showing that note, and one pointed at another kind of file replaces the view.
+   * A split that re-opened nothing (a batch split, which writes through the editor its caller handed over) has
+   * no view to check, and keeps the behavior it always had; so does one whose re-open was not seen to land.
+   *
+   * @returns Whether the source view now shows something else.
+   */
+  private isSourceEditorShowingAnotherNote(): boolean {
+    return this.sourceView !== null && (this.sourceView.leaf.view !== this.sourceView || this.sourceView.file !== this.sourceFile);
+  }
+
+  /**
    * Puts the caret where the template's `{{content}}` was, in the note this operation just created
    * (issue #244).
    *
@@ -741,9 +770,31 @@ export class SplitComposer extends ComposerBase {
       }
     });
 
-    if (changes.length > 0) {
+    // The awaits above give the user time to point the leaf at another note; the caller refuses the split then.
+    if (changes.length > 0 && !this.isSourceEditorShowingAnotherNote()) {
       this.editor.transaction({ changes });
     }
+  }
+
+  /**
+   * Refuses the split, with a notice, when the source editor now shows another note.
+   *
+   * Aborting rolls the transaction back, so the target and the source are left as they were. Re-opening the
+   * source instead was not an option: the editor selection was already extended over the footnote definitions
+   * the extraction orphans, and a re-open restores only the captured selections.
+   *
+   * @returns Whether the split was refused.
+   */
+  private refuseIfSourceEditorLeftSource(): boolean {
+    if (!this.isSourceEditorShowingAnotherNote()) {
+      return false;
+    }
+
+    this.pluginNoticeComponent.showNotice(
+      `Cancelled splitting ${this.sourceFile.path}: its tab was no longer showing it when the split was about to edit it, so the note was left as it was.`
+    );
+    this.abortController.abort();
+    return true;
   }
 
   /**
@@ -836,6 +887,8 @@ export class SplitComposer extends ComposerBase {
       return;
     }
 
+    // Only a view the re-open is seen to have landed on is guarded: the guard asks whether it still shows the source.
+    this.sourceView = view.file === this.sourceFile ? view : null;
     this.editor = view.editor;
     this.editor.setSelections(this.capturedSelections.map((selection) => ({
       anchor: this.editor.offsetToPos(selection.startOffset),

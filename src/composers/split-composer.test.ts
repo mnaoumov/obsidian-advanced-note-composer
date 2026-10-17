@@ -2257,3 +2257,155 @@ describe('SplitComposer source links to extracted headings (issue #291)', () => 
     expect(vi.mocked(editor.replaceSelection)).toHaveBeenCalled();
   });
 });
+
+describe('SplitComposer when the source tab is pointed at another note mid-split', () => {
+  interface SwitchableView {
+    readonly show: (file: null | TFile) => void;
+    readonly view: MarkdownView;
+  }
+
+  // The view the source is re-opened in. A user who opens another note in that tab while `Templater` renders
+  // keeps the view and its editor, now showing the other note; `show` is that navigation.
+  function createSwitchableView(editor: Editor): SwitchableView {
+    let shownFile: null | TFile = null;
+    const view: GenericObject = {
+      editor,
+      get file(): null | TFile {
+        return shownFile;
+      },
+      setEphemeralState: vi.fn()
+    };
+    view['leaf'] = { view };
+    vi.spyOn(app.workspace, 'getActiveViewOfType').mockReturnValue(castTo<MarkdownView>(view));
+    // The re-open lands on the source, as it does in Obsidian.
+    openFileMock.mockImplementation(() => {
+      shownFile = getSourceFile();
+    });
+    return {
+      show(file): void {
+        shownFile = file;
+      },
+      view: castTo<MarkdownView>(view)
+    };
+  }
+
+  // A slow template is where the user has time to navigate: the stand-in `Templater` navigates while it renders.
+  function navigateDuringTemplater(navigate: () => void): void {
+    castTo<GenericObject>(app.plugins.plugins)['templater-obsidian'] = {
+      templater: {
+        // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+        overwrite_file_commands: vi.fn(() => {
+          navigate();
+        })
+      }
+    };
+  }
+
+  function getLastNoticeMessage(pluginNoticeComponent: PluginNoticeComponent): string {
+    const [message] = vi.mocked(pluginNoticeComponent.showNotice).mock.lastCall ?? [];
+    return typeof message === 'string' ? message : '';
+  }
+
+  it('should refuse and roll back instead of writing the link into the other note', async () => {
+    const decoyFile = await app.vault.create('decoy.md', 'decoy body');
+    const editor = createEditorDouble();
+    const switchableView = createSwitchableView(editor);
+    navigateDuringTemplater(() => {
+      switchableView.show(decoyFile);
+    });
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+
+    await createComposer({ editor, isNewTargetFile: false, pluginNoticeComponent, settingsOverrides: { shouldRunTemplaterOnDestinationFile: true } }).splitFile();
+
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    expect(getLastNoticeMessage(pluginNoticeComponent)).toContain('its tab was no longer showing it');
+  });
+
+  it('should refuse when the tab now holds another kind of view', async () => {
+    const editor = createEditorDouble();
+    const switchableView = createSwitchableView(editor);
+    navigateDuringTemplater(() => {
+      // A file of another kind opened in the tab replaces the markdown view, which keeps its last note.
+      castTo<GenericObject>(switchableView.view.leaf)['view'] = {};
+    });
+
+    await createComposer({ editor, isNewTargetFile: false, settingsOverrides: { shouldRunTemplaterOnDestinationFile: true } }).splitFile();
+
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+  });
+
+  it('should go ahead while the tab still shows the source', async () => {
+    const editor = createEditorDouble();
+    const switchableView = createSwitchableView(editor);
+    // Clicking the note the tab already shows changes nothing.
+    navigateDuringTemplater(() => {
+      switchableView.show(getSourceFile());
+    });
+
+    await createComposer({ editor, settingsOverrides: { shouldRunTemplaterOnDestinationFile: true } }).splitFile();
+
+    expect(editor.replaceSelection).toHaveBeenCalled();
+  });
+
+  it('should refuse before the residual when the tab moves while the source links are redirected', async () => {
+    const decoyFile = await app.vault.create('decoy.md', 'decoy body');
+    app.vault.setConfig('newLinkFormat', 'absolute');
+    app.vault.setConfig('useMarkdownLinks', false);
+    // The suite stubs the parser out; this test needs it, to find the links in the editor's content.
+    delete castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'];
+    const transaction = vi.fn();
+    const editor = strictProxy<Editor>({
+      getCursor: vi.fn().mockReturnValue({ ch: 0, line: 0 }),
+      getValue: vi.fn(),
+      listSelections: vi.fn().mockReturnValue([{ anchor: { ch: 12, line: 0 }, head: { ch: 0, line: 0 } }]),
+      offsetToPos: vi.fn((offset: number) => ({ ch: offset, line: 0 })),
+      posToOffset: vi.fn((pos: MockPosition) => pos.ch),
+      replaceSelection: vi.fn(),
+      setSelections: vi.fn(),
+      transaction
+    });
+    const switchableView = createSwitchableView(editor);
+    vi.mocked(buildExtractedSubpathPredicate).mockReturnValue((subpath) => subpath === '#B');
+    // Still the source after the insert; the other note by the time the links are rewritten, which is when the
+    // source editor is first read.
+    vi.mocked(editor.getValue).mockImplementation(() => {
+      switchableView.show(decoyFile);
+      return '[[source#A]] x See [[source#B]]';
+    });
+    const pluginNoticeComponent = createPluginNoticeComponentStub();
+
+    try {
+      await createComposer({ editor, isNewTargetFile: false, pluginNoticeComponent }).splitFile();
+    } finally {
+      const actual = await vi.importActual<typeof import('../extracted-link-targets.ts')>('../extracted-link-targets.ts');
+      vi.mocked(buildExtractedSubpathPredicate).mockImplementation(actual.buildExtractedSubpathPredicate);
+    }
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+    expect(getLastNoticeMessage(pluginNoticeComponent)).toContain('its tab was no longer showing it');
+  });
+
+  it('should refuse a frontmatter-only extract before rewriting the source properties', async () => {
+    const sourceContent = '---\naliases:\n  - alpha\n  - bravo\n---\n\nsource body\n';
+    await app.vault.modify(getSourceFile(), sourceContent);
+    const decoyFile = await app.vault.create('decoy.md', 'decoy body');
+    const editor = createEditorDouble();
+    const switchableView = createSwitchableView(editor);
+    navigateDuringTemplater(() => {
+      switchableView.show(decoyFile);
+    });
+
+    await createComposer({
+      capturedSelections: [{ endOffset: sourceContent.indexOf('alpha') + 'alpha'.length, startOffset: sourceContent.indexOf('alpha') }],
+      editor,
+      isNewTargetFile: false,
+      selectedText: '  - alpha',
+      settingsOverrides: { shouldRunTemplaterOnDestinationFile: true }
+    }).splitFile();
+
+    expect(editor.replaceSelection).not.toHaveBeenCalled();
+    expect(await app.vault.adapter.read('target.md')).toBe('target body');
+  });
+});

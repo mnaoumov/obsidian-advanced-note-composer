@@ -488,7 +488,12 @@ export abstract class ComposerBase {
     const { content: newContent, frontmatter: newFrontmatter } = this.extractFrontmatter(targetContentToInsert);
     let templateFrontmatter: Frontmatter = {};
 
-    if (!isFrontmatterOnlyExtract) {
+    if (isFrontmatterOnlyExtract) {
+      // The properties below are written by `processFrontMatter`, which the transaction does not see. The body
+      // write is what records the target's restore point everywhere else, so an identity write records it here,
+      // or a rolled-back frontmatter-only extract would keep the merged properties.
+      await vaultTransaction.process(this.targetFile, (content) => content);
+    } else {
       // Demote BEFORE the template is applied, so only the note's own outline moves: any heading the
       // template itself contributes was written at the level the user wanted it at.
       targetContentToInsert = this.applyTemplate(demoteHeadings(newContent, this.headingLevelShift));
