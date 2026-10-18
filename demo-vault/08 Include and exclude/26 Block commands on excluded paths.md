@@ -11,12 +11,15 @@ Both filters are **per command category**, and there is no longer any box that c
 
 ## Path forms
 
-Each line of any box is either a path string or a `/regular expression/`, and they match differently:
+Each line of any box is a path, a glob or a `/regular expression/flags`, and they match differently:
 
-- A **path string** matches that note or folder **and everything inside it**. `Merge folder` covers `Merge folder` itself and every note under it.
-- A **`/regular expression/`** is tested against the path exactly as written. That is how you match a folder *without* its contents: `/^Merge folder$/` matches only the folder itself.
+- A **path** matches that note or folder **and everything inside it**. `Merge folder` covers `Merge folder` itself and every note under it.
+- A **glob** is a line holding `*`, `?` or `[`. `*` matches within one folder level, `**` across levels, `?` one character, and `[abc]` / `[!abc]` one character from a set. A glob without a `/` matches a name at any depth (`*.pdf` covers `a/b/c.pdf`), one with a `/` starts at the vault root (`Attachments/**/*.pdf`), and a trailing `/` matches folders only (`tmp*/`). To use one of those characters literally, escape it: `Notes \[old\]`.
+- A **`/regular expression/flags`** is tested against the path exactly as written. That is how you match a folder *without* its contents: `/^Merge folder$/` matches only the folder itself.
 
-If a line is not a valid regular expression, the setting says `Invalid regular expression: …` and the **whole list** is ignored until you fix it — so one broken entry disables the others in that box.
+Every form ignores letter case, so `merge folder` covers `Merge folder` too.
+
+If a line is not a valid glob or regular expression, the setting says so and why (`Invalid regular expression: …`, `Invalid glob pattern: …`), and the **whole list** is ignored until you fix it — so one broken entry disables the others in that box.
 
 ## Try it
 

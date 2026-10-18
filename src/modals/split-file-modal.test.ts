@@ -421,7 +421,7 @@ function expectFolderFilterFollowsSplitContentFilter(pluginSettingsComponent: Pl
 
   expect(isAllowedFolder?.(castTo<TFolder>({ path: 'ignored-folder' }))).toBe(false);
   expect(isAllowedFolder?.(castTo<TFolder>({ path: 'allowed-folder' }))).toBe(true);
-  expect(isPathIgnored).toHaveBeenLastCalledWith('allowed-folder', CommandCategory.SplitAndExtract);
+  expect(isPathIgnored).toHaveBeenLastCalledWith('allowed-folder', CommandCategory.SplitAndExtract, true);
 }
 
 describe('prepareForSplitFile', () => {

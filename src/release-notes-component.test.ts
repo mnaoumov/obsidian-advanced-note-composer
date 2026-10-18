@@ -142,6 +142,7 @@ describe('createReleaseNotesComponent', () => {
       expect(settings.releaseNotesShown).toContain('3.0.0');
       expect(settings.releaseNotesShown).toContain('5.11.0');
       expect(settings.releaseNotesShown).toContain('5.12.0');
+      expect(settings.releaseNotesShown).toContain('5.20.0');
       expect(mockAlert).toHaveBeenCalledTimes(1);
       // The library renders the plugin name as code, so the title is a fragment, not a string.
       const title = ensureNonNullable(mockAlert.mock.lastCall)[0].title;
@@ -180,7 +181,7 @@ describe('createReleaseNotesComponent', () => {
       }
 
       expect(whenLoadedFromFile).toHaveBeenCalledTimes(1);
-      settings.releaseNotesShown = ['3.0.0', '5.11.0', '5.12.0'];
+      settings.releaseNotesShown = ['3.0.0', '5.11.0', '5.12.0', '5.20.0'];
       resolveLoadedFromFile();
       await waitForAllAsyncOperations();
 
@@ -200,15 +201,15 @@ describe('createReleaseNotesComponent', () => {
       component.load();
       await triggerLayoutReadyAndWait(triggerLayoutReady);
 
-      expect(settings.releaseNotesShown).toEqual(['3.0.0', '5.11.0', '5.12.0']);
+      expect(settings.releaseNotesShown).toEqual(['3.0.0', '5.11.0', '5.12.0', '5.20.0']);
       const message = mockAlert.mock.lastCall?.[0].message;
       expect(message).toBeInstanceOf(DocumentFragment);
-      expect(Array.from(castTo<DocumentFragment>(message).querySelectorAll('h3'), (heading) => heading.textContent)).toEqual(['5.11.0', '5.12.0']);
+      expect(Array.from(castTo<DocumentFragment>(message).querySelectorAll('h3'), (heading) => heading.textContent)).toEqual(['5.11.0', '5.12.0', '5.20.0']);
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
       const { app, triggerLayoutReady } = createMockApp();
-      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0', '5.12.0']);
+      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0', '5.12.0', '5.20.0']);
       const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,

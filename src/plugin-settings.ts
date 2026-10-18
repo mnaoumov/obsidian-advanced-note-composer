@@ -1648,10 +1648,12 @@ export class PluginSettings {
    *
    * @param path - The path to check.
    * @param commandCategory - The category of the command asking.
+   * @param isFolder - Whether the path is a FOLDER. Only a folder-only glob (one ending in `/`) reads it: such an entry
+   * always covers what is inside a matching folder, and the folder itself only when this is `true`.
    * @returns Whether the path is ignored for that command.
    */
-  public isPathIgnored(path: string, commandCategory: CommandCategory): boolean {
-    return this.categoryPathSettings(commandCategory).isPathIgnored(path);
+  public isPathIgnored(path: string, commandCategory: CommandCategory, isFolder = false): boolean {
+    return this.categoryPathSettings(commandCategory).isPathIgnored(path, isFolder);
   }
 
   /**
@@ -1668,10 +1670,11 @@ export class PluginSettings {
    *
    * @param path - The path to check.
    * @param commandCategory - The category of the command asking.
+   * @param isFolder - Whether the path is a FOLDER, read only by a folder-only glob, as in {@link isPathIgnored}.
    * @returns Whether the command must be blocked on the path.
    */
-  public shouldBlockCommandOnPath(path: string, commandCategory: CommandCategory): boolean {
-    return this.commandCategoryPathSettings(commandCategory).isPathIgnored(path);
+  public shouldBlockCommandOnPath(path: string, commandCategory: CommandCategory, isFolder = false): boolean {
+    return this.commandCategoryPathSettings(commandCategory).isPathIgnored(path, isFolder);
   }
 
   /**

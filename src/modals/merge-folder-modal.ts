@@ -133,7 +133,7 @@ class MergeFolderModal extends FuzzySuggestModal<TFolder> {
     // Whether an excluded folder may be a destination is its OWN setting since issue #253, not a side
     // effect of `Should always merge excluded items` — that one decides what a merge swallows, and a user
     // who wanted excluded items merged rather than skipped was getting excluded destinations offered too.
-    if (!this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations && this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge)) {
+    if (!this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations && this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Merge, true)) {
       return false;
     }
     if (!this.shouldIncludeChildFolders && isChildOrSelf({ app: this.app, childPathOrFile: folder, parentPathOrFile: this.sourceFolder })) {

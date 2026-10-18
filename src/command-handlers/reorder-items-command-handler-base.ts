@@ -322,7 +322,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     const nameTemplate = kind === ReorderItemKind.File ? settings.reorderedFileNameTemplate : settings.reorderedFolderNameTemplate;
 
     return parentFolder.children
-      .filter((child) => (kind === ReorderItemKind.File ? isFile(child) : isFolder(child)) && !settings.isPathIgnored(child.path, CommandCategory.Reorder))
+      .filter((child) => (kind === ReorderItemKind.File ? isFile(child) : isFolder(child)) && !settings.isPathIgnored(child.path, CommandCategory.Reorder, isFolder(child)))
       .map((child) =>
         isFile(child)
           ? { extension: `.${child.extension}`, name: child.basename, path: child.path }

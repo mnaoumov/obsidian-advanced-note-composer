@@ -594,15 +594,18 @@ describe('PluginSettingsTab', () => {
     }
   });
 
-  it('should explain the path-string and regular-expression forms in the include/exclude path descriptions', async () => {
+  it('should explain the path, glob and regular-expression forms in the include/exclude path descriptions', async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
-    // The command-visibility filter (issue #198) takes the same two entry forms, so it explains them too.
+    // The command-visibility filter (issue #198) takes the same entry forms, so it explains them too.
     for (const name of ['Merge include paths', 'Merge exclude paths', 'Merge command include paths', 'Merge command exclude paths']) {
       const desc = findDesc(name);
-      expect(desc).toContain('A path string matches that note or folder and everything inside it');
+      expect(desc).toContain('A path matches that note or folder and everything inside it');
+      expect(desc).toContain('A glob is an entry holding');
+      expect(desc).toContain('tmp*/');
       expect(desc).toContain('/^Inbox$/');
+      expect(desc).toContain('Every form ignores letter case');
     }
   });
 

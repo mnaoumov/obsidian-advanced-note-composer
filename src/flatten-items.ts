@@ -50,9 +50,10 @@ export interface CollectFlattenItemsParams {
    * a plain predicate so this module stays independent of the settings object.
    *
    * @param path - The path to check.
+   * @param isFolder - Whether the path is a folder, which a folder-only glob (one ending in `/`) needs to match it.
    * @returns Whether the path is excluded.
    */
-  readonly isPathIgnored: (path: string) => boolean;
+  readonly isPathIgnored: (path: string, isFolder: boolean) => boolean;
 
   /**
    * What the flatten promotes.
@@ -115,9 +116,10 @@ interface FlattenContext {
    * Whether a path is excluded/ignored in the plugin settings.
    *
    * @param path - The path to check.
+   * @param isFolder - Whether the path is a folder.
    * @returns Whether the path is excluded.
    */
-  isPathIgnored: (path: string) => boolean;
+  isPathIgnored: (path: string, isFolder: boolean) => boolean;
 }
 
 /**
@@ -309,7 +311,7 @@ function buildFlattenContext(params: CollectFlattenItemsParams): FlattenContext 
   return {
     attachmentExtensions: params.attachmentExtensions,
     attachmentFolderConfig: parseAttachmentFolderConfig(params.app),
-    isPathIgnored: (path) => params.isPathIgnored(path)
+    isPathIgnored: (path, isFolderPath) => params.isPathIgnored(path, isFolderPath)
   };
 }
 
@@ -345,7 +347,7 @@ function buildItems(
  * @returns The direct children the flatten will move.
  */
 function collectAllChildrenItems(folder: TFolder, context: FlattenContext): TAbstractFile[] {
-  return folder.children.filter((child) => !context.isPathIgnored(child.path));
+  return folder.children.filter((child) => !context.isPathIgnored(child.path, isFolder(child)));
 }
 
 function collectFolders(
@@ -611,7 +613,7 @@ function isProtectedFolder(folder: TFolder, noteAttachmentFolders: readonly Note
  * @returns Whether the folder must be left where it is, subtree included.
  */
 function isSkippedFolder(folder: TFolder, context: FlattenContext): boolean {
-  return context.isPathIgnored(folder.path) || isConfiguredAttachmentFolder(folder, context);
+  return context.isPathIgnored(folder.path, true) || isConfiguredAttachmentFolder(folder, context);
 }
 
 /**

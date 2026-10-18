@@ -209,7 +209,7 @@ describe('typing a regular expression into Merge exclude paths (issue #155)', ()
     expect(result.savedExcludePaths).toContain(REPORTED_EXCLUDE_PATH);
     expect(result.validationMessageForCompleteValue).toBe('');
 
-    // An un-parseable entry is surfaced rather than silently ignored.
-    expect(result.validationMessageForIncompleteValue).toBe(`Invalid regular expression: ${INCOMPLETE_EXCLUDE_PATH}`);
+    // An un-parseable entry is surfaced rather than silently ignored, with the reason it does not parse.
+    expect(result.validationMessageForIncompleteValue).toBe(String.raw`Invalid regular expression: ${INCOMPLETE_EXCLUDE_PATH} (\ at end of pattern)`);
   });
 });

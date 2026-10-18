@@ -353,7 +353,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       app: this.app,
       attachmentExtensions: settings.attachmentExtensions,
       folder,
-      isPathIgnored: (path) => settings.isPathIgnored(path, CommandCategory.MoveAndFlatten),
+      isPathIgnored: (path, isFolderPath) => settings.isPathIgnored(path, CommandCategory.MoveAndFlatten, isFolderPath),
       mode: this.flattenMode
     };
   }
@@ -527,7 +527,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
 export function isAllowedFlattenDestination(params: IsAllowedFlattenDestinationParams): boolean {
   const { app, pluginSettingsComponent, sourceFolder, targetFolder } = params;
   return !isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })
-    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
+    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten, true);
 }
 
 /**

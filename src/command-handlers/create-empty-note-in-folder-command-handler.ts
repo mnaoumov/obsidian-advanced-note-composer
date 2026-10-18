@@ -115,7 +115,7 @@ export class CreateEmptyNoteInFolderCommandHandler extends FolderCommandHandler 
   }
 
   protected override async executeFolder(parentFolder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Create)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Create, true)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot create a note in ');

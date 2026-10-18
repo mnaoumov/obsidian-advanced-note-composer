@@ -438,7 +438,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
           // merge pickers do.
           isAllowedFolder: (candidateFolder) =>
             this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations
-            || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path, CommandCategory.Merge),
+            || !this.pluginSettingsComponent.settings.isPathIgnored(candidateFolder.path, CommandCategory.Merge, true),
           placeholder: 'Select folder for the merged note...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });
