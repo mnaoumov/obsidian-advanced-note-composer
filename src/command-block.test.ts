@@ -6,6 +6,10 @@ import type {
 
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
+  App,
+  TFolder
+} from 'obsidian-test-mocks/obsidian';
+import {
   describe,
   expect,
   it
@@ -135,5 +139,19 @@ describe('isFileOrFolderCommandBlocked', () => {
     const abstractFile = strictProxy<TAbstractFile>({ path: 'secret/folder' });
     expect(isFileOrFolderCommandBlocked({ abstractFile, commandCategory: CommandCategory.Merge, pluginSettingsComponent })).toBe(true);
     expect(isFileOrFolderCommandBlocked({ abstractFile, commandCategory: CommandCategory.Rename, pluginSettingsComponent })).toBe(false);
+  });
+
+  // A folder-only glob covers the folder itself only when the helper says the path IS a folder.
+  it('should block a folder matched by a folder-only glob', () => {
+    const pluginSettingsComponent = createComponent({ mergeCommandExcludePaths: ['tmp*/'] });
+    const folder = TFolder.create__(App.createConfigured__().vault, 'tmp1').asOriginalType__();
+    expect(isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent })).toBe(true);
+    expect(
+      isFileOrFolderCommandBlocked({
+        abstractFile: strictProxy<TAbstractFile>({ path: 'tmp1' }),
+        commandCategory: CommandCategory.Merge,
+        pluginSettingsComponent
+      })
+    ).toBe(false);
   });
 });

@@ -108,6 +108,33 @@ function buildReleaseNotes(): ReleaseNotes {
       f.appendText(' settings page is gone: each ');
       appendCodeBlock(f, '<Category> command menus');
       f.appendText(' section moved to the page of its own commands, next to its include/exclude paths. Every setting keeps its value.');
+    }),
+    // The include/exclude path grammar moved to `@mnaoumov/obsidian-lib` 5.0.0, which changes what an entry
+    // the user already typed matches, so it is announced the way 5.12.0 announced issue #288.
+    '5.20.0': createFragment((f) => {
+      f.appendText('Every include/exclude path box now ignores letter case, so ');
+      appendCodeBlock(f, 'inbox');
+      f.appendText(' covers ');
+      appendCodeBlock(f, 'Inbox');
+      f.appendText(' too.');
+      f.createEl('br');
+      f.appendText('An entry holding ');
+      appendCodeBlock(f, '*');
+      f.appendText(', ');
+      appendCodeBlock(f, '?');
+      f.appendText(' or ');
+      appendCodeBlock(f, '[');
+      f.appendText(' is now a glob, such as ');
+      appendCodeBlock(f, '*.pdf');
+      f.appendText(' or ');
+      appendCodeBlock(f, 'tmp*/');
+      f.appendText('. If one of your paths contains such a character literally, escape it: ');
+      appendCodeBlock(f, String.raw`Notes \[old\]`);
+      f.appendText('.');
+      f.createEl('br');
+      f.appendText('A ');
+      appendCodeBlock(f, '/regular expression/');
+      f.appendText(' entry may now carry flags after its closing slash, and an invalid entry is reported with the reason.');
     })
   };
 }

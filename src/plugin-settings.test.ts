@@ -409,9 +409,39 @@ describe('PluginSettings', () => {
     expect(settings.isPathIgnored('Inbox/sub/deep.md', CommandCategory.Merge)).toBe(false);
     expect(settings.isPathIgnored('Other/note.md', CommandCategory.Merge)).toBe(false);
   });
+
+  it('should match every entry form case-insensitively', () => {
+    const settings = new PluginSettings();
+    settings.mergeExcludePaths = ['Inbox', '/^Archive$/', '*.PDF'];
+    expect(settings.isPathIgnored('inbox/note.md', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('ARCHIVE', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('Docs/scan.pdf', CommandCategory.Merge)).toBe(true);
+  });
+
+  it('should match a name glob at any depth', () => {
+    const settings = new PluginSettings();
+    settings.mergeExcludePaths = ['*.pdf'];
+    expect(settings.isPathIgnored('a/b/c.pdf', CommandCategory.Merge)).toBe(true);
+    expect(settings.isPathIgnored('a/b/c.md', CommandCategory.Merge)).toBe(false);
+  });
+
+  it('should match a folder-only glob against the folder itself only when told it is a folder', () => {
+    const settings = new PluginSettings();
+    settings.mergeExcludePaths = ['tmp*/'];
+    expect(settings.isPathIgnored('Notes/tmp1', CommandCategory.Merge, true)).toBe(true);
+    expect(settings.isPathIgnored('Notes/tmp1', CommandCategory.Merge)).toBe(false);
+    expect(settings.isPathIgnored('Notes/tmp1/note.md', CommandCategory.Merge)).toBe(true);
+  });
 });
 
 describe('PluginSettings.shouldBlockCommandOnPath', () => {
+  it('should match a folder-only glob against the folder itself only when told it is a folder', () => {
+    const settings = new PluginSettings();
+    settings.mergeCommandExcludePaths = ['tmp*/'];
+    expect(settings.shouldBlockCommandOnPath('tmp1', CommandCategory.Merge, true)).toBe(true);
+    expect(settings.shouldBlockCommandOnPath('tmp1', CommandCategory.Merge)).toBe(false);
+  });
+
   it('should block a path listed in the category command exclude list', () => {
     const settings = new PluginSettings();
     settings.mergeCommandExcludePaths = ['secret'];

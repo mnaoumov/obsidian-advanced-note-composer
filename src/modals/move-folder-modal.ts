@@ -35,7 +35,7 @@ export function isAllowedMoveTarget(params: IsAllowedMoveTargetParams): boolean 
   const { app, pluginSettingsComponent, sourceFolder, targetFolder } = params;
   return targetFolder !== sourceFolder.parent
     && !isChildOrSelf({ app, childPathOrFile: targetFolder, parentPathOrFile: sourceFolder })
-    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten);
+    && !pluginSettingsComponent.settings.isPathIgnored(targetFolder.path, CommandCategory.MoveAndFlatten, true);
 }
 
 export async function selectTargetFolderForMove(params: SelectTargetFolderForMoveParams): Promise<null | TFolder> {

@@ -3,6 +3,8 @@ import type {
   TAbstractFile
 } from 'obsidian';
 
+import { isFolder } from '@mnaoumov/obsidian-lib/file-system';
+
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import type { CommandCategory } from './plugin-settings.ts';
 
@@ -70,5 +72,5 @@ export function isEditorCommandBlocked(params: IsEditorCommandBlockedParams): bo
  * @returns Whether the command must be blocked.
  */
 export function isFileOrFolderCommandBlocked(params: IsFileOrFolderCommandBlockedParams): boolean {
-  return params.pluginSettingsComponent.settings.shouldBlockCommandOnPath(params.abstractFile.path, params.commandCategory);
+  return params.pluginSettingsComponent.settings.shouldBlockCommandOnPath(params.abstractFile.path, params.commandCategory, isFolder(params.abstractFile));
 }

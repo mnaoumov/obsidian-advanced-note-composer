@@ -412,7 +412,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       if (confirmResult.shouldReselectTarget) {
         const selectedFolder = await selectFolder({
           app: this.app,
-          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.SplitAndExtract),
+          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.SplitAndExtract, true),
           placeholder: 'Select folder to root the produced tree in...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });

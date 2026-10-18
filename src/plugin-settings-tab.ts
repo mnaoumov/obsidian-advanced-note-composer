@@ -268,8 +268,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.createEl('br');
                   f.appendText('Leave empty to treat every markdown file as a note.');
                   f.createEl('br');
-                  f.appendText('This does not keep a file out of a merge: a file listed here is still moved, just never inlined as text. To keep notes and folders out of merges by path or ');
-                  appendCodeBlock(f, '/regular expression/');
+                  f.appendText('This does not keep a file out of a merge: a file listed here is still moved, just never inlined as text. To keep notes and folders out of merges by path, glob or ');
+                  appendCodeBlock(f, '/regular expression/flags');
                   f.appendText(', use ');
                   appendCodeBlock(f, 'Merge exclude paths');
                   f.appendText('; to stop the merge commands running on a path, use ');
@@ -642,15 +642,15 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.createEl('br');
                   f.appendText('Insert each path on a new line');
                   f.createEl('br');
-                  f.appendText('You can use a path or ');
-                  appendCodeBlock(f, '/regular expression/');
-                  f.appendText(', as in the include/exclude paths lists. A plain path covers that folder and everything under it; a regular expression is tested against the full path, so ');
+                  f.appendText('You can use a path, a glob or ');
+                  appendCodeBlock(f, '/regular expression/flags');
+                  f.appendText(', as in the include/exclude paths lists, and letter case is ignored. A plain path or a glob covers the folders it names and everything under them; a regular expression is tested against the full path, so ');
                   appendCodeBlock(f, String.raw`/^E\/[^/]+$/`);
                   f.appendText(' matches only the folders directly inside ');
                   appendCodeBlock(f, 'E');
                   f.appendText('.');
                   f.createEl('br');
-                  f.appendText('If an entry is an invalid regular expression, the whole list is ignored until it is fixed.');
+                  f.appendText('If an entry is not a valid glob or regular expression, the setting says why, and the whole list is ignored until it is fixed.');
                 }),
                 name: 'Folder paths to keep separate',
                 render: (setting) => {
@@ -2610,8 +2610,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.createEl('br');
             f.appendText('Insert each path on a new line');
             f.createEl('br');
-            f.appendText('You can use path string or ');
-            appendCodeBlock(f, '/regular expression/');
+            f.appendText('You can use a path, a glob or ');
+            appendCodeBlock(f, '/regular expression/flags');
             f.createEl('br');
             appendPathFormsDesc(f);
             f.createEl('br');
@@ -2634,8 +2634,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             f.createEl('br');
             f.appendText('Insert each path on a new line');
             f.createEl('br');
-            f.appendText('You can use path string or ');
-            appendCodeBlock(f, '/regular expression/');
+            f.appendText('You can use a path, a glob or ');
+            appendCodeBlock(f, '/regular expression/flags');
             f.createEl('br');
             appendPathFormsDesc(f);
             f.createEl('br');
@@ -2668,8 +2668,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.createEl('br');
           f.appendText('Insert each path on a new line');
           f.createEl('br');
-          f.appendText('You can use path string or ');
-          appendCodeBlock(f, '/regular expression/');
+          f.appendText('You can use a path, a glob or ');
+          appendCodeBlock(f, '/regular expression/flags');
           f.createEl('br');
           appendPathFormsDesc(f);
           f.createEl('br');
@@ -2690,8 +2690,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           f.createEl('br');
           f.appendText('Insert each path on a new line');
           f.createEl('br');
-          f.appendText('You can use path string or ');
-          appendCodeBlock(f, '/regular expression/');
+          f.appendText('You can use a path, a glob or ');
+          appendCodeBlock(f, '/regular expression/flags');
           f.createEl('br');
           appendPathFormsDesc(f);
           f.createEl('br');
@@ -3024,8 +3024,14 @@ function appendAttachmentFolderProtectionDesc(f: DocumentFragment): void {
   f.appendText(' is recognized');
 }
 
+/**
+ * The three entry forms every include/exclude path list takes (`@mnaoumov/obsidian-lib` `PathSettings`):
+ * a plain path, a glob and a `/regular expression/flags` literal, all matched case-insensitively.
+ *
+ * @param f - The description fragment to append to.
+ */
 function appendPathFormsDesc(f: DocumentFragment): void {
-  f.appendText('A path string matches that note or folder and everything inside it, so ');
+  f.appendText('A path matches that note or folder and everything inside it, so ');
   appendCodeBlock(f, 'Inbox');
   f.appendText(' covers ');
   appendCodeBlock(f, 'Inbox');
@@ -3035,11 +3041,53 @@ function appendPathFormsDesc(f: DocumentFragment): void {
   appendCodeBlock(f, 'Inbox/sub/deep.md');
   f.appendText('.');
   f.createEl('br');
-  f.appendText('A regular expression is tested against the path exactly as written, which is how you match a folder without its contents: ');
+  f.appendText('A glob is an entry holding ');
+  appendCodeBlock(f, '*');
+  f.appendText(', ');
+  appendCodeBlock(f, '?');
+  f.appendText(' or ');
+  appendCodeBlock(f, '[');
+  f.appendText(': ');
+  appendCodeBlock(f, '*');
+  f.appendText(' matches within one folder level, ');
+  appendCodeBlock(f, '**');
+  f.appendText(' across levels, ');
+  appendCodeBlock(f, '?');
+  f.appendText(' one character, and ');
+  appendCodeBlock(f, '[abc]');
+  f.appendText(' / ');
+  appendCodeBlock(f, '[!abc]');
+  f.appendText(' one character from a set. A glob without a ');
+  appendCodeBlock(f, '/');
+  f.appendText(' matches a name at any depth, so ');
+  appendCodeBlock(f, '*.pdf');
+  f.appendText(' covers ');
+  appendCodeBlock(f, 'a/b/c.pdf');
+  f.appendText('; one with a ');
+  appendCodeBlock(f, '/');
+  f.appendText(' starts at the vault root, as in ');
+  appendCodeBlock(f, 'Attachments/**/*.pdf');
+  f.appendText('; a trailing ');
+  appendCodeBlock(f, '/');
+  f.appendText(' matches folders only, as in ');
+  appendCodeBlock(f, 'tmp*/');
+  f.appendText('. To use one of those characters literally, escape it: ');
+  appendCodeBlock(f, String.raw`Notes \[old\]`);
+  f.appendText('.');
+  f.createEl('br');
+  f.appendText('A regular expression ');
+  appendCodeBlock(f, '/pattern/flags');
+  f.appendText(' is tested against the path exactly as written, which is how you match a folder without its contents: ');
   appendCodeBlock(f, '/^Inbox$/');
   f.appendText(' matches only the ');
   appendCodeBlock(f, 'Inbox');
   f.appendText(' folder itself.');
   f.createEl('br');
-  f.appendText('If any line is not a valid regular expression, the whole list is ignored until you fix it.');
+  f.appendText('Every form ignores letter case, so ');
+  appendCodeBlock(f, 'inbox');
+  f.appendText(' covers ');
+  appendCodeBlock(f, 'Inbox');
+  f.appendText(' too.');
+  f.createEl('br');
+  f.appendText('If any line is not a valid glob or regular expression, the setting says why, and the whole list is ignored until you fix it.');
 }

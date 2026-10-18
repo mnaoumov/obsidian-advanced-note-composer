@@ -1655,7 +1655,7 @@ async function selectFolderThenName(params: SelectFolderThenNameParams): Promise
       abortController: params.abortController,
       app: prepareParams.app,
       canMergeIntoExistingNote: prepareParams.canMergeIntoExistingNote ?? true,
-      isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
+      isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract, true),
       placeholder: 'Select folder to create the new note in...',
       pluginSettingsComponent: prepareParams.pluginSettingsComponent
     });
@@ -1786,7 +1786,7 @@ async function selectTargetParentFolder(params: SelectTargetParentFolderParams):
     // just as it closes the picker the user came from.
     abortController: params.abortController,
     app: prepareParams.app,
-    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract),
+    isAllowedFolder: (candidateFolder) => !settings.isPathIgnored(candidateFolder.path, CommandCategory.SplitAndExtract, true),
     placeholder: 'Select folder to create the new note in...',
     pluginSettingsComponent: prepareParams.pluginSettingsComponent
   });

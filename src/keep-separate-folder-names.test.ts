@@ -90,6 +90,11 @@ describe('shouldKeepFolderPathSeparate', () => {
     expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: [String.raw`/^E\/[^/]+$/`], paths: ['E/B/C'] })).toBe(false);
   });
 
+  it('should match a folder-only glob against the folder itself', () => {
+    // Every path judged here is a folder's, so `tmp*/` must cover the folder and not only what is inside it.
+    expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['tmp*/'], paths: ['E/tmp1'] })).toBe(true);
+  });
+
   it('should match nothing while the list holds an un-parseable regular expression', () => {
     // The shared all-or-nothing fallback of issue #155; `pathsValidator` is what reports it.
     expect(shouldKeepFolderPathSeparate({ keepSeparateFolderPaths: ['E', String.raw`/^E\/`], paths: ['E/B'] })).toBe(false);

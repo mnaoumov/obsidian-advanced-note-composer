@@ -297,7 +297,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   }
 
   protected override async executeFolder(parentFolder: TFolder): Promise<void> {
-    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Create)) {
+    if (this.pluginSettingsComponent.settings.isPathIgnored(parentFolder.path, CommandCategory.Create, true)) {
       this.pluginNoticeComponent.showNotice(
         await createFragmentAsync(async (f) => {
           f.appendText('You cannot create a folder in ');
@@ -781,7 +781,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         const selectedFolder = await selectFolder({
           app: this.app,
           // An ignored folder is refused by `executeFolder` up front, so it is never offered here either.
-          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Create),
+          isAllowedFolder: (folder) => !this.pluginSettingsComponent.settings.isPathIgnored(folder.path, CommandCategory.Create, true),
           placeholder: 'Select folder to create the new folder in...',
           pluginSettingsComponent: this.pluginSettingsComponent
         });

@@ -86,7 +86,8 @@ export function shouldKeepFolderPathSeparate(params: ShouldKeepFolderPathSeparat
   const { keepSeparateFolderPaths, paths } = params;
   const pathSettings = new PathSettings();
   pathSettings.excludePaths = [...keepSeparateFolderPaths];
-  return paths.some((path) => pathSettings.isPathIgnored(path));
+  // Every path judged here is a folder's, so a folder-only glob (`Archive*/`) matches the folder itself.
+  return paths.some((path) => pathSettings.isPathIgnored(path, true));
 }
 
 /**
