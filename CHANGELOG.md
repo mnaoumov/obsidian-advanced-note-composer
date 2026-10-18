@@ -3,7 +3,7 @@
 ## 5.19.2
 
 - fix(split): refuse when the source tab navigates away mid-split
-- test: stop the Templater cursor test racing the extract it drives
+- test: stop the `Templater` cursor test racing the extract it drives
 - build(deps): merge taking obsidian-lib 4.3.0 and its validation debug switch
 - docs(demo-vault): give every settings button a way back to the shipped default
 - docs(demo-vault): give every Try it section buttons for its setup and steps
@@ -17,7 +17,7 @@
 - refactor(api): merge re-copying the providers' contracts in their short typescript-lib form
 - refactor(api): merge using the providers' copied plugin API contracts, with full schemas
 - fix(ui): render plugin names as code in notices, settings, docs and comments
-- build: merge loading obsidian-typings' ESM copy for the Templater augmentation
+- build: merge loading obsidian-typings' ESM copy for the `Templater` augmentation
 - refactor: merge the keyed getConfig read of attachmentFolderPath
 - test: merge using the obsidian-typings declarations of Obsidian internals
 
