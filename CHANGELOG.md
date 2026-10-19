@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 5.20.0
+
+- build(deps): clear the brace-expansion, sharp and fast-uri advisories
+- feat(path-settings): accept globs and match include/exclude paths case-insensitively
+- docs: mark plugin names as code
+
 ## 5.19.2
 
 - fix(split): refuse when the source tab navigates away mid-split
