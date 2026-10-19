@@ -13,7 +13,7 @@ import {
 
 /*
  * Issue #301: `Split template` = `<% tp.file.cursor() %> {{content}}`, and the note an Extract created kept the
- * raw `<% tp.file.cursor() %>` — read by the reporter as "Templater does not trigger". `Templater` DID run:
+ * raw `<% tp.file.cursor() %>` — read by the reporter as "`Templater` does not trigger". `Templater` DID run:
  * `tp.file.cursor()` renders to that very marker, and `Templater` consumes it only with a separate cursor jump in
  * the ACTIVE editor, while the plugin renders the destination before the note is ever opened.
  *

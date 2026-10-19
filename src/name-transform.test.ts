@@ -262,7 +262,7 @@ function createApp(overrides?: CreateAppOverrides): AppOriginal {
   const app = App.createConfigured__({ files: overrides?.files ?? { 'note.md': 'note' } }).asOriginalType__();
   // `getRecentFiles` is not part of the mock's surface, and the Templater-context fallback chain consults it
   // whenever no note is open (issue #218) — stubbed empty for every test, so only the tests that care about
-  // it say so. No plugin is registered here, which is the "Templater is missing" case.
+  // it say so. No plugin is registered here, which is the "`Templater` is missing" case.
   installRecentFiles(app, []);
   return app;
 }

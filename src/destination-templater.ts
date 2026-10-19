@@ -39,7 +39,7 @@ export interface ResolveDestinationTemplaterRunnerParams {
  * `Create empty note in folder...` (issue #284). Those flows used to skip `Templater` entirely, which left the
  * template's own `<% %>` commands raw in every note they produced, while an ordinary split honored them.
  *
- * Deciding once is what keeps a batch from repeating the "Templater is not installed" notice per note.
+ * Deciding once is what keeps a batch from repeating the "`Templater` is not installed" notice per note.
  *
  * @param params - The app, the notice sink and the setting.
  * @returns The runner, or `null` when the setting is off or `Templater` is not installed.
