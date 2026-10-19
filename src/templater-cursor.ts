@@ -8,7 +8,7 @@
  * acts on the ACTIVE editor only. `Templater`'s own entry points jump right after they render, because the note
  * they render is the one on screen. This plugin renders its destinations inside an operation, before the note
  * is opened (and often without ever opening it), so that jump never fired and the marker stayed in the note as
- * raw text — which the reporter read as "Templater does not trigger", although every other command in the same
+ * raw text — which the reporter read as "`Templater` does not trigger", although every other command in the same
  * template had rendered.
  *
  * So a note `Templater` rendered while it was NOT the active note, and that still holds a marker, is remembered

@@ -158,7 +158,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           this.settingEx({
             desc: createFragment((f) => {
               f.appendText('Whether to run ');
-              f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+              appendCodeBlock(f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/' }), 'Templater');
               f.appendText(' on the destination file after merging/splitting, so ');
               appendCodeBlock(f, 'Templater');
               f.appendText(' commands in the merge and split templates run.');
@@ -313,10 +313,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.appendText(' merges a note away, whether the attachments that note owns follow into the destination note\'s attachment folder.');
                   f.createEl('br');
                   f.appendText('The destination honors your vault\'s attachment settings, including ');
-                  /**
-                  HACK: see the TSDoc for {@link EMPTY} for motivation.
-                  */
-                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+                  appendCodeBlock(f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location' }), 'Custom Attachment Location');
                   f.appendText(' when it is installed.');
                   f.createEl('br');
                   f.appendText(
@@ -459,10 +456,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   f.appendText(' merges the folder\'s notes away, whether their attachments follow into the merged note\'s attachment folder.');
                   f.createEl('br');
                   f.appendText('The destination honors your vault\'s attachment settings, including ');
-                  /**
-                  HACK: see the TSDoc for {@link EMPTY} for motivation.
-                  */
-                  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+                  appendCodeBlock(f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location' }), 'Custom Attachment Location');
                   f.appendText(' when it is installed.');
                   f.createEl('br');
                   f.appendText('An attachment moves when one of the merged notes references it, or when it already sits where that note\'s attachments belong.');
@@ -1100,10 +1094,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               f.appendText('Whether the attachments the extracted text references follow it into the new note\'s attachment folder.');
               f.createEl('br');
               f.appendText('The destination honors your vault\'s attachment settings, including ');
-              /**
-              HACK: see the TSDoc for {@link EMPTY} for motivation.
-              */
-              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+              appendCodeBlock(f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location' }), 'Custom Attachment Location');
               f.appendText(' when it is installed.');
               f.createEl('br');
               f.appendText(
@@ -1126,10 +1117,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           this.settingEx({
             desc: createFragment((f) => {
               f.appendText('Once the extract lands, hand the destination note to ');
-              /**
-              HACK: see the TSDoc for {@link EMPTY} for motivation.
-              */
-              f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+              appendCodeBlock(f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location' }), 'Custom Attachment Location');
               f.appendText(' so it collects that note\'s attachments, as if you had run its ');
               appendCodeBlock(f, 'Collect attachments in current note');
               f.appendText(' command yourself.');
@@ -1552,7 +1540,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
                   appendCodeBlock(f, '{{time:FORMAT}}');
                   f.createEl('br');
                   f.appendText('With ');
-                  f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+                  appendCodeBlock(f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/' }), 'Templater');
                   f.appendText(' installed, the same values are available as ');
                   appendCodeBlock(f, 'TOKENS.rawString');
                   f.appendText(', which is how you write a mapping:');
@@ -2934,7 +2922,7 @@ function addNumberedSplitNoteTokens(f: DocumentFragment): void {
  */
 function addPropertyTemplaterDesc(f: DocumentFragment, noteDescription: string, exampleToken: string, resultRule: string): void {
   f.appendText('With ');
-  f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/', text: 'Templater' });
+  appendCodeBlock(f.createEl('a', { href: 'https://silentvoid13.github.io/Templater/' }), 'Templater');
   f.appendText(' installed it may also hold ');
   appendCodeBlock(f, 'Templater');
   f.appendText(' commands, run once the tokens below are filled in: the tokens are available as ');
@@ -3013,10 +3001,7 @@ function addTokenList(f: DocumentFragment, tokens: readonly string[]): void {
  */
 function appendAttachmentFolderProtectionDesc(f: DocumentFragment): void {
   f.appendText('This is how to protect your attachment folder when ');
-  /**
-  HACK: see the TSDoc for {@link EMPTY} for motivation.
-  */
-  f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location', text: `${EMPTY}Custom Attachment Location` });
+  appendCodeBlock(f.createEl('a', { href: 'https://github.com/mnaoumov/obsidian-custom-attachment-location' }), 'Custom Attachment Location');
   f.appendText(
     ' decides where attachments go: it derives the folder from the note, and that cannot be reversed into "which folder is an attachment folder". Without it, only your vault\'s own '
   );
