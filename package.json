@@ -52,7 +52,7 @@
     "@codemirror/view": "6.43.13",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
-    "@mnaoumov/obsidian-dev-toolkit": "^3.7.0",
+    "@mnaoumov/obsidian-dev-toolkit": "^4.0.0",
     "@mnaoumov/typescript-dev-toolkit": "^3.6.0",
     "@mnaoumov/typescript-test-toolkit": "^1.0.1",
     "@obsidian-typings/obsidian-public-latest": "^6.44.0",
