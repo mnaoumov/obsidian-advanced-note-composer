@@ -15,7 +15,7 @@ import { findSettingItemInObsidian } from './settings-tab-navigation.ts';
 
 /*
  * Desktop-only: this exercises two editor context menus, a desktop-only surface. Version coverage: the placement logic
- * is pure plugin logic on top of `obsidian-dev-utils`' `shouldAddToViewportMenu`, so public-latest is
+ * is pure plugin logic on top of `@mnaoumov/obsidian-lib`'s `shouldAddToViewportMenu`, so public-latest is
  * enough.
  *
  * The menus are raised by triggering the workspace events directly, exactly as

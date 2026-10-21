@@ -67,7 +67,7 @@ export function shouldKeepFolderNameSeparate(params: ShouldKeepFolderNameSeparat
  * The name list cannot say "folders in folder X", which is what the reporter asked for: a rule scoped to a
  * place rather than to a name. This list takes exactly the syntax of the `<category> include/exclude paths`
  * lists — a plain path covers that path AND its whole subtree, a `/regular expression/` is tested
- * unanchored against the full path — and is matched through obsidian-dev-utils' own `PathSettings`, so the
+ * unanchored against the full path — and is matched through `@mnaoumov/obsidian-lib`'s own `PathSettings`, so the
  * grammar is that object rather than a second copy of it. That also carries over its all-or-nothing
  * fallback: one un-parseable literal makes the whole list match nothing, which the registered
  * `pathsValidator` reports (issue #155).

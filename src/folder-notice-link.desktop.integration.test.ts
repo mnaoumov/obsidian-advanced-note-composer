@@ -23,7 +23,7 @@ interface MenuLike {
 /*
  * Issue #234: a folder name in an operation notice only highlighted the folder in the file explorer, leaving
  * the reporter in the explorer rather than in a document. Clicking it must now open that folder's folder
- * note, and highlight THAT — the reveal follows what the click opens, which is `obsidian-dev-utils`' own
+ * note, and highlight THAT — the reveal follows what the click opens, which is `@mnaoumov/obsidian-lib`'s own
  * behavior since 94.2.0 (it falls back to highlighting the folder when the note is hidden, or when the folder
  * has no note at all).
  *

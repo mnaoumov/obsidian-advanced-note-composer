@@ -7,7 +7,7 @@
  * `evalInObsidian` ships the WHOLE callback as ONE CDP `Runtime.evaluate` with `awaitPromise: true`, and the
  * transport rejects any single command once `commandTimeoutInMilliseconds` elapses — **30 000 ms** by
  * default (`obsidian-integration-testing`'s `connect-to-cdp.ts`), which nothing in this repo can raise: the
- * transport is built by the `obsidian-dev-utils` global setup, with no option threaded through. A closure
+ * transport is built by the `@mnaoumov/obsidian-lib` global setup, with no option threaded through. A closure
  * that runs longer dies as `CDP command timed out after 30000ms: Runtime.evaluate` and the transport
  * DISCARDS everything it had gathered — no assertion, no message, nothing to read. So an in-page `waitUntil`
  * budget above 30 s is unreachable by construction, whatever vitest's own test timeout says.

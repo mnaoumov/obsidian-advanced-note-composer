@@ -292,7 +292,7 @@ export interface ResolveAttachmentDestinationParams {
  * from the others.
  *
  * Links to ordinary notes are never collected; a markdown file that is really an attachment (one whose
- * extension is configured, per `obsidian-dev-utils` {@link isTreatedAsAttachment}) is.
+ * extension is configured, per `@mnaoumov/obsidian-lib` {@link isTreatedAsAttachment}) is.
  *
  * Deliberately narrower than {@link collectAttachmentsToRelocate}, which ALSO takes unreferenced files
  * sitting at a proper attachment path: that rule is only safe because a folder merge is moving the whole
@@ -344,7 +344,7 @@ export function collectAttachmentsOwnedByNote(params: CollectAttachmentsOwnedByN
  * That second rule is what makes moving safe enough to be on by default: an attachment referenced by both
  * the extracted heading and the text left behind would otherwise be moved out from under the source note,
  * which is strictly worse than leaving it where it is. Links to ordinary notes are never collected; a
- * markdown file that is really an attachment (one whose extension is configured, per `obsidian-dev-utils`
+ * markdown file that is really an attachment (one whose extension is configured, per `@mnaoumov/obsidian-lib`
  * {@link isTreatedAsAttachment}) is.
  *
  * Unlike {@link collectAttachmentsToRelocate} it never takes an unreferenced file sitting at a proper
@@ -570,7 +570,7 @@ export async function relocateAttachmentUnitFolders(params: RelocateAttachmentUn
 }
 
 /**
- * Resolves where an attachment belongs once its note has moved, via `obsidian-dev-utils`
+ * Resolves where an attachment belongs once its note has moved, via `@mnaoumov/obsidian-lib`
  * {@link getAttachmentFilePath}. That helper reads Obsidian's own attachment-folder configuration and is
  * the very function `Custom Attachment Location` patches, so a vault running that plugin gets its answer
  * without this plugin knowing it exists (issue #161).

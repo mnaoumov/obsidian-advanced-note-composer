@@ -352,7 +352,7 @@ export const COMMAND_CATEGORY_PATH_SETTING_NAMES: ReadonlyMap<CommandCategory, C
 export class PluginSettings {
   /**
    * Extensions that make a file an attachment rather than a note, matched against the file's whole name
-   * by `obsidian-dev-utils` `isTreatedAsAttachment` — so a multi-part extension like `.excalidraw.md` is
+   * by `@mnaoumov/obsidian-lib` `isTreatedAsAttachment` — so a multi-part extension like `.excalidraw.md` is
    * written out in full. Such a file is never merged — inlining an `Excalidraw` drawing's raw payload into
    * a note is never what the user wanted (issue #160). It is moved like any other attachment instead: by
    * the folder merges (into a single file, or into another folder) and by the file merge that owns it
@@ -1602,7 +1602,7 @@ export class PluginSettings {
    *
    * Visibility first belonged to a `shouldBlockCommandsOnExcludedPaths` toggle, which needed a switch
    * precisely because it borrowed the content filter's list. Two empty lists already mean "block nothing"
-   * (obsidian-dev-utils' `PathSettings` defaults make {@link PathSettings.isPathIgnored} `false`), which IS the old
+   * (`@mnaoumov/obsidian-lib`'s `PathSettings` defaults make {@link PathSettings.isPathIgnored} `false`), which IS the old
    * toggle-off default, so a separate switch would only add the incoherent "off, yet paths listed" state.
    *
    * Like the content map above, these nine replaced an all-commands pair in issue #271 rather than

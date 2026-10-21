@@ -4,7 +4,7 @@
  * The NAME half of the folder-then-name pair that replaces the split/extract picker when
  * `Should choose the folder before the name when splitting` is on (issue #261).
  *
- * It started life as a bare `prompt()` from `obsidian-dev-utils`, which offered `Create` and `Cancel` and
+ * It started life as a bare `prompt()` from `@mnaoumov/obsidian-lib`, which offered `Create` and `Cancel` and
  * nothing else. Issue #280 is what that costs: the `Create` / `Merge` switch lives in the picker this pair
  * replaces, so with the setting on a split could only ever CREATE — a capability removed by a setting that
  * says nothing about it. The reporter asked for the switch back, and for the naming box to grow the two

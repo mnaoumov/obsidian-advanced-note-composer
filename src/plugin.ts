@@ -153,7 +153,7 @@ export class Plugin extends PluginBase {
     // The three move commands are created up front so the marked-selection notice can offer them as
     // buttons (and reflect their availability) — see MoveNoticeComponent.
     // Every handler that both backs a notice button AND is registered as a command is built through a
-    // builder rather than shared. Since obsidian-dev-utils 90 a command handler instance cannot be
+    // builder rather than shared. A command handler instance cannot be
     // registered twice, and the factory below runs once per menu surface, so handing it the same instance
     // throws and the whole plugin fails to load. The notice keeps its own unregistered instance: it calls
     // the handler directly (canExecuteInActiveEditor / executeInActiveEditor / cancelMove), which reads

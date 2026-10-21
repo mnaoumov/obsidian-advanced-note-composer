@@ -4,10 +4,10 @@
  * This plugin's whole public surface, as a consumer sees it.
  *
  * Hand-written and self-contained on purpose: it imports from `obsidian` and nothing else, so a plugin that
- * has never heard of `obsidian-dev-utils` can copy this file, or reference it where it sits, and depend on
+ * has never heard of `@mnaoumov/obsidian-lib` can copy this file, or reference it where it sits, and depend on
  * this plugin with no build-time dependency on this repository at all.
  *
- * {@link CustomAttachmentLocationApi} is published through the `obsidian-dev-utils` plugin registry under the
+ * {@link CustomAttachmentLocationApi} is published through the `@mnaoumov/obsidian-lib` plugin registry under the
  * plugin id `obsidian-custom-attachment-location`, so a consumer gets version negotiation, a handle that is
  * revoked when this plugin unloads, and a wait that ends when this plugin loads rather than a lookup that
  * returns `undefined` because it ran first.
@@ -30,7 +30,7 @@ import type {
 } from 'obsidian';
 
 /**
- * This plugin's API, published through the `obsidian-dev-utils` plugin registry under the plugin id
+ * This plugin's API, published through the `@mnaoumov/obsidian-lib` plugin registry under the plugin id
  * `obsidian-custom-attachment-location`.
  *
  * Every member that resolves a path is asynchronous, and that is not an accident of the implementation: an
@@ -165,7 +165,7 @@ export interface CustomAttachmentLocationApi {
    * and answers `isApplied: true`, since there is nothing left to hand over. Two proposals arriving at once
    * are asked one after the other, never as two dialogs stacked on top of each other.
    *
-   * Added in contract version `1.1.0`. Its shape matches `obsidian-dev-utils`' `SettingsMigrationApi`, so a
+   * Added in contract version `1.1.0`. Its shape matches `@mnaoumov/obsidian-lib`'s `SettingsMigrationApi`, so a
    * consumer that has that library can hand the whole offer to its `SettingsMigrationComponent`.
    *
    * @param params - The proposal.
@@ -213,7 +213,7 @@ export interface GetAttachmentFolderPathParams {
 }
 
 /**
- * Why an attachment path is being resolved. The same spellings `obsidian-dev-utils`' `AttachmentPathContext`
+ * Why an attachment path is being resolved. The same spellings `@mnaoumov/obsidian-lib`'s `AttachmentPathContext`
  * enum uses, so a value of that enum passes as one of these.
  *
  * - `DeleteNote`: the note is being deleted.
@@ -225,7 +225,7 @@ export type AttachmentPathContext = 'DeleteNote' | 'RenameNote' | 'Unknown';
 /**
  * Parameters for {@link CustomAttachmentLocationApi.getAvailablePathForAttachments}.
  *
- * The same fields as `obsidian-dev-utils`' `GetAvailablePathForAttachmentsExtendedFunctionParams`, so a params
+ * The same fields as `@mnaoumov/obsidian-lib`'s `GetAvailablePathForAttachmentsExtendedFunctionParams`, so a params
  * object built for that type passes as this one.
  */
 export interface GetAvailablePathForAttachmentsParams {

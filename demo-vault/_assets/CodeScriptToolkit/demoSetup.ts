@@ -14,14 +14,14 @@ import {
   TFile,
   TFolder
 } from 'obsidian';
-// Deliberately still `obsidian-dev-utils`, unlike the plugin itself: a vault has no `node_modules`, and
-// `CodeScript Toolkit` serves that package, and no other library, to vault scripts as a built-in module.
+// A vault has no `node_modules`: `CodeScript Toolkit` serves `@mnaoumov/obsidian-lib` and `@mnaoumov/typescript-lib`
+// to vault scripts as built-in modules.
 import {
   configureCommunityPlugin,
   disableCommunityPlugin,
   enableCommunityPlugin,
   installConfigureEnableCommunityPlugin
-} from 'obsidian-dev-utils/obsidian/community-plugins';
+} from '@mnaoumov/obsidian-lib/community-plugins';
 
 const PLUGIN_ID = 'advanced-note-composer';
 const TEMPLATER_PLUGIN_ID = 'templater-obsidian';

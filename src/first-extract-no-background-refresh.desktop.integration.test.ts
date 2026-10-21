@@ -25,7 +25,7 @@ describe('first extract does not refresh the background (issue #102)', () => {
 
         // Open three tabs (other, target, source) with source last so it is active. Background tabs are
         // what let the regression manifest: before the fix, rendering the confirm dialog's internal links
-        // warmed obsidian-dev-utils' link handlers by briefly creating/activating/detaching a leaf, which
+        // warmed `@mnaoumov/obsidian-lib`'s link handlers by briefly creating/activating/detaching a leaf, which
         // transiently switched the active tab to a background one and back.
         await app.workspace.getLeaf('tab').openFile(other);
         await app.workspace.getLeaf('tab').openFile(target);

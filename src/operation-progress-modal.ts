@@ -11,7 +11,7 @@
  * "Genuinely finished" is the whole point of the request — the reporter's own mock-up closed too
  * early, and they said so. A command returning is NOT the end: renaming a file makes other plugins
  * queue their own link updates, and those run afterwards. {@link flushQueue} is the join point for
- * that, since it resolves once the shared `obsidian-dev-utils` queue has drained.
+ * that, since it resolves once the shared `@mnaoumov/obsidian-lib` queue has drained.
  *
  * `waitForAllAsyncOperations` looks like the obvious candidate and is not: its tracking is disabled
  * outside tests by design, so in production it would resolve immediately and close the dialog exactly
