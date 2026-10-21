@@ -61,7 +61,7 @@ import { renderTemplateErrorMessage } from '../templater-string.ts';
 const MIN_MERGEABLE_NOTE_COUNT = 2;
 
 /**
- * The `obsidian-dev-utils` behavior each setting value cleans up with. `DeleteSubFoldersOnly` maps to plain
+ * The `@mnaoumov/obsidian-lib` behavior each setting value cleans up with. `DeleteSubFoldersOnly` maps to plain
  * `Delete` — never `DeleteWithEmptyParents` — because the merged folder itself is excluded from the paths
  * offered to the cleanup, so no ancestor of it can end up empty and the parent half would be meaningless.
  * A `Record` keyed by the enum rather than a `switch`, so adding a member is a compile error instead of an

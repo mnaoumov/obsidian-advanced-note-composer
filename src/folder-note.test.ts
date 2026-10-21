@@ -23,7 +23,7 @@ import {
 
 /*
  * What is left to test here is the MAPPING — this plugin's two settings, and the token vocabulary its name
- * template is written in, expressed as `obsidian-dev-utils`' folder-note parameters. Where a folder note
+ * template is written in, expressed as `@mnaoumov/obsidian-lib`' folder-note parameters. Where a folder note
  * lives, how the installed `folder-notes` plugin is read under `Auto` and which file that resolves to are
  * dev-utils' own, tested in its own suite; asserting them again here would only pin someone else's behavior.
  */

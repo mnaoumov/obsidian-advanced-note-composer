@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * This plugin's `Folder note` SETTINGS, expressed as `obsidian-dev-utils`' folder-note parameters.
+ * This plugin's `Folder note` SETTINGS, expressed as `@mnaoumov/obsidian-lib`' folder-note parameters.
  *
  * The folder-note concept itself — where a folder's note lives, how the installed `folder-notes` plugin is
  * read under `Auto`, which file that resolves to — moved into `@mnaoumov/obsidian-lib/folder-note` in
