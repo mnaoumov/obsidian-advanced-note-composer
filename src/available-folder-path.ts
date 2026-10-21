@@ -10,7 +10,7 @@ import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
  * Finds an available FOLDER path, appending ` 1`, ` 2`, … until a name that no existing file or folder
  * occupies is found (mirroring Obsidian's own de-duplication).
  *
- * Deliberately not `obsidian-dev-utils` {@link getAvailablePath}: that one de-duplicates a FILE path, so it
+ * Deliberately not `@mnaoumov/obsidian-lib` {@link getAvailablePath}: that one de-duplicates a FILE path, so it
  * splits the name on its last dot and inserts the counter before the extension — turning a folder named
  * `v1.2` into `v1 1.2` instead of `v1.2 1`. A folder has no extension, so the counter always goes at the
  * end.

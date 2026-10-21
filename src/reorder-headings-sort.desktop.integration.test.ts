@@ -30,7 +30,7 @@ interface ObsidianDevUtilsStateLike {
 }
 
 /**
- * The slice of the `obsidian-dev-utils` cross-plugin registry the stand-in is published into.
+ * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
   __obsidianDevUtils?: ObsidianDevUtilsStateLike;

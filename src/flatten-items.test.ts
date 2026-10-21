@@ -75,7 +75,7 @@ function collectPathsSyncOrNull(folderPath: string, mode: FlattenMode): null | s
 }
 
 /**
- * Stands in for `PluginSettings.isPathIgnored`, matching the path and its whole subtree exactly as obsidian-dev-utils'
+ * Stands in for `PluginSettings.isPathIgnored`, matching the path and its whole subtree exactly as `@mnaoumov/obsidian-lib`'s
  * `PathSettings` compiles a plain path entry (`^<escaped>(/|$)`).
  *
  * @param paths - The excluded paths.

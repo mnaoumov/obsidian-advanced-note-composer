@@ -3,7 +3,7 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { CommandMenuPlacement } from './plugin-settings.ts';
 
 /**
- * The `mode` `obsidian-dev-utils` forwards from Obsidian's `markdown-viewport-menu` event for a note being
+ * The `mode` `@mnaoumov/obsidian-lib` forwards from Obsidian's `markdown-viewport-menu` event for a note being
  * EDITED, as opposed to `'preview'` for one being read.
  *
  * Kept here rather than at each call site so no command handler has to know the literal, and so the one

@@ -14,7 +14,7 @@ import {
  * note to the `Custom Attachment Location` plugin so that plugin collects the note's attachments.
  *
  * That plugin is not installed in this vault, and installing it to test this would be testing IT rather
- * than the hand-off. So a stand-in API is published under its id in the `obsidian-dev-utils` plugin registry
+ * than the hand-off. So a stand-in API is published under its id in the `@mnaoumov/obsidian-lib` plugin registry
  * - the wire-level path that library's Plugin API protocol guide freezes - and the test asserts what this
  * plugin is responsible for: that it finds the API the way a consumer does, calls `collectAttachments`, passes
  * the note the extract actually created, and does none of it when the setting is off.
@@ -54,7 +54,7 @@ interface ObsidianDevUtilsStateLike {
 }
 
 /**
- * The slice of the `obsidian-dev-utils` cross-plugin registry the stand-in is published into.
+ * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
   __obsidianDevUtils?: ObsidianDevUtilsStateLike;

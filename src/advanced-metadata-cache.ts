@@ -5,7 +5,7 @@
  * Metadata Cache plugin (issue #306).
  *
  * Obsidian keeps no per-heading metadata, so `Reorder headings...` cannot sort by time on its own. Advanced
- * Metadata Cache's `Headings` module tracks those times and publishes them in the `obsidian-dev-utils`
+ * Metadata Cache's `Headings` module tracks those times and publishes them in the `@mnaoumov/obsidian-lib`
  * plugin registry, which is where this plugin reads them, the same way it reaches Custom Attachment
  * Location (`custom-attachment-location.ts`). That plugin is an Obsidian plugin repo rather than an npm
  * package, so there is nothing to depend on: its own copyable `api.d.ts` and `api-contract.ts` are copied

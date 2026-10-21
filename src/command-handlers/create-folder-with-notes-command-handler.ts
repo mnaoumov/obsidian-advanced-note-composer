@@ -690,7 +690,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
   /**
    * Prompts for the folder name, rejecting a name that normalizes to nothing usable.
    *
-   * Reuses the `obsidian-dev-utils` prompt rather than a bespoke modal: it already re-asks with the typed
+   * Reuses the `@mnaoumov/obsidian-lib` prompt rather than a bespoke modal: it already re-asks with the typed
    * text preserved when the validator refuses, which is exactly the behavior the reporter's video shows.
    *
    * The same prompt serves the initial ask and the confirmation dialog's `Rename` (issue #200) — one

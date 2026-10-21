@@ -24,7 +24,7 @@ import {
 } from './plugin-settings.ts';
 
 /**
- * Every settings property registered with `obsidian-dev-utils`' shared paths validator: the two baseline
+ * Every settings property registered with `@mnaoumov/obsidian-lib`'s shared paths validator: the two baseline
  * pairs, the eighteen per-category visibility lists (issue #249) and the sixteen per-category content
  * lists (issue #270 — `Select` has no content pair; see the comment in `plugin-settings.ts`).
  *
@@ -402,7 +402,7 @@ describe('PluginSettingsComponent', () => {
       });
     });
 
-    // Issue #155. The message is obsidian-dev-utils' own i18n string, asserted verbatim so an upstream
+    // Issue #155. The message is `@mnaoumov/obsidian-lib`'s own i18n string, asserted verbatim so an upstream
     // wording change fails here instead of silently degrading the setting's feedback.
     // The command-visibility filter (issue #198) takes the same entry forms and so shares the validator,
     // and so does every per-category pair below it (issue #249) — a broken regex there fails the same

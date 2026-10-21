@@ -10,7 +10,7 @@
  * grow a second, worse copy of that logic here, the destination note is handed over and the other
  * plugin decides (issue #246).
  *
- * The other plugin is reached through the API it publishes in the `obsidian-dev-utils` plugin registry,
+ * The other plugin is reached through the API it publishes in the `@mnaoumov/obsidian-lib` plugin registry,
  * not through its plugin instance. That plugin is an Obsidian plugin repo rather than an npm package, so
  * there is nothing to depend on: its own copyable `api.d.ts` and `api-contract.ts` are copied VERBATIM into
  * `./custom-attachment-location-api/`, everything here narrows them to the one member this plugin calls, and

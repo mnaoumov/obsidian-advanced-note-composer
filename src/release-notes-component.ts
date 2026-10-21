@@ -12,7 +12,7 @@ interface CreateReleaseNotesComponentParams {
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
-// The popup itself is obsidian-dev-utils' `ReleaseNotesComponent`: it names the plugin in its title (issue #286),
+// The popup itself is `@mnaoumov/obsidian-lib`'s `ReleaseNotesComponent`: it names the plugin in its title (issue #286),
 // waits for `data.json` to be read before deciding what was already shown (issue #293), and shows the notes in
 // version order. What stays here is this plugin's storage, its core-plugin gate, and the notes themselves.
 export function createReleaseNotesComponent(params: CreateReleaseNotesComponentParams): ReleaseNotesComponent {

@@ -19,7 +19,7 @@ const PLUGIN_ID = 'advanced-note-composer';
  * `SplitTargetMode.Create`, spelled as the literal the setting persists and the dropdown option carries.
  *
  * Deliberately NOT imported from `plugin-settings.ts`: this file's module scope is evaluated in plain
- * Node, where that import pulls in `obsidian-dev-utils` and then `obsidian`, which does not resolve there
+ * Node, where that import pulls in `@mnaoumov/obsidian-lib` and then `obsidian`, which does not resolve there
  * (`Cannot find package 'obsidian'`). Only the `callback` below runs inside Obsidian.
  */
 const SPLIT_TARGET_MODE_CREATE = 'Create';

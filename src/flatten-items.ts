@@ -653,7 +653,7 @@ function parseAttachmentFolderConfig(app: App): AttachmentFolderConfig {
 
   const raw = app.vault.getConfig('attachmentFolderPath');
 
-  // An unset value is the vault root too — Obsidian always writes the key, but `obsidian-dev-utils` reads it
+  // An unset value is the vault root too — Obsidian always writes the key, but `@mnaoumov/obsidian-lib` reads it
   // without a fallback, so absorbing it here rather than propagating `undefined` costs nothing.
   if (!raw || raw === '/' || raw === '.') {
     return NO_ATTACHMENT_FOLDER_CONFIG;

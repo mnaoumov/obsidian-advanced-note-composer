@@ -182,7 +182,7 @@ vi.mock('./release-notes-component.ts', () => ({
   createReleaseNotesComponent: vi.fn()
 }));
 
-// Since obsidian-dev-utils 93.2.0 the universal components live in a private `components` bag behind
+// The universal components live in a private `components` bag behind
 // PROTECTED accessors, not in `_`-prefixed backing fields — assigning the old fields silently registered
 // nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
 interface PluginInternals {

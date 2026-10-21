@@ -9,7 +9,7 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 // Issue #250: loading the plugin opened a tab and closed it again. `RenderLinkHandlersWarmupComponent`
-// called obsidian-dev-utils' `registerLinkHandlers` at layout ready, and on its first call that derived a
+// called `@mnaoumov/obsidian-lib`'s `registerLinkHandlers` at layout ready, and on its first call that derived a
 // DOM-events-handlers constructor by driving the real workspace -- create a leaf, open an arbitrary note in
 // preview, wait, detach -- creating `__temp.md` first when the vault held no markdown files at all, which is
 // exactly the case here. On desktop the reporter saw the resulting `file-open` / `active-leaf-change` cascade

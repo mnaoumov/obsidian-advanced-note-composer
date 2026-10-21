@@ -800,7 +800,7 @@ export class SplitComposer extends ComposerBase {
   /**
    * Moves the attachments the extracted range owned into the target note's attachment folder (issue #239),
    * through the same {@link relocateAttachments} pipeline the merges use — so the per-note destination is
-   * resolved by `obsidian-dev-utils` `getAttachmentFilePath`, the function `Custom Attachment Location`
+   * resolved by `@mnaoumov/obsidian-lib` `getAttachmentFilePath`, the function `Custom Attachment Location`
    * patches, and a recursive split resolves it afresh for each note it creates.
    *
    * **Runs LAST, where {@link MergeComposer.mergeFile} relocates FIRST, and the asymmetry is deliberate.**

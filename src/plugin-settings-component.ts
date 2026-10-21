@@ -217,7 +217,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       // `markdownAttachmentSubExtensions` configured invented SUB-extensions matched against the base
       // name of a markdown file, so `excalidraw` meant exactly `*.excalidraw.md`. Its successor
       // `attachmentExtensions` configures REAL extensions matched against the whole name, which is what
-      // `obsidian-dev-utils` `isTreatedAsAttachment` takes. Appending `.md` is therefore the faithful
+      // `@mnaoumov/obsidian-lib` `isTreatedAsAttachment` takes. Appending `.md` is therefore the faithful
       // conversion — and the migration is mandatory rather than cosmetic, because a bare `excalidraw`
       // survives the shared predicate's normalization only to match nothing at all.
       if (legacySettings.markdownAttachmentSubExtensions !== undefined) {
@@ -233,7 +233,7 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
       // blocking fired on `isPathIgnored`, which already accounted for `includePaths`, so copying only the
       // exclude half would silently un-block everything outside a configured include list. With the toggle
       // off there is nothing to carry over — two empty lists ARE that behavior — so the key is simply
-      // dropped (obsidian-dev-utils deletes it from the record, since it is no longer a plugin setting).
+      // dropped (`@mnaoumov/obsidian-lib` deletes it from the record, since it is no longer a plugin setting).
       if (legacySettings.shouldBlockCommandsOnExcludedPaths) {
         legacySettings.commandIncludePaths = legacySettings.includePaths ?? [];
         legacySettings.commandExcludePaths = legacySettings.excludePaths ?? [];
@@ -376,10 +376,10 @@ export class PluginSettingsComponent extends PluginSettingsComponentBase<PluginS
     this.registerValidator('reorderedFileTitleTemplate', validateReorderedFileTitleTemplate);
     this.registerValidator('headingNumberTemplate', validateHeadingNumberTemplate);
 
-    // An un-parseable `/regular expression/` entry no longer throws from the setter (obsidian-dev-utils
+    // An un-parseable `/regular expression/` entry no longer throws from the setter (`@mnaoumov/obsidian-lib`
     // 88.4.0, issue #155) — the whole list quietly falls back to its default pattern instead. Without a
     // validator that fallback is invisible, so a single broken entry would silently stop the other
-    // entries from matching. The validator is the obsidian-dev-utils export, not a local copy.
+    // entries from matching. The validator is the `@mnaoumov/obsidian-lib` export, not a local copy.
     //
     // Every list below is per-category since issue #271 retired the all-commands `includePaths` /
     // `excludePaths` / `commandIncludePaths` / `commandExcludePaths` quartet these used to narrow; the

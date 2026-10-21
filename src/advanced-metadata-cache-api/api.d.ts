@@ -16,7 +16,7 @@
  *   contract `1.3.0` every extra the `Backlinks` and `Names` modules offer beyond the core call.
  *
  * Hand-written and self-contained on purpose: it imports from `obsidian` and nothing else, so a
- * plugin that has never heard of `obsidian-dev-utils` can copy this file, or reference it, and depend
+ * plugin that has never heard of `@mnaoumov/obsidian-lib` can copy this file, or reference it, and depend
  * on this plugin with no build-time dependency on this repository at all.
  *
  * {@link CustomArrayDict} and {@link LinkSuggestion} are therefore INLINED rather than imported from
@@ -35,7 +35,7 @@ import type {
 } from 'obsidian';
 
 /**
- * This plugin's API, published through the `obsidian-dev-utils` plugin registry under the plugin id
+ * This plugin's API, published through the `@mnaoumov/obsidian-lib` plugin registry under the plugin id
  * `advanced-metadata-cache`.
  */
 export interface AdvancedMetadataCacheApi {
@@ -84,7 +84,7 @@ export interface AdvancedMetadataCacheApi {
    * a note with the previous one to work out which heading is which, across renames, moves and level
    * changes, and stores the times in this plugin's own folder, never in the note. Synchronous, and current
    * as of the last parse Obsidian announced, so a caller that has just edited the note should await
-   * `obsidian-dev-utils`' `getCacheSafe` (or the next `changed` event) first.
+   * `@mnaoumov/obsidian-lib`'s `getCacheSafe` (or the next `changed` event) first.
    *
    * The times are what this device saw: a change arriving from another device is stamped when it arrives
    * here. A time is `null` when the plugin did not see the event happen — a heading already
@@ -214,7 +214,7 @@ export interface AdvancedMetadataCacheApi {
 /**
  * The settings another plugin may propose through {@link AdvancedMetadataCacheApi.migrateSettings}.
  *
- * Structurally the payload of `obsidian-dev-utils`'s `SettingsMigrationApi<TMigratableSettings>`, whose
+ * Structurally the payload of `@mnaoumov/obsidian-lib`'s `SettingsMigrationApi<TMigratableSettings>`, whose
  * envelope {@link MigrateSettingsParams} and {@link MigrateSettingsResult} restate here so this file keeps
  * importing from `obsidian` alone; the plugin's build checks the two stay assignable.
  */

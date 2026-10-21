@@ -3,7 +3,7 @@
  *
  * The command grouping every per-category setting is keyed by.
  *
- * Its own module, and deliberately free of any `obsidian` / `obsidian-dev-utils` runtime import, so
+ * Its own module, and deliberately free of any `obsidian` / `@mnaoumov/obsidian-lib` runtime import, so
  * `menu-placeable-commands.ts` can name a category without dragging the Obsidian runtime in — an
  * integration test imports that table from plain Node, where `obsidian` does not resolve.
  * `plugin-settings.ts` re-exports both members, so every existing import keeps working.

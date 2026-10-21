@@ -7,7 +7,7 @@
  * The aggregate's remaining failures are one-offs that pass when their file is run alone, so each run that
  * shows one is spent the moment it ends. The folder-merge stall reported only `An unhandled error occurred.
  * Please check the console for more information.` - and the console it pointed at belonged to an Obsidian
- * the harness had already closed. Recording `console.error` (where obsidian-dev-utils' `printError` writes
+ * the harness had already closed. Recording `console.error` (where `@mnaoumov/obsidian-lib`'s `printError` writes
  * the full stack), uncaught `error` events and unhandled rejections for the length of each test turns that
  * notice into its stack in the very report that shows the failure.
  *
