@@ -73,7 +73,7 @@ export const COMMAND_MENU_PLACEMENTS: readonly CommandMenuPlacement[] = [
 
 /**
  * What a folder merge does with the folders it empties. A plugin-local **wrapper** around the
- * `obsidian-dev-utils` `EmptyFolderBehavior`, not that enum itself, because of the fourth member: keeping the
+ * `@mnaoumov/obsidian-lib` `EmptyFolderBehavior`, not that enum itself, because of the fourth member: keeping the
  * merged folder while deleting the folders under it (issue #167) is a change to WHICH paths are offered to
  * `cleanupEmptyFolders`, not a new per-path behavior, so it cannot be expressed as a dev-utils value. The
  * three original members deliberately reuse `EmptyFolderBehavior`'s exact string values, so every
@@ -441,7 +441,7 @@ export class PluginSettings {
    * copy would go stale the moment that plugin is reconfigured — and falls back to a note named after its
    * folder, inside it, when that plugin is absent or set to a storage location with no counterpart here.
    *
-   * `obsidian-dev-utils`' own {@link FolderNoteLocation}, NOT a plugin-local enum of the same name: the
+   * `@mnaoumov/obsidian-lib`' own {@link FolderNoteLocation}, NOT a plugin-local enum of the same name: the
    * library owns the folder-note concept since 94.2.0, and its four members are the four this plugin had
    * declared. The move needs **no** `registerLegacySettingsConverter` because the member VALUES are
    * byte-identical (`Auto` / `InsideFolder` / `None` / `ParentFolder`), so every already-persisted

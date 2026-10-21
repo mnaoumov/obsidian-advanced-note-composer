@@ -260,7 +260,7 @@ export async function collectFlattenItems(params: CollectFlattenItemsParams): Pr
  * `null` means "ask {@link collectFlattenItems}", never "nothing to flatten": a folder-only mode has to know
  * where every note's attachments belong, and once an attachment-location plugin (`Custom Attachment Location`
  * and friends) installs its own resolution, that answer is genuinely asynchronous. Otherwise the answer is
- * exact rather than a guess — `obsidian-dev-utils`' {@link getAttachmentFolderPathSyncOrNull} runs the very
+ * exact rather than a guess — `@mnaoumov/obsidian-lib`' {@link getAttachmentFolderPathSyncOrNull} runs the very
  * code {@link getAttachmentFolderPath} would have run.
  *
  * {@link FlattenMode.AllChildren} resolves no attachment folder at all, so it never answers `null`.
@@ -376,7 +376,7 @@ function collectFolders(
 
 /**
  * Resolves, for every note under the folder, where its attachments belong. The resolution goes through
- * `obsidian-dev-utils` {@link getAttachmentFolderPath} — the surface `Custom Attachment Location` patches —
+ * `@mnaoumov/obsidian-lib` {@link getAttachmentFolderPath} — the surface `Custom Attachment Location` patches —
  * so a vault running that plugin is answered correctly without this plugin knowing it exists (issue #161).
  *
  * @param app - The Obsidian application instance.
@@ -549,7 +549,7 @@ function isInsideOrEqual(path: string, folderPath: string): boolean {
 }
 
 /**
- * {@link isInsideOrEqual}, case-insensitively — `obsidian-dev-utils` resolves the configured folder with
+ * {@link isInsideOrEqual}, case-insensitively — `@mnaoumov/obsidian-lib` resolves the configured folder with
  * `getFolderOrNull({ isCaseInsensitive: true })`, so a case-sensitive compare here would disagree with the
  * resolution it is standing in for.
  *
@@ -586,7 +586,7 @@ function isNote(file: TAbstractFile, attachmentExtensions: readonly string[]): f
  * - An attachment folder resolving outside the flattened folder (the vault root, a fixed folder) or onto
  *   the note's own folder (the plain `./` mode) protects nothing — there is no candidate containing it.
  *
- * Deliberately NOT `obsidian-dev-utils` `hasOwnAttachmentFolder`: that compares a note's attachment folder
+ * Deliberately NOT `@mnaoumov/obsidian-lib` `hasOwnAttachmentFolder`: that compares a note's attachment folder
  * against one resolved for a non-existent dummy note, so it answers `true` for the plain `./` mode too.
  *
  * It is EXACT but not complete, which is why {@link isConfiguredAttachmentFolder} sits beside it: the notes
@@ -618,7 +618,7 @@ function isSkippedFolder(folder: TFolder, context: FlattenContext): boolean {
 
 /**
  * Reduces Obsidian's `attachmentFolderPath` setting to the two forms recognizable from a folder alone,
- * following the same branching `obsidian-dev-utils` `resolveAttachmentFolder` uses to resolve it forwards.
+ * following the same branching `@mnaoumov/obsidian-lib` `resolveAttachmentFolder` uses to resolve it forwards.
  *
  * `/` (and the empty value) is the vault root, which is never a flatten candidate; `.`/`./` puts every
  * note's attachments in its own folder, so recognizing it would protect every folder in the vault. Both

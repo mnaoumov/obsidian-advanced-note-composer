@@ -407,7 +407,7 @@ export function collectAttachmentsReferencedBySelections(params: CollectAttachme
  *
  * - referenced by one of those notes (via the metadata cache's resolved links, which cover embeds), or
  * - unreferenced but already sitting at its proper attachment path for one of them, as decided by
- *   `obsidian-dev-utils` {@link isAtProperAttachmentPath} — a stray in an attachment folder is still an
+ *   `@mnaoumov/obsidian-lib` {@link isAtProperAttachmentPath} — a stray in an attachment folder is still an
  *   attachment, and leaving it behind would keep its folder alive.
  *
  * Only notes whose own folder contains the attachment's folder are consulted for the second rule, which
@@ -462,7 +462,7 @@ export async function collectAttachmentsToRelocate(params: CollectAttachmentsToR
  * `_files/` folder, say — so relocating its files one by one into the note's attachment folder would tear
  * it apart and break the links inside it.
  *
- * The designation is read back through `obsidian-dev-utils` {@link findAttachmentUnitFolderPath}, from
+ * The designation is read back through `@mnaoumov/obsidian-lib` {@link findAttachmentUnitFolderPath}, from
  * whatever an attachment-location plugin published, so this plugin and that one agree on what a unit is. A
  * vault where nothing is published has no units, and every attachment comes back as a loose file.
  *

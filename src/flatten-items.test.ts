@@ -404,7 +404,7 @@ describe('collectFlattenItems', () => {
 /**
  * Issue #185: Obsidian builds a folder's context menu synchronously, so `canExecuteFolder` cannot await the
  * attachment resolution — which is why the two folder-only commands used to be offered even when the only
- * thing they could promote was an attachment folder. `obsidian-dev-utils`'
+ * thing they could promote was an attachment folder. `@mnaoumov/obsidian-lib`'
  * `getAttachmentFolderPathSyncOrNull` answers exactly whenever no attachment-location plugin installed its
  * own `extended` resolution, so the answer here is either identical to the asynchronous one or an honest
  * `null`.
@@ -574,7 +574,7 @@ describe('configured attachment folder', () => {
       'parent/a/sub/pic.png': 'PIC'
     }, 'parent/a/FILES');
 
-    // `obsidian-dev-utils` resolves the configured folder case-insensitively, so this has to agree with it.
+    // `@mnaoumov/obsidian-lib` resolves the configured folder case-insensitively, so this has to agree with it.
     expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 

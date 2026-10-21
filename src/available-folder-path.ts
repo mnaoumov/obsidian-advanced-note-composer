@@ -40,7 +40,7 @@ export function getAvailableFolderPath(app: App, desiredPath: string): string {
 
 /**
  * De-duplicates the path an existing file or folder is about to be moved to, picking the rule that matches
- * what is being moved: {@link getAvailableFolderPath} for a folder, `obsidian-dev-utils`
+ * what is being moved: {@link getAvailableFolderPath} for a folder, `@mnaoumov/obsidian-lib`
  * {@link getAvailablePath} for a file.
  *
  * The flatten executor and its confirmation preview both go through this, so a preview can never promise a
