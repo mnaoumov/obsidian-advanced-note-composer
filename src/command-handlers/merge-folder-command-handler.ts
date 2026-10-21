@@ -175,8 +175,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const { sourceFolder, targetFolder } = params;
     const notice = showOperationPermanentProgressNotice({
       content: await createFragmentAsync(async (f) => {
-        appendCodeBlock(f, 'Advanced Note Composer');
-        f.appendText(': Merging folder ');
+        f.appendText('Merging folder ');
         f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: sourceFolder.path }));
         f.appendText(' with ');
         f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFolder.path }));
@@ -362,8 +361,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
-        appendCodeBlock(f, 'Advanced Note Composer');
-        f.appendText(': You have enabled setting ');
+        f.appendText('You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
         f.appendText(', but ');
         appendCodeBlock(f, 'Templater');
@@ -437,9 +435,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     }
     this.pluginNoticeComponent.showNotice(
       await createFragmentAsync(async (f) => {
-        appendCodeBlock(f, 'Advanced Note Composer');
         f.appendText(
-          `: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
+          `${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
         );
         for (const ignoredSourceFile of ignoredSourceFiles) {
           f.createEl('br');

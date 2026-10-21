@@ -179,8 +179,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
 
   const notice = showOperationPermanentProgressNotice({
     content: await createFragmentAsync(async (f) => {
-      appendCodeBlock(f, 'Advanced Note Composer');
-      f.appendText(`: ${progressLabel} into `);
+      f.appendText(`${progressLabel} into `);
       f.append(await renderInternalLink({ app, pathOrAbstractFile: targetFile.path }));
       f.createEl('br');
       f.createEl('br');
@@ -476,9 +475,8 @@ async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNot
   }
   pluginNoticeComponent.showNotice(
     await createFragmentAsync(async (f) => {
-      appendCodeBlock(f, 'Advanced Note Composer');
       f.appendText(
-        `: ${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
+        `${String(ignoredSourceFiles.length)} file(s) were not merged because they are ignored in the plugin settings:`
       );
       for (const ignoredSourceFile of ignoredSourceFiles) {
         f.createEl('br');
@@ -493,8 +491,7 @@ function warnIfTemplaterMissing(app: App, pluginNoticeComponent: PluginNoticeCom
     return;
   }
   pluginNoticeComponent.showNotice(createFragment((f) => {
-    appendCodeBlock(f, 'Advanced Note Composer');
-    f.appendText(': You have enabled setting ');
+    f.appendText('You have enabled setting ');
     appendCodeBlock(f, 'Should run templater on destination file');
     f.appendText(', but ');
     appendCodeBlock(f, 'Templater');
