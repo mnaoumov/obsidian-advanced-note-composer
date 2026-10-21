@@ -54,7 +54,7 @@
 - test(screenshots): apply the dark theme through applyObsidianTheme
 - fix(split): keep the create/merge switch steady across the folder prompt and the picker (#303)
 - fix(templater): consume the cursor marker when a created note opens (#301)
-- fix(smart-cut): re-select the moved content from the completion notice link (re #300 - [FR] Highlight the content with continuous clicking)
+- fix(smart-cut): re-select the moved content from the completion notice link (re #300 - \[FR\] Highlight the content with continuous clicking)
 - feat: rename the split/extract wording to extract (#299)
 
 ## 5.13.0
@@ -65,12 +65,12 @@
 - test(split-auto-number): merge running each case in phases driven from node
 - feat(merge-folder): merge keeping attachment unit folders whole (#298)
 - feat(split): merge offering the create/merge switch before the folder is chosen (#297)
-- feat(merge-folder): keep same-named folders separate by path (re #296 - [FR] `Folder names to keep separate` adjustment)
-- feat(reorder-headings): number headings the way folders and notes are numbered (re #295 - [FR] Reorder Headings Enhancement)
-- feat(reorder-headings): move headings under a different parent (re #295 - [FR] Reorder Headings Enhancement)
+- feat(merge-folder): keep same-named folders separate by path (re #296 - \[FR\] `Folder names to keep separate` adjustment)
+- feat(reorder-headings): number headings the way folders and notes are numbered (re #295 - \[FR\] Reorder Headings Enhancement)
+- feat(reorder-headings): move headings under a different parent (re #295 - \[FR\] Reorder Headings Enhancement)
 - chore: merge caret-free desktop screenshot capture
 - test(integration): merge per-test Obsidian error recording for the desktop aggregate
-- feat(rename-folder): merge several folder note aliases per template (re #294 - [FR] Allow folder note aliases to enter multiple `aliases`)
+- feat(rename-folder): merge several folder note aliases per template (re #294 - \[FR\] Allow folder note aliases to enter multiple `aliases`)
 - refactor(notices): merge the move onto the library file-explorer reveal
 - chore: merge the obsidian-integration-testing 17 float
 - docs: merge updating five JSDoc links whose targets were renamed or removed
@@ -81,10 +81,10 @@
 - test(settings): merge expecting the command menus sections on the Swap and Smart cut & paste pages (#278)
 - fix(release-notes): merge waiting for the settings before deciding what was shown (#293)
 - feat(settings): merge moving each command menus section onto its command page (#278)
-- fix(split): merge keeping the title a split template writes on a new note (re #276 - [BUG] `{{index}}` doesn't work in properties)
+- fix(split): merge keeping the title a split template writes on a new note (re #276 - \[BUG\] `{{index}}` doesn't work in properties)
 - refactor: merge reaching `Custom Attachment Location` through its published API
-- feat(settings): merge folding the strategies group into Common (re #275 - [FR] Settings Enhancement)
-- fix: merge keeping the editor focused after every extract-notice click (re #263 - [FR] Continuous clicking on notification should keep highlighting the selection)
+- feat(settings): merge folding the strategies group into Common (re #275 - \[FR\] Settings Enhancement)
+- fix: merge keeping the editor focused after every extract-notice click (re #263 - \[FR\] Continuous clicking on notification should keep highlighting the selection)
 - test: merge floating obsidian-test-mocks to ^7.0.0
 - test(demo-vault): merge installing `CodeScript Toolkit` headlessly in the demo-vault setup
 - docs(screenshots): merge recapturing the recursive-split mobile frames
