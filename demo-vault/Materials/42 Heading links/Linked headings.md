@@ -1,5 +1,5 @@
 ---
-obsidian-dev-utils:
+obsidian-dev-toolkit:
   demo-vault-validation:
     allow-wikilinks: These links ARE the heading and block links a split keeps pointing at the right note, including block and aliased forms.
 ---

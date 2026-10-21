@@ -1,5 +1,5 @@
 ---
-obsidian-dev-utils:
+obsidian-dev-toolkit:
   demo-vault-validation:
     allow-wikilinks: These links ARE the backlinks the heading rename rewrites, including a nested-heading spelling only a wikilink has.
 ---
