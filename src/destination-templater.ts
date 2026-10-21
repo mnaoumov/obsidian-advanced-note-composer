@@ -60,8 +60,7 @@ export function resolveDestinationTemplaterRunner(params: ResolveDestinationTemp
   if (!templaterPlugin) {
     if (shouldWarnIfMissing) {
       pluginNoticeComponent.showNotice(createFragment((f) => {
-        appendCodeBlock(f, 'Advanced Note Composer');
-        f.appendText(': You have enabled setting ');
+        f.appendText('You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
         f.appendText(', but ');
         appendCodeBlock(f, 'Templater');

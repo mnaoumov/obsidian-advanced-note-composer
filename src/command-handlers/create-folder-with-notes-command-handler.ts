@@ -838,8 +838,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
     const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
-        appendCodeBlock(f, 'Advanced Note Composer');
-        f.appendText(': You have enabled setting ');
+        f.appendText('You have enabled setting ');
         appendCodeBlock(f, 'Should run templater on destination file');
         f.appendText(', but ');
         appendCodeBlock(f, 'Templater');
@@ -869,8 +868,6 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
         // template, and leaves the note unrendered. The note is kept the same way — it already exists and
         // the remaining notes still deserve their turn — but the message says which one failed.
         this.pluginNoticeComponent.showNotice(createFragment((f) => {
-          appendCodeBlock(f, 'Advanced Note Composer');
-          f.appendText(': ');
           appendCodeBlock(f, 'Templater');
           f.appendText(' failed on ');
           appendCodeBlock(f, file.path);
