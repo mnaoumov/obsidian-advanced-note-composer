@@ -25,7 +25,7 @@ interface HeadingTimesLike {
   seen: null | number;
 }
 
-interface ObsidianDevUtilsStateLike {
+interface ObsidianLibStateLike {
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -33,7 +33,7 @@ interface ObsidianDevUtilsStateLike {
  * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
-  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+  __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
@@ -163,9 +163,9 @@ describe('reorder headings: sort (issue #306)', () => {
         const CREATED_BY_HEADING: Record<string, null | number> = { Fresh: 3000, Log: 0, Middle: 2000, Old: null };
 
         const host = window as PluginApiRegistryHostLike;
-        host.__obsidianDevUtils ??= {};
-        host.__obsidianDevUtils.pluginApiRegistry ??= {};
-        const registryWrapper = host.__obsidianDevUtils.pluginApiRegistry;
+        host.__obsidianLib ??= {};
+        host.__obsidianLib.pluginApiRegistry ??= {};
+        const registryWrapper = host.__obsidianLib.pluginApiRegistry;
         registryWrapper.value ??= {};
         const registry = registryWrapper.value;
         registry.records ??= {};

@@ -61,7 +61,7 @@ describe('cancel a pending extract from the minimized modal bar', () => {
         };
 
         function countLockIndicators(): number {
-          return activeDocument.querySelectorAll('.obsidian-dev-utils-lock-indicator').length;
+          return activeDocument.querySelectorAll('.obsidian-lib-lock-indicator').length;
         }
 
         async function openAndGetEditor(file: TFile): Promise<Editor> {
