@@ -10,28 +10,42 @@
  * definition. The plugin registry checks the payloads against it only while the
  * `obsidian-lib:validate-plugin-api-payloads` debug switch is on.
  *
- * The contract types, the {@link https://standardschema.dev | Standard Schema} builders and the common
- * guards come from `@mnaoumov/typescript-lib/api-contract`, so a consumer copying this file needs that
- * package; `api.d.ts` itself still imports from `obsidian` alone. What is left here is the constant and
- * the guards only this API has. `defineApiContract` checks every entry against its method's signature.
+ * Copying it takes two dependencies beside `api.d.ts` and `obsidian`. `@mnaoumov/typescript-lib` carries
+ * the contract types, the {@link https://standardschema.dev | Standard Schema} builders and the guard
+ * builders, in its `api-contract` and `type-guards` entry points. `@mnaoumov/obsidian-lib` carries the file
+ * guards, in its `file-system` entry point. What is left here is the constant and the guards for this API's
+ * own shapes. `defineApiContract` checks every entry against its method's signature.
  */
 
 import type { TypedApiContract } from '@mnaoumov/typescript-lib/api-contract';
 import type { Reference } from 'obsidian';
 
 import {
-  createArgumentsSchema,
-  createTypeGuardSchema,
+  isFile,
+  isPathOrFile
+} from '@mnaoumov/obsidian-lib/file-system';
+import {
+  createApiContractSchemaBuilders,
+  createExpectedTypeGuard,
   defineApiContract,
-  nullableGuard,
-  STRING_ARRAY_GUARD,
-  STRING_GUARD
+  nullableGuard
 } from '@mnaoumov/typescript-lib/api-contract';
-import { isStringArray } from '@mnaoumov/typescript-lib/type-guards';
-import { TFile } from 'obsidian';
+import {
+  arrayTypeGuard,
+  functionTypeGuard,
+  instanceOfTypeGuard,
+  isBoolean,
+  isNumber,
+  isString,
+  isStringArray,
+  nullableTypeGuard,
+  objectTypeGuard,
+  optionalTypeGuard
+} from '@mnaoumov/typescript-lib/type-guards';
 
 import type {
   AdvancedMetadataCacheApi,
+  AdvancedMetadataCacheMigratableSettings,
   CustomArrayDict,
   HeadingTimes,
   LinkSuggestion,
@@ -45,10 +59,52 @@ import type {
  */
 export type AdvancedMetadataCacheApiContract = TypedApiContract<AdvancedMetadataCacheApi>;
 
-const BACKLINKS_DICT_GUARD = { expected: 'a backlinks dictionary', typeGuard: isBacklinksDict };
-const LINK_SUGGESTION_ARRAY_GUARD = { expected: 'an array of link suggestions', typeGuard: isLinkSuggestionArray };
-const NAME_GUARD = { ...STRING_GUARD, expected: 'a name' };
-const PATH_OR_FILE_GUARD = { expected: 'a path or a file', typeGuard: isPathOrFile };
+const { createArgumentsSchema, createTypeGuardSchema } = createApiContractSchemaBuilders('advanced-metadata-cache');
+
+type BacklinksDict = CustomArrayDict<Reference>;
+
+/**
+ * Only the three members a caller relies on are checked, not every method of {@link CustomArrayDict}.
+ */
+const isBacklinksDictShape = objectTypeGuard<Pick<BacklinksDict, 'data' | 'get' | 'keys'>>({
+  data: instanceOfTypeGuard<BacklinksDict['data']>(Map),
+  get: functionTypeGuard<BacklinksDict['get']>(),
+  keys: functionTypeGuard<BacklinksDict['keys']>()
+});
+
+const isHeadingTimes = objectTypeGuard<HeadingTimes>({
+  created: nullableTypeGuard(isNumber),
+  heading: isString,
+  level: isNumber,
+  line: isNumber,
+  modified: nullableTypeGuard(isNumber),
+  seen: nullableTypeGuard(isNumber)
+});
+
+const isLinkSuggestion = objectTypeGuard<LinkSuggestion>({
+  alias: optionalTypeGuard(isString),
+  file: nullableTypeGuard(isFile),
+  path: isString
+});
+
+const isMigratableSettings = objectTypeGuard<AdvancedMetadataCacheMigratableSettings>({
+  titlePropertyNames: optionalTypeGuard(isStringArray)
+});
+
+const isMigrateSettingsParams = objectTypeGuard<MigrateSettingsParams>({
+  proposedSettings: isMigratableSettings,
+  sourcePluginId: isString
+});
+
+const isMigrateSettingsResult = objectTypeGuard<MigrateSettingsResult>({
+  isApplied: isBoolean
+});
+
+const BACKLINKS_DICT_GUARD = createExpectedTypeGuard('a backlinks dictionary', isBacklinksDict);
+const LINK_SUGGESTION_ARRAY_GUARD = createExpectedTypeGuard('an array of link suggestions', arrayTypeGuard(isLinkSuggestion));
+const NAME_GUARD = createExpectedTypeGuard('a name', isString);
+const PATH_OR_FILE_GUARD = createExpectedTypeGuard('a path or a file', isPathOrFile);
+const PATHS_GUARD = createExpectedTypeGuard('an array of paths', isStringArray);
 
 /**
  * The contract this plugin publishes with {@link AdvancedMetadataCacheApi}, for a consumer to pass as the
@@ -60,7 +116,7 @@ export const ADVANCED_METADATA_CACHE_API_CONTRACT: AdvancedMetadataCacheApiContr
     output: createTypeGuardSchema(nullableGuard(BACKLINKS_DICT_GUARD))
   },
   getBacklinksForFileOriginal: {
-    input: createArgumentsSchema([{ expected: 'a file', typeGuard: isFile }]),
+    input: createArgumentsSchema([createExpectedTypeGuard('a file', isFile)]),
     output: createTypeGuardSchema(BACKLINKS_DICT_GUARD)
   },
   getBacklinksForFileSafe: {
@@ -69,7 +125,7 @@ export const ADVANCED_METADATA_CACHE_API_CONTRACT: AdvancedMetadataCacheApiContr
   },
   getHeadingTimes: {
     input: createArgumentsSchema([PATH_OR_FILE_GUARD]),
-    output: createTypeGuardSchema({ expected: 'an array of heading times', typeGuard: isHeadingTimesArray })
+    output: createTypeGuardSchema(createExpectedTypeGuard('an array of heading times', arrayTypeGuard(isHeadingTimes)))
   },
   getLinkSuggestions: {
     input: createArgumentsSchema([]),
@@ -85,97 +141,33 @@ export const ADVANCED_METADATA_CACHE_API_CONTRACT: AdvancedMetadataCacheApiContr
   },
   getPathsByName: {
     input: createArgumentsSchema([NAME_GUARD]),
-    output: createTypeGuardSchema(nullableGuard({ ...STRING_ARRAY_GUARD, expected: 'an array of paths' }))
+    output: createTypeGuardSchema(nullableGuard(PATHS_GUARD))
   },
   getPathsByNameSafe: {
     input: createArgumentsSchema([NAME_GUARD]),
-    output: createTypeGuardSchema(nullableGuard({ ...STRING_ARRAY_GUARD, expected: 'an array of paths' }))
+    output: createTypeGuardSchema(nullableGuard(PATHS_GUARD))
   },
   getTitlePropertyNames: {
     input: createArgumentsSchema([]),
-    output: createTypeGuardSchema({ ...STRING_ARRAY_GUARD, expected: 'an array of property names' })
+    output: createTypeGuardSchema(createExpectedTypeGuard('an array of property names', isStringArray))
   },
   getTitles: {
     input: createArgumentsSchema([PATH_OR_FILE_GUARD]),
-    output: createTypeGuardSchema({ ...STRING_ARRAY_GUARD, expected: 'an array of titles' })
+    output: createTypeGuardSchema(createExpectedTypeGuard('an array of titles', isStringArray))
   },
   migrateSettings: {
-    input: createArgumentsSchema([{ expected: 'migrate settings params', typeGuard: isMigrateSettingsParams }]),
-    output: createTypeGuardSchema({ expected: 'a migrate settings result', typeGuard: isMigrateSettingsResult })
+    input: createArgumentsSchema([createExpectedTypeGuard('migrate settings params', isMigrateSettingsParams)]),
+    output: createTypeGuardSchema(createExpectedTypeGuard('a migrate settings result', isMigrateSettingsResult))
   }
 });
 
-function isArrayOf<T>(value: unknown, isValid: (item: unknown) => item is T): value is T[] {
-  return Array.isArray(value) && value.every((item) => isValid(item));
-}
-
-function isBacklinksDict(value: unknown): value is CustomArrayDict<Reference> {
-  return isObject(value)
-    && Reflect.get(value, 'data') instanceof Map
-    && typeof Reflect.get(value, 'get') === 'function'
-    && typeof Reflect.get(value, 'keys') === 'function';
-}
-
-function isFile(value: unknown): value is TFile {
-  return value instanceof TFile;
-}
-
-function isHeadingTimes(value: unknown): value is HeadingTimes {
-  return isObject(value)
-    && isNullableNumber(Reflect.get(value, 'created'))
-    && typeof Reflect.get(value, 'heading') === 'string'
-    && typeof Reflect.get(value, 'level') === 'number'
-    && typeof Reflect.get(value, 'line') === 'number'
-    && isNullableNumber(Reflect.get(value, 'modified'))
-    && isNullableNumber(Reflect.get(value, 'seen'));
-}
-
-function isHeadingTimesArray(value: unknown): value is HeadingTimes[] {
-  return isArrayOf(value, isHeadingTimes);
-}
-
-function isLinkSuggestion(value: unknown): value is LinkSuggestion {
-  if (!isObject(value)) {
-    return false;
-  }
-
-  const alias: unknown = Reflect.get(value, 'alias');
-  const file: unknown = Reflect.get(value, 'file');
-  return (alias === undefined || typeof alias === 'string')
-    && (file === null || isFile(file))
-    && typeof Reflect.get(value, 'path') === 'string';
-}
-
-function isLinkSuggestionArray(value: unknown): value is LinkSuggestion[] {
-  return isArrayOf(value, isLinkSuggestion);
-}
-
-function isMigrateSettingsParams(value: unknown): value is MigrateSettingsParams {
-  if (!isObject(value) || typeof Reflect.get(value, 'sourcePluginId') !== 'string') {
-    return false;
-  }
-
-  const proposedSettings: unknown = Reflect.get(value, 'proposedSettings');
-  if (!isObject(proposedSettings)) {
-    return false;
-  }
-
-  const titlePropertyNames: unknown = Reflect.get(proposedSettings, 'titlePropertyNames');
-  return titlePropertyNames === undefined || isStringArray(titlePropertyNames);
-}
-
-function isMigrateSettingsResult(value: unknown): value is MigrateSettingsResult {
-  return isObject(value) && typeof Reflect.get(value, 'isApplied') === 'boolean';
-}
-
-function isNullableNumber(value: unknown): value is null | number {
-  return value === null || typeof value === 'number';
-}
-
-function isObject(value: unknown): value is object {
-  return typeof value === 'object' && value !== null;
-}
-
-function isPathOrFile(value: unknown): value is string | TFile {
-  return typeof value === 'string' || isFile(value);
+/**
+ * A guard over the members a caller relies on cannot narrow to the whole {@link CustomArrayDict}, so this one
+ * line restates the narrowing.
+ *
+ * @param value - The value to check.
+ * @returns Whether the value is a backlinks dictionary.
+ */
+function isBacklinksDict(value: unknown): value is BacklinksDict {
+  return isBacklinksDictShape(value);
 }

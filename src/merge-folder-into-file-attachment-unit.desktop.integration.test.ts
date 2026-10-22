@@ -42,7 +42,7 @@ interface MergeSettings {
   shouldMoveAttachmentsWhenMergingFolder: boolean;
 }
 
-interface ObsidianDevUtilsStateLike {
+interface ObsidianLibStateLike {
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -50,7 +50,7 @@ interface ObsidianDevUtilsStateLike {
  * The slice of the shared plugin API registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
-  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+  __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
@@ -171,9 +171,9 @@ describe('merge folder into file with an attachment unit folder (issue #298)', (
 
         function getPluginApiRegistry(): PluginApiRegistryLike {
           const host = window as PluginApiRegistryHostLike;
-          host.__obsidianDevUtils ??= {};
-          host.__obsidianDevUtils.pluginApiRegistry ??= {};
-          const wrapper = host.__obsidianDevUtils.pluginApiRegistry;
+          host.__obsidianLib ??= {};
+          host.__obsidianLib.pluginApiRegistry ??= {};
+          const wrapper = host.__obsidianLib.pluginApiRegistry;
           wrapper.value ??= {};
           return wrapper.value;
         }

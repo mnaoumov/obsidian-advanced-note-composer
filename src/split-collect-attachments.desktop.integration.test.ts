@@ -49,7 +49,7 @@ interface LeafWithEditor {
   editor: Editor;
 }
 
-interface ObsidianDevUtilsStateLike {
+interface ObsidianLibStateLike {
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -57,7 +57,7 @@ interface ObsidianDevUtilsStateLike {
  * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
-  __obsidianDevUtils?: ObsidianDevUtilsStateLike;
+  __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
@@ -159,9 +159,9 @@ describe('an extract hands its destination note to Custom Attachment Location (i
 
         const original = { ...settingsComponent.settings };
         const host = window as PluginApiRegistryHostLike;
-        host.__obsidianDevUtils ??= {};
-        host.__obsidianDevUtils.pluginApiRegistry ??= {};
-        const registryWrapper = host.__obsidianDevUtils.pluginApiRegistry;
+        host.__obsidianLib ??= {};
+        host.__obsidianLib.pluginApiRegistry ??= {};
+        const registryWrapper = host.__obsidianLib.pluginApiRegistry;
         registryWrapper.value ??= {};
         const registry = registryWrapper.value;
         registry.records ??= {};

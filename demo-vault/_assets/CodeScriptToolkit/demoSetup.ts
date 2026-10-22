@@ -214,7 +214,7 @@ const OPEN_AFTER_OPERATION_SETTLE_IN_MILLISECONDS = 500;
 async function waitUntilNoNoteIsLocked(): Promise<void> {
   for (let waited = 0; waited < WAIT_LIMIT_IN_MILLISECONDS; waited += WAIT_STEP_IN_MILLISECONDS) {
     await sleep(WAIT_STEP_IN_MILLISECONDS);
-    if (!activeDocument.querySelector('.obsidian-dev-utils-lock-indicator')) {
+    if (!activeDocument.querySelector('.obsidian-lib-lock-indicator')) {
       break;
     }
   }

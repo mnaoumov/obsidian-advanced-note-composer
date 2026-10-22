@@ -218,7 +218,7 @@ export function captureStallDiagnosticsInObsidian(params: CaptureStallDiagnostic
 
   return {
     activePath: app.workspace.getActiveFile()?.path ?? null,
-    lockIndicatorCount: activeDocument.querySelectorAll('.obsidian-dev-utils-lock-indicator').length,
+    lockIndicatorCount: activeDocument.querySelectorAll('.obsidian-lib-lock-indicator').length,
     modals: [...activeDocument.querySelectorAll('.modal')].map((el) => el.textContent.slice(0, TEXT_LIMIT)),
     notices: [...activeDocument.querySelectorAll('.notice')].map((el) => el.textContent.slice(0, TEXT_LIMIT)),
     pathStates

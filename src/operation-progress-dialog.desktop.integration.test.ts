@@ -282,7 +282,7 @@ async function describeStall(contextId: ContextId<SuiteContext>, vaultPath: stri
         dialogText: findDialog()?.textContent ?? null,
         isSourceInPlace: app.vault.getAbstractFileByPath(sourceNotePath) !== null,
         isTargetInPlace: app.vault.getAbstractFileByPath(targetNotePath) !== null,
-        lockIndicatorCount: document.querySelectorAll('.obsidian-dev-utils-lock-indicator').length,
+        lockIndicatorCount: document.querySelectorAll('.obsidian-lib-lock-indicator').length,
         modalTitles: [...document.querySelectorAll('.modal')].map((modalEl) => modalEl.querySelector('.modal-title')?.textContent ?? '<untitled>'),
         steps: context.steps ?? []
       };

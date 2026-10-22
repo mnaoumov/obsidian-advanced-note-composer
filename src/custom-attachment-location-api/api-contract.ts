@@ -7,15 +7,15 @@
  *
  * This plugin publishes exactly this constant with its API, and a consumer copies it beside `api.d.ts` and
  * passes it as the `contract` when it looks the API up, so both ends validate against ONE definition. The
- * plugin registry checks the payloads against it only while the `obsidian-lib:validate-plugin-api-payloads`
- * debug switch is on.
+ * plugin registry checks the payloads against it only while the `obsidian-lib:validate-plugin-api-payloads` debug
+ * switch is on.
  *
- * Copying it takes one dependency beside `api.d.ts` and `obsidian`: `@mnaoumov/typescript-lib`, whose
- * `api-contract` subpath carries the contract type, the {@link https://standardschema.dev | Standard Schema}
- * builders and the common guards. What is left here is this API's own constant and the guards for its own
- * shapes. {@link defineApiContract} checks every entry against its method's signature, and the result is
- * assignable to any registry's contract type that is generic over the API (such as
- * `PluginApiContract<CustomAttachmentLocationApi>`).
+ * Copying it takes two dependencies beside `api.d.ts` and `obsidian`. `@mnaoumov/typescript-lib` carries the
+ * contract type, the {@link https://standardschema.dev | Standard Schema} builders and the guard builders, in
+ * its `api-contract` and `type-guards` entry points. `@mnaoumov/obsidian-lib` carries the file guards, in its
+ * `file-system` entry point. What is left here is this API's own constant and the guards for its own shapes.
+ * {@link defineApiContract} checks every entry against its method's signature, and the result is assignable to
+ * any registry's contract type that is generic over the API (such as `ApiContract<CustomAttachmentLocationApi>`).
  *
  * It is not named `api.ts`: TypeScript would read `api.d.ts` as that file's own declarations.
  */
@@ -24,25 +24,31 @@ import type { TypedApiContract } from '@mnaoumov/typescript-lib/api-contract';
 import type { FileStats } from 'obsidian';
 
 import {
+  isAbstractFile,
+  isFile
+} from '@mnaoumov/obsidian-lib/file-system';
+import {
   BOOLEAN_GUARD,
-  createArgumentsSchema,
-  createTypeGuardSchema,
+  createApiContractSchemaBuilders,
+  createExpectedTypeGuard,
   defineApiContract,
   nullableGuard,
   STRING_GUARD,
   UNDEFINED_GUARD
 } from '@mnaoumov/typescript-lib/api-contract';
 import {
+  arrayTypeGuard,
+  functionTypeGuard,
   isBoolean,
+  isNull,
   isNumber,
   isString,
   isStringArray,
-  isUndefined
+  literalTypeGuard,
+  objectTypeGuard,
+  optionalTypeGuard,
+  unionTypeGuard
 } from '@mnaoumov/typescript-lib/type-guards';
-import {
-  TAbstractFile,
-  TFile
-} from 'obsidian';
 
 import type {
   AttachmentPathContext,
@@ -65,180 +71,104 @@ import type {
  */
 export type CustomAttachmentLocationApiContract = TypedApiContract<CustomAttachmentLocationApi>;
 
-type Guard<T> = (value: unknown) => value is T;
+const { createArgumentsSchema, createTypeGuardSchema } = createApiContractSchemaBuilders('obsidian-custom-attachment-location');
 
-type PropertyGuards<T extends object> = {
-  readonly [TKey in keyof T]-?: Guard<Partial<Pick<T, TKey>> extends Pick<T, TKey> ? T[TKey] | undefined : T[TKey]>;
-};
-
-const VENDOR = 'obsidian-custom-attachment-location';
-
-const SCHEMA_OPTIONS = { vendor: VENDOR };
-
-const isAttachmentPathContext = createLiteralGuard<AttachmentPathContext>(['DeleteNote', 'RenameNote', 'Unknown']);
-const isCollectAttachmentUsedByMultipleNotesMode = createLiteralGuard<CollectAttachmentUsedByMultipleNotesMode>([
+const isAttachmentPathContext = literalTypeGuard<AttachmentPathContext>(['DeleteNote', 'RenameNote', 'Unknown']);
+const isCollectAttachmentUsedByMultipleNotesMode = literalTypeGuard<CollectAttachmentUsedByMultipleNotesMode>([
   'Cancel',
   'Copy',
   'Move',
   'Prompt',
   'Skip'
 ]);
-const isMoveAttachmentToProperFolderUsedByMultipleNotesMode = createLiteralGuard<MoveAttachmentToProperFolderUsedByMultipleNotesMode>([
+const isMoveAttachmentToProperFolderUsedByMultipleNotesMode = literalTypeGuard<MoveAttachmentToProperFolderUsedByMultipleNotesMode>([
   'Cancel',
   'CopyAll',
   'Prompt',
   'Skip'
 ]);
 
-const isFileStats = createObjectGuard<FileStats>({
+const isFileStats = objectTypeGuard<FileStats>({
   ctime: isNumber,
   mtime: isNumber,
   size: isNumber
 });
 
-const isCollectAttachmentsParams = createObjectGuard<CollectAttachmentsParams>({
-  pathsOrFiles: createArrayGuard(createUnionGuard(isString, isAbstractFile))
+const isCollectAttachmentsParams = objectTypeGuard<CollectAttachmentsParams>({
+  pathsOrFiles: arrayTypeGuard(unionTypeGuard(isString, isAbstractFile))
 });
 
-const isGetAttachmentFolderPathParams = createObjectGuard<GetAttachmentFolderPathParams>({
-  attachmentFileName: createOptionalGuard(isString),
+const isGetAttachmentFolderPathParams = objectTypeGuard<GetAttachmentFolderPathParams>({
+  attachmentFileName: optionalTypeGuard(isString),
   notePath: isString
 });
 
-const isGetAvailablePathForAttachmentsParams = createObjectGuard<GetAvailablePathForAttachmentsParams>({
+const isGetAvailablePathForAttachmentsParams = objectTypeGuard<GetAvailablePathForAttachmentsParams>({
   attachmentFileBaseName: isString,
   attachmentFileExtension: isString,
-  attachmentFileStats: createOptionalGuard(isFileStats),
+  attachmentFileStats: optionalTypeGuard(isFileStats),
   context: isAttachmentPathContext,
-  notePathOrFile: createUnionGuard(isNull, createUnionGuard(isString, isFile)),
-  oldAttachmentPathOrFile: createUnionGuard(isString, isFile),
-  oldNotePathOrFile: createOptionalGuard(createUnionGuard(isString, isFile)),
-  readAttachmentFileContent: createUnionGuard(isNull, isAttachmentFileContentReader),
-  shouldSkipDuplicateCheck: createOptionalGuard(isBoolean),
-  shouldSkipGeneratedAttachmentFileName: createOptionalGuard(isBoolean),
-  shouldSkipMissingAttachmentFolderCreation: createOptionalGuard(isBoolean)
+  notePathOrFile: unionTypeGuard(isNull, isString, isFile),
+  oldAttachmentPathOrFile: unionTypeGuard(isString, isFile),
+  oldNotePathOrFile: optionalTypeGuard(unionTypeGuard(isString, isFile)),
+  readAttachmentFileContent: unionTypeGuard(isNull, functionTypeGuard<() => Promise<ArrayBuffer>>()),
+  shouldSkipDuplicateCheck: optionalTypeGuard(isBoolean),
+  shouldSkipGeneratedAttachmentFileName: optionalTypeGuard(isBoolean),
+  shouldSkipMissingAttachmentFolderCreation: optionalTypeGuard(isBoolean)
 });
 
-const isGetProperAttachmentPathParams = createObjectGuard<GetProperAttachmentPathParams>({
-  attachmentPathOrFile: createUnionGuard(isString, isFile),
+const isGetProperAttachmentPathParams = objectTypeGuard<GetProperAttachmentPathParams>({
+  attachmentPathOrFile: unionTypeGuard(isString, isFile),
   notePath: isString
 });
 
-const isIsAttachmentUnitFolderParams = createObjectGuard<IsAttachmentUnitFolderParams>({
+const isIsAttachmentUnitFolderParams = objectTypeGuard<IsAttachmentUnitFolderParams>({
   folderPath: isString
 });
 
-const isMigratableCollectSettings = createObjectGuard<MigratableCollectSettings>({
-  attachmentUnitFolderPaths: createOptionalGuard(isStringArray),
-  collectAttachmentUsedByMultipleNotesMode: createOptionalGuard(isCollectAttachmentUsedByMultipleNotesMode),
-  excludePathsFromAttachmentCollecting: createOptionalGuard(isStringArray),
-  moveAttachmentToProperFolderUsedByMultipleNotesMode: createOptionalGuard(isMoveAttachmentToProperFolderUsedByMultipleNotesMode),
-  shouldCollectAttachmentsAutomatically: createOptionalGuard(isBoolean)
+const isMigratableCollectSettings = objectTypeGuard<MigratableCollectSettings>({
+  attachmentUnitFolderPaths: optionalTypeGuard(isStringArray),
+  collectAttachmentUsedByMultipleNotesMode: optionalTypeGuard(isCollectAttachmentUsedByMultipleNotesMode),
+  excludePathsFromAttachmentCollecting: optionalTypeGuard(isStringArray),
+  moveAttachmentToProperFolderUsedByMultipleNotesMode: optionalTypeGuard(isMoveAttachmentToProperFolderUsedByMultipleNotesMode),
+  shouldCollectAttachmentsAutomatically: optionalTypeGuard(isBoolean)
 });
 
-const isMigrateSettingsParams = createObjectGuard<MigrateSettingsParams>({
+const isMigrateSettingsParams = objectTypeGuard<MigrateSettingsParams>({
   proposedSettings: isMigratableCollectSettings,
   sourcePluginId: isString
 });
 
-const isMigrateSettingsResult = createObjectGuard<MigrateSettingsResult>({
+const isMigrateSettingsResult = objectTypeGuard<MigrateSettingsResult>({
   isApplied: isBoolean
 });
-
 /**
  * The contract this plugin publishes with {@link CustomAttachmentLocationApi}, for a consumer to pass as the
  * `contract` when it looks the API up.
  */
 export const CUSTOM_ATTACHMENT_LOCATION_API_CONTRACT: CustomAttachmentLocationApiContract = defineApiContract<CustomAttachmentLocationApi>({
   collectAttachments: {
-    input: createArgumentsSchema([{
-      expected: 'collect-attachments params: { pathsOrFiles: (string | TAbstractFile)[] }',
-      typeGuard: isCollectAttachmentsParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, ...UNDEFINED_GUARD, expected: 'nothing' })
+    input: createArgumentsSchema([createExpectedTypeGuard('collect-attachments params: { pathsOrFiles: (string | TAbstractFile)[] }', isCollectAttachmentsParams)]),
+    output: createTypeGuardSchema({ ...UNDEFINED_GUARD, expected: 'nothing' })
   },
   getAttachmentFolderPath: {
-    input: createArgumentsSchema([{
-      expected: 'attachment-folder-path params: { notePath: string, attachmentFileName?: string }',
-      typeGuard: isGetAttachmentFolderPathParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, ...nullableGuard({ ...STRING_GUARD, expected: 'a folder path' }) })
+    input: createArgumentsSchema([createExpectedTypeGuard('attachment-folder-path params: { notePath: string, attachmentFileName?: string }', isGetAttachmentFolderPathParams)]),
+    output: createTypeGuardSchema(nullableGuard({ ...STRING_GUARD, expected: 'a folder path' }))
   },
   getAvailablePathForAttachments: {
-    input: createArgumentsSchema([{
-      expected: 'available-path-for-attachments params',
-      typeGuard: isGetAvailablePathForAttachmentsParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, ...STRING_GUARD, expected: 'an attachment path' })
+    input: createArgumentsSchema([createExpectedTypeGuard('available-path-for-attachments params', isGetAvailablePathForAttachmentsParams)]),
+    output: createTypeGuardSchema({ ...STRING_GUARD, expected: 'an attachment path' })
   },
   getProperAttachmentPath: {
-    input: createArgumentsSchema([{
-      expected: 'proper-attachment-path params: { attachmentPathOrFile: string | TFile, notePath: string }',
-      typeGuard: isGetProperAttachmentPathParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, ...nullableGuard({ ...STRING_GUARD, expected: 'an attachment path' }) })
+    input: createArgumentsSchema([createExpectedTypeGuard('proper-attachment-path params: { attachmentPathOrFile: string | TFile, notePath: string }', isGetProperAttachmentPathParams)]),
+    output: createTypeGuardSchema(nullableGuard({ ...STRING_GUARD, expected: 'an attachment path' }))
   },
   isAttachmentUnitFolder: {
-    input: createArgumentsSchema([{
-      expected: 'attachment-unit-folder params: { folderPath: string }',
-      typeGuard: isIsAttachmentUnitFolderParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, ...BOOLEAN_GUARD })
+    input: createArgumentsSchema([createExpectedTypeGuard('attachment-unit-folder params: { folderPath: string }', isIsAttachmentUnitFolderParams)]),
+    output: createTypeGuardSchema(BOOLEAN_GUARD)
   },
   migrateSettings: {
-    input: createArgumentsSchema([{
-      expected: 'migrate-settings params: { proposedSettings: MigratableCollectSettings, sourcePluginId: string }',
-      typeGuard: isMigrateSettingsParams
-    }], SCHEMA_OPTIONS),
-    output: createTypeGuardSchema({ ...SCHEMA_OPTIONS, expected: 'a migrate-settings result: { isApplied: boolean }', typeGuard: isMigrateSettingsResult })
+    input: createArgumentsSchema([createExpectedTypeGuard('migrate-settings params: { proposedSettings: MigratableCollectSettings, sourcePluginId: string }', isMigrateSettingsParams)]),
+    output: createTypeGuardSchema(createExpectedTypeGuard('a migrate-settings result: { isApplied: boolean }', isMigrateSettingsResult))
   }
 });
-
-function createArrayGuard<T>(isItem: Guard<T>): Guard<T[]> {
-  return (value): value is T[] => Array.isArray(value) && value.every((item) => isItem(item));
-}
-
-function createLiteralGuard<T extends string>(literals: readonly T[]): Guard<T> {
-  const literalList: readonly unknown[] = literals;
-  return (value): value is T => literalList.includes(value);
-}
-
-function createObjectGuard<T extends object>(propertyGuards: PropertyGuards<T>): Guard<T> {
-  return (value): value is T => {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-
-    for (const key in propertyGuards) {
-      if (!propertyGuards[key](Reflect.get(value, key))) {
-        return false;
-      }
-    }
-
-    return true;
-  };
-}
-
-function createOptionalGuard<T>(isPresent: Guard<T>): Guard<T | undefined> {
-  return createUnionGuard(isUndefined, isPresent);
-}
-
-function createUnionGuard<TFirst, TSecond>(isFirst: Guard<TFirst>, isSecond: Guard<TSecond>): Guard<TFirst | TSecond> {
-  return (value): value is TFirst | TSecond => isFirst(value) || isSecond(value);
-}
-
-function isAbstractFile(value: unknown): value is TAbstractFile {
-  return value instanceof TAbstractFile;
-}
-
-function isAttachmentFileContentReader(value: unknown): value is () => Promise<ArrayBuffer> {
-  return typeof value === 'function';
-}
-
-function isFile(value: unknown): value is TFile {
-  return value instanceof TFile;
-}
-
-function isNull(value: unknown): value is null {
-  return value === null;
-}

@@ -428,7 +428,7 @@ async function describeStall(contextId: ContextId<SuiteContext>, vaultPath: stri
       }
       return {
         activeFile: app.workspace.getActiveFile()?.path ?? null,
-        lockIndicatorCount: document.querySelectorAll('.obsidian-dev-utils-lock-indicator').length,
+        lockIndicatorCount: document.querySelectorAll('.obsidian-lib-lock-indicator').length,
         modalTitles: [...document.querySelectorAll('.modal')].map((modalEl) => modalEl.querySelector('.modal-title')?.textContent ?? '<untitled>'),
         promptCount: document.querySelectorAll('.prompt').length,
         steps: context.steps ?? [],
