@@ -130,10 +130,10 @@ export interface RenderOperationNoticeLinkParams {
   /**
    * What to run on click, on top of the open.
    *
-   * A FILE link that carries this hook does NOT ask dev-utils for the file explorer reveal: the hook does
+   * A FILE link that carries this hook does NOT ask obsidian-lib for the file explorer reveal: the hook does
    * the revealing itself (issue #263). A hook that moves the focus back into an editor has to do so AFTER
-   * the explorer's reveal has finished taking it, and dev-utils' reveal is fire-and-forget — nothing can be
-   * ordered after it. A FOLDER link is unaffected; dev-utils always reveals those itself.
+   * the explorer's reveal has finished taking it, and obsidian-lib's reveal is fire-and-forget — nothing can be
+   * ordered after it. A FOLDER link is unaffected; obsidian-lib always reveals those itself.
    *
    * @default `undefined`
    */
@@ -143,7 +143,7 @@ export interface RenderOperationNoticeLinkParams {
   readonly pathOrAbstractFile: PathOrAbstractFile;
 
   /**
-   * Carries the `Folder note` settings a FOLDER link resolves its note with. Still needed after dev-utils
+   * Carries the `Folder note` settings a FOLDER link resolves its note with. Still needed after obsidian-lib
    * took the resolution over: WHICH note describes a folder is this plugin's setting to answer, and the
    * library asks for it as a parameter.
    */
@@ -284,7 +284,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
  * showed it, so a destination renamed in between still reveals the right item, and a folder note written
  * after the notice appeared is still found.
  *
- * What is left HERE is the one thing dev-utils has no opinion about: the caller's own {@link
+ * What is left HERE is the one thing obsidian-lib has no opinion about: the caller's own {@link
  * RenderOperationNoticeLinkParams.onClick} hook, layered on top of everything above.
  *
  * @param params - The parameters.

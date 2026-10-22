@@ -81,7 +81,7 @@ describe('the name box\'s detours (issue #280)', () => {
             settings.shouldSplitHeadingsAutomatically = false;
           });
           // The box names a note the user is INVENTING, so it must follow `Editor > Spellcheck` the way the
-          // dev-utils `prompt()` it replaces did (issue #233). Turned ON here because Obsidian's own
+          // obsidian-lib `prompt()` it replaces did (issue #233). Turned ON here because Obsidian's own
           // `AbstractTextComponent` hardcodes `spellcheck="false"`: with the setting off, a box that had
           // lost the fix would be indistinguishable from one that still has it.
           app.vault.setConfig('spellcheck', true);
@@ -295,7 +295,7 @@ describe('the name box\'s detours (issue #280)', () => {
     });
 
     // Exactly one minimize button, beside the native close button — the ask, and the reason the box is a
-    // modal of this plugin's own rather than a bare dev-utils `prompt()`.
+    // modal of this plugin's own rather than a bare obsidian-lib `prompt()`.
     expect(result.minimizeButtonCount).toBe(1);
 
     expect(result.detourLabels).toStrictEqual(['Change target folder', 'Switch to merge']);

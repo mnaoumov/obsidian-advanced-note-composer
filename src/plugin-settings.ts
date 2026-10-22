@@ -75,10 +75,10 @@ export const COMMAND_MENU_PLACEMENTS: readonly CommandMenuPlacement[] = [
  * What a folder merge does with the folders it empties. A plugin-local **wrapper** around the
  * `@mnaoumov/obsidian-lib` `EmptyFolderBehavior`, not that enum itself, because of the fourth member: keeping the
  * merged folder while deleting the folders under it (issue #167) is a change to WHICH paths are offered to
- * `cleanupEmptyFolders`, not a new per-path behavior, so it cannot be expressed as a dev-utils value. The
+ * `cleanupEmptyFolders`, not a new per-path behavior, so it cannot be expressed as an obsidian-lib value. The
  * three original members deliberately reuse `EmptyFolderBehavior`'s exact string values, so every
  * already-persisted setting stays valid and no legacy-settings converter is needed. Do not "simplify" this
- * back to the dev-utils enum.
+ * back to the obsidian-lib enum.
  */
 export enum EmptyFolderBehaviorAfterMergingFolder {
   Delete = 'Delete',
@@ -447,7 +447,7 @@ export class PluginSettings {
    * byte-identical (`Auto` / `InsideFolder` / `None` / `ParentFolder`), so every already-persisted
    * `data.json` value is still a valid member — the same reasoning that let
    * {@link EmptyFolderBehaviorAfterMergingFolder} reuse `EmptyFolderBehavior`'s values. The difference is
-   * the conclusion: that enum stays local because it has a member dev-utils cannot express, and this one has
+   * the conclusion: that enum stays local because it has a member obsidian-lib cannot express, and this one has
    * nothing of its own left to keep.
    *
    * @default {@link FolderNoteLocation.Auto}

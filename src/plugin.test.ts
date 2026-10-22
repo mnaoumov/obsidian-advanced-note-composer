@@ -230,7 +230,7 @@ describe('Plugin', () => {
     expect(PluginSettingsTabComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     // The plugin's own settings component must REPLACE the placeholder one obsidian-dev-utils 93.2.0
-    // registers, or every dev-utils helper reading `plugin.pluginSettingsComponent` sees empty settings.
+    // registers, or every obsidian-lib helper reading `plugin.pluginSettingsComponent` sees empty settings.
     expect(internals.pluginSettingsComponent).toBeInstanceOf(PluginSettingsComponent);
     expect(registerCommandHandlers).toHaveBeenCalledOnce();
 

@@ -137,7 +137,7 @@ class SplitNoteNameModal extends Modal {
     super.onOpen();
     this.setTitle('Enter note name');
     // The box's own handle, for the plugin's stylesheet and for the desktop suite that drives its buttons.
-    // It stood in for a dev-utils `prompt()`, whose `.prompt-modal` class the flow's tests used to select
+    // It stood in for an obsidian-lib `prompt()`, whose `.prompt-modal` class the flow's tests used to select
     // on, so something has to name it or those selectors have nothing to find.
     this.modalEl.addClass('advanced-note-composer-split-note-name-modal');
 
@@ -151,7 +151,7 @@ class SplitNoteNameModal extends Modal {
     textComponent.setPlaceholder('Note name');
     this.inputEl = textComponent.inputEl;
     // The box names a note the user is INVENTING, so it follows `Editor > Spellcheck` exactly as the
-    // dev-utils `prompt()` it replaces has since issue #233, and as the picker's box does in `Create`.
+    // obsidian-lib `prompt()` it replaces has since issue #233, and as the picker's box does in `Create`.
     // `AbstractTextComponent` forces `spellcheck="false"` on every text component, so this has to be
     // applied here or the attribute the setting asks for never lands.
     applySpellcheckMode({

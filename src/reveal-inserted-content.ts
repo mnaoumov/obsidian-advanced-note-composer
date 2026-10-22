@@ -171,7 +171,7 @@ export interface RevealInsertedContentParams extends PollForInsertedContentParam
    * Whether the destination is also REVEALED in the file explorer, with the editor put back in front
    * only once that reveal has finished (issue #263).
    *
-   * The notice link asks for this instead of letting dev-utils' `renderInternalLink` reveal the file,
+   * The notice link asks for this instead of letting obsidian-lib's `renderInternalLink` reveal the file,
    * because the two must be ORDERED: the file explorer's reveal makes its own leaf the active one (and
    * does so twice, the second time a frame later), so an activation that is not sequenced after it is
    * simply undone.
@@ -353,7 +353,7 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
   const { app, file } = params;
   const shouldRevealInFileExplorer = params.shouldRevealInFileExplorer ?? false;
 
-  // Started BEFORE the poll, so the explorer highlights the note as promptly as dev-utils' own reveal did,
+  // Started BEFORE the poll, so the explorer highlights the note as promptly as obsidian-lib's own reveal did,
   // and awaited AFTER it, so nothing below can run before the explorer is done taking the focus.
   const revealPromise = shouldRevealInFileExplorer ? revealInFileExplorer({ abstractFile: file, app }) : noopAsync();
   const located = await pollForInsertedContent(params);
@@ -390,7 +390,7 @@ export async function revealInsertedContent(params: RevealInsertedContentParams)
    *   real mouse click it had not, and the explorer took the focus back on every repeat click — what the
    *   reporter's video shows. The reveal is `revealLeaf` (asynchronous) → `setActiveLeaf(explorer)` → a
    *   `nextFrame` that activates the explorer AGAIN, so both its promise and the frames after it have to be
-   *   awaited — which is exactly what dev-utils' `revealInFileExplorer` resolves on, so the reveal awaited
+   *   awaited — which is exactly what obsidian-lib's `revealInFileExplorer` resolves on, so the reveal awaited
    *   above already covers it.
    * - Harmless on the paths that do not reveal: the smart cut & paste move already has the user in this
    *   editor, so this is what is already true there.

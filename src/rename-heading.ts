@@ -98,12 +98,12 @@ export interface UpdateHeadingBacklinksParams {
   readonly oldHeading: string;
 
   /**
-   * The plugin notice component (threaded into the dev-utils link editor).
+   * The plugin notice component (threaded into the obsidian-lib link editor).
    */
   readonly pluginNoticeComponent: PluginNoticeComponent;
 
   /**
-   * The per-plugin resource-lock component (threaded into the dev-utils link editor).
+   * The per-plugin resource-lock component (threaded into the obsidian-lib link editor).
    */
   readonly resourceLockComponent: ResourceLockComponent;
 }

@@ -45,7 +45,7 @@ interface TestableHandler {
   shouldAddToFilesMenu: (params: FileCommandHandlerShouldAddToFilesMenuParams) => boolean;
 }
 
-// Partial rather than a bare factory: `plugin-settings.ts` reaches dev-utils' folder-note module, which
+// Partial rather than a bare factory: `plugin-settings.ts` reaches obsidian-lib's folder-note module, which
 // imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
 // `undefined` and the whole suite fails to load.
 vi.mock(import('@mnaoumov/obsidian-lib/file-system'), async (importOriginal) => ({
