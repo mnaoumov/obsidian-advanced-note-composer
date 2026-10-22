@@ -95,7 +95,7 @@ export interface ResolveFolderOfFolderNoteParams {
 }
 
 /**
- * Translates the plugin's `Folder note` settings into the bag dev-utils resolves a folder note with — the
+ * Translates the plugin's `Folder note` settings into the bag obsidian-lib resolves a folder note with — the
  * same bag `renderInternalLink` takes for a FOLDER link, which is why this is options and not an already
  * resolved config.
  *
@@ -106,7 +106,7 @@ export interface ResolveFolderOfFolderNoteParams {
  * names a FILE, which never resolves a folder note at all.
  *
  * `extensions` and `isHidden` are deliberately left at their defaults: this plugin has no setting for either,
- * and under `Auto` — the default — dev-utils takes the installed `folder-notes` plugin's answer whole, which
+ * and under `Auto` — the default — obsidian-lib takes the installed `folder-notes` plugin's answer whole, which
  * includes both.
  *
  * @param settings - The settings that say which note is a folder's folder note.
@@ -117,7 +117,7 @@ export function buildFolderNoteOptions(settings: FolderNoteSettings): RenderInte
     get location(): FolderNoteLocation {
       return settings.folderNoteLocation;
     },
-    // The name is a TEMPLATE here, in this plugin's own token vocabulary, where dev-utils takes a callback:
+    // The name is a TEMPLATE here, in this plugin's own token vocabulary, where obsidian-lib takes a callback:
     // It has no vocabulary to impose, and rendering the template is exactly what this module exists for.
     // Ignored under `Auto`, which names the note the way the installed plugin does.
     resolveName: (folder: TFolder): string => resolveFolderTemplateTokens({ sourceFolder: folder, template: settings.folderNoteNameTemplate })

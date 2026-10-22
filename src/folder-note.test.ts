@@ -25,7 +25,7 @@ import {
  * What is left to test here is the MAPPING — this plugin's two settings, and the token vocabulary its name
  * template is written in, expressed as `@mnaoumov/obsidian-lib`' folder-note parameters. Where a folder note
  * lives, how the installed `folder-notes` plugin is read under `Auto` and which file that resolves to are
- * dev-utils' own, tested in its own suite; asserting them again here would only pin someone else's behavior.
+ * obsidian-lib's own, tested in its own suite; asserting them again here would only pin someone else's behavior.
  */
 
 const DEFAULT_NAME_TEMPLATE = '{{folderName}}';
@@ -46,7 +46,7 @@ function settingsFor(folderNoteLocation: FolderNoteLocation, folderNoteNameTempl
 
 describe('buildFolderNoteOptions', () => {
   it('should pass the location setting through as it stands', () => {
-    // Including `Auto`: it is dev-utils' own member, so the mapping has nothing to translate — which is the
+    // Including `Auto`: it is obsidian-lib's own member, so the mapping has nothing to translate — which is the
     // whole point of dropping the plugin-local enum.
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.Auto)).location).toBe(FolderNoteLocation.Auto);
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.ParentFolder)).location).toBe(FolderNoteLocation.ParentFolder);
@@ -56,7 +56,7 @@ describe('buildFolderNoteOptions', () => {
     initApp({ 'alpha/bravo/charlie/note.md': '' });
     const folder = getFolder('alpha/bravo/charlie');
 
-    // The vocabulary is what dev-utils deliberately does not have — it takes a callback precisely so the
+    // The vocabulary is what obsidian-lib deliberately does not have — it takes a callback precisely so the
     // caller's tokens stay the caller's.
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder)).resolveName?.(folder)).toBe('charlie');
     expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder, '{{parentFolder}} - {{folderName}}')).resolveName?.(folder))
