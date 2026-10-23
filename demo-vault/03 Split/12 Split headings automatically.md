@@ -22,14 +22,14 @@ await require('/demoSetup.ts').changeSettings(app, { shouldSplitHeadingsAutomati
 ---
 caption: Extract the Beta heading
 ---
-await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-this-heading', cursorBefore: 'The second section.', notePath: 'Materials/12 Split headings automatically/Greek letters.md' });
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-this-heading', cursorBefore: 'The second section.', notePath: 'Materials/12 Split headings automatically/Greek letters.md', shouldWaitUntilDone: true });
 ```
 
 ```code-button
 ---
 caption: Split the rest by H2
 ---
-await require('/demoSetup.ts').runCommand(app, { commandId: 'split-note-by-headings-h2', cursorBefore: 'The first section.', notePath: 'Materials/12 Split headings automatically/Greek letters.md' });
+await require('/demoSetup.ts').runCommand(app, { commandId: 'split-note-by-headings-h2', cursorBefore: 'The first section.', notePath: 'Materials/12 Split headings automatically/Greek letters.md', shouldWaitUntilDone: true });
 ```
 
 ```code-button
