@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 6.0.0
+
+- fix(demo-vault): wait for the automatic heading splits before a button reports
+- chore(deps)!: move to obsidian-lib 6 and off the dropped obsidian-dev-utils names
+- docs: name obsidian-lib where comments said dev-utils
+- docs: point leftover obsidian-dev-utils mentions at the packages that hold the APIs now
+- chore(deps): move to obsidian-dev-toolkit 4 and its demo-vault directive spelling
+- fix: drop the plugin name from notice text
+- docs: shorten the debugging section
+- docs(changelog): escape the issue-title tags so markdownlint and cspell pass
+- docs(changelog): name the issue each released entry resolved
+- fix(demo-vault): load the demo setup helpers from @mnaoumov/obsidian-lib
+- docs(readme): lead the Debugging section with `Advanced Debug Mode`
+
 ## 5.20.0
 
 - build(deps): clear the brace-expansion, sharp and fast-uri advisories
