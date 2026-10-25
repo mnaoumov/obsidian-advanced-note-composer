@@ -44,6 +44,12 @@ interface DialogProbeResult {
   readonly createdPaths: string[];
 
   /**
+   * How far the folder row's colon sits from the end of its `Folder` label, in pixels. A loose `: ` text
+   * run in the flex row put the row gap there, rendering `Folder : name`.
+   */
+  readonly folderLabelToColonGapInPixels: number;
+
+  /**
    * How many name rows the dialog previewed. Hiding the buttons must not change this.
    */
   readonly nameRowCount: number;
@@ -110,6 +116,8 @@ describe('hiding the rename buttons in the create-folder confirmation (issue #21
       expect(folderOnly.renameButtonCount).toBe(1);
       expect(notesOnly.renameButtonCount).toBe(2);
       expect(bothHidden.renameButtonCount).toBe(0);
+      // The colon hugs its label; the row gap belongs between the label and the name.
+      expect(bothShown.folderLabelToColonGapInPixels).toBeLessThan(1);
       // Every name is still previewed — only the buttons went away.
       expect(bothHidden.nameRowCount).toBe(3);
       // And what was previewed is what got created.
@@ -232,6 +240,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
       // The PREVIEW is the reason the dialog exists, so hiding the buttons must not touch it: one row for
       // the folder and one per note.
       const nameRowCount = document.querySelectorAll(NAME_ROW_SELECTOR).length;
+      const folderLabelToColonGapInPixels = measureFolderLabelToColonGap();
 
       if (!shouldConfirm) {
         findButton('Cancel')?.click();
@@ -241,7 +250,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
-        return { createdPaths: [], nameRowCount, renameButtonCount };
+        return { createdPaths: [], folderLabelToColonGapInPixels, nameRowCount, renameButtonCount };
       }
 
       findButton('Create')?.click();
@@ -260,6 +269,7 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
 
       return {
         createdPaths: app.vault.getFolderByPath(`${parent}/1. Alpha`)?.children.map((child) => child.path).sort() ?? [],
+        folderLabelToColonGapInPixels,
         nameRowCount,
         renameButtonCount
       };
@@ -279,6 +289,25 @@ async function probeConfirmDialog(isFolderButtonShown: boolean, isNoteButtonShow
           throw new TypeError('No prompt input.');
         }
         return inputEl;
+      }
+
+      function measureFolderLabelToColonGap(): number {
+        const rowEl = document.querySelector(NAME_ROW_SELECTOR);
+        const labelEl = rowEl?.querySelector('code');
+        if (!rowEl || !labelEl) {
+          return NaN;
+        }
+        const walker = document.createTreeWalker(rowEl, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const colonIndex = node.textContent?.indexOf(':') ?? -1;
+          if (colonIndex >= 0) {
+            const range = document.createRange();
+            range.setStart(node, colonIndex);
+            range.setEnd(node, colonIndex + 1);
+            return range.getBoundingClientRect().left - labelEl.getBoundingClientRect().right;
+          }
+        }
+        return NaN;
       }
 
       async function openConfirmDialog(): Promise<void> {

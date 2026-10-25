@@ -932,6 +932,27 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const buttonTexts = [...fragment.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent);
       expect(buttonTexts).toEqual(['Rename', 'Rename', 'Rename']);
     });
+
+    // The row is a flex container, so a loose `: ` text run would be a flex item of its own: its space
+    // collapses and the gap lands on both sides of the colon, rendering `Folder : name`.
+    it('should keep the folder row free of loose text so the colon hugs its label', async () => {
+      initApp({ 'parent/note.md': 'note' });
+      mockPrompt.mockResolvedValue('alpha');
+      confirmResults = [createConfirmResult(true)];
+      const { handler } = createHandler({ shouldAskBeforeCreatingFolder: true });
+
+      await handler.executeFolder(getFolder('parent'));
+
+      const fragment = createFragment();
+      await ensureNonNullable(capturedConfirmParams).buildContent(fragment);
+      for (const rowEl of fragment.querySelectorAll(`.${NAME_ROW_CLASS}`)) {
+        expect([...rowEl.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)).toEqual([]);
+      }
+      const folderLabelEl = ensureNonNullable(fragment.querySelector(`.${NAME_ROW_CLASS}`)?.firstElementChild);
+      expect(folderLabelEl.tagName).toBe('SPAN');
+      // `appendCodeBlock` is mocked away, so the label's own text is just the colon.
+      expect(folderLabelEl.textContent).toBe(':');
+    });
   });
 
   // Issue #214: the same reporter who asked for the buttons wants them turn-off-able, so a vault whose note

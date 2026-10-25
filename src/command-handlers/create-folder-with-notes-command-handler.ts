@@ -1006,8 +1006,12 @@ async function buildCreateConfirmContent(params: BuildCreateConfirmContentParams
   fragment.createEl('br');
   fragment.createEl('br');
   const folderRowEl = fragment.createDiv(NAME_ROW_CLASS);
-  appendCodeBlock(folderRowEl, 'Folder');
-  folderRowEl.appendText(': ');
+  // The row is a flex container, so a loose text run would be an anonymous flex item of its own: its space
+  // collapses and the row gap lands on both sides of the colon (`Folder : name`). One span keeps `Folder:`
+  // together and leaves the gap between the label and the name.
+  const folderLabelEl = folderRowEl.createSpan();
+  appendCodeBlock(folderLabelEl, 'Folder');
+  folderLabelEl.appendText(':');
   // Plain text, not a link: the folder does not exist yet.
   appendCodeBlock(folderRowEl, tokens.folderName);
   if (shouldShowFolderRenameButton) {
