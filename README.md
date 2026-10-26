@@ -53,6 +53,21 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **Include / exclude paths** — two independent filters: what the plugin may touch, and where its commands are offered at all — each narrowable per command category, so a folder can lose its merges and keep everything else, or stay out of the reorder dialog while every other command still uses it. [Block commands on excluded paths](<./demo-vault/08 Include and exclude/26 Block commands on excluded paths.md>)
 - **UI** — every dialog can be minimized, and every one of them can be pointed at a different target without cancelling the operation; operations report what they are doing; each category of commands can be moved off the crowded editor context menu and onto the empty margin `Readable line length` leaves beside the text; and the settings tab is a short list of pages rather than one long scroll. [Minimizing dialogs](<./demo-vault/10 UI/32 Minimizing dialogs.md>) · [Operation notices](<./demo-vault/10 UI/33 Operation notices.md>) · [Change target](<./demo-vault/10 UI/34 Change target.md>) · [Finding a setting](<./demo-vault/10 UI/35 Finding a setting.md>) · [Command menu placement](<./demo-vault/10 UI/38 Command menu placement.md>)
 
+## Similar plugins
+
+- [`Note Refactor`](https://community.obsidian.md/plugins/note-refactor-obsidian) — extracts selected text into new notes and splits a note into several; it covers the extract and split half, while this plugin also merges, swaps and moves notes, folders and selections.
+- [`Note Refactor Next`](https://community.obsidian.md/plugins/note-refactor-next) — a maintained continuation of `Note Refactor`, with the same extract and split scope.
+- [`Note Refactor Plus`](https://community.obsidian.md/plugins/note-refactor-plus) — extracts selections or headings through several named profiles, each with its own template, folder, file name rule and link style; this plugin has one set of extraction settings and also merges, swaps and moves.
+- [`Note Splitter`](https://community.obsidian.md/plugins/note-splitter) — splits a note into individual notes at a delimiter; this plugin splits by headings, recursively into a folder tree if asked.
+- [`Index Note Splitter`](https://community.obsidian.md/plugins/index-note-splitter) — splits a long note into linked section notes and turns the source into an index of them; this plugin leaves a link, an embed or nothing in place of each extracted part.
+- [`Merge Notes`](https://community.obsidian.md/plugins/merge-notes) — merges the notes you select into one; this plugin merges notes and folders, reconciling frontmatter by a chosen strategy and carrying attachments along.
+- [`Power Merge Notes`](https://community.obsidian.md/plugins/power-merge-notes) — merges notes heading by heading, with frontmatter and `Dataview` handling and clean-up of same-name duplicates; it is a merge tool, while this plugin also extracts, splits and swaps.
+- [`Advanced Merger`](https://community.obsidian.md/plugins/advanced-merger) — merges a folder of notes into one for export; this plugin merges a folder into a single note as well, turning sub-folders into headings, and keeps the result in the vault as an ordinary note.
+- [`Notes Merger`](https://community.obsidian.md/plugins/notes-merger) — merges the notes an index note lists into one document; this plugin merges by note, folder or selection rather than from an index.
+- [`Text Transporter`](https://community.obsidian.md/plugins/obsidian42-text-transporter) — a set of text tools for copying, moving and linking text and blocks between notes; it works at the level of lines and blocks, while this plugin moves whole notes, headings and folders as well as selections.
+
+Last searched for similar plugins on 2026-10-26.
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/advanced-note-composer).
