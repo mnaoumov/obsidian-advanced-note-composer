@@ -40,13 +40,13 @@ import {
 import { getRecentPaths } from '../recency/recent-suggestions.ts';
 
 export interface Item extends SearchResultContainer {
-  alias?: string;
-  bookmarkPath?: string;
-  downranked?: boolean;
-  file?: TFile;
-  item?: BookmarkItem;
-  linktext?: string;
-  type: string;
+  readonly alias?: string;
+  readonly bookmarkPath?: string;
+  readonly downranked?: boolean;
+  readonly file?: TFile;
+  readonly item?: BookmarkItem;
+  readonly linktext?: string;
+  readonly type: string;
 }
 
 export interface SuggestModalBaseConstructorParams {

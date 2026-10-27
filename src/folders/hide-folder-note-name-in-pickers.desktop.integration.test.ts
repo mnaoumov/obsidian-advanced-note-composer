@@ -13,21 +13,25 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: FolderNoteNameSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: FolderNoteNameSettings;
 }
 
 interface FolderNoteNameSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   folderNoteLocation: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   folderNoteNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAllowOnlyCurrentFolderByDefault: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldHideFolderNoteNameInPickers: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: FolderNoteNameSettings) => void) => Promise<void>;
-  settings: FolderNoteNameSettings;
+  readonly editAndSave: (editor: (settings: FolderNoteNameSettings) => void) => Promise<void>;
+  readonly settings: FolderNoteNameSettings;
 }
 
 describe('hiding the folder note name in pickers (issue #304)', () => {

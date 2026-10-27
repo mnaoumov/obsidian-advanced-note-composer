@@ -80,27 +80,27 @@ interface InitAppOptions {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 /**
  * A tab the rollback put back, as recorded by the stubbed leaf it was reopened in.
  */
 interface ReopenedTab {
-  isActive: boolean;
-  path: string;
+  readonly isActive: boolean;
+  readonly path: string;
 }
 
 interface RunnerContext {
-  hide: MockInstance;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly hide: MockInstance;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface RunnerHarness {
-  consoleDebugComponent: ConsoleDebugComponent;
-  context: RunnerContext;
-  pluginNoticeComponent: PluginNoticeComponent;
-  pluginSettingsComponent: PluginSettingsComponent;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly context: RunnerContext;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 function containsNotice(showNotice: MockInstance<PluginNoticeComponent['showNotice']>, text: string): boolean {

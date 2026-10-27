@@ -26,30 +26,34 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: TemplaterSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: TemplaterSettings;
 }
 
 interface MenuItemLike {
-  callback?: (this: void) => unknown;
-  dom?: HTMLElement;
+  readonly callback?: (this: void) => unknown;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide: () => unknown;
-  items: MenuItemLike[];
+  readonly hide: () => unknown;
+  readonly items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: TemplaterSettings) => void) => Promise<void>;
-  settings: TemplaterSettings;
+  readonly editAndSave: (editor: (settings: TemplaterSettings) => void) => Promise<void>;
+  readonly settings: TemplaterSettings;
 }
 
 interface TemplaterSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   folderNoteAliasesTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldRunTemplaterOnDestinationFile: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   splitTemplate: string;
 }
 

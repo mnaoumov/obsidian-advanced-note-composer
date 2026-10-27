@@ -14,20 +14,20 @@ import {
 import { findSettingItemInObsidian } from '../settings/settings-tab-navigation.ts';
 
 interface InstructionCounts {
-  checkboxCount: number;
-  instructionCount: number;
+  readonly checkboxCount: number;
+  readonly instructionCount: number;
 }
 
 interface ReorderDialogReading {
-  hasCheckbox: boolean;
-  rowLabels: (string | undefined)[];
+  readonly hasCheckbox: boolean;
+  readonly rowLabels: (string | undefined)[];
 }
 
 interface SplitSwitchReading {
-  hasSwitchAfter: boolean;
-  hasSwitchBefore: boolean;
-  isCreateModeAfter: boolean;
-  isCreateModeBefore: boolean;
+  readonly hasSwitchAfter: boolean;
+  readonly hasSwitchBefore: boolean;
+  readonly isCreateModeAfter: boolean;
+  readonly isCreateModeBefore: boolean;
 }
 
 const OVERRIDES_SETTING_NAME = 'Should show per-operation option overrides';

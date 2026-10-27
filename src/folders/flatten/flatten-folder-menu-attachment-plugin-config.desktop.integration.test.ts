@@ -22,23 +22,23 @@ interface ExtendedAttachmentParams {
 }
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 
   /**
    * The menu section, which every command handler sets to the plugin's name. Obsidian core contributes
    * folder-menu items of its own, so a title alone does not identify ours.
    */
-  section?: string;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface MenuProbe {
-  parkedAncestorTitles: string[];
-  parkedElsewhereTitles: string[];
+  readonly parkedAncestorTitles: string[];
+  readonly parkedElsewhereTitles: string[];
 }
 
 /**
@@ -49,6 +49,7 @@ interface NotePathLike {
 }
 
 interface ObsidianLibStateLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -56,24 +57,28 @@ interface ObsidianLibStateLike {
  * The slice of the shared plugin API registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   records?: Record<string, PublishedPluginApiRecordLike[]>;
-  subscribers?: (() => void)[];
+  readonly subscribers?: (() => void)[];
 }
 
 interface PluginApiRegistryWrapperLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value?: PluginApiRegistryLike;
 }
 
 interface PublishedPluginApiRecordLike {
-  api: object;
-  apiVersion: string;
-  contract: Record<string, object>;
+  readonly api: object;
+  readonly apiVersion: string;
+  readonly contract: Record<string, object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isRevoked: boolean;
-  pluginId: string;
+  readonly pluginId: string;
 }
 
 /**

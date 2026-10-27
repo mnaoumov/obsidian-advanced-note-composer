@@ -17,20 +17,23 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExtractNoticeLinkSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExtractNoticeLinkSettings;
 }
 
 interface ExtractNoticeLinkSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenTargetNoteAfterSplit: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowOperationNotices: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExtractNoticeLinkSettings) => void) => Promise<void>;
-  settings: ExtractNoticeLinkSettings;
+  readonly editAndSave: (editor: (settings: ExtractNoticeLinkSettings) => void) => Promise<void>;
+  readonly settings: ExtractNoticeLinkSettings;
 }
 
 /*

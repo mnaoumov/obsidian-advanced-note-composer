@@ -20,20 +20,23 @@ const PLUGIN_ID = 'advanced-note-composer';
 // Minimal shape of the plugin's settings component reached at runtime to set an ignored path (there is
 // no settings-tab UI control for a single ignored path, so the live component's `editAndSave` is used).
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExcludePathsSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExcludePathsSettings;
 }
 
 interface ExcludePathsSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeExcludePaths: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAlwaysMergeExcludedItems: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
-  settings: ExcludePathsSettings;
+  readonly editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
+  readonly settings: ExcludePathsSettings;
 }
 
 describe('merge folder skips ignored files (issue #72)', () => {

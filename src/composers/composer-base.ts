@@ -145,7 +145,9 @@ export interface ComposerBaseUpdateEditorSelectionsParams {
 }
 
 export interface Selection {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Selection offsets are adjusted as the source content is rewritten.
   endOffset: number;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Selection offsets are adjusted as the source content is rewritten.
   startOffset: number;
 }
 

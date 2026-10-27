@@ -31,25 +31,28 @@ interface CollectAttachmentsParamsLike {
 }
 
 interface CollectAttachmentsSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit: boolean;
 }
 
 interface CollectedAbstractFile {
-  path: string;
+  readonly path: string;
 }
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: CollectAttachmentsSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: CollectAttachmentsSettings;
 }
 
 interface LeafWithEditor {
-  editor: Editor;
+  readonly editor: Editor;
 }
 
 interface ObsidianLibStateLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -57,15 +60,18 @@ interface ObsidianLibStateLike {
  * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   records?: Record<string, PublishedPluginApiRecordLike[]>;
-  subscribers?: (() => void)[];
+  readonly subscribers?: (() => void)[];
 }
 
 interface PluginApiRegistryWrapperLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value?: PluginApiRegistryLike;
 }
 
@@ -77,16 +83,17 @@ interface ProbeResult {
 }
 
 interface PublishedPluginApiRecordLike {
-  api: object;
-  apiVersion: string;
-  contract: Record<string, object>;
+  readonly api: object;
+  readonly apiVersion: string;
+  readonly contract: Record<string, object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isRevoked: boolean;
-  pluginId: string;
+  readonly pluginId: string;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: CollectAttachmentsSettings) => void) => Promise<void>;
-  settings: CollectAttachmentsSettings;
+  readonly editAndSave: (editor: (settings: CollectAttachmentsSettings) => void) => Promise<void>;
+  readonly settings: CollectAttachmentsSettings;
 }
 
 describe('an extract hands its destination note to Custom Attachment Location (issue #246)', () => {

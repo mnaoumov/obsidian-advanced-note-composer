@@ -64,21 +64,21 @@ const TEMPLATE_FIRST_EXCEPTIONS = new Set(['Folder note']);
 const TOP_LEVEL_LABEL = 'top level';
 
 interface AppStatics {
-  createConfigured__: () => App;
+  readonly createConfigured__: () => App;
 }
 
 interface DisabledPredicateRow {
-  disabled?: (() => boolean) | boolean;
+  readonly disabled?: (() => boolean) | boolean;
 }
 
 interface NamedComponent<T extends BaseComponent> {
-  component: T;
-  name: string;
+  readonly component: T;
+  readonly name: string;
 }
 
 interface NamedDesc {
-  name: string;
-  text: string;
+  readonly name: string;
+  readonly text: string;
 }
 
 const headings: string[] = [];

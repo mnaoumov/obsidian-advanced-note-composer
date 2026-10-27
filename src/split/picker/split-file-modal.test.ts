@@ -80,7 +80,7 @@ vi.mock('@mnaoumov/obsidian-lib/vault', () => ({
 }));
 
 interface OpenableModal {
-  open: () => void;
+  readonly open: () => void;
 }
 
 vi.mock('../../ui/open-minimizable-modal.ts', () => ({
@@ -105,7 +105,7 @@ let shouldAutoSwitchToSmartCut = false;
 let autoSwitchToFolderThenNameName: null | string = null;
 
 interface AsyncModule {
-  invokeAsyncSafely: ($function: () => Promise<void>) => void;
+  readonly invokeAsyncSafely: ($function: () => Promise<void>) => void;
 }
 
 interface SwitchToFolderThenNameResult {
@@ -118,7 +118,7 @@ interface SwitchToSmartCutResult {
 }
 
 interface WithChooseAsync {
-  onChooseSuggestionAsync: (item: unknown, $event: KeyboardEvent | MouseEvent) => Promise<void>;
+  readonly onChooseSuggestionAsync: (item: unknown, $event: KeyboardEvent | MouseEvent) => Promise<void>;
 }
 
 interface WithReturnToFolderThenNameFlag {
@@ -126,8 +126,9 @@ interface WithReturnToFolderThenNameFlag {
 }
 
 interface WithSwitchToSmartCut {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isSelected: boolean;
-  promiseResolve: (result: SwitchToFolderThenNameResult | SwitchToSmartCutResult) => void;
+  readonly promiseResolve: (result: SwitchToFolderThenNameResult | SwitchToSmartCutResult) => void;
 }
 
 vi.mock('../../ui/suggest-modal-base.ts', async () => {

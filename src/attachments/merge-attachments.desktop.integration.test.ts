@@ -15,20 +15,23 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MergeAttachmentSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MergeAttachmentSettings;
 }
 
 interface MergeAttachmentSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   attachmentExtensions: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldMoveAttachmentsWhenMergingFile: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MergeAttachmentSettings) => void) => Promise<void>;
-  settings: MergeAttachmentSettings;
+  readonly editAndSave: (editor: (settings: MergeAttachmentSettings) => void) => Promise<void>;
+  readonly settings: MergeAttachmentSettings;
 }
 
 describe('attachments in a merge (issue #161)', () => {

@@ -25,22 +25,26 @@ const MULTI_LINE_NAME_TRANSFORM_TEMPLATE = '{{rawString}}\n{{rawString}}';
 // (a CodeMirror code highlighter, so driving it from the DOM is not practical) — the same walker
 // `split-headings-recursively.desktop.integration.test.ts` uses.
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: NameTransformSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: NameTransformSettings;
 }
 
 interface NameTransformSettings {
-  mergeExcludePaths: string[];
+  readonly mergeExcludePaths: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   nameTransformTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitHeadingsAutomatically: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
-  settings: NameTransformSettings;
+  readonly editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
+  readonly settings: NameTransformSettings;
 }
 
 describe('name transform producing a multi-line name (issue #203)', () => {

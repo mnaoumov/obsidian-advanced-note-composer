@@ -33,16 +33,16 @@ import { selectTargetFileForMergeFiles } from './merge-files-modal.ts';
 import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 
 interface TestableHandler {
-  canExecuteFile: (file: TFile) => boolean;
-  canExecuteFiles: (files: TFile[]) => boolean;
-  executeFile: (file: TFile) => Promise<void>;
-  executeFiles: (files: TFile[]) => Promise<void>;
+  readonly canExecuteFile: (file: TFile) => boolean;
+  readonly canExecuteFiles: (files: TFile[]) => boolean;
+  readonly executeFile: (file: TFile) => Promise<void>;
+  readonly executeFiles: (files: TFile[]) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
-  shouldAddToFilesMenu: (params: FileCommandHandlerShouldAddToFilesMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
+  readonly shouldAddToFilesMenu: (params: FileCommandHandlerShouldAddToFilesMenuParams) => boolean;
 }
 
 // Partial rather than a bare factory: `plugin-settings.ts` reaches obsidian-lib's folder-note module, which

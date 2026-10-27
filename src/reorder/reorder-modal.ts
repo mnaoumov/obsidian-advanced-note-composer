@@ -143,7 +143,7 @@ export interface ReorderModalSort {
    * @param scope - The {@link ReorderModalSortScope.value} chosen in the scope dropdown.
    * @returns Whether the order changed.
    */
-  reverse: (this: void, scope: string) => boolean;
+  readonly reverse: (this: void, scope: string) => boolean;
 
   /**
    * What the scope dropdown offers. Never empty: a list with nothing to sort gets no sort row at all.
@@ -156,7 +156,7 @@ export interface ReorderModalSort {
    * @param params - The key and scope chosen in the dropdowns, and the button pressed.
    * @returns Whether the order changed.
    */
-  sort: (this: void, params: ReorderModalSortParams) => boolean;
+  readonly sort: (this: void, params: ReorderModalSortParams) => boolean;
 }
 
 /**
@@ -214,7 +214,7 @@ export interface ReorderModalToggle {
    *
    * @param isEnabled - The new state.
    */
-  onChanged: (this: void, isEnabled: boolean) => void;
+  readonly onChanged: (this: void, isEnabled: boolean) => void;
 }
 
 /**
@@ -227,7 +227,7 @@ export interface ReorderModel {
    * The rows, in the order they are rendered. Rows of one group are contiguous; beyond that the order is
    * the model's own — depth-first for a heading tree, folders-then-files for a folder listing.
    */
-  buildRows: (this: void) => readonly ReorderModalRow[];
+  readonly buildRows: (this: void) => readonly ReorderModalRow[];
 
   /**
    * Whether a drop at that position would be accepted, asked while the drag hovers so a refused position
@@ -236,7 +236,7 @@ export interface ReorderModel {
    * @param params - Which row, and where it would be dropped.
    * @returns Whether {@link ReorderModel.didMoveTo} would move anything.
    */
-  canMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
+  readonly canMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
 
   /**
    * Nests a row one level deeper or lifts it one level out. Only ever called when
@@ -245,7 +245,7 @@ export interface ReorderModel {
    * @param params - Which row: `1` indents, `-1` outdents.
    * @returns Whether anything actually moved.
    */
-  didChangeDepth: (this: void, params: ReorderModelDidMoveParams) => boolean;
+  readonly didChangeDepth: (this: void, params: ReorderModelDidMoveParams) => boolean;
 
   /**
    * Moves a row one place up or down among its own group.
@@ -253,7 +253,7 @@ export interface ReorderModel {
    * @param params - Which row, and which way.
    * @returns Whether anything actually moved.
    */
-  didMove: (this: void, params: ReorderModelDidMoveParams) => boolean;
+  readonly didMove: (this: void, params: ReorderModelDidMoveParams) => boolean;
 
   /**
    * Moves a row to a dropped-on position within its own group.
@@ -261,7 +261,7 @@ export interface ReorderModel {
    * @param params - Which row, and where it was dropped.
    * @returns Whether anything actually moved.
    */
-  didMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
+  readonly didMoveTo: (this: void, params: ReorderModelDidMoveToParams) => boolean;
 
   /**
    * The header to render above a group's first row.
@@ -270,7 +270,7 @@ export interface ReorderModel {
    * @returns The header text, or `null` for a group that needs none — which is every group of a heading
    * tree, where the groups exist only to keep a drag among its siblings.
    */
-  getGroupTitle: (this: void, groupKey: string) => null | string;
+  readonly getGroupTitle: (this: void, groupKey: string) => null | string;
 
   /**
    * Whether rows nest: a nestable list offers indent/outdent buttons and a middle drop zone that puts the

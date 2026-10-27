@@ -33,34 +33,41 @@ const PLUGIN_ID = 'advanced-note-composer';
 const SPLIT_TEMPLATE = '# {{newTitle}}\n\n{{content}}\n\nfrom [[{{fromTitle}}]]';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: TemplateSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: TemplateSettings;
 }
 
 interface MenuItemLike {
-  callback?: (this: void) => unknown;
-  dom?: HTMLElement;
+  readonly callback?: (this: void) => unknown;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide: () => unknown;
-  items: MenuItemLike[];
+  readonly hide: () => unknown;
+  readonly items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
-  settings: TemplateSettings;
+  readonly editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
+  readonly settings: TemplateSettings;
 }
 
 interface TemplateSettings {
-  defaultSplitTargetMode: string;
+  readonly defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenTargetNoteAfterSplit: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   splitTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   textAfterExtractionMode: string;
 }
 

@@ -186,11 +186,15 @@ vi.mock('./release-notes-component.ts', () => ({
 // PROTECTED accessors, not in `_`-prefixed backing fields — assigning the old fields silently registered
 // nothing, and every read of `this.resourceLockComponent` threw `Value is undefined` instead.
 interface PluginInternals {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   commandHandlerComponent: CommandHandlerComponent;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   consoleDebugComponent: ConsoleDebugComponent;
-  onloadImpl: () => Promise<void>;
+  readonly onloadImpl: () => Promise<void>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginNoticeComponent: PluginNoticeComponent;
-  pluginSettingsComponent: PluginSettingsComponentBase<object>;
+  readonly pluginSettingsComponent: PluginSettingsComponentBase<object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   resourceLockComponent: ResourceLockComponent;
 }
 

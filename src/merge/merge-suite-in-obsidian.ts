@@ -128,12 +128,12 @@ export interface SettingsCarrier<Settings extends object> {
    * @param editor - Receives the live settings to mutate.
    * @returns A {@link Promise} that resolves once they are saved.
    */
-  editAndSave: (editor: (settings: Settings) => void) => Promise<void>;
+  readonly editAndSave: (editor: (settings: Settings) => void) => Promise<void>;
 
   /**
    * The live settings.
    */
-  settings: Settings;
+  readonly settings: Settings;
 }
 
 /**
@@ -258,9 +258,9 @@ export function findSettingsComponentInObsidian<Settings extends object>(params:
   const { app, pluginId, probeSettingName } = params;
 
   interface ComponentTreeNode {
-    _children?: ComponentTreeNode[];
-    editAndSave?: unknown;
-    settings?: Record<string, unknown>;
+    readonly _children?: ComponentTreeNode[];
+    readonly editAndSave?: unknown;
+    readonly settings?: Record<string, unknown>;
   }
 
   const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;

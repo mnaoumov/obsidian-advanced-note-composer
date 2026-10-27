@@ -25,11 +25,11 @@ import { findSettingItemInObsidian } from '../../settings/settings-tab-navigatio
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  items: MenuItemLike[];
+  readonly items: MenuItemLike[];
 }
 
 interface ProbeResult {

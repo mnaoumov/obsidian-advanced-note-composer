@@ -29,40 +29,50 @@ const DIALOG_SEEN_TIMEOUT_IN_MILLISECONDS = 15_000;
 const DIALOG_GONE_TIMEOUT_IN_MILLISECONDS = 20_000;
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ProgressDialogSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ProgressDialogSettings;
 }
 
 interface ProgressDialogSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSwapping: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldBlockVaultDuringOperations: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowOperationNotices: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ProgressDialogSettings) => void) => Promise<void>;
-  settings: ProgressDialogSettings;
+  readonly editAndSave: (editor: (settings: ProgressDialogSettings) => void) => Promise<void>;
+  readonly settings: ProgressDialogSettings;
 }
 
 /**
  * What the phases hand to each other, on `window` in the Obsidian process.
  */
 interface SuiteContext {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   cancelButtonCount?: number;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   closeButtonCount?: number;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isDialogSeen?: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   observer?: MutationObserver;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   originalSettings?: ProgressDialogSettings;
 
   /**
    * When setup started, as `performance.now()`, which every step is timed from.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   startTime?: number;
 
   /**
    * Each step as it completes, with its time since setup, so a stall names the step it stopped after.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   steps?: string[];
 }
 

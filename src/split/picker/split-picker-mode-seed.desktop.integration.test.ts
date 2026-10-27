@@ -26,19 +26,21 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ModeSeedSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ModeSeedSettings;
 }
 
 interface ModeSeedSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitHeadingsAutomatically: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ModeSeedSettings) => void) => Promise<void>;
-  settings: ModeSeedSettings;
+  readonly editAndSave: (editor: (settings: ModeSeedSettings) => void) => Promise<void>;
+  readonly settings: ModeSeedSettings;
 }
 
 describe('the split/extract picker\'s box is remembered per mode (issue #237)', () => {

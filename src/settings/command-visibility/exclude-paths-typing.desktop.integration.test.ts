@@ -23,18 +23,19 @@ const INCOMPLETE_EXCLUDE_PATH = String.raw`/^Inbox\/`;
 // Minimal shape of the plugin's settings component reached at runtime, used only to restore the original
 // exclude paths afterwards (the same walker `merge-folder-skips-ignored.desktop.integration.test.ts` uses).
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExcludePathsSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExcludePathsSettings;
 }
 
 interface ExcludePathsSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeExcludePaths: string[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
-  settings: ExcludePathsSettings;
+  readonly editAndSave: (editor: (settings: ExcludePathsSettings) => void) => Promise<void>;
+  readonly settings: ExcludePathsSettings;
 }
 
 interface TypingResult {

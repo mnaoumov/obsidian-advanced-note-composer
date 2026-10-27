@@ -38,25 +38,25 @@ import type { RenameFolderCommandHandlerConstructorParams } from './rename-folde
 import { RenameFolderCommandHandler } from './rename-folder-command-handler.ts';
 
 interface HandlerContext {
-  handler: Testable;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly handler: Testable;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 /**
  * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
-  canExecuteFolder: (folder: TFolder) => boolean;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 vi.mock('@mnaoumov/typescript-lib/html-element', () => ({

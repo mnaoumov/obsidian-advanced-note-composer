@@ -27,9 +27,9 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: SplitTargetModeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: SplitTargetModeSettings;
 }
 
 interface ExtractInModeOptions {
@@ -59,15 +59,15 @@ interface ExtractInModeResult {
 }
 
 interface PickerObservations {
-  hasCreateRowForUnknownName: boolean;
-  isSwitchOn: boolean;
-  isTreatTitleAsPathDisabled: boolean;
-  isUnresolvedPathDisabled: boolean;
+  readonly hasCreateRowForUnknownName: boolean;
+  readonly isSwitchOn: boolean;
+  readonly isTreatTitleAsPathDisabled: boolean;
+  readonly isUnresolvedPathDisabled: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: SplitTargetModeSettings) => void) => Promise<void>;
-  settings: SplitTargetModeSettings;
+  readonly editAndSave: (editor: (settings: SplitTargetModeSettings) => void) => Promise<void>;
+  readonly settings: SplitTargetModeSettings;
 }
 
 /**
@@ -76,7 +76,9 @@ interface SettingsCarrier {
 type SpellcheckByMode = Record<string, null | string>;
 
 interface SplitTargetModeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
 }
 

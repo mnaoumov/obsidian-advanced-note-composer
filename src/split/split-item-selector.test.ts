@@ -52,16 +52,16 @@ vi.mock('../settings/plugin-settings.ts', () => ({
 }));
 
 interface SettingsOverrides {
-  frontmatterTitleMode?: string;
-  isPathIgnored?: ReturnType<typeof vi.fn>;
-  nameTransformTemplate?: string;
-  numberedSplitFolderNameTemplate?: string;
-  numberedSplitNoteNameTemplate?: string;
-  replacement?: string;
-  shouldAddInvalidTitleToNoteAlias?: boolean;
-  shouldReplaceInvalidTitleCharacters?: boolean;
-  shouldSplitIntoFolder?: boolean;
-  splitIntoFolderNoteNameTemplate?: string;
+  readonly frontmatterTitleMode?: string;
+  readonly isPathIgnored?: ReturnType<typeof vi.fn>;
+  readonly nameTransformTemplate?: string;
+  readonly numberedSplitFolderNameTemplate?: string;
+  readonly numberedSplitNoteNameTemplate?: string;
+  readonly replacement?: string;
+  readonly shouldAddInvalidTitleToNoteAlias?: boolean;
+  readonly shouldReplaceInvalidTitleCharacters?: boolean;
+  readonly shouldSplitIntoFolder?: boolean;
+  readonly splitIntoFolderNoteNameTemplate?: string;
 }
 
 function createMockApp(): App {

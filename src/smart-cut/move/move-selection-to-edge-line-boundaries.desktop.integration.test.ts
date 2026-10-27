@@ -16,9 +16,9 @@ import { findSettingItemInObsidian } from '../../settings/settings-tab-navigatio
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface EdgeBoundaryProbe {
-  reporterTemplateBottom: string;
-  shippedDefaultBottom: string;
-  shippedDefaultTop: string;
+  readonly reporterTemplateBottom: string;
+  readonly shippedDefaultBottom: string;
+  readonly shippedDefaultTop: string;
 }
 
 /**

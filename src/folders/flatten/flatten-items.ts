@@ -119,7 +119,7 @@ interface FlattenContext {
    * @param isFolder - Whether the path is a folder.
    * @returns Whether the path is excluded.
    */
-  isPathIgnored: (path: string, isFolder: boolean) => boolean;
+  readonly isPathIgnored: (path: string, isFolder: boolean) => boolean;
 }
 
 /**

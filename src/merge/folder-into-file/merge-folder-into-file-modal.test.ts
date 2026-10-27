@@ -42,7 +42,7 @@ vi.mock('../../ui/confirm-dialog-modal.ts', () => ({
 }));
 
 interface AskSettings {
-  shouldAskBeforeMerging: boolean;
+  readonly shouldAskBeforeMerging: boolean;
 }
 
 interface ConfirmArguments {
@@ -53,8 +53,8 @@ interface ConfirmArguments {
 }
 
 interface ConfirmModalArguments {
-  buildContent: (fragment: DocumentFragment) => Promise<void>;
-  promiseResolve: (result: ConfirmDialogModalResult) => void;
+  readonly buildContent: (fragment: DocumentFragment) => Promise<void>;
+  readonly promiseResolve: (result: ConfirmDialogModalResult) => void;
 }
 
 const mockAppendCodeBlock = vi.mocked(appendCodeBlock);

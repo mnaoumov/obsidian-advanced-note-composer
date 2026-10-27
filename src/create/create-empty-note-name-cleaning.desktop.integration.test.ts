@@ -28,37 +28,47 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface CleaningSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldChooseFolderBeforeNameWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenTargetNoteAfterSplit: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldTitleCaseCreatedNoteName: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   splitTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   textAfterExtractionMode: string;
 }
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: CleaningSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: CleaningSettings;
 }
 
 interface MenuItemLike {
-  callback?: (this: void) => unknown;
-  dom?: HTMLElement;
+  readonly callback?: (this: void) => unknown;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide: () => unknown;
-  items: MenuItemLike[];
+  readonly hide: () => unknown;
+  readonly items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: CleaningSettings) => void) => Promise<void>;
-  settings: CleaningSettings;
+  readonly editAndSave: (editor: (settings: CleaningSettings) => void) => Promise<void>;
+  readonly settings: CleaningSettings;
 }
 
 describe('clean the typed name of a created empty note (issue #283)', () => {

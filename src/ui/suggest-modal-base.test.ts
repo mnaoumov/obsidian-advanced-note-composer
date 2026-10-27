@@ -39,6 +39,7 @@ import {
 import { SuggestModalBase } from './suggest-modal-base.ts';
 
 interface OnInputable {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   onInput: () => void;
 }
 
@@ -48,13 +49,18 @@ interface RefreshSpellcheckScenario {
 }
 
 interface SuggestModalSuper {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   onOpen: () => void;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   updateSuggestions: () => void;
 }
 
 interface TestableSuggestModalBase {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowAlias: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowMarkdown: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowNonFileBookmarks: boolean;
 }
 
@@ -70,8 +76,8 @@ vi.mock('../folders/folder-note.ts', () => ({
 }));
 
 interface BookmarksPlugin {
-  getItemTitle: ReturnType<typeof vi.fn>;
-  items: BookmarkItem[];
+  readonly getItemTitle: ReturnType<typeof vi.fn>;
+  readonly items: BookmarkItem[];
 }
 
 interface FolderNoteFixture {

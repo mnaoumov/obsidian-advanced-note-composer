@@ -27,6 +27,7 @@ export interface ExtractFrontmatterResult {
  * governed by `frontmatterTitleMode` instead).
  */
 export interface Frontmatter extends GenericObject {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Merge and split flows replace or delete the parsed title property.
   title?: string;
 }
 

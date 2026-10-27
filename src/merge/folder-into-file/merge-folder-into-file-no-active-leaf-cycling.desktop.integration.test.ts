@@ -62,17 +62,20 @@ interface MergeSettings {
   /**
    * `Delete`, so the emptied folder disappearing is the post-commit signal.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   emptyFolderBehaviorAfterMergingFolder: string;
 
   /**
    * Off, so the merge runs without a confirmation dialog.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 
   /**
    * MUST stay off. This is the plugin's ONE deliberate open (issue #212); with it on the test would be
    * watching that feature instead of the per-note suppression it is here to pin.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterMergingFolderIntoFile: boolean;
 }
 
@@ -83,16 +86,19 @@ interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The activation recorder's registration, so cleanup can take it back off.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   eventRef?: EventRef;
 
   /**
    * The notice recorder's observer, so cleanup can disconnect it.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   noticeObserver?: MutationObserver;
 
   /**
    * The settings as they were, to restore in the shared vault.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   originalSettings?: MergeSettings;
 }
 

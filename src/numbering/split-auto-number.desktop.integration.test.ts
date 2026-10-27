@@ -60,20 +60,20 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 120_000;
  * field at a time: `PluginSettings` carries a `Map`, which a spread would carry across the transport as `{}`.
  */
 interface AutoNumberSettings {
-  defaultSplitTargetMode: string;
-  numberedSplitFolderNameTemplate: string;
-  numberedSplitNoteNameTemplate: string;
-  shouldAllowOnlyCurrentFolderByDefault: boolean;
-  shouldAskBeforeSplitting: boolean;
-  shouldAskForTargetFolderWhenSplitting: boolean;
-  shouldSplitIntoFolder: boolean;
-  shouldSplitRecursivelyIntoDefaultNewNoteFolder: boolean;
+  readonly defaultSplitTargetMode: string;
+  readonly numberedSplitFolderNameTemplate: string;
+  readonly numberedSplitNoteNameTemplate: string;
+  readonly shouldAllowOnlyCurrentFolderByDefault: boolean;
+  readonly shouldAskBeforeSplitting: boolean;
+  readonly shouldAskForTargetFolderWhenSplitting: boolean;
+  readonly shouldSplitIntoFolder: boolean;
+  readonly shouldSplitRecursivelyIntoDefaultNewNoteFolder: boolean;
 }
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: AutoNumberSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: AutoNumberSettings;
 }
 
 /**
@@ -152,17 +152,17 @@ interface RecursiveTrigger {
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: AutoNumberSettings) => void) => Promise<void>;
-  settings: AutoNumberSettings;
+  readonly editAndSave: (editor: (settings: AutoNumberSettings) => void) => Promise<void>;
+  readonly settings: AutoNumberSettings;
 }
 
 /**
  * The status one poll reports: what is still missing. Empty everywhere means settled.
  */
 interface SplitStatus {
-  isContentMissing: boolean;
-  isLinkMissing: boolean;
-  missingPaths: string[];
+  readonly isContentMissing: boolean;
+  readonly isLinkMissing: boolean;
+  readonly missingPaths: string[];
 }
 
 /**
@@ -174,16 +174,19 @@ type SplitTrigger = ExtractTrigger | RecursiveTrigger;
  * What the phases hand to each other, on `window` in the Obsidian process.
  */
 interface SuiteContext {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   originalSettings?: AutoNumberSettings;
 
   /**
    * When setup started, as `performance.now()`, which every step is timed from.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   startTime?: number;
 
   /**
    * Each step as it completes, with its time since setup, so a stall names the step it stopped after.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   steps?: string[];
 }
 

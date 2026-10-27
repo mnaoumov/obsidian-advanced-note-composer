@@ -28,7 +28,7 @@ import {
  * from the `App` type `asOriginalType__()` hands back.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 const SETTING_NAME = 'Folder note aliases template';

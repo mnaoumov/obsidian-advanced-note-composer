@@ -38,20 +38,23 @@ const FOLDER_NAME_TEMPLATE = '{{index}}. {{safeFolderName}}';
 const NOTE_NAME_TEMPLATE = '{{index}}. {{safeName}}';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MoveAutoNumberSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MoveAutoNumberSettings;
 }
 
 interface MoveAutoNumberSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   numberedMovedFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   numberedMovedNoteNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeFlattening: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MoveAutoNumberSettings) => void) => Promise<void>;
-  settings: MoveAutoNumberSettings;
+  readonly editAndSave: (editor: (settings: MoveAutoNumberSettings) => void) => Promise<void>;
+  readonly settings: MoveAutoNumberSettings;
 }
 
 describe('auto-numbering what a move relocates (issue #273)', () => {

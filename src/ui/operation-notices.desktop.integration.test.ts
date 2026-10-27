@@ -14,19 +14,21 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: OperationNoticeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: OperationNoticeSettings;
 }
 
 interface OperationNoticeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeFlattening: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowOperationNotices: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: OperationNoticeSettings) => void) => Promise<void>;
-  settings: OperationNoticeSettings;
+  readonly editAndSave: (editor: (settings: OperationNoticeSettings) => void) => Promise<void>;
+  readonly settings: OperationNoticeSettings;
 }
 
 /*

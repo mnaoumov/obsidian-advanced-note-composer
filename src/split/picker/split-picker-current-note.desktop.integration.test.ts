@@ -23,18 +23,20 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: SplitPickerSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: SplitPickerSettings;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: SplitPickerSettings) => void) => Promise<void>;
-  settings: SplitPickerSettings;
+  readonly editAndSave: (editor: (settings: SplitPickerSettings) => void) => Promise<void>;
+  readonly settings: SplitPickerSettings;
 }
 
 interface SplitPickerSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOfferCurrentNoteWhenSplitting: boolean;
 }
 

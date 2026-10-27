@@ -39,9 +39,9 @@ const NAME_TRANSFORM_TEMPLATE = '<% TOKENS.rawString.replaceAll(": ", " - ") %>'
 const MERGE_NAME_TRANSFORM_TEMPLATE = '<% TOKENS.rawString.replaceAll("_", " - ") %>';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: NameTransformSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: NameTransformSettings;
 }
 
 interface MenuItemLike {
@@ -49,36 +49,45 @@ interface MenuItemLike {
    * Set by whatever registered the item — a submenu PARENT has none, which is what distinguishes it from the
    * leaf that actually runs the command.
    */
-  callback?: () => void;
+  readonly callback?: () => void;
 
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 
   /**
    * Present when the plugin's items are nested under one entry, which is the default.
    */
-  submenu?: MenuLike;
+  readonly submenu?: MenuLike;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface NameTransformSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeFolderIntoFileNoteNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   nameTransformTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderContentTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldRunTemplaterOnDestinationFile: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldTitleCaseCreatedFolderName: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
-  settings: NameTransformSettings;
+  readonly editAndSave: (editor: (settings: NameTransformSettings) => void) => Promise<void>;
+  readonly settings: NameTransformSettings;
 }
 
 describe('name transform with no note open (issue #218)', () => {

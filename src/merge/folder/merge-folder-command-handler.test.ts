@@ -40,9 +40,9 @@ import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
 interface HandlerContext {
-  handler: Testable;
-  hide: MockInstance;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly handler: Testable;
+  readonly hide: MockInstance;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface InitAppOptions {
@@ -57,17 +57,17 @@ interface InitAppOptions {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
-  canExecuteFolder: (folder: TFolder) => boolean;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe

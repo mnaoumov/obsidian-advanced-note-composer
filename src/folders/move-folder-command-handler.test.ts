@@ -50,19 +50,19 @@ interface CapturedConfirmParams {
 }
 
 interface HandlerContext {
-  editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
-  handler: Testable;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
+  readonly handler: Testable;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface Testable {
-  canExecuteFolder: (folder: TFolder) => boolean;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 vi.mock('@mnaoumov/typescript-lib/html-element', () => ({

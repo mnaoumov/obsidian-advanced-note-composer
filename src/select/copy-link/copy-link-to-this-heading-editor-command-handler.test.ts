@@ -45,8 +45,8 @@ interface Harness {
 }
 
 interface TestableHandler {
-  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
-  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
+  readonly canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  readonly executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;

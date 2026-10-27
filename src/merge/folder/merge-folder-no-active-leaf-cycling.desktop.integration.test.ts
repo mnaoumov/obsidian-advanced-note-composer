@@ -59,6 +59,7 @@ interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   eventRef?: EventRef;
 }
 

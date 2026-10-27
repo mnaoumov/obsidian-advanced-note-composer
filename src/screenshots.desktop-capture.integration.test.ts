@@ -45,14 +45,14 @@ import {
  * The editor, reduced to cursor placement.
  */
 interface CursorEditor {
-  setCursor: (this: void, line: number, ch: number) => void;
+  readonly setCursor: (this: void, line: number, ch: number) => void;
 }
 
 /**
  * A Markdown view, reduced to the editor cursor call this storyboard needs.
  */
 interface CursorEditorView {
-  editor: CursorEditor;
+  readonly editor: CursorEditor;
 }
 
 const PLUGIN_ID = 'advanced-note-composer';

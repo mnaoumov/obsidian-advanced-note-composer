@@ -19,18 +19,25 @@ const PLUGIN_ID = 'advanced-note-composer';
 const PARENT = 'cfr-hidden-parent';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: CreateFolderSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: CreateFolderSettings;
 }
 
 interface CreateFolderSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderContentTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldRunTemplaterOnDestinationFile: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowRenameButtonForCreatedFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowRenameButtonForCreatedNotes: boolean;
 }
 
@@ -89,8 +96,8 @@ interface RestorableSettings {
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
-  settings: CreateFolderSettings;
+  readonly editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
+  readonly settings: CreateFolderSettings;
 }
 
 describe('hiding the rename buttons in the create-folder confirmation (issue #214)', () => {

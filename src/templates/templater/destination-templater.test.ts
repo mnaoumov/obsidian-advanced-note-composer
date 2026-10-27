@@ -16,7 +16,7 @@ import {
 import { resolveDestinationTemplaterRunner } from './destination-templater.ts';
 
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface TestContext {

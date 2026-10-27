@@ -14,20 +14,23 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExcludedSourceSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExcludedSourceSettings;
 }
 
 interface ExcludedSourceSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeExcludePaths: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAllowOnlyCurrentFolderByDefault: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExcludedSourceSettings) => void) => Promise<void>;
-  settings: ExcludedSourceSettings;
+  readonly editAndSave: (editor: (settings: ExcludedSourceSettings) => void) => Promise<void>;
+  readonly settings: ExcludedSourceSettings;
 }
 
 describe('running a command on a note the content filter excludes (issue #288)', () => {
