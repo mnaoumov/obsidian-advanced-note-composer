@@ -169,6 +169,18 @@ function getTargetFile(): TFile {
 
 describe('MergeComposer', () => {
   describe('mergeFile', () => {
+    it('should retain incoming properties with Replace and a template without frontmatter', async () => {
+      await app.vault.modify(getSourceFile(), '---\nsourceOnly: incoming\n---\nsource body');
+      await app.vault.modify(getTargetFile(), '---\ntargetOnly: original\n---\ntarget body');
+
+      await createComposer({ defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter }).mergeFile();
+
+      const content = await app.vault.adapter.read('target.md');
+      expect(extractFrontmatter(content).frontmatter).toEqual({ sourceOnly: 'incoming' });
+      expect(content).toContain('source body');
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+    });
+
     it.each([
       FrontmatterMergeStrategy.KeepOriginalFrontmatter,
       FrontmatterMergeStrategy.MergeAndPreferNewValues,

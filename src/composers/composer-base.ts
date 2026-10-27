@@ -514,7 +514,9 @@ export abstract class ComposerBase {
     if (this.frontmatterMergeStrategy !== FrontmatterMergeStrategy.KeepOriginalFrontmatter) {
       const originalTitle = originalFrontmatter.title;
       let mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter, originalFrontmatter });
-      mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter: templateFrontmatter, originalFrontmatter: mergedFrontmatter });
+      if (Object.keys(templateFrontmatter).length > 0) {
+        mergedFrontmatter = this.mergeFrontmatter({ newFrontmatter: templateFrontmatter, originalFrontmatter: mergedFrontmatter });
+      }
       if (originalTitle === undefined) {
         // The target note has no `title`. For a brand-new (empty) target file, the operation decides via
         // `shouldKeepSourceTitleForNewTargetFile` (a merge relocates the whole source note, so it keeps
