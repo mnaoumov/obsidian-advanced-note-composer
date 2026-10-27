@@ -1,0 +1,180 @@
+import type {
+  Editor,
+  TFile
+} from 'obsidian';
+
+import { evalInObsidian } from 'obsidian-integration-testing';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import {
+  describe,
+  expect,
+  it
+} from 'vitest';
+
+import { findSettingItemInObsidian } from '../settings/settings-tab-navigation.ts';
+
+const PLUGIN_ID = 'advanced-note-composer';
+
+describe('switch to extract from the smart-cut notice', () => {
+  it('re-opens the source with the selection restored, opens the split picker, and completes the move', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, findSettingItem, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
+         * cap, not at it. Before this shared budget it declared 38 600 ms, so the eval could only ever die
+         * as a bare transport timeout - which names the harness rather than the wait that overran. Every step
+         * waited for here settles in well under a second on a healthy machine. A helper that waits is charged
+         * once per CALL SITE, so adding a call to one adds a whole ceiling: re-divide this budget by the new
+         * count, not by the `waitUntil` calls the body shows.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 3000;
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+
+        const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
+        try {
+          const source = await resetFile('open-split-source.md', 'alpha bravo charlie');
+          const target = await resetFile('open-split-target.md', 'target body');
+
+          // Open the source, select "bravo", and mark it for a smart cut & paste move.
+          const editor = await openAndGetEditor(source);
+          editor.setSelection(editor.offsetToPos(6), editor.offsetToPos(11));
+          app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
+          await waitUntil({ predicate: () => findSwitchButton() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const isSwitchButtonPresent = findSwitchButton() !== null;
+
+          // Navigate away to prove the switch re-opens the SOURCE (not whatever is active).
+          await app.workspace.getLeaf(false).openFile(target);
+          await waitUntil({ predicate: () => app.workspace.getActiveFile()?.path === 'open-split-target.md', timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+
+          // Click the notice's "Switch to extract" button: it clears the mark, re-opens the source
+          // with the selection restored, and opens the split picker.
+          findSwitchButton()?.click();
+          await waitUntil({ predicate: () => document.querySelector('.prompt') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          // Issue #262: reached this way, the box has to be ready to type into. It was the create/merge
+          // switch that held focus — it is PREPENDED to the modal, so it is the first focusable thing in it.
+          const isPickerInputFocused = activeDocument.activeElement === document.querySelector('.prompt-input');
+
+          const activePathWhenPickerOpen = app.workspace.getActiveFile()?.path ?? '';
+          const restoredSelection = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getSelection() ?? '';
+          const isMarkNoticeGone = findSwitchButton() === null;
+
+          // Choose the target in the picker (Enter = move to bottom); "ask before splitting" is off so it
+          // completes immediately.
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new TypeError('No split picker input.');
+          }
+          // Extracting into a note that ALREADY EXISTS is a merge, and the create/merge switch made that
+          // explicit (issue #227) - so the picker has to be told before it will offer existing notes.
+          const modeToggle = document.querySelector('.advanced-note-composer-split-target-mode .checkbox-container');
+          if (!(modeToggle instanceof HTMLElement)) {
+            throw new TypeError('No create/merge switch in the split picker.');
+          }
+          if (!modeToggle.classList.contains('is-enabled')) {
+            modeToggle.click();
+          }
+
+          input.value = target.basename;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({ predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(target.basename)), timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          input.focus();
+          await pressKey({ key: 'Enter' });
+
+          // The moved text lands in the target and is removed from the source; the source edit reaches
+          // the open editor buffer first, so wait for the vault file to reflect both sides.
+          await waitUntil({
+            predicate: async () => {
+              const content = await app.vault.read(target);
+              return content.includes('bravo');
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await waitUntil({
+            predicate: async () => {
+              const content = await app.vault.read(source);
+              return !content.includes('bravo');
+            },
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const sourceContent = await app.vault.read(source);
+          const targetContent = await app.vault.read(target);
+
+          return { activePathWhenPickerOpen, isPickerInputFocused, markNoticeGone: isMarkNoticeGone, restoredSelection, sourceContent, switchButtonPresent: isSwitchButtonPresent, targetContent };
+        } finally {
+          await didSetAskBeforeSplitting(isOriginalShouldAsk);
+        }
+
+        function findSwitchButton(): HTMLButtonElement | null {
+          for (const el of activeDocument.querySelectorAll(':scope .notice button')) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Switch to extract') {
+              return el;
+            }
+          }
+          return null;
+        }
+
+        async function didSetAskBeforeSplitting(shouldAsk: boolean): Promise<boolean> {
+          app.setting.open();
+          app.setting.openTabById(pluginId);
+          const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
+          if (!tab) {
+            throw new Error('Settings tab was not found.');
+          }
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+
+          const item = await findSettingItem({ app, name: 'Should ask before splitting', settingTab: tab });
+          const toggle = item?.querySelector('.checkbox-container');
+          if (!(toggle instanceof HTMLElement)) {
+            throw new TypeError('"Should ask before splitting" toggle was not found.');
+          }
+          const wasEnabled = toggle.classList.contains('is-enabled');
+          if (wasEnabled !== shouldAsk) {
+            toggle.click();
+            await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          }
+          app.setting.close();
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return wasEnabled;
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+
+        async function openAndGetEditor(file: TFile): Promise<Editor> {
+          await app.workspace.getLeaf(false).openFile(file);
+          await waitUntil({ predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor !== undefined, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+          if (!view) {
+            throw new Error('No active markdown view.');
+          }
+          return view.editor;
+        }
+      },
+      input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // The notice offered the switch button; clicking it re-opened the source (dismissing the mark
+    // notice) with "bravo" restored as the selection and the split picker open.
+    expect(result.switchButtonPresent).toBe(true);
+    expect(result.markNoticeGone).toBe(true);
+    // Issue #262: the box is focused when the picker is reached from the smart-cut notice.
+    expect(result.isPickerInputFocused).toBe(true);
+    expect(result.activePathWhenPickerOpen).toBe('open-split-source.md');
+    expect(result.restoredSelection).toBe('bravo');
+    // Completing the split moved "bravo" into the target and removed it from the source.
+    expect(result.targetContent).toContain('bravo');
+    expect(result.sourceContent).not.toContain('bravo');
+  });
+});

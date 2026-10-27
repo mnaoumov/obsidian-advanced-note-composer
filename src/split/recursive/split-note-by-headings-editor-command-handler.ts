@@ -1,0 +1,205 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
+  App,
+  Editor,
+  MarkdownFileInfo,
+  MarkdownView,
+  TFile
+} from 'obsidian';
+
+import { EditorCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/editor-command-handler';
+import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+
+import type { Level } from '../../headings/markdown-heading-document.ts';
+import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
+
+import { getSelectionUnderHeading } from '../../composers/composer-base.ts';
+import { doesSelectionIntersectHeadingOfLevel } from '../../headings/headings.ts';
+import { isEditorCommandBlocked } from '../../settings/command-visibility/command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../../settings/command-visibility/command-menu-placement.ts';
+import { CommandCategory } from '../../settings/plugin-settings.ts';
+import {
+  buildOperationNoticeContent,
+  showOperationCompletionNotice,
+  showOperationProgressNotice
+} from '../../ui/operation-notices.ts';
+import { prepareForSplitFile } from '../picker/split-file-modal.ts';
+import { SplitComposer } from '../split-composer.ts';
+
+interface SplitNoteByHeadingsEditorCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly headingLevel: Level;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
+}
+
+export class SplitNoteByHeadingsEditorCommandHandler extends EditorCommandHandler {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly headingLevel: Level;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
+
+  public constructor(params: SplitNoteByHeadingsEditorCommandHandlerConstructorParams) {
+    super({
+      editorMenuSubmenuIcon: 'lucide-git-merge',
+      icon: 'lucide-scissors-line-dashed',
+      id: `split-note-by-headings-h${String(params.headingLevel)}`,
+      name: `Split note by headings - H${String(params.headingLevel)}`
+    });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
+    this.headingLevel = params.headingLevel;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+  }
+
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.canExecuteEditor(editor, context);
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SplitAndExtract, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
+      return false;
+    }
+    const file = context.file;
+    if (!file) {
+      return false;
+    }
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) {
+      return false;
+    }
+    const from = editor.getCursor('from');
+    const to = editor.getCursor('to');
+    return doesSelectionIntersectHeadingOfLevel({
+      headings: cache.headings ?? [],
+      level: this.headingLevel,
+      selectionEndLine: to.line,
+      selectionStartLine: from.line
+    });
+  }
+
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const file = context.file;
+    if (!file) {
+      return;
+    }
+    // The individual splits are silent (`isMultipleSplit`), so the batch reports itself once — a progress
+    // notice for the whole run and one completion notice naming how many notes it produced (issue #182).
+    /*
+     * No `abortController`, so no Cancel (issue #289): each heading is split in its own transaction, so a
+     * cancel could only stop between two of them, leaving the earlier headings split and the rest not.
+     */
+    const progressNotice = showOperationProgressNotice({
+      app: this.app,
+      content: () =>
+        buildOperationNoticeContent({
+          app: this.app,
+          isLoading: true,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          sourcePathOrAbstractFile: file,
+          verb: `Splitting note by H${String(this.headingLevel)} headings in`
+        }),
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+    // Collected rather than counted: the completion notice names the notes it created, in the order they
+    // were created (issue #235), and their number is the count it always reported.
+    const createdFiles: TFile[] = [];
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- No better way for infinite loop.
+      while (true) {
+        const cache = await getCacheSafe(this.app, file);
+        if (!cache) {
+          break;
+        }
+        const heading = (cache.headings ?? []).find((h) => h.level === this.headingLevel);
+        if (!heading) {
+          break;
+        }
+        const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
+        if (!headingInfo) {
+          this.pluginNoticeComponent.showNotice('Failed to find heading');
+          return;
+        }
+        editor.setSelection(headingInfo.start, headingInfo.end);
+        const result = await prepareForSplitFile({
+          app: this.app,
+          editor,
+          heading: headingInfo.heading,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          resourceLockComponent: this.resourceLockComponent,
+          shouldSkipModal: true,
+          sourceFile: file
+        });
+        if (!result) {
+          return;
+        }
+        const composer = new SplitComposer({
+          app: this.app,
+          capturedSelections: result.capturedSelections,
+          consoleDebugComponent: this.consoleDebugComponent,
+          editor,
+          heading: headingInfo.heading,
+          isMultipleSplit: true,
+          isNewTargetFile: result.isNewTargetFile,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          resourceLockComponent: this.resourceLockComponent,
+          selectedText: result.selectedText,
+          sourceFile: file,
+          targetFile: result.targetFile
+        });
+        await composer.splitFile();
+        createdFiles.push(result.targetFile);
+      }
+    } finally {
+      progressNotice?.[Symbol.dispose]();
+    }
+
+    if (createdFiles.length > 0) {
+      showOperationCompletionNotice({
+        content: await buildOperationNoticeContent({
+          app: this.app,
+          createdPathsOrAbstractFiles: createdFiles,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          sourcePathOrAbstractFile: file,
+          suffix: ` into ${String(createdFiles.length)} note(s)`,
+          verb: 'Split note'
+        }),
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent: this.pluginSettingsComponent
+      });
+    }
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {
+    super.shouldAddToEditorMenu(editor, context);
+    return checkShouldAddCommandToEditorMenu({
+      commandId: this.id,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandId: this.id,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+}

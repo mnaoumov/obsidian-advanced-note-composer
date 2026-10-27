@@ -1,0 +1,183 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type {
+  App,
+  Editor,
+  EditorPosition,
+  MarkdownFileInfo,
+  MarkdownView,
+  TFile
+} from 'obsidian';
+
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+import type { PluginSettings } from '../settings/plugin-settings.ts';
+
+import { CommandMenuPlacement } from '../settings/plugin-settings.ts';
+import { MarkSelectionToSwapEditorCommandHandler } from './mark-selection-to-swap-editor-command-handler.ts';
+import { SwapSelectionBuffer } from './swap-selection-buffer.ts';
+
+interface HandlerParams {
+  readonly app: App;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly swapSelectionBuffer: SwapSelectionBuffer;
+}
+
+interface TestableHandler {
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
+  shouldAddCommandToSubmenu: () => boolean;
+  shouldAddToEditorMenu: () => boolean;
+  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
+}
+
+function createMockContext(file: null | TFile): MarkdownFileInfo {
+  return strictProxy<MarkdownFileInfo>({ file });
+}
+
+function createMockEditor(hasSomethingSelected = true): Editor {
+  return strictProxy<Editor>({
+    getCursor: vi.fn((which?: string) => ({ ch: 0, line: which === 'from' ? 0 : 1 })),
+    getSelection: vi.fn().mockReturnValue('marked text'),
+    posToOffset: vi.fn((pos: EditorPosition) => (pos.line === 0 ? 3 : 14)),
+    somethingSelected: vi.fn().mockReturnValue(hasSomethingSelected)
+  });
+}
+
+function createMockFile(mtime = 1000): TFile {
+  return strictProxy<TFile>({
+    path: 'source.md',
+    stat: strictProxy({ mtime })
+  });
+}
+
+function createMockParams(isPathIgnored = false, shouldAddCommandsToSubmenu = true, shouldBlockCommandOnPath = false): HandlerParams {
+  return {
+    app: strictProxy<App>({}),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+    pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
+      settings: strictProxy<PluginSettings>({
+        commandMenuPlacement: vi.fn().mockReturnValue(CommandMenuPlacement.EditorMenu),
+        isPathIgnored: vi.fn().mockReturnValue(isPathIgnored),
+        shouldAddCommandsToSubmenu,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(shouldBlockCommandOnPath)
+      })
+    }),
+    swapSelectionBuffer: new SwapSelectionBuffer()
+  };
+}
+
+function toTestable(handler: MarkSelectionToSwapEditorCommandHandler): TestableHandler {
+  return castTo<TestableHandler>(handler);
+}
+
+describe('MarkSelectionToSwapEditorCommandHandler', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should construct with correct params', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams()));
+    expect(handler.id).toBe('mark-selection-to-swap');
+    expect(handler.name).toBe('Swap selections: Mark selection to swap');
+    expect(handler.icon).toBe('switch-camera');
+  });
+
+  it('should be available only when something is selected', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams()));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
+    expect(handler.canExecuteEditor(createMockEditor(false), createMockContext(createMockFile()))).toBe(false);
+  });
+
+  it('should block canExecuteEditor when the command is blocked on the path', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, true, true)));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(false);
+  });
+
+  it('should allow canExecuteEditor when the command is not blocked on the path', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, true, false)));
+    expect(handler.canExecuteEditor(createMockEditor(true), createMockContext(createMockFile()))).toBe(true);
+  });
+
+  it('should return early and not mark when context.file is null', async () => {
+    const params = createMockParams();
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockContext(null));
+
+    expect(params.swapSelectionBuffer.hasMark()).toBe(false);
+  });
+
+  it('should run on a source path the content filter ignores, which only the command filter refuses (issue #288)', async () => {
+    const params = createMockParams(true);
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
+
+    await handler.executeEditor(createMockEditor(), createMockContext(createMockFile()));
+
+    expect(params.swapSelectionBuffer.hasMark()).toBe(true);
+  });
+
+  it('should mark the selection and show a notice on the happy path', async () => {
+    const params = createMockParams(false);
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
+    const file = createMockFile(2000);
+
+    await handler.executeEditor(createMockEditor(), createMockContext(file));
+
+    const marked = params.swapSelectionBuffer.get();
+    expect(marked).not.toBeNull();
+    expect(marked?.startOffset).toBe(3);
+    expect(marked?.endOffset).toBe(14);
+    expect(marked?.selectedText).toBe('marked text');
+    expect(marked?.sourceFile).toBe(file);
+    expect(marked?.sourceMtime).toBe(2000);
+    expect(params.pluginNoticeComponent.showNotice).toHaveBeenCalledWith(expect.stringContaining('Marked selection to swap'));
+  });
+
+  it('should add to the editor menu', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToEditorMenu()).toBe(true);
+  });
+
+  it('should reflect the submenu setting', () => {
+    expect(toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, true))).shouldAddCommandToSubmenu()).toBe(true);
+    expect(toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams(false, false))).shouldAddCommandToSubmenu()).toBe(false);
+  });
+});
+
+/**
+ * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
+ * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).
+ */
+const VIEWPORT_MENU_MODE = 'source';
+const VIEWPORT_MENU_SOURCE = 'gutter';
+
+function createMockMarkdownView(editor: Editor): MarkdownView {
+  return strictProxy<MarkdownView>({ editor });
+}
+
+describe('MarkSelectionToSwapEditorCommandHandler viewport menu placement', () => {
+  it('should stay off the readable-line-length margin while the category is placed in the editor menu', () => {
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(createMockParams()));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(false);
+  });
+
+  it('should appear on the readable-line-length margin once the category is placed there (issue #252)', () => {
+    const params = createMockParams();
+    vi.mocked(params.pluginSettingsComponent.settings.commandMenuPlacement).mockReturnValue(CommandMenuPlacement.ViewportMenu);
+    const handler = toTestable(new MarkSelectionToSwapEditorCommandHandler(params));
+    expect(handler.shouldAddToViewportMenu(createMockMarkdownView(createMockEditor()), VIEWPORT_MENU_MODE, VIEWPORT_MENU_SOURCE)).toBe(true);
+  });
+});

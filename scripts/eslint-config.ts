@@ -12,8 +12,8 @@ export const configs: Linter.Config[] = defineEslintConfigs({
       // Verbatim copies of the providers' hand-written `api.d.ts`, refreshed from their repositories rather than
       // Edited, so their style is the providers' to keep.
       globalIgnores([
-        'src/advanced-metadata-cache-api/api.d.ts',
-        'src/custom-attachment-location-api/api.d.ts'
+        'src/integrations/advanced-metadata-cache-api/api.d.ts',
+        'src/integrations/custom-attachment-location-api/api.d.ts'
       ])
     );
   }

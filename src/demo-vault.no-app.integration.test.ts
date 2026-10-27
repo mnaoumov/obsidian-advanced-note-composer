@@ -55,13 +55,13 @@ registerDemoVaultCoverageSuite({
       'Materials/41 Auto-number moves/Move example/Destination/3. Gamma/!.md'
     ]
   },
-  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/plugin-settings.ts' }],
+  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/settings/plugin-settings.ts' }],
   interfaces: [],
   nonTrivialGuard: {
     expectDemoNote: '09 Titles, links and frontmatter/30 Frontmatter merge strategy.md',
     expectMember: 'defaultFrontmatterMergeStrategy',
     interfaceName: 'PluginSettings',
-    sourcePath: 'src/plugin-settings.ts'
+    sourcePath: 'src/settings/plugin-settings.ts'
   },
   rootFolder: getRootFolder() ?? process.cwd()
 });
