@@ -37,6 +37,8 @@ An attachment moves when the merged note references it and **no other note does*
 
 ## Content to merge
 
+When `Permanent Links` is enabled with API 1.1.0 or newer, merging transfers the source note's keys and aliases to the destination before deleting the source. The destination keeps its primary key, even with **Replace with new frontmatter**. A failed transfer stops the merge and keeps the source note. This applies to every merge that combines notes, including folder merges.
+
 This paragraph, and the footnote below[^demo], travel into the target note when you merge.
 
 [^demo]: This footnote is renumbered if the target already has footnotes - proof that footnote fixing works.

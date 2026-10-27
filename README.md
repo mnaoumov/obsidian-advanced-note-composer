@@ -59,6 +59,8 @@ Each row is one family of commands; its link opens the demo-vault section that w
 
 ## See also
 
+Merges also preserve keys from `Permanent Links` when it is enabled: see [Merge file](<./demo-vault/01 Merge/01 Merge file.md>).
+
 [My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)
 
 | Plugin | Features | How `Advanced Note Composer` differs |

@@ -7,17 +7,20 @@ import type {
 import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App as AppOriginal,
+  Plugin,
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
 
 import { getPath } from '@mnaoumov/obsidian-lib/file-system';
+import { publishPluginApi } from '@mnaoumov/obsidian-lib/plugin/plugin-api';
 import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import { Component } from 'obsidian';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -31,6 +34,7 @@ import {
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 
+import { extractFrontmatter } from '../composers/frontmatter-merge.ts';
 import {
   publishCustomAttachmentLocationStub,
   revokeCustomAttachmentLocationStubs
@@ -66,6 +70,25 @@ vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
 }));
 
 let app: AppOriginal;
+const permanentLinksProviders: Component[] = [];
+
+afterEach(() => {
+  for (const provider of permanentLinksProviders.splice(0)) {
+    provider.unload();
+  }
+});
+
+function publishPermanentLinks(moveKeys: (fromFile: TFile, toFile: TFile) => Promise<void>, apiVersion = '1.1.0'): void {
+  const component = new Component();
+  component.load();
+  permanentLinksProviders.push(component);
+  publishPluginApi({
+    api: { moveKeys },
+    apiVersion,
+    component,
+    plugin: strictProxy<Plugin>({ manifest: { author: 'test', description: 'test', id: 'permanent-links', minAppVersion: '1.0.0', name: 'Permanent Links', version: '1.1.0' } })
+  });
+}
 
 afterEach(() => {
   revokeCustomAttachmentLocationStubs();
@@ -146,6 +169,99 @@ function getTargetFile(): TFile {
 
 describe('MergeComposer', () => {
   describe('mergeFile', () => {
+    it.each([
+      FrontmatterMergeStrategy.KeepOriginalFrontmatter,
+      FrontmatterMergeStrategy.MergeAndPreferNewValues,
+      FrontmatterMergeStrategy.MergeAndPreferOriginalValues,
+      FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter,
+      FrontmatterMergeStrategy.ReplaceWithNewFrontmatter
+    ])('should preserve transferred keys and their receipt with frontmatter strategy %s', async (strategy) => {
+      await app.vault.modify(getSourceFile(), '---\nkeys: [source-key, source-alias]\nkeys-accepted: [source-key, source-alias]\nsourceOnly: incoming\n---\nsource body');
+      await app.vault.modify(getTargetFile(), '---\nkeys: [target-key, target-alias]\nkeys-accepted: [target-key, target-alias]\ntargetOnly: original\n---\ntarget body');
+      const expectedKeys = ['target-key', 'target-alias', 'source-key', 'source-alias'];
+      publishPermanentLinks(async (fromFile, toFile) => {
+        await app.fileManager.processFrontMatter(toFile, (frontmatter: GenericObject) => {
+          frontmatter['keys'] = expectedKeys;
+          frontmatter['keys-accepted'] = expectedKeys;
+        });
+        await app.fileManager.processFrontMatter(fromFile, (frontmatter: GenericObject) => {
+          delete frontmatter['keys'];
+          frontmatter['keys-accepted'] = [];
+        });
+      });
+
+      await createComposer({ defaultFrontmatterMergeStrategy: strategy }).mergeFile();
+
+      const content = await app.vault.adapter.read('target.md');
+      const { frontmatter } = extractFrontmatter(content);
+      expect(frontmatter['keys']).toEqual(expectedKeys);
+      expect(frontmatter['keys-accepted']).toEqual(expectedKeys);
+      expect(content).toContain('source body');
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+      if (strategy === FrontmatterMergeStrategy.ReplaceWithNewFrontmatter) {
+        expect(frontmatter['targetOnly']).toBeUndefined();
+      }
+    });
+
+    it('should await the key transfer before reading the content to merge and deleting the source', async () => {
+      const source = getSourceFile();
+      const target = getTargetFile();
+      const moveKeys = vi.fn(async (fromFile: TFile, toFile: TFile) => {
+        expect(fromFile).toBe(source);
+        expect(toFile).toBe(target);
+        expect(await app.vault.adapter.exists('source.md')).toBe(true);
+        await app.vault.modify(fromFile, 'source after key transfer');
+      });
+      publishPermanentLinks(moveKeys);
+
+      await createComposer().mergeFile();
+
+      expect(moveKeys).toHaveBeenCalledExactlyOnceWith(source, target);
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+      expect(await app.vault.adapter.read('target.md')).toContain('source after key transfer');
+      expect(await app.vault.adapter.read('target.md')).not.toContain('source body');
+    });
+
+    it('should preserve both notes when the key transfer rejects after writing frontmatter', async () => {
+      publishPermanentLinks(async (fromFile, toFile) => {
+        await app.vault.modify(fromFile, 'changed source');
+        await app.vault.modify(toFile, 'changed target');
+        throw new Error('key transfer failed');
+      });
+
+      await expect(createComposer().mergeFile()).rejects.toThrow('key transfer failed');
+
+      expect(await app.vault.adapter.read('source.md')).toBe('source body');
+      expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    });
+
+    it('should merge without calling an older Permanent Links API', async () => {
+      const moveKeys = vi.fn<() => Promise<void>>();
+      publishPermanentLinks(moveKeys, '1.0.0');
+
+      await createComposer().mergeFile();
+
+      expect(moveKeys).not.toHaveBeenCalled();
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+      expect(await app.vault.adapter.read('target.md')).toContain('source body');
+    });
+
+    it('should restore both notes when a merge is cancelled after transferring keys', async () => {
+      const composer = createComposer();
+      const moveKeys = vi.fn(async (fromFile: TFile, toFile: TFile) => {
+        await app.vault.modify(fromFile, 'source without keys');
+        await app.vault.modify(toFile, 'target with transferred keys');
+        castTo<AbortableComposer>(composer).abortController.abort();
+      });
+      publishPermanentLinks(moveKeys);
+
+      await composer.mergeFile();
+
+      expect(moveKeys).toHaveBeenCalledOnce();
+      expect(await app.vault.adapter.read('source.md')).toBe('source body');
+      expect(await app.vault.adapter.read('target.md')).toBe('target body');
+    });
+
     it('should merge the source content into the target and trash the source', async () => {
       await createComposer().mergeFile();
 

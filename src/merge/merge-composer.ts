@@ -22,6 +22,7 @@ import {
 import { ComposerBase } from '../composers/composer-base.ts';
 import { runLockedTransaction } from '../composers/locked-transaction.ts';
 import { openFileAfterOperation } from '../composers/open-after-operation.ts';
+import { movePermanentLinksKeys } from '../integrations/permanent-links.ts';
 import { Action } from '../settings/plugin-settings.ts';
 import {
   showOperationCompletionNotice,
@@ -106,6 +107,16 @@ export class MergeComposer extends ComposerBase {
             this.abortController.abort();
             return;
           }
+          const keyTransfer = movePermanentLinksKeys({
+            app: this.app,
+            fromFile: this.sourceFile,
+            toFile: this.targetFile,
+            vaultTransaction
+          });
+          const preservedFrontmatter = keyTransfer ? await keyTransfer : {};
+          if (keyTransfer) {
+            sourceContent = await this.app.vault.read(this.sourceFile);
+          }
           if (attachmentsToRelocate.length > 0) {
             // Moved while the source note still exists, so the vault's own rename updates the links to
             // them inside it — hence the re-read below, which picks up the new locations before the
@@ -122,7 +133,7 @@ export class MergeComposer extends ComposerBase {
             });
             sourceContent = await this.app.vault.read(this.sourceFile);
           }
-          await this.insertIntoTargetFile({ contentToInsert: sourceContent, vaultTransaction });
+          await this.insertIntoTargetFile({ contentToInsert: sourceContent, preservedFrontmatter, vaultTransaction });
           await vaultTransaction.trash(this.sourceFile);
         },
         injectedVaultTransaction: this.injectedVaultTransaction,
