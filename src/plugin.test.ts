@@ -23,20 +23,20 @@ import {
   vi
 } from 'vitest';
 
-import type { PluginSettings } from './plugin-settings.ts';
+import type { PluginSettings } from './settings/plugin-settings.ts';
 
-import { MoveNoticeComponent } from './move-notice-component.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
 import {
   clearRecentTargets,
   getRecentTargetPaths
-} from './recent-targets.ts';
+} from './recency/recent-targets.ts';
 import { createReleaseNotesComponent } from './release-notes-component.ts';
-import { SelectionAnchorComponent } from './selection-anchor-component.ts';
-import { SelectionHighlightComponent } from './selection-highlight-component.ts';
-import { TOKENIZED_STRING_LANGUAGE } from './tokenized-string-language.ts';
+import { SelectionAnchorComponent } from './select/anchor/selection-anchor-component.ts';
+import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
+import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
+import { SelectionHighlightComponent } from './smart-cut/mark/selection-highlight-component.ts';
+import { MoveNoticeComponent } from './smart-cut/move-notice-component.ts';
+import { TOKENIZED_STRING_LANGUAGE } from './templates/tokenized-string-language.ts';
 
 vi.mock('@mnaoumov/obsidian-lib/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
@@ -54,112 +54,112 @@ vi.mock('@mnaoumov/obsidian-lib/plugin/plugin-event-source', () => ({
   PluginEventSourceImpl: vi.fn()
 }));
 
-vi.mock('./command-handlers/extract-after-cursor-editor-command-handler.ts', () => ({
+vi.mock('./split/extract/extract-after-cursor-editor-command-handler.ts', () => ({
   ExtractAfterCursorEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/extract-before-cursor-editor-command-handler.ts', () => ({
+vi.mock('./split/extract/extract-before-cursor-editor-command-handler.ts', () => ({
   ExtractBeforeCursorEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/extract-current-selection-editor-command-handler.ts', () => ({
+vi.mock('./split/extract/extract-current-selection-editor-command-handler.ts', () => ({
   ExtractCurrentSelectionEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/extract-this-heading-editor-command-handler.ts', () => ({
+vi.mock('./split/extract/extract-this-heading-editor-command-handler.ts', () => ({
   ExtractThisHeadingEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/cancel-move-command-handler.ts', () => ({
+vi.mock('./smart-cut/cancel-move-command-handler.ts', () => ({
   CancelMoveCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/mark-selection-to-move-editor-command-handler.ts', () => ({
+vi.mock('./smart-cut/mark/mark-selection-to-move-editor-command-handler.ts', () => ({
   MarkSelectionToMoveEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/merge-file-command-handler.ts', () => ({
+vi.mock('./merge/merge-file-command-handler.ts', () => ({
   MergeFileCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/merge-folder-command-handler.ts', () => ({
+vi.mock('./merge/folder/merge-folder-command-handler.ts', () => ({
   MergeFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/move-marked-selection-here-editor-command-handler.ts', () => ({
+vi.mock('./smart-cut/move/move-marked-selection-here-editor-command-handler.ts', () => ({
   MoveMarkedSelectionHereEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/move-marked-selection-to-edge-editor-command-handler.ts', () => ({
+vi.mock('./smart-cut/move/move-marked-selection-to-edge-editor-command-handler.ts', () => ({
   MoveMarkedSelectionToEdgeEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/open-split-modal-command-handler.ts', () => ({
+vi.mock('./smart-cut/open-split-modal-command-handler.ts', () => ({
   OpenSplitModalCommandHandler: vi.fn()
 }));
 
-vi.mock('./move-notice-component.ts', () => ({
+vi.mock('./smart-cut/move-notice-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
   MoveNoticeComponent: vi.fn(function moveNoticeComponentStub() {
     return { setOpenSplitModalCommandHandler: vi.fn() };
   })
 }));
 
-vi.mock('./selection-anchor-component.ts', () => ({
+vi.mock('./select/anchor/selection-anchor-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
   SelectionAnchorComponent: vi.fn(function selectionAnchorComponentStub() {
     return { getEditorExtension: vi.fn().mockReturnValue([]) };
   })
 }));
 
-vi.mock('./selection-highlight-component.ts', () => ({
+vi.mock('./smart-cut/mark/selection-highlight-component.ts', () => ({
   // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
   SelectionHighlightComponent: vi.fn(function selectionHighlightComponentStub() {
     return { getEditorExtension: vi.fn().mockReturnValue([]) };
   })
 }));
 
-vi.mock('./command-handlers/split-note-by-headings-content-editor-command-handler.ts', () => ({
+vi.mock('./split/recursive/split-note-by-headings-content-editor-command-handler.ts', () => ({
   SplitNoteByHeadingsContentEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/split-note-by-headings-editor-command-handler.ts', () => ({
+vi.mock('./split/recursive/split-note-by-headings-editor-command-handler.ts', () => ({
   SplitNoteByHeadingsEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/swap-file-command-handler.ts', () => ({
+vi.mock('./swap/swap-file-command-handler.ts', () => ({
   SwapFileCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/swap-folder-command-handler.ts', () => ({
+vi.mock('./swap/swap-folder-command-handler.ts', () => ({
   SwapFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/mark-selection-to-swap-editor-command-handler.ts', () => ({
+vi.mock('./swap/mark-selection-to-swap-editor-command-handler.ts', () => ({
   MarkSelectionToSwapEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/swap-with-marked-selection-editor-command-handler.ts', () => ({
+vi.mock('./swap/swap-with-marked-selection-editor-command-handler.ts', () => ({
   SwapWithMarkedSelectionEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/flatten-folder-command-handler.ts', () => ({
+vi.mock('./folders/flatten/flatten-folder-command-handler.ts', () => ({
   FlattenFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/move-folder-command-handler.ts', () => ({
+vi.mock('./folders/move-folder-command-handler.ts', () => ({
   MoveFolderCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/rename-heading-editor-command-handler.ts', () => ({
+vi.mock('./headings/rename-heading-editor-command-handler.ts', () => ({
   RenameHeadingEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./command-handlers/reorder-headings-editor-command-handler.ts', () => ({
+vi.mock('./reorder/headings/reorder-headings-editor-command-handler.ts', () => ({
   ReorderHeadingsEditorCommandHandler: vi.fn()
 }));
 
-vi.mock('./plugin-settings-component.ts', () => {
+vi.mock('./settings/plugin-settings-component.ts', () => {
   class MockPluginSettingsComponent {
     public settings: PluginSettings = strictProxy<PluginSettings>({
       releaseNotesShown: []
@@ -174,7 +174,7 @@ vi.mock('./plugin-settings-component.ts', () => {
   return { PluginSettingsComponent: MockPluginSettingsComponent };
 });
 
-vi.mock('./plugin-settings-tab.ts', () => ({
+vi.mock('./settings/plugin-settings-tab.ts', () => ({
   PluginSettingsTab: vi.fn()
 }));
 

@@ -1,0 +1,301 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
+  App,
+  Editor,
+  MarkdownFileInfo,
+  Notice,
+  TFile,
+  Vault
+} from 'obsidian';
+
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import type { Selection } from '../../composers/composer-base.ts';
+import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
+import type { PluginSettings } from '../../settings/plugin-settings.ts';
+
+import { InsertMode } from '../../composers/insert-mode.ts';
+import {
+  FrontmatterMergeStrategy,
+  SmartCutAndPasteMoveKind,
+  TextAfterExtractionMode
+} from '../../settings/plugin-settings.ts';
+import { SplitComposer } from '../../split/split-composer.ts';
+import { MoveSelectionBuffer } from '../mark/move-selection-buffer.ts';
+import { MoveMarkedSelectionToEdgeEditorCommandHandler } from './move-marked-selection-to-edge-editor-command-handler.ts';
+
+interface CapturedComposerArguments {
+  readonly insertMode: InsertMode;
+  readonly insertToken: string;
+  readonly shouldFixFootnotes: boolean;
+  readonly shouldIncludeFrontmatter: boolean;
+  readonly shouldJumpToMovedContent: boolean;
+  readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind;
+  readonly sourceFile: TFile;
+  readonly targetCursorOffset: null | number;
+  readonly targetFile: TFile;
+  readonly textAfterExtractionMode: TextAfterExtractionMode;
+}
+
+interface CreateMockParamsOptions {
+  readonly insertMode?: InsertMode;
+  readonly moveSelectionBuffer?: MoveSelectionBuffer;
+  readonly shouldBlockCommandOnPath?: boolean;
+  readonly shouldJumpToMovedContentToBottom?: boolean;
+  readonly shouldJumpToMovedContentToTop?: boolean;
+}
+
+interface HandlerParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly insertMode: InsertMode;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
+}
+
+interface TestableHandler {
+  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
+  readonly id: string;
+  readonly name: string;
+}
+
+const SOURCE_MTIME = 1000;
+
+vi.mock('../../split/split-composer.ts', () => {
+  const MockSplitComposer = vi.fn();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- vi.fn() prototype is untyped in mock factories.
+  MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
+  return { SplitComposer: MockSplitComposer };
+});
+
+const MockSplitComposer = vi.mocked(SplitComposer);
+
+function capturedComposerArguments(): CapturedComposerArguments {
+  return castTo<CapturedComposerArguments>(MockSplitComposer.mock.calls[0]?.[0]);
+}
+
+function createMarkedBuffer(sourceFile: TFile, capturedSelections: Selection[]): MoveSelectionBuffer {
+  const buffer = new MoveSelectionBuffer();
+  buffer.mark({
+    abortController: new AbortController(),
+    capturedSelections,
+    highlight: { [Symbol.dispose]: vi.fn() },
+    lock: { [Symbol.dispose]: vi.fn() },
+    markedHeading: null,
+    notice: strictProxy<Notice>({ hide: vi.fn() }),
+    selectedText: 'marked text',
+    sourceFile,
+    sourceMtime: SOURCE_MTIME
+  });
+  return buffer;
+}
+
+function createMockContext(file: null | TFile): MarkdownFileInfo {
+  return strictProxy<MarkdownFileInfo>({ file });
+}
+
+function createMockEditor(value = 'one two three'): Editor {
+  return strictProxy<Editor>({
+    getValue: vi.fn().mockReturnValue(value)
+  });
+}
+
+function createMockFile(path: string, mtime = SOURCE_MTIME): TFile {
+  return strictProxy<TFile>({
+    path,
+    stat: strictProxy({ mtime })
+  });
+}
+
+function createMockParams(options: CreateMockParamsOptions = {}): HandlerParams {
+  return {
+    app: strictProxy<App>({
+      vault: strictProxy<Vault>({
+        getFileByPath: vi.fn().mockReturnValue(createMockFile('source.md'))
+      })
+    }),
+    consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+    insertMode: options.insertMode ?? InsertMode.Append,
+    moveSelectionBuffer: options.moveSelectionBuffer ?? new MoveSelectionBuffer(),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }) }),
+    pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
+      settings: strictProxy<PluginSettings>({
+        defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
+        isPathIgnored: vi.fn().mockReturnValue(false),
+        shouldApplyTextAfterExtractionToSameFile: false,
+        shouldBlockCommandOnPath: vi.fn().mockReturnValue(options.shouldBlockCommandOnPath ?? false),
+        shouldFixFootnotesByDefault: true,
+        shouldIncludeFrontmatterWhenSplittingByDefault: false,
+        shouldJumpToMovedContentToBottom: options.shouldJumpToMovedContentToBottom ?? true,
+        shouldJumpToMovedContentToTop: options.shouldJumpToMovedContentToTop ?? true,
+        textAfterExtractionMode: TextAfterExtractionMode.LinkToNewFile
+      })
+    }),
+    resourceLockComponent: strictProxy<ResourceLockComponent>({})
+  };
+}
+
+function toTestable(handler: MoveMarkedSelectionToEdgeEditorCommandHandler): TestableHandler {
+  return castTo<TestableHandler>(handler);
+}
+
+describe('MoveMarkedSelectionToEdgeEditorCommandHandler', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
+  });
+
+  it('should construct the bottom command for append', () => {
+    const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(createMockParams({ insertMode: InsertMode.Append })));
+    expect(handler.id).toBe('move-marked-selection-to-bottom-of-file');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection to bottom of file');
+  });
+
+  it('should construct the top command for prepend', () => {
+    const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(createMockParams({ insertMode: InsertMode.Prepend })));
+    expect(handler.id).toBe('move-marked-selection-to-top-of-file');
+    expect(handler.name).toBe('Smart cut & paste: Move marked selection to top of file');
+  });
+
+  it('should throw for an unknown insert mode', () => {
+    expect(() => new MoveMarkedSelectionToEdgeEditorCommandHandler(createMockParams({ insertMode: castTo<InsertMode>('bogus') }))).toThrow();
+  });
+
+  describe('canExecuteEditor', () => {
+    it('should be available when moving to the bottom of the same note', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ insertMode: InsertMode.Append, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('source.md')))).toBe(true);
+    });
+
+    it('should be unavailable when the top offset falls inside a selection spanning the frontmatter', () => {
+      const source = createMockFile('source.md');
+      // Frontmatter ends (contentStart) at offset 10; the selection [8, 12) straddles it.
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 12, startOffset: 8 }]) })
+        )
+      );
+      expect(handler.canExecuteEditor(createMockEditor('---\nx\n---\nbody'), createMockContext(createMockFile('source.md')))).toBe(false);
+    });
+
+    it('should be available when moving to a different note', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(true);
+    });
+
+    it('should be unavailable when the command is blocked on the target path', () => {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({
+            insertMode: InsertMode.Append,
+            moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]),
+            shouldBlockCommandOnPath: true
+          })
+        )
+      );
+      expect(handler.canExecuteEditor(createMockEditor(), createMockContext(createMockFile('target.md')))).toBe(false);
+    });
+  });
+
+  describe('executeEditor', () => {
+    it('should move using default settings with no cursor offset and a derived insert mode', async () => {
+      const source = createMockFile('source.md');
+      const buffer = createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]);
+      const params = createMockParams({ insertMode: InsertMode.Prepend, moveSelectionBuffer: buffer });
+      const handler = toTestable(new MoveMarkedSelectionToEdgeEditorCommandHandler(params));
+
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
+
+      expect(MockSplitComposer).toHaveBeenCalledTimes(1);
+      const $arguments = capturedComposerArguments();
+      expect($arguments.insertMode).toBe(InsertMode.Prepend);
+      expect($arguments.targetCursorOffset).toBeNull();
+      expect($arguments.insertToken).toContain('advanced-note-composer-move-');
+      expect($arguments.shouldFixFootnotes).toBe(true);
+      expect($arguments.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);
+      expect(buffer.hasMark()).toBe(false);
+    });
+  });
+
+  // Each direction is its own template kind, so a handler that reported the wrong one would silently apply
+  // the other direction's template override (issue #174).
+  describe('getSmartCutAndPasteMoveKind (issue #174)', () => {
+    async function captureMoveKind(insertMode: InsertMode): Promise<SmartCutAndPasteMoveKind> {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ insertMode, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
+      return capturedComposerArguments().smartCutAndPasteMoveKind;
+    }
+
+    it('should report ToTop for a prepend', async () => {
+      expect(await captureMoveKind(InsertMode.Prepend)).toBe(SmartCutAndPasteMoveKind.ToTop);
+    });
+
+    it('should report ToBottom for an append', async () => {
+      expect(await captureMoveKind(InsertMode.Append)).toBe(SmartCutAndPasteMoveKind.ToBottom);
+    });
+  });
+
+  // Each direction reads its OWN setting, so a test that only flipped one of them would pass against a
+  // handler that read the wrong one — hence the cross cases (top off / bottom on, and the reverse).
+  describe('shouldJumpToMovedContent (issue #144)', () => {
+    async function checkJumpFlag(options: CreateMockParamsOptions): Promise<boolean> {
+      const source = createMockFile('source.md');
+      const handler = toTestable(
+        new MoveMarkedSelectionToEdgeEditorCommandHandler(
+          createMockParams({ ...options, moveSelectionBuffer: createMarkedBuffer(source, [{ endOffset: 10, startOffset: 5 }]) })
+        )
+      );
+      await handler.executeEditor(createMockEditor(), createMockContext(createMockFile('target.md')));
+      return capturedComposerArguments().shouldJumpToMovedContent;
+    }
+
+    it('should jump for both directions by default', async () => {
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend })).toBe(true);
+    });
+
+    it('should not jump to the top when only the top setting is off', async () => {
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToTop: false })).toBe(false);
+    });
+
+    it('should still jump to the bottom when only the top setting is off', async () => {
+      expect(await checkJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToTop: false })).toBe(true);
+    });
+
+    it('should not jump to the bottom when only the bottom setting is off', async () => {
+      expect(await checkJumpFlag({ insertMode: InsertMode.Append, shouldJumpToMovedContentToBottom: false })).toBe(false);
+    });
+
+    it('should still jump to the top when only the bottom setting is off', async () => {
+      expect(await checkJumpFlag({ insertMode: InsertMode.Prepend, shouldJumpToMovedContentToBottom: false })).toBe(true);
+    });
+  });
+});

@@ -1,0 +1,60 @@
+import { join } from '@mnaoumov/typescript-lib/path';
+
+import type {
+  ItemSelectorBaseConstructorParams,
+  SelectItemResult
+} from '../composers/item-selector-base.ts';
+
+import { ItemSelectorBase } from '../composers/item-selector-base.ts';
+import { CommandCategory } from '../settings/plugin-settings.ts';
+
+interface MergeItemSelectorConstructorParams extends ItemSelectorBaseConstructorParams {
+  readonly __brand?: 'MergeItemSelectorConstructorParams';
+}
+
+export class MergeItemSelector extends ItemSelectorBase {
+  public constructor(params: MergeItemSelectorConstructorParams) {
+    super(params);
+  }
+
+  public override async selectItem(): Promise<SelectItemResult> {
+    if (this.isModifier || this.item?.type === 'unresolved') {
+      const fileName = this.item?.type === 'unresolved' ? this.item.linktext ?? '' : this.inputValue;
+      const parentFolder = this.app.fileManager.getNewFileParent(this.sourceFile.path, fileName);
+
+      const existingFile = this.app.metadataCache.getFirstLinkpathDest(join(parentFolder.path, fileName), '');
+      if (existingFile && this.pluginSettingsComponent.settings.isPathIgnored(existingFile.path, CommandCategory.Merge)) {
+        return {
+          isNewTargetFile: false,
+          targetFile: existingFile
+        };
+      }
+
+      return {
+        isNewTargetFile: true,
+        targetFile: await this.app.fileManager.createNewMarkdownFile(parentFolder, fileName, '')
+      };
+    }
+
+    if (this.item?.type === 'bookmark' && this.item.item?.type === 'file') {
+      const bookmarkFile = this.app.vault.getFileByPath(this.item.item.path ?? '');
+      if (bookmarkFile) {
+        return {
+          isNewTargetFile: false,
+          targetFile: bookmarkFile
+        };
+      }
+
+      throw new Error('Bookmark file not found');
+    }
+
+    if (this.item?.file) {
+      return {
+        isNewTargetFile: false,
+        targetFile: this.item.file
+      };
+    }
+
+    throw new Error('No valid file selected');
+  }
+}

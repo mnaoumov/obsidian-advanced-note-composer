@@ -4,7 +4,7 @@ import type { App } from 'obsidian';
 import { ReleaseNotesComponent } from '@mnaoumov/obsidian-lib/components/release-notes-component';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 
-import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+import type { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
 
 interface CreateReleaseNotesComponentParams {
   readonly app: App;

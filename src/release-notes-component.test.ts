@@ -19,8 +19,8 @@ import {
   vi
 } from 'vitest';
 
-import type { PluginSettingsComponent } from './plugin-settings-component.ts';
-import type { PluginSettings } from './plugin-settings.ts';
+import type { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
+import type { PluginSettings } from './settings/plugin-settings.ts';
 
 import { createReleaseNotesComponent } from './release-notes-component.ts';
 

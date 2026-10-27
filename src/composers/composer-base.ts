@@ -39,30 +39,30 @@ import {
   TFile
 } from 'obsidian';
 
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+import type { BuildOperationNoticeContentParams } from '../ui/operation-notices.ts';
 import type {
   ExtractFrontmatterResult,
   Frontmatter
-} from '../frontmatter-merge.ts';
-import type { BuildOperationNoticeContentParams } from '../operation-notices.ts';
-import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
+} from './frontmatter-merge.ts';
 
-import { buildExtractedSubpathPredicate } from '../extracted-link-targets.ts';
-import { demoteHeadings } from '../folder-headings.ts';
-import {
-  extractFrontmatter,
-  mergeRecursively
-} from '../frontmatter-merge.ts';
-import { InsertMode } from '../insert-mode.ts';
-import { parseMarkdownHeadingDocument } from '../markdown-heading-document.ts';
-import { buildOperationNoticeContent } from '../operation-notices.ts';
+import { parseMarkdownHeadingDocument } from '../headings/markdown-heading-document.ts';
+import { demoteHeadings } from '../merge/folder-into-file/folder-headings.ts';
+import { recordRecentTarget } from '../recency/recent-targets.ts';
 import {
   Action,
   CommandCategory,
   FrontmatterMergeStrategy
-} from '../plugin-settings.ts';
-import { recordRecentTarget } from '../recent-targets.ts';
-import { resolveTemplateTokens } from '../template-tokens.ts';
-import { recordPendingTemplaterCursor } from '../templater-cursor.ts';
+} from '../settings/plugin-settings.ts';
+import { buildExtractedSubpathPredicate } from '../split/extracted-link-targets.ts';
+import { resolveTemplateTokens } from '../templates/template-tokens.ts';
+import { recordPendingTemplaterCursor } from '../templates/templater/templater-cursor.ts';
+import { buildOperationNoticeContent } from '../ui/operation-notices.ts';
+import {
+  extractFrontmatter,
+  mergeRecursively
+} from './frontmatter-merge.ts';
+import { InsertMode } from './insert-mode.ts';
 
 export function getInsertModeFromEvent($event: KeyboardEvent | MouseEvent): InsertMode {
   return $event.shiftKey ? InsertMode.Prepend : InsertMode.Append;

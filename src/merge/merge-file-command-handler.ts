@@ -1,0 +1,149 @@
+import type {
+  FileCommandHandlerShouldAddToFileMenuParams,
+  FileCommandHandlerShouldAddToFilesMenuParams
+} from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
+  App,
+  TFile
+} from 'obsidian';
+
+import { FileCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
+import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
+
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+
+import { isFileOrFolderCommandBlocked } from '../settings/command-visibility/command-block.ts';
+import { CommandCategory } from '../settings/plugin-settings.ts';
+import { MergeComposer } from './merge-composer.ts';
+import { prepareForMergeFile } from './merge-file-modal.ts';
+import { selectTargetFileForMergeFiles } from './merge-files-modal.ts';
+import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
+
+const MIN_MERGEABLE_FILE_COUNT = 2;
+
+interface MergeFileCommandHandlerConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
+}
+
+export class MergeFileCommandHandler extends FileCommandHandler {
+  private readonly app: App;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
+
+  public constructor(params: MergeFileCommandHandlerConstructorParams) {
+    super({
+      fileMenuItemName: 'Merge entire file with...',
+      fileMenuSubmenuIcon: 'lucide-git-merge',
+      filesMenuItemName: 'Merge these files into one file...',
+      filesMenuSubmenuIcon: 'lucide-git-merge',
+      icon: 'lucide-git-merge',
+      id: 'merge-file',
+      name: 'Merge current file with another file...'
+    });
+
+    this.app = params.app;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+  }
+
+  protected override canExecuteFile(file: TFile): boolean {
+    return isMarkdownFile(file) && !isFileOrFolderCommandBlocked({ abstractFile: file, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent });
+  }
+
+  protected override canExecuteFiles(files: TFile[]): boolean {
+    // The multi-select merge needs at least two mergeable (markdown, non-blocked) notes.
+    return this.mergeableFiles(files).length >= MIN_MERGEABLE_FILE_COUNT;
+  }
+
+  protected override async executeFile(file: TFile): Promise<void> {
+    const result = await prepareForMergeFile({
+      app: this.app,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
+      sourceFile: file
+    });
+    if (!result) {
+      return;
+    }
+    const composer = new MergeComposer({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      frontmatterMergeStrategy: result.frontmatterMergeStrategy,
+      insertMode: result.insertMode,
+      isNewTargetFile: result.isNewTargetFile,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
+      shouldFixFootnotes: result.shouldFixFootnotes,
+      shouldMergeHeadings: result.shouldMergeHeadings,
+      // Follows the picker that chose the target: whatever the picker was allowed to OFFER, the merge must
+      // be allowed to land in (issue #253), or picking an excluded destination would end in a refusal.
+      // The SOURCE gate in `canExecuteFile` stays — neither setting decides where a command is offered.
+      shouldMergeIgnoredTarget: this.pluginSettingsComponent.settings.shouldOfferExcludedPathsAsMergeDestinations,
+      sourceFile: file,
+      targetFile: result.targetFile
+    });
+    await composer.mergeFile();
+  }
+
+  protected override async executeFiles(files: TFile[]): Promise<void> {
+    // Multi-select (files-menu) merge: pick one target, then merge every selected note into it in one
+    // reversible transaction (issue #92). The picker excludes the selected sources and ignored files.
+    const sourceFiles = this.mergeableFiles(files);
+    if (sourceFiles.length < MIN_MERGEABLE_FILE_COUNT) {
+      return;
+    }
+    const targetFile = await selectTargetFileForMergeFiles({
+      app: this.app,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      sourceFiles
+    });
+    if (!targetFile) {
+      return;
+    }
+    await mergeFilesIntoSingleFile({
+      app: this.app,
+      consoleDebugComponent: this.consoleDebugComponent,
+      isNewTargetFile: false,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      progressLabel: 'Merging files',
+      resourceLockComponent: this.resourceLockComponent,
+      // No folder scopes this merge, so each source note carries the attachments it owns (issue #161).
+      shouldRelocateOwnedAttachments: this.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile,
+      sourceFiles,
+      targetFile
+    });
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFileMenu(params: FileCommandHandlerShouldAddToFileMenuParams): boolean {
+    super.shouldAddToFileMenu(params);
+    return params.source !== 'link-context-menu';
+  }
+
+  // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
+  protected override shouldAddToFilesMenu(params: FileCommandHandlerShouldAddToFilesMenuParams): boolean {
+    super.shouldAddToFilesMenu(params);
+    return true;
+  }
+
+  private mergeableFiles(files: TFile[]): TFile[] {
+    return files.filter((file) => isMarkdownFile(file) && !isFileOrFolderCommandBlocked({ abstractFile: file, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent }));
+  }
+}

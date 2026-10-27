@@ -29,19 +29,18 @@ import {
   vi
 } from 'vitest';
 
-import type { PluginSettingsComponent } from '../plugin-settings-component.ts';
-import type { PluginSettings } from '../plugin-settings.ts';
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+import type { PluginSettings } from '../settings/plugin-settings.ts';
 import type {
   ComposerBaseConstructorParamsBase,
   Selection
 } from './composer-base.ts';
 
-import { InsertMode } from '../insert-mode.ts';
 import {
   Action,
   CommandCategory,
   FrontmatterMergeStrategy
-} from '../plugin-settings.ts';
+} from '../settings/plugin-settings.ts';
 import {
   ComposerBase,
   getEnclosingHeadingLine,
@@ -49,6 +48,7 @@ import {
   getSelectionUnderHeading,
   resolveInsertOffset
 } from './composer-base.ts';
+import { InsertMode } from './insert-mode.ts';
 
 interface CreateComposerOptions {
   readonly frontmatterMergeStrategy?: FrontmatterMergeStrategy;

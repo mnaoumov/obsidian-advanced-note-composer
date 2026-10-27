@@ -1,0 +1,274 @@
+import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type {
+  App,
+  Editor,
+  MarkdownFileInfo,
+  MarkdownView
+} from 'obsidian';
+
+import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
+
+import type { InsertMode } from '../../composers/insert-mode.ts';
+import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
+import type { SmartCutAndPasteMoveKind } from '../../settings/plugin-settings.ts';
+import type { MoveSelectionBuffer } from '../mark/move-selection-buffer.ts';
+import type { MoveOptions } from './paste-options-modal.ts';
+
+import { ActiveEditorCommandHandlerBase } from '../../active-editor-command-handler-base.ts';
+import { resolveInsertOffset } from '../../composers/composer-base.ts';
+import { isEditorCommandBlocked } from '../../settings/command-visibility/command-block.ts';
+import {
+  checkShouldAddCommandToEditorMenu,
+  checkShouldAddCommandToViewportMenu
+} from '../../settings/command-visibility/command-menu-placement.ts';
+import {
+  CommandCategory,
+  TextAfterExtractionMode
+} from '../../settings/plugin-settings.ts';
+import { SplitComposer } from '../../split/split-composer.ts';
+import { createMoveToken } from './move-token.ts';
+
+/**
+ * Where a marked selection is inserted in the target note: a specific `targetCursorOffset` (the paste
+ * cursor), or `null` to derive the offset from `insertMode` (top = after frontmatter, bottom = end).
+ * When {@link Insertion.targetCursorEndOffset} is greater than `targetCursorOffset`, the moved content
+ * replaces that `[targetCursorOffset, targetCursorEndOffset]` range (paste-over-selection).
+ */
+export interface Insertion {
+  readonly insertMode: InsertMode;
+
+  /**
+   * The end of the target range to replace with the moved content. Equal to `targetCursorOffset` (no
+   * selection to replace — a plain insertion) or `null` (top/bottom, where the offset is derived).
+   */
+  readonly targetCursorEndOffset: null | number;
+  readonly targetCursorOffset: null | number;
+}
+
+interface MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams {
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly id: string;
+  readonly moveSelectionBuffer: MoveSelectionBuffer;
+  readonly name: string;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+  readonly resourceLockComponent: ResourceLockComponent;
+}
+
+/**
+ * Shared base for the commands that move a marked selection into the active note. Subclasses only
+ * decide the insert point ({@link resolveInsertion}) and, optionally, how content-processing options
+ * are resolved ({@link resolveOptions}); all validation, locking, and the `SplitComposer` handoff live
+ * here.
+ */
+export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
+  protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly moveSelectionBuffer: MoveSelectionBuffer;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly resourceLockComponent: ResourceLockComponent;
+
+  public constructor(params: MoveMarkedSelectionEditorCommandHandlerBaseConstructorParams) {
+    super({
+      app: params.app,
+      editorMenuSubmenuIcon: 'lucide-git-merge',
+      icon: 'lucide-clipboard-paste',
+      id: params.id,
+      name: params.name
+    });
+
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.moveSelectionBuffer = params.moveSelectionBuffer;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
+  }
+
+  /**
+   * Builds the content-processing options from the plugin's default settings, seeded with the resolved
+   * `Text after extraction` mode.
+   *
+   * @param defaultTextAfterExtractionMode - The residual to leave in the source note.
+   * @returns The default options.
+   */
+  protected buildDefaultOptions(defaultTextAfterExtractionMode: TextAfterExtractionMode): MoveOptions {
+    const settings = this.pluginSettingsComponent.settings;
+    return {
+      frontmatterMergeStrategy: settings.defaultFrontmatterMergeStrategy,
+      shouldFixFootnotes: settings.shouldFixFootnotesByDefault,
+      shouldIncludeFrontmatter: settings.shouldIncludeFrontmatterWhenSplittingByDefault,
+      textAfterExtractionMode: defaultTextAfterExtractionMode
+    };
+  }
+
+  protected override canExecuteEditor(editor: Editor, context: MarkdownFileInfo): boolean {
+    if (isEditorCommandBlocked({ commandCategory: CommandCategory.SmartCutAndPaste, context, pluginSettingsComponent: this.pluginSettingsComponent })) {
+      return false;
+    }
+    const marked = this.moveSelectionBuffer.get();
+    if (!marked) {
+      return false;
+    }
+    const targetFile = context.file;
+    if (!targetFile || !this.app.vault.getFileByPath(marked.sourceFile.path)) {
+      return false;
+    }
+    if (targetFile.path !== marked.sourceFile.path) {
+      return true;
+    }
+
+    // Same-note move: forbid an insert range that overlaps the marked selection — the moved content
+    // would be removed along with the source. The bottom offset (end of note) can never be inside a
+    // selection; the top offset (after frontmatter) can when the selection spans the frontmatter
+    // boundary; the at-cursor range can when the user selected text overlapping the marked selection.
+    const insertion = this.resolveInsertion(editor);
+    const startOffset = insertion.targetCursorOffset ?? resolveInsertOffset(editor.getValue(), insertion.insertMode);
+    const endOffset = insertion.targetCursorEndOffset ?? startOffset;
+    return !this.moveSelectionBuffer.isRangeOverlappingMarkedSelection({ endOffset, startOffset });
+  }
+
+  protected override async executeEditor(editor: Editor, context: MarkdownFileInfo): Promise<void> {
+    const targetFile = context.file;
+    if (!targetFile) {
+      return;
+    }
+    const marked = this.moveSelectionBuffer.get();
+    if (!marked) {
+      return;
+    }
+
+    const sourceFile = this.app.vault.getFileByPath(marked.sourceFile.path);
+    if (!sourceFile) {
+      this.pluginNoticeComponent.showNotice('The note the selection was marked in no longer exists.');
+      this.moveSelectionBuffer.clear();
+      return;
+    }
+
+    if (this.pluginSettingsComponent.settings.isPathIgnored(targetFile.path, CommandCategory.SmartCutAndPaste)) {
+      this.pluginNoticeComponent.showNotice(
+        await createFragmentAsync(async (f) => {
+          f.appendText('You cannot move a selection into file ');
+          f.append(await renderInternalLink({ app: this.app, pathOrAbstractFile: targetFile }));
+          f.appendText(' because it is ignored in the plugin settings.');
+        })
+      );
+      return;
+    }
+
+    if (sourceFile.stat.mtime !== marked.sourceMtime) {
+      this.pluginNoticeComponent.showNotice('The note the selection was marked in has changed since it was marked. Mark the selection again.');
+      return;
+    }
+
+    const isSameFile = sourceFile.path === targetFile.path;
+    // A same-note move would otherwise leave a self-link (or self-embed) in place of the moved text,
+    // which is meaningless — so default to leaving nothing unless the user opted in via settings.
+    const defaultTextAfterExtractionMode = isSameFile && !this.pluginSettingsComponent.settings.shouldApplyTextAfterExtractionToSameFile
+      ? TextAfterExtractionMode.None
+      : this.pluginSettingsComponent.settings.textAfterExtractionMode;
+
+    const options = await this.resolveOptions(defaultTextAfterExtractionMode);
+    if (!options) {
+      return;
+    }
+
+    const insertion = this.resolveInsertion(editor);
+    const insertToken = createMoveToken();
+
+    // Release the held source lock before the composer runs — `splitFile` acquires its own source +
+    // target locks. The captured data is read from `marked` (a local), so clearing first is safe,
+    // makes the move one-shot, and leaves no dangling mark if the move fails.
+    this.moveSelectionBuffer.clear();
+
+    const composer = new SplitComposer({
+      app: this.app,
+      capturedSelections: marked.capturedSelections,
+      consoleDebugComponent: this.consoleDebugComponent,
+      editor,
+      frontmatterMergeStrategy: options.frontmatterMergeStrategy,
+      insertMode: insertion.insertMode,
+      insertToken,
+      isMultipleSplit: false,
+      isNewTargetFile: false,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      pluginSettingsComponent: this.pluginSettingsComponent,
+      resourceLockComponent: this.resourceLockComponent,
+      selectedText: marked.selectedText,
+      shouldFixFootnotes: options.shouldFixFootnotes,
+      shouldIncludeFrontmatter: options.shouldIncludeFrontmatter,
+      shouldJumpToMovedContent: this.shouldJumpToMovedContent(),
+      smartCutAndPasteMoveKind: this.getSmartCutAndPasteMoveKind(),
+      sourceFile,
+      targetCursorEndOffset: insertion.targetCursorEndOffset,
+      targetCursorOffset: insertion.targetCursorOffset,
+      targetFile,
+      textAfterExtractionMode: options.textAfterExtractionMode
+    });
+    await composer.splitFile();
+  }
+
+  /**
+   * Which smart cut & paste move this handler performs (issue #174). Decided by the handler, since only it
+   * knows which move this is — the same reasoning as {@link shouldJumpToMovedContent} — and passed to the
+   * composer, where its presence both marks the split as a smart cut & paste move and selects the
+   * per-direction template override.
+   *
+   * @returns The move kind.
+   */
+  protected abstract getSmartCutAndPasteMoveKind(): SmartCutAndPasteMoveKind;
+
+  /**
+   * Resolves the insert point of the move in the target note.
+   *
+   * @param editor - The target editor.
+   * @returns The insertion descriptor.
+   */
+  protected abstract resolveInsertion(editor: Editor): Insertion;
+
+  /**
+   * Resolves the content-processing options for the move. The default uses the plugin's settings with
+   * no UI; subclasses may override to prompt the user.
+   *
+   * @param defaultTextAfterExtractionMode - The residual to leave in the source note.
+   * @returns The options, or `null` when the user cancels.
+   */
+  protected resolveOptions(defaultTextAfterExtractionMode: TextAfterExtractionMode): Promise<MoveOptions | null> {
+    return Promise.resolve(this.buildDefaultOptions(defaultTextAfterExtractionMode));
+  }
+
+  protected override shouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
+  protected override shouldAddToEditorMenu(): boolean {
+    return checkShouldAddCommandToEditorMenu({
+      commandId: this.id,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  protected override shouldAddToViewportMenu(_view: MarkdownView, mode: string, _source: string): boolean {
+    return checkShouldAddCommandToViewportMenu({
+      commandId: this.id,
+      mode,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    });
+  }
+
+  /**
+   * Whether the move should land the cursor on the moved content in the target note (issue #144).
+   *
+   * Unconditionally `true` here, which is what the cursor-targeted moves want: inserting text AT the
+   * cursor and then leaving the cursor somewhere else is incoherent. Only the top/bottom moves — where
+   * the point can be to get text out of the way and keep your place — override this with their settings.
+   *
+   * @returns Whether to jump to the moved content.
+   */
+  protected shouldJumpToMovedContent(): boolean {
+    return true;
+  }
+}

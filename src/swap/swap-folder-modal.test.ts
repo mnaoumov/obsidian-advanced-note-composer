@@ -1,0 +1,115 @@
+import type {
+  App,
+  TFolder,
+  Vault,
+  Workspace
+} from 'obsidian';
+
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+
+import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
+
+vi.mock('@mnaoumov/obsidian-lib/html-element', () => ({
+  appendCodeBlock: vi.fn()
+}));
+
+vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
+  renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
+vi.mock('@mnaoumov/obsidian-lib/vault', () => ({
+  isChildOrSelf: vi.fn().mockReturnValue(false)
+}));
+
+interface MockPluginSettingsComponentOptions {
+  readonly shouldAskBeforeSwapping?: boolean;
+}
+
+function createMockApp(): App {
+  return strictProxy<App>({
+    vault: strictProxy<Vault>({
+      getAllFolders: vi.fn().mockReturnValue([]),
+      getFileByPath: vi.fn().mockReturnValue(null)
+    }),
+    workspace: strictProxy<Workspace>({
+      getRecentFiles: vi.fn().mockReturnValue([])
+    })
+  });
+}
+
+function createMockFolder(path: string): TFolder {
+  const name = path.split('/').pop() ?? path;
+  return strictProxy<TFolder>({
+    children: [],
+    name,
+    path
+  });
+}
+
+function createMockPluginSettingsComponent(options?: MockPluginSettingsComponentOptions): PluginSettingsComponent {
+  return strictProxy<PluginSettingsComponent>({
+    editAndSave: vi.fn().mockResolvedValue(undefined),
+    settings: strictProxy({
+      isPathIgnored: vi.fn().mockReturnValue(false),
+      shouldAskBeforeSwapping: options?.shouldAskBeforeSwapping ?? true,
+      shouldIncludeChildFoldersWhenSwappingByDefault: true,
+      shouldIncludeParentFoldersWhenSwappingByDefault: true,
+      shouldShowModalInstructions: true,
+      shouldSwapEntireFolderStructureByDefault: true
+    })
+  });
+}
+
+describe('selectTargetFolderForSwap', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should return null when modal is cancelled', async () => {
+    const sourceFolder = createMockFolder('source');
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent();
+
+    const promise = selectTargetFolderForSwap({ app, pluginSettingsComponent, sourceFolder });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+
+  it('should return null when shouldAskBeforeSwapping is false and modal cancelled', async () => {
+    const sourceFolder = createMockFolder('source');
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: false });
+
+    const promise = selectTargetFolderForSwap({ app, pluginSettingsComponent, sourceFolder });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    // Modal auto-closes without selection → onClose → null
+    expect(result).toBeNull();
+  });
+
+  it('should return null when shouldAskBeforeSwapping is true and modal cancelled', async () => {
+    const sourceFolder = createMockFolder('source');
+    const app = createMockApp();
+    const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: true });
+
+    const promise = selectTargetFolderForSwap({ app, pluginSettingsComponent, sourceFolder });
+    await vi.advanceTimersByTimeAsync(0);
+    const result = await promise;
+    expect(result).toBeNull();
+  });
+});
