@@ -132,11 +132,11 @@ async function startRecordingErrors(): Promise<void> {
           record('console.error', values);
           originalConsoleError(...values);
         };
-        window.addEventListener('error', (event) => {
-          record('uncaught', [event.error ?? event.message]);
+        window.addEventListener('error', ($event) => {
+          record('uncaught', [$event.error ?? $event.message]);
         });
-        window.addEventListener('unhandledrejection', (event) => {
-          record('unhandledrejection', [event.reason]);
+        window.addEventListener('unhandledrejection', ($event) => {
+          record('unhandledrejection', [$event.reason]);
         });
       }
     });

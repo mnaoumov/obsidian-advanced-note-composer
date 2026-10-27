@@ -97,9 +97,9 @@ describe('paste options modal keyboard paths', () => {
           wasDefaultPrevented
         };
 
-        function captureEnter(event: KeyboardEvent): void {
-          if (event.key === 'Enter') {
-            wasDefaultPrevented = event.defaultPrevented;
+        function captureEnter($event: KeyboardEvent): void {
+          if ($event.key === 'Enter') {
+            wasDefaultPrevented = $event.defaultPrevented;
           }
         }
 
@@ -273,9 +273,9 @@ describe('paste options modal keyboard paths', () => {
           app.commands.executeCommandById(`${pluginId}:cancel-move`);
         }
 
-        function captureEscape(event: KeyboardEvent): void {
-          if (event.key === 'Escape') {
-            wasDefaultPrevented = event.defaultPrevented;
+        function captureEscape($event: KeyboardEvent): void {
+          if ($event.key === 'Escape') {
+            wasDefaultPrevented = $event.defaultPrevented;
           }
         }
 

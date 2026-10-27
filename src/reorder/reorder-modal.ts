@@ -348,7 +348,7 @@ interface RegisterDropTargetParams {
   /**
    * Where a drop on {@link RegisterDropTargetParams.el} lands.
    */
-  readonly resolvePlacement: (event: DragEvent) => ReorderDropPlacement;
+  readonly resolvePlacement: ($event: DragEvent) => ReorderDropPlacement;
   readonly targetRow: ReorderModalRow;
 }
 
@@ -530,7 +530,7 @@ class ReorderModal extends Modal {
   }
 
   private registerDropTarget(params: RegisterDropTargetParams): void {
-    this.app.dragManager.handleDrop(params.el, (event, draggable, isOver) => {
+    this.app.dragManager.handleDrop(params.el, ($event, draggable, isOver) => {
       const droppedSource = toReorderDragSource(draggable);
       // Refusing by returning `null` leaves the event un-`preventDefault`ed, which is what declines a row
       // from another group — and a file dragged in from the explorer — instead of accepting it.
@@ -543,7 +543,7 @@ class ReorderModal extends Modal {
           dragSource: droppedSource,
           indicatorEl: params.el,
           isOver,
-          placement: params.resolvePlacement(event),
+          placement: params.resolvePlacement($event),
           targetRow: params.targetRow
         })
         ? { action: null, dropEffect: 'move' }
@@ -629,7 +629,7 @@ class ReorderModal extends Modal {
       title: row.label,
       type: REORDER_DRAGGABLE_TYPE
     }));
-    this.registerDropTarget({ el: itemEl, resolvePlacement: (event) => this.resolvePlacement(event, itemEl), targetRow: row });
+    this.registerDropTarget({ el: itemEl, resolvePlacement: ($event) => this.resolvePlacement($event, itemEl), targetRow: row });
     // A drag abandoned outside any row ends without a drop, so the last insertion line has to be cleared
     // here; `dragend` fires on the row the drag started from.
     itemEl.addEventListener('dragend', () => {
@@ -732,9 +732,9 @@ class ReorderModal extends Modal {
     }
   }
 
-  private resolvePlacement(event: DragEvent, itemEl: HTMLElement): ReorderDropPlacement {
+  private resolvePlacement($event: DragEvent, itemEl: HTMLElement): ReorderDropPlacement {
     const bounds = itemEl.getBoundingClientRect();
-    const fraction = (event.clientY - bounds.top) / bounds.height;
+    const fraction = ($event.clientY - bounds.top) / bounds.height;
     if (!this.params.model.isNestable) {
       return fraction > DROP_AFTER_HEIGHT_FRACTION ? ReorderDropPlacement.After : ReorderDropPlacement.Before;
     }
