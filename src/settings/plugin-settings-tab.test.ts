@@ -81,10 +81,6 @@ interface NamedDesc {
   text: string;
 }
 
-interface TextBasedProbe {
-  setPlaceholderValue?: unknown;
-}
-
 const headings: string[] = [];
 const toggles: NamedComponent<ToggleComponent>[] = [];
 const texts: NamedComponent<TextComponent>[] = [];
@@ -1147,9 +1143,6 @@ function spyOnAdd<T extends BaseComponent>(
   vi.spyOn(prototype, method).mockImplementation(function addComponentSpy(this: Setting, callback: (component: BaseComponent) => void): Setting {
     const name = this.nameEl.textContent;
     return original.call(this, (component: BaseComponent) => {
-      // Mock value components lack the obsidian-lib text-based-component probe (`setPlaceholderValue`).
-      // Assigning it stops the strict proxy from throwing and makes `bind` correctly treat them as non-text-based.
-      castTo<TextBasedProbe>(component).setPlaceholderValue = undefined;
       registry.push({ component: castTo<T>(component), name });
       callback(component);
     });
