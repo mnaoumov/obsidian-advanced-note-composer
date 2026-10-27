@@ -110,9 +110,9 @@ describe('reorder modal keyboard paths', () => {
           wasDefaultPrevented
         };
 
-        function captureEscape(event: KeyboardEvent): void {
-          if (event.key === 'Escape') {
-            wasDefaultPrevented = event.defaultPrevented;
+        function captureEscape($event: KeyboardEvent): void {
+          if ($event.key === 'Escape') {
+            wasDefaultPrevented = $event.defaultPrevented;
           }
         }
 

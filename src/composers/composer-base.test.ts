@@ -233,23 +233,23 @@ function stubProcessFrontMatterNoop(): void {
 
 describe('getInsertModeFromEvent', () => {
   it('should return Prepend when shift key is held', () => {
-    const event = strictProxy<KeyboardEvent>({ shiftKey: true });
-    expect(getInsertModeFromEvent(event)).toBe(InsertMode.Prepend);
+    const $event = strictProxy<KeyboardEvent>({ shiftKey: true });
+    expect(getInsertModeFromEvent($event)).toBe(InsertMode.Prepend);
   });
 
   it('should return Append when shift key is not held', () => {
-    const event = strictProxy<KeyboardEvent>({ shiftKey: false });
-    expect(getInsertModeFromEvent(event)).toBe(InsertMode.Append);
+    const $event = strictProxy<KeyboardEvent>({ shiftKey: false });
+    expect(getInsertModeFromEvent($event)).toBe(InsertMode.Append);
   });
 
   it('should return Append for mouse event without shift', () => {
-    const event = strictProxy<MouseEvent>({ shiftKey: false });
-    expect(getInsertModeFromEvent(event)).toBe(InsertMode.Append);
+    const $event = strictProxy<MouseEvent>({ shiftKey: false });
+    expect(getInsertModeFromEvent($event)).toBe(InsertMode.Append);
   });
 
   it('should return Prepend for mouse event with shift', () => {
-    const event = strictProxy<MouseEvent>({ shiftKey: true });
-    expect(getInsertModeFromEvent(event)).toBe(InsertMode.Prepend);
+    const $event = strictProxy<MouseEvent>({ shiftKey: true });
+    expect(getInsertModeFromEvent($event)).toBe(InsertMode.Prepend);
   });
 });
 
