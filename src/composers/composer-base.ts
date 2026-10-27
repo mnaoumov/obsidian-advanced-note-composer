@@ -170,6 +170,12 @@ interface ComposerBaseInsertIntoTargetFileParams {
    * @default `false`
    */
   readonly isFrontmatterOnlyExtract?: boolean;
+
+  /**
+   * Properties written by an integration before composition, which every merge strategy must retain.
+   * Applied in the same frontmatter write so listeners never observe the transferred keys removed.
+   */
+  readonly preservedFrontmatter?: Frontmatter;
   readonly vaultTransaction: VaultTransaction;
 }
 
@@ -532,6 +538,7 @@ export abstract class ComposerBase {
       if (this.isNewTargetFile && templateFrontmatter.title !== undefined) {
         mergedFrontmatter.title = templateFrontmatter.title;
       }
+      Object.assign(mergedFrontmatter, params.preservedFrontmatter);
       await this.app.fileManager.processFrontMatter(this.targetFile, (frontmatter: Frontmatter) => {
         for (const key of Object.keys(frontmatter)) {
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- We need to empty the object.
