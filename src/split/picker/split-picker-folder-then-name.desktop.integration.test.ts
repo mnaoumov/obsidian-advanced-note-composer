@@ -27,23 +27,29 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: FolderThenNameSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: FolderThenNameSettings;
 }
 
 interface FolderThenNameSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldChooseFolderBeforeNameWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitHeadingsAutomatically: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: FolderThenNameSettings) => void) => Promise<void>;
-  settings: FolderThenNameSettings;
+  readonly editAndSave: (editor: (settings: FolderThenNameSettings) => void) => Promise<void>;
+  readonly settings: FolderThenNameSettings;
 }
 
 describe('choosing the folder before the name (issue #261)', () => {

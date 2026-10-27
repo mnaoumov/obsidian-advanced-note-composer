@@ -25,19 +25,19 @@ import { findSettingItemInObsidian } from '../settings/settings-tab-navigation.t
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface MenuItemLike {
-  callback?: () => void;
-  dom?: HTMLElement;
+  readonly callback?: () => void;
+  readonly dom?: HTMLElement;
 
   /**
    * The menu section, which every command handler sets to the plugin's name. Obsidian core contributes
    * a folder-menu item titled `Move folder to...` too, so the title alone does not identify ours.
    */
-  section?: string;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 describe('recent folder ordering (issue #158)', () => {

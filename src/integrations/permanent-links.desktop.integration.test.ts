@@ -9,48 +9,57 @@ import {
 import type { PermanentLinksApi } from './permanent-links-api/api.d.ts';
 
 interface ApiRecord {
-  api: Pick<PermanentLinksApi, 'moveKeys'>;
-  apiVersion: string;
-  contract: Record<string, object>;
+  readonly api: Pick<PermanentLinksApi, 'moveKeys'>;
+  readonly apiVersion: string;
+  readonly contract: Record<string, object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isRevoked: boolean;
-  pluginId: string;
+  readonly pluginId: string;
 }
 
 interface ApiRegistry {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   records?: Record<string, ApiRecord[]>;
 }
 
 interface ComponentNode {
-  _children?: ComponentNode[];
-  editAndSave?: unknown;
-  settings?: MergeSettings;
+  readonly _children?: ComponentNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MergeSettings;
 }
 
 interface MergeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultFrontmatterMergeStrategy: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterMerge: boolean;
 }
 
 interface PermanentFrontmatter {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   permanentLinks?: string[];
 }
 
 interface RegistryHost {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   __obsidianLib?: RegistryState;
 }
 
 interface RegistryState {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginApiRegistry?: RegistryWrapper;
 }
 
 interface RegistryWrapper {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value?: ApiRegistry;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
-  settings: MergeSettings;
+  readonly editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
+  readonly settings: MergeSettings;
 }
 
 // Desktop-only, matching the existing merge/delete suites. The provider stand-in uses the published

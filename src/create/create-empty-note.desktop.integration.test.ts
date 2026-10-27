@@ -26,35 +26,43 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: EmptyNoteSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: EmptyNoteSettings;
 }
 
 interface EmptyNoteSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenTargetNoteAfterSplit: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowModalInstructions: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   textAfterExtractionMode: string;
 }
 
 interface MenuItemLike {
-  callback?: (this: void) => unknown;
-  dom?: HTMLElement;
+  readonly callback?: (this: void) => unknown;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide: () => unknown;
-  items: MenuItemLike[];
+  readonly hide: () => unknown;
+  readonly items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: EmptyNoteSettings) => void) => Promise<void>;
-  settings: EmptyNoteSettings;
+  readonly editAndSave: (editor: (settings: EmptyNoteSettings) => void) => Promise<void>;
+  readonly settings: EmptyNoteSettings;
 }
 
 describe('create an empty note (issue #244)', () => {

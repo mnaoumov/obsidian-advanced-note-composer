@@ -11,19 +11,19 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface DragOutcome {
-  isDragOverAccepted: boolean;
-  isDropAccepted: boolean;
-  rowLabelsAfterDrop: (string | undefined)[];
-  targetClassesWhileOver: string[];
-  typesAfterDragStart: string[];
+  readonly isDragOverAccepted: boolean;
+  readonly isDropAccepted: boolean;
+  readonly rowLabelsAfterDrop: (string | undefined)[];
+  readonly targetClassesWhileOver: string[];
+  readonly typesAfterDragStart: string[];
 }
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  items: MenuItemLike[];
+  readonly items: MenuItemLike[];
 }
 
 // Issue #231. The reorder modal offers TWO ways to move a row, and only the arrow buttons were ever

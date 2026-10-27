@@ -17,21 +17,24 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: RecursiveSplitNoticeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: RecursiveSplitNoticeSettings;
 }
 
 interface RecursiveSplitNoticeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
-  shouldBlockVaultDuringOperations: boolean;
+  readonly shouldBlockVaultDuringOperations: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldShowOperationNotices: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitRecursivelyIntoDefaultNewNoteFolder: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: RecursiveSplitNoticeSettings) => void) => Promise<void>;
-  settings: RecursiveSplitNoticeSettings;
+  readonly editAndSave: (editor: (settings: RecursiveSplitNoticeSettings) => void) => Promise<void>;
+  readonly settings: RecursiveSplitNoticeSettings;
 }
 
 /*

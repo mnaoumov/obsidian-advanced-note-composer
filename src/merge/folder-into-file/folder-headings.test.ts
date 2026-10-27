@@ -12,13 +12,13 @@ import {
 } from './folder-headings.ts';
 
 interface EntrySummary {
-  depth: number;
-  headings: string[];
+  readonly depth: number;
+  readonly headings: string[];
 }
 
 interface PlanSummary {
-  entries: EntrySummary[];
-  trailingHeadings: string[];
+  readonly entries: EntrySummary[];
+  readonly trailingHeadings: string[];
 }
 
 describe('buildFolderHeadingPlan', () => {

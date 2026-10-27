@@ -16,19 +16,19 @@ import {
 import { showOperationProgressModal } from './operation-progress-modal.ts';
 
 interface ModalProbe {
-  close: () => void;
-  closeCallCount: number;
-  contentEl: HTMLElement;
-  isOpen: boolean;
-  modalEl: HTMLElement;
-  onOpen: () => void;
-  open: () => void;
-  titleEl: HTMLElement;
+  readonly close: () => void;
+  readonly closeCallCount: number;
+  readonly contentEl: HTMLElement;
+  readonly isOpen: boolean;
+  readonly modalEl: HTMLElement;
+  readonly onOpen: () => void;
+  readonly open: () => void;
+  readonly titleEl: HTMLElement;
 }
 
 interface TestButtonComponent {
   readonly buttonEl: HTMLButtonElement;
-  simulateClick__: () => void;
+  readonly simulateClick__: () => void;
 }
 
 const modals: ModalProbe[] = [];

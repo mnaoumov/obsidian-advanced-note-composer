@@ -33,8 +33,8 @@ interface StubActiveSourceEditorResult {
 }
 
 interface TestableHandler {
-  canExecute: () => boolean;
-  execute: () => void;
+  readonly canExecute: () => boolean;
+  readonly execute: () => void;
   readonly id: string;
   readonly name: string;
 }

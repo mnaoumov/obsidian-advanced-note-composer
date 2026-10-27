@@ -14,27 +14,29 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MergeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MergeSettings;
 }
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  items: MenuItemLike[];
+  readonly items: MenuItemLike[];
 }
 
 interface MergeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
-  settings: MergeSettings;
+  readonly editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
+  readonly settings: MergeSettings;
 }
 
 describe('merge multiple selected files into one file (issue #92)', () => {

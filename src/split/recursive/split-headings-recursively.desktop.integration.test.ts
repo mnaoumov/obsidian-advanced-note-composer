@@ -28,21 +28,25 @@ const TEMPLATE_SOURCE_PATH = 'split-headings-recursively-template-source.md';
 // renders as a CodeMirror code highlighter, so driving it from the DOM is not practical) — the same walker
 // `exclude-paths-typing.desktop.integration.test.ts` and `merge-folder-skips-ignored…` use.
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: TemplateSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: TemplateSettings;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
-  settings: TemplateSettings;
+  readonly editAndSave: (editor: (settings: TemplateSettings) => void) => Promise<void>;
+  readonly settings: TemplateSettings;
 }
 
 interface TemplateSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitHeadingsAutomatically: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
-  splitExcludePaths: string[];
+  readonly splitExcludePaths: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   splitTemplate: string;
 }
 

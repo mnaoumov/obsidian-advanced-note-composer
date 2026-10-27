@@ -49,11 +49,13 @@ interface MergeSettings {
   /**
    * Off, so the merge runs without a confirmation dialog.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 
   /**
    * The feature under test (issue #215).
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenFirstNoteAfterMergingFolder: boolean;
 }
 
@@ -64,11 +66,13 @@ interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   eventRef?: EventRef;
 
   /**
    * The settings as they were, to restore in the shared vault.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   originalSettings?: MergeSettings;
 }
 

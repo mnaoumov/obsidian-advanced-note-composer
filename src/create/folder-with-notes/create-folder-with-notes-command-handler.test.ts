@@ -47,9 +47,9 @@ interface CapturedConfirmParams {
 }
 
 interface HandlerContext {
-  editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
-  handler: Testable;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
+  readonly handler: Testable;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 /**
@@ -60,20 +60,20 @@ interface HandlerContext {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
-  canExecute: () => boolean;
-  canExecuteFolder: (folder: TFolder) => boolean;
-  execute: () => Promise<void>;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecute: () => boolean;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly execute: () => Promise<void>;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
-  validateTypedNoteName: (params: ValidateTypedNoteNameParams) => Promise<MaybeReturn<string>>;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly validateTypedNoteName: (params: ValidateTypedNoteNameParams) => Promise<MaybeReturn<string>>;
 }
 
 interface ValidateTypedNoteNameParams {

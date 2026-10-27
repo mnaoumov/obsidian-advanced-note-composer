@@ -21,18 +21,23 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MinimizeButtonSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MinimizeButtonSettings;
 }
 
 interface MinimizeButtonSettings {
-  newFolderContentTemplate: string;
-  newFolderNameTemplate: string;
+  readonly newFolderContentTemplate: string;
+  readonly newFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeFlattening: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldRunTemplaterOnDestinationFile: boolean;
 }
 
@@ -53,13 +58,13 @@ interface ModalProbeResult {
 }
 
 interface PickerState {
-  hasPromptInput: boolean;
-  minimizeButtonCount: number;
+  readonly hasPromptInput: boolean;
+  readonly minimizeButtonCount: number;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MinimizeButtonSettings) => void) => Promise<void>;
-  settings: MinimizeButtonSettings;
+  readonly editAndSave: (editor: (settings: MinimizeButtonSettings) => void) => Promise<void>;
+  readonly settings: MinimizeButtonSettings;
 }
 
 describe('minimize button', () => {

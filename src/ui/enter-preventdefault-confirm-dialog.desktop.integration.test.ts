@@ -15,6 +15,7 @@ import { findSettingItemInObsidian } from '../settings/settings-tab-navigation.t
  * has had its turn with it.
  */
 interface CapturedKeyboardEvent {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value: KeyboardEvent | null;
 }
 

@@ -44,16 +44,19 @@ interface MergeSettings {
   /**
    * `Delete`, so the emptied folder disappearing is the post-commit signal.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   emptyFolderBehaviorAfterMergingFolder: string;
 
   /**
    * Off, so the merge runs without a confirmation dialog.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 
   /**
    * The feature under test (issue #212).
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterMergingFolderIntoFile: boolean;
 }
 
@@ -64,11 +67,13 @@ interface SuiteContext extends MergeSuiteStallContext {
   /**
    * The recorder's registration, so cleanup can take it back off.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   eventRef?: EventRef;
 
   /**
    * The settings as they were, to restore in the shared vault.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   originalSettings?: MergeSettings;
 }
 

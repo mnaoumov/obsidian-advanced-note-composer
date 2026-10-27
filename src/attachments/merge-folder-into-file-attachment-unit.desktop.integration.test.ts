@@ -17,9 +17,9 @@ const PLUGIN_ID = 'advanced-note-composer';
 const PLUGIN_NAME = 'Advanced Note Composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MergeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MergeSettings;
 }
 
 interface IsAttachmentUnitFolderParamsLike {
@@ -27,22 +27,26 @@ interface IsAttachmentUnitFolderParamsLike {
 }
 
 interface MenuItemLike {
-  dom?: HTMLElement;
-  section?: string;
+  readonly dom?: HTMLElement;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface MergeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   emptyFolderBehaviorAfterMergingFolder: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldMoveAttachmentsWhenMergingFolder: boolean;
 }
 
 interface ObsidianLibStateLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -50,24 +54,28 @@ interface ObsidianLibStateLike {
  * The slice of the shared plugin API registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   records?: Record<string, PublishedPluginApiRecordLike[]>;
-  subscribers?: (() => void)[];
+  readonly subscribers?: (() => void)[];
 }
 
 interface PluginApiRegistryWrapperLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value?: PluginApiRegistryLike;
 }
 
 interface PublishedPluginApiRecordLike {
-  api: object;
-  apiVersion: string;
-  contract: Record<string, object>;
+  readonly api: object;
+  readonly apiVersion: string;
+  readonly contract: Record<string, object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isRevoked: boolean;
-  pluginId: string;
+  readonly pluginId: string;
 }
 
 /**
@@ -80,8 +88,8 @@ interface ResolutionParamsLike {
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
-  settings: MergeSettings;
+  readonly editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
+  readonly settings: MergeSettings;
 }
 
 /**

@@ -22,13 +22,13 @@ import {
 } from './name-transform.ts';
 
 interface CreateAppOverrides {
-  files: Record<string, string>;
+  readonly files: Record<string, string>;
 }
 
 interface FixOverrides {
-  fileName: string;
-  nameTransformTemplate?: string;
-  shouldReplaceInvalidCharacters?: boolean;
+  readonly fileName: string;
+  readonly nameTransformTemplate?: string;
+  readonly shouldReplaceInvalidCharacters?: boolean;
 }
 
 /**
@@ -39,12 +39,12 @@ interface FixOverrides {
  * assign over `app.plugins` any more.
  */
 interface PluginsRegistryTestable {
-  registerPlugin__: (id: string, plugin: unknown) => void;
+  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface TemplaterMock {
-  createRunningConfig: Mock;
-  parseTemplate: Mock;
+  readonly createRunningConfig: Mock;
+  readonly parseTemplate: Mock;
 }
 
 /**

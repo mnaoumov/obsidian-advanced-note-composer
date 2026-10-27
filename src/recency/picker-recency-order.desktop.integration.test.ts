@@ -33,24 +33,26 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: PickerRecencySettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: PickerRecencySettings;
 }
 
 interface MenuItemLike {
-  callback?: () => void;
-  dom?: HTMLElement;
-  section?: string;
+  readonly callback?: () => void;
+  readonly dom?: HTMLElement;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface PickerRecencySettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pickerRecencyOrder: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMovingFolder: boolean;
 }
 
@@ -65,8 +67,8 @@ interface ProbeResult {
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: PickerRecencySettings) => void) => Promise<void>;
-  settings: PickerRecencySettings;
+  readonly editAndSave: (editor: (settings: PickerRecencySettings) => void) => Promise<void>;
+  readonly settings: PickerRecencySettings;
 }
 
 describe('picker recency order (issue #248)', () => {

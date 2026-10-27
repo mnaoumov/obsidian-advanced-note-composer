@@ -9,12 +9,12 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 describe('rename folder', () => {

@@ -29,11 +29,11 @@ import { MENU_PLACEABLE_COMMANDS } from './menu-placeable-commands.ts';
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  items: MenuItemLike[];
+  readonly items: MenuItemLike[];
 }
 
 interface ProbeResult {

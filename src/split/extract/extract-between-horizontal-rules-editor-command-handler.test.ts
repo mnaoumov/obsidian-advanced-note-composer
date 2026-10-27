@@ -36,14 +36,14 @@ import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './extract-bet
 import { getSelectionBetweenHorizontalRules } from './horizontal-rules.ts';
 
 interface TestableHandler {
-  canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
-  executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
+  readonly canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  readonly executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToEditorMenu: (editor: Editor, context: MarkdownFileInfo) => boolean;
-  shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToEditorMenu: (editor: Editor, context: MarkdownFileInfo) => boolean;
+  readonly shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
 vi.mock('./horizontal-rules.ts', () => ({

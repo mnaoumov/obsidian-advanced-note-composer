@@ -9,8 +9,8 @@ import type { Selection } from '../../composers/composer-base.ts';
 import { extractFrontmatterSelection } from './frontmatter-selection.ts';
 
 interface ExtractionSummary {
-  extractedYaml: string;
-  remainingYaml: string;
+  readonly extractedYaml: string;
+  readonly remainingYaml: string;
 }
 
 const ALIASES_NOTE = [

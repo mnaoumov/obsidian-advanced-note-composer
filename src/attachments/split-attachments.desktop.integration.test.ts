@@ -19,18 +19,20 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: SplitAttachmentSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: SplitAttachmentSettings;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: SplitAttachmentSettings) => void) => Promise<void>;
-  settings: SplitAttachmentSettings;
+  readonly editAndSave: (editor: (settings: SplitAttachmentSettings) => void) => Promise<void>;
+  readonly settings: SplitAttachmentSettings;
 }
 
 interface SplitAttachmentSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldMoveAttachmentsWhenSplitting: boolean;
 }
 

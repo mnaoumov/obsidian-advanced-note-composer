@@ -25,27 +25,28 @@ const PLUGIN_ID = 'advanced-note-composer';
 const ALIASES_TEMPLATE = '{{safeFolderName}}\n{{parentFolder}} {{safeFolderName}}';
 
 interface AliasSettings {
-  defaultSplitTargetMode: string;
+  readonly defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   folderNoteAliasesTemplate: string;
 }
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: AliasSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: AliasSettings;
 }
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 }
 
 interface MenuLike {
-  items: MenuItemLike[];
+  readonly items: MenuItemLike[];
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: AliasSettings) => void) => Promise<void>;
-  settings: AliasSettings;
+  readonly editAndSave: (editor: (settings: AliasSettings) => void) => Promise<void>;
+  readonly settings: AliasSettings;
 }
 
 describe('rename folder with a multi-line aliases template (issue #294)', () => {

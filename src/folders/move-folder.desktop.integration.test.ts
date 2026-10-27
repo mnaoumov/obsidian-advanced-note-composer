@@ -17,18 +17,19 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MoveSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MoveSettings;
 }
 
 interface MoveSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMovingFolder: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MoveSettings) => void) => Promise<void>;
-  settings: MoveSettings;
+  readonly editAndSave: (editor: (settings: MoveSettings) => void) => Promise<void>;
+  readonly settings: MoveSettings;
 }
 
 describe('move folder to... (issue #73)', () => {

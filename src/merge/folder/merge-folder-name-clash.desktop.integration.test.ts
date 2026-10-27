@@ -18,21 +18,25 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: MergeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: MergeSettings;
 }
 
 interface MergeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   emptyFolderBehaviorAfterMergingFolder: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeFolderIntoFileLocation: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeFolderIntoFileNoteNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
-  settings: MergeSettings;
+  readonly editAndSave: (editor: (settings: MergeSettings) => void) => Promise<void>;
+  readonly settings: MergeSettings;
 }
 
 describe('merging a folder into a note whose name a merged note already uses (issue #186)', () => {

@@ -20,6 +20,7 @@ export interface HeadingNumbering {
    * Whether to number every heading. Mutable: the modal's `Number headings` checkbox flips it, and the
    * rows re-render from it.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The modal checkbox updates the numbering choice before rendering headings.
   shouldNumber: boolean;
 
   /**

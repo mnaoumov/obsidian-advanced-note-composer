@@ -16,19 +16,21 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: FrontmatterSelectionSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: FrontmatterSelectionSettings;
 }
 
 interface FrontmatterSelectionSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldExtractFrontmatterSelectionAsProperties: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: FrontmatterSelectionSettings) => void) => Promise<void>;
-  settings: FrontmatterSelectionSettings;
+  readonly editAndSave: (editor: (settings: FrontmatterSelectionSettings) => void) => Promise<void>;
+  readonly settings: FrontmatterSelectionSettings;
 }
 
 describe('extracting a properties selection (issue #183)', () => {

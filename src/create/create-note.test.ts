@@ -39,13 +39,13 @@ vi.mock('../settings/plugin-settings.ts', () => ({
 }));
 
 interface SettingsOverrides {
-  frontmatterTitleMode?: string;
-  nameTransformTemplate?: string;
-  numberedSplitNoteNameTemplate?: string;
-  replacement?: string;
-  shouldAddInvalidTitleToNoteAlias?: boolean;
-  shouldReplaceInvalidTitleCharacters?: boolean;
-  shouldTitleCaseCreatedNoteName?: boolean;
+  readonly frontmatterTitleMode?: string;
+  readonly nameTransformTemplate?: string;
+  readonly numberedSplitNoteNameTemplate?: string;
+  readonly replacement?: string;
+  readonly shouldAddInvalidTitleToNoteAlias?: boolean;
+  readonly shouldReplaceInvalidTitleCharacters?: boolean;
+  readonly shouldTitleCaseCreatedNoteName?: boolean;
 }
 
 function createMockApp(createdFile: TFile): App {

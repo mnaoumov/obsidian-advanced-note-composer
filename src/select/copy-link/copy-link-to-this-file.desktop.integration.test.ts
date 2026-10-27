@@ -9,6 +9,7 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface CopyState {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   copied: null | string;
 }
 

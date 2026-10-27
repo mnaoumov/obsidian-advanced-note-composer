@@ -13,25 +13,25 @@ import {
 const PLUGIN_NAME = 'Advanced Note Composer';
 
 interface MenuItemLike {
-  dom?: HTMLElement;
+  readonly dom?: HTMLElement;
 
   /**
    * The menu section, which every command handler sets to the plugin's name. Obsidian core contributes
    * folder-menu items of its own, so a title alone does not identify ours.
    */
-  section?: string;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface MenuProbe {
-  hasItemForNoteAndAttachment: boolean;
-  hasItemForSingleNote: boolean;
-  hasItemForTwoNotes: boolean;
-  hasItemForTwoNotesAcrossSubFolder: boolean;
+  readonly hasItemForNoteAndAttachment: boolean;
+  readonly hasItemForSingleNote: boolean;
+  readonly hasItemForTwoNotes: boolean;
+  readonly hasItemForTwoNotesAcrossSubFolder: boolean;
 }
 
 /**

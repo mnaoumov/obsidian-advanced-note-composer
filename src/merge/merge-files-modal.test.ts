@@ -29,8 +29,8 @@ vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
 }));
 
 interface MockPlugin {
-  app: App;
-  pluginSettingsComponent: PluginSettingsComponent;
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 interface MockPluginOptions {

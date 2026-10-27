@@ -14,26 +14,28 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: LocationSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: LocationSettings;
 }
 
 interface LocationProbe {
-  besideFolderPath: null | string;
-  defaultNewNoteLocationPath: null | string;
-  insideFolderPath: null | string;
-  mergedFolderSurvivesInsideMode: boolean;
+  readonly besideFolderPath: null | string;
+  readonly defaultNewNoteLocationPath: null | string;
+  readonly insideFolderPath: null | string;
+  readonly mergedFolderSurvivesInsideMode: boolean;
 }
 
 interface LocationSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeFolderIntoFileLocation: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: LocationSettings) => void) => Promise<void>;
-  settings: LocationSettings;
+  readonly editAndSave: (editor: (settings: LocationSettings) => void) => Promise<void>;
+  readonly settings: LocationSettings;
 }
 
 /**

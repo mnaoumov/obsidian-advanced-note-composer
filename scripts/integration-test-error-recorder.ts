@@ -33,11 +33,13 @@ interface ErrorRecorder {
   /**
    * The errors recorded since the current test started.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Operation state is reassigned during the existing lifecycle.
   entries: string[];
 
   /**
    * When the current test started, as `performance.now()`, so each entry says how far into the test it came.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Operation state is reassigned during the existing lifecycle.
   startTime: number;
 }
 
@@ -48,6 +50,7 @@ interface ErrorRecorderHost {
   /**
    * Absent until the first test of the run installs it; the instance outlives every file after that.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Operation state is reassigned during the existing lifecycle.
   __advancedNoteComposerErrorRecorder?: ErrorRecorder;
 }
 

@@ -72,11 +72,13 @@ export interface MergeSuiteStallContext {
   /**
    * Every notice that appeared since the notice recorder was installed, when the suite installs one.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Integration suites install and replace their notice and navigation recordings.
   noticeLog?: NoticeLogEntryInObsidian[];
 
   /**
    * Every path the active leaf visited since the activation recorder was installed.
    */
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Integration suites install and replace their notice and navigation recordings.
   recording?: string[];
 }
 
@@ -89,22 +91,22 @@ interface MergeStallSettings {
   /**
    * What happens to the emptied folder, which is the post-commit signal two of these suites wait on.
    */
-  emptyFolderBehaviorAfterMergingFolder: string;
+  readonly emptyFolderBehaviorAfterMergingFolder: string;
 
   /**
    * The one that parks a merge on a dialog forever when it is unexpectedly on.
    */
-  shouldAskBeforeMerging: boolean;
+  readonly shouldAskBeforeMerging: boolean;
 
   /**
    * Whether a folder merge opens the destination's first note afterwards.
    */
-  shouldOpenFirstNoteAfterMergingFolder: boolean;
+  readonly shouldOpenFirstNoteAfterMergingFolder: boolean;
 
   /**
    * Whether a folder-contents merge opens the note it produced afterwards.
    */
-  shouldOpenNoteAfterMergingFolderIntoFile: boolean;
+  readonly shouldOpenNoteAfterMergingFolderIntoFile: boolean;
 }
 
 /* v8 ignore start -- Integration-only: it drives a live Obsidian, and is covered by the suites that use it. */

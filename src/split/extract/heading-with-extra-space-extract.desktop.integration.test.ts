@@ -28,9 +28,9 @@ const SOURCE_CONTENT = `##  ${HEADING_TEXT}\n- first bullet\n    - indented bull
 const SPLIT_TEMPLATE = '> [!bc]\n> up:: [[{{fromTitle}}]]\n#inbox\n\n {{content}}';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExtractSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExtractSettings;
 }
 
 interface ExtractResult {
@@ -40,17 +40,23 @@ interface ExtractResult {
 }
 
 interface ExtractSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldChooseFolderBeforeNameWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   splitTemplate: string;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExtractSettings) => void) => Promise<void>;
-  settings: ExtractSettings;
+  readonly editAndSave: (editor: (settings: ExtractSettings) => void) => Promise<void>;
+  readonly settings: ExtractSettings;
 }
 
 function expectExtracted(result: ExtractResult): void {

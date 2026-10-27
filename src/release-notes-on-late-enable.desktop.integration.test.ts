@@ -11,6 +11,7 @@ interface ReleaseNotesPluginView {
 }
 
 interface ReleaseNotesSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   releaseNotesShown: readonly string[];
 }
 

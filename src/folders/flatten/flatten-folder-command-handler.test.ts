@@ -63,23 +63,23 @@ interface CapturedConfirmParams {
  * flatten variant became its own command (issue #177).
  */
 interface CreateHandlerOverrides extends Partial<PluginSettings> {
-  flattenMode?: FlattenMode;
+  readonly flattenMode?: FlattenMode;
 }
 
 interface HandlerContext {
-  editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
-  handler: Testable;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
+  readonly handler: Testable;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface Testable {
-  canExecuteFolder: (folder: TFolder) => boolean;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 // UI-rendering helpers used only by notices — stub their return so link rendering does not reach into

@@ -31,14 +31,15 @@ interface BackgroundClickResult {
 }
 
 interface BackgroundClickSettings {
-  newFolderNameTemplate: string;
+  readonly newFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeFlattening: boolean;
 }
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: BackgroundClickSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: BackgroundClickSettings;
 }
 
 interface EscapeCancelResult {
@@ -61,8 +62,8 @@ interface Point {
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: BackgroundClickSettings) => void) => Promise<void>;
-  settings: BackgroundClickSettings;
+  readonly editAndSave: (editor: (settings: BackgroundClickSettings) => void) => Promise<void>;
+  readonly settings: BackgroundClickSettings;
 }
 
 describe('modal background click', () => {

@@ -58,14 +58,14 @@ async function runExtract(): Promise<ExtractResult> {
       const targetPath = `${targetName}.md`;
 
       interface SettingsCarrier {
-        editAndSave: (editor: (settings: Record<string, unknown>) => void) => Promise<void>;
-        settings: Record<string, unknown>;
+        readonly editAndSave: (editor: (settings: Record<string, unknown>) => void) => Promise<void>;
+        readonly settings: Record<string, unknown>;
       }
 
       interface ComponentTreeNode {
-        _children?: ComponentTreeNode[];
-        editAndSave?: unknown;
-        settings?: Record<string, unknown>;
+        readonly _children?: ComponentTreeNode[];
+        readonly editAndSave?: unknown;
+        readonly settings?: Record<string, unknown>;
       }
 
       const CHANGED_SETTINGS: Record<string, unknown> = {

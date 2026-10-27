@@ -16,18 +16,19 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: FlattenSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: FlattenSettings;
 }
 
 interface FlattenSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeFlattening: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: FlattenSettings) => void) => Promise<void>;
-  settings: FlattenSettings;
+  readonly editAndSave: (editor: (settings: FlattenSettings) => void) => Promise<void>;
+  readonly settings: FlattenSettings;
 }
 
 describe('flatten folder (issue #105)', () => {

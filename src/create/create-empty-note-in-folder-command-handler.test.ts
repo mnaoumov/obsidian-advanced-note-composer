@@ -35,15 +35,15 @@ import { CreateEmptyNoteInFolderCommandHandler } from './create-empty-note-in-fo
 import { createNoteFromTypedName } from './create-note.ts';
 
 interface TestableHandler {
-  canExecute: () => boolean;
-  canExecuteFolder: (folder: TFolder) => boolean;
-  execute: () => Promise<void>;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecute: () => boolean;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly execute: () => Promise<void>;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 vi.mock('@mnaoumov/typescript-lib/html-element', () => ({

@@ -35,19 +35,19 @@ import { SwapFileCommandHandler } from './swap-file-command-handler.ts';
 import { selectFileForSwap } from './swap-file-modal.ts';
 
 interface HandlerContext {
-  handler: Testable;
-  hide: MockInstance;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly handler: Testable;
+  readonly hide: MockInstance;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface Testable {
-  canExecuteFile: (file: TFile) => boolean;
-  executeFile: (file: TFile) => Promise<void>;
+  readonly canExecuteFile: (file: TFile) => boolean;
+  readonly executeFile: (file: TFile) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFileMenu: (params: FileCommandHandlerShouldAddToFileMenuParams) => boolean;
 }
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does

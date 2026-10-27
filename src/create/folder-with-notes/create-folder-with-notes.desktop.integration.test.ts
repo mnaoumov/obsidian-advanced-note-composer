@@ -13,23 +13,29 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: CreateFolderSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: CreateFolderSettings;
 }
 
 interface CreateFolderSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderContentTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   newFolderNameTemplate: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOpenNoteAfterCreatingFolder: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldRunTemplaterOnDestinationFile: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldTitleCaseCreatedFolderName: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
-  settings: CreateFolderSettings;
+  readonly editAndSave: (editor: (settings: CreateFolderSettings) => void) => Promise<void>;
+  readonly settings: CreateFolderSettings;
 }
 
 describe('create folder with notes... (issues #191, #194, #195, #219, #233)', () => {

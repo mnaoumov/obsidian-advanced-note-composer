@@ -17,15 +17,16 @@ const PLUGIN_ID = 'advanced-note-composer';
 const ADVANCED_METADATA_CACHE_PLUGIN_ID = 'advanced-metadata-cache';
 
 interface HeadingTimesLike {
-  created: null | number;
-  heading: string;
-  level: number;
-  line: number;
-  modified: null | number;
-  seen: null | number;
+  readonly created: null | number;
+  readonly heading: string;
+  readonly level: number;
+  readonly line: number;
+  readonly modified: null | number;
+  readonly seen: null | number;
 }
 
 interface ObsidianLibStateLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   pluginApiRegistry?: PluginApiRegistryWrapperLike;
 }
 
@@ -33,24 +34,28 @@ interface ObsidianLibStateLike {
  * The slice of the `@mnaoumov/obsidian-lib` cross-plugin registry the stand-in is published into.
  */
 interface PluginApiRegistryHostLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   __obsidianLib?: ObsidianLibStateLike;
 }
 
 interface PluginApiRegistryLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   records?: Record<string, PublishedPluginApiRecordLike[]>;
-  subscribers?: (() => void)[];
+  readonly subscribers?: (() => void)[];
 }
 
 interface PluginApiRegistryWrapperLike {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   value?: PluginApiRegistryLike;
 }
 
 interface PublishedPluginApiRecordLike {
-  api: object;
-  apiVersion: string;
-  contract: Record<string, object>;
+  readonly api: object;
+  readonly apiVersion: string;
+  readonly contract: Record<string, object>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   isRevoked: boolean;
-  pluginId: string;
+  readonly pluginId: string;
 }
 
 describe('reorder headings: sort (issue #306)', () => {

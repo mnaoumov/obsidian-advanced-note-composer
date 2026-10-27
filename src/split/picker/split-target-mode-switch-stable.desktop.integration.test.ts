@@ -29,29 +29,35 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: SwitchSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: SwitchSettings;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: SwitchSettings) => void) => Promise<void>;
-  settings: SwitchSettings;
+  readonly editAndSave: (editor: (settings: SwitchSettings) => void) => Promise<void>;
+  readonly settings: SwitchSettings;
 }
 
 interface SurfaceMeasure {
-  description: string;
-  inputTop: number;
-  minimizeButtonCount: number;
-  switchRowHeight: number;
+  readonly description: string;
+  readonly inputTop: number;
+  readonly minimizeButtonCount: number;
+  readonly switchRowHeight: number;
 }
 
 interface SwitchSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskForTargetFolderWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldChooseFolderBeforeNameWhenSplitting: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitHeadingsAutomatically: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldSplitIntoFolder: boolean;
 }
 

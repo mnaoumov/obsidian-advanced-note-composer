@@ -20,35 +20,37 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: OrderingSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: OrderingSettings;
 }
 
 interface MenuItemLike {
-  callback?: () => void;
-  dom?: HTMLElement;
+  readonly callback?: () => void;
+  readonly dom?: HTMLElement;
 
   /**
    * The menu section, which every command handler sets to the plugin's name. Obsidian core contributes a
    * folder-menu item of its own, so the title alone does not identify ours.
    */
-  section?: string;
+  readonly section?: string;
 }
 
 interface MenuLike {
-  hide: () => void;
-  items: MenuItemLike[];
+  readonly hide: () => void;
+  readonly items: MenuItemLike[];
 }
 
 interface OrderingSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAddCommandsToSubmenu: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMovingFolder: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: OrderingSettings) => void) => Promise<void>;
-  settings: OrderingSettings;
+  readonly editAndSave: (editor: (settings: OrderingSettings) => void) => Promise<void>;
+  readonly settings: OrderingSettings;
 }
 
 describe('recent target ordering (issues #206, #256)', () => {

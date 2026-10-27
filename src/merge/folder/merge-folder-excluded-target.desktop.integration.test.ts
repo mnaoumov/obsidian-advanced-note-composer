@@ -18,23 +18,29 @@ import {
 const PLUGIN_ID = 'advanced-note-composer';
 
 interface ComponentTreeNode {
-  _children?: ComponentTreeNode[];
-  editAndSave?: unknown;
-  settings?: ExcludedMergeSettings;
+  readonly _children?: ComponentTreeNode[];
+  readonly editAndSave?: unknown;
+  readonly settings?: ExcludedMergeSettings;
 }
 
 interface ExcludedMergeSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   mergeExcludePaths: string[];
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAlwaysMergeExcludedItems: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldAskBeforeMerging: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldIncludeChildFoldersWhenMergingByDefault: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldIncludeParentFoldersWhenMergingByDefault: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldOfferExcludedPathsAsMergeDestinations: boolean;
 }
 
 interface SettingsCarrier {
-  editAndSave: (editor: (settings: ExcludedMergeSettings) => void) => Promise<void>;
-  settings: ExcludedMergeSettings;
+  readonly editAndSave: (editor: (settings: ExcludedMergeSettings) => void) => Promise<void>;
+  readonly settings: ExcludedMergeSettings;
 }
 
 describe('merging into an excluded target folder', () => {

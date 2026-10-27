@@ -35,18 +35,18 @@ import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
 
 interface HandlerContext {
-  handler: Testable;
-  showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
+  readonly handler: Testable;
+  readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
 }
 
 interface Testable {
-  canExecuteFolder: (folder: TFolder) => boolean;
-  executeFolder: (folder: TFolder) => Promise<void>;
+  readonly canExecuteFolder: (folder: TFolder) => boolean;
+  readonly executeFolder: (folder: TFolder) => Promise<void>;
   readonly icon: string;
   readonly id: string;
   readonly name: string;
-  shouldAddCommandToSubmenu: () => boolean;
-  shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
+  readonly shouldAddCommandToSubmenu: () => boolean;
+  readonly shouldAddToFolderMenu: (params: FolderCommandHandlerShouldAddToFolderMenuParams) => boolean;
 }
 
 // UI-rendering helpers used only by the ignored-path notice — stub their return so link rendering does
