@@ -722,6 +722,43 @@ describe('mergeFrontmatter strategies', () => {
 
     // The original key does not survive the replace strategy.
     expect(seeded['existingKey']).toBeUndefined();
+    expect(seeded['newKey']).toBe('new');
+  });
+
+  it('should preserve existing merge records when both frontmatters need a separate record', async () => {
+    const seeded: GenericObject = {};
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({ frontmatterMergeStrategy: FrontmatterMergeStrategy.PreserveBothOriginalAndNewFrontmatter });
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ __merged: { previous: 'record' } });
+
+    await composer.callInsertIntoTargetFile('---\nsourceOnly: incoming\n---\ncontent');
+
+    expect(seeded['__merged']).toEqual({ previous: 'record' });
+    expect(seeded['__merged1']).toEqual(expect.objectContaining({ sourceOnly: 'incoming' }));
+  });
+
+  it.each(['{{content}}', '---\n---\n{{content}}'])('should retain incoming properties with an empty template frontmatter: %s', async (template) => {
+    const seeded: GenericObject = { targetOnly: 'original' };
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({ frontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    composer.templateToReturn = template;
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ targetOnly: 'original' });
+
+    await composer.callInsertIntoTargetFile('---\nsourceOnly: incoming\n---\ncontent');
+
+    expect(seeded).toEqual({ sourceOnly: 'incoming' });
+  });
+
+  it('should let populated template properties replace incoming properties', async () => {
+    const seeded: GenericObject = { targetOnly: 'original' };
+    stubProcessFrontMatter(seeded);
+    const composer = createComposer({ frontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter });
+    composer.templateToReturn = '---\ntemplateOnly: template\n---\n{{content}}';
+    vi.mocked(getFrontmatterSafe).mockResolvedValue({ targetOnly: 'original' });
+
+    await composer.callInsertIntoTargetFile('---\nsourceOnly: incoming\n---\ncontent');
+
+    expect(seeded).toEqual({ templateOnly: 'template' });
   });
 
   it('should skip the frontmatter merge entirely for KeepOriginalFrontmatter', async () => {

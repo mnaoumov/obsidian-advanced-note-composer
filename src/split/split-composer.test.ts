@@ -2074,6 +2074,17 @@ describe('splitFile frontmatter-only extract', () => {
     expect(targetBody).toContain('target body');
   });
 
+  it('should retain extracted properties with Replace when no template is applied', async () => {
+    await createFrontmatterSourceComposer({
+      editor: createEditorDouble(),
+      settingsOverrides: { defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.ReplaceWithNewFrontmatter }
+    }).splitFile();
+
+    const targetContent = await app.vault.adapter.read('target.md');
+    expect(targetContent).toContain('alpha');
+    expect(targetContent.slice(getFrontMatterInfo(targetContent).contentStart)).not.toContain('alpha');
+  });
+
   it('should offer the notice link no jump, having written no body to jump to (issue #232)', async () => {
     await createFrontmatterSourceComposer({ editor: createEditorDouble() }).splitFile();
 
