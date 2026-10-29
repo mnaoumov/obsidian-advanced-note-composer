@@ -232,16 +232,16 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
   await editBacklinks({
     abortSignal,
     app,
-    linkConverter: (link) => {
-      const rewritten = rewriteHeadingLink({ link, newHeading, oldHeading });
+    pathOrFile: notePathOrFile,
+    pluginNoticeComponent,
+    referenceConverter: (reference) => {
+      const rewritten = rewriteHeadingLink({ link: reference, newHeading, oldHeading });
       if (rewritten === undefined) {
         return;
       }
       rewrittenLinks.push(rewritten);
       return rewritten;
     },
-    pathOrFile: notePathOrFile,
-    pluginNoticeComponent,
     resourceLockComponent
   });
 

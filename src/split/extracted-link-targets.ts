@@ -3,6 +3,7 @@ import type {
   Pos
 } from 'obsidian';
 
+import { isPositionInOffsetRange } from '@mnaoumov/obsidian-lib/position';
 import { resolveSubpath } from 'obsidian';
 
 /**
@@ -74,5 +75,5 @@ export function buildExtractedSubpathPredicate(params: BuildExtractedSubpathPred
 }
 
 function isInsideRanges(position: Pos, ranges: readonly ExtractedRange[]): boolean {
-  return ranges.some((range) => range.startOffset <= position.start.offset && position.end.offset <= range.endOffset);
+  return ranges.some((range) => isPositionInOffsetRange(position, range));
 }

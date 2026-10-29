@@ -183,8 +183,10 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
   await editBacklinks({
     abortSignal: params.abortSignal,
     app: params.app,
-    linkConverter: (link) => {
-      const { linkPath, subpath } = splitSubpath(link.link);
+    pathOrFile: params.path,
+    pluginNoticeComponent: params.pluginNoticeComponent,
+    referenceConverter: (reference) => {
+      const { linkPath, subpath } = splitSubpath(reference.link);
       const newSubpath = resolveReorderedHeadingSubpath({
         newHeadingPaths,
         oldHeadingPaths,
@@ -197,12 +199,10 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
         return;
       }
 
-      const rewritten = replaceLinkUrl(link, linkPath + newSubpath);
+      const rewritten = replaceLinkUrl(reference, linkPath + newSubpath);
       rewrittenLinks.push(rewritten);
       return rewritten;
     },
-    pathOrFile: params.path,
-    pluginNoticeComponent: params.pluginNoticeComponent,
     resourceLockComponent: params.resourceLockComponent
   });
 

@@ -9,9 +9,9 @@ import type {
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import {
   convertLink,
-  editLinks,
-  editLinksInContent,
-  extractLinkFile,
+  editReferences,
+  editReferencesInContent,
+  extractReferenceFile,
   splitSubpath,
   updateLink
 } from '@mnaoumov/obsidian-lib/link';
@@ -21,6 +21,7 @@ import {
   getCacheSafe,
   getFrontmatterSafe
 } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { isPositionInOffsetRange } from '@mnaoumov/obsidian-lib/position';
 import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import { noop } from '@mnaoumov/typescript-lib/function';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
@@ -431,12 +432,14 @@ export abstract class ComposerBase {
 
       const linkJsons = backlinksToFix.get(backlinkPath) ?? [];
       let linkIndex = 0;
-      await editLinks({
+      await editReferences({
         abortSignal: this.abortController.signal,
         app: this.app,
-        linkConverter: (link) => {
+        pathOrFile: backlinkPath,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        referenceConverter: (reference) => {
           linkIndex++;
-          if (!linkJsons.includes(JSON.stringify(link))) {
+          if (!linkJsons.includes(JSON.stringify(reference))) {
             return;
           }
 
@@ -445,15 +448,13 @@ export abstract class ComposerBase {
 
           return updateLink({
             app: this.app,
-            link,
             newSourcePathOrFile: backlinkPath,
             newTargetPathOrFile: this.targetFile,
             oldTargetPathOrFile: this.sourceFile,
+            reference,
             shouldUpdateFileNameAlias: true
           });
         },
-        pathOrFile: backlinkPath,
-        pluginNoticeComponent: this.pluginNoticeComponent,
         resourceLockComponent: this.resourceLockComponent
       });
     }
@@ -723,12 +724,12 @@ export abstract class ComposerBase {
    */
   private async fixLinks(targetContentToInsert: string): Promise<string> {
     const isExtractedSubpath = await this.buildExtractedSubpathPredicate();
-    return await editLinksInContent({
+    return await editReferencesInContent({
       app: this.app,
       content: targetContentToInsert,
-      linkConverter: (link) => {
-        const { linkPath, subpath } = splitSubpath(link.link);
-        const linkedFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.sourceFile });
+      referenceConverter: (reference) => {
+        const { linkPath, subpath } = splitSubpath(reference.link);
+        const linkedFile = extractReferenceFile({ app: this.app, reference, sourcePathOrFile: this.sourceFile });
         if (linkedFile === this.sourceFile && isExtractedSubpath(subpath)) {
           if (linkPath === '') {
             return;
@@ -736,19 +737,19 @@ export abstract class ComposerBase {
 
           return updateLink({
             app: this.app,
-            link,
             newSourcePathOrFile: this.targetFile,
             newTargetPathOrFile: this.targetFile,
             oldSourcePathOrFile: this.sourceFile,
-            oldTargetPathOrFile: this.sourceFile
+            oldTargetPathOrFile: this.sourceFile,
+            reference
           });
         }
 
         return convertLink({
           app: this.app,
-          link,
           newSourcePathOrFile: this.targetFile,
-          oldSourcePathOrFile: this.sourceFile
+          oldSourcePathOrFile: this.sourceFile,
+          reference
         });
       }
     });
@@ -852,9 +853,7 @@ export abstract class ComposerBase {
   }
 
   private isSelected(position: Pos, selections: Selection[]): boolean {
-    return selections.some((selection) => {
-      return selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset;
-    });
+    return selections.some((selection) => isPositionInOffsetRange(position, selection));
   }
 
   private mergeFrontmatter(params: ComposerBaseMergeFrontmatterParams): Frontmatter {
