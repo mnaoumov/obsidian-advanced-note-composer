@@ -161,7 +161,7 @@ describe('updateHeadingBacklinks', () => {
     // The obsidian-test-mocks MetadataCache does not implement `getBacklinksForFile`, so discovery is
     // driven from the real parsed link cache of the linking note (only its target-referencing links).
     // The rewrite path
-    // (editLinks + rewriteHeadingLink + the real files) stays real; `[[other]]` is intentionally left
+    // (editReferences + rewriteHeadingLink + the real files) stays real; `[[other]]` is intentionally left
     // out so the converter's "reference not in the backlink set" branch is exercised.
     const noteFile = ensureNonNullable(app.vault.getFileByPath('note.md'));
     const targetLinks = (app.metadataCache.getFileCache(noteFile)?.links ?? []).filter((link) => link.link.startsWith('target'));

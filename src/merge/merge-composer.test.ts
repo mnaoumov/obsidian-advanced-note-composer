@@ -48,7 +48,7 @@ interface AbortableComposer {
 
 // Return-value stubs for the two metadata reads test-mocks does not fully model: the backlink index
 // (getBacklinksForFileSafe) and frontmatter extraction (getFrontmatterSafe). getCacheSafe runs for
-// REAL against test-mocks' synchronous indexer, so editLinks sees the target's links; the vault, lock,
+// REAL against test-mocks' synchronous indexer, so editReferences sees the target's links; the vault, lock,
 // transaction, and link rewriting are all real too.
 vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
   ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>(),

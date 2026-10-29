@@ -17,6 +17,7 @@ import {
   isMarkdownFile,
   isTreatedAsAttachment
 } from '@mnaoumov/obsidian-lib/file-system';
+import { isPositionInOffsetRange } from '@mnaoumov/obsidian-lib/position';
 import {
   dirname,
   join
@@ -646,7 +647,7 @@ function isAttachmentFile(file: TFile, attachmentExtensions: readonly string[]):
 function isSelected(position: Pos, selections: readonly Selection[]): boolean {
   // Wholly inside, matching `ComposerBase`'s own rule: a reference straddling the boundary is not part of
   // what gets extracted, so the note keeps pointing at it.
-  return selections.some((selection) => selection.startOffset <= position.start.offset && position.end.offset <= selection.endOffset);
+  return selections.some((selection) => isPositionInOffsetRange(position, selection));
 }
 
 function normalizeFolderPath(folderPath: string | undefined): string {

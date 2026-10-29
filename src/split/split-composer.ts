@@ -8,8 +8,8 @@ import type {
 } from 'obsidian';
 
 import {
-  editLinksInContent,
-  extractLinkFile,
+  editReferencesInContent,
+  extractReferenceFile,
   splitSubpath,
   updateLink
 } from '@mnaoumov/obsidian-lib/link';
@@ -736,23 +736,23 @@ export class SplitComposer extends ComposerBase {
     });
     const changes: EditorChange[] = [];
 
-    await editLinksInContent({
+    await editReferencesInContent({
       app: this.app,
       content: this.editor.getValue(),
-      linkConverter: (link) => {
+      referenceConverter: (reference) => {
         // A frontmatter link carries no position in the body, so there is nothing for the editor to replace.
-        if (!isReferenceCache(link)) {
+        if (!isReferenceCache(reference)) {
           return;
         }
 
-        const startOffset = link.position.start.offset;
-        const endOffset = link.position.end.offset;
+        const startOffset = reference.position.start.offset;
+        const endOffset = reference.position.end.offset;
         if (selectionRanges.some((range) => range.startOffset < endOffset && startOffset < range.endOffset)) {
           return;
         }
 
-        const linkedFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.sourceFile });
-        if (linkedFile !== this.sourceFile || !isExtractedSubpath(splitSubpath(link.link).subpath)) {
+        const linkedFile = extractReferenceFile({ app: this.app, reference, sourcePathOrFile: this.sourceFile });
+        if (linkedFile !== this.sourceFile || !isExtractedSubpath(splitSubpath(reference.link).subpath)) {
           return;
         }
 
@@ -760,10 +760,10 @@ export class SplitComposer extends ComposerBase {
           from: this.editor.offsetToPos(startOffset),
           text: updateLink({
             app: this.app,
-            link,
             newSourcePathOrFile: this.sourceFile,
             newTargetPathOrFile: this.targetFile,
-            oldTargetPathOrFile: this.sourceFile
+            oldTargetPathOrFile: this.sourceFile,
+            reference
           }),
           to: this.editor.offsetToPos(endOffset)
         });

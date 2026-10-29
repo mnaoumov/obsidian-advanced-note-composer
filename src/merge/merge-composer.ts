@@ -2,8 +2,8 @@ import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/co
 import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 
 import {
-  editLinks,
-  extractLinkFile,
+  editReferences,
+  extractReferenceFile,
   updateLink
 } from '@mnaoumov/obsidian-lib/link';
 
@@ -182,12 +182,14 @@ export class MergeComposer extends ComposerBase {
     await super.fixBacklinks(params);
 
     let linkIndex = 0;
-    await editLinks({
+    await editReferences({
       abortSignal: this.abortController.signal,
       app: this.app,
-      linkConverter: (link): MaybeReturn<string> => {
+      pathOrFile: this.targetFile,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      referenceConverter: (reference): MaybeReturn<string> => {
         linkIndex++;
-        const linkFile = extractLinkFile({ app: this.app, link, sourcePathOrFile: this.targetFile });
+        const linkFile = extractReferenceFile({ app: this.app, reference, sourcePathOrFile: this.targetFile });
         if (linkFile !== this.sourceFile) {
           return;
         }
@@ -197,15 +199,13 @@ export class MergeComposer extends ComposerBase {
 
         return updateLink({
           app: this.app,
-          link,
           newSourcePathOrFile: this.targetFile,
           newTargetPathOrFile: this.targetFile,
           oldTargetPathOrFile: this.sourceFile,
+          reference,
           shouldUpdateFileNameAlias: true
         });
       },
-      pathOrFile: this.targetFile,
-      pluginNoticeComponent: this.pluginNoticeComponent,
       resourceLockComponent: this.resourceLockComponent
     });
   }
