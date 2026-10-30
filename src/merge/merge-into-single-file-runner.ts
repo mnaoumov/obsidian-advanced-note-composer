@@ -7,6 +7,7 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
@@ -260,6 +261,8 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           if (abortController.signal.aborted) {
             throw new Error('Merge into single file aborted.');
           }
+          // The merge does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+          reportBulkOperationProgress();
           const headingPlanEntry = headingPlanByPath.get(sourceFile.path);
           pendingHeadings.push(...headingPlanEntry?.headings ?? []);
           if (isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path)) {

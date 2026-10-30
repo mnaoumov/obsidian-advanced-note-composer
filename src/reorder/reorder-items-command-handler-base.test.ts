@@ -28,11 +28,13 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 import type { ReorderItemsCommandHandlerParams } from './reorder-items-command-handler-base.ts';
 import type { DidConfirmReorderModalParams } from './reorder-modal.ts';
 
+import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import { ReorderChildFoldersCommandHandler } from './reorder-child-folders-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './reorder-sibling-folders-command-handler.ts';
 
@@ -77,6 +79,7 @@ vi.mock('./reorder-modal.ts', () => ({
   })
 }));
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 let driveModal: ((params: DidConfirmReorderModalParams) => void) | null = null;
 let isConfirmed = true;
@@ -172,6 +175,8 @@ describe('ReorderChildFoldersCommandHandler', () => {
     await handler.executeFolder(getFolder('parent'));
 
     expect(getChildFolderNames('parent')).toEqual(['1. Beta', '2. Gamma', '3. Alpha']);
+    // The reorder is one bulk operation, committed under a summary naming the folder it renumbered.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Reorder the contents of parent']);
   });
 
   it('should number a folder that never carried an index', async () => {
@@ -652,8 +657,10 @@ function createChildHandler(settingsOverrides?: Partial<PluginSettings>): Handle
 }
 
 function createHandlerParams(showNotice: PluginNoticeComponent['showNotice'], settingsOverrides?: Partial<PluginSettings>): ReorderItemsCommandHandlerParams {
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   return {
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({

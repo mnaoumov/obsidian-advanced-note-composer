@@ -8,6 +8,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
@@ -15,6 +16,7 @@ import { isChildOrSelf } from '@mnaoumov/obsidian-lib/vault';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import { join } from '@mnaoumov/typescript-lib/path';
 
+import type { BulkOperationRunner } from '../../bulk-operations/bulk-operation-runner.ts';
 import type { MovedNameSequence } from '../../numbering/numbered-moved-name.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
@@ -64,6 +66,7 @@ interface FlattenFolderCommandHandlerConfirmFlattenParams {
 
 interface FlattenFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
 
   /**
   Which flatten this handler is. Registered once per {@link FlattenMode}.
@@ -167,6 +170,7 @@ const FLATTEN_CONFIRM_SUMMARIES: Record<FlattenMode, string> = {
  */
 export class FlattenFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly flattenMode: FlattenMode;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -180,6 +184,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.flattenMode = params.flattenMode;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
@@ -284,23 +289,27 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent
     });
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          await this.flattenImpl({
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
             abortController,
-            itemsToMove,
-            parentFolder,
-            vaultTransaction
-          });
-        },
-        lockTargets: [
-          { mode: 'subtree', pathOrFile: folder.path },
-          { mode: 'subtree', pathOrFile: parentFolder.path }
-        ],
-        operationName: 'Flatten folder',
-        resourceLockComponent: this.resourceLockComponent
+            app: this.app,
+            body: async (vaultTransaction) => {
+              await this.flattenImpl({
+                abortController,
+                itemsToMove,
+                parentFolder,
+                vaultTransaction
+              });
+            },
+            lockTargets: [
+              { mode: 'subtree', pathOrFile: folder.path },
+              { mode: 'subtree', pathOrFile: parentFolder.path }
+            ],
+            operationName: 'Flatten folder',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `${FLATTEN_COMMAND_DEFINITIONS[mode].name.replace(/\.\.\.$/, '')} ${folder.path} into ${parentFolder.path}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {
@@ -439,6 +448,8 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
        */
       const targetPath = getAvailablePathForAbstractFile(this.app, item, join(parentFolder.path, movedNameSequence.resolveName(item)));
       await vaultTransaction.rename(item, targetPath);
+      // The flatten does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+      reportBulkOperationProgress();
     }
   }
 

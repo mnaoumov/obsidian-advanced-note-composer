@@ -33,10 +33,12 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
+import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import { getSelectionUnderHeading } from '../../composers/composer-base.ts';
 import { InsertMode } from '../../composers/insert-mode.ts';
 import { CommandMenuPlacement } from '../../settings/plugin-settings.ts';
@@ -70,6 +72,7 @@ type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareFo
 
 interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunnerStub;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -87,6 +90,7 @@ interface TestableHandler {
   readonly shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
 let confirmResults: ConfirmDialogModalResult[] = [];
@@ -248,6 +252,7 @@ function createMockLeaf(): WorkspaceLeaf {
 }
 
 function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   return {
     app: strictProxy<App>({
       fileManager: strictProxy<FileManager>({
@@ -263,6 +268,7 @@ function createMockParams(options?: MockParamsOptions): SplitNoteByHeadingsRecur
         getLeaf: vi.fn().mockReturnValue(createMockLeaf())
       })
     }),
+    bulkOperationRunner: bulkOperationRunnerStub,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }), showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -708,6 +714,8 @@ describe('SplitNoteByHeadingsRecursivelyEditorCommandHandler', () => {
     expect(MockSplitComposer).toHaveBeenCalledTimes(3);
     // Both roots are named; `A/B/B.md` is only counted, because a deep tree cannot be listed in a notice.
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split note [test/note.md] into 3 note(s): [A/A.md], [C/C.md].');
+    // The whole run is one bulk operation, committed under a summary naming the note.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Split note recursively test/note.md']);
   });
 
   it('should defer the split template to every produced note, paired with the note it came out of (issue #172)', async () => {

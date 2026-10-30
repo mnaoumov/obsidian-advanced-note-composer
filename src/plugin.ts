@@ -1,4 +1,6 @@
 import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { UndoBulkOperationCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler';
+import { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
 import { TemplatesLanguageComponent } from '@mnaoumov/obsidian-lib/components/templates-language-component';
 import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
@@ -122,6 +124,19 @@ export class Plugin extends PluginBase {
     }));
     this.register(clearPendingTemplaterCursors);
 
+    // Records each folder-wide command and recursive split as git commits when the setting is on, so one
+    // `git revert` undoes one command. Read on every operation, so toggling the setting applies to the next.
+    function isBulkOperationCommitEnabled(): boolean {
+      return pluginSettingsComponent.settings.shouldCommitBulkOperations;
+    }
+    const bulkOperationCommitComponent = this.addChild(
+      new BulkOperationCommitComponent({
+        app: this.app,
+        isEnabled: isBulkOperationCommitEnabled,
+        pluginId: this.manifest.id,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      })
+    );
     // eslint-disable-next-line no-magic-numbers -- Self-descriptive magic numbers.
     const HEADING_LEVELS: Level[] = [1, 2, 3, 4, 5, 6];
     const resourceLockComponent = this.resourceLockComponent;
@@ -189,6 +204,7 @@ export class Plugin extends PluginBase {
     const buildSplitHeadingRecursivelyEditorCommandHandler = (): SplitHeadingRecursivelyEditorCommandHandler =>
       new SplitHeadingRecursivelyEditorCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
@@ -400,6 +416,7 @@ export class Plugin extends PluginBase {
       buildOpenSplitModalCommandHandler(),
       new MergeFolderCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
@@ -407,6 +424,7 @@ export class Plugin extends PluginBase {
       }),
       new MergeFolderIntoFileCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
@@ -420,6 +438,7 @@ export class Plugin extends PluginBase {
       }),
       new SwapFolderCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
@@ -442,6 +461,7 @@ export class Plugin extends PluginBase {
       ...FLATTEN_MODES.map((flattenMode) =>
         new FlattenFolderCommandHandler({
           app: this.app,
+          bulkOperationRunner: bulkOperationCommitComponent,
           flattenMode,
           pluginNoticeComponent: this.pluginNoticeComponent,
           pluginSettingsComponent,
@@ -450,6 +470,7 @@ export class Plugin extends PluginBase {
       ),
       new MoveFolderCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
@@ -462,6 +483,7 @@ export class Plugin extends PluginBase {
       }),
       new RenameFolderCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
@@ -475,15 +497,21 @@ export class Plugin extends PluginBase {
       buildReorderHeadingsEditorCommandHandler(),
       new ReorderSiblingFoldersCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
       }),
       new ReorderChildFoldersCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
+      }),
+      new UndoBulkOperationCommandHandler({
+        bulkOperationCommitComponent,
+        isEnabled: isBulkOperationCommitEnabled
       }),
       new OpenDemoVaultCommandHandler({
         app: this.app,
@@ -493,6 +521,7 @@ export class Plugin extends PluginBase {
       }),
       new SplitNoteByHeadingsRecursivelyEditorCommandHandler({
         app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,

@@ -33,10 +33,12 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
+import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import {
   getEnclosingHeadingLine,
   getSelectionUnderHeading
@@ -67,6 +69,7 @@ type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareFo
 
 interface SplitHeadingRecursivelyEditorCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunnerStub;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -83,6 +86,7 @@ interface TestableHandler {
   readonly shouldAddToViewportMenu: (view: MarkdownView, mode: string, source: string) => boolean;
 }
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
 
@@ -211,6 +215,7 @@ function createMockLeaf(): WorkspaceLeaf {
 }
 
 function createMockParams(options?: MockParamsOptions): SplitHeadingRecursivelyEditorCommandHandlerConstructorParams {
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   return {
     app: strictProxy<App>({
       fileManager: strictProxy<FileManager>({
@@ -224,6 +229,7 @@ function createMockParams(options?: MockParamsOptions): SplitHeadingRecursivelyE
         getLeaf: vi.fn().mockReturnValue(createMockLeaf())
       })
     }),
+    bulkOperationRunner: bulkOperationRunnerStub,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({}),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({
       showNotice: vi.fn().mockReturnValue({ hide: vi.fn() }),
@@ -441,6 +447,8 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     // The notice names the ROOT note only (issue #235): the grandchild is counted, and reached from inside
     // the note it was split out of.
     expect(getShownNoticeText(params.pluginNoticeComponent)).toBe('Split heading in [test/note.md] into 2 note(s): [test/B/B.md].');
+    // The whole run is one bulk operation, committed under a summary naming the heading and the note.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Split heading recursively B in test/note.md']);
   });
 
   it('should extract the chosen heading rather than the first one in the note', async () => {

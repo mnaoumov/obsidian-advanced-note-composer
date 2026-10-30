@@ -8,6 +8,7 @@ import type {
 
 import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 
+import type { BulkOperationRunner } from '../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 
 import { runLockedTransaction } from '../composers/locked-transaction.ts';
@@ -24,6 +25,7 @@ import { swap } from './swapper.ts';
 
 interface SwapFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -31,6 +33,7 @@ interface SwapFolderCommandHandlerConstructorParams {
 
 export class SwapFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -44,6 +47,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -87,24 +91,28 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent
     });
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          await swap({
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
+            abortController,
             app: this.app,
-            shouldSwapEntireFolderStructure: result.shouldSwapEntireFolderStructure,
-            sourceFile: folder,
-            targetFile: result.targetFolder,
-            vaultTransaction
-          });
-        },
-        lockTargets: [
-          { mode: 'subtree', pathOrFile: folder.path },
-          { mode: 'subtree', pathOrFile: result.targetFolder.path }
-        ],
-        operationName: 'Swap folders',
-        resourceLockComponent: this.resourceLockComponent
+            body: async (vaultTransaction) => {
+              await swap({
+                app: this.app,
+                shouldSwapEntireFolderStructure: result.shouldSwapEntireFolderStructure,
+                sourceFile: folder,
+                targetFile: result.targetFolder,
+                vaultTransaction
+              });
+            },
+            lockTargets: [
+              { mode: 'subtree', pathOrFile: folder.path },
+              { mode: 'subtree', pathOrFile: result.targetFolder.path }
+            ],
+            operationName: 'Swap folders',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `Swap folder ${sourcePath} with ${targetPath}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {

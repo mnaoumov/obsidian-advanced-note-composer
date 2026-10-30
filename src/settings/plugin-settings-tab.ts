@@ -2470,6 +2470,35 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           })
         ],
         name: 'UI'
+      }),
+      this.settingPage({
+        desc: 'Record the folder-wide commands as git commits, so one revert undoes one command.',
+        items: [
+          this.settingEx({
+            desc: createFragment((f) => {
+              f.appendText('Whether each folder-wide command (merge, move, rename, flatten, swap and reorder folders) and each recursive split is recorded as git commits: a ');
+              appendCodeBlock(f, 'chore: before OP<n>');
+              f.appendText(' commit of whatever was pending, then an ');
+              appendCodeBlock(f, 'OP<n>: <summary>');
+              f.appendText(' commit of what the command changed.');
+              f.createEl('br');
+              f.appendText('The ');
+              appendCodeBlock(f, 'Undo a bulk operation...');
+              f.appendText(' command lists those commits and reverts the one you pick.');
+              f.createEl('br');
+              f.appendText('Works on desktop only, for a vault inside a git repository, with ');
+              appendCodeBlock(f, 'git');
+              f.appendText(' on the path. Anywhere else the commands run as they always do.');
+            }),
+            name: 'Should commit bulk operations',
+            render: (setting) => {
+              setting.addToggle((toggle) => {
+                this.bind({ propertyName: 'shouldCommitBulkOperations', valueComponent: toggle });
+              });
+            }
+          })
+        ],
+        name: 'Bulk operation commits'
       })
     ];
   }

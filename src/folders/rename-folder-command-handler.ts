@@ -22,6 +22,7 @@ import {
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { normalizePath } from 'obsidian';
 
+import type { BulkOperationRunner } from '../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { CreateFolderTemplateTokens } from '../templates/template-tokens.ts';
 
@@ -65,6 +66,7 @@ const FOLDER_NOTE_TITLE_TEMPLATE_SETTING_NAME = 'Folder note title template';
  */
 export interface RenameFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -131,6 +133,7 @@ const TITLE_PROPERTY_NAME = 'title';
  */
 export class RenameFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -144,6 +147,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -310,24 +314,28 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
     });
 
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          // Captured BEFORE the rename: a folder note named after its folder can only be found under the
-          // folder's OLD name.
-          const folderNote = this.resolveFolderNote(folder);
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
+            abortController,
+            app: this.app,
+            body: async (vaultTransaction) => {
+              // Captured BEFORE the rename: a folder note named after its folder can only be found under the
+              // folder's OLD name.
+              const folderNote = this.resolveFolderNote(folder);
 
-          await vaultTransaction.rename(folder, plan.newFolderPath);
+              await vaultTransaction.rename(folder, plan.newFolderPath);
 
-          if (folderNote) {
-            await this.renameFolderNote(folder, folderNote, vaultTransaction);
-          }
-          await this.writeProperties(folder, plan, vaultTransaction);
-        },
-        lockTargets: [{ mode: 'subtree', pathOrFile: plan.oldFolderPath }],
-        operationName: 'Rename folder',
-        resourceLockComponent: this.resourceLockComponent
+              if (folderNote) {
+                await this.renameFolderNote(folder, folderNote, vaultTransaction);
+              }
+              await this.writeProperties(folder, plan, vaultTransaction);
+            },
+            lockTargets: [{ mode: 'subtree', pathOrFile: plan.oldFolderPath }],
+            operationName: 'Rename folder',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `Rename folder ${plan.oldFolderPath} to ${plan.newFolderPath}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {

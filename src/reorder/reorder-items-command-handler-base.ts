@@ -8,6 +8,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 import {
   isFile,
@@ -27,6 +28,7 @@ import {
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { normalizePath } from 'obsidian';
 
+import type { BulkOperationRunner } from '../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type {
   CreateFolderTemplateTokens,
@@ -86,6 +88,7 @@ export interface ReorderItemsCommandHandlerBaseConstructorParams extends Reorder
  */
 export interface ReorderItemsCommandHandlerParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -130,6 +133,7 @@ type PlannedReorderItem = PlannedReorderFile | PlannedReorderFolder;
  */
 export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandler {
   protected readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -143,6 +147,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -417,29 +422,35 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
     });
 
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          // Captured BEFORE anything is renamed: a folder note named after its folder can only be found
-          // under the folder's OLD name.
-          const folderNotesByOldPath = this.collectFolderNotes(plan);
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
+            abortController,
+            app: this.app,
+            body: async (vaultTransaction) => {
+              // Captured BEFORE anything is renamed: a folder note named after its folder can only be found
+              // under the folder's OLD name.
+              const folderNotesByOldPath = this.collectFolderNotes(plan);
 
-          const kindsByNewPath = new Map(plan.map((plannedItem) => [plannedItem.item.newPath, plannedItem.kind]));
-          const renameSteps = buildRenameSteps({
-            items: plan.map((plannedItem) => plannedItem.item),
-            resolveTemporaryPath: (desiredPath) => this.resolveTemporaryPath(desiredPath, ensureNonNullable(kindsByNewPath.get(desiredPath)))
-          });
-          for (const step of renameSteps) {
-            await vaultTransaction.rename(step.fromPath, step.toPath);
-          }
+              const kindsByNewPath = new Map(plan.map((plannedItem) => [plannedItem.item.newPath, plannedItem.kind]));
+              const renameSteps = buildRenameSteps({
+                items: plan.map((plannedItem) => plannedItem.item),
+                resolveTemporaryPath: (desiredPath) => this.resolveTemporaryPath(desiredPath, ensureNonNullable(kindsByNewPath.get(desiredPath)))
+              });
+              for (const step of renameSteps) {
+                await vaultTransaction.rename(step.fromPath, step.toPath);
+                // The reorder does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+                reportBulkOperationProgress();
+              }
 
-          await this.renameFolderNotes(plan, folderNotesByOldPath, vaultTransaction);
-          await this.writeTitles(plan, vaultTransaction);
-        },
-        lockTargets: [{ mode: 'subtree', pathOrFile: parentFolder.path }],
-        operationName: 'Reorder',
-        resourceLockComponent: this.resourceLockComponent
+              await this.renameFolderNotes(plan, folderNotesByOldPath, vaultTransaction);
+              await this.writeTitles(plan, vaultTransaction);
+            },
+            lockTargets: [{ mode: 'subtree', pathOrFile: parentFolder.path }],
+            operationName: 'Reorder',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `Reorder the contents of ${parentFolder.path}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {

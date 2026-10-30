@@ -213,7 +213,9 @@ describe('PluginSettingsTab', () => {
       // issue #217's rename, so it is not a reorder detail.
       'page:Folder note',
       'page:Reorder',
-      'page:UI'
+      'page:UI',
+      // Its own page rather than a row on `UI`: it writes to the repository's history, not to the interface.
+      'page:Bulk operation commits'
     ]);
   });
 
@@ -223,6 +225,11 @@ describe('PluginSettingsTab', () => {
     const tab = await createSettingsTab();
 
     expect(collectPageSections(tab)).toEqual({
+      // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
+      // shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
+      // the folder rows name their own target type — so the headings only mislabelled the first row.
+      // Issue #282 did not bring them back: the page is four rows, and only its path rows are a section.
+      'Bulk operation commits': [],
       // Issue #271 moved the `Create` category's path rows here, in a section of their own, and issue #278
       // put its menu placement beside them. Every command page with a menu-placeable command leads its
       // two per-category sections with that one. `Merge` and `Move/flatten` have none — no command of
@@ -253,10 +260,6 @@ describe('PluginSettingsTab', () => {
       // Issue #222: each notice button and jump toggle sits under the template of the move it belongs to.
       'Smart cut & paste': ['Notice', 'At cursor', 'To top of file', 'To bottom of file', 'Smart cut & paste command menus', 'Smart cut & paste include/exclude paths'],
       'Split/extract': ['Split/extract command menus', 'Split/extract include/exclude paths'],
-      // Issue #226 gave this page `Swap file` / `Swap folders`; issue #241 took them away again. The
-      // shared `Should ask before swapping` row belonged to neither, `Swap file` held nothing else, and
-      // the folder rows name their own target type — so the headings only mislabelled the first row.
-      // Issue #282 did not bring them back: the page is four rows, and only its path rows are a section.
       'Swap': ['Swap command menus', 'Swap include/exclude paths'],
       'UI': []
     });

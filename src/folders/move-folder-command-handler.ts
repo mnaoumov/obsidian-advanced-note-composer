@@ -12,6 +12,7 @@ import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 import { join } from '@mnaoumov/typescript-lib/path';
 
+import type { BulkOperationRunner } from '../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from '../ui/confirm-dialog-modal.ts';
 
@@ -44,6 +45,7 @@ interface BuildMoveConfirmContentParams {
 
 interface MoveFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
   readonly resourceLockComponent: ResourceLockComponent;
@@ -57,6 +59,7 @@ interface MoveFolderCommandHandlerConstructorParams {
  */
 export class MoveFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -70,6 +73,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
@@ -111,18 +115,22 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent
     });
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          await vaultTransaction.rename(folder, targetPath);
-        },
-        lockTargets: [
-          { mode: 'subtree', pathOrFile: folder.path },
-          { mode: 'subtree', pathOrFile: targetFolder.path }
-        ],
-        operationName: 'Move folder',
-        resourceLockComponent: this.resourceLockComponent
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
+            abortController,
+            app: this.app,
+            body: async (vaultTransaction) => {
+              await vaultTransaction.rename(folder, targetPath);
+            },
+            lockTargets: [
+              { mode: 'subtree', pathOrFile: folder.path },
+              { mode: 'subtree', pathOrFile: targetFolder.path }
+            ],
+            operationName: 'Move folder',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `Move folder ${sourcePath} to ${targetPath}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {
